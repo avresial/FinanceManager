@@ -18,6 +18,7 @@ namespace FinanceManager.Pages
 
         public string CurrentlyLoadedAccountName { get; set; }
         public bool IsLoading { get; set; }
+        public bool? ImportSucess { get; set; } 
         public string ErrorMessage { get; set; } = string.Empty;
 
 
@@ -55,17 +56,25 @@ namespace FinanceManager.Pages
                     ErrorMessage = ex.Message;
                 }
             }
-
+            ImportSucess = null;
             IsLoading = false;
-            StateHasChanged();
+            //StateHasChanged();
         }
 
-        public async Task Add()
+        public void Add()
         {
             if (!AccountsService.Accounts.ContainsKey(CurrentlyLoadedAccountName))
+            {
                 AccountsService.Accounts.Add(CurrentlyLoadedAccountName, CurrentlyLoadedEntries.ToList());
+            }
+            else
+            {
+                ImportSucess = false;
+                return;
+            }
 
             CurrentlyLoadedEntries = null;
+            ImportSucess = true;
         }
     }
 }
