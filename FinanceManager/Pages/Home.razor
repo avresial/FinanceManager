@@ -11,7 +11,7 @@
     @if (Accounts != null && Accounts.Any())
     {
         <div class="row">
-            <AllAccountsSummary />
+            <AllAccountsSummary Accounts="Accounts" />
         </div>
         <hr class="mb-5" />
 
@@ -27,11 +27,7 @@
                         @for (int j = 0; j < columnelementCount; j++)
                         {
                             if (Accounts.Count() <= drawnElementsCount)
-                            {
-                                // <div class="col-sm mb-4">
-                                // </div>
                                 continue;
-                            }
 
                             AccountModel accountModel = new AccountModel(Accounts.ElementAt(drawnElementsCount).Key, Accounts.ElementAt(drawnElementsCount).Value);
 
