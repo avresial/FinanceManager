@@ -1,20 +1,32 @@
-﻿<div class="container">
-    <div class="row">
-        <p style="font-weight:bold;">Account name</p>
+﻿@inherits AccountDetailsPreviewBase
+
+
+<div class="container">
+    <div class="row justify-content-center ">
+        <div class="col">
+            <p style="font-weight:bold;">@AccountModel.Name</p>
+        </div>
     </div>
 
-    @for (int i = 0; i < 5; i++)
-    {
-        <div class="row mb-3">
-            <div class="col-md-auto">
-                property @i
-            </div>
-
-            <div class="col-md-auto">
-                value
-            </div>
+    <div class="row justify-content-center mb-3">
+        <div class="col">
+            Last balance
         </div>
-    }
-    
+
+        <div class="col">
+            @AccountModel.Entries.FirstOrDefault()?.Balance
+        </div>
+    </div>
+
+    <div class="row justify-content-center mb-3 ">
+        <div class="col">
+            Last Posting date
+        </div>
+
+        <div class="col">
+            @AccountModel.Entries.FirstOrDefault()?.PostingDate
+        </div>
+    </div>
+
 </div>
 

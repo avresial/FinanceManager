@@ -16,16 +16,32 @@
         <hr class="mb-5" />
 
         <div class="row">
-            @for (int j = 0; j < 2; j++)
-            {
-                <div class="row">
-                    @for (int i = 0; i < 3; i++)
-                    {
-                        <div class="col-sm mb-4">
-                            <AccountDetailsPreview />
-                        </div>
-                    }
-                </div>
+            @{
+                int columnelementCount = 3;
+
+                int rows = (int)Math.Ceiling(Accounts.Count() / (double)columnelementCount);
+                int drawnElementsCount = 0;
+                @for (int i = 0; i < rows; i++)
+                {
+                    <div class="row justify-content-center">
+                        @for (int j = 0; j < columnelementCount; j++)
+                        {
+                            if (Accounts.Count() <= drawnElementsCount)
+                            {
+                                // <div class="col-sm mb-4">
+                                // </div>
+                                continue;
+                            }
+
+                            AccountModel accountModel = new AccountModel(Accounts.ElementAt(drawnElementsCount).Key, Accounts.ElementAt(drawnElementsCount).Value);
+
+                            <div class="col-sm-4 mb-4">
+                                <AccountDetailsPreview AccountModel="accountModel" />
+                            </div>
+                            drawnElementsCount++;
+                        }
+                    </div>
+                }
             }
         </div>
         <hr />
@@ -43,12 +59,12 @@
     <div class="row">
         <nav aria-label="...">
             <ul class="pagination">
-                <li class="page-item disabled">
-                    <a class="page-link" href="#" tabindex="-1">This week</a>
+                <li class="page-item ">
+                    <a class="page-link" href="#" onclick="@GetThisWeek" tabindex="-1">Last week</a>
                 </li>
-                <li class="page-item"><a class="page-link" href="#">This month</a></li>
+                <li class="page-item"><a class="page-link" href="#" onclick="@GetThisMonth">Last month</a></li>
                 <li class="page-item active">
-                    <a class="page-link" href="#"> This year <span class="sr-only"></span></a>
+                    <a class="page-link" href="#" onclick="@GetThisYear"> Last year <span class="sr-only"></span></a>
                 </li>
             </ul>
         </nav>
