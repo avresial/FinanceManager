@@ -1,10 +1,19 @@
 ﻿using FinanceManager.Models;
+using System.Data;
 
 namespace FinanceManager.Services
 {
     public class AccountsService
     {
         private Dictionary<string, List<AccountEntry>> Accounts = new Dictionary<string, List<AccountEntry>>();
+
+
+        public AccountsService()
+        {
+            Accounts.Add("Main", new List<AccountEntry>() { new AccountEntry() { PostingDate = DateTime.Now, Balance = 10 } });
+            Accounts.Add("Additional 1", new List<AccountEntry>() { new AccountEntry() { PostingDate = DateTime.Now, Balance = 20 } });
+        }
+
 
         public event Action<string> AccountsChanged;
 
