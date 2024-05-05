@@ -14,7 +14,7 @@ namespace FinanceManager.Pages
         [Inject]
         public AccountsService AccountsService { get; set; }
 
-        public List<AccountEntry> CurrentlyLoadedEntries { get; set; }
+        public List<AccountEntryDto> CurrentlyLoadedEntries { get; set; }
 
         private string currentlyLoadedAccountName;
         public string CurrentlyLoadedAccountName
@@ -60,7 +60,7 @@ namespace FinanceManager.Pages
                     using (var csv = new CsvReader(reader, config))
                     {
                         CurrentlyLoadedAccountName = Path.GetFileNameWithoutExtension(file.Name);
-                        CurrentlyLoadedEntries = await csv.GetRecordsAsync<AccountEntry>().ToListAsync();
+                        CurrentlyLoadedEntries = await csv.GetRecordsAsync<AccountEntryDto>().ToListAsync();
                     }
                 }
                 catch (Exception ex)

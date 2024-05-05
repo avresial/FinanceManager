@@ -7,27 +7,36 @@ namespace FinanceManager.Pages.Dashboard
     {
         private Random random = new Random();
         [Parameter]
-        public Dictionary<string, List<AccountEntry>> Accounts { get; set; }
+        public Dictionary<string, List<AccountEntryDto>> Accounts { get; set; }
+        public List<Tuple<string, double>> SpendingByCategory { get; set; } = new List<Tuple<string, double>>();
+        public List<Tuple<string, double>> WealthByCategory { get; set; } = new List<Tuple<string, double>>();
 
-        public double Spent { get; set; }
-        public double Invested { get; set; }
-        public double FundsLeft { get; set; }
-        public double AllFunds { get; set; }
-        public double SpentOnCar { get; set; }
-        public double DayToDay { get; set; }
-        public double Investments { get; set; }
-        public double Rest { get; set; }
-        
+
+
         protected override async Task OnParametersSetAsync()
         {
-            Spent = Math.Round(random.NextDouble(), 2);
-            Invested = Math.Round(random.NextDouble(), 2);
-            FundsLeft = Math.Round(random.NextDouble(), 2);
-            AllFunds = Math.Round(random.NextDouble(), 2);
-            SpentOnCar = Math.Round(random.NextDouble(), 2);
-            DayToDay = Math.Round(random.NextDouble(), 2);
-            Investments = Math.Round(random.NextDouble(), 2);
-            Rest = Math.Round(random.NextDouble(), 2);
+            WealthByCategory.Clear();
+            WealthByCategory.Add(new Tuple<string, double>("Cash", Math.Round(random.NextDouble(), 2)));
+            WealthByCategory.Add(new Tuple<string, double>("Investments", Math.Round(random.NextDouble(), 2)));
+            WealthByCategory.Add(new Tuple<string, double>("Assets", Math.Round(random.NextDouble(), 2)));
+            
+            double otherWealth = 0;
+            foreach (var account in Accounts)
+            {
+                var newValue = account.Value.FirstOrDefault();
+                if (newValue is null) continue;
+
+                otherWealth += newValue.Balance;
+            }
+
+            WealthByCategory.Add(new Tuple<string, double>("Other", otherWealth));
+
+
+            SpendingByCategory.Clear();
+            SpendingByCategory.Add(new Tuple<string, double>("Investments", Math.Round(random.NextDouble(), 2)));
+            SpendingByCategory.Add(new Tuple<string, double>("Car & motocycle", Math.Round(random.NextDouble(), 2)));
+            SpendingByCategory.Add(new Tuple<string, double>("Day to day", Math.Round(random.NextDouble(), 2)));
+            SpendingByCategory.Add(new Tuple<string, double>("Other", Math.Round(random.NextDouble(), 2)));
         }
     }
 }

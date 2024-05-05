@@ -13,7 +13,7 @@ namespace FinanceManager.Pages
         {
             if (!AccountsService.Contains(AccountName))
             {
-                AccountsService.Add(AccountName, new List<Models.AccountEntry>());
+                AccountsService.Add(AccountName, new List<Models.AccountEntryDto>());
             }
             else
             {

@@ -1,7 +1,7 @@
 ﻿@inherits AccountDetailsPreviewBase
 
 
-<div class="container">
+<div>
     <div class="row justify-content-center ">
         <div class="col">
             <p style="font-weight:bold;">@AccountModel.Name</p>
@@ -14,7 +14,7 @@
         </div>
 
         <div class="col">
-            @AccountModel.Entries.FirstOrDefault()?.Balance
+            @AccountModel.Entries.FirstOrDefault()?.Balance zł
         </div>
     </div>
 

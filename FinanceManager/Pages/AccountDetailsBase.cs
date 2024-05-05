@@ -16,7 +16,7 @@ namespace FinanceManager.Pages
 
         public string ErrorMessage { get; set; } = string.Empty;
 
-        public IEnumerable<AccountEntry> Entries { get; set; }
+        public IEnumerable<AccountEntryDto> Entries { get; set; }
 
         protected override async Task OnInitializedAsync()
         {

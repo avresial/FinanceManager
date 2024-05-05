@@ -4,22 +4,22 @@ namespace FinanceManager.Services
 {
     public class AccountsService
     {
-        private Dictionary<string, List<AccountEntry>> Accounts = new Dictionary<string, List<AccountEntry>>();
+        private Dictionary<string, List<AccountEntryDto>> Accounts = new Dictionary<string, List<AccountEntryDto>>();
 
 
         public AccountsService()
         {
-            Accounts.Add("Main", new List<AccountEntry>() { new AccountEntry() { PostingDate = DateTime.Now , Balance = 10 } });
-            Accounts.Add("Week ago", new List<AccountEntry>() { new AccountEntry() { PostingDate = DateTime.Now - new TimeSpan(7,0, 0, 0), Balance = 20 } });
-            Accounts.Add("Month ago", new List<AccountEntry>() { new AccountEntry() { PostingDate = DateTime.Now - new TimeSpan(31,0, 0, 0), Balance = 20 } });
+            Accounts.Add("Main", new List<AccountEntryDto>() { new AccountEntryDto() { PostingDate = DateTime.Now , Balance = 10 } });
+            Accounts.Add("Week ago", new List<AccountEntryDto>() { new AccountEntryDto() { PostingDate = DateTime.Now - new TimeSpan(2,0, 0, 0), Balance = 20 } });
+            Accounts.Add("Month ago", new List<AccountEntryDto>() { new AccountEntryDto() { PostingDate = DateTime.Now - new TimeSpan(20,0, 0, 0), Balance = 30 } });
         }
 
 
         public event Action<string> AccountsChanged;
 
-        public Dictionary<string, List<AccountEntry>> Get() 
+        public Dictionary<string, List<AccountEntryDto>> Get() 
         {
-            Dictionary<string, List<AccountEntry>> result = new Dictionary<string, List<AccountEntry>>();
+            Dictionary<string, List<AccountEntryDto>> result = new Dictionary<string, List<AccountEntryDto>>();
             foreach (var item in Accounts)
             {
                 result.Add(item.Key, item.Value);
@@ -27,8 +27,8 @@ namespace FinanceManager.Services
 
             return result;
         }
-        public List<AccountEntry> Get(string key) => Accounts[key];
-        public void Add(string key, List<AccountEntry> data)
+        public List<AccountEntryDto> Get(string key) => Accounts[key];
+        public void Add(string key, List<AccountEntryDto> data)
         {
             Accounts.Add(key, data);
             AccountsChanged?.Invoke(key);

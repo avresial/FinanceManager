@@ -1,4 +1,5 @@
 ﻿@page "/"
+@using FinanceManager.Enums
 @inherits HomeBase
 <div class="container">
     <PageTitle>Finance manager</PageTitle>
@@ -29,7 +30,7 @@
                             if (Accounts.Count() <= drawnElementsCount)
                                 continue;
 
-                            AccountModel accountModel = new AccountModel(Accounts.ElementAt(drawnElementsCount).Key, Accounts.ElementAt(drawnElementsCount).Value);
+                            AccountModel accountModel = new AccountModel(Accounts.ElementAt(drawnElementsCount).Key, Accounts.ElementAt(drawnElementsCount).Value, AccountType.Other);
 
                             <div class="col-sm-4 mb-4">
                                 <AccountDetailsPreview AccountModel="accountModel" />
@@ -55,12 +56,12 @@
     <div class="row">
         <nav aria-label="...">
             <ul class="pagination">
-                <li class="page-item ">
-                    <a class="page-link" href="#" onclick="@GetThisWeek" tabindex="-1">Last week</a>
-                </li>
-                <li class="page-item"><a class="page-link" href="#" onclick="@GetThisMonth">Last month</a></li>
+                <li class="page-item"><a class="page-link" href="#" onclick="@GetThisMonth">This month</a></li>
                 <li class="page-item active">
-                    <a class="page-link" href="#" onclick="@GetThisYear"> Last year <span class="sr-only"></span></a>
+                    <a class="page-link" href="#" onclick="@GetThisYear"> This year <span class="sr-only"></span></a>
+                </li>
+                <li class="page-item ">
+                    <a class="page-link" href="#" onclick="@GetAllTime" tabindex="-1">All time</a>
                 </li>
             </ul>
         </nav>

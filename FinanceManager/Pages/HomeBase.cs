@@ -16,8 +16,8 @@ namespace FinanceManager.Pages
         public AccountsService AccountsService { get; set; }
 
 
-        public Dictionary<string, List<AccountEntry>> Accounts = new Dictionary<string, List<AccountEntry>>();
-        public ObservableCollection<AccountEntry> AccountEntries { get; set; }
+        public Dictionary<string, List<AccountEntryDto>> Accounts = new Dictionary<string, List<AccountEntryDto>>();
+        public ObservableCollection<AccountEntryDto> AccountEntries { get; set; }
 
         public string AccountName { get; set; }
         public bool isLoading { get; set; }
@@ -25,20 +25,9 @@ namespace FinanceManager.Pages
 
         protected override async Task OnInitializedAsync()
         {
-            try
-            {
-                Accounts = AccountsService.Get();
-                StateHasChanged();
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = ex.Message;
-            }
+            GetAllTime();
         }
-        public async Task GetThisWeek()
-        {
-            SetAccountsWithinTimeSpan(new TimeSpan(7, 0, 0, 0));
-        }
+      
 
         private void SetAccountsWithinTimeSpan(TimeSpan timeSpan)
         {
@@ -59,15 +48,29 @@ namespace FinanceManager.Pages
                 ErrorMessage = ex.Message;
             }
         }
-
+        public async Task GetAllTime()
+        {
+            try
+            {
+                Accounts = AccountsService.Get();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+            }
+        }
         public async Task GetThisMonth()
         {
-            SetAccountsWithinTimeSpan(new TimeSpan(31,0, 0, 0));
+            var date = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+
+            SetAccountsWithinTimeSpan((DateTime.Now - date).Duration());
         }
 
         public async Task GetThisYear()
         {
-            SetAccountsWithinTimeSpan(new TimeSpan(365, 0, 0, 0));
+            var date = new DateTime(DateTime.Now.Year, 1, 1);
+            SetAccountsWithinTimeSpan((DateTime.Now - date).Duration());
         }
 
 

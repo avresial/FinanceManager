@@ -2,7 +2,7 @@
 
 namespace FinanceManager.Models
 {
-    public class AccountEntry
+    public class AccountEntryDto
     {
         [Index(0)]
         public DateTime PostingDate { get; set; }
