@@ -33,25 +33,25 @@ else
                         <div class="input-group-prepend">
                             <span class="input-group-text" id="basic-addon1">Account name</span>
                         </div>
-                        <input type="text" class="form-control" placeholder="@CurrentlyLoadedAccountName" aria-label="Username" aria-describedby="basic-addon1" @bind-value="CurrentlyLoadedAccountName">
-                        <button class="btn btn-primary" type="submit" onclick="@Add">Add data</button>
+                        <input type="text" class="form-control" placeholder="@CurrentlyLoadedAccountName" aria-label="Username" aria-describedby="basic-addon1" 
+                        @bind="CurrentlyLoadedAccountName" @bind:event="oninput">
+                        <button class="btn btn-primary" type="submit" onclick="@Add" disabled="@IsDisabled">Add data</button>
                     </div>
                 </div>
-
-                <div class="row">
-                    <p>There is @CurrentlyLoadedEntries.Count() rows of data to import.</p>
-                </div>
-
-               
 
                 @if (AccountsService.Accounts.ContainsKey(CurrentlyLoadedAccountName))
                 {
                     <div class="row">
                         <div class="alert alert-warning" role="alert">
-                            <p>Data table with name @CurrentlyLoadedAccountName already exists in database. In order to add this data table, change a name.</p>
+                            Data table with name @CurrentlyLoadedAccountName already exists in database. In order to add this data table, change a name.
                         </div>
                     </div>
                 }
+
+                <div class="row">
+                    <p>There is @CurrentlyLoadedEntries.Count() rows of data to import.</p>
+                </div>
+                
                 <div class="row">
                     <table class="table">
                         <thead>
@@ -90,11 +90,12 @@ else
 
         @if (ImportSucess.HasValue && ImportSucess.Value == true)
         {
-            <div class="row">
-                <div class="alert alert-success" role="alert">
-                    Data table imported succesfuly.
-                </div>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <strong>Data table imported succesfuly.</strong><br />
+                Add next one or go to <a href="/">Home</a> page.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" onclick="@CloseImportNotification"></button>
             </div>
+           
         }
     }
 }

@@ -5,6 +5,9 @@
 
 <h3>Available accounts (@Accounts?.Count())</h3>
 
+
+
+
 @if (Accounts != null && Accounts.Any())
 {
     <table class="table">
@@ -30,7 +33,7 @@
 else
 {
     <div class="alert alert-warning" role="alert">
-        <p>There is no account data available.</p>
-        <p>In order to add data, navigate to <a href="/Import" role="button">Import</a> tab.</p>
+        There is no account data available.<br>
+        In order to add data, navigate to <a href="/Import" role="button">Import</a> tab.
     </div>
 }

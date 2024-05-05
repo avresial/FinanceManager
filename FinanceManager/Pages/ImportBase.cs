@@ -16,12 +16,25 @@ namespace FinanceManager.Pages
 
         public List<AccountEntry> CurrentlyLoadedEntries { get; set; }
 
-        public string CurrentlyLoadedAccountName { get; set; }
+        private string currentlyLoadedAccountName;
+        public string CurrentlyLoadedAccountName
+        {
+            get { return currentlyLoadedAccountName; }
+            set
+            {
+                currentlyLoadedAccountName = value;
+                IsDisableUpdate();
+            }
+        }
+
         public bool IsLoading { get; set; }
-        public bool? ImportSucess { get; set; } 
+        public bool? ImportSucess { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
-
-
+        public bool IsDisabled { get; set; }
+        public void IsDisableUpdate()
+        {
+            IsDisabled = AccountsService.Accounts.ContainsKey(CurrentlyLoadedAccountName);
+        }
 
         public async Task LoadFiles(InputFileChangeEventArgs e)
         {
@@ -56,11 +69,15 @@ namespace FinanceManager.Pages
                     ErrorMessage = ex.Message;
                 }
             }
-            ImportSucess = null;
+            CloseImportNotification();
             IsLoading = false;
             //StateHasChanged();
         }
 
+        public void CloseImportNotification()
+        {
+            ImportSucess = null;
+        }
         public void Add()
         {
             if (!AccountsService.Accounts.ContainsKey(CurrentlyLoadedAccountName))
