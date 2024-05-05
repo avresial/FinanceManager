@@ -26,7 +26,7 @@ namespace FinanceManager.Pages
         {
             try
             {
-                Accounts = AccountsService.Accounts;
+                Accounts = AccountsService.Get();
             }
             catch (Exception ex)
             {

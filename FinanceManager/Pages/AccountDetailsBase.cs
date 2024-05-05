@@ -6,6 +6,8 @@ namespace FinanceManager.Pages
 {
     public class AccountDetailsBase : ComponentBase
     {
+        private const int maxTableSize = 500;
+
         [Parameter]
         public string AccountName { get; set; }
 
@@ -18,10 +20,20 @@ namespace FinanceManager.Pages
 
         protected override async Task OnInitializedAsync()
         {
+            UpdateEntries();
+        }
+
+        protected override async Task OnParametersSetAsync()
+        {
+            UpdateEntries();
+        }
+
+        private void UpdateEntries()
+        {
             try
             {
-                if (AccountsService.Accounts.ContainsKey(AccountName))
-                    Entries = AccountsService.Accounts[AccountName].Take(500);
+                if (AccountsService.Contains(AccountName))
+                    Entries = AccountsService.Get(AccountName).Take(maxTableSize);
             }
             catch (Exception ex)
             {

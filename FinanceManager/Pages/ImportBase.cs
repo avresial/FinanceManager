@@ -33,7 +33,7 @@ namespace FinanceManager.Pages
         public bool IsDisabled { get; set; }
         public void IsDisableUpdate()
         {
-            IsDisabled = AccountsService.Accounts.ContainsKey(CurrentlyLoadedAccountName);
+            IsDisabled = AccountsService.Contains(CurrentlyLoadedAccountName);
         }
 
         public async Task LoadFiles(InputFileChangeEventArgs e)
@@ -52,14 +52,13 @@ namespace FinanceManager.Pages
                 return;
             }
 
-            foreach (var file in e.GetMultipleFiles(1))
+            foreach (var file in e.GetMultipleFiles(6))
             {
                 try
                 {
                     using (var reader = new StreamReader(file.OpenReadStream()))
                     using (var csv = new CsvReader(reader, config))
                     {
-                        await Task.Delay(1000);
                         CurrentlyLoadedAccountName = Path.GetFileNameWithoutExtension(file.Name);
                         CurrentlyLoadedEntries = await csv.GetRecordsAsync<AccountEntry>().ToListAsync();
                     }
@@ -80,9 +79,9 @@ namespace FinanceManager.Pages
         }
         public void Add()
         {
-            if (!AccountsService.Accounts.ContainsKey(CurrentlyLoadedAccountName))
+            if (!AccountsService.Contains(CurrentlyLoadedAccountName))
             {
-                AccountsService.Accounts.Add(CurrentlyLoadedAccountName, CurrentlyLoadedEntries.ToList());
+                AccountsService.Add(CurrentlyLoadedAccountName, CurrentlyLoadedEntries.ToList());
             }
             else
             {

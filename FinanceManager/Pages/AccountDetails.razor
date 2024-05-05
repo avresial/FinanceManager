@@ -14,9 +14,9 @@ else
     <table class="table">
         <thead>
             <tr>
-                <th scope="col">PostingDate</th>
+                <th scope="col">Posting date</th>
                 <th scope="col">Balance</th>
-                <th scope="col">BalanceChange</th>
+                <th scope="col">Balance change</th>
                 <th scope="col">Sender name</th>
             </tr>
         </thead>
@@ -25,7 +25,7 @@ else
             @foreach (var entry in Entries)
             {
                 <tr>
-                    <td>@entry.PostingDate</td>
+                    <td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
                     <td>@entry.Balance zł</td>
                     @if (entry.BalanceChange > 0)
                     {
