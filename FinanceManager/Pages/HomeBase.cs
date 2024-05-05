@@ -33,53 +33,5 @@ namespace FinanceManager.Pages
                 ErrorMessage = ex.Message;
             }
         }
-
-
-
-        public async Task LoadFiles(InputFileChangeEventArgs e)
-        {
-            isLoading = true;
-            ErrorMessage = string.Empty;
-            //var config = new CsvConfiguration(CultureInfo.InvariantCulture)
-            var config = new CsvConfiguration(new CultureInfo("de-DE"))
-            {
-                Delimiter = ";",
-                HasHeaderRecord = true,
-            };
-            if (e.File is null)
-            {
-                isLoading = false;
-                return;
-            }
-
-            foreach (var file in e.GetMultipleFiles(1))
-            {
-                try
-                {
-                    using (var reader = new StreamReader(file.OpenReadStream()))
-                    using (var csv = new CsvReader(reader, config))
-                    {
-                        await Task.Delay(1000);
-                        AccountName = Path.GetFileNameWithoutExtension(file.Name);
-                        AccountEntries = new ObservableCollection<AccountEntry>(await csv.GetRecordsAsync<AccountEntry>().ToListAsync());
-                    }
-                }
-                catch (Exception ex)
-                {
-                    ErrorMessage = ex.Message;
-                }
-            }
-
-            isLoading = false;
-            StateHasChanged();
-        }
-
-        public async Task Add()
-        {
-            if (!AccountsService.Accounts.ContainsKey(AccountName))
-                AccountsService.Accounts.Add(AccountName, AccountEntries.ToList());
-
-            AccountEntries = null;
-        }
     }
 }
