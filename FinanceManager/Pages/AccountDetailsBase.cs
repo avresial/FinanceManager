@@ -33,7 +33,7 @@ namespace FinanceManager.Pages
             try
             {
                 if (AccountsService.Contains(AccountName))
-                    Entries = AccountsService.Get(AccountName).Take(maxTableSize);
+                    Entries = AccountsService.Get(AccountName).Entries.Take(maxTableSize);
             }
             catch (Exception ex)
             {

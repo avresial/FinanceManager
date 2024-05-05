@@ -1,12 +1,10 @@
-﻿using CsvHelper.Configuration;
-using CsvHelper;
+﻿using ChartJs.Blazor.Common;
+using ChartJs.Blazor.PieChart;
+using ChartJs.Blazor.Util;
 using FinanceManager.Models;
 using FinanceManager.Services;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using System.Collections.ObjectModel;
-using System.Globalization;
-using System.Reflection.Metadata.Ecma335;
 
 namespace FinanceManager.Pages
 {
@@ -16,18 +14,19 @@ namespace FinanceManager.Pages
         public AccountsService AccountsService { get; set; }
 
 
-        public Dictionary<string, List<AccountEntryDto>> Accounts = new Dictionary<string, List<AccountEntryDto>>();
+        public List<AccountModel> Accounts = new List<AccountModel>();
         public ObservableCollection<AccountEntryDto> AccountEntries { get; set; }
 
         public string AccountName { get; set; }
         public bool isLoading { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
 
+
         protected override async Task OnInitializedAsync()
         {
             GetAllTime();
         }
-      
+
 
         private void SetAccountsWithinTimeSpan(TimeSpan timeSpan)
         {
@@ -37,10 +36,10 @@ namespace FinanceManager.Pages
 
                 foreach (var account in AccountsService.Get())
                 {
-                    var entries = account.Value.Where(x => (x.PostingDate - DateTime.Now).Duration() < timeSpan).ToList();
+                    List<AccountEntryDto> entries = account.Entries.Where(x => (x.PostingDate - DateTime.Now).Duration() < timeSpan).ToList();
                     if (!entries.Any()) continue;
 
-                    Accounts.Add(account.Key, entries);
+                    Accounts.Add(account);
                 }
             }
             catch (Exception ex)

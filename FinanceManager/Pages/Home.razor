@@ -9,6 +9,7 @@
     </div>
 
 
+
     @if (Accounts != null && Accounts.Any())
     {
         <div class="row">
@@ -30,9 +31,9 @@
                             if (Accounts.Count() <= drawnElementsCount)
                                 continue;
 
-                            AccountModel accountModel = new AccountModel(Accounts.ElementAt(drawnElementsCount).Key, Accounts.ElementAt(drawnElementsCount).Value, AccountType.Other);
+                            AccountModel accountModel = Accounts.ElementAt(drawnElementsCount);
 
-                            <div class="col-sm-4 mb-4">
+                            <div class="col-sm-4 my-4">
                                 <AccountDetailsPreview AccountModel="accountModel" />
                             </div>
                             drawnElementsCount++;
@@ -41,7 +42,6 @@
                 }
             }
         </div>
-        <hr />
     }
     else
     {

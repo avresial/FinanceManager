@@ -18,7 +18,7 @@ namespace FinanceManager.Layout
             AccountsService.AccountsChanged += AccountsService_AccountsChanged;
             try
             {
-                AccountNames = [.. AccountsService.Get().Keys.OrderBy(x => x)];
+                AccountNames = [.. AccountsService.Get().Select(x=>x.Name).OrderBy(x => x)];
             }
             catch (Exception ex)
             {
@@ -30,7 +30,7 @@ namespace FinanceManager.Layout
         {
             try
             {
-                AccountNames = [.. AccountsService.Get().Keys.OrderBy(x=>x)];
+                AccountNames = [.. AccountsService.Get().Select(x => x.Name).OrderBy(x => x)];
             }
             catch (Exception ex)
             {

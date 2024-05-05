@@ -8,13 +8,55 @@
         </div>
     </div>
 
+
+    <div class="row justify-content-center mb-3">
+        <div class="col">
+            Type
+        </div>
+
+        <div class="col">
+            @AccountModel.AccountType
+        </div>
+    </div>
+
+    <div class="row justify-content-center mb-3">
+        <div class="col">
+            First balance
+        </div>
+
+        <div class="col">
+            @AccountModel.Entries.FirstOrDefault()?.Balance zł
+        </div>
+    </div>
+
     <div class="row justify-content-center mb-3">
         <div class="col">
             Last balance
         </div>
 
         <div class="col">
-            @AccountModel.Entries.FirstOrDefault()?.Balance zł
+            @AccountModel.Entries.LastOrDefault()?.Balance zł
+        </div>
+    </div>
+
+    <div class="row justify-content-center mb-3">
+        <div class="col">
+            Balance change
+        </div>
+
+        <div class="col">
+            @(Math.Round((AccountModel.Entries.LastOrDefault()?.Balance - AccountModel.Entries.FirstOrDefault()?.Balance).Value, 2)) zł
+        </div>
+    </div>
+
+
+    <div class="row justify-content-center mb-3 ">
+        <div class="col">
+            First Posting date
+        </div>
+
+        <div class="col">
+            @AccountModel.Entries.FirstOrDefault()?.PostingDate.ToString("yyyy-MM-dd")
         </div>
     </div>
 
@@ -24,9 +66,9 @@
         </div>
 
         <div class="col">
-            @AccountModel.Entries.FirstOrDefault()?.PostingDate
+            @AccountModel.Entries.LastOrDefault()?.PostingDate.ToString("yyyy-MM-dd")
         </div>
     </div>
-
+    <hr />
 </div>
 

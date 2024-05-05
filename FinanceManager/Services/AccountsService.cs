@@ -1,38 +1,38 @@
-﻿using FinanceManager.Models;
+﻿using FinanceManager.Enums;
+using FinanceManager.Models;
 
 namespace FinanceManager.Services
 {
     public class AccountsService
     {
-        private Dictionary<string, List<AccountEntryDto>> Accounts = new Dictionary<string, List<AccountEntryDto>>();
+        private List<AccountModel> Accounts = new List<AccountModel>();
 
 
         public AccountsService()
         {
-            Accounts.Add("Main", new List<AccountEntryDto>() { new AccountEntryDto() { PostingDate = DateTime.Now , Balance = 10 } });
-            Accounts.Add("Week ago", new List<AccountEntryDto>() { new AccountEntryDto() { PostingDate = DateTime.Now - new TimeSpan(2,0, 0, 0), Balance = 20 } });
-            Accounts.Add("Month ago", new List<AccountEntryDto>() { new AccountEntryDto() { PostingDate = DateTime.Now - new TimeSpan(20,0, 0, 0), Balance = 30 } });
+            Accounts.Add(new AccountModel("Main", new List<AccountEntryDto>() { new AccountEntryDto() { PostingDate = DateTime.Now, Balance = 10 } }, AccountType.Asset));
+            Accounts.Add(new AccountModel("Week ago", new List<AccountEntryDto>() { new AccountEntryDto() { PostingDate = DateTime.Now - new TimeSpan(2, 0, 0, 0), Balance = 20 } }, AccountType.Investment));
+            Accounts.Add(new AccountModel("Month ago", new List<AccountEntryDto>() { new AccountEntryDto() { PostingDate = DateTime.Now - new TimeSpan(20, 0, 0, 0), Balance = 30 } }, AccountType.Other));
         }
 
 
         public event Action<string> AccountsChanged;
 
-        public Dictionary<string, List<AccountEntryDto>> Get() 
+        public List<AccountModel> Get()
         {
-            Dictionary<string, List<AccountEntryDto>> result = new Dictionary<string, List<AccountEntryDto>>();
+            List<AccountModel> result = new List<AccountModel>();
+
             foreach (var item in Accounts)
-            {
-                result.Add(item.Key, item.Value);
-            }
+                result.Add(item);
 
             return result;
         }
-        public List<AccountEntryDto> Get(string key) => Accounts[key];
-        public void Add(string key, List<AccountEntryDto> data)
+        public AccountModel? Get(string key) => Accounts.FirstOrDefault(x => x.Name == key);
+        public void Add(string name, List<AccountEntryDto> data)
         {
-            Accounts.Add(key, data);
-            AccountsChanged?.Invoke(key);
+            Accounts.Add(new AccountModel(name, data, Enums.AccountType.Cash));
+            AccountsChanged?.Invoke(name);
         }
-        public bool Contains(string key) => Accounts.ContainsKey(key);
+        public bool Contains(string key) => Accounts.Any(x => x.Name == key);
     }
 }
