@@ -1,5 +1,4 @@
 ﻿using FinanceManager.Models;
-using System.Data;
 
 namespace FinanceManager.Services
 {

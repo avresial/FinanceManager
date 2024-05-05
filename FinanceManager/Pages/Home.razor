@@ -1,40 +1,57 @@
 ﻿@page "/"
 @inherits HomeBase
+<div class="container">
+    <PageTitle>Finance manager</PageTitle>
 
-<PageTitle>Finance manager</PageTitle>
-
-<h3>Available accounts (@Accounts?.Count())</h3>
-
-
-
-@if (Accounts != null && Accounts.Any())
-{
-    <AllAccountsSummary />
-
-    <table class="table">
-        <thead>
-            <tr>
-                <th scope="col">Account name</th>
-                <th scope="col">Entries count</th>
-            </tr>
-        </thead>
-        <tbody>
-
-            @foreach (var account in Accounts)
-            {
-                <tr>
-                    <td><a href="/AccountDetails/@account.Key" role="button">@account.Key</a> </td>
-                    <td>@account.Value.Count()</td>
-                </tr>
-            }
-
-        </tbody>
-    </table>
-}
-else
-{
-    <div class="alert alert-warning" role="alert">
-        There is no account data available.<br>
-        In order to add data, navigate to <a href="/Import" role="button">Import</a> tab.
+    <div class="row mb-5">
+        <h1>Dashboard</h1>
     </div>
-}
+
+
+    @if (Accounts != null && Accounts.Any())
+    {
+        <div class="row">
+            <AllAccountsSummary />
+        </div>
+        <hr class="mb-5" />
+
+        <div class="row">
+            @for (int j = 0; j < 2; j++)
+            {
+                <div class="row">
+                    @for (int i = 0; i < 3; i++)
+                    {
+                        <div class="col-sm mb-4">
+                            <AccountDetailsPreview />
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        <hr />
+    }
+    else
+    {
+        <div class="row">
+            <div class="alert alert-warning" role="alert">
+                There is no account data available.<br>
+                In order to add data, navigate to <a href="/Import" role="button">Import</a> tab.
+            </div>
+        </div>
+    }
+
+    <div class="row">
+        <nav aria-label="...">
+            <ul class="pagination">
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1">This week</a>
+                </li>
+                <li class="page-item"><a class="page-link" href="#">This month</a></li>
+                <li class="page-item active">
+                    <a class="page-link" href="#"> This year <span class="sr-only"></span></a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+</div>

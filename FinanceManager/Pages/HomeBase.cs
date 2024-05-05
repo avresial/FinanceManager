@@ -33,5 +33,8 @@ namespace FinanceManager.Pages
                 ErrorMessage = ex.Message;
             }
         }
+
+
     }
 }
+
