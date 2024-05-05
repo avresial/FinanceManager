@@ -1,0 +1,97 @@
+﻿@page "/"
+@inherits HomeBase
+
+<PageTitle>Finance manager</PageTitle>
+
+<h1>Finance manager <i class="bi bi-cloud-arrow-up"></i></h1>
+<i class="bi bi-cloud-arrow-up"></i>
+@if (Accounts != null && Accounts.Any())
+{
+    <p>Currently stored accounts (@Accounts.Count())</p>
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Acion</th>
+                <th scope="col">Account name</th>
+                <th scope="col">Entries count</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            @foreach (var account in Accounts)
+            {
+                <tr>
+                    <td><a class="btn btn-primary" href="/AccountDetails/@account.Key" role="button">Expand</a></td>
+                    <td>@account.Key</td>
+                    <td>@account.Value.Count()</td>
+                </tr>
+            }
+
+        </tbody>
+    </table>
+}
+
+<div class="mb-3">
+    <label for="formFile" class="form-label">Default file input example</label>
+    <InputFile class="form-control" type="file" id="formFile" OnChange="LoadFiles"/>
+</div>
+
+@if (isLoading)
+{
+    <h1>Loading</h1>
+}
+else
+{
+    @if (ErrorMessage != string.Empty)
+    {
+        <div class="alert alert-warning" role="alert">
+            @ErrorMessage
+        </div>
+    }
+    else
+    {
+        @if (AccountEntries != null)
+        {
+
+
+            <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                    <span class="input-group-text" id="basic-addon1">Account name</span>
+                </div>
+                <input type="text" class="form-control" placeholder="@AccountName" aria-label="Username" aria-describedby="basic-addon1" @bind-value="AccountName">
+                <button class="btn btn-primary" type="submit" onclick="@Add">Add data</button>
+            </div>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">PostingDate</th>
+                        <th scope="col">Balance</th>
+                        <th scope="col">BalanceChange</th>
+                        <th scope="col">Sender name</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    @foreach (var entry in AccountEntries.Take(20))
+                    {
+                        <tr>
+                            <td>@entry.PostingDate</td>
+                            <td>@entry.Balance zł</td>
+                            @if (entry.BalanceChange > 0)
+                            {
+                                <td style="background-color:lightgreen">@entry.BalanceChange zł</td>
+                            }
+                            else
+                            {
+                                <td style="background-color:lightcoral">@entry.BalanceChange zł</td>
+                            }
+                            <td>@entry.SenderName</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+        }
+    }
+}
