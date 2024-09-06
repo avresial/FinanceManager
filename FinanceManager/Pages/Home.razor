@@ -1,70 +1,53 @@
 ﻿@page "/"
 @using FinanceManager.Enums
-@inherits HomeBase
 <div class="container">
-    <PageTitle>Finance manager</PageTitle>
+	<PageTitle>Finance manager</PageTitle>
 
-    <div class="row mb-5">
-        <h1>Dashboard</h1>
-    </div>
+	<div class="row mb-5">
+		<h1>Dashboard</h1>
+	</div>
 
 
 
-    @if (Accounts != null && Accounts.Any())
-    {
-        <div class="row">
-            <AllAccountsSummary Accounts="Accounts" />
-        </div>
-        <hr class="mb-5" />
+	@if (Accounts != null && Accounts.Any())
+	{
+		<div class="row">
+			<AllAccountsSummary Accounts="Accounts" />
+		</div>
 
-        <div class="row">
-            @{
-                int columnelementCount = 3;
+		<hr class="mb-5" />
 
-                int rows = (int)Math.Ceiling(Accounts.Count() / (double)columnelementCount);
-                int drawnElementsCount = 0;
-                @for (int i = 0; i < rows; i++)
-                {
-                    <div class="row justify-content-center">
-                        @for (int j = 0; j < columnelementCount; j++)
-                        {
-                            if (Accounts.Count() <= drawnElementsCount)
-                                continue;
+		<div class="row">
+			@foreach (var account in Accounts)
+			{
+				<div class="col-sm-4 my-4">
+					<AccountDetailsPreview AccountModel="account" />
+				</div>
+			}
+		</div>
+	}
+	else
+	{
+		<div class="row">
+			<div class="alert alert-warning" role="alert">
+				There is no account data available.<br>
+				In order to add data, navigate to <a href="/Import" role="button">Import</a> tab.
+			</div>
+		</div>
+	}
 
-                            AccountModel accountModel = Accounts.ElementAt(drawnElementsCount);
-
-                            <div class="col-sm-4 my-4">
-                                <AccountDetailsPreview AccountModel="accountModel" />
-                            </div>
-                            drawnElementsCount++;
-                        }
-                    </div>
-                }
-            }
-        </div>
-    }
-    else
-    {
-        <div class="row">
-            <div class="alert alert-warning" role="alert">
-                There is no account data available.<br>
-                In order to add data, navigate to <a href="/Import" role="button">Import</a> tab.
-            </div>
-        </div>
-    }
-
-    <div class="row">
-        <nav aria-label="...">
-            <ul class="pagination">
-                <li class="page-item"><a class="page-link" href="#" onclick="@GetThisMonth">This month</a></li>
-                <li class="page-item active">
-                    <a class="page-link" href="#" onclick="@GetThisYear"> This year <span class="sr-only"></span></a>
-                </li>
-                <li class="page-item ">
-                    <a class="page-link" href="#" onclick="@GetAllTime" tabindex="-1">All time</a>
-                </li>
-            </ul>
-        </nav>
-    </div>
+	<div class="row">
+		<nav aria-label="...">
+			<ul class="pagination">
+				<li class="page-item"><a class="page-link" href="#" onclick="@GetThisMonth">This month</a></li>
+				<li class="page-item active">
+					<a class="page-link" href="#" onclick="@GetThisYear"> This year <span class="sr-only"></span></a>
+				</li>
+				<li class="page-item ">
+					<a class="page-link" href="#" onclick="@GetAllTime" tabindex="-1">All time</a>
+				</li>
+			</ul>
+		</nav>
+	</div>
 
 </div>

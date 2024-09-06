@@ -5,6 +5,8 @@ VisualStudioVersion = 17.9.34728.123
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FinanceManager", "FinanceManager\FinanceManager.csproj", "{F9CE4E7C-65B8-4EA8-8296-4C3C57847C92}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceManager.Presentation", "FinanceManager.Presentation\FinanceManager.Presentation.csproj", "{A19C5728-3523-40B5-9E02-18644F9CE414}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{F9CE4E7C-65B8-4EA8-8296-4C3C57847C92}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F9CE4E7C-65B8-4EA8-8296-4C3C57847C92}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F9CE4E7C-65B8-4EA8-8296-4C3C57847C92}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A19C5728-3523-40B5-9E02-18644F9CE414}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A19C5728-3523-40B5-9E02-18644F9CE414}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A19C5728-3523-40B5-9E02-18644F9CE414}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A19C5728-3523-40B5-9E02-18644F9CE414}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
