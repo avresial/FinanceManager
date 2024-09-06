@@ -19,8 +19,4 @@
     <ProjectReference Include="..\FinanceManager.Presentation\FinanceManager.Presentation.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Models\" />
-  </ItemGroup>
-
 </Project>
