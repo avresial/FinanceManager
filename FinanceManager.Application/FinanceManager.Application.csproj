@@ -6,4 +6,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\FinanceManager.Core\FinanceManager.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Dtos\" />
+  </ItemGroup>
+
 </Project>

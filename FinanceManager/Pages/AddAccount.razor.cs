@@ -1,4 +1,5 @@
-﻿using FinanceManager.Services;
+﻿using FinanceManager.Core.Entities;
+using FinanceManager.Core.Repositories;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Pages
@@ -6,14 +7,14 @@ namespace FinanceManager.Pages
 	public partial class AddAccount : ComponentBase
 	{
 		[Inject]
-		public AccountsService AccountsService { get; set; }
+		public IBankAccountRepository AccountsService { get; set; }
 		public string AccountName { get; set; }
 
 		public void Add()
 		{
-			if (!AccountsService.Contains(AccountName))
+			if (!AccountsService.Exists(AccountName))
 			{
-				AccountsService.Add(AccountName, new List<Models.AccountEntryDto>());
+				AccountsService.AddBankAccountEntry(AccountName, new List<BankAccountEntry>());
 			}
 			else
 			{

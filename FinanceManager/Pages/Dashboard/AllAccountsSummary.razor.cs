@@ -1,6 +1,6 @@
 ﻿using ChartJs.Blazor.Common;
 using ChartJs.Blazor.LineChart;
-using FinanceManager.Models;
+using FinanceManager.Core.Entities;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Pages.Dashboard
@@ -9,7 +9,7 @@ namespace FinanceManager.Pages.Dashboard
 	{
 		private Random random = new Random();
 		[Parameter]
-		public List<AccountModel> Accounts { get; set; }
+		public List<BankAccount> Accounts { get; set; }
 		public List<Tuple<string, double>> SpendingByCategory { get; set; } = new List<Tuple<string, double>>();
 		public List<Tuple<string, double>> WealthByCategory { get; set; } = new List<Tuple<string, double>>();
 		public LineConfig _config;

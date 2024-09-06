@@ -1,5 +1,5 @@
-﻿using FinanceManager.Models;
-using FinanceManager.Services;
+﻿using FinanceManager.Core.Entities;
+using FinanceManager.Core.Repositories;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Pages
@@ -12,11 +12,11 @@ namespace FinanceManager.Pages
 		public string AccountName { get; set; }
 
 		[Inject]
-		public AccountsService AccountsService { get; set; }
+		public IBankAccountRepository BankAccountRepository { get; set; }
 
 		public string ErrorMessage { get; set; } = string.Empty;
 
-		public IEnumerable<AccountEntryDto> Entries { get; set; }
+		public IEnumerable<BankAccountEntry> Entries { get; set; }
 
 		protected override async Task OnInitializedAsync()
 		{
@@ -32,8 +32,8 @@ namespace FinanceManager.Pages
 		{
 			try
 			{
-				if (AccountsService.Contains(AccountName))
-					Entries = AccountsService.Get(AccountName).Entries.Take(maxTableSize);
+				if (BankAccountRepository.Exists(AccountName))
+					Entries = BankAccountRepository.Get(AccountName).Entries.Take(maxTableSize);
 			}
 			catch (Exception ex)
 			{

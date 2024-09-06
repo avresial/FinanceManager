@@ -1,7 +1,7 @@
 ﻿using CsvHelper;
 using CsvHelper.Configuration;
-using FinanceManager.Models;
-using FinanceManager.Services;
+using FinanceManager.Core.Entities;
+using FinanceManager.Core.Repositories;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using System.Globalization;
@@ -11,9 +11,9 @@ namespace FinanceManager.Pages
 	public partial class Import : ComponentBase
 	{
 		[Inject]
-		public AccountsService AccountsService { get; set; }
+		public IBankAccountRepository BankAccountRepository { get; set; }
 
-		public List<AccountEntryDto> CurrentlyLoadedEntries { get; set; }
+		public List<BankAccountEntry> CurrentlyLoadedEntries { get; set; }
 
 		private string currentlyLoadedAccountName;
 		public string CurrentlyLoadedAccountName
@@ -32,7 +32,7 @@ namespace FinanceManager.Pages
 		public bool IsDisabled { get; set; }
 		public void IsDisableUpdate()
 		{
-			IsDisabled = AccountsService.Contains(CurrentlyLoadedAccountName);
+			IsDisabled = BankAccountRepository.Exists(CurrentlyLoadedAccountName);
 		}
 
 		public async Task LoadFiles(InputFileChangeEventArgs e)
@@ -59,7 +59,7 @@ namespace FinanceManager.Pages
 					using (var csv = new CsvReader(reader, config))
 					{
 						CurrentlyLoadedAccountName = Path.GetFileNameWithoutExtension(file.Name);
-						CurrentlyLoadedEntries = await csv.GetRecordsAsync<AccountEntryDto>().ToListAsync();
+						CurrentlyLoadedEntries = await csv.GetRecordsAsync<BankAccountEntry>().ToListAsync();
 					}
 				}
 				catch (Exception ex)
@@ -78,9 +78,9 @@ namespace FinanceManager.Pages
 		}
 		public void Add()
 		{
-			if (!AccountsService.Contains(CurrentlyLoadedAccountName))
+			if (!BankAccountRepository.Exists(CurrentlyLoadedAccountName))
 			{
-				AccountsService.Add(CurrentlyLoadedAccountName, CurrentlyLoadedEntries.ToList());
+				BankAccountRepository.AddBankAccountEntry(CurrentlyLoadedAccountName, CurrentlyLoadedEntries.ToList());
 			}
 			else
 			{

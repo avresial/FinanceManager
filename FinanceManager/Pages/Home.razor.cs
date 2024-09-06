@@ -1,5 +1,5 @@
-﻿using FinanceManager.Models;
-using FinanceManager.Services;
+﻿using FinanceManager.Core.Entities;
+using FinanceManager.Core.Repositories;
 using Microsoft.AspNetCore.Components;
 using System.Collections.ObjectModel;
 
@@ -8,11 +8,11 @@ namespace FinanceManager.Pages
 	public partial class Home : ComponentBase
 	{
 		[Inject]
-		public AccountsService AccountsService { get; set; }
+		public IBankAccountRepository AccountsService { get; set; }
 
 
-		public List<AccountModel> Accounts = new List<AccountModel>();
-		public ObservableCollection<AccountEntryDto> AccountEntries { get; set; }
+		public List<BankAccount> Accounts = [];
+		public ObservableCollection<BankAccountEntry> AccountEntries { get; set; }
 
 		public string AccountName { get; set; }
 		public bool isLoading { get; set; }
@@ -31,9 +31,9 @@ namespace FinanceManager.Pages
 			{
 				Accounts.Clear();
 
-				foreach (var account in AccountsService.Get())
+				foreach (BankAccount account in AccountsService.Get())
 				{
-					List<AccountEntryDto> entries = account.Entries.Where(x => (x.PostingDate - DateTime.Now).Duration() < timeSpan).ToList();
+					List<BankAccountEntry> entries = account.Entries.Where(x => (x.PostingDate - DateTime.Now).Duration() < timeSpan).ToList();
 					if (!entries.Any()) continue;
 
 					Accounts.Add(account);
@@ -48,7 +48,7 @@ namespace FinanceManager.Pages
 		{
 			try
 			{
-				Accounts = AccountsService.Get();
+				Accounts = AccountsService.Get().ToList();
 				StateHasChanged();
 			}
 			catch (Exception ex)

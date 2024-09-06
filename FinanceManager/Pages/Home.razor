@@ -1,4 +1,5 @@
 ﻿@page "/"
+@using FinanceManager.Core.Entities
 @using FinanceManager.Enums
 <div class="container">
 	<PageTitle>Finance manager</PageTitle>
@@ -6,8 +7,6 @@
 	<div class="row mb-5">
 		<h1>Dashboard</h1>
 	</div>
-
-
 
 	@if (Accounts != null && Accounts.Any())
 	{
@@ -18,10 +17,10 @@
 		<hr class="mb-5" />
 
 		<div class="row">
-			@foreach (var account in Accounts)
+			@foreach (BankAccount account in Accounts)
 			{
 				<div class="col-sm-4 my-4">
-					<AccountDetailsPreview AccountModel="account" />
+					<AccountDetailsPreview BankAccountModel="account" />
 				</div>
 			}
 		</div>
@@ -49,5 +48,4 @@
 			</ul>
 		</nav>
 	</div>
-
 </div>
