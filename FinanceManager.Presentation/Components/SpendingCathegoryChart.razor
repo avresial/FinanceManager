@@ -2,7 +2,6 @@
 @using FinanceManager.Core.Entities
 @using FinanceManager.Core.Enums
 
-
 <ApexChart @ref="chart" TItem="BankAccountEntry"
 		   Title="@Title" XAxisType="XAxisType.Datetime" Height="300">
 
@@ -12,7 +11,8 @@
 						 Items="serie.Value"
 						 Name="@serie.Key.ToString()"
 						 XValue="@(e => e.PostingDate)"
-						 YAggregate="@(e => e.Sum(e => e.Balance))"
+						 OrderByDescending="@(e => e.X)"
+						 YAggregate="@(e => e.Sum(e => e.BalanceChange))"
 						 SeriesType="SeriesType.Line" />
 	}
 </ApexChart>
@@ -21,7 +21,7 @@
 	private ApexChart<BankAccountEntry> chart;
 
 	[Parameter]
-	public Dictionary<AccountType, List<BankAccountEntry>> DataDictionary { get; set; } = new Dictionary<AccountType, List<BankAccountEntry>>();
+	public Dictionary<ExpenseType, List<BankAccountEntry>> DataDictionary { get; set; } = new Dictionary<ExpenseType, List<BankAccountEntry>>();
 
 	[Parameter]
 	public string Title { get; set; }
@@ -33,4 +33,3 @@
 		await chart?.UpdateSeriesAsync(true);
 	}
 }
- 

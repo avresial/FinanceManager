@@ -3,7 +3,7 @@
 
 
 		<div class="col my-4" >
-			<BalanceChart DataDictionary="@ExpensesTypesAgregate" Title="Wealth distribution"></BalanceChart>
+			<AccountTypeChart DataDictionary="@ExpensesTypesAgregate" Title="Wealth distribution"></AccountTypeChart>
 		</div>
 
 		<div class="col-sm-3 my-4">
@@ -53,9 +53,7 @@
 
 		<div class="col my-4">
 
-			<div class="alert alert-warning h-100" role="alert">
-				Chart unavilable
-			</div>
+			<SpendingCathegoryChart Title="Spending distribution" DataDictionary="@ExpensesCathegoriesAgregate"></SpendingCathegoryChart>
 
 		</div>
 
