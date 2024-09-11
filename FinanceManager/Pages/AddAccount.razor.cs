@@ -14,7 +14,8 @@ namespace FinanceManager.Pages
 		{
 			if (!AccountsService.Exists(AccountName))
 			{
-				AccountsService.AddBankAccountEntry(AccountName, new List<BankAccountEntry>());
+				AccountsService.AddBankAccount(new BankAccount(AccountName, new List<BankAccountEntry>() { new BankAccountEntry() { SenderName = "xd" } }, Core.Enums.AccountType.Asset));
+				StateHasChanged();
 			}
 			else
 			{
