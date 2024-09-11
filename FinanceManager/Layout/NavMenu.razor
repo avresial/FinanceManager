@@ -26,9 +26,8 @@
         {
             @foreach (var accountName in AccountNames)
             {
-
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="@($"/AccountDetails/{accountName}")" Match="NavLinkMatch.All">
+                    <NavLink class="nav-link" href="@($"AccountDetails/{accountName}")" Match="NavLinkMatch.All">
                         <span class="bi bi-wallet-fill navbarIcon" aria-hidden="true"></span>@accountName
                     </NavLink>
                 </div>
@@ -36,17 +35,9 @@
         }
 
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="@($"/AddAccount")" Match="NavLinkMatch.All">
-                <span class="bi bi-plus-circle-fill navbarIcon" aria-hidden="true"></span>Add
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
             <NavLink class="nav-link" href="AddAccount" Match="NavLinkMatch.All">
                 <span class="bi bi-plus-circle-fill navbarIcon" aria-hidden="true"></span>Add
             </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <a class="nav-link" href="AddAccount">AddAccount</a>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="/Import" Match="NavLinkMatch.All">

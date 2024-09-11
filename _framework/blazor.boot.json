@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "FinanceManager",
   "resources": {
-    "hash": "sha256-VMGho/scsYej/zWuLzZvrakjaL6qar7KjGbA4lWvTuU=",
+    "hash": "sha256-ZI58Van1TzJ7UmP0+U3/81oSvqH6cskWTtftS7VMRSk=",
     "jsModuleNative": {
       "dotnet.native.8.0.7.jew1171z1c.js": "sha256-tFsxPBbhkdn6GKNBKvCRLzrfAHdyM86odYTe0MtrwMk="
     },
@@ -22,7 +22,7 @@
       "FinanceManager.Core.wasm": "sha256-jzm8y6SSLq2lFoRY7BPNPv6Cq5HrRD9hlj2KoThOSxQ=",
       "FinanceManager.Infrastructure.wasm": "sha256-BnjrsbyWI+48+Nfpdz7GLgz38655fWCP62jJ1qOhII4=",
       "FinanceManager.Presentation.wasm": "sha256-OhYXNUB4p35HXV4UiovUqGEiIHpRcXWeEDPTeuHeX/M=",
-      "FinanceManager.wasm": "sha256-iSscV8usmq/2s7RagdGmIbii97QtJ0rNu+M4y99hjuE=",
+      "FinanceManager.wasm": "sha256-Ycx+7YLRp7p4eMT0x9QqMEewYwC7Puj9KnMk4pm9xRo=",
       "Microsoft.AspNetCore.Authorization.wasm": "sha256-WHV91hKpEkms8mH83PcvILvo1tQWa5ysbLSL6mpPl9g=",
       "Microsoft.AspNetCore.Components.Authorization.wasm": "sha256-2xFMrHgN5gWOEuWAgW2Tv4Xjv46o/z3TKUD4IY2EvN0=",
       "Microsoft.AspNetCore.Components.wasm": "sha256-151jUTpeKHAlFmH4sRLTuUqbk7eHL98FqlYJW0OptVk=",
