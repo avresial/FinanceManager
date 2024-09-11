@@ -1,6 +1,4 @@
-﻿using ChartJs.Blazor.Common;
-using ChartJs.Blazor.LineChart;
-using FinanceManager.Core.Entities;
+﻿using FinanceManager.Core.Entities;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Pages.Dashboard
@@ -12,53 +10,7 @@ namespace FinanceManager.Pages.Dashboard
 		public List<BankAccount> Accounts { get; set; }
 		public List<Tuple<string, double>> SpendingByCategory { get; set; } = new List<Tuple<string, double>>();
 		public List<Tuple<string, double>> WealthByCategory { get; set; } = new List<Tuple<string, double>>();
-		public LineConfig _config;
-		public LineConfig _config2;
 
-		protected override async Task OnInitializedAsync()
-		{
-			_config = new LineConfig
-			{
-				Options = new LineOptions
-				{
-					Responsive = true,
-					AspectRatio = 3,
-					Title = new OptionsTitle
-					{
-						Display = true,
-						Text = "Total wealth chart"
-					}
-				}
-			};
-
-			foreach (string color in new[] { "Red", "Yellow", "Green", "Blue" })
-			{
-				_config.Data.Labels.Add(color);
-			}
-
-			LineDataset<int> dataset = new LineDataset<int>(new[] { 6, 5, 3, 7 });
-
-
-			_config.Data.Datasets.Add(dataset);
-
-
-			_config2 = new LineConfig
-			{
-				Options = new LineOptions
-				{
-					Responsive = true,
-					AspectRatio = 3,
-
-					Title = new OptionsTitle
-					{
-						Display = true,
-						Text = "Spending chart"
-					},
-				}
-			};
-			_config2.Data.Datasets.Add(dataset2);
-		}
-		LineDataset<int> dataset2 = new LineDataset<int>();
 		protected override async Task OnParametersSetAsync()
 		{
 			WealthByCategory.Clear();
@@ -85,9 +37,6 @@ namespace FinanceManager.Pages.Dashboard
 
 
 
-			for (int i = 0; i < random.Next(1, 5); i++)
-				dataset2.Add(i);
-			// _config2.Data.Datasets.Clear();
 
 
 			SpendingByCategory.Clear();
