@@ -8,6 +8,7 @@
 		<h1>Dashboard</h1>
 	</div>
 
+
 	@if (Accounts != null && Accounts.Any())
 	{
 		<div class="row">
@@ -35,17 +36,15 @@
 		</div>
 	}
 
-	<div class="row">
-		<nav aria-label="...">
-			<ul class="pagination">
-				<li class="page-item"><a class="page-link" href="#" onclick="@GetThisMonth">This month</a></li>
-				<li class="page-item active">
-					<a class="page-link" href="#" onclick="@GetThisYear"> This year <span class="sr-only"></span></a>
-				</li>
-				<li class="page-item ">
-					<a class="page-link" href="#" onclick="@GetAllTime" tabindex="-1">All time</a>
-				</li>
-			</ul>
-		</nav>
+	<div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+		<input type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" onclick="@GetThisMonth">
+		<label class="btn btn-outline-primary" for="btnradio1">This month</label>
+
+		<input type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off" onclick="@GetThisYear">
+		<label class="btn btn-outline-primary" for="btnradio2">This year</label>
+
+		<input type="radio" class="btn-check" name="btnradio" id="btnradio3" autocomplete="off" onclick="@GetAllTime" checked>
+		<label class="btn btn-outline-primary" for="btnradio3">All time</label>
 	</div>
+
 </div>
