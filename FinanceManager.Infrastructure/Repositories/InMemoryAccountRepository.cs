@@ -25,7 +25,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
 			if (bankAccount is null) return;
 			foreach (var item in data)
-				AddBankAccountEntry(name, item.BalanceChange, item.SenderName, item.ExpenseType, item.PostingDate);
+				AddBankAccountEntry(name, item.BalanceChange, item.Description, item.ExpenseType, item.PostingDate);
 		}
 		public void AddBankAccountEntry(string name, decimal balanceChange, string senderName, ExpenseType expenseType, DateTime? postingDate = null)
 		{
@@ -42,9 +42,9 @@ namespace FinanceManager.Infrastructure.Repositories
 			{
 				BalanceChange = balanceChange,
 				Balance = balance,
-				SenderName = senderName,
+				Description = senderName,
 				ExpenseType = expenseType,
-				PostingDate = DateTime.Now,
+				PostingDate = DateTime.UtcNow,
 			};
 
 			if (postingDate.HasValue)
@@ -71,26 +71,33 @@ namespace FinanceManager.Infrastructure.Repositories
 		{
 			int elementsCount = 10;
 
-			DateTime dateTime = DateTime.Now - new TimeSpan(elementsCount, 0, 0, 0);
+			DateTime dateTime = DateTime.UtcNow - new TimeSpan(elementsCount, 0, 0, 0);
 			AddBankAccount(new BankAccount("Main", AccountType.Cash));
-			for (int i = 0; i < 10; i++)
-				AddBankAccountEntry("Main", GetRandomBalanceChange(), $"Some random sender{i}", GetRandomType(), dateTime += new TimeSpan(1, 0, 0, 0));
-
-			dateTime = DateTime.Now - new TimeSpan(elementsCount + 7, 0, 0, 0);
-			AddBankAccount(new BankAccount("Week ago - Invest", AccountType.Investment));
 			for (int i = 0; i < elementsCount; i++)
-				AddBankAccountEntry("Week ago - Invest", GetRandomBalanceChange(), $"Some random sender{i}", GetRandomType(), dateTime += new TimeSpan(1, 0, 0, 0));
+				AddBankAccountEntry("Main", GetRandomBalanceChange(), $"Lorem ipsum{i}", GetRandomType(), dateTime += new TimeSpan(1, 0, 0, 0));
+
+			dateTime = DateTime.UtcNow - new TimeSpan(elementsCount + 7, 0, 0, 0);
+			AddBankAccount(new BankAccount("Bonds", AccountType.Investment));
+			for (int i = 0; i < elementsCount; i++)
+				AddBankAccountEntry("Bonds", GetRandomBalanceChange(), $"Lorem ipsum{i}", GetRandomType(), dateTime += new TimeSpan(1, 0, 0, 0));
 
 
-			dateTime = DateTime.Now - new TimeSpan(elementsCount + 31, 0, 0, 0);
-			AddBankAccount(new BankAccount("Month ago - Asset", AccountType.Asset));
-			for (int i = 0; i < 9; i++)
-				AddBankAccountEntry("Month ago - Asset", GetRandomBalanceChange(), $"Some random sender{i}", GetRandomType(), dateTime += new TimeSpan(1, 0, 0, 0));
+			dateTime = DateTime.UtcNow - new TimeSpan(elementsCount + 31, 0, 0, 0);
+			AddBankAccount(new BankAccount("S&P 500", AccountType.Investment));
+			for (int i = 0; i < elementsCount; i++)
+				AddBankAccountEntry("S&P 500", GetRandomBalanceChange(), $"Lorem ipsum{i}", GetRandomType(), dateTime += new TimeSpan(1, 0, 0, 0));
 
-			dateTime = DateTime.Now.AddMonths(-12);
-			AddBankAccount(new BankAccount("Year ago - Asset", AccountType.Other));
-			for (int i = 0; i < 9; i++)
-				AddBankAccountEntry("Year ago - Asset", GetRandomBalanceChange(), $"Some random sender{i}", GetRandomType(), dateTime += new TimeSpan(1, 0, 0, 0));
+			dateTime = DateTime.UtcNow.AddMonths(-1);
+			AddBankAccount(new BankAccount("PPK", AccountType.Investment));
+			for (int i = 0; i < elementsCount; i++)
+				AddBankAccountEntry("PPK", GetRandomBalanceChange(), $"Lorem ipsum {i}", GetRandomType(), dateTime += new TimeSpan(1, 0, 0, 0));
+
+			dateTime = DateTime.UtcNow.AddMonths(-2);
+			var creditDays = (DateTime.UtcNow - dateTime).TotalDays;
+			AddBankAccount(new BankAccount("Credit", AccountType.Credit));
+			AddBankAccountEntry("Credit", -9000, $"Lorem ipsum {0}", ExpenseType.DeptRepainment, dateTime += new TimeSpan(1, 0, 0, 0));
+			for (int i = 1; i < creditDays; i++)
+				AddBankAccountEntry("Credit", (decimal)(random.Next(0, 300) + Math.Round(random.NextDouble(), 2)), $"Lorem ipsum {i}", ExpenseType.DeptRepainment, dateTime += new TimeSpan(1, 0, 0, 0));
 		}
 
 

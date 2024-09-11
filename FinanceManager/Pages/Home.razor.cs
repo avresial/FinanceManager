@@ -11,33 +11,33 @@ namespace FinanceManager.Pages
 		public IBankAccountRepository AccountsService { get; set; }
 
 
-		public List<BankAccount> Accounts = [];
+		public List<BankAccount> Accounts;
 		public ObservableCollection<BankAccountEntry> AccountEntries { get; set; }
 
 		public string AccountName { get; set; }
 		public bool isLoading { get; set; }
 		public string ErrorMessage { get; set; } = string.Empty;
 
-
-		protected override async Task OnInitializedAsync()
+		protected override async Task OnAfterRenderAsync(bool firstRender)
 		{
-			GetThisMonth();
+			await GetThisMonth();
 		}
-
 
 		private void SetAccountsWithinTimeSpan(TimeSpan timeSpan)
 		{
 			try
 			{
+				if (Accounts is null) Accounts = new List<BankAccount>();
 				Accounts.Clear();
 
 				foreach (BankAccount account in AccountsService.Get())
 				{
-					List<BankAccountEntry> entries = account.Entries.Where(x => (x.PostingDate - DateTime.Now).Duration() < timeSpan).ToList();
+					List<BankAccountEntry> entries = account.Entries.Where(x => (DateTime.Now - x.PostingDate).Duration() < timeSpan).ToList();
 					if (!entries.Any()) continue;
 
-					Accounts.Add(account);
+					Accounts.Add(new BankAccount(account.Name, entries, account.AccountType));
 				}
+				StateHasChanged();
 			}
 			catch (Exception ex)
 			{
@@ -58,15 +58,15 @@ namespace FinanceManager.Pages
 		}
 		public async Task GetThisMonth()
 		{
-			var date = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-
-			SetAccountsWithinTimeSpan((DateTime.Now - date).Duration());
+			//	var date = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+			var date = DateTime.UtcNow.Date.AddDays(1 - DateTime.UtcNow.Day);
+			SetAccountsWithinTimeSpan((DateTime.UtcNow - date).Duration());
 		}
 
 		public async Task GetThisYear()
 		{
-			var date = new DateTime(DateTime.Now.Year, 1, 1);
-			SetAccountsWithinTimeSpan((DateTime.Now - date).Duration());
+			var date = new DateTime(DateTime.UtcNow.Year, 1, 1);
+			SetAccountsWithinTimeSpan((DateTime.UtcNow - date).Duration());
 		}
 
 
