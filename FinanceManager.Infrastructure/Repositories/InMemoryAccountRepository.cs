@@ -84,8 +84,13 @@ namespace FinanceManager.Infrastructure.Repositories
 
 			dateTime = DateTime.Now - new TimeSpan(elementsCount + 31, 0, 0, 0);
 			AddBankAccount(new BankAccount("Month ago - Asset", AccountType.Asset));
-			for (int i = 0; i < 10; i++)
+			for (int i = 0; i < 9; i++)
 				AddBankAccountEntry("Month ago - Asset", GetRandomBalanceChange(), $"Some random sender{i}", GetRandomType(), dateTime += new TimeSpan(1, 0, 0, 0));
+
+			dateTime = DateTime.Now.AddMonths(-12);
+			AddBankAccount(new BankAccount("Year ago - Asset", AccountType.Other));
+			for (int i = 0; i < 9; i++)
+				AddBankAccountEntry("Year ago - Asset", GetRandomBalanceChange(), $"Some random sender{i}", GetRandomType(), dateTime += new TimeSpan(1, 0, 0, 0));
 		}
 
 
