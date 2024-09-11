@@ -1,91 +1,108 @@
 ﻿<div class="container">
-    <div class="row justify-content-center">
+	<div class="row justify-content-center">
 
 
-        <div class="col my-4">
+		<div class="col my-4">
 
-            <div class="alert alert-warning h-100" role="alert">
-                Chart unavilable
-            </div>
-        </div>
-       
-        <div class="col-sm-3 my-4">
+			<div class="alert alert-warning h-100" role="alert">
+				Chart unavilable
+			</div>
+		</div>
 
-            <div class="row mb-2">
-                <div class="col" style="font-weight:bold;">
-                    Wealth distribution
-                </div>
-            </div>
+		<div class="col-sm-3 my-4">
 
-            @foreach (var wealthCategory in WealthByCategory)
-            {
-                <div class="row mb-2">
-                    <div class="col">
-                        @wealthCategory.Item1
-                    </div>
+			<div class="row mb-2">
+				<div class="col" style="font-weight:bold;">
+					Wealth distribution
+				</div>
+			</div>
 
-                    <div class="col-auto">
-                        @wealthCategory.Item2 zł
-                    </div>
-                </div>
-            }
+			@foreach (var wealthCategory in WealthByCategory)
+			{
+				<div class="row mb-2">
+					<div class="col">
+						@wealthCategory.Item1
+					</div>
 
-            <hr class="mt-1 mb-1" />
-            <div class="row mb-2">
-                <div class="col">
-                    Total wealth
-                </div>
+					<div class="col-auto">
+						@wealthCategory.Item2 zł
+					</div>
+				</div>
+			}
 
-                <div class="col-auto" style="color:green">
-                    @Math.Round(WealthByCategory.Sum(x => x.Item2), 2) zł
-                </div>
-            </div>
-        </div>
-    </div>
-    <hr class="mt-1 mb-1" />
+			<hr class="mt-1 mb-1" />
+			<div class="row mb-2">
+				<div class="col">
+					Total wealth
+				</div>
+				@if (@Math.Round(WealthByCategory.Sum(x => x.Item2), 2) < 0)
+				{
+					<div class="col-auto" style="color:red">
+						@Math.Round(WealthByCategory.Sum(x => x.Item2), 2) zł
+					</div>
+				}
+				else
+				{
+					<div class="col-auto" style="color:green">
+						@Math.Round(WealthByCategory.Sum(x => x.Item2), 2) zł
+					</div>
+				}
+			</div>
+		</div>
+	</div>
+	<hr class="mt-1 mb-1" />
 
-    <div class="row justify-content-center">
+	<div class="row justify-content-center">
 
-        <div class="col my-4">
+		<div class="col my-4">
 
-            <div class="alert alert-warning h-100" role="alert">
-               Chart unavilable
-            </div>
-           
-        </div>
+			<div class="alert alert-warning h-100" role="alert">
+				Chart unavilable
+			</div>
 
-        <div class="col-sm-3 my-4">
-            <div class="row mb-2">
-                <div class="col" style="font-weight:bold;">
-                    Spending distribution
-                </div>
-            </div>
+		</div>
 
-            @foreach (var spentCategory in SpendingByCategory)
-            {
-                <div class="row mb-2">
-                    <div class="col">
-                        @spentCategory.Item1
-                    </div>
+		<div class="col-sm-3 my-4">
+			<div class="row mb-2">
+				<div class="col" style="font-weight:bold;">
+					Spending distribution
+				</div>
+			</div>
 
-                    <div class="col-auto">
-                        @spentCategory.Item2 zł
-                    </div>
-                </div>
-            }
+			@foreach (var spentCategory in SpendingByCategory)
+			{
+				<div class="row mb-2">
+					<div class="col">
+						@spentCategory.ExpenseType
+					</div>
+
+					<div class="col-auto">
+						@spentCategory.Value zł
+					</div>
+				</div>
+			}
 
 
-            <hr class="mt-1 mb-1" />
-            <div class="row mb-2">
-                <div class="col">
-                    Total spent
-                </div>
+			<hr class="mt-1 mb-1" />
+			<div class="row mb-2">
+				<div class="col">
+					Total spent
+				</div>
+				@if (Math.Round(SpendingByCategory.Sum(x => x.Value), 2) < 0)
+				{
+					<div class="col-auto" style="color:red">
+						@Math.Round(SpendingByCategory.Sum(x => x.Value), 2) zł
+					</div>
 
-                <div class="col-auto" style="color:red">
-                    @Math.Round(SpendingByCategory.Sum(x => x.Item2), 2) zł
-                </div>
-            </div>
+				}
+				else
+				{
+					<div class="col-auto" style="color:green">
+						@Math.Round(SpendingByCategory.Sum(x => x.Value), 2) zł
+					</div>
+				}
+			</div>
 
-        </div>
-    </div>
+		</div>
+	</div>
 </div>

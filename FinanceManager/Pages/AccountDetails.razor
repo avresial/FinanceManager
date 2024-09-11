@@ -16,7 +16,8 @@ else
                 <th scope="col">Posting date</th>
                 <th scope="col">Balance</th>
                 <th scope="col">Balance change</th>
-                <th scope="col">Sender name</th>
+                @* <th scope="col">Sender name</th> *@
+                <th scope="col">Expense type</th>
             </tr>
         </thead>
         <tbody>
@@ -34,7 +35,8 @@ else
                     {
                         <td style="background-color:lightcoral">@entry.BalanceChange zł</td>
                     }
-                    <td>@entry.SenderName</td>
+                    @* <td>@entry.SenderName</td> *@
+                    <td>@entry.ExpenseType</td>
                 </tr>
             }
         </tbody>
