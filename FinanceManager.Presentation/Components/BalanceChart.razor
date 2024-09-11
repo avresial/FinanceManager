@@ -1,0 +1,25 @@
+﻿@using ApexCharts
+@using FinanceManager.Core.Entities
+
+
+<ApexChart TItem="BankAccountEntry"
+           Title="@Title">
+
+    <ApexPointSeries TItem="BankAccountEntry"
+                     Items="Data"
+                     Name="Gross Value"
+                     SeriesType="SeriesType.Line"
+                     XValue="@(e => e.PostingDate.Date.ToString("yyyy-MM-dd"))"
+                     YAggregate="@(e => e.Sum(x=>x.Balance))" />
+
+   
+</ApexChart>
+    
+@code {
+    [Parameter]
+    public List<BankAccountEntry> Data { get; set; } = new();
+
+    [Parameter]
+    public string Title { get; set; }
+
+}
