@@ -1,4 +1,4 @@
-﻿using FinanceManager.Core.Repositories;
+﻿using FinanceManager.Core.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Layout
@@ -6,7 +6,7 @@ namespace FinanceManager.Layout
 	public class NavMenuBase : ComponentBase
 	{
 		[Inject]
-		public IBankAccountRepository AccountsService { get; set; }
+		public IAccountService AccountsService { get; set; }
 
 		public List<string> AccountNames = new List<string>();
 
@@ -17,6 +17,7 @@ namespace FinanceManager.Layout
 			try
 			{
 				AccountNames = [.. AccountsService.Get().Select(x => x.Name).OrderBy(x => x)];
+				AccountsService.AccountsChanged += AccountsService_AccountsChanged;
 			}
 			catch (Exception ex)
 			{
@@ -24,7 +25,7 @@ namespace FinanceManager.Layout
 			}
 		}
 
-		private void AccountsService_AccountsChanged(string arg1)
+		private void AccountsService_AccountsChanged()
 		{
 			try
 			{

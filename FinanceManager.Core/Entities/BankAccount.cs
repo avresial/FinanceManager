@@ -14,5 +14,11 @@ namespace FinanceManager.Core.Entities
 			Entries = entries.ToList();
 			AccountType = accountType;
 		}
+		public BankAccount(string name, AccountType accountType)
+		{
+			Name = name;
+			Entries = new List<BankAccountEntry>();
+			AccountType = accountType;
+		}
 	}
 }
