@@ -18,7 +18,7 @@ namespace FinanceManager.Pages
 		public bool isLoading { get; set; }
 		public string ErrorMessage { get; set; } = string.Empty;
 
-		protected override async Task OnAfterRenderAsync(bool firstRender)
+		protected override async Task OnInitializedAsync()
 		{
 			await GetThisMonth();
 		}
