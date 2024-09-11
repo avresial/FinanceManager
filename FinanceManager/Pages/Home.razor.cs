@@ -21,7 +21,7 @@ namespace FinanceManager.Pages
 
 		protected override async Task OnInitializedAsync()
 		{
-			GetAllTime();
+			GetThisMonth();
 		}
 
 

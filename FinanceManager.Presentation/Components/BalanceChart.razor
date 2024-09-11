@@ -1,25 +1,36 @@
 ﻿@using ApexCharts
 @using FinanceManager.Core.Entities
+@using FinanceManager.Core.Enums
 
 
-<ApexChart TItem="BankAccountEntry"
-           Title="@Title">
+<ApexChart @ref="chart" TItem="BankAccountEntry"
+		   Title="@Title" XAxisType="XAxisType.Datetime" Height="300">
 
-    <ApexPointSeries TItem="BankAccountEntry"
-                     Items="Data"
-                     Name="Gross Value"
-                     SeriesType="SeriesType.Line"
-                     XValue="@(e => e.PostingDate.Date.ToString("yyyy-MM-dd"))"
-                     YAggregate="@(e => e.Sum(x=>x.Balance))" />
-
-   
+	@foreach (var serie in DataDictionary)
+	{
+		<ApexPointSeries TItem="BankAccountEntry"
+						 Items="serie.Value"
+						 Name="@serie.Key.ToString()"
+						 XValue="@(e => e.PostingDate)"
+						 YAggregate="@(e => e.Sum(e => e.Balance))"
+						 SeriesType="SeriesType.Line" />
+	}
 </ApexChart>
-    
+
 @code {
-    [Parameter]
-    public List<BankAccountEntry> Data { get; set; } = new();
+	private ApexChart<BankAccountEntry> chart;
 
-    [Parameter]
-    public string Title { get; set; }
+	[Parameter]
+	public Dictionary<AccountType, List<BankAccountEntry>> DataDictionary { get; set; } = new Dictionary<AccountType, List<BankAccountEntry>>();
 
+	[Parameter]
+	public string Title { get; set; }
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (chart is null) return;
+		
+		await chart?.UpdateSeriesAsync(true);
+	}
 }
+ 

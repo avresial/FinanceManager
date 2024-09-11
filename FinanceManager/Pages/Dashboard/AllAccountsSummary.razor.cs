@@ -15,11 +15,21 @@ namespace FinanceManager.Pages.Dashboard
 
 		protected override async Task OnParametersSetAsync()
 		{
+
+			InitializeWealthByCategory();
+			InitializeSpendingByCathegory();
+		}
+
+		public Dictionary<AccountType, List<BankAccountEntry>> ExpensesTypesAgregate { get; set; } = new Dictionary<AccountType, List<BankAccountEntry>>();
+
+		void InitializeWealthByCategory()
+		{
+			ExpensesTypesAgregate.Clear();
 			WealthByCategory.Clear();
 
 			Dictionary<string, decimal> WealthByCategoryTmp = new Dictionary<string, decimal>();
 
-			foreach (var account in Accounts)
+			foreach (var account in Accounts.OrderBy(x => x.Name))
 			{
 				var newValue = account.Entries.LastOrDefault();
 				if (newValue is null) continue;
@@ -27,10 +37,14 @@ namespace FinanceManager.Pages.Dashboard
 				{
 					if (newValue is null) continue;
 					WealthByCategoryTmp.Add(account.AccountType.ToString(), newValue.Balance);
+					ExpensesTypesAgregate.Add(account.AccountType, account.Entries);
 				}
 				else
 				{
 					WealthByCategoryTmp[account.AccountType.ToString()] += newValue.Balance;
+
+					ExpensesTypesAgregate[account.AccountType].Add(newValue);
+					ExpensesTypesAgregate[account.AccountType] = ExpensesTypesAgregate[account.AccountType].OrderByDescending(x => x.PostingDate).ToList();
 				}
 			}
 
@@ -39,10 +53,14 @@ namespace FinanceManager.Pages.Dashboard
 
 			WealthByCategory = WealthByCategory.OrderBy(x => x.Item1).ToList();
 
-			InitializeSpendingByCathegory();
+			foreach (var item in ExpensesTypesAgregate.Values)
+			{
+				foreach (var element in item)
+				{
+					element.PostingDate = new DateTime(element.PostingDate.Year, element.PostingDate.Month, element.PostingDate.Day);
+				}
+			}
 		}
-
-
 		void InitializeSpendingByCathegory()
 		{
 			SpendingByCategory.Clear();
@@ -59,7 +77,6 @@ namespace FinanceManager.Pages.Dashboard
 					if (cathegory is null) continue;
 
 					cathegory.Value += account.Entries.Where(x => x.ExpenseType == expenseType).Sum(x => x.BalanceChange);
-
 				}
 			}
 
