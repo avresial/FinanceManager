@@ -1,0 +1,49 @@
+﻿@using FinanceManager.Core.Repositories
+
+@inject IBankAccountRepository bankAccountRepository;
+
+
+<div class="card">
+	<div class="card-body">
+		<h5 class="card-title">Spending</h5>
+		<ul class="list-group list-group-flush">
+			@foreach (var item in Data)
+			{
+				<li class="list-group-item">
+					@* <i class="bi bi-house"></i>  *@
+					@item.Key - @item.Value
+				</li>
+			}
+		</ul>
+	</div>
+</div>
+
+@code
+{
+
+	Dictionary<string, decimal> Data = new Dictionary<string, decimal>();
+	protected override async Task OnInitializedAsync()
+	{
+		await Task.Run(() =>
+		{
+			var bankAccounts = bankAccountRepository.Get().Where(x => x.Entries.Any());
+
+			foreach (var account in bankAccounts)
+			{
+				foreach (var entry in account.Entries.Where(x => x.BalanceChange < 0))
+				{
+					var key = entry.ExpenseType.ToString();
+					if (Data.ContainsKey(key))
+					{
+						Data[key] += -entry.BalanceChange;
+					}
+					else
+					{
+						Data.Add(key, -entry.BalanceChange);
+					}
+				}
+			}
+		});
+	}
+
+}
