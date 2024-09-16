@@ -1,0 +1,113 @@
+﻿@using ApexCharts
+
+<div class="card">
+	<div class="card-body">
+		<h5 class="card-title">Income source</h5>
+		<h6 class="card-subtitle mb-2 text-muted">$@Data.LastOrDefault().Value</h6>
+
+		<ApexChart @ref="chart" TItem="IncomeSourceOverviewEntry" Height="100" Options="options">
+
+
+			<ApexPointSeries TItem="IncomeSourceOverviewEntry"
+							 Items="Data"
+							 Name="serie.Key.ToString()"
+							 XValue="@(e => e.Source)"
+							 YAggregate="@(e => e.Sum(e => e.Value))"
+							 SeriesType="SeriesType.Bar" />
+
+		</ApexChart>
+	</div>
+</div>
+
+
+
+
+@code {
+	private ApexChart<IncomeSourceOverviewEntry> chart;
+
+	private ApexChartOptions<IncomeSourceOverviewEntry> options { get; set; } = new();
+
+	[Parameter]
+	public List<IncomeSourceOverviewEntry> Data { get; set; } = new List<IncomeSourceOverviewEntry>()
+	{
+		new IncomeSourceOverviewEntry()
+		{
+			Source = "1",
+			Value = 10
+		},
+		new IncomeSourceOverviewEntry()
+		{
+			Source = "2",
+			Value = 2
+		},
+		new IncomeSourceOverviewEntry()
+		{
+			Source = "3",
+			Value = 30
+		},
+		new IncomeSourceOverviewEntry()
+		{
+			Source = "4",
+			Value = 4
+		},
+	};
+
+	protected override void OnInitialized()
+	{
+		options.Chart = new Chart
+			{
+				Toolbar = new ApexCharts.Toolbar
+				{
+					Show = false
+				},
+
+			};
+
+
+		options.Xaxis = new XAxis()
+			{
+				AxisTicks = new AxisTicks()
+				{
+					Show = false,
+				},
+				AxisBorder = new AxisBorder()
+				{
+					Show = false
+				},
+				Position = XAxisPosition.Bottom,
+				Type = XAxisType.Category
+
+			};
+
+		options.Yaxis = new List<YAxis>();
+
+		options.Yaxis.Add(new YAxis
+			{
+				AxisTicks = new AxisTicks()
+				{
+					Show = false
+				},
+				Show = false,
+				SeriesName = "NetValue",
+				DecimalsInFloat = 0,
+
+			});
+
+		base.OnInitialized();
+	}
+
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (chart is null) return;
+
+		await chart?.UpdateSeriesAsync(true);
+	}
+	public class IncomeSourceOverviewEntry
+	{
+		public string Source;
+		public decimal Value;
+	}
+
+}
+

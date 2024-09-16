@@ -2,51 +2,55 @@
 
 @using FinanceManager.Core.Entities
 @using FinanceManager.Enums
+@using FinanceManager.Presentation.Components.Dashboard
 
 <div class="container">
 	<PageTitle>Finance manager</PageTitle>
 
-	<div class="row mb-5">
-		<h1>Dashboard</h1>
+	<Dashboard></Dashboard>
+
+	@* <div class="row mb-5">
+	<h1>Dashboard</h1>
 	</div>
 
 
 	@if (Accounts != null && Accounts.Any())
 	{
-		<div class="row">
-			<AllAccountsSummary Accounts="Accounts" />
-		</div>
+	<div class="row">
+	<AllAccountsSummary Accounts="Accounts" />
+	</div>
 
-		<hr class="mb-5" />
+	<hr class="mb-5" />
 
-		<div class="row">
-			@foreach (BankAccount account in Accounts)
-			{
-				<div class="col-sm-4 my-4">
-					<AccountDetailsPreview BankAccountModel="account" />
-				</div>
-			}
-		</div>
+	<div class="row">
+	@foreach (BankAccount account in Accounts)
+	{
+	<div class="col-sm-4 my-4">
+	<AccountDetailsPreview BankAccountModel="account" />
+	</div>
+	}
+	</div>
 	}
 	else
 	{
-		<div class="row">
-			<div class="alert alert-warning" role="alert">
-				There is no account data available.<br>
-				In order to add data, navigate to <a href="/Import" role="button">Import</a> tab.
-			</div>
-		</div>
+	<div class="row">
+	<div class="alert alert-warning" role="alert">
+	There is no account data available.<br>
+	In order to add data, navigate to <a href="/Import" role="button">Import</a> tab.
+	</div>
+	</div>
 	}
 
 	<div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-		<input type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" onclick="@GetThisMonth" checked>
-		<label class="btn btn-outline-primary" for="btnradio1">This month</label>
+	<input type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" onclick="@GetThisMonth" checked>
+	<label class="btn btn-outline-primary" for="btnradio1">This month</label>
 
-		<input type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off" onclick="@GetThisYear">
-		<label class="btn btn-outline-primary" for="btnradio2">This year</label>
+	<input type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off" onclick="@GetThisYear">
+	<label class="btn btn-outline-primary" for="btnradio2">This year</label>
 
-		<input type="radio" class="btn-check" name="btnradio" id="btnradio3" autocomplete="off" onclick="@GetAllTime">
-		<label class="btn btn-outline-primary" for="btnradio3">All time</label>
+	<input type="radio" class="btn-check" name="btnradio" id="btnradio3" autocomplete="off" onclick="@GetAllTime">
+	<label class="btn btn-outline-primary" for="btnradio3">All time</label>
 	</div>
+	*@
 
 </div>
