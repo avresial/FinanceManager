@@ -1,4 +1,8 @@
 ﻿@using ApexCharts
+@using FinanceManager.Core.Repositories
+
+@inject IBankAccountRepository bankAccountRepository;
+
 
 <div class="card">
 	<div class="card-body">
@@ -10,7 +14,7 @@
 
 			<ApexPointSeries TItem="IncomeSourceOverviewEntry"
 							 Items="Data"
-							 Name="serie.Key.ToString()"
+							 Name="Income"
 							 XValue="@(e => e.Source)"
 							 YAggregate="@(e => e.Sum(e => e.Value))"
 							 SeriesType="SeriesType.Bar" />
@@ -32,27 +36,12 @@
 	{
 		new IncomeSourceOverviewEntry()
 		{
-			Source = "1",
+			Source = "Sallary",
 			Value = 10
-		},
-		new IncomeSourceOverviewEntry()
-		{
-			Source = "2",
-			Value = 2
-		},
-		new IncomeSourceOverviewEntry()
-		{
-			Source = "3",
-			Value = 30
-		},
-		new IncomeSourceOverviewEntry()
-		{
-			Source = "4",
-			Value = 4
 		},
 	};
 
-	protected override void OnInitialized()
+	protected override async Task OnInitializedAsync()
 	{
 		options.Chart = new Chart
 			{
@@ -88,21 +77,45 @@
 					Show = false
 				},
 				Show = false,
-				SeriesName = "NetValue",
+				SeriesName = "income",
 				DecimalsInFloat = 0,
 
 			});
 
-		base.OnInitialized();
+		await Task.Run(() =>
+		{
+			var bankAccounts = bankAccountRepository.Get().Where(x => x.Entries.Any());
+
+			foreach (var account in bankAccounts)
+			{
+				foreach (var entry in account.Entries.Where(x => x.BalanceChange > 0))
+				{
+					var dataEntry = Data.FirstOrDefault();
+					if (dataEntry is null)
+					{
+						Data.Add(new IncomeSourceOverviewEntry()
+							{
+								Source = "Sallary",
+								Value = entry.BalanceChange
+							});
+					}
+					else
+					{
+						dataEntry.Value += entry.BalanceChange;
+					}
+
+				}
+			}
+		});
 	}
 
 
-	protected override async Task OnParametersSetAsync()
-	{
-		if (chart is null) return;
+	// protected override async Task OnParametersSetAsync()
+	// {
+	// 	if (chart is null) return;
 
-		await chart?.UpdateSeriesAsync(true);
-	}
+	// 	await chart?.UpdateSeriesAsync(true);
+	// }
 	public class IncomeSourceOverviewEntry
 	{
 		public string Source;

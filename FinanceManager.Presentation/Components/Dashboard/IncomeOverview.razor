@@ -14,9 +14,8 @@
 
 			<ApexPointSeries TItem="SpendingOverviewEntry"
 							 Items="Data"
-							 Name="serie.Key.ToString()"
+							 Name="Income"
 							 XValue="@(e => e.Date)"
-							 OrderByDescending="@(e => e.X)"
 							 YAggregate="@(e => e.Sum(e => e.Value))"
 							 SeriesType="SeriesType.Line" />
 
@@ -35,7 +34,7 @@
 	[Parameter]
 	public List<SpendingOverviewEntry> Data { get; set; } = new List<SpendingOverviewEntry>();
 
-	protected override void OnInitialized()
+	protected override async Task OnInitializedAsync()
 	{
 		options.Chart = new Chart
 			{
@@ -76,38 +75,41 @@
 
 			});
 
-
-		var bankAccounts = bankAccountRepository.Get().Where(x => x.Entries.Any());
-
-		foreach (var account in bankAccounts)
+		await Task.Run(() =>
 		{
-			foreach (var entry in account.Entries.Where(x => x.BalanceChange > 0))
+			var bankAccounts = bankAccountRepository.Get().Where(x => x.Entries.Any());
+
+			foreach (var account in bankAccounts)
 			{
-				var dataEntry = Data.FirstOrDefault(x => x.Date == entry.PostingDate.Date);
-				if (dataEntry is null)
+				foreach (var entry in account.Entries.Where(x => x.BalanceChange > 0))
 				{
-					Data.Add(new SpendingOverviewEntry()
-						{
-							Date = entry.PostingDate.Date,
-							Value = entry.BalanceChange
-						});
-				}
-				else
-				{
-					dataEntry.Value += entry.BalanceChange;
-				}
+					var dataEntry = Data.FirstOrDefault(x => x.Date == entry.PostingDate.Date);
+					if (dataEntry is null)
+					{
+						Data.Add(new SpendingOverviewEntry()
+							{
+								Date = entry.PostingDate.Date,
+								Value = entry.BalanceChange
+							});
+					}
+					else
+					{
+						dataEntry.Value += entry.BalanceChange;
+					}
 
+				}
 			}
-		}
+			Data = Data.OrderBy(x => x.Date).ToList();
+		});
 	}
 
 
-	protected override async Task OnParametersSetAsync()
-	{
-		if (chart is null) return;
+	// protected override async Task OnParametersSetAsync()
+	// {
+	// 	if (chart is null) return;
 
-		await chart?.UpdateSeriesAsync(true);
-	}
+	// 	await chart?.UpdateSeriesAsync(true);
+	// }
 	public class SpendingOverviewEntry
 	{
 		public DateTime Date;

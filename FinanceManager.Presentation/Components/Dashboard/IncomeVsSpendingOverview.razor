@@ -15,7 +15,6 @@
 							 Items="Data"
 							 Name="Income"
 							 XValue="@(e => e.Date)"
-							 OrderByDescending="@(e => e.X)"
 							 YAggregate="@(e => e.Sum(e => e.Income))"
 							 SeriesType="SeriesType.Line" />
 
@@ -23,7 +22,6 @@
 							 Items="Data"
 							 Name="Spending"
 							 XValue="@(e => e.Date)"
-							 OrderByDescending="@(e => e.X)"
 							 YAggregate="@(e => e.Sum(e => e.Spending))"
 							 SeriesType="SeriesType.Area" />
 
@@ -38,14 +36,14 @@
 	private ApexChart<IncomeVsSpendingEntry> chart;
 
 	private ApexChartOptions<IncomeVsSpendingEntry> options { get; set; } = new()
-	{
+		{
 			Colors = new List<string> { "#00FF00", "#FF0000" },
-	};
+		};
 
 	[Parameter]
 	public List<IncomeVsSpendingEntry> Data { get; set; } = new List<IncomeVsSpendingEntry>();
 
-	protected override void OnInitialized()
+	protected override async Task OnInitializedAsync()
 	{
 		options.Chart = new Chart
 			{
@@ -86,52 +84,56 @@
 
 			});
 
-			
-
-		var bankAccounts = bankAccountRepository.Get().Where(x => x.Entries.Any());
-
-		foreach (var account in bankAccounts)
+		await Task.Run(() =>
 		{
-			foreach (var entry in account.Entries)
+
+			var bankAccounts = bankAccountRepository.Get().Where(x => x.Entries.Any());
+
+			foreach (var account in bankAccounts)
 			{
-				var dataEntry = Data.FirstOrDefault(x => x.Date == entry.PostingDate.Date);
-				if (dataEntry is null)
+				foreach (var entry in account.Entries)
 				{
-					var newDataEntry = new IncomeVsSpendingEntry() { Date = entry.PostingDate.Date };
-					if (entry.BalanceChange < 0)
+					var dataEntry = Data.FirstOrDefault(x => x.Date == entry.PostingDate.Date);
+					if (dataEntry is null)
 					{
-						newDataEntry.Spending = -entry.BalanceChange;
+						var newDataEntry = new IncomeVsSpendingEntry() { Date = entry.PostingDate.Date };
+						if (entry.BalanceChange < 0)
+						{
+							newDataEntry.Spending = -entry.BalanceChange;
+						}
+						else
+						{
+							newDataEntry.Income = entry.BalanceChange;
+						}
+
+						Data.Add(newDataEntry);
 					}
 					else
 					{
-						newDataEntry.Income = entry.BalanceChange;
+						if (entry.BalanceChange < 0)
+						{
+							dataEntry.Spending -= entry.BalanceChange;
+						}
+						else
+						{
+							dataEntry.Income += entry.BalanceChange;
+						}
 					}
 
-					Data.Add(newDataEntry);
 				}
-				else
-				{
-					if (entry.BalanceChange < 0)
-					{
-						dataEntry.Spending -= entry.BalanceChange;
-					}
-					else
-					{
-						dataEntry.Income += entry.BalanceChange;
-					}
-				}
-
 			}
-		}
+			Data = Data.OrderBy(x=>x.Date).ToList();
+
+		});
 	}
 
 
-	protected override async Task OnParametersSetAsync()
-	{
-		if (chart is null) return;
+	// protected override async Task OnParametersSetAsync()
+	// {
+	// 	if (chart is null) return;
 
-		await chart?.UpdateSeriesAsync(true);
-	}
+	// 	await chart?.UpdateSeriesAsync(true);
+	// }
 	public class IncomeVsSpendingEntry
 	{
 		public DateTime Date;

@@ -16,11 +16,16 @@
 @code {
 	IEnumerable<BankAccount> bankAccounts;
 	decimal TotalNetWorth = 0;
-	
-	protected override void OnInitialized()
+
+	protected override async Task OnInitializedAsync()
 	{
-		bankAccounts = bankAccountRepository.Get();
-		TotalNetWorth = bankAccounts.Where(x => x.Entries.Any()).Sum(x => x.Entries.Last().Balance);
+		await Task.Run(() =>
+		{
+			bankAccounts = bankAccountRepository.Get();
+			TotalNetWorth = bankAccounts.Where(x => x.Entries.Any()).Sum(x => x.Entries.Last().Balance);
+
+		});
+
 	}
 }
 
