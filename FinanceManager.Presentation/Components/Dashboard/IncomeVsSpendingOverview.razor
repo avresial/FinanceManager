@@ -15,14 +15,14 @@
 							 Items="Data"
 							 Name="Income"
 							 XValue="@(e => e.Date)"
-							 YAggregate="@(e => e.Sum(e => e.Income))"
+							 YValue="e=> e.Income"
 							 SeriesType="SeriesType.Line" />
 
 			<ApexPointSeries TItem="IncomeVsSpendingEntry"
 							 Items="Data"
 							 Name="Spending"
 							 XValue="@(e => e.Date)"
-							 YAggregate="@(e => e.Sum(e => e.Spending))"
+							 YValue="e=> e.Spending"
 							 SeriesType="SeriesType.Area" />
 
 		</ApexChart>

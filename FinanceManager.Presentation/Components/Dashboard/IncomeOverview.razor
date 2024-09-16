@@ -16,7 +16,7 @@
 							 Items="Data"
 							 Name="Income"
 							 XValue="@(e => e.Date)"
-							 YAggregate="@(e => e.Sum(e => e.Value))"
+							 YValue="e=> e.Value"
 							 SeriesType="SeriesType.Line" />
 
 		</ApexChart>

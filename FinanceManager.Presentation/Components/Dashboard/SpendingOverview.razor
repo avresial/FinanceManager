@@ -36,7 +36,7 @@
 								 Items="Data"
 								 Name="Spending"
 								 XValue="@(e => e.Date)"
-								 YAggregate="@(e => e.Sum(e => e.Value))"
+								 YValue="e=> e.Value"
 								 SeriesType="SeriesType.Line" />
 
 			</ApexChart>
@@ -125,7 +125,10 @@
 			Data = Data.OrderBy(x => x.Date).ToList();
 		});
 	}
-
+	protected override void OnAfterRender(bool firstRender)
+	{
+		base.OnAfterRender(firstRender);
+	}
 
 	// protected override async Task OnParametersSetAsync()
 	// {

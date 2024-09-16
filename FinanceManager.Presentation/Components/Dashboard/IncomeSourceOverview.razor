@@ -9,14 +9,14 @@
 		<h5 class="card-title">Income source</h5>
 		<h6 class="card-subtitle mb-2 text-muted">$@Data.LastOrDefault().Value</h6>
 
-		<ApexChart @ref="chart" TItem="IncomeSourceOverviewEntry" Height="100" Options="options">
+		<ApexChart @ref="chart" TItem="IncomeSourceOverviewEntry" Height="300" Options="options">
 
 
 			<ApexPointSeries TItem="IncomeSourceOverviewEntry"
 							 Items="Data"
 							 Name="Income"
 							 XValue="@(e => e.Source)"
-							 YAggregate="@(e => e.Sum(e => e.Value))"
+							 YValue="e=> e.Value"
 							 SeriesType="SeriesType.Bar" />
 
 		</ApexChart>
