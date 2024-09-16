@@ -16,7 +16,7 @@
 							 Name="Income"
 							 XValue="@(e => e.Date)"
 							 YValue="e=> e.Income"
-							 SeriesType="SeriesType.Line" />
+							 SeriesType="SeriesType.Area" />
 
 			<ApexPointSeries TItem="IncomeVsSpendingEntry"
 							 Items="Data"
@@ -38,6 +38,18 @@
 	private ApexChartOptions<IncomeVsSpendingEntry> options { get; set; } = new()
 		{
 			Colors = new List<string> { "#00FF00", "#FF0000" },
+			Fill = new Fill
+			{
+				Type = new List<FillType> { FillType.Gradient, FillType.Gradient },
+				Gradient = new FillGradient
+				{
+					ShadeIntensity = 1,
+					OpacityFrom = 0.2,
+					OpacityTo = 0.9,
+
+				},
+			}
+
 		};
 
 	[Parameter]
@@ -87,7 +99,7 @@
 		await Task.Run(() =>
 		{
 
-			var bankAccounts = bankAccountRepository.Get().Where(x => x.Entries.Any());
+			var bankAccounts = bankAccountRepository.Get(new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1), DateTime.Now).Where(x => x.Entries.Any());
 
 			foreach (var account in bankAccounts)
 			{

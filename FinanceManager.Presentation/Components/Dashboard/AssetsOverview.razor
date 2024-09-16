@@ -9,7 +9,7 @@
 		<h5 class="card-title">Assets</h5>
 		<h6 class="card-subtitle mb-2 text-muted">$ @TotalAssets</h6>
 
-		<ApexChart @ref="chart" TItem="WealthOverviewEntry" Height="100" Options="options">
+		<ApexChart @ref="chart" TItem="WealthOverviewEntry" Height="300" Options="options">
 
 
 			<ApexPointSeries TItem="WealthOverviewEntry"
@@ -87,7 +87,7 @@
 
 		await Task.Run(() =>
 		{
-			bankAccounts = bankAccountRepository.Get().Where(x => x.Entries.Any() && x.Entries.Last().Balance >= 0);
+			bankAccounts = bankAccountRepository.Get(new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1), DateTime.Now).Where(x => x.Entries.Any() && x.Entries.Last().Balance >= 0);
 			TotalAssets = bankAccounts.Sum(x => x.Entries.Last().Balance);
 
 			foreach (var account in bankAccounts)

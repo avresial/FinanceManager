@@ -16,7 +16,7 @@ namespace FinanceManager.Layout
 		{
 			try
 			{
-				AccountNames = [.. AccountsService.Get().Select(x => x.Name).OrderBy(x => x)];
+				AccountNames = [.. AccountsService.Get(DateTime.Now.AddDays(-31), DateTime.Now).Select(x => x.Name).OrderBy(x => x)];
 				AccountsService.AccountsChanged += AccountsService_AccountsChanged;
 			}
 			catch (Exception ex)
@@ -29,7 +29,7 @@ namespace FinanceManager.Layout
 		{
 			try
 			{
-				AccountNames = [.. AccountsService.Get().Select(x => x.Name).OrderBy(x => x)];
+				AccountNames = [.. AccountsService.Get(DateTime.Now.AddDays(-31), DateTime.Now).Select(x => x.Name).OrderBy(x => x)];
 			}
 			catch (Exception ex)
 			{
