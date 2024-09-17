@@ -4,26 +4,27 @@
 
 @inject IBankAccountRepository bankAccountRepository;
 
-<div class="card">
+<div class="card" style="height:300px;">
 	<div class="card-body">
-		<h5 class="card-title">Assets</h5>
-		<h6 class="card-subtitle mb-2 text-muted">$ @TotalAssets</h6>
+		<div>
 
-		<ApexChart @ref="chart" TItem="WealthOverviewEntry" Height="300" Options="options">
-
-
-			<ApexPointSeries TItem="WealthOverviewEntry"
-							 Items="Data"
-							 Name="Assets"
-							 XValue="@(e => e.Cathegory)"
-							 YValue="e=> e.Value"
-							 SeriesType="SeriesType.Pie" />
-
-		</ApexChart>
+			<h5 class="card-title">Assets</h5>
+			<h6 class="card-subtitle mb-2 text-muted">$ @TotalAssets</h6>
+		</div>
+		<div>
+			<ApexChart @ref="chart" Height="@height" TItem="WealthOverviewEntry" Options="options">
 
 
+				<ApexPointSeries TItem="WealthOverviewEntry"
+								 Items="Data"
+								 Name="Assets"
+								 XValue="@(e => e.Cathegory)"
+								 YValue="e=> e.Value"
+								 SeriesType="SeriesType.Pie" />
 
+			</ApexChart>
 
+		</div>
 	</div>
 </div>
 
@@ -33,6 +34,7 @@
 @code {
 	IEnumerable<BankAccount> bankAccounts;
 	decimal TotalAssets = 0;
+	string height = "100%";
 
 	private ApexChart<WealthOverviewEntry> chart;
 

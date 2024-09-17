@@ -4,11 +4,11 @@
 @inject IBankAccountRepository bankAccountRepository;
 
 
-<div class="card">
+<div class="card" style="height:300px;">
 	<div class="card-body">
 		<h5 class="card-title">Income & expenses</h5>
 
-		<ApexChart @ref="chart" TItem="IncomeVsSpendingEntry" Height="300" Options="options">
+		<ApexChart @ref="chart" TItem="IncomeVsSpendingEntry" Options="options">
 
 
 			<ApexPointSeries TItem="IncomeVsSpendingEntry"
@@ -33,6 +33,7 @@
 
 
 @code {
+	string height = "100%";
 	private ApexChart<IncomeVsSpendingEntry> chart;
 
 	private ApexChartOptions<IncomeVsSpendingEntry> options { get; set; } = new()
