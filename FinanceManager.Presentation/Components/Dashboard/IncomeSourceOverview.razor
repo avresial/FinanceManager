@@ -1,7 +1,9 @@
 ﻿@using ApexCharts
 @using FinanceManager.Core.Repositories
+@using FinanceManager.Core.Services
 
 @inject IBankAccountRepository bankAccountRepository;
+@inject ISettingsService settingsService;
 
 
 <div class="card" style="height:@Height;">
@@ -10,7 +12,7 @@
 			<div class="row">
 				<div class="col px-0">
 					<h5 class="card-title">Income source</h5>
-					<h6 class="card-subtitle mb-2 text-muted">$@Data.LastOrDefault().Value</h6>
+					<h6 class="card-subtitle mb-2 text-muted">@Data.LastOrDefault().Value @currency</h6>
 				</div>
 			</div>
 
@@ -34,6 +36,8 @@
 </div>
 
 @code {
+	
+	private string currency = "";
 	private ApexChart<IncomeSourceOverviewEntry> chart;
 
 	private ApexChartOptions<IncomeSourceOverviewEntry> options { get; set; } = new();
@@ -53,6 +57,7 @@
 
 	protected override async Task OnInitializedAsync()
 	{
+		currency = settingsService.GetCurrency();
 		options.Chart = new Chart
 			{
 				Toolbar = new ApexCharts.Toolbar

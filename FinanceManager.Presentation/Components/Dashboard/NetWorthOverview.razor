@@ -1,19 +1,22 @@
 ﻿@using ApexCharts
 @using FinanceManager.Core.Entities
 @using FinanceManager.Core.Repositories
+@using FinanceManager.Core.Services
 
 @inject IBankAccountRepository bankAccountRepository;
+@inject ISettingsService settingsService;
 
 <div class="card" style="height:@Height;">
 	<div class="card-body">
 		<h5 class="card-title">Total net worth</h5>
-		<h1 class="card-subtitle mb-2 text-muted">$@TotalNetWorth</h1>
+		<h1 class="card-subtitle mb-2 text-muted">@TotalNetWorth @currency</h1>
 	</div>
 </div>
 
 
 
 @code {
+	private string currency = "";
 	IEnumerable<BankAccount> bankAccounts;
 	decimal TotalNetWorth = 0;
 
@@ -22,6 +25,7 @@
 
 	protected override async Task OnInitializedAsync()
 	{
+		currency = settingsService.GetCurrency();
 		await Task.Run(() =>
 		{
 			bankAccounts = bankAccountRepository.Get(new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1), DateTime.Now);

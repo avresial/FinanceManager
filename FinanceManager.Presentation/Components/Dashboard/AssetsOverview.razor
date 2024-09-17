@@ -1,8 +1,10 @@
 ﻿@using ApexCharts
 @using FinanceManager.Core.Entities
 @using FinanceManager.Core.Repositories
+@using FinanceManager.Core.Services
 
 @inject IBankAccountRepository bankAccountRepository;
+@inject ISettingsService settingsService;
 
 <div class="card" style="height:300px;">
 	<div class="card-body">
@@ -10,7 +12,7 @@
 			<div class="row">
 				<div class="col px-0">
 					<h5 class="card-title">Assets</h5>
-					<h6 class="card-subtitle mb-2 text-muted">$ @TotalAssets</h6>
+					<h6 class="card-subtitle mb-2 text-muted">@TotalAssets @currency</h6>
 				</div>
 			</div>
 
@@ -39,6 +41,7 @@
 
 
 @code {
+	private string currency = "";
 	IEnumerable<BankAccount> bankAccounts;
 	decimal TotalAssets = 0;
 
@@ -83,6 +86,10 @@
 					SeriesName = "NetValue",
 					DecimalsInFloat = 0,
 				}
+			},
+			Legend = new Legend()
+			{
+			Position = LegendPosition.Bottom,	
 			}
 		};
 
@@ -95,6 +102,7 @@
 	}
 	protected override async Task OnInitializedAsync()
 	{
+		currency = settingsService.GetCurrency();
 
 		await Task.Run(() =>
 		{

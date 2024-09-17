@@ -8,7 +8,8 @@ namespace FinanceManager.Application
 	{
 		public static IServiceCollection AddApplication(this IServiceCollection services)
 		{
-			services.AddScoped<IAccountService, AccountService>();
+			services.AddScoped<IAccountService, AccountService>()
+					.AddScoped<ISettingsService, SettingsService>();
 
 			return services;
 		}
