@@ -3,7 +3,7 @@
 @inject IBankAccountRepository bankAccountRepository;
 
 
-<div class="card">
+<div class="card" style="height:@Height;">
 	<div class="card-body">
 		<h5 class="card-title">Spending</h5>
 		<ul class="list-group list-group-flush">
@@ -20,6 +20,9 @@
 
 @code
 {
+
+	[Parameter]
+	public string Height { get; set; } = "300px";
 
 	Dictionary<string, decimal> Data = new Dictionary<string, decimal>();
 	protected override async Task OnInitializedAsync()

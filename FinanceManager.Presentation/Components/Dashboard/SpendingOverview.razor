@@ -3,44 +3,56 @@
 
 @inject IBankAccountRepository bankAccountRepository;
 
-<div class="card">
+<div class="card" style="height:@Height;">
 	<div class="card-body">
-		<h5 class="card-title">Spendings</h5>
-		<h6 class="card-subtitle mb-2 text-muted">$99</h6>
-		@if (!Data.Any())
-		{
-			<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="margin: auto; display: block; max-height: 250px;" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid">
-				<g transform="rotate(180 50 50)">
-					<rect x="15" y="15" width="10" height="40" fill="#ebebeb">
-						<animate attributeName="height" values="50;70;30;50" keyTimes="0;0.33;0.66;1" dur="1s" repeatCount="indefinite" calcMode="spline" keySplines="0.5 0 0.5 1;0.5 0 0.5 1;0.5 0 0.5 1" begin="-0.4s"></animate>
-					</rect>
-					<rect x="35" y="15" width="10" height="40" fill="#f0f0f0">
-						<animate attributeName="height" values="50;70;30;50" keyTimes="0;0.33;0.66;1" dur="1s" repeatCount="indefinite" calcMode="spline" keySplines="0.5 0 0.5 1;0.5 0 0.5 1;0.5 0 0.5 1" begin="-0.2s"></animate>
-					</rect>
-					<rect x="55" y="15" width="10" height="40" fill="#ebebeb">
-						<animate attributeName="height" values="50;70;30;50" keyTimes="0;0.33;0.66;1" dur="1s" repeatCount="indefinite" calcMode="spline" keySplines="0.5 0 0.5 1;0.5 0 0.5 1;0.5 0 0.5 1" begin="-0.6s"></animate>
-					</rect>
-					<rect x="75" y="15" width="10" height="40" fill="#f0f0f0">
-						<animate attributeName="height" values="50;70;30;50" keyTimes="0;0.33;0.66;1" dur="1s" repeatCount="indefinite" calcMode="spline" keySplines="0.5 0 0.5 1;0.5 0 0.5 1;0.5 0 0.5 1" begin="-1s"></animate>
-					</rect>
-				</g>
-			</svg>
-		}
-		else
-		{
 
-			<ApexChart @ref="chart" TItem="SpendingOverviewEntry" Height="100" Options="options">
+		<div class="container-fluid d-flex flex-column h-100">
+			<div class="row">
+				<div class="col px-0">
+					<h5 class="card-title">Spendings</h5>
+					<h6 class="card-subtitle mb-2 text-muted">@TotalSpending</h6>
+				</div>
+			</div>
+
+			<div class="row flex-fill" style="height:1px;">
+				<div class="h-100">
+					@if (!Data.Any())
+					{
+						<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="margin: auto; display: block; max-height: 250px;" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid">
+							<g transform="rotate(180 50 50)">
+								<rect x="15" y="15" width="10" height="40" fill="#ebebeb">
+									<animate attributeName="height" values="50;70;30;50" keyTimes="0;0.33;0.66;1" dur="1s" repeatCount="indefinite" calcMode="spline" keySplines="0.5 0 0.5 1;0.5 0 0.5 1;0.5 0 0.5 1" begin="-0.4s"></animate>
+								</rect>
+								<rect x="35" y="15" width="10" height="40" fill="#f0f0f0">
+									<animate attributeName="height" values="50;70;30;50" keyTimes="0;0.33;0.66;1" dur="1s" repeatCount="indefinite" calcMode="spline" keySplines="0.5 0 0.5 1;0.5 0 0.5 1;0.5 0 0.5 1" begin="-0.2s"></animate>
+								</rect>
+								<rect x="55" y="15" width="10" height="40" fill="#ebebeb">
+									<animate attributeName="height" values="50;70;30;50" keyTimes="0;0.33;0.66;1" dur="1s" repeatCount="indefinite" calcMode="spline" keySplines="0.5 0 0.5 1;0.5 0 0.5 1;0.5 0 0.5 1" begin="-0.6s"></animate>
+								</rect>
+								<rect x="75" y="15" width="10" height="40" fill="#f0f0f0">
+									<animate attributeName="height" values="50;70;30;50" keyTimes="0;0.33;0.66;1" dur="1s" repeatCount="indefinite" calcMode="spline" keySplines="0.5 0 0.5 1;0.5 0 0.5 1;0.5 0 0.5 1" begin="-1s"></animate>
+								</rect>
+							</g>
+						</svg>
+					}
+					else
+					{
+
+						<ApexChart @ref="chart" TItem="SpendingOverviewEntry" Height="@("100%")" Options="options">
 
 
-				<ApexPointSeries TItem="SpendingOverviewEntry"
-								 Items="Data"
-								 Name="Spending"
-								 XValue="@(e => e.Date)"
-								 YValue="e=> e.Value"
-								 SeriesType="SeriesType.Line" />
+							<ApexPointSeries TItem="SpendingOverviewEntry"
+											 Items="Data"
+											 Name="Spending"
+											 XValue="@(e => e.Date)"
+											 YValue="e=> e.Value"
+											 SeriesType="SeriesType.Line" />
 
-			</ApexChart>
-		}
+						</ApexChart>
+					}
+				</div>
+			</div>
+		</div>
 	</div>
 </div>
 
@@ -54,6 +66,11 @@
 
 	[Parameter]
 	public List<SpendingOverviewEntry> Data { get; set; } = new List<SpendingOverviewEntry>();
+	
+	[Parameter]
+	public string Height { get; set; } = "300px";
+
+	public decimal TotalSpending = 0;
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -111,7 +128,7 @@
 						Data.Add(new SpendingOverviewEntry()
 							{
 								Date = entry.PostingDate.Date,
-								Value = entry.BalanceChange
+								Value = - entry.BalanceChange
 							});
 					}
 					else
@@ -123,19 +140,13 @@
 			}
 
 			Data = Data.OrderBy(x => x.Date).ToList();
+			TotalSpending = Data.Sum(x=>x.Value);
 		});
 	}
 	protected override void OnAfterRender(bool firstRender)
 	{
 		base.OnAfterRender(firstRender);
 	}
-
-	// protected override async Task OnParametersSetAsync()
-	// {
-	// 	if (chart is null) return;
-
-	// 	await chart?.UpdateSeriesAsync(true);
-	// }
 
 	public class SpendingOverviewEntry
 	{

@@ -4,27 +4,34 @@
 @inject IBankAccountRepository bankAccountRepository;
 
 
-<div class="card">
+<div class="card" style="height:@Height;">
 	<div class="card-body">
-		<h5 class="card-title">Income source</h5>
-		<h6 class="card-subtitle mb-2 text-muted">$@Data.LastOrDefault().Value</h6>
+		<div class="container-fluid d-flex flex-column h-100">
+			<div class="row">
+				<div class="col px-0">
+					<h5 class="card-title">Income source</h5>
+					<h6 class="card-subtitle mb-2 text-muted">$@Data.LastOrDefault().Value</h6>
+				</div>
+			</div>
 
-		<ApexChart @ref="chart" TItem="IncomeSourceOverviewEntry" Height="300" Options="options">
+			<div class="row flex-fill" style="height:1px;">
+				<div class="h-100">
+					<ApexChart @ref="chart" TItem="IncomeSourceOverviewEntry" Height="@("100%")" Options="options">
 
 
-			<ApexPointSeries TItem="IncomeSourceOverviewEntry"
-							 Items="Data"
-							 Name="Income"
-							 XValue="@(e => e.Source)"
-							 YValue="e=> e.Value"
-							 SeriesType="SeriesType.Bar" />
+						<ApexPointSeries TItem="IncomeSourceOverviewEntry"
+										 Items="Data"
+										 Name="Income"
+										 XValue="@(e => e.Source)"
+										 YValue="e=> e.Value"
+										 SeriesType="SeriesType.Bar" />
 
-		</ApexChart>
+					</ApexChart>
+				</div>
+			</div>
+		</div>
 	</div>
 </div>
-
-
-
 
 @code {
 	private ApexChart<IncomeSourceOverviewEntry> chart;
@@ -40,6 +47,9 @@
 			Value = 10
 		},
 	};
+
+	[Parameter]
+	public string Height { get; set; } = "300px";
 
 	protected override async Task OnInitializedAsync()
 	{

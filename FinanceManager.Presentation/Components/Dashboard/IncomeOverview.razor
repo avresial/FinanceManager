@@ -4,22 +4,33 @@
 @inject IBankAccountRepository bankAccountRepository;
 
 
-<div class="card">
+<div class="card" style="height:@Height;">
 	<div class="card-body">
-		<h5 class="card-title">Income</h5>
-		<h6 class="card-subtitle mb-2 text-muted">$99</h6>
+		<div class="container-fluid d-flex flex-column h-100">
+			<div class="row">
+				<div class="col px-0">
+					<h5 class="card-title">Income</h5>
+					<h6 class="card-subtitle mb-2 text-muted">@TotalIncome</h6>
+				</div>
+			</div>
 
-		<ApexChart @ref="chart" TItem="SpendingOverviewEntry" Height="100" Options="options">
+			<div class="row flex-fill" style="height:1px;">
+				<div class="h-100">
+
+					<ApexChart @ref="chart" TItem="SpendingOverviewEntry" Height="@("100%")" Options="options">
 
 
-			<ApexPointSeries TItem="SpendingOverviewEntry"
-							 Items="Data"
-							 Name="Income"
-							 XValue="@(e => e.Date)"
-							 YValue="e=> e.Value"
-							 SeriesType="SeriesType.Line" />
+						<ApexPointSeries TItem="SpendingOverviewEntry"
+										 Items="Data"
+										 Name="Income"
+										 XValue="@(e => e.Date)"
+										 YValue="e=> e.Value"
+										 SeriesType="SeriesType.Line" />
 
-		</ApexChart>
+					</ApexChart>
+				</div>
+			</div>
+		</div>
 	</div>
 </div>
 
@@ -33,6 +44,11 @@
 
 	[Parameter]
 	public List<SpendingOverviewEntry> Data { get; set; } = new List<SpendingOverviewEntry>();
+
+	[Parameter]
+	public string Height { get; set; } = "300px";
+
+	public decimal TotalIncome = 0;
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -100,6 +116,7 @@
 				}
 			}
 			Data = Data.OrderBy(x => x.Date).ToList();
+			TotalIncome = Data.Sum(x => x.Value);
 		});
 	}
 
@@ -115,6 +132,5 @@
 		public DateTime Date;
 		public decimal Value;
 	}
-
 }
 

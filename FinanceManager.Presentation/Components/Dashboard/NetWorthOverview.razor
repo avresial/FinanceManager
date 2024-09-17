@@ -4,7 +4,7 @@
 
 @inject IBankAccountRepository bankAccountRepository;
 
-<div class="card">
+<div class="card" style="height:@Height;">
 	<div class="card-body">
 		<h5 class="card-title">Total net worth</h5>
 		<h1 class="card-subtitle mb-2 text-muted">$@TotalNetWorth</h1>
@@ -16,6 +16,9 @@
 @code {
 	IEnumerable<BankAccount> bankAccounts;
 	decimal TotalNetWorth = 0;
+
+	[Parameter]
+	public string Height { get; set; } = "300px";
 
 	protected override async Task OnInitializedAsync()
 	{
