@@ -33,7 +33,7 @@ namespace FinanceManager.Pages
 			try
 			{
 				if (BankAccountRepository.Exists(AccountName))
-					Entries = BankAccountRepository.Get(AccountName).Entries.Take(maxTableSize).OrderByDescending(x => x.PostingDate);
+					Entries = BankAccountRepository.Get(AccountName, DateTime.Now.AddDays(-31), DateTime.Now).Entries.Take(maxTableSize).OrderByDescending(x => x.PostingDate);
 			}
 			catch (Exception ex)
 			{

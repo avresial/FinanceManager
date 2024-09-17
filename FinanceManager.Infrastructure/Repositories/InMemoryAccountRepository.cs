@@ -57,14 +57,28 @@ namespace FinanceManager.Infrastructure.Repositories
 			return _bankAccounts.Any(x => x.Name == name);
 		}
 
-		public IEnumerable<BankAccount> Get()
+		public IEnumerable<BankAccount> Get(DateTime dateStart, DateTime dateEnd)
 		{
-			return _bankAccounts;
+			List<BankAccount> result = new List<BankAccount>();
+			foreach (var account in _bankAccounts)
+			{
+				var newAccount = Get(account.Name, dateStart, dateEnd);
+				if (newAccount is null) continue;
+
+				result.Add(newAccount);
+			}
+			return result;
 		}
 
-		public BankAccount? Get(string name)
+		public BankAccount? Get(string name, DateTime dateStart, DateTime dateEnd)
 		{
-			return _bankAccounts.FirstOrDefault(x => x.Name == name);
+			var foundElement = _bankAccounts.FirstOrDefault(x => x.Name == name);
+
+			if (foundElement is null) return null;
+
+			BankAccount result = new BankAccount(foundElement.Name, foundElement.Entries.Where(x => x.PostingDate >= dateStart && x.PostingDate <= dateEnd), foundElement.AccountType);
+
+			return result;
 		}
 
 		private void AddMockData()

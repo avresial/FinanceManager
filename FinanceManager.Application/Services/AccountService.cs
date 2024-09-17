@@ -27,16 +27,16 @@ namespace FinanceManager.Application.Services
 			return _bankAccountRepository.Exists(name);
 		}
 
-		public IEnumerable<BankAccount> Get()
+		public IEnumerable<BankAccount> Get(DateTime dateStart, DateTime dateEnd)
 		{
 			if (_bankAccountRepository is null) throw new Exception();
-			return _bankAccountRepository.Get();
+			return _bankAccountRepository.Get(dateStart, dateEnd);
 		}
 
-		public BankAccount? Get(string name)
+		public BankAccount? Get(string name, DateTime dateStart, DateTime dateEnd)
 		{
 			if (_bankAccountRepository is null) throw new Exception();
-			return _bankAccountRepository.Get(name);
+			return _bankAccountRepository.Get(name, dateStart, dateEnd);
 		}
 	}
 }
