@@ -1,17 +1,18 @@
-﻿@using FinanceManager.Core.Repositories
+﻿@using FinanceManager.Core.Enums
+@using FinanceManager.Core.Repositories
 
 @inject IBankAccountRepository bankAccountRepository;
 
 
-<div class="card">
+<div class="card" style="height:@Height;">
 	<div class="card-body">
 		<h5 class="card-title">Spending</h5>
 		<ul class="list-group list-group-flush">
-			@foreach (var item in Data)
+			@foreach (var entry in Data)
 			{
 				<li class="list-group-item">
 					@* <i class="bi bi-house"></i>  *@
-					@item.Key - @item.Value
+					@entry.ExpenseType - @entry.Value
 				</li>
 			}
 		</ul>
@@ -21,7 +22,10 @@
 @code
 {
 
-	Dictionary<string, decimal> Data = new Dictionary<string, decimal>();
+	[Parameter]
+	public string Height { get; set; } = "300px";
+
+	List<SpendingCathegoryOverviewEntry> Data = new List<SpendingCathegoryOverviewEntry>();
 	protected override async Task OnInitializedAsync()
 	{
 		await Task.Run(() =>
@@ -33,17 +37,27 @@
 				foreach (var entry in account.Entries.Where(x => x.BalanceChange < 0))
 				{
 					var key = entry.ExpenseType.ToString();
-					if (Data.ContainsKey(key))
+					var entryElement = Data.FirstOrDefault(x => x.ExpenseType == entry.ExpenseType);
+
+					if (entryElement is not null)
 					{
-						Data[key] += -entry.BalanceChange;
+						entryElement.Value += -entry.BalanceChange;
 					}
 					else
 					{
-						Data.Add(key, -entry.BalanceChange);
+						Data.Add(new SpendingCathegoryOverviewEntry() { ExpenseType = entry.ExpenseType, Value = -entry.BalanceChange });
 					}
 				}
 			}
+
+			Data = Data.OrderByDescending(x => x.Value).ToList();
 		});
+	}
+
+	private class SpendingCathegoryOverviewEntry
+	{
+		public ExpenseType ExpenseType { get; set; }
+		public decimal Value { get; set; }
 	}
 
 }

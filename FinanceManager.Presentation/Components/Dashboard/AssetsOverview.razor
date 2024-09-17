@@ -6,24 +6,31 @@
 
 <div class="card" style="height:300px;">
 	<div class="card-body">
-		<div>
+		<div class="container-fluid d-flex flex-column h-100">
+			<div class="row">
+				<div class="col px-0">
+					<h5 class="card-title">Assets</h5>
+					<h6 class="card-subtitle mb-2 text-muted">$ @TotalAssets</h6>
+				</div>
+			</div>
 
-			<h5 class="card-title">Assets</h5>
-			<h6 class="card-subtitle mb-2 text-muted">$ @TotalAssets</h6>
-		</div>
-		<div>
-			<ApexChart @ref="chart" Height="@height" TItem="WealthOverviewEntry" Options="options">
+			<div class="row flex-fill" style="height:1px;">
+				<div class="h-100">
+
+					<ApexChart @ref="chart" Height="@("100%")" TItem="WealthOverviewEntry" Options="options">
 
 
-				<ApexPointSeries TItem="WealthOverviewEntry"
-								 Items="Data"
-								 Name="Assets"
-								 XValue="@(e => e.Cathegory)"
-								 YValue="e=> e.Value"
-								 SeriesType="SeriesType.Pie" />
+						<ApexPointSeries TItem="WealthOverviewEntry"
+										 Items="Data"
+										 Name="Assets"
+										 XValue="@(e => e.Cathegory)"
+										 YValue="e=> e.Value"
+										 SeriesType="SeriesType.Pie" />
 
-			</ApexChart>
+					</ApexChart>
 
+				</div>
+			</div>
 		</div>
 	</div>
 </div>
@@ -34,7 +41,9 @@
 @code {
 	IEnumerable<BankAccount> bankAccounts;
 	decimal TotalAssets = 0;
-	string height = "100%";
+
+	[Parameter]
+	public string Height { get; set; } = "300px";
 
 	private ApexChart<WealthOverviewEntry> chart;
 

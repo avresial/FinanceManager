@@ -5,15 +5,15 @@
 		<div class="col-md-12 col-lg-8">
 			<div class="row justify-content-center g-1">
 				<div class="col-md-12 col-lg-12">
-					<NetWorthOverview></NetWorthOverview>
+					<NetWorthOverview Height="@($"{UnitHeight}px")"></NetWorthOverview>
 				</div>
 
 				<div class="col-md-12 col-lg-6">
-					<SpendingOverview></SpendingOverview>
+					<SpendingOverview Height="@($"{UnitHeight*2}px")"></SpendingOverview>
 				</div>
 
 				<div class="col-md-12 col-lg-6">
-					<IncomeOverview></IncomeOverview>
+					<IncomeOverview Height="@($"{UnitHeight*2}px")"></IncomeOverview>
 				</div>
 
 
@@ -24,7 +24,7 @@
 
 		<div class="col-md-12 col-lg-4">
 
-			<SpendingCathegoryOverview></SpendingCathegoryOverview>
+			<SpendingCathegoryOverview Height="@($"{UnitHeight * 3 + 5}px")"></SpendingCathegoryOverview>
 
 		</div>
 
@@ -32,10 +32,10 @@
 
 			<div class="row justify-content-center g-1">
 				<div class="col-md-12 col-lg-6">
-					<AssetsOverview></AssetsOverview>
+					<AssetsOverview Height="@($"{UnitHeight*4}px")"></AssetsOverview>
 				</div>
 				<div class="col-md-12 col-lg-6">
-					<IncomeVsSpendingOverview></IncomeVsSpendingOverview>
+					<IncomeVsSpendingOverview Height="@($"{UnitHeight * 3}px")"></IncomeVsSpendingOverview>
 				</div>
 			</div>
 
@@ -44,7 +44,7 @@
 		<div class="col-md-12 col-lg-4">
 			<div class="row g-1">
 				<div class="col-md-12 col-lg-12">
-					<IncomeSourceOverview></IncomeSourceOverview>
+					<IncomeSourceOverview Height="@($"{UnitHeight * 3}px")"></IncomeSourceOverview>
 				</div>
 
 
@@ -52,3 +52,9 @@
 		</div>
 	</div>
 </div>
+
+
+@code
+{
+	const int UnitHeight = 100;
+}

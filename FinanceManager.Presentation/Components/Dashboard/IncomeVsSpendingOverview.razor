@@ -6,26 +6,36 @@
 
 <div class="card" style="height:300px;">
 	<div class="card-body">
-		<h5 class="card-title">Income & expenses</h5>
+		<div class="container-fluid d-flex flex-column h-100">
+			<div class="row">
+				<div class="col px-0">
+					<h5 class="card-title">Income & expenses</h5>
+				</div>
+			</div>
 
-		<ApexChart @ref="chart" TItem="IncomeVsSpendingEntry" Options="options">
+			<div class="row flex-fill" style="height:1px;">
+				<div class="h-100">
+					<ApexChart @ref="chart" Height="@("100%")" TItem="IncomeVsSpendingEntry" Options="options">
 
 
-			<ApexPointSeries TItem="IncomeVsSpendingEntry"
-							 Items="Data"
-							 Name="Income"
-							 XValue="@(e => e.Date)"
-							 YValue="e=> e.Income"
-							 SeriesType="SeriesType.Area" />
+						<ApexPointSeries TItem="IncomeVsSpendingEntry"
+										 Items="Data"
+										 Name="Income"
+										 XValue="@(e => e.Date)"
+										 YValue="e=> e.Income"
+										 SeriesType="SeriesType.Area" />
 
-			<ApexPointSeries TItem="IncomeVsSpendingEntry"
-							 Items="Data"
-							 Name="Spending"
-							 XValue="@(e => e.Date)"
-							 YValue="e=> e.Spending"
-							 SeriesType="SeriesType.Area" />
+						<ApexPointSeries TItem="IncomeVsSpendingEntry"
+										 Items="Data"
+										 Name="Spending"
+										 XValue="@(e => e.Date)"
+										 YValue="e=> e.Spending"
+										 SeriesType="SeriesType.Area" />
 
-		</ApexChart>
+					</ApexChart>
+				</div>
+			</div>
+		</div>
 	</div>
 </div>
 
@@ -33,6 +43,7 @@
 
 
 @code {
+
 	string height = "100%";
 	private ApexChart<IncomeVsSpendingEntry> chart;
 
@@ -52,6 +63,9 @@
 			}
 
 		};
+
+	[Parameter]
+	public string Height { get; set; } = "300px";
 
 	[Parameter]
 	public List<IncomeVsSpendingEntry> Data { get; set; } = new List<IncomeVsSpendingEntry>();
