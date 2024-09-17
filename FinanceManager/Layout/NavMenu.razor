@@ -2,58 +2,68 @@
 
 
 <div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">FinanceManager</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-    </div>
+	<div class="container-fluid">
+		<a class="navbar-brand" href="">FinanceManager</a>
+		<button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+			<span class="navbar-toggler-icon"></span>
+		</button>
+	</div>
 </div>
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-speedometer2 navbarIcon" aria-hidden="true"></span> Dashboard
-            </NavLink>
-        </div>
-        <br>
-        <div class="nav-item px-3" style="padding-bottom: 0.0rem">
-            Accounts
-        </div>
-        
-        @if (AccountNames is not null && AccountNames.Any())
-        {
-            @foreach (var accountName in AccountNames)
-            {
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="@($"AccountDetails/{accountName}")" Match="NavLinkMatch.All">
-                        <span class="bi bi-wallet-fill navbarIcon" aria-hidden="true"></span>@accountName
-                    </NavLink>
-                </div>
-            }
-        }
+	<nav class="flex-column">
+		<div class="nav-item px-3">
+			<NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+				<span class="bi bi-speedometer2 navbarIcon" aria-hidden="true"></span> Dashboard
+			</NavLink>
+		</div>
+		<div class="nav-item px-3">
+			<NavLink class="nav-link" href="Assets" Match="NavLinkMatch.All">
+				<span class="bi bi-currency-exchange navbarIcon" aria-hidden="true"></span> Assets
+			</NavLink>
+		</div>
+		<div class="nav-item px-3">
+			<NavLink class="nav-link" href="Investments" Match="NavLinkMatch.All">
+				<span class="bi bi-cash-coin navbarIcon" aria-hidden="true"></span> Investments
+			</NavLink>
+		</div>
+		<br>
+		<div class="nav-item px-3" style="padding-bottom: 0.0rem">
+			Accounts
+		</div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="AddAccount" Match="NavLinkMatch.All">
-                <span class="bi bi-plus-circle-fill navbarIcon" aria-hidden="true"></span>Add
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="Import" Match="NavLinkMatch.All">
-                <span class="bi bi-cloud-upload-fill navbarIcon" aria-hidden="true"></span> Import
-            </NavLink>
-        </div>
-    </nav>
+		@if (AccountNames is not null && AccountNames.Any())
+		{
+			@foreach (var accountName in AccountNames)
+			{
+				<div class="nav-item px-3">
+					<NavLink class="nav-link py-0" href="@($"AccountDetails/{accountName}")" Match="NavLinkMatch.All">
+						<span class="bi bi-wallet-fill navbarIcon" aria-hidden="true"></span>@accountName
+					</NavLink>
+				</div>
+			}
+		}
+
+		<div class="nav-item px-3">
+			<NavLink class="nav-link py-0" href="AddAccount" Match="NavLinkMatch.All">
+				<span class="bi bi-plus-circle-fill navbarIcon" aria-hidden="true"></span>Add
+			</NavLink>
+		</div>
+		<div class="nav-item px-3">
+			<NavLink class="nav-link py-0" href="Import" Match="NavLinkMatch.All">
+				<span class="bi bi-cloud-upload-fill navbarIcon" aria-hidden="true"></span> Import
+			</NavLink>
+		</div>
+	</nav>
 </div>
 
 @code {
-    private bool collapseNavMenu = true;
+	private bool collapseNavMenu = true;
 
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+	private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
-    }
+	private void ToggleNavMenu()
+	{
+		collapseNavMenu = !collapseNavMenu;
+	}
 }

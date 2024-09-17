@@ -11,9 +11,25 @@
     </NotAuthorized>
 </AuthorizeView> *@
 
-@code{
-    public void BeginLogOut()
-    {
-        Navigation.NavigateToLogout("authentication/logout");
-    }
+
+<div class="">
+	Username
+</div>
+<div class="btn">
+	Logout
+</div>
+@code {
+	public void BeginLogOut()
+	{
+		Navigation.NavigateToLogout("authentication/logout");
+	}
+	string showState = "show";
+
+	public void DropdownToggle()
+	{
+		if (showState == "show")
+			showState = "";
+		else
+			showState = "show";
+	}
 }

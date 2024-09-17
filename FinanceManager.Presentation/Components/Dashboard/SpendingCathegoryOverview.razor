@@ -1,8 +1,9 @@
 ﻿@using FinanceManager.Core.Enums
 @using FinanceManager.Core.Repositories
+@using FinanceManager.Core.Services
 
 @inject IBankAccountRepository bankAccountRepository;
-
+@inject ISettingsService settingsService;
 
 <div class="card" style="height:@Height;">
 	<div class="card-body">
@@ -12,7 +13,7 @@
 			{
 				<li class="list-group-item">
 					@* <i class="bi bi-house"></i>  *@
-					@entry.ExpenseType - @entry.Value
+					@entry.ExpenseType - @entry.Value @currency
 				</li>
 			}
 		</ul>
@@ -21,6 +22,7 @@
 
 @code
 {
+	private string currency = "";
 
 	[Parameter]
 	public string Height { get; set; } = "300px";
@@ -28,6 +30,7 @@
 	List<SpendingCathegoryOverviewEntry> Data = new List<SpendingCathegoryOverviewEntry>();
 	protected override async Task OnInitializedAsync()
 	{
+		currency = settingsService.GetCurrency();
 		await Task.Run(() =>
 		{
 			var bankAccounts = bankAccountRepository.Get(new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1), DateTime.Now).Where(x => x.Entries.Any());
