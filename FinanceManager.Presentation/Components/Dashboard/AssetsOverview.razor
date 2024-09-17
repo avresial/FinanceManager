@@ -48,6 +48,9 @@
 	[Parameter]
 	public string Height { get; set; } = "300px";
 
+	[Parameter]
+	public DateTime StartDateTime { get; set; }
+
 	private ApexChart<WealthOverviewEntry> chart;
 
 	private ApexChartOptions<WealthOverviewEntry> options { get; set; } = new()
@@ -89,11 +92,10 @@
 			},
 			Legend = new Legend()
 			{
-			Position = LegendPosition.Bottom,	
+				Position = LegendPosition.Bottom,
 			}
 		};
 
-	[Parameter]
 	public List<WealthOverviewEntry> Data { get; set; } = new List<WealthOverviewEntry>();
 
 	protected override Task OnAfterRenderAsync(bool firstRender)
@@ -104,9 +106,20 @@
 	{
 		currency = settingsService.GetCurrency();
 
+
+	}
+
+
+	protected override async Task OnParametersSetAsync()
+	{
+		Data.Clear();
+
+		if (chart is not null)
+			await chart.UpdateSeriesAsync(true);
+
 		await Task.Run(() =>
 		{
-			bankAccounts = bankAccountRepository.Get(new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1), DateTime.Now).Where(x => x.Entries.Any() && x.Entries.Last().Balance >= 0);
+			bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any() && x.Entries.Last().Balance >= 0);
 			TotalAssets = bankAccounts.Sum(x => x.Entries.Last().Balance);
 
 			foreach (var account in bankAccounts)
@@ -127,15 +140,9 @@
 				}
 			}
 		});
+
+		if (chart is not null) await chart.UpdateSeriesAsync(true);
 	}
-
-
-	// protected override async Task OnParametersSetAsync()
-	// {
-	// 	if (chart is null) return;
-
-	// 	await chart?.UpdateSeriesAsync(true);
-	// }
 	public class WealthOverviewEntry
 	{
 		public string Cathegory;

@@ -68,6 +68,8 @@
 	public string Height { get; set; } = "300px";
 
 	[Parameter]
+	public DateTime StartDateTime { get; set; }
+
 	public List<IncomeVsSpendingEntry> Data { get; set; } = new List<IncomeVsSpendingEntry>();
 
 	protected override async Task OnInitializedAsync()
@@ -111,10 +113,17 @@
 
 			});
 
+	}
+
+
+	protected override async Task OnParametersSetAsync()
+	{
+		Data.Clear();
+		if (chart is not null) await chart.UpdateSeriesAsync(true);
+
 		await Task.Run(() =>
 		{
-
-			var bankAccounts = bankAccountRepository.Get(new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1), DateTime.Now).Where(x => x.Entries.Any());
+			var bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any());
 
 			foreach (var account in bankAccounts)
 			{
@@ -149,18 +158,12 @@
 
 				}
 			}
-			Data = Data.OrderBy(x=>x.Date).ToList();
+			Data = Data.OrderBy(x => x.Date).ToList();
 
 		});
+
+		if (chart is not null) await chart.UpdateSeriesAsync(true);
 	}
-
-
-	// protected override async Task OnParametersSetAsync()
-	// {
-	// 	if (chart is null) return;
-
-	// 	await chart?.UpdateSeriesAsync(true);
-	// }
 	public class IncomeVsSpendingEntry
 	{
 		public DateTime Date;

@@ -7,7 +7,7 @@ namespace FinanceManager.Presentation.Components.Dashboard
 {
 	public partial class Dashboard : ComponentBase
 	{
-		const int UnitHeight = 125;
+		const int UnitHeight = 130;
 		[Inject]
 		public IBankAccountRepository AccountsService { get; set; }
 

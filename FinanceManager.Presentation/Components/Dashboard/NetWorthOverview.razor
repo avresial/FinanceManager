@@ -26,16 +26,7 @@
 	[Parameter]
 	public DateTime StartDateTime { get; set; }
 
-	// protected override async Task OnInitializedAsync()
-	// {
-	// 	currency = settingsService.GetCurrency();
-	// 	await Task.Run(() =>
-	// 	{
-	// 		bankAccounts = bankAccountRepository.Get(GetTimeStart(), DateTime.Now);
-	// 		TotalNetWorth = bankAccounts.Where(x => x.Entries.Any()).Sum(x => x.Entries.Last().Balance);
 
-	// 	});
-	// }
 	protected override async Task OnParametersSetAsync()
 	{
 		currency = settingsService.GetCurrency();
@@ -43,10 +34,7 @@
 		{
 			bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now);
 			TotalNetWorth = bankAccounts.Where(x => x.Entries.Any()).Sum(x => x.Entries.Last().Balance);
-
 		});
 	}
-	
-
 }
 

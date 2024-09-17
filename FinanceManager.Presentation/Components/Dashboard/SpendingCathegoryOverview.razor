@@ -27,13 +27,23 @@
 	[Parameter]
 	public string Height { get; set; } = "300px";
 
+	[Parameter]
+	public DateTime StartDateTime { get; set; }
+
 	List<SpendingCathegoryOverviewEntry> Data = new List<SpendingCathegoryOverviewEntry>();
 	protected override async Task OnInitializedAsync()
 	{
 		currency = settingsService.GetCurrency();
+		
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		Data.Clear();
+
 		await Task.Run(() =>
 		{
-			var bankAccounts = bankAccountRepository.Get(new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1), DateTime.Now).Where(x => x.Entries.Any());
+			var bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any());
 
 			foreach (var account in bankAccounts)
 			{

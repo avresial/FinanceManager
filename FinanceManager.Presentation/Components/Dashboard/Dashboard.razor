@@ -13,10 +13,8 @@
 				</div>
 
 				<div class="col-xs-12 col-md-6">
-					<IncomeOverview Height="@($"{UnitHeight*2}px")"></IncomeOverview>
+					<IncomeOverview Height="@($"{UnitHeight*2}px")" StartDateTime="@StartDateTime"></IncomeOverview>
 				</div>
-
-
 			</div>
 
 
@@ -24,14 +22,14 @@
 
 		<div class="col-xs-12 col-md-6 col-lg-4">
 
-			<SpendingCathegoryOverview Height="@($"{UnitHeight * 3 + 5}px")"></SpendingCathegoryOverview>
+			<SpendingCathegoryOverview Height="@($"{UnitHeight * 3 + 5}px")" StartDateTime="@StartDateTime"></SpendingCathegoryOverview>
 
 		</div>
 		
 		<div class="col-xs-12 col-md-6 col-lg-4">
 			<div class="row g-1">
 				<div class="col-xs-12 col-md-12">
-					<IncomeSourceOverview Height="@($"{UnitHeight * 3}px")"></IncomeSourceOverview>
+					<IncomeSourceOverview Height="@($"{UnitHeight * 3}px")" StartDateTime="@StartDateTime"></IncomeSourceOverview>
 				</div>
 			</div>
 		</div>
@@ -40,16 +38,16 @@
 
 			<div class="row justify-content-center g-1">
 				<div class="col-xs-12 col-md-6">
-					<AssetsOverview Height="@($"{UnitHeight*3}px")"></AssetsOverview>
+					<AssetsOverview Height="@($"{UnitHeight*3}px")" StartDateTime="@StartDateTime"></AssetsOverview>
 				</div>
 				<div class="col-xs-12 col-md-6">
-					<IncomeVsSpendingOverview Height="@($"{UnitHeight * 3}px")"></IncomeVsSpendingOverview>
+					<IncomeVsSpendingOverview Height="@($"{UnitHeight * 3}px")" StartDateTime="@StartDateTime"></IncomeVsSpendingOverview>
 				</div>
 			</div>
 
 		</div>
 
-		<div class="btn-group btn-group-justified col-12 gap-1" role="group" aria-label="Basic radio toggle button group">
+		<div class="btn-group btn-group-justified col-12 gap-1mb-1" role="group" aria-label="Basic radio toggle button group">
 			<input type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" onclick="@GetThisMonth" checked>
 			<label class="btn btn-outline-secondary col-4" for="btnradio1">This month</label>
 

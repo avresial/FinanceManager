@@ -65,7 +65,7 @@
 	protected override async Task OnParametersSetAsync()
 	{
 		Data.Clear();
-		await chart?.UpdateSeriesAsync(true);
+		if (chart is not null) await chart.UpdateSeriesAsync(true);
 		await Task.Run(() =>
 		{
 			var bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any());
@@ -95,7 +95,7 @@
 			TotalSpending = Data.Sum(x => x.Value);
 		});
 
-		await chart?.UpdateSeriesAsync(true);
+		if (chart is not null) await chart.UpdateSeriesAsync(true);
 	}
 	protected override async Task OnInitializedAsync()
 	{
