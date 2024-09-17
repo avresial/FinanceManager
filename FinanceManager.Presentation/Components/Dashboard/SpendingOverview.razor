@@ -54,12 +54,49 @@
 
 	[Parameter]
 	public List<SpendingOverviewEntry> Data { get; set; } = new List<SpendingOverviewEntry>();
-	
+
+	[Parameter]
+	public DateTime StartDateTime { get; set; }
+
 	[Parameter]
 	public string Height { get; set; } = "300px";
 
 	public decimal TotalSpending = 0;
+	protected override async Task OnParametersSetAsync()
+	{
+		Data.Clear();
+		await chart?.UpdateSeriesAsync(true);
+		await Task.Run(() =>
+		{
+			var bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any());
 
+			foreach (var account in bankAccounts)
+			{
+				foreach (var entry in account.Entries.Where(x => x.BalanceChange < 0))
+				{
+					var dataEntry = Data.FirstOrDefault(x => x.Date == entry.PostingDate.Date);
+					if (dataEntry is null)
+					{
+						Data.Add(new SpendingOverviewEntry()
+							{
+								Date = entry.PostingDate.Date,
+								Value = -entry.BalanceChange
+							});
+					}
+					else
+					{
+						dataEntry.Value += entry.BalanceChange;
+					}
+
+				}
+			}
+
+			Data = Data.OrderBy(x => x.Date).ToList();
+			TotalSpending = Data.Sum(x => x.Value);
+		});
+
+		await chart?.UpdateSeriesAsync(true);
+	}
 	protected override async Task OnInitializedAsync()
 	{
 		currency = settingsService.GetCurrency();
@@ -101,36 +138,9 @@
 				DecimalsInFloat = 0,
 
 			});
-		await chart.UpdateSeriesAsync(false);
 
-		await Task.Run(() =>
-		{
-			var bankAccounts = bankAccountRepository.Get(new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1), DateTime.Now).Where(x => x.Entries.Any());
 
-			foreach (var account in bankAccounts)
-			{
-				foreach (var entry in account.Entries.Where(x => x.BalanceChange < 0))
-				{
-					var dataEntry = Data.FirstOrDefault(x => x.Date == entry.PostingDate.Date);
-					if (dataEntry is null)
-					{
-						Data.Add(new SpendingOverviewEntry()
-							{
-								Date = entry.PostingDate.Date,
-								Value = - entry.BalanceChange
-							});
-					}
-					else
-					{
-						dataEntry.Value += entry.BalanceChange;
-					}
 
-				}
-			}
-
-			Data = Data.OrderBy(x => x.Date).ToList();
-			TotalSpending = Data.Sum(x=>x.Value);
-		});
 	}
 	protected override void OnAfterRender(bool firstRender)
 	{
