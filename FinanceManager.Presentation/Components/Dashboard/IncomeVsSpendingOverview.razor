@@ -119,8 +119,14 @@
 	protected override async Task OnParametersSetAsync()
 	{
 		Data.Clear();
-		if (chart is not null) await chart.UpdateSeriesAsync(true);
+		Data.AddRange(await GetData());
 
+		if (chart is not null) await chart.UpdateSeriesAsync(true);
+	}
+
+	private async Task<List<IncomeVsSpendingEntry>> GetData()
+	{
+		List<IncomeVsSpendingEntry> result = new List<IncomeVsSpendingEntry>();
 		await Task.Run(() =>
 		{
 			var bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any());
@@ -129,7 +135,7 @@
 			{
 				foreach (var entry in account.Entries)
 				{
-					var dataEntry = Data.FirstOrDefault(x => x.Date == entry.PostingDate.Date);
+					var dataEntry = result.FirstOrDefault(x => x.Date == entry.PostingDate.Date);
 					if (dataEntry is null)
 					{
 						var newDataEntry = new IncomeVsSpendingEntry() { Date = entry.PostingDate.Date };
@@ -142,7 +148,7 @@
 							newDataEntry.Income = entry.BalanceChange;
 						}
 
-						Data.Add(newDataEntry);
+						result.Add(newDataEntry);
 					}
 					else
 					{
@@ -158,11 +164,9 @@
 
 				}
 			}
-			Data = Data.OrderBy(x => x.Date).ToList();
-
 		});
 
-		if (chart is not null) await chart.UpdateSeriesAsync(true);
+		return result.OrderBy(x => x.Date).ToList();
 	}
 	public class IncomeVsSpendingEntry
 	{
