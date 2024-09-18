@@ -27,8 +27,7 @@
 										 Name="Assets"
 										 XValue="e => e.Cathegory.ToString()"
 										 YAggregate="@(e => e.Sum(e => e.Value))"
-										 SeriesType="SeriesType.Pie" 
-										 />
+										 SeriesType="SeriesType.Pie" />
 
 					</ApexChart>
 
@@ -103,18 +102,18 @@
 	protected override async Task OnInitializedAsync()
 	{
 		currency = settingsService.GetCurrency();
-
-
 	}
 
 
 	protected override async Task OnParametersSetAsync()
 	{
-		Data.Clear();
+		foreach (var dataEntry in Data)
+			dataEntry.Value = 0;
+
 		if (chart is not null) await chart.UpdateSeriesAsync(true);
 
-		Data.AddRange(await GetData()); 
-		
+		Data.AddRange(await GetData());
+
 		StateHasChanged();
 
 		if (chart is not null) await chart.UpdateSeriesAsync(true);
