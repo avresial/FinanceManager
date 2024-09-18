@@ -4,12 +4,12 @@ using FinanceManager.Core.Repositories;
 
 namespace FinanceManager.Infrastructure.Repositories
 {
-	public class InMemoryAccountRepository : IBankAccountRepository
+	public class InMemoryMockAccountRepository : IBankAccountRepository
 	{
 		private readonly Random random = new Random();
 		private readonly List<BankAccount> _bankAccounts = new List<BankAccount>();
 
-		public InMemoryAccountRepository()
+		public InMemoryMockAccountRepository()
 		{
 			AddMockData();
 		}
@@ -83,37 +83,60 @@ namespace FinanceManager.Infrastructure.Repositories
 
 		private void AddMockData()
 		{
-			int elementsCount = 10;
+			AddAccount(DateTime.UtcNow.AddMonths(-8), 100, "Main", AccountType.Cash);
+			AddAccount(DateTime.UtcNow.AddMonths(-8), 10, "Cash", AccountType.Cash);
+			AddAccount(DateTime.UtcNow.AddMonths(-8), 10, "Bonds", AccountType.Investment);
+			AddAccount(DateTime.UtcNow.AddMonths(-12), 10, "S&P 500", AccountType.Investment);
+			AddAccount(DateTime.UtcNow.AddMonths(-2), 10, "PPK", AccountType.Investment);
 
-			DateTime dateTime = DateTime.UtcNow - new TimeSpan(elementsCount, 0, 0, 0);
-			AddBankAccount(new BankAccount("Main", AccountType.Cash));
-			for (int i = 0; i < elementsCount; i++)
-				AddBankAccountEntry("Main", GetRandomBalanceChange(), $"Lorem ipsum{i}", GetRandomType(), dateTime += new TimeSpan(1, 0, 0, 0));
-
-			dateTime = DateTime.UtcNow - new TimeSpan(elementsCount + 7, 0, 0, 0);
-			AddBankAccount(new BankAccount("Bonds", AccountType.Investment));
-			for (int i = 0; i < elementsCount; i++)
-				AddBankAccountEntry("Bonds", GetRandomBalanceChange(), $"Lorem ipsum{i}", GetRandomType(), dateTime += new TimeSpan(1, 0, 0, 0));
-
-
-			dateTime = DateTime.UtcNow - new TimeSpan(elementsCount + 31, 0, 0, 0);
-			AddBankAccount(new BankAccount("S&P 500", AccountType.Investment));
-			for (int i = 0; i < elementsCount; i++)
-				AddBankAccountEntry("S&P 500", GetRandomBalanceChange(), $"Lorem ipsum{i}", GetRandomType(), dateTime += new TimeSpan(1, 0, 0, 0));
-
-			dateTime = DateTime.UtcNow.AddMonths(-1);
-			AddBankAccount(new BankAccount("PPK", AccountType.Investment));
-			for (int i = 0; i < elementsCount; i++)
-				AddBankAccountEntry("PPK", GetRandomBalanceChange(), $"Lorem ipsum {i}", GetRandomType(), dateTime += new TimeSpan(1, 0, 0, 0));
-
-			dateTime = DateTime.UtcNow.AddMonths(-2);
-			var creditDays = (DateTime.UtcNow - dateTime).TotalDays;
-			AddBankAccount(new BankAccount("Credit", AccountType.Credit));
-			AddBankAccountEntry("Credit", -9000, $"Lorem ipsum {0}", ExpenseType.DeptRepainment, dateTime += new TimeSpan(1, 0, 0, 0));
-			for (int i = 1; i < creditDays; i++)
-				AddBankAccountEntry("Credit", (decimal)(random.Next(0, 300) + Math.Round(random.NextDouble(), 2)), $"Lorem ipsum {i}", ExpenseType.DeptRepainment, dateTime += new TimeSpan(1, 0, 0, 0));
+			AddLoanAccount(DateTime.UtcNow.AddMonths(-2), -9000, "Loan");
 		}
 
+		private void AddLoanAccount(DateTime startDay, decimal startingBalance, string accountName)
+		{
+			var creditDays = (DateTime.UtcNow - startDay).TotalDays;
+			AddBankAccount(new BankAccount(accountName, AccountType.Credit));
+			AddBankAccountEntry(accountName, startingBalance, $"Lorem ipsum {0}", ExpenseType.DebtRepayment, startDay);
+			decimal repaidAmount = 0;
+
+			int index = 0;
+			while (repaidAmount < -startingBalance && startDay.Date < DateTime.Now.Date)
+			{
+				decimal balanceChange = (decimal)(random.Next(0, 300) + Math.Round(random.NextDouble(), 2));
+				repaidAmount += balanceChange;
+				if (repaidAmount >= -startingBalance)
+					balanceChange = repaidAmount + startingBalance;
+				startDay = startDay.AddDays(1);
+
+				AddBankAccountEntry(accountName, balanceChange, $"Lorem ipsum {index++}", ExpenseType.Other, startDay);
+
+				if (_bankAccounts.Any(x => x.Name == "Main"))
+					AddBankAccountEntry("Main", -balanceChange, $"Loan repainment {index++}", ExpenseType.DebtRepayment, startDay);
+			}
+		}
+
+		private void AddAccount(DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
+		{
+			ExpenseType expenseType = GetRandomType();
+			if (accountType == AccountType.Investment)
+				expenseType = ExpenseType.Investment;
+
+			AddBankAccount(new BankAccount(accountName, accountType));
+			AddBankAccountEntry(accountName, startingBalance, $"Lorem ipsum {0}", expenseType, startDay);
+
+			int index = 0;
+			while (startDay.Date < DateTime.Now.Date)
+			{
+				decimal balanceChange = (decimal)(random.Next(-150, 200) + Math.Round(random.NextDouble(), 2));
+
+				startDay = startDay.AddDays(1);
+				expenseType = GetRandomType();
+				if (accountType == AccountType.Investment)
+					expenseType = ExpenseType.Investment;
+
+				AddBankAccountEntry(accountName, balanceChange, $"Lorem ipsum {index++}", expenseType, startDay);
+			}
+		}
 
 
 		private ExpenseType GetRandomType()

@@ -1,5 +1,6 @@
 ﻿@page "/Assets"
 @using FinanceManager.Presentation.Components.Dashboard
+@using FinanceManager.Presentation.Components.Dashboard.Cards
 
 <PageTitle>Assets</PageTitle>
 <h3>Assets</h3>
@@ -7,93 +8,83 @@
 <div class="row">
 	@* <div class="d-flex flex-wrap"> *@
 
-		<div class="col-md-12 col-lg-4 p-1">
-			<div class="card">
-				<div class="card-body">
-					<h5 class="card-title">Assets distribution - Pie chart</h5>
-					<ChartSpinner></ChartSpinner>
-				</div>
-			</div>
-		</div>
+	<div class="col-md-12 col-lg-4 p-1">
+		<AssetsPerTypeOverviewCard></AssetsPerTypeOverviewCard>
+	</div>
 
-		<div class="col-md-12 col-lg-4 p-1">
-			<div class="card">
-				<div class="card-body">
-					<h5 class="card-title">Assets distribution in detail - Pie chart</h5>
-					<ChartSpinner></ChartSpinner>
-				</div>
-			</div>
-		</div>
+	<div class="col-md-12 col-lg-4 p-1">
+		<AssetsPerAccountOverviewCard></AssetsPerAccountOverviewCard>
+	</div>
+	
+	<div class="col-md-12 col-lg-4 p-1">
+		<AssetsPerAccountOverviewCard DisplayAsChart="false"></AssetsPerAccountOverviewCard>
 
-		<div class="col-md-12 col-lg-4 p-1">
-			<div class="card">
-				<div class="card-body">
-					<h5 class="card-title">Asset list by value</h5>
-					<p class="card-text placeholder-glow">
-						<div class="row">
-
-							@for (int i = 0; i < 10; i++)
-							{
-								<div class="col-8">
-									<div class="placeholder col-12 p-1"></div>
-								</div>
-
-								<div class="col-4">
-									<div class="placeholder col-12 p-1"></div>
-								</div>
-							}
-						</div>
-					</p>
-				</div>
-			</div>
-		</div>
-
-		<div class="col-md-12 col-lg-6 p-1">
-			<div class="card">
-				<div class="card-body">
-					<h5 class="card-title">Stocks - Time series</h5>
+		@* <div class="card">
+			<div class="card-body">
+				<h5 class="card-title">Asset list by value</h5>
+				<p class="card-text placeholder-glow">
 					<div class="row">
-						<div class="col-8">
 
-							<ChartSpinner></ChartSpinner>
-						</div>
-						<div class="col-4">
-							<div class="col-12 p-1">Select asset</div>
-							<div class="placeholder col-9 p-1"></div>
-							<div class="placeholder col-5 p-1"></div>
-							<div class="placeholder col-8 p-1"></div>
-							<div class="placeholder col-9 p-1"></div>
-							<div class="placeholder col-3 p-1"></div>
-							<div class="placeholder col-7 p-1"></div>
-							<div class="placeholder col-5 p-1"></div>
-						</div>
+						@for (int i = 0; i < 10; i++)
+						{
+							<div class="col-8">
+								<div class="placeholder col-12 p-1"></div>
+							</div>
+
+							<div class="col-4">
+								<div class="placeholder col-12 p-1"></div>
+							</div>
+						}
+					</div>
+				</p>
+			</div>
+		</div> *@
+	</div>
+
+	<div class="col-md-12 col-lg-6 p-1">
+		<div class="card">
+			<div class="card-body">
+				<h5 class="card-title">Stocks - Time series</h5>
+				<div class="row">
+					<div class="col-8">
+
+						<ChartSpinner></ChartSpinner>
+					</div>
+					<div class="col-4">
+						<div class="col-12 p-1">Select asset</div>
+						<div class="placeholder col-9 p-1"></div>
+						<div class="placeholder col-5 p-1"></div>
+						<div class="placeholder col-8 p-1"></div>
+						<div class="placeholder col-9 p-1"></div>
+						<div class="placeholder col-3 p-1"></div>
+						<div class="placeholder col-7 p-1"></div>
+						<div class="placeholder col-5 p-1"></div>
 					</div>
 				</div>
 			</div>
 		</div>
+	</div>
 
-		@* <div class="col-6 p-1">
-			<div class="card">
-				<div class="card-body">
-					<h5 class="card-title">Real estate - Time series</h5>
-					<ChartSpinner></ChartSpinner>
-				</div>
-			</div>
-		</div>
+	@* <div class="col-6 p-1">
+	<div class="card">
+	<div class="card-body">
+	<h5 class="card-title">Real estate - Time series</h5>
+	<ChartSpinner></ChartSpinner>
+	</div>
+	</div>
+	</div>
 
-		<div class="col-6 p-1">
-			<div class="card">
-				<div class="card-body">
-					<h5 class="card-title">Crypto - Time series</h5>
-					<ChartSpinner></ChartSpinner>
-				</div>
-			</div>
-		</div> *@
+	<div class="col-6 p-1">
+	<div class="card">
+	<div class="card-body">
+	<h5 class="card-title">Crypto - Time series</h5>
+	<ChartSpinner></ChartSpinner>
+	</div>
+	</div>
+	</div> *@
 
 
 	@* </div> *@
 </div>
 
-@code {
 
-}

@@ -32,8 +32,9 @@ namespace FinanceManager.Pages
 		{
 			try
 			{
+				DateTime dateStart = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
 				if (BankAccountRepository.Exists(AccountName))
-					Entries = BankAccountRepository.Get(AccountName, DateTime.Now.AddDays(-31), DateTime.Now).Entries.Take(maxTableSize).OrderByDescending(x => x.PostingDate);
+					Entries = BankAccountRepository.Get(AccountName, dateStart, DateTime.Now).Entries.Take(maxTableSize).OrderByDescending(x => x.PostingDate);
 			}
 			catch (Exception ex)
 			{

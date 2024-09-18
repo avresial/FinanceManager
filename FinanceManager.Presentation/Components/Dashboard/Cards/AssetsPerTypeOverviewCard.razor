@@ -42,7 +42,6 @@
 
 @code {
 	private string currency = "";
-	IEnumerable<BankAccount> bankAccounts;
 	decimal TotalAssets = 0;
 
 	[Parameter]
@@ -112,25 +111,25 @@
 
 		if (chart is not null) await chart.UpdateSeriesAsync(true);
 
-		Data.AddRange(await GetData());
-
+		//Data.AddRange(await GetData());
+		await GetData();
 		StateHasChanged();
 
 		if (chart is not null) await chart.UpdateSeriesAsync(true);
 
 	}
 
-	async Task<List<WealthOverviewEntry>> GetData()
+	async Task GetData()
 	{
-		List<WealthOverviewEntry> result = new List<WealthOverviewEntry>();
+		//	List<WealthOverviewEntry> result = new List<WealthOverviewEntry>();
 		await Task.Run(() =>
 			{
-				bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any() && x.Entries.Last().Balance >= 0);
+				var bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any() && x.Entries.Last().Balance >= 0).ToList();
 				TotalAssets = bankAccounts.Sum(x => x.Entries.Last().Balance);
 
 				foreach (var account in bankAccounts)
 				{
-					var dataEntry = result.FirstOrDefault(x => x.Cathegory == account.AccountType.ToString());
+					var dataEntry = Data.FirstOrDefault(x => x.Cathegory == account.AccountType.ToString());
 
 					if (dataEntry is not null)
 					{
@@ -138,7 +137,7 @@
 					}
 					else
 					{
-						result.Add(new WealthOverviewEntry()
+						Data.Add(new WealthOverviewEntry()
 							{
 								Cathegory = account.AccountType.ToString(),
 								Value = account.Entries.Last().Balance
@@ -147,7 +146,7 @@
 				}
 			});
 
-		return result;
+		//return result;
 	}
 
 	public class WealthOverviewEntry

@@ -1,0 +1,199 @@
+﻿@using ApexCharts
+@using FinanceManager.Core.Entities
+@using FinanceManager.Core.Repositories
+@using FinanceManager.Core.Services
+
+@inject IBankAccountRepository bankAccountRepository;
+@inject ISettingsService settingsService;
+
+<div class="card" style="height:@Height;">
+	<div class="card-body">
+		<div class="container-fluid d-flex flex-column h-100">
+			<div class="row">
+				<div class="col px-0">
+					<h5 class="card-title">Assets per account</h5>
+					@if (DisplayAsChart)
+					{
+						<h6 class="card-subtitle mb-2 text-muted">@TotalAssets @currency</h6>
+					}
+				</div>
+			</div>
+			<div class="row flex-fill" style="height:1px;">
+				<div class="h-100">
+					@if (DisplayAsChart)
+					{
+
+						<ApexChart @ref="chart" Height="@("100%")" TItem="WealthOverviewEntry" Options="options">
+
+
+							<ApexPointSeries TItem="WealthOverviewEntry"
+											 Items="Data"
+											 Name="Assets"
+											 XValue="e => e.Cathegory.ToString()"
+											 YAggregate="@(e => e.Sum(e => e.Value))"
+											 SeriesType="SeriesType.Pie" />
+
+						</ApexChart>
+					}
+					else
+					{
+
+						@foreach (var wealthCategory in Data)
+						{
+							<div class="row mb-2">
+								<div class="col">
+									@wealthCategory.Cathegory
+								</div>
+
+								<div class="col-auto">
+									@wealthCategory.Value zł
+								</div>
+							</div>
+						}
+
+						<hr class="mt-1 mb-1" />
+						<div class="row mb-2">
+							<div class="col">
+								Sum
+							</div>
+							@if (@TotalAssets < 0)
+							{
+								<div class="col-auto" style="color:red">
+									@TotalAssets @currency
+								</div>
+							}
+							else
+							{
+								<div class="col-auto" style="color:green">
+									@TotalAssets @currency
+								</div>
+							}
+						</div>
+					}
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+
+
+@code {
+	private string currency = "";
+	decimal TotalAssets = 0;
+	[Parameter]
+	public bool DisplayAsChart { get; set; } = true;
+
+	[Parameter]
+	public string Height { get; set; } = "300px";
+
+	[Parameter]
+	public DateTime StartDateTime { get; set; }
+
+	private ApexChart<WealthOverviewEntry> chart;
+
+	private ApexChartOptions<WealthOverviewEntry> options { get; set; } = new()
+		{
+			Chart = new Chart
+			{
+				Toolbar = new ApexCharts.Toolbar
+				{
+					Show = false
+				},
+			},
+			Xaxis = new XAxis()
+			{
+				AxisTicks = new AxisTicks()
+				{
+					Show = false,
+				},
+				AxisBorder = new AxisBorder()
+				{
+					Show = false
+				},
+				Position = XAxisPosition.Bottom,
+				Type = XAxisType.Category
+
+			},
+			Yaxis = new List<YAxis>()
+			{
+
+				new YAxis
+				{
+					AxisTicks = new AxisTicks()
+					{
+						Show = false
+					},
+					Show = false,
+					SeriesName = "NetValue",
+					DecimalsInFloat = 0,
+				}
+			},
+			Legend = new Legend()
+			{
+				Position = LegendPosition.Bottom,
+			}
+		};
+
+	public List<WealthOverviewEntry> Data { get; set; } = new List<WealthOverviewEntry>();
+
+
+	protected override async Task OnInitializedAsync()
+	{
+		currency = settingsService.GetCurrency();
+	}
+
+
+	protected override async Task OnParametersSetAsync()
+	{
+		foreach (var dataEntry in Data)
+			dataEntry.Value = 0;
+
+		if (chart is not null) await chart.UpdateSeriesAsync(true);
+
+		Data.AddRange(await GetData());
+
+		StateHasChanged();
+
+		if (chart is not null) await chart.UpdateSeriesAsync(true);
+
+	}
+
+	async Task<List<WealthOverviewEntry>> GetData()
+	{
+		List<WealthOverviewEntry> result = new List<WealthOverviewEntry>();
+		await Task.Run(() =>
+			{
+				var bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any() && x.Entries.Last().Balance >= 0).ToList();
+				TotalAssets = bankAccounts.Sum(x => x.Entries.Last().Balance);
+
+				foreach (var account in bankAccounts)
+				{
+					var dataEntry = result.FirstOrDefault(x => x.Cathegory == account.Name);
+
+					if (dataEntry is not null)
+					{
+						dataEntry.Value += account.Entries.Last().Balance;
+					}
+					else
+					{
+						result.Add(new WealthOverviewEntry()
+							{
+								Cathegory = account.Name,
+								Value = account.Entries.Last().Balance
+							});
+					}
+				}
+			});
+
+		return result.OrderByDescending(x => x.Value).ToList();
+	}
+
+	public class WealthOverviewEntry
+	{
+		public string Cathegory;
+		public decimal Value;
+	}
+
+}

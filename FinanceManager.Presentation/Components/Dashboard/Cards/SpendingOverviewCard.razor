@@ -77,15 +77,24 @@
 					var dataEntry = Data.FirstOrDefault(x => x.Date == entry.PostingDate.Date);
 					if (dataEntry is null)
 					{
-						Data.Add(new SpendingOverviewEntry()
+						var newDatapoint = new SpendingOverviewEntry()
 							{
 								Date = entry.PostingDate.Date,
 								Value = -entry.BalanceChange
-							});
+							};
+						if (newDatapoint.Value < 0)
+						{
+
+						}
+						Data.Add(newDatapoint);
 					}
 					else
 					{
-						dataEntry.Value += entry.BalanceChange;
+						dataEntry.Value += -entry.BalanceChange;
+						if (dataEntry.Value < 0)
+						{
+
+						}
 					}
 
 				}
