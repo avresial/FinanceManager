@@ -1,11 +1,13 @@
 ﻿namespace FinanceManager.Core.Enums
 {
-    public enum AccountType
-    {
-        Cash,
-        Investment,
-        Asset,
-        Credit,
-        Other
-    }
+	public enum AccountType
+	{
+		Cash,
+		Stock,
+		Bond,
+		Crypto,
+		Loan,
+		RealEstate,
+		Other
+	}
 }

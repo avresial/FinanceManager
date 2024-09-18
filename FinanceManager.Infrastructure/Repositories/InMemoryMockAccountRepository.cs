@@ -85,9 +85,12 @@ namespace FinanceManager.Infrastructure.Repositories
 		{
 			AddAccount(DateTime.UtcNow.AddMonths(-8), 100, "Main", AccountType.Cash);
 			AddAccount(DateTime.UtcNow.AddMonths(-8), 10, "Cash", AccountType.Cash);
-			AddAccount(DateTime.UtcNow.AddMonths(-8), 10, "Bonds", AccountType.Investment);
-			AddAccount(DateTime.UtcNow.AddMonths(-12), 10, "S&P 500", AccountType.Investment);
-			AddAccount(DateTime.UtcNow.AddMonths(-2), 10, "PPK", AccountType.Investment);
+			AddAccount(DateTime.UtcNow.AddMonths(-8), 10, "Bonds", AccountType.Bond);
+			AddAccount(DateTime.UtcNow.AddMonths(-12), 10, "Nvidia", AccountType.Stock);
+			AddAccount(DateTime.UtcNow.AddMonths(-12), 10, "Intel", AccountType.Stock);
+			AddAccount(DateTime.UtcNow.AddMonths(-12), 10, "S&P 500", AccountType.Stock);
+			AddAccount(DateTime.UtcNow.AddMonths(-2), 10, "PPK", AccountType.Stock);
+			AddAccount(DateTime.UtcNow.AddYears(-12), 10000, "Apartment", AccountType.RealEstate);
 
 			AddLoanAccount(DateTime.UtcNow.AddMonths(-2), -9000, "Loan");
 		}
@@ -95,7 +98,7 @@ namespace FinanceManager.Infrastructure.Repositories
 		private void AddLoanAccount(DateTime startDay, decimal startingBalance, string accountName)
 		{
 			var creditDays = (DateTime.UtcNow - startDay).TotalDays;
-			AddBankAccount(new BankAccount(accountName, AccountType.Credit));
+			AddBankAccount(new BankAccount(accountName, AccountType.Loan));
 			AddBankAccountEntry(accountName, startingBalance, $"Lorem ipsum {0}", ExpenseType.DebtRepayment, startDay);
 			decimal repaidAmount = 0;
 
@@ -118,7 +121,7 @@ namespace FinanceManager.Infrastructure.Repositories
 		private void AddAccount(DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
 		{
 			ExpenseType expenseType = GetRandomType();
-			if (accountType == AccountType.Investment)
+			if (accountType == AccountType.Stock)
 				expenseType = ExpenseType.Investment;
 
 			AddBankAccount(new BankAccount(accountName, accountType));
@@ -131,7 +134,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
 				startDay = startDay.AddDays(1);
 				expenseType = GetRandomType();
-				if (accountType == AccountType.Investment)
+				if (accountType == AccountType.Stock)
 					expenseType = ExpenseType.Investment;
 
 				AddBankAccountEntry(accountName, balanceChange, $"Lorem ipsum {index++}", expenseType, startDay);
