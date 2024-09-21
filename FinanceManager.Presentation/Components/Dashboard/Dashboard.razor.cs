@@ -25,9 +25,13 @@ namespace FinanceManager.Presentation.Components.Dashboard
 			await GetThisMonth();
 		}
 
-		public async Task GetAllTime()
+		public async Task GetQuater()
 		{
-			StartDateTime = new DateTime();
+			DateTime date = DateTime.Now;
+			if (date.Month <= 3) StartDateTime = new DateTime(date.Year, 1, 1);
+			else if (date.Month <= 6) StartDateTime = new DateTime(date.Year, 4, 1);
+			else if (date.Month <= 9) StartDateTime = new DateTime(date.Year, 7, 1);
+			else if (date.Month <= 12) StartDateTime = new DateTime(date.Year, 10, 1);
 		}
 		public async Task GetThisMonth()
 		{
@@ -38,6 +42,5 @@ namespace FinanceManager.Presentation.Components.Dashboard
 		{
 			StartDateTime = new DateTime(DateTime.Now.Year, 1, 1);
 		}
-
 	}
 }
