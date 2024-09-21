@@ -1,5 +1,4 @@
 ﻿@using ApexCharts
-@using FinanceManager.Core.Entities
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
 
@@ -11,7 +10,7 @@
 		<div class="container-fluid d-flex flex-column h-100">
 			<div class="row">
 				<div class="col px-0">
-					<h5 class="card-title">Assets</h5>
+					<h5 class="card-title">Liabilities</h5>
 					<h6 class="card-subtitle mb-2 text-muted">@TotalAssets @currency</h6>
 				</div>
 			</div>
@@ -19,16 +18,27 @@
 			<div class="row flex-fill" style="height:1px;">
 				<div class="h-100">
 
-					<ApexChart @ref="chart" Height="@("100%")" TItem="WealthOverviewEntry" Options="options">
+					<ApexChart @ref="chart" Height="@("100%")" TItem="LiabilityOverviewEntry" Options="options">
+						<ApexPointTooltip>
+							<div class="m-2">
+								@{
+									var point = context.DataPoint.Items.FirstOrDefault();
 
+									<span class="me-1">@context.DataPoint.X: -@point.Value @currency</span>
 
-						<ApexPointSeries TItem="WealthOverviewEntry"
-										 Items="Data"
-										 Name="Assets"
-										 XValue="e => e.Cathegory.ToString()"
-										 YAggregate="@(e => e.Sum(e => e.Value))"
-										 SeriesType="SeriesType.Pie"
-										 OrderByDescending="@(e=>e.Y.Value)"/>
+								}
+							</div>
+						</ApexPointTooltip>
+
+						<ChildContent>
+							<ApexPointSeries TItem="LiabilityOverviewEntry"
+											 Items="Data"
+											 Name="Assets"
+											 XValue="e => e.Cathegory.ToString()"
+											 YAggregate="@(e => e.Sum(e => e.Value))"
+											 SeriesType="SeriesType.Pie"
+											 OrderByDescending="@(e=>e.Y.Value)" />
+						</ChildContent>
 
 					</ApexChart>
 
@@ -51,9 +61,9 @@
 	[Parameter]
 	public DateTime StartDateTime { get; set; }
 
-	private ApexChart<WealthOverviewEntry> chart;
+	private ApexChart<LiabilityOverviewEntry> chart;
 
-	private ApexChartOptions<WealthOverviewEntry> options { get; set; } = new()
+	private ApexChartOptions<LiabilityOverviewEntry> options { get; set; } = new()
 		{
 			Chart = new Chart
 			{
@@ -96,7 +106,7 @@
 			}
 		};
 
-	public List<WealthOverviewEntry> Data { get; set; } = new List<WealthOverviewEntry>();
+	public List<LiabilityOverviewEntry> Data { get; set; } = new List<LiabilityOverviewEntry>();
 
 
 	protected override async Task OnInitializedAsync()
@@ -125,7 +135,7 @@
 		//	List<WealthOverviewEntry> result = new List<WealthOverviewEntry>();
 		await Task.Run(() =>
 			{
-				var bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any() && x.Entries.First().Balance >= 0).ToList();
+				var bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any() && x.Entries.First().Balance <= 0).ToList();
 				TotalAssets = bankAccounts.Sum(x => x.Entries.Last().Balance);
 
 				foreach (var account in bankAccounts)
@@ -134,14 +144,14 @@
 
 					if (dataEntry is not null)
 					{
-						dataEntry.Value += account.Entries.Last().Balance;
+						dataEntry.Value -= account.Entries.Last().Balance;
 					}
 					else
 					{
-						Data.Add(new WealthOverviewEntry()
+						Data.Add(new LiabilityOverviewEntry()
 							{
 								Cathegory = account.AccountType.ToString(),
-								Value = account.Entries.Last().Balance
+								Value = -account.Entries.Last().Balance
 							});
 					}
 				}
@@ -150,11 +160,9 @@
 		//return result;
 	}
 
-	public class WealthOverviewEntry
+	public class LiabilityOverviewEntry
 	{
 		public string Cathegory;
 		public decimal Value;
 	}
-
 }
-
