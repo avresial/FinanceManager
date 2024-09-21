@@ -1,4 +1,5 @@
 ﻿@using ApexCharts
+@using FinanceManager.Core.Entities
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
 
@@ -113,7 +114,16 @@
 
 			foreach (var account in bankAccounts)
 			{
-				foreach (var entry in account.Entries.Where(x => x.BalanceChange > 0))
+				List<BankAccountEntry> entries = new List<BankAccountEntry>();
+				if ((DateTime.Now - StartDateTime).TotalDays > 3 * 31)
+				{
+					entries = account.GetEntriesMonthly();
+				}
+				else
+				{
+					entries = account.Entries;
+				}
+				foreach (var entry in entries.Where(x => x.BalanceChange > 0))
 				{
 					var dataEntry = Data.FirstOrDefault();
 					if (dataEntry is null)
@@ -131,10 +141,7 @@
 
 				}
 			}
-			var lastEntry = Data.LastOrDefault();
-			if (lastEntry is not null)
-
-				Total = lastEntry.Value;
+			Total = Data.Sum(x => x.Value);
 
 		});
 		if (chart is not null) await chart.UpdateSeriesAsync(true);
