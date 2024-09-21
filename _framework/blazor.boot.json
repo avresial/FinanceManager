@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "FinanceManager",
   "resources": {
-    "hash": "sha256-nkSakuu/UIqXce1kfPpo2t0TN7ln8oOJAqropvyRsmI=",
+    "hash": "sha256-iCjn3y1c3rchjOqGQ/3HAik9qABN3JQNPeUBFsEZU9E=",
     "jsModuleNative": {
       "dotnet.native.8.0.7.jew1171z1c.js": "sha256-tFsxPBbhkdn6GKNBKvCRLzrfAHdyM86odYTe0MtrwMk="
     },
@@ -19,11 +19,11 @@
     "assembly": {
       "Blazor-ApexCharts.wasm": "sha256-4mV9xovVFn4rxtiMOitQWW5ivJikWhYJr0+p/VThLA0=",
       "CsvHelper.wasm": "sha256-BXz5RCSFBrg3KCDZD4lxgyWmw1YH6vUT0N/oIQdCKfA=",
-      "FinanceManager.Application.wasm": "sha256-hyVmH0j1KR/sqsKMT39yBZBShUu6EuradZHni2bLSUI=",
-      "FinanceManager.Core.wasm": "sha256-3YR9ODWAdImhyXxDfuw6x1SQYNmRk8lDu9D3XcgsM+Y=",
-      "FinanceManager.Infrastructure.wasm": "sha256-/Ai0JvGPc8+nzwjwgJPvkxAIICjWwuDKZ8RZkmxL1rE=",
-      "FinanceManager.Presentation.wasm": "sha256-oztbNqVe3f9Es8bbtgQNv3gJjpd9GscOV4n9byJV0cg=",
-      "FinanceManager.wasm": "sha256-RNjdLCikLZY/g/8P7QXZ/XlqBGFfBtGRvHNMTwbPee4=",
+      "FinanceManager.Application.wasm": "sha256-pAFDth/VAXgeykxrmSURl0puVVnQOspmnV4Cr/g6ttI=",
+      "FinanceManager.Core.wasm": "sha256-B1fRhFrWxqlTWgFrFbDcyuw/HHQF4tk3m80aRuUFddQ=",
+      "FinanceManager.Infrastructure.wasm": "sha256-NxbkAjz7iKSEm9EsE8UCtj6f76nbBfKayUluxivJ6/8=",
+      "FinanceManager.Presentation.wasm": "sha256-kWzIhTEa989gE6sNlOw3+QL4cSdqnaOGh7QuMGXvSt8=",
+      "FinanceManager.wasm": "sha256-W6CVAYS2onT0Uwc5wRM5jLR+pP83xLlFX0HiggaMfUg=",
       "Microsoft.AspNetCore.Components.Authorization.wasm": "sha256-VesBuN4Pj2T7RP+rAvmb6mdZRfYWYoOQfOdAtfy77tM=",
       "Microsoft.AspNetCore.Components.wasm": "sha256-jaE5Qp34uLrp09G2LnKLtr4IsxiHQZxRG03ntUfUmuw=",
       "Microsoft.AspNetCore.Components.Web.wasm": "sha256-Qhl8/sh0o3+3FeTSyMtaj2pofaHfXQOj53Ew5JF7u/k=",
