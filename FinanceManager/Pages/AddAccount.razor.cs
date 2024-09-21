@@ -14,7 +14,7 @@ namespace FinanceManager.Pages
 		{
 			if (!AccountService.Exists(AccountName))
 			{
-				AccountService.AddBankAccount(new BankAccount(AccountName, Core.Enums.AccountType.Asset));
+				AccountService.AddBankAccount(new BankAccount(AccountName, Core.Enums.AccountType.Other));
 				StateHasChanged();
 			}
 			else

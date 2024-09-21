@@ -1,4 +1,5 @@
 ﻿@using ApexCharts
+@using FinanceManager.Core.Entities
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
 
@@ -25,15 +26,15 @@
 					else
 					{
 
-						<ApexChart @ref="chart" TItem="SpendingOverviewEntry" Height="@("100%")" Options="options">
+						<ApexChart @ref="chart" TItem="SpendingOverviewEntry" Height="@("100%")" Options="options" XAxisType="XAxisType.Datetime">
 
 
 							<ApexPointSeries TItem="SpendingOverviewEntry"
 											 Items="Data"
 											 Name="Spending"
-											 XValue="@(e => e.Date)"
+											 XValue="@(e => e.Date.ToLocalTime())"
 											 YValue="e=> e.Value"
-											 SeriesType="SeriesType.Line" />
+											 SeriesType="SeriesType.Area" />
 
 						</ApexChart>
 					}
@@ -68,11 +69,22 @@
 		if (chart is not null) await chart.UpdateSeriesAsync(true);
 		await Task.Run(() =>
 		{
-			var bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any());
+			IEnumerable<BankAccount> bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any());
+
 
 			foreach (var account in bankAccounts)
 			{
-				foreach (var entry in account.Entries.Where(x => x.BalanceChange < 0))
+				List<BankAccountEntry> entries = new List<BankAccountEntry>();
+				if ((DateTime.Now - StartDateTime).TotalDays > 3 * 31)
+				{
+					entries = account.GetEntriesMonthly();
+				}
+				else
+				{
+					entries = account.Entries;
+				}
+
+				foreach (var entry in entries.Where(x => x.BalanceChange < 0))
 				{
 					var dataEntry = Data.FirstOrDefault(x => x.Date == entry.PostingDate.Date);
 					if (dataEntry is null)
@@ -82,19 +94,11 @@
 								Date = entry.PostingDate.Date,
 								Value = -entry.BalanceChange
 							};
-						if (newDatapoint.Value < 0)
-						{
-
-						}
 						Data.Add(newDatapoint);
 					}
 					else
 					{
 						dataEntry.Value += -entry.BalanceChange;
-						if (dataEntry.Value < 0)
-						{
-
-						}
 					}
 
 				}
@@ -116,8 +120,12 @@
 					Show = false
 				},
 
-			};
+				Zoom = new Zoom()
+				{
+					Enabled = false
+				}
 
+			};
 
 		options.Xaxis = new XAxis()
 			{
