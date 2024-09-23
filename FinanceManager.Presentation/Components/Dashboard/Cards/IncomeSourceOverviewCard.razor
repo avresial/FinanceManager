@@ -1,4 +1,5 @@
 ﻿@using ApexCharts
+@using FinanceManager.Core.Extensions
 @using FinanceManager.Core.Entities
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
@@ -115,9 +116,13 @@
 			foreach (var account in bankAccounts)
 			{
 				List<BankAccountEntry> entries = new List<BankAccountEntry>();
-				if ((DateTime.Now - StartDateTime).TotalDays > 3 * 31)
+				if ((DateTime.Now - StartDateTime).TotalDays > 6 * 31)
 				{
-					entries = account.GetEntriesMonthly();
+					entries = account.Entries.GetEntriesMonthly();
+				}
+				else if ((DateTime.Now - StartDateTime).TotalDays > 31)
+				{
+					entries = account.Entries.GetEntriesWeekly();
 				}
 				else
 				{

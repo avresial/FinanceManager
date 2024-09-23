@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "FinanceManager",
   "resources": {
-    "hash": "sha256-iCjn3y1c3rchjOqGQ/3HAik9qABN3JQNPeUBFsEZU9E=",
+    "hash": "sha256-Z1HzHLa/AbKhQNwe0g0OSX9zT5Xt4nTLyn+29LnldCw=",
     "jsModuleNative": {
       "dotnet.native.8.0.7.jew1171z1c.js": "sha256-tFsxPBbhkdn6GKNBKvCRLzrfAHdyM86odYTe0MtrwMk="
     },
@@ -19,11 +19,11 @@
     "assembly": {
       "Blazor-ApexCharts.wasm": "sha256-4mV9xovVFn4rxtiMOitQWW5ivJikWhYJr0+p/VThLA0=",
       "CsvHelper.wasm": "sha256-BXz5RCSFBrg3KCDZD4lxgyWmw1YH6vUT0N/oIQdCKfA=",
-      "FinanceManager.Application.wasm": "sha256-pAFDth/VAXgeykxrmSURl0puVVnQOspmnV4Cr/g6ttI=",
-      "FinanceManager.Core.wasm": "sha256-B1fRhFrWxqlTWgFrFbDcyuw/HHQF4tk3m80aRuUFddQ=",
-      "FinanceManager.Infrastructure.wasm": "sha256-NxbkAjz7iKSEm9EsE8UCtj6f76nbBfKayUluxivJ6/8=",
-      "FinanceManager.Presentation.wasm": "sha256-kWzIhTEa989gE6sNlOw3+QL4cSdqnaOGh7QuMGXvSt8=",
-      "FinanceManager.wasm": "sha256-W6CVAYS2onT0Uwc5wRM5jLR+pP83xLlFX0HiggaMfUg=",
+      "FinanceManager.Application.wasm": "sha256-rn/YNSzC054O67cqoAEAWpNtw8M9ColJJSuhp9Nzo4s=",
+      "FinanceManager.Core.wasm": "sha256-Hz3EvplvipaIKGnsEXdqPb+GV2mARDmrKsaiBbqqu9k=",
+      "FinanceManager.Infrastructure.wasm": "sha256-/XAxtybX9oux/CqviQn0oKqs7K3wExMOdY0lsPzgLYk=",
+      "FinanceManager.Presentation.wasm": "sha256-2KfpmKXMtHFTnzl61y41miq0gEAjLlXEHFX7UV9mEG4=",
+      "FinanceManager.wasm": "sha256-D66JL0R7DuzR8GDQ7dmap7eXL/UdQ7SkyIfvr7/zO1M=",
       "Microsoft.AspNetCore.Components.Authorization.wasm": "sha256-VesBuN4Pj2T7RP+rAvmb6mdZRfYWYoOQfOdAtfy77tM=",
       "Microsoft.AspNetCore.Components.wasm": "sha256-jaE5Qp34uLrp09G2LnKLtr4IsxiHQZxRG03ntUfUmuw=",
       "Microsoft.AspNetCore.Components.Web.wasm": "sha256-Qhl8/sh0o3+3FeTSyMtaj2pofaHfXQOj53Ew5JF7u/k=",
@@ -69,7 +69,7 @@
       "System.Runtime.Numerics.wasm": "sha256-zAopZOD1LA2B8pAR+44pltpF0TOvrNr4ZEmwG3O/QFQ=",
       "System.Runtime.Serialization.Formatters.wasm": "sha256-GN8jr476tgFJ6dFGUboEG7zmtuSU3LVCeegsrkxvcVU=",
       "System.Runtime.Serialization.Primitives.wasm": "sha256-QiLZ3i56JiN8ElXHuo/xJ3EMdHq48lUWf8FXh4e+bBI=",
-      "System.Runtime.wasm": "sha256-4k3SYWgV2rtlWNbp6ktnN5FLkbCLXFo3vnX1SBQQVmw=",
+      "System.Runtime.wasm": "sha256-usqWw69QEuxY5epcqRrT1mWOt1VpJo7w72WPD2Sj7xA=",
       "System.Security.Claims.wasm": "sha256-CA7LnTHCxcujmy2yJFmNIiz60DHeWw6rCIsCdP2kPXg=",
       "System.Security.Cryptography.wasm": "sha256-w+iQsI1K0iER75KQQizXvU7YiihvuyyFvYP3p4kZSrA=",
       "System.Text.Encodings.Web.wasm": "sha256-qzotNcGjmC75j16EFMIJNV5ERbpcbSGN0qDxlNujdu4=",
