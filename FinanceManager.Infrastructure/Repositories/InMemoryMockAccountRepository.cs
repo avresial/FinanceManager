@@ -92,7 +92,7 @@ namespace FinanceManager.Infrastructure.Repositories
 			AddAccount(DateTime.UtcNow.AddMonths(-2), 10, "PPK", AccountType.Stock);
 			AddAccount(DateTime.UtcNow.AddYears(-12), 10000, "Apartment", AccountType.RealEstate);
 
-			AddLoanAccount(DateTime.UtcNow.AddMonths(-2), -9000, "Loan");
+			AddLoanAccount(DateTime.UtcNow.AddMonths(-2), -300 * 62, "Loan");
 		}
 
 		private void AddLoanAccount(DateTime startDay, decimal startingBalance, string accountName)
