@@ -4,6 +4,7 @@ namespace FinanceManager.Core.Repositories
 {
 	public interface IFinancalAccountRepository
 	{
+		public Dictionary<string, Type> GetAvailableAccounts();
 		public IEnumerable<T> GetAccounts<T>(DateTime dateStart, DateTime dateEnd) where T : FinancialAccount;
 		public T? GetAccount<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialAccount;
 		public List<T>? GetEntries<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialEntryBase;

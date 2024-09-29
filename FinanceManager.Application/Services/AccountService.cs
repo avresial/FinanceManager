@@ -40,6 +40,9 @@ namespace FinanceManager.Application.Services
 			return _bankAccountRepository.Exists(name);
 		}
 
-
+		public Dictionary<string, Type> GetAvailableAccounts()
+		{
+			return _bankAccountRepository.GetAvailableAccounts();
+		}
 	}
 }

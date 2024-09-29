@@ -27,14 +27,25 @@ namespace FinanceManager.Pages
 		{
 			UpdateEntries();
 		}
-
+		public Type accountType;
 		private void UpdateEntries()
 		{
 			try
 			{
 				DateTime dateStart = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-				if (BankAccountRepository.Exists(AccountName))
-					Entries = BankAccountRepository.GetAccount<BankAccount>(AccountName, dateStart, DateTime.Now).Entries.Take(maxTableSize).OrderByDescending(x => x.PostingDate);
+				var accounts = BankAccountRepository.GetAvailableAccounts();
+				if (accounts.ContainsKey(AccountName))
+				{
+					accountType = accounts[AccountName];
+					if (accountType == typeof(BankAccount))
+					{
+						Entries = BankAccountRepository.GetAccount<BankAccount>(AccountName, dateStart, DateTime.Now)
+							.Entries
+							.Take(maxTableSize)
+							.OrderByDescending(x => x.PostingDate);
+					}
+				}
+
 			}
 			catch (Exception ex)
 			{

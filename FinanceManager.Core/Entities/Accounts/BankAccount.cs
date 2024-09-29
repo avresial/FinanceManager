@@ -19,6 +19,18 @@ namespace FinanceManager.Core.Entities.Accounts
 	public class FinancialAccount : IFinancalAccount
 	{
 		internal IFinancalAccountRepository _financalAccountRepository;
+		public FinancialAccount()
+		{
+
+		}
+		public FinancialAccount(IFinancalAccountRepository financalAccountRepository, string name, DateTime start, DateTime end)
+		{
+			_financalAccountRepository = financalAccountRepository;
+			Name = name;
+			Start = start;
+			End = end;
+		}
+
 		public string Name { get; set; }
 		public DateTime Start { get; private set; }
 		public DateTime End { get; private set; }
@@ -69,6 +81,20 @@ namespace FinanceManager.Core.Entities.Accounts
 	public class StockAccount : FinancialAccount, IFinancalAccount
 	{
 		public List<StockEntry>? Entries { get; private set; }
+		public StockAccount(string name, IEnumerable<StockEntry> entries)
+		{
+			Name = name;
+			Entries = entries.ToList();
+		}
+		public StockAccount(string name, DateTime start, DateTime end) : base(null, name, start, end)
+		{
+			Entries = new List<StockEntry>();
+		}
+		public override void SetDates(DateTime start, DateTime end)
+		{
+			if (Entries is null) return;
+			Entries.RemoveAll(x => x.PostingDate < start || x.PostingDate > end);
+		}
 	}
 
 	public class BankAccount : FinancialAccount, IFinancalAccount

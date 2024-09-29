@@ -1,4 +1,6 @@
 ﻿@page "/AccountDetails/{AccountName}"
+@using FinanceManager.Core.Entities.Accounts
+@using FinanceManager.Presentation.Components.AccountDetailsPageContents
 
 
 <h3>@AccountName</h3>
@@ -8,7 +10,7 @@
 		@ErrorMessage
 	</div>
 }
-else
+else if (accountType == typeof(BankAccount))
 {
 	<div class="col-12 ">
 		<div class="card">
@@ -53,5 +55,15 @@ else
 			</tbody>
 		</table>
 	}
+}
+else if (accountType == typeof(StockAccount))
+{
+	<StockAccountDetailsPageContent AccountName="@AccountName"></StockAccountDetailsPageContent>
+}
+else
+{
+	<div class="alert alert-danger" role="alert">
+		@accountType type is not supported.
+	</div>
 }
 

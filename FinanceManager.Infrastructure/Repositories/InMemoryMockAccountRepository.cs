@@ -9,6 +9,7 @@ namespace FinanceManager.Infrastructure.Repositories
 	{
 		private readonly Random random = new Random();
 		private readonly ServiceContainer _bankAccounts = new ServiceContainer();
+		Dictionary<string, Type> nameTypeDictionary = new Dictionary<string, Type>();
 
 		public InMemoryMockAccountRepository()
 		{
@@ -52,6 +53,15 @@ namespace FinanceManager.Infrastructure.Repositories
 				return bankAccount as T;
 			}
 
+			if (typeof(T) == typeof(StockAccount))
+			{
+				StockAccount databaseBankAccount = firstAccount as StockAccount;
+
+				StockAccount bankAccount = new StockAccount(name, databaseBankAccount.Entries);
+				bankAccount.SetDates(dateStart, dateEnd);
+				return bankAccount as T;
+			}
+
 			return default;
 		}
 		public List<T>? GetEntries<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialEntryBase
@@ -63,30 +73,33 @@ namespace FinanceManager.Infrastructure.Repositories
 
 		public void AddFinancialAccount<T>(T bankAccount) where T : FinancialAccount
 		{
+			if (_bankAccounts is null) return;
+
 			var accountsOfType = (List<T>)_bankAccounts.GetService(typeof(List<T>));
 			if (accountsOfType is null)
 				_bankAccounts.AddService(typeof(List<T>), new List<T>() { bankAccount });
 			else
 				accountsOfType.Add(bankAccount);
+
+			nameTypeDictionary.Add(bankAccount.Name, typeof(T));
 		}
 
 
 		public void AddFinancialAccount<AccountType, EntryType>(string name, List<EntryType> data) where AccountType : FinancialAccount where EntryType : FinancialEntryBase
 		{
-			//var bankAccount = _bankAccounts.FirstOrDefault(x => x.Name == name);
+			//var mainBankAccount = _bankAccounts.FirstOrDefault(x => x.Name == name);
 
-			//if (bankAccount is null) return;
+			//if (mainBankAccount is null) return;
 			//foreach (var item in data)
 			//	AddFinancialAccount(name, item.BalanceChange, item.Description, item.ExpenseType, item.PostingDate);
 		}
 
 		public bool Exists(string name)
 		{
-			return false;
-			//			return _bankAccounts.Any(x => x.Name == name);
+			return nameTypeDictionary.ContainsKey(name);
 		}
 
-		private T? FindAccount<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialAccount
+		private T? FindAccount<T>(string name) where T : FinancialAccount
 		{
 			List<T> accountsOfType = _bankAccounts.GetService(typeof(List<T>)) as List<T>;
 			if (accountsOfType is null) return default;
@@ -96,63 +109,62 @@ namespace FinanceManager.Infrastructure.Repositories
 
 			return firstAccount;
 		}
-		private void AddBankAccountEntry(string name, decimal balanceChange, string senderName, ExpenseType expenseType, DateTime? postingDate = null)
+		private void AddMockData()
 		{
-			var bankAccount = FindAccount<BankAccount>(name, new DateTime(), DateTime.Now);
+			AddBankAccount(DateTime.UtcNow.AddMonths(-8), 100, "Main", AccountType.Cash);
+			AddBankAccount(DateTime.UtcNow.AddMonths(-8), 10, "Cash", AccountType.Cash);
+			AddBankAccount(DateTime.UtcNow.AddMonths(-8), 10, "Bonds", AccountType.Bond);
+			AddBankAccount(DateTime.UtcNow.AddMonths(-12), 10, "Nvidia", AccountType.Stock);
+			AddBankAccount(DateTime.UtcNow.AddMonths(-12), 10, "Intel", AccountType.Stock);
+			AddBankAccount(DateTime.UtcNow.AddMonths(-12), 10, "S&P 500", AccountType.Stock);
+			AddBankAccount(DateTime.UtcNow.AddMonths(-2), 10, "PPK", AccountType.Stock);
+			AddBankAccount(DateTime.UtcNow.AddYears(-12), 10000, "Apartment", AccountType.RealEstate);
+
+			AddLoanAccount(DateTime.UtcNow.AddMonths(-2), -300 * 62, "Loan");
+
+
+			AddStockAccount(DateTime.UtcNow.AddDays(-10), 10, "Wallet 1");
+		}
+
+		private void AddStockAccount(DateTime startDay, decimal startingBalance, string accountName)
+		{
+			AddFinancialAccount(new StockAccount(accountName, DateTime.UtcNow, DateTime.UtcNow));
+			List<string> tickers = new List<string>() { "S&P 500", "Orlen", "Nvidia" };
+			int tickerIndex = random.Next(tickers.Count);
+			AddStockAccountEntry(accountName, tickers[tickerIndex], startingBalance, startDay);
+
+			while (startDay.Date < DateTime.Now.Date)
+			{
+				tickerIndex = random.Next(tickers.Count);
+				decimal balanceChange = (decimal)(random.Next(-150, 200) + Math.Round(random.NextDouble(), 2));
+
+				startDay = startDay.AddDays(1);
+
+				AddStockAccountEntry(accountName, tickers[tickerIndex], balanceChange, startDay);
+			}
+		}
+		private void AddStockAccountEntry(string name, string ticker, decimal balanceChange, DateTime? postingDate = null)
+		{
+			var bankAccount = FindAccount<StockAccount>(name);
 			if (bankAccount is null) return;
 
 			decimal balance = balanceChange;
 
-			if (bankAccount.Entries is not null && bankAccount.Entries.Any())
-				balance += bankAccount.Entries.Last().Value;
-			//DateTime postingDate = DateTime.Now;
-			BankAccountEntry bankAccountEntry = new BankAccountEntry(postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, balance, balanceChange)
+			if (bankAccount.Entries is not null && bankAccount.Entries.Any(x => x.Ticker == ticker))
+				balance += bankAccount.Entries.Last(x => x.Ticker == ticker).Value;
+
+			StockEntry bankAccountEntry = new StockEntry(postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, balance, balanceChange, ticker)
 			{
-				Description = senderName,
-				ExpenseType = expenseType,
+				Ticker = ticker,
 			};
-			AddFinancialAccount<BankAccount, BankAccountEntry>(name, new List<BankAccountEntry>() { bankAccountEntry });
+
+			AddFinancialAccount<StockAccount, StockEntry>(name, new List<StockEntry>() { bankAccountEntry });
+
 			if (bankAccount.Entries is not null)
 				bankAccount.Entries.Add(bankAccountEntry);
 		}
-		private void AddMockData()
-		{
-			AddAccount(DateTime.UtcNow.AddMonths(-8), 100, "Main", AccountType.Cash);
-			AddAccount(DateTime.UtcNow.AddMonths(-8), 10, "Cash", AccountType.Cash);
-			AddAccount(DateTime.UtcNow.AddMonths(-8), 10, "Bonds", AccountType.Bond);
-			AddAccount(DateTime.UtcNow.AddMonths(-12), 10, "Nvidia", AccountType.Stock);
-			AddAccount(DateTime.UtcNow.AddMonths(-12), 10, "Intel", AccountType.Stock);
-			AddAccount(DateTime.UtcNow.AddMonths(-12), 10, "S&P 500", AccountType.Stock);
-			AddAccount(DateTime.UtcNow.AddMonths(-2), 10, "PPK", AccountType.Stock);
-			AddAccount(DateTime.UtcNow.AddYears(-12), 10000, "Apartment", AccountType.RealEstate);
 
-			//	AddLoanAccount(DateTime.UtcNow.AddMonths(-2), -300 * 62, "Loan");
-		}
-
-		//private void AddLoanAccount(DateTime startDay, decimal startingBalance, string accountName)
-		//{
-		//	var creditDays = (DateTime.UtcNow - startDay).TotalDays;
-		//	AddFinancialAccount(new BankAccount(accountName, AccountType.Loan));
-		//	AddFinancialAccount(accountName, startingBalance, $"Lorem ipsum {0}", ExpenseType.DebtRepayment, startDay);
-		//	decimal repaidAmount = 0;
-
-		//	int index = 0;
-		//	while (repaidAmount < -startingBalance && startDay.Date < DateTime.Now.Date)
-		//	{
-		//		decimal balanceChange = (decimal)(random.Next(0, 300) + Math.Round(random.NextDouble(), 2));
-		//		repaidAmount += balanceChange;
-		//		if (repaidAmount >= -startingBalance)
-		//			balanceChange = repaidAmount + startingBalance;
-		//		startDay = startDay.AddDays(1);
-
-		//		AddFinancialAccount(accountName, balanceChange, $"Lorem ipsum {index++}", ExpenseType.Other, startDay);
-
-		//		if (_bankAccounts.Any(x => x.Name == "Main"))
-		//			AddFinancialAccount("Main", -balanceChange, $"Loan repainment {index++}", ExpenseType.DebtRepayment, startDay);
-		//	}
-		//}
-
-		private void AddAccount(DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
+		private void AddBankAccount(DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
 		{
 			ExpenseType expenseType = GetRandomType();
 			if (accountType == AccountType.Stock)
@@ -174,6 +186,53 @@ namespace FinanceManager.Infrastructure.Repositories
 				AddBankAccountEntry(accountName, balanceChange, $"Lorem ipsum {index++}", expenseType, startDay);
 			}
 		}
+		private void AddLoanAccount(DateTime startDay, decimal startingBalance, string accountName)
+		{
+			var creditDays = (DateTime.UtcNow - startDay).TotalDays;
+
+			AddFinancialAccount(new BankAccount(accountName, AccountType.Loan));
+
+			AddBankAccountEntry(accountName, startingBalance, $"Lorem ipsum {0}", ExpenseType.DebtRepayment, startDay);
+
+			decimal repaidAmount = 0;
+
+			int index = 0;
+			while (repaidAmount < -startingBalance && startDay.Date < DateTime.Now.Date)
+			{
+				decimal balanceChange = (decimal)(random.Next(0, 300) + Math.Round(random.NextDouble(), 2));
+				repaidAmount += balanceChange;
+				if (repaidAmount >= -startingBalance)
+					balanceChange = repaidAmount + startingBalance;
+				startDay = startDay.AddDays(1);
+
+				AddBankAccountEntry(accountName, balanceChange, $"Lorem ipsum {0}", ExpenseType.Other, startDay);
+
+				var mainBankAccount = FindAccount<BankAccount>("Main");
+				if (mainBankAccount is not null)
+					AddBankAccountEntry("Main", -balanceChange, $"Loan repainment {0}", ExpenseType.DebtRepayment, startDay);
+			}
+		}
+		private void AddBankAccountEntry(string name, decimal balanceChange, string senderName, ExpenseType expenseType, DateTime? postingDate = null)
+		{
+			var bankAccount = FindAccount<BankAccount>(name);
+			if (bankAccount is null) return;
+
+			decimal balance = balanceChange;
+
+			if (bankAccount.Entries is not null && bankAccount.Entries.Any())
+				balance += bankAccount.Entries.Last().Value;
+
+			BankAccountEntry bankAccountEntry = new BankAccountEntry(postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, balance, balanceChange)
+			{
+				Description = senderName,
+				ExpenseType = expenseType,
+			};
+
+			AddFinancialAccount<BankAccount, BankAccountEntry>(name, new List<BankAccountEntry>() { bankAccountEntry });
+
+			if (bankAccount.Entries is not null)
+				bankAccount.Entries.Add(bankAccountEntry);
+		}
 
 
 		private ExpenseType GetRandomType()
@@ -187,5 +246,9 @@ namespace FinanceManager.Infrastructure.Repositories
 			return (decimal)(random.Next(-100, 100) + Math.Round(random.NextDouble(), 2));
 		}
 
+		public Dictionary<string, Type> GetAvailableAccounts()
+		{
+			return nameTypeDictionary;
+		}
 	}
 }
