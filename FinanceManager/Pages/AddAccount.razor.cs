@@ -1,4 +1,4 @@
-﻿using FinanceManager.Core.Entities;
+﻿using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Services;
 using Microsoft.AspNetCore.Components;
 
@@ -14,7 +14,7 @@ namespace FinanceManager.Pages
 		{
 			if (!AccountService.Exists(AccountName))
 			{
-				AccountService.AddBankAccount(new BankAccount(AccountName, Core.Enums.AccountType.Other));
+				AccountService.AddFinancialAccount(new BankAccount(AccountName, Core.Enums.AccountType.Other));
 				StateHasChanged();
 			}
 			else

@@ -1,8 +1,10 @@
-﻿@using FinanceManager.Core.Enums
+﻿@using FinanceManager.Core.Entities
+@using FinanceManager.Core.Entities.Accounts
+@using FinanceManager.Core.Enums
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
 
-@inject IBankAccountRepository bankAccountRepository;
+@inject IFinancalAccountRepository bankAccountRepository;
 @inject ISettingsService settingsService;
 
 <div class="card" style="height:@Height;">
@@ -34,7 +36,7 @@
 	protected override async Task OnInitializedAsync()
 	{
 		currency = settingsService.GetCurrency();
-		
+
 	}
 
 	protected override async Task OnParametersSetAsync()
@@ -43,22 +45,23 @@
 
 		await Task.Run(() =>
 		{
-			var bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any());
-
-			foreach (var account in bankAccounts)
+			var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now);
+			if (bankAccounts is null) return;
+		
+			foreach (var account in bankAccounts.Where(x => x.Entries is not null && x.Entries.Any()))
 			{
-				foreach (var entry in account.Entries.Where(x => x.BalanceChange < 0))
+				foreach (var entry in account.Entries.Where(x => x.ValueChange < 0))
 				{
 					var key = entry.ExpenseType.ToString();
 					var entryElement = Data.FirstOrDefault(x => x.ExpenseType == entry.ExpenseType);
 
 					if (entryElement is not null)
 					{
-						entryElement.Value += -entry.BalanceChange;
+						entryElement.Value += -entry.ValueChange;
 					}
 					else
 					{
-						Data.Add(new SpendingCathegoryOverviewEntry() { ExpenseType = entry.ExpenseType, Value = -entry.BalanceChange });
+						Data.Add(new SpendingCathegoryOverviewEntry() { ExpenseType = entry.ExpenseType, Value = -entry.ValueChange });
 					}
 				}
 			}

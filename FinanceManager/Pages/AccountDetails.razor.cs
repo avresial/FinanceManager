@@ -1,4 +1,4 @@
-﻿using FinanceManager.Core.Entities;
+﻿using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Repositories;
 using Microsoft.AspNetCore.Components;
 
@@ -12,7 +12,7 @@ namespace FinanceManager.Pages
 		public string AccountName { get; set; }
 
 		[Inject]
-		public IBankAccountRepository BankAccountRepository { get; set; }
+		public IFinancalAccountRepository BankAccountRepository { get; set; }
 
 		public string ErrorMessage { get; set; } = string.Empty;
 
@@ -34,7 +34,7 @@ namespace FinanceManager.Pages
 			{
 				DateTime dateStart = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
 				if (BankAccountRepository.Exists(AccountName))
-					Entries = BankAccountRepository.Get(AccountName, dateStart, DateTime.Now).Entries.Take(maxTableSize).OrderByDescending(x => x.PostingDate);
+					Entries = BankAccountRepository.GetAccount<BankAccount>(AccountName, dateStart, DateTime.Now).Entries.Take(maxTableSize).OrderByDescending(x => x.PostingDate);
 			}
 			catch (Exception ex)
 			{

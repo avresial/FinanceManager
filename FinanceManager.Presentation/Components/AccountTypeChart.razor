@@ -1,5 +1,6 @@
 ﻿@using ApexCharts
 @using FinanceManager.Core.Entities
+@using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Core.Enums
 
 
@@ -13,7 +14,7 @@
 						 Name="@serie.Key.ToString()"
 						 XValue="@(e => e.PostingDate)"
 						 OrderByDescending="@(e => e.X)"
-						 YAggregate="@(e => e.Sum(e => e.Balance))"
+						 YAggregate="@(e => e.Sum(e => e.Value))"
 						 SeriesType="SeriesType.Line" />
 	}
 </ApexChart>

@@ -1,10 +1,11 @@
 ﻿@using ApexCharts
 @using FinanceManager.Core.Entities
+@using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Extensions
 @using FinanceManager.Core.Services
 
-@inject IBankAccountRepository bankAccountRepository;
+@inject IFinancalAccountRepository bankAccountRepository;
 @inject ISettingsService settingsService;
 
 
@@ -29,8 +30,7 @@
 										 Name="Income"
 										 XValue="@(e => e.Date.ToLocalTime())"
 										 YValue="e=> e.Value"
-										 SeriesType="SeriesType.Area" 
-										 />
+										 SeriesType="SeriesType.Area" />
 
 					</ApexChart>
 				</div>
@@ -109,9 +109,10 @@
 		var result = new List<SpendingOverviewEntry>();
 		await Task.Run(() =>
 		{
-			var bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any());
-
-			foreach (var account in bankAccounts)
+			var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now);
+			if (bankAccounts is null) return;
+			
+			foreach (var account in bankAccounts.Where(x => x.Entries is not null && x.Entries.Any()))
 			{
 				List<BankAccountEntry> entries = new List<BankAccountEntry>();
 				if ((DateTime.Now - StartDateTime).TotalDays > 6 * 31)
@@ -127,7 +128,7 @@
 					entries = account.Entries;
 				}
 
-				foreach (var entry in entries.Where(x => x.BalanceChange > 0))
+				foreach (var entry in entries.Where(x => x.ValueChange > 0))
 				{
 					var dataEntry = result.FirstOrDefault(x => x.Date == entry.PostingDate.Date);
 					if (dataEntry is null)
@@ -135,12 +136,12 @@
 						result.Add(new SpendingOverviewEntry()
 							{
 								Date = entry.PostingDate.Date,
-								Value = entry.BalanceChange
+								Value = entry.ValueChange
 							});
 					}
 					else
 					{
-						dataEntry.Value += entry.BalanceChange;
+						dataEntry.Value += entry.ValueChange;
 					}
 
 				}

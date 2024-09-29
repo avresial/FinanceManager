@@ -1,10 +1,11 @@
 ﻿@using ApexCharts
 @using FinanceManager.Core.Entities
+@using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Extensions
 @using FinanceManager.Core.Services
 
-@inject IBankAccountRepository bankAccountRepository;
+@inject IFinancalAccountRepository bankAccountRepository;
 @inject ISettingsService settingsService;
 
 <div class="card" style="height:@Height;">
@@ -70,8 +71,11 @@
 		if (chart is not null) await chart.UpdateSeriesAsync(true);
 		await Task.Run(() =>
 		{
-			IEnumerable<BankAccount> bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any());
+			List<BankAccount> bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now)
+			.Where(x => x.Entries is not null && x.Entries.Any())
+			.ToList();
 
+			if (bankAccounts is null) return;
 
 			foreach (var account in bankAccounts)
 			{
@@ -89,7 +93,7 @@
 					entries = account.Entries;
 				}
 
-				foreach (var entry in entries.Where(x => x.BalanceChange < 0))
+				foreach (var entry in entries.Where(x => x.ValueChange < 0))
 				{
 					var dataEntry = Data.FirstOrDefault(x => x.Date == entry.PostingDate.Date);
 					if (dataEntry is null)
@@ -97,13 +101,13 @@
 						var newDatapoint = new SpendingOverviewEntry()
 							{
 								Date = entry.PostingDate.Date,
-								Value = -entry.BalanceChange
+								Value = -entry.ValueChange
 							};
 						Data.Add(newDatapoint);
 					}
 					else
 					{
-						dataEntry.Value += -entry.BalanceChange;
+						dataEntry.Value += -entry.ValueChange;
 					}
 
 				}

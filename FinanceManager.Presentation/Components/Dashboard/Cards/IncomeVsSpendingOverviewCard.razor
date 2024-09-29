@@ -2,8 +2,8 @@
 @using FinanceManager.Core.Entities
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Extensions
-
-@inject IBankAccountRepository bankAccountRepository;
+@using FinanceManager.Core.Entities.Accounts
+@inject IFinancalAccountRepository bankAccountRepository;
 
 
 <div class="card" style="height:@Height;">
@@ -134,9 +134,9 @@
 		List<IncomeVsSpendingEntry> result = new List<IncomeVsSpendingEntry>();
 		await Task.Run(() =>
 		{
-			var bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any());
-
-			foreach (var account in bankAccounts)
+			var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now);
+			if (bankAccounts is null) return;
+			foreach (var account in bankAccounts.Where(x => x.Entries is not null && x.Entries.Any()))
 			{
 				List<BankAccountEntry> entries = new List<BankAccountEntry>();
 				if ((DateTime.Now - StartDateTime).TotalDays > 6 * 31)
@@ -158,26 +158,26 @@
 					if (dataEntry is null)
 					{
 						var newDataEntry = new IncomeVsSpendingEntry() { Date = entry.PostingDate.Date };
-						if (entry.BalanceChange < 0)
+						if (entry.ValueChange < 0)
 						{
-							newDataEntry.Spending = -entry.BalanceChange;
+							newDataEntry.Spending = -entry.ValueChange;
 						}
 						else
 						{
-							newDataEntry.Income = entry.BalanceChange;
+							newDataEntry.Income = entry.ValueChange;
 						}
 
 						result.Add(newDataEntry);
 					}
 					else
 					{
-						if (entry.BalanceChange < 0)
+						if (entry.ValueChange < 0)
 						{
-							dataEntry.Spending -= entry.BalanceChange;
+							dataEntry.Spending -= entry.ValueChange;
 						}
 						else
 						{
-							dataEntry.Income += entry.BalanceChange;
+							dataEntry.Income += entry.ValueChange;
 						}
 					}
 

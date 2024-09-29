@@ -2,7 +2,7 @@
 
 namespace FinanceManager.Core.Services
 {
-	public interface IAccountService : IBankAccountRepository
+	public interface IAccountService : IFinancalAccountRepository
 	{
 		public event Action AccountsChanged;
 	}

@@ -1,6 +1,6 @@
 ﻿using CsvHelper;
 using CsvHelper.Configuration;
-using FinanceManager.Core.Entities;
+using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Repositories;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
@@ -11,7 +11,7 @@ namespace FinanceManager.Pages
 	public partial class Import : ComponentBase
 	{
 		[Inject]
-		public IBankAccountRepository BankAccountRepository { get; set; }
+		public IFinancalAccountRepository BankAccountRepository { get; set; }
 
 		public List<BankAccountEntry> CurrentlyLoadedEntries { get; set; }
 
@@ -80,7 +80,7 @@ namespace FinanceManager.Pages
 		{
 			if (!BankAccountRepository.Exists(CurrentlyLoadedAccountName))
 			{
-				BankAccountRepository.AddBankAccountEntry(CurrentlyLoadedAccountName, CurrentlyLoadedEntries.ToList());
+				BankAccountRepository.AddFinancialAccount<BankAccount, BankAccountEntry>(CurrentlyLoadedAccountName, CurrentlyLoadedEntries.ToList());
 			}
 			else
 			{
