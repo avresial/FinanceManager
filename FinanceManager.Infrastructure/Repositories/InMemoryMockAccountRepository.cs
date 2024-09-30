@@ -16,7 +16,7 @@ namespace FinanceManager.Infrastructure.Repositories
 			AddMockData();
 		}
 
-		public IEnumerable<T> GetAccounts<T>(DateTime dateStart, DateTime dateEnd) where T : FinancialAccount
+		public IEnumerable<T> GetAccounts<T>(DateTime dateStart, DateTime dateEnd) where T : FinancialAccountBase
 		{
 			var accountsOfType = _bankAccounts.GetService(typeof(List<T>)) as List<T>;
 			if (accountsOfType is null)
@@ -36,7 +36,7 @@ namespace FinanceManager.Infrastructure.Repositories
 			return result;
 		}
 
-		public T? GetAccount<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialAccount
+		public T? GetAccount<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialAccountBase
 		{
 			List<T> accountsOfType = _bankAccounts.GetService(typeof(List<T>)) as List<T>;
 			if (accountsOfType is null) return default;
@@ -71,7 +71,7 @@ namespace FinanceManager.Infrastructure.Repositories
 			return null;
 		}
 
-		public void AddFinancialAccount<T>(T bankAccount) where T : FinancialAccount
+		public void AddFinancialAccount<T>(T bankAccount) where T : FinancialAccountBase
 		{
 			if (_bankAccounts is null) return;
 
@@ -85,7 +85,7 @@ namespace FinanceManager.Infrastructure.Repositories
 		}
 
 
-		public void AddFinancialAccount<AccountType, EntryType>(string name, List<EntryType> data) where AccountType : FinancialAccount where EntryType : FinancialEntryBase
+		public void AddFinancialAccount<AccountType, EntryType>(string name, List<EntryType> data) where AccountType : FinancialAccountBase where EntryType : FinancialEntryBase
 		{
 			//var mainBankAccount = _bankAccounts.FirstOrDefault(x => x.Name == name);
 
@@ -99,7 +99,7 @@ namespace FinanceManager.Infrastructure.Repositories
 			return nameTypeDictionary.ContainsKey(name);
 		}
 
-		private T? FindAccount<T>(string name) where T : FinancialAccount
+		private T? FindAccount<T>(string name) where T : FinancialAccountBase
 		{
 			List<T> accountsOfType = _bankAccounts.GetService(typeof(List<T>)) as List<T>;
 			if (accountsOfType is null) return default;

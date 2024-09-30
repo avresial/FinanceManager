@@ -1,5 +1,4 @@
 ﻿using FinanceManager.Core.Enums;
-using FinanceManager.Core.Repositories;
 
 namespace FinanceManager.Core.Entities.Accounts
 {
@@ -16,24 +15,27 @@ namespace FinanceManager.Core.Entities.Accounts
 
 	}
 
-	public class FinancialAccount : IFinancalAccount
+	public class FinancialAccountBase
 	{
-		internal IFinancalAccountRepository _financalAccountRepository;
-		public FinancialAccount()
+		public string Name { get; set; }
+		public DateTime Start { get; protected set; }
+		public DateTime End { get; protected set; }
+	}
+
+	public class FinancialAccountBase<T> : FinancialAccountBase, IFinancalAccount where T : FinancialEntryBase
+	{
+		public List<T>? Entries { get; protected set; }
+
+		public FinancialAccountBase()
 		{
 
 		}
-		public FinancialAccount(IFinancalAccountRepository financalAccountRepository, string name, DateTime start, DateTime end)
+		public FinancialAccountBase(string name, DateTime start, DateTime end)
 		{
-			_financalAccountRepository = financalAccountRepository;
 			Name = name;
 			Start = start;
 			End = end;
 		}
-
-		public string Name { get; set; }
-		public DateTime Start { get; private set; }
-		public DateTime End { get; private set; }
 
 		public virtual void SetDates(DateTime start, DateTime end)
 		{
@@ -66,27 +68,24 @@ namespace FinanceManager.Core.Entities.Accounts
 		}
 	}
 
-	public class FixedAssetAccount : FinancialAccount
+	public class FixedAssetAccount : FinancialAccountBase<FixedAssetEntry>
 	{
-		public List<FixedAssetEntry>? Entries { get; private set; }
+		//	public List<FixedAssetEntry>? Entries { get; private set; }
 		public override void SetDates(DateTime start, DateTime end)
 		{
-			if (_financalAccountRepository is null) return;
-
-			Entries = _financalAccountRepository.GetEntries<FixedAssetEntry>(Name, start, end);
 
 			base.SetDates(start, end);
 		}
 	}
-	public class StockAccount : FinancialAccount, IFinancalAccount
+	public class StockAccount : FinancialAccountBase<InvestmentEntry>//, IFinancalAccount
 	{
-		public List<InvestmentEntry>? Entries { get; private set; }
+		//public List<InvestmentEntry>? Entries { get; private set; }
 		public StockAccount(string name, IEnumerable<InvestmentEntry> entries)
 		{
 			Name = name;
 			Entries = entries.ToList();
 		}
-		public StockAccount(string name, DateTime start, DateTime end) : base(null, name, start, end)
+		public StockAccount(string name, DateTime start, DateTime end) : base(name, start, end)
 		{
 			Entries = new List<InvestmentEntry>();
 		}
@@ -109,9 +108,9 @@ namespace FinanceManager.Core.Entities.Accounts
 		}
 	}
 
-	public class BankAccount : FinancialAccount, IFinancalAccount
+	public class BankAccount : FinancialAccountBase<BankAccountEntry>//, IFinancalAccount
 	{
-		public List<BankAccountEntry>? Entries { get; private set; }
+		//public List<BankAccountEntry>? Entries { get; private set; }
 		public AccountType AccountType { get; private set; }
 
 		public BankAccount(string name, IEnumerable<BankAccountEntry> entries, AccountType accountType)
