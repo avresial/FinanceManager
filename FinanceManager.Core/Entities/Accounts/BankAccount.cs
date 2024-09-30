@@ -80,20 +80,32 @@ namespace FinanceManager.Core.Entities.Accounts
 	}
 	public class StockAccount : FinancialAccount, IFinancalAccount
 	{
-		public List<StockEntry>? Entries { get; private set; }
-		public StockAccount(string name, IEnumerable<StockEntry> entries)
+		public List<InvestmentEntry>? Entries { get; private set; }
+		public StockAccount(string name, IEnumerable<InvestmentEntry> entries)
 		{
 			Name = name;
 			Entries = entries.ToList();
 		}
 		public StockAccount(string name, DateTime start, DateTime end) : base(null, name, start, end)
 		{
-			Entries = new List<StockEntry>();
+			Entries = new List<InvestmentEntry>();
 		}
 		public override void SetDates(DateTime start, DateTime end)
 		{
 			if (Entries is null) return;
 			Entries.RemoveAll(x => x.PostingDate < start || x.PostingDate > end);
+		}
+
+		public List<InvestmentType> GetStoredTypes()
+		{
+			if (Entries is null) Enumerable.Empty<InvestmentType>();
+
+			return Entries.DistinctBy(x => x.InvestmentType).Select(x => x.InvestmentType).ToList();
+		}
+		public decimal GetPrice(InvestmentEntry investmentEntry)
+		{
+			decimal pricePerUnit = 1;
+			return investmentEntry.Value * pricePerUnit;
 		}
 	}
 

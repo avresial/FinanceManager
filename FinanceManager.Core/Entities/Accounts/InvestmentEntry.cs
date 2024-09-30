@@ -15,13 +15,14 @@ namespace FinanceManager.Core.Entities.Accounts
 		public decimal Value { get; internal set; }
 		public decimal ValueChange { get; internal set; }
 	}
-	public class StockEntry : FinancialEntryBase
+	public class InvestmentEntry : FinancialEntryBase
 	{
 		public string Ticker { get; set; }
-
-		public StockEntry(DateTime postingDate, decimal value, decimal valueChange, string ticker) : base(postingDate, value, valueChange)
+		public InvestmentType InvestmentType { get; set; }
+		public InvestmentEntry(DateTime postingDate, decimal value, decimal valueChange, string ticker, InvestmentType investmentType) : base(postingDate, value, valueChange)
 		{
 			Ticker = ticker;
+			InvestmentType = investmentType;
 		}
 
 	}

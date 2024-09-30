@@ -16,9 +16,9 @@ namespace FinanceManager.Infrastructure.Repositories
 			var tickerDatabase = _database[ticker];
 
 			if (!tickerDatabase.ContainsKey(date.Date))
-				tickerDatabase.Add(date.Date, (decimal)Math.Round(_random.Next() + _random.NextDouble(), 5));
+				tickerDatabase.Add(date.Date, (decimal)Math.Round(_random.Next(1, 100) + _random.NextDouble(), 5));
 
-			return new StockPrice() { Ticker = ticker, Price = tickerDatabase[date.Date], Date = date.Date };
+			return new StockPrice() { Ticker = ticker, PricePerUnit = tickerDatabase[date.Date], Date = date.Date };
 		}
 	}
 }

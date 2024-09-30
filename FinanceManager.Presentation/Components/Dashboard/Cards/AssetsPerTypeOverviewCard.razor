@@ -1,11 +1,13 @@
 ﻿@using ApexCharts
 @using FinanceManager.Core.Entities
 @using FinanceManager.Core.Entities.Accounts
+@using FinanceManager.Core.Enums
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
 
 @inject IFinancalAccountRepository bankAccountRepository;
 @inject ISettingsService settingsService;
+@inject IStockRepository stockRepository;
 
 <div class="card" style="height:@Height;">
 	<div class="card-body">
@@ -13,7 +15,7 @@
 			<div class="row">
 				<div class="col px-0">
 					<h5 class="card-title">Assets</h5>
-					<h6 class="card-subtitle mb-2 text-muted">@TotalAssets @currency</h6>
+					<h6 class="card-subtitle mb-2 text-muted">@Math.Round(TotalAssets, 2) @currency</h6>
 				</div>
 			</div>
 
@@ -27,7 +29,7 @@
 										 Items="Data"
 										 Name="Assets"
 										 XValue="e => e.Cathegory.ToString()"
-										 YAggregate="@(e => e.Sum(e => e.Value))"
+										 YAggregate="@(e =>Math.Round( e.Sum(e => e.Value),2))"
 										 SeriesType="SeriesType.Pie"
 										 OrderByDescending="@(e=>e.Y.Value)" />
 
@@ -123,35 +125,65 @@
 
 	async Task GetData()
 	{
-		//	List<WealthOverviewEntry> result = new List<WealthOverviewEntry>();
-		await Task.Run(() =>
+		await Task.Run(async () =>
 			{
 				var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now);
-				if (bankAccounts is null) return;
-
-				bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0).ToList();
-				TotalAssets = bankAccounts.Sum(x => x.Entries.Last().Value);
-
-				foreach (var account in bankAccounts)
+				if (bankAccounts is not null)
 				{
-					var dataEntry = Data.FirstOrDefault(x => x.Cathegory == account.AccountType.ToString());
+					bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0).ToList();
 
-					if (dataEntry is not null)
+					foreach (var account in bankAccounts)
 					{
-						dataEntry.Value += account.Entries.Last().Value;
-					}
-					else
-					{
-						Data.Add(new WealthOverviewEntry()
-							{
-								Cathegory = account.AccountType.ToString(),
-								Value = account.Entries.Last().Value
-							});
+						var dataEntry = Data.FirstOrDefault(x => x.Cathegory == account.AccountType.ToString());
+
+						if (dataEntry is not null)
+						{
+							dataEntry.Value += account.Entries.Last().Value;
+						}
+						else
+						{
+							Data.Add(new WealthOverviewEntry()
+								{
+									Cathegory = account.AccountType.ToString(),
+									Value = account.Entries.Last().Value
+								});
+						}
 					}
 				}
-			});
 
-		//return result;
+				var stockAccounts = bankAccountRepository.GetAccounts<StockAccount>(StartDateTime, DateTime.Now);
+				if (stockAccounts is not null)
+				{
+					stockAccounts = stockAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0).ToList();
+
+					foreach (var account in stockAccounts)
+					{
+						foreach (var investmentType in account.GetStoredTypes())
+						{
+							var dataEntry = Data.FirstOrDefault(x => x.Cathegory == investmentType.ToString());
+
+							if (dataEntry is not null)
+							{
+								var entry = account.Entries.Last(x => x.InvestmentType == investmentType);
+								var price = await stockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
+								dataEntry.Value += price.PricePerUnit * entry.Value;
+							}
+							else
+							{
+								var entry = account.Entries.Last(x => x.InvestmentType == investmentType);
+								var price = await stockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
+								Data.Add(new WealthOverviewEntry()
+									{
+										Cathegory = investmentType.ToString(),
+										Value = price.PricePerUnit * entry.Value
+									});
+							}
+						}
+					}
+				}
+
+				TotalAssets = Data.Sum(x => x.Value);
+			});
 	}
 
 	public class WealthOverviewEntry

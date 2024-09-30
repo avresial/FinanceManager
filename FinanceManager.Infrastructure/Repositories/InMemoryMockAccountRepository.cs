@@ -113,25 +113,24 @@ namespace FinanceManager.Infrastructure.Repositories
 		{
 			AddBankAccount(DateTime.UtcNow.AddMonths(-8), 100, "Main", AccountType.Cash);
 			AddBankAccount(DateTime.UtcNow.AddMonths(-8), 10, "Cash", AccountType.Cash);
-			AddBankAccount(DateTime.UtcNow.AddMonths(-8), 10, "Bonds", AccountType.Bond);
-			AddBankAccount(DateTime.UtcNow.AddMonths(-12), 10, "Nvidia", AccountType.Stock);
-			AddBankAccount(DateTime.UtcNow.AddMonths(-12), 10, "Intel", AccountType.Stock);
-			AddBankAccount(DateTime.UtcNow.AddMonths(-12), 10, "S&P 500", AccountType.Stock);
-			AddBankAccount(DateTime.UtcNow.AddMonths(-2), 10, "PPK", AccountType.Stock);
+			//AddBankAccount(DateTime.UtcNow.AddMonths(-8), 10, "Bonds", AccountType.Bond);
+			//AddBankAccount(DateTime.UtcNow.AddMonths(-12), 10, "Nvidia", AccountType.Stock);
+			//AddBankAccount(DateTime.UtcNow.AddMonths(-12), 10, "Intel", AccountType.Stock);
+			//AddBankAccount(DateTime.UtcNow.AddMonths(-12), 10, "S&P 500", AccountType.Stock);
+			//AddBankAccount(DateTime.UtcNow.AddMonths(-2), 10, "PPK", AccountType.Stock);
 			AddBankAccount(DateTime.UtcNow.AddYears(-12), 10000, "Apartment", AccountType.RealEstate);
-
 			AddLoanAccount(DateTime.UtcNow.AddMonths(-2), -300 * 62, "Loan");
 
-
-			AddStockAccount(DateTime.UtcNow.AddDays(-10), 10, "Wallet 1");
+			AddStockAccount(DateTime.UtcNow.AddMonths(-5), 10, "Wallet 1", new List<(string, InvestmentType)>()
+			{
+				("S&P 500", InvestmentType.Stock),( "Orlen", InvestmentType.Stock), ("Nvidia", InvestmentType.Stock),( "Intel", InvestmentType.Stock), ("Bonds" , InvestmentType.Bond)});
 		}
 
-		private void AddStockAccount(DateTime startDay, decimal startingBalance, string accountName)
+		private void AddStockAccount(DateTime startDay, decimal startingBalance, string accountName, List<(string, InvestmentType)> tickers)
 		{
 			AddFinancialAccount(new StockAccount(accountName, DateTime.UtcNow, DateTime.UtcNow));
-			List<string> tickers = new List<string>() { "S&P 500", "Orlen", "Nvidia" };
 			int tickerIndex = random.Next(tickers.Count);
-			AddStockAccountEntry(accountName, tickers[tickerIndex], startingBalance, startDay);
+			AddStockAccountEntry(accountName, tickers[tickerIndex].Item1, tickers[tickerIndex].Item2, startingBalance, startDay);
 
 			while (startDay.Date < DateTime.Now.Date)
 			{
@@ -140,10 +139,10 @@ namespace FinanceManager.Infrastructure.Repositories
 
 				startDay = startDay.AddDays(1);
 
-				AddStockAccountEntry(accountName, tickers[tickerIndex], balanceChange, startDay);
+				AddStockAccountEntry(accountName, tickers[tickerIndex].Item1, tickers[tickerIndex].Item2, balanceChange, startDay);
 			}
 		}
-		private void AddStockAccountEntry(string name, string ticker, decimal balanceChange, DateTime? postingDate = null)
+		private void AddStockAccountEntry(string name, string ticker, InvestmentType investmentType, decimal balanceChange, DateTime? postingDate = null)
 		{
 			var bankAccount = FindAccount<StockAccount>(name);
 			if (bankAccount is null) return;
@@ -153,12 +152,12 @@ namespace FinanceManager.Infrastructure.Repositories
 			if (bankAccount.Entries is not null && bankAccount.Entries.Any(x => x.Ticker == ticker))
 				balance += bankAccount.Entries.Last(x => x.Ticker == ticker).Value;
 
-			StockEntry bankAccountEntry = new StockEntry(postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, balance, balanceChange, ticker)
+			InvestmentEntry bankAccountEntry = new InvestmentEntry(postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, balance, balanceChange, ticker, investmentType)
 			{
 				Ticker = ticker,
 			};
 
-			AddFinancialAccount<StockAccount, StockEntry>(name, new List<StockEntry>() { bankAccountEntry });
+			AddFinancialAccount<StockAccount, InvestmentEntry>(name, new List<InvestmentEntry>() { bankAccountEntry });
 
 			if (bankAccount.Entries is not null)
 				bankAccount.Entries.Add(bankAccountEntry);
