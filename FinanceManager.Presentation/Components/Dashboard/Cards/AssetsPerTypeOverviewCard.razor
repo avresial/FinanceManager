@@ -138,14 +138,14 @@
 
 						if (dataEntry is not null)
 						{
-							dataEntry.Value += account.Entries.Last().Value;
+							dataEntry.Value += account.Entries.First().Value;
 						}
 						else
 						{
 							Data.Add(new WealthOverviewEntry()
 								{
 									Cathegory = account.AccountType.ToString(),
-									Value = account.Entries.Last().Value
+									Value = account.Entries.First().Value
 								});
 						}
 					}
@@ -162,15 +162,23 @@
 						{
 							var dataEntry = Data.FirstOrDefault(x => x.Cathegory == investmentType.ToString());
 
+							var entry = account.Entries.First(x => x.InvestmentType == investmentType);
+
+							if (entry.Value < 0)
+							{
+								if (dataEntry is not null)
+									dataEntry.Value = 0;
+
+								continue;
+							}
+
 							if (dataEntry is not null)
 							{
-								var entry = account.Entries.Last(x => x.InvestmentType == investmentType);
 								var price = await stockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
 								dataEntry.Value += price.PricePerUnit * entry.Value;
 							}
 							else
 							{
-								var entry = account.Entries.Last(x => x.InvestmentType == investmentType);
 								var price = await stockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
 								Data.Add(new WealthOverviewEntry()
 									{

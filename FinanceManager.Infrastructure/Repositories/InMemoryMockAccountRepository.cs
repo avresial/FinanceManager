@@ -157,10 +157,9 @@ namespace FinanceManager.Infrastructure.Repositories
 				Ticker = ticker,
 			};
 
-			AddFinancialAccount<StockAccount, InvestmentEntry>(name, new List<InvestmentEntry>() { bankAccountEntry });
 
 			if (bankAccount.Entries is not null)
-				bankAccount.Entries.Add(bankAccountEntry);
+				bankAccount.Entries.Insert(0, bankAccountEntry);
 		}
 
 		private void AddBankAccount(DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
@@ -230,7 +229,7 @@ namespace FinanceManager.Infrastructure.Repositories
 			AddFinancialAccount<BankAccount, BankAccountEntry>(name, new List<BankAccountEntry>() { bankAccountEntry });
 
 			if (bankAccount.Entries is not null)
-				bankAccount.Entries.Add(bankAccountEntry);
+				bankAccount.Entries.Insert(0, bankAccountEntry);
 		}
 
 
