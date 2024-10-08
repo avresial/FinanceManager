@@ -42,7 +42,7 @@
                     }
                     <td>@entry.Ticker </td>
 
-                    <td>@prices[entry].PricePerUnit.ToString("0.00") @prices[entry].Currency</td>
+                    <td>@((entry.Value*prices[entry].PricePerUnit).ToString("0.00")) @prices[entry].Currency</td>
                 </tr>
             }
         </tbody>

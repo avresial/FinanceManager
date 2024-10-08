@@ -100,6 +100,12 @@ namespace FinanceManager.Core.Entities.Accounts
 
             return Entries.DistinctBy(x => x.InvestmentType).Select(x => x.InvestmentType).ToList();
         }
+        public List<string> GetStoredTickers()
+        {
+            if (Entries is null) Enumerable.Empty<InvestmentType>();
+
+            return Entries.DistinctBy(x => x.Ticker).Select(x => x.Ticker).ToList();
+        }
 
     }
 

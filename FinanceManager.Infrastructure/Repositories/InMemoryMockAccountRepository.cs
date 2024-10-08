@@ -123,11 +123,21 @@ namespace FinanceManager.Infrastructure.Repositories
             AddBankAccount(DateTime.UtcNow.AddYears(-12), 10000, "Apartment", AccountType.RealEstate);
             AddLoanAccount(DateTime.UtcNow.AddMonths(-2), -300 * 62, "Loan");
 
-            AddStockAccount(DateTime.UtcNow.AddDays(-7), 10, "Wallet 1", new List<(string, InvestmentType)>()
+            AddStockAccount(DateTime.UtcNow.AddDays(-10), 10, "Wallet 1", new List<(string, InvestmentType)>()
             {
                 ("S&P 500", InvestmentType.Stock)
                 ,( "Orlen", InvestmentType.Stock), 
                 //("Nvidia", InvestmentType.Stock),( "Intel", InvestmentType.Stock), ("Bonds" , InvestmentType.Bond)
+            });
+
+            AddStockAccount(DateTime.UtcNow.AddDays(-10), 10, "Wallet 2", new List<(string, InvestmentType)>()
+            {
+                ("Nvidia", InvestmentType.Stock),( "Intel", InvestmentType.Stock), ("Bond 1" , InvestmentType.Bond)
+            });
+
+            AddStockAccount(DateTime.UtcNow.AddDays(-10), 10, "Wallet 3", new List<(string, InvestmentType)>()
+            {
+                ("Bond 2", InvestmentType.Bond),( "Bond 3", InvestmentType.Bond), ("Bond 4" , InvestmentType.Bond)
             });
         }
 
@@ -157,7 +167,20 @@ namespace FinanceManager.Infrastructure.Repositories
             decimal balance = balanceChange;
 
             if (bankAccount.Entries is not null && bankAccount.Entries.Any(x => x.Ticker == ticker))
-                balance += bankAccount.Entries.First(x => x.Ticker == ticker).Value;
+            {
+                var lastBalance = bankAccount.Entries.First(x => x.Ticker == ticker).Value;
+                if (balance + lastBalance < 0)
+                {
+                    balance = 0;
+                    balanceChange = -lastBalance;
+                }
+                else
+                {
+                    balance += lastBalance;
+                }
+            }
+
+            if (balanceChange == 0) return;
 
             InvestmentEntry bankAccountEntry = new InvestmentEntry(postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, balance, balanceChange, ticker, investmentType)
             {
