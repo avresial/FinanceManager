@@ -111,7 +111,7 @@ namespace FinanceManager.Infrastructure.Repositories
         }
         private void AddMockData()
         {
-            //		AddBankAccount(DateTime.UtcNow.AddMonths(-8), 100, "Main", AccountType.Cash);
+            AddBankAccount(DateTime.UtcNow.AddMonths(-8), 100, "Main", AccountType.Cash);
             //		AddBankAccount(DateTime.UtcNow.AddMonths(-8), 10, "Cash", AccountType.Cash);
 
             //AddBankAccount(DateTime.UtcNow.AddMonths(-8), 10, "Bonds", AccountType.Bond);
@@ -120,8 +120,8 @@ namespace FinanceManager.Infrastructure.Repositories
             //AddBankAccount(DateTime.UtcNow.AddMonths(-12), 10, "S&P 500", AccountType.Stock);
             //AddBankAccount(DateTime.UtcNow.AddMonths(-2), 10, "PPK", AccountType.Stock);
 
-            AddBankAccount(DateTime.UtcNow.AddYears(-12), 10000, "Apartment", AccountType.RealEstate);
-            AddLoanAccount(DateTime.UtcNow.AddMonths(-2), -300 * 62, "Loan");
+            AddBankAccount(DateTime.UtcNow.AddMonths(-3), 10000, "Apartment 1", AccountType.RealEstate);
+            AddLoanAccount(DateTime.UtcNow.AddMonths(-2), -300 * 62, "Loan 1");
 
             AddStockAccount(DateTime.UtcNow.AddDays(-10), 10, "Wallet 1", new List<(string, InvestmentType)>()
             {
