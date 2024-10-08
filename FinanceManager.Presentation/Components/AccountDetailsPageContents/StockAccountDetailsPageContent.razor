@@ -1,88 +1,104 @@
-﻿@using FinanceManager.Core.Entities.Accounts
+﻿@using FinanceManager.Core.Entities
+@using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Core.Repositories
 
 
 
 <div class="col-12 ">
-	<div class="card">
-		<div class="card-body">
-			<h5 class="card-title">Balance over time - Time series</h5>
-			<ChartSpinner></ChartSpinner>
-		</div>
-	</div>
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Balance over time - Time series</h5>
+            <ChartSpinner></ChartSpinner>
+        </div>
+    </div>
 </div>
 
 @if (Account is not null && Account.Entries is not null)
 {
-	<table class="table">
-		<thead>
-			<tr>
-				<th scope="col">Posting date</th>
-				<th scope="col">Unit</th>
-				<th scope="col">Unit change</th>
-				<th scope="col">Ticker</th>
-			</tr>
-		</thead>
-		<tbody>
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Posting date</th>
+                <th scope="col">Unit</th>
+                <th scope="col">Unit change</th>
+                <th scope="col">Ticker</th>
+                <th scope="col">Price</th>
+            </tr>
+        </thead>
+        <tbody>
 
-			@foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
-			{
-				<tr>
-					<td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
-					<td>@entry.Value</td>
-					@if (entry.ValueChange > 0)
-					{
-						<td style="background-color:lightgreen">@entry.ValueChange</td>
-					}
-					else
-					{
-						<td style="background-color:lightcoral">@entry.ValueChange</td>
-					}
-					<td>@entry.Ticker </td>
-				</tr>
-			}
-		</tbody>
-	</table>
+            @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
+            {
+                <tr>
+                    <td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
+                    <td>@entry.Value</td>
+                    @if (entry.ValueChange > 0)
+                    {
+                        <td class="text-success">@entry.ValueChange</td>
+                    }
+                    else
+                    {
+                        <td class="text-danger">@entry.ValueChange</td>
+                    }
+                    <td>@entry.Ticker </td>
+
+                    <td>@prices[entry].PricePerUnit.ToString("0.00") @prices[entry].Currency</td>
+                </tr>
+            }
+        </tbody>
+    </table>
 }
 
 @code {
-	public StockAccount? Account { get; set; }
-	public string ErrorMessage { get; set; } = string.Empty;
+    public StockAccount? Account { get; set; }
+    public string ErrorMessage { get; set; } = string.Empty;
 
-	[Parameter]
-	public required string AccountName { get; set; }
+    [Parameter]
+    public required string AccountName { get; set; }
 
-	[Inject]
-	public IFinancalAccountRepository BankAccountRepository { get; set; }
+    [Inject]
+    public IFinancalAccountRepository BankAccountRepository { get; set; }
 
-	protected override async Task OnInitializedAsync()
-	{
-		UpdateEntries();
-	}
+    [Inject]
+    public IStockRepository StockRepository { get; set; }
 
-	protected override async Task OnParametersSetAsync()
-	{
-		UpdateEntries();
-	}
-	public Type accountType;
-	private void UpdateEntries()
-	{
-		try
-		{
-			DateTime dateStart = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-			var accounts = BankAccountRepository.GetAvailableAccounts();
-			if (accounts.ContainsKey(AccountName))
-			{
-				accountType = accounts[AccountName];
-				if (accountType == typeof(StockAccount))
-					Account = BankAccountRepository.GetAccount<StockAccount>(AccountName, dateStart, DateTime.Now);
-			}
+    protected override async Task OnInitializedAsync()
+    {
+        await UpdateEntries();
+    }
 
-		}
-		catch (Exception ex)
-		{
-			ErrorMessage = ex.Message;
-		}
-	}
+    protected override async Task OnParametersSetAsync()
+    {
+        await UpdateEntries();
+    }
+    public Type accountType;
+    private Dictionary<InvestmentEntry, StockPrice> prices = new();
+    private async Task UpdateEntries()
+    {
+        try
+        {
+            DateTime dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            var accounts = BankAccountRepository.GetAvailableAccounts();
+            if (accounts.ContainsKey(AccountName))
+            {
+                accountType = accounts[AccountName];
+                if (accountType == typeof(StockAccount))
+                {
+                    Account = BankAccountRepository.GetAccount<StockAccount>(AccountName, dateStart, DateTime.UtcNow);
+
+                    foreach (var entry in Account.Entries)
+                    {
+                        var price = await StockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
+                        prices.Add(entry, price);
+                    }
+                }
+            }
+
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
 
 }

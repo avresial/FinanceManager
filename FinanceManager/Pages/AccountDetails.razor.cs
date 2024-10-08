@@ -32,7 +32,11 @@ namespace FinanceManager.Pages
 		{
 			try
 			{
-				DateTime dateStart = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+				DateTime dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+
+				if (DateTime.UtcNow.Day == 1)
+					dateStart = DateTime.UtcNow.AddMonths(-1);
+
 				var accounts = BankAccountRepository.GetAvailableAccounts();
 				if (accounts.ContainsKey(AccountName))
 				{
