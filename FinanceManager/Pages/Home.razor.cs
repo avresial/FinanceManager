@@ -1,4 +1,4 @@
-﻿using FinanceManager.Core.Entities;
+﻿using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Repositories;
 using Microsoft.AspNetCore.Components;
 using System.Collections.ObjectModel;
@@ -8,7 +8,7 @@ namespace FinanceManager.Pages
 	public partial class Home : ComponentBase
 	{
 		[Inject]
-		public IBankAccountRepository AccountsService { get; set; }
+		public IFinancalAccountRepository AccountsService { get; set; }
 
 
 		public List<BankAccount> Accounts;
@@ -30,7 +30,7 @@ namespace FinanceManager.Pages
 				if (Accounts is null) Accounts = new List<BankAccount>();
 				Accounts.Clear();
 
-				foreach (BankAccount account in AccountsService.Get(DateTime.Now.AddDays(-31), DateTime.Now))
+				foreach (BankAccount account in AccountsService.GetAccounts<BankAccount>(DateTime.Now.AddDays(-31), DateTime.Now))
 				{
 					List<BankAccountEntry> entries = account.Entries.Where(x => (DateTime.Now - x.PostingDate).Duration() < timeSpan).ToList();
 					if (!entries.Any()) continue;
@@ -48,7 +48,7 @@ namespace FinanceManager.Pages
 		{
 			try
 			{
-				Accounts = AccountsService.Get(DateTime.Now.AddDays(-31), DateTime.Now).ToList();
+				Accounts = AccountsService.GetAccounts<BankAccount>(DateTime.Now.AddDays(-31), DateTime.Now).ToList();
 				StateHasChanged();
 			}
 			catch (Exception ex)

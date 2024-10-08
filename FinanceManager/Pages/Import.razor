@@ -66,14 +66,14 @@ else
                             {
                                 <tr>
                                     <td>@entry.PostingDate</td>
-                                    <td>@entry.Balance zł</td>
-                                    @if (entry.BalanceChange > 0)
+                                    <td>@entry.Value zł</td>
+                                    @if (entry.ValueChange > 0)
                                     {
-                                        <td style="background-color:lightgreen">@entry.BalanceChange zł</td>
+                                        <td style="background-color:lightgreen">@entry.ValueChange zł</td>
                                     }
                                     else
                                     {
-                                        <td style="background-color:lightcoral">@entry.BalanceChange zł</td>
+                                        <td style="background-color:lightcoral">@entry.ValueChange zł</td>
                                     }
                                     <td>@entry.Description</td>
                                 </tr>

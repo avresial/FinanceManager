@@ -1,4 +1,4 @@
-using FinanceManager.Core.Entities;
+using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Repositories;
 using Microsoft.AspNetCore.Components;
 using System.Collections.ObjectModel;
@@ -8,9 +8,9 @@ namespace FinanceManager.Presentation.Components.Dashboard
 	public partial class Dashboard : ComponentBase
 	{
 		const int UnitHeight = 130;
-		[Inject]
-		public IBankAccountRepository AccountsService { get; set; }
 
+		[Inject]
+		public IFinancalAccountRepository AccountsService { get; set; }
 
 		public List<BankAccount> Accounts;
 		public ObservableCollection<BankAccountEntry> AccountEntries { get; set; }

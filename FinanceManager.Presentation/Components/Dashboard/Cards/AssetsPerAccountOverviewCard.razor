@@ -1,9 +1,10 @@
 ﻿@using ApexCharts
 @using FinanceManager.Core.Entities
+@using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
 
-@inject IBankAccountRepository bankAccountRepository;
+@inject IFinancalAccountRepository bankAccountRepository;
 @inject ISettingsService settingsService;
 
 <div class="card" style="height:@Height;">
@@ -14,7 +15,7 @@
 					<h5 class="card-title">Assets per account</h5>
 					@if (DisplayAsChart)
 					{
-						<h6 class="card-subtitle mb-2 text-muted">@TotalAssets @currency</h6>
+						<h6 class="card-subtitle mb-2 text-muted">@Math.Round(TotalAssets,2) @currency</h6>
 					}
 				</div>
 			</div>
@@ -30,7 +31,7 @@
 											 Items="Data"
 											 Name="Assets"
 											 XValue="e => e.Cathegory.ToString()"
-											 YAggregate="@(e => e.Sum(e => e.Value))"
+											 YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"
 											 SeriesType="SeriesType.Pie" />
 
 						</ApexChart>
@@ -169,26 +170,54 @@
 		List<WealthOverviewEntry> result = new List<WealthOverviewEntry>();
 		await Task.Run(() =>
 			{
-				var bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any() && x.Entries.Last().Balance >= 0).ToList();
-				TotalAssets = bankAccounts.Sum(x => x.Entries.Last().Balance);
-
-				foreach (var account in bankAccounts)
+				var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now);
+				if (bankAccounts is not null)
 				{
-					var dataEntry = result.FirstOrDefault(x => x.Cathegory == account.Name);
+					bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.Last().Value >= 0).ToList();
 
-					if (dataEntry is not null)
+					foreach (var account in bankAccounts)
 					{
-						dataEntry.Value += account.Entries.Last().Balance;
-					}
-					else
-					{
-						result.Add(new WealthOverviewEntry()
-							{
-								Cathegory = account.Name,
-								Value = account.Entries.Last().Balance
-							});
+						var dataEntry = result.FirstOrDefault(x => x.Cathegory == account.Name);
+
+						if (dataEntry is not null)
+						{
+							dataEntry.Value += account.Entries.Last().Value;
+						}
+						else
+						{
+							result.Add(new WealthOverviewEntry()
+								{
+									Cathegory = account.Name,
+									Value = account.Entries.Last().Value
+								});
+						}
 					}
 				}
+				var stockAccounts = bankAccountRepository.GetAccounts<StockAccount>(StartDateTime, DateTime.Now);
+				if (stockAccounts is not null)
+				{
+					stockAccounts = stockAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.Last().Value >= 0).ToList();
+
+					foreach (var account in stockAccounts)
+					{
+						var dataEntry = result.FirstOrDefault(x => x.Cathegory == account.Name);
+
+						if (dataEntry is not null)
+						{
+							dataEntry.Value += account.Entries.Last().Value;
+						}
+						else
+						{
+							result.Add(new WealthOverviewEntry()
+								{
+									Cathegory = account.Name,
+									Value = account.Entries.Last().Value
+								});
+						}
+					}
+				}
+
+				TotalAssets = result.Sum(x => x.Value);
 			});
 
 		return result.OrderByDescending(x => x.Value).ToList();

@@ -1,4 +1,4 @@
-﻿using FinanceManager.Core.Entities;
+﻿using FinanceManager.Core.Entities.Accounts;
 
 namespace FinanceManager.Core.Extensions
 {
@@ -26,11 +26,8 @@ namespace FinanceManager.Core.Extensions
 				}
 
 
-				BankAccountEntry bankAccountEntry = new BankAccountEntry()
+				BankAccountEntry bankAccountEntry = new BankAccountEntry(stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2), Math.Round(entriesForStepMonth.Sum(x => x.ValueChange), 2))
 				{
-					PostingDate = stepDate.Date,
-					Balance = Math.Round(entriesForStepMonth.Average(x => x.Balance), 2),
-					BalanceChange = Math.Round(entriesForStepMonth.Sum(x => x.BalanceChange), 2),
 					Description = $"Bank entry of month {stepDate.Month}"
 				};
 
@@ -62,11 +59,8 @@ namespace FinanceManager.Core.Extensions
 				}
 
 
-				BankAccountEntry bankAccountEntry = new BankAccountEntry()
+				BankAccountEntry bankAccountEntry = new BankAccountEntry(stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2), Math.Round(entriesForStepMonth.Sum(x => x.ValueChange), 2))
 				{
-					PostingDate = stepDate.Date,
-					Balance = Math.Round(entriesForStepMonth.Average(x => x.Balance), 2),
-					BalanceChange = Math.Round(entriesForStepMonth.Sum(x => x.BalanceChange), 2),
 					Description = $"Bank entry of month {stepDate.Month}"
 				};
 

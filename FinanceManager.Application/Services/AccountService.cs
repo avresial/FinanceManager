@@ -1,24 +1,37 @@
-﻿using FinanceManager.Core.Entities;
+﻿using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Repositories;
 using FinanceManager.Core.Services;
 
 namespace FinanceManager.Application.Services
 {
-	public class AccountService(IBankAccountRepository bankAccountRepository) : IAccountService
+	public class AccountService(IFinancalAccountRepository bankAccountRepository) : IAccountService
 	{
-		private readonly IBankAccountRepository? _bankAccountRepository = bankAccountRepository;
+		private readonly IFinancalAccountRepository? _bankAccountRepository = bankAccountRepository;
 
 		public event Action? AccountsChanged;
-
-		public void AddBankAccount(BankAccount bankAccount)
+		public IEnumerable<T> GetAccounts<T>(DateTime dateStart, DateTime dateEnd) where T : FinancialAccountBase
 		{
-			_bankAccountRepository?.AddBankAccount(bankAccount);
+			if (_bankAccountRepository is null) throw new Exception();
+			return _bankAccountRepository.GetAccounts<T>(dateStart, dateEnd);
+		}
+		public T? GetAccount<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialAccountBase
+		{
+			if (_bankAccountRepository is null) throw new Exception();
+			return _bankAccountRepository.GetAccount<T>(name, dateStart, dateEnd);
+		}
+		public List<T>? GetEntries<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialEntryBase
+		{
+			return null;
+		}
+		public void AddFinancialAccount<T>(T bankAccount) where T : FinancialAccountBase
+		{
+			_bankAccountRepository?.AddFinancialAccount(bankAccount);
 			AccountsChanged?.Invoke();
 		}
 
-		public void AddBankAccountEntry(string name, List<BankAccountEntry> data)
+		public void AddFinancialAccount<AccountType, EntryType>(string name, List<EntryType> data) where AccountType : FinancialAccountBase where EntryType : FinancialEntryBase
 		{
-			_bankAccountRepository?.AddBankAccountEntry(name, data);
+			_bankAccountRepository?.AddFinancialAccount<AccountType, EntryType>(name, data);
 		}
 
 		public bool Exists(string name)
@@ -27,16 +40,9 @@ namespace FinanceManager.Application.Services
 			return _bankAccountRepository.Exists(name);
 		}
 
-		public IEnumerable<BankAccount> Get(DateTime dateStart, DateTime dateEnd)
+		public Dictionary<string, Type> GetAvailableAccounts()
 		{
-			if (_bankAccountRepository is null) throw new Exception();
-			return _bankAccountRepository.Get(dateStart, dateEnd);
-		}
-
-		public BankAccount? Get(string name, DateTime dateStart, DateTime dateEnd)
-		{
-			if (_bankAccountRepository is null) throw new Exception();
-			return _bankAccountRepository.Get(name, dateStart, dateEnd);
+			return _bankAccountRepository.GetAvailableAccounts();
 		}
 	}
 }

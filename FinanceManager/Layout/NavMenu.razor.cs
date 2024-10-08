@@ -1,9 +1,10 @@
-﻿using FinanceManager.Core.Services;
+﻿using FinanceManager.Core.Entities.Accounts;
+using FinanceManager.Core.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Layout
 {
-	public class NavMenuBase : ComponentBase
+	public partial class NavMenu : ComponentBase
 	{
 		[Inject]
 		public IAccountService AccountsService { get; set; }
@@ -16,7 +17,8 @@ namespace FinanceManager.Layout
 		{
 			try
 			{
-				AccountNames = [.. AccountsService.Get(DateTime.Now.AddDays(-31), DateTime.Now).Select(x => x.Name).OrderBy(x => x)];
+				AccountNames = AccountsService.GetAvailableAccounts().Keys.ToList();
+				//				AccountNames = [.. AccountsService.GetAccounts<BankAccount>(DateTime.Now.AddDays(-31), DateTime.Now).Select(x => x.Name).OrderBy(x => x)];
 				AccountsService.AccountsChanged += AccountsService_AccountsChanged;
 			}
 			catch (Exception ex)
@@ -29,7 +31,7 @@ namespace FinanceManager.Layout
 		{
 			try
 			{
-				AccountNames = [.. AccountsService.Get(DateTime.Now.AddDays(-31), DateTime.Now).Select(x => x.Name).OrderBy(x => x)];
+				AccountNames = [.. AccountsService.GetAccounts<BankAccount>(DateTime.Now.AddDays(-31), DateTime.Now).Select(x => x.Name).OrderBy(x => x)];
 			}
 			catch (Exception ex)
 			{

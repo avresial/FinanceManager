@@ -1,4 +1,4 @@
-﻿using FinanceManager.Core.Entities;
+﻿using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Repositories;
 using Microsoft.AspNetCore.Components;
 
@@ -12,7 +12,7 @@ namespace FinanceManager.Pages
 		public string AccountName { get; set; }
 
 		[Inject]
-		public IBankAccountRepository BankAccountRepository { get; set; }
+		public IFinancalAccountRepository BankAccountRepository { get; set; }
 
 		public string ErrorMessage { get; set; } = string.Empty;
 
@@ -27,14 +27,29 @@ namespace FinanceManager.Pages
 		{
 			UpdateEntries();
 		}
-
+		public Type accountType;
 		private void UpdateEntries()
 		{
 			try
 			{
-				DateTime dateStart = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-				if (BankAccountRepository.Exists(AccountName))
-					Entries = BankAccountRepository.Get(AccountName, dateStart, DateTime.Now).Entries.Take(maxTableSize).OrderByDescending(x => x.PostingDate);
+				DateTime dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+
+				if (DateTime.UtcNow.Day == 1)
+					dateStart = DateTime.UtcNow.AddMonths(-1);
+
+				var accounts = BankAccountRepository.GetAvailableAccounts();
+				if (accounts.ContainsKey(AccountName))
+				{
+					accountType = accounts[AccountName];
+					if (accountType == typeof(BankAccount))
+					{
+						Entries = BankAccountRepository.GetAccount<BankAccount>(AccountName, dateStart, DateTime.Now)
+							.Entries
+							.Take(maxTableSize)
+							.OrderByDescending(x => x.PostingDate);
+					}
+				}
+
 			}
 			catch (Exception ex)
 			{

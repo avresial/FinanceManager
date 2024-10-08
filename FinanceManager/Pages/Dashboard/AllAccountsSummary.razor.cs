@@ -1,4 +1,4 @@
-﻿using FinanceManager.Core.Entities;
+﻿using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Enums;
 using FinanceManager.Presentation.ViewModels;
 using Microsoft.AspNetCore.Components;
@@ -37,12 +37,12 @@ namespace FinanceManager.Pages.Dashboard
 				if (!WealthByCategoryTmp.ContainsKey(account.AccountType.ToString()))
 				{
 					if (newValue is null) continue;
-					WealthByCategoryTmp.Add(account.AccountType.ToString(), newValue.Balance);
+					WealthByCategoryTmp.Add(account.AccountType.ToString(), newValue.Value);
 					ExpensesTypesAgregate.Add(account.AccountType, account.Entries);
 				}
 				else
 				{
-					WealthByCategoryTmp[account.AccountType.ToString()] += newValue.Balance;
+					WealthByCategoryTmp[account.AccountType.ToString()] += newValue.Value;
 
 					ExpensesTypesAgregate[account.AccountType].Add(newValue);
 					ExpensesTypesAgregate[account.AccountType] = ExpensesTypesAgregate[account.AccountType].OrderByDescending(x => x.PostingDate).ToList();
@@ -58,7 +58,7 @@ namespace FinanceManager.Pages.Dashboard
 			{
 				foreach (var element in item)
 				{
-					element.PostingDate = new DateTime(element.PostingDate.Year, element.PostingDate.Month, element.PostingDate.Day);
+					//	element.PostingDate = new DateTime(element.PostingDate.Year, element.PostingDate.Month, element.PostingDate.Day);
 				}
 			}
 		}
@@ -88,17 +88,17 @@ namespace FinanceManager.Pages.Dashboard
 						var cathegory = SpendingByCategory.FirstOrDefault(x => x.ExpenseType == expenseType);
 						if (cathegory is null)
 						{
-							ExpensesCathegoriesAgregate[expenseType].Add(new BankAccountEntry() { PostingDate = iterationDate, ExpenseType = expenseType });
+							//ExpensesCathegoriesAgregate[expenseType].Add(new BankAccountEntry() { PostingDate = iterationDate, ExpenseType = expenseType });
 							continue;
 						}
 
 						var spendingDuringDay = account.Entries.Where(x => x.ExpenseType == expenseType && x.PostingDate.Year == iterationDate.Year && x.PostingDate.Month == iterationDate.Month && x.PostingDate.Day == iterationDate.Day).ToList();
 						if (!spendingDuringDay.Any())
 						{
-							ExpensesCathegoriesAgregate[expenseType].Add(new BankAccountEntry() { PostingDate = iterationDate, ExpenseType = expenseType });
+							//ExpensesCathegoriesAgregate[expenseType].Add(new BankAccountEntry() { PostingDate = iterationDate, ExpenseType = expenseType });
 						}
 
-						cathegory.Value += spendingDuringDay.Sum(x => x.BalanceChange);
+						cathegory.Value += spendingDuringDay.Sum(x => x.ValueChange);
 						ExpensesCathegoriesAgregate[expenseType].AddRange(spendingDuringDay);
 					}
 				}

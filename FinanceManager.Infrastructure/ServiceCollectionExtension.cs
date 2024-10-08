@@ -8,7 +8,8 @@ namespace FinanceManager.Infrastructure
 	{
 		public static IServiceCollection AddInfrastructure(this IServiceCollection services)
 		{
-			services.AddScoped<IBankAccountRepository, InMemoryMockAccountRepository>();
+			services.AddScoped<IFinancalAccountRepository, InMemoryMockAccountRepository>()
+					.AddScoped<IStockRepository, StockRepositoryMock>();
 
 			return services;
 		}

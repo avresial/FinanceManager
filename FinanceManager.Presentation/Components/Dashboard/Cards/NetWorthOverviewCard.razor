@@ -1,9 +1,10 @@
 ﻿@using ApexCharts
 @using FinanceManager.Core.Entities
+@using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
 
-@inject IBankAccountRepository bankAccountRepository;
+@inject IFinancalAccountRepository bankAccountRepository;
 @inject ISettingsService settingsService;
 
 <div class="card" style="height:@Height;">
@@ -32,8 +33,9 @@
 		currency = settingsService.GetCurrency();
 		await Task.Run(() =>
 		{
-			bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now);
-			TotalNetWorth = bankAccounts.Where(x => x.Entries.Any()).Sum(x => x.Entries.Last().Balance);
+			bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now);
+			if (bankAccounts is null) return;
+			TotalNetWorth = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any()).Sum(x => x.Entries.Last().Value);
 		});
 	}
 }

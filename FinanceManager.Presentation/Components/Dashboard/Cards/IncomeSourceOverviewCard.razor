@@ -1,10 +1,11 @@
 ﻿@using ApexCharts
+@using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Core.Extensions
 @using FinanceManager.Core.Entities
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
 
-@inject IBankAccountRepository bankAccountRepository;
+@inject IFinancalAccountRepository bankAccountRepository;
 @inject ISettingsService settingsService;
 
 
@@ -111,7 +112,7 @@
 		if (chart is not null) await chart.UpdateSeriesAsync(true);
 		await Task.Run(() =>
 		{
-			var bankAccounts = bankAccountRepository.Get(StartDateTime, DateTime.Now).Where(x => x.Entries.Any());
+			var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now).Where(x => x.Entries is not null && x.Entries.Any());
 
 			foreach (var account in bankAccounts)
 			{
@@ -128,7 +129,7 @@
 				{
 					entries = account.Entries;
 				}
-				foreach (var entry in entries.Where(x => x.BalanceChange > 0))
+				foreach (var entry in entries.Where(x => x.ValueChange > 0))
 				{
 					var dataEntry = Data.FirstOrDefault();
 					if (dataEntry is null)
@@ -136,12 +137,12 @@
 						Data.Add(new IncomeSourceOverviewEntry()
 							{
 								Source = "Sallary",
-								Value = entry.BalanceChange
+								Value = entry.ValueChange
 							});
 					}
 					else
 					{
-						dataEntry.Value += entry.BalanceChange;
+						dataEntry.Value += entry.ValueChange;
 					}
 
 				}
