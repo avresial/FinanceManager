@@ -11,7 +11,7 @@ Finance manager is an online budgeting tool. This software lets you keep track o
 ### Track your money!
 ![dashboard](ReadmeElements/Imgs/Dashboard.png)
 
-### Inspect accounts details
+### Inspect accounts details!
 
 ![dashboard](ReadmeElements/Imgs/AccountDetails.png)
 
