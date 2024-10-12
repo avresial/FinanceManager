@@ -3,7 +3,7 @@
 @using FinanceManager.Core.Repositories
 
 
-@* 
+@*
 <div class="col-12 ">
     <div class="card">
         <div class="card-body">
@@ -17,36 +17,85 @@
 {
     <div class="row mt-2">
         <div class="col-9 px-3">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th scope="col">Posting date</th>
-                        <th scope="col">Balance</th>
-                        <th scope="col">Balance change</th>
-                    </tr>
-                </thead>
-                <tbody>
-
-                    @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
-                    {
+            <div class="row">
+                <table class="table">
+                    <thead>
                         <tr>
-                            <td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
-                            <td>@entry.Value @currency</td>
-                            @if (entry.ValueChange > 0)
-                            {
-                                <td class="text-success">@entry.ValueChange @currency</td>
-                            }
-                            else
-                            {
-                                <td class="text-danger">@entry.ValueChange @currency</td>
-                            }
+                            <th scope="col">Posting date</th>
+                            <th scope="col">Balance</th>
+                            <th scope="col">Balance change</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+
+                        @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
+                        {
+                            <tr>
+                                <td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
+                                <td>@entry.Value @currency</td>
+                                @if (entry.ValueChange > 0)
+                                {
+                                    <td class="text-success">@entry.ValueChange @currency</td>
+                                }
+                                else
+                                {
+                                    <td class="text-danger">@entry.ValueChange @currency</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="row">
+                <button class="btn text-center" title="Load more" disabled>
+                    <div>
+                        <i class="bi bi-arrow-bar-down"></i>
+                    </div>
+                </button>
+            </div>
         </div>
 
         <div class="col-3">
+
+            <div class="row">
+                <h6 class="text-center mt-2">Basics</h6>
+                <div class="row mb-3 mx-0 px-0">
+                    <div class="col-6">
+                        <div class="row mb-1">
+                            <div>
+                                Balance change
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <div class="row mb-1 text-success">
+                            <div class="col-6 test-end">+100 @currency</div>
+                            <div class="col">
+                                <i class="fs-5 bi bi-arrow-up-right"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3 mx-0 px-0">
+                    <div class="col-6">
+                        <div class="row mb-1">
+                            <div>
+                                Balance change
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <div class="row mb-1 text-danger">
+                            <div class="col-6 test-end">-100 @currency</div>
+                            <div class="col">
+                                <i class="fs-5 bi bi-arrow-down-right"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
             <div class="row">
                 @if (Top5 is not null)
                 {
