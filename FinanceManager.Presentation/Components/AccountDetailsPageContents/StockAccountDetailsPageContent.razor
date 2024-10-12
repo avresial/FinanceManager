@@ -15,38 +15,41 @@
 
 @if (Account is not null && Account.Entries is not null)
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th scope="col">Posting date</th>
-                <th scope="col">Unit</th>
-                <th scope="col">Unit change</th>
-                <th scope="col">Ticker</th>
-                <th scope="col">Price</th>
-            </tr>
-        </thead>
-        <tbody>
+    <div class="container">
 
-            @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
-            {
+        <table class="table">
+            <thead>
                 <tr>
-                    <td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
-                    <td>@entry.Value</td>
-                    @if (entry.ValueChange > 0)
-                    {
-                        <td class="text-success">@entry.ValueChange</td>
-                    }
-                    else
-                    {
-                        <td class="text-danger">@entry.ValueChange</td>
-                    }
-                    <td>@entry.Ticker </td>
-
-                    <td>@((entry.Value*prices[entry].PricePerUnit).ToString("0.00")) @prices[entry].Currency</td>
+                    <th scope="col">Posting date</th>
+                    <th scope="col">Unit</th>
+                    <th scope="col">Unit change</th>
+                    <th scope="col">Ticker</th>
+                    <th scope="col">Price</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+
+                @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
+                {
+                    <tr>
+                        <td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
+                        <td>@entry.Value</td>
+                        @if (entry.ValueChange > 0)
+                        {
+                            <td class="text-success">@entry.ValueChange</td>
+                        }
+                        else
+                        {
+                            <td class="text-danger">@entry.ValueChange</td>
+                        }
+                        <td>@entry.Ticker </td>
+
+                        <td>@((entry.Value * prices[entry].PricePerUnit).ToString("0.00")) @prices[entry].Currency</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {

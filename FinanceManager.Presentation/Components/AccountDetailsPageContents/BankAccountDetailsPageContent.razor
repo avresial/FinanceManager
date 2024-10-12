@@ -54,13 +54,16 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="row">
-                    <button class="btn text-center" title="Load more" disabled>
-                        <div>
-                            <i class="bi bi-arrow-bar-down"></i>
-                        </div>
-                    </button>
-                </div>
+                @if (!LoadedAllData)
+                {
+                    <div class="row">
+                        <button class="btn text-center" title="Load more" @onclick="LoadMore">
+                            <div>
+                                <i class="bi bi-arrow-bar-down"></i>
+                            </div>
+                        </button>
+                    </div>
+                }
             </div>
 
             <div class="col-3">
@@ -114,7 +117,7 @@
                                             Dept repayment
                                         </div>
                                     </div>
-                                    <div class="row fs-6 text-muted">
+                                    <div class="row text-muted">
                                         <div style="font-size:0.8rem !important">
                                             @entry.Description
                                         </div>
@@ -124,7 +127,7 @@
                                     <div class="row mb-1">
                                         <div class="text-success">@entry.ValueChange @currency</div>
                                     </div>
-                                    <div class="row fs-6 text-muted">
+                                    <div class="row text-muted">
                                         <div style="font-size:0.8rem !important">
                                             @entry.PostingDate.ToString("yyyy-MM-dd")
                                         </div>
@@ -179,6 +182,7 @@
     internal List<BankAccountEntry>? Bottom5;
     internal string currency = "PLN";
     decimal balanceChange = 100;
+    bool LoadedAllData = false;
 
     private ApexChartOptions<BankAccountEntry> options { get; set; } = new()
         {
@@ -256,12 +260,7 @@
                 {
                     Account = BankAccountRepository.GetAccount<BankAccount>(AccountName, dateStart, DateTime.UtcNow);
                     if (Account is not null && Account.Entries is not null)
-                    {
-                        var EntriesOrdered = Account.Entries.OrderByDescending(x => x.ValueChange);
-                        Top5 = EntriesOrdered.Take(5).ToList();
-                        Bottom5 = EntriesOrdered.Skip(Account.Entries.Count - 6).Take(5).OrderBy(x => x.ValueChange).ToList();
-                        balanceChange = Account.Entries.First().Value - Account.Entries.Last().Value;
-                    }
+                        UpdateInfo();
 
                 }
             }
@@ -273,4 +272,34 @@
         }
     }
 
+    public void UpdateInfo()
+    {
+        var EntriesOrdered = Account.Entries.OrderByDescending(x => x.ValueChange);
+        Top5 = EntriesOrdered.Take(5).ToList();
+        Bottom5 = EntriesOrdered.Skip(Account.Entries.Count - 6).Take(5).OrderBy(x => x.ValueChange).ToList();
+        balanceChange = Account.Entries.First().Value - Account.Entries.Last().Value;
+    }
+
+    public async Task LoadMore()
+    {
+        if (Account is null) return;
+
+        var newStartDate = Account.Start.AddMonths(-1);
+        var newData = BankAccountRepository.GetAccount<BankAccount>(AccountName, newStartDate, Account.Start);
+
+        if (Account.Entries is null || newData is null || newData.Entries is null) return;
+        if (newData.Entries.Last().PostingDate == Account.Entries.Last().PostingDate)
+        {
+            LoadedAllData = true;
+            return;
+        }
+
+        Account.Entries.AddRange(newData.Entries);
+        Account.SetDates(newStartDate, Account.End);
+
+        if (chart is not null)
+            await chart.RenderAsync();
+
+        UpdateInfo();
+    }
 }
