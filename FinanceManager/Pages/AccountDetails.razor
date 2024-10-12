@@ -2,26 +2,25 @@
 @using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Presentation.Components.AccountDetailsPageContents
 
-
-<h3>@AccountName</h3>
-@if (ErrorMessage != string.Empty)
-{
-	<div class="alert alert-warning" role="alert">
-		@ErrorMessage
-	</div>
-}
-else if (accountType == typeof(BankAccount))
-{
-	<BankAccountDetailsPageContent AccountName="@AccountName"></BankAccountDetailsPageContent>
-}
-else if (accountType == typeof(StockAccount))
-{
-	<StockAccountDetailsPageContent AccountName="@AccountName"></StockAccountDetailsPageContent>
-}
-else
-{
-	<div class="alert alert-danger" role="alert">
-		@accountType type is not supported.
-	</div>
-}
-
+<div class="container-fluid px-0">
+    @if (ErrorMessage != string.Empty)
+    {
+        <div class="alert alert-warning" role="alert">
+            @ErrorMessage
+        </div>
+    }
+    else if (accountType == typeof(BankAccount))
+    {
+        <BankAccountDetailsPageContent AccountName="@AccountName"></BankAccountDetailsPageContent>
+    }
+    else if (accountType == typeof(StockAccount))
+    {
+        <StockAccountDetailsPageContent AccountName="@AccountName"></StockAccountDetailsPageContent>
+    }
+    else
+    {
+        <div class="alert alert-danger" role="alert">
+            @accountType type is not supported.
+        </div>
+    }
+</div>
