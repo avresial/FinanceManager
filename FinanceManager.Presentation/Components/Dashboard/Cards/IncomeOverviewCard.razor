@@ -70,6 +70,10 @@
 				Zoom = new Zoom()
 				{
 					Enabled = false
+				},
+				Sparkline = new ChartSparkline()
+				{
+					Enabled = true,
 				}
 			};
 
@@ -92,6 +96,7 @@
 
 		options.Yaxis.Add(new YAxis
 			{
+				TickAmount = 2,
 				AxisTicks = new AxisTicks()
 				{
 					Show = false

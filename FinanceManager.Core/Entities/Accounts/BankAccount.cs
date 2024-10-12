@@ -129,7 +129,14 @@ namespace FinanceManager.Core.Entities.Accounts
 
         public override void SetDates(DateTime start, DateTime end)
         {
+            if (Entries is null) return;
+
             Entries.RemoveAll(x => x.PostingDate < start || x.PostingDate > end);
+
+            if (!Entries.Any()) return;
+
+            Start = Entries.Last().PostingDate;
+            End = Entries.First().PostingDate;
         }
     }
 }

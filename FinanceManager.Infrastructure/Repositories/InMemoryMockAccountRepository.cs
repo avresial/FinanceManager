@@ -234,9 +234,9 @@ namespace FinanceManager.Infrastructure.Repositories
 
                 AddBankAccountEntry(accountName, balanceChange, $"Lorem ipsum {0}", ExpenseType.Other, startDay);
 
-                var mainBankAccount = FindAccount<BankAccount>("Main");
-                if (mainBankAccount is not null)
-                    AddBankAccountEntry("Main", -balanceChange, $"Loan repainment {0}", ExpenseType.DebtRepayment, startDay);
+                //var mainBankAccount = FindAccount<BankAccount>("Main");
+                //if (mainBankAccount is not null)
+                //    AddBankAccountEntry("Main", -balanceChange, $"Loan repainment {0}", ExpenseType.DebtRepayment, startDay);
                 startDay = startDay.AddDays(1);
             }
         }
