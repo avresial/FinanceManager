@@ -9,7 +9,7 @@
         <ApexChart @ref="chart" TItem="BankAccountEntry" Height="150" Options=@options XAxisType="XAxisType.Datetime">
             <ApexPointSeries TItem="BankAccountEntry"
                              Items="Account.Entries"
-                             Name="Income"
+                             Name="@Account.Name"
                              XValue="e => e.PostingDate.ToLocalTime()"
                              YValue="e=> e.Value"
                              SeriesType="SeriesType.Area"
@@ -184,49 +184,6 @@
     decimal balanceChange = 100;
     bool LoadedAllData = false;
 
-    private ApexChartOptions<BankAccountEntry> options { get; set; } = new()
-        {
-            Chart = new Chart
-            {
-                Sparkline = new ChartSparkline()
-                {
-                    Enabled = true,
-                },
-                Toolbar = new ApexCharts.Toolbar
-                {
-                    Show = false
-                },
-            },
-            Xaxis = new XAxis()
-            {
-                AxisTicks = new AxisTicks()
-                {
-                    Show = false,
-                },
-                AxisBorder = new AxisBorder()
-                {
-                    Show = false
-                },
-            },
-            Yaxis = new List<YAxis>()
-            {
-                new YAxis
-                {
-                    // AxisTicks = new AxisTicks()
-                    // {
-                    //     Show = false
-                    // },
-                 //   TickAmount = 1,
-                    Show = false,
-                    SeriesName = "Vaue",
-                    DecimalsInFloat = 0,
-                }
-            },
-            Colors = new List<string>
-            {
-                "#A9A9A9"
-            }
-        };
 
     [Parameter]
     public required string AccountName { get; set; }
@@ -302,4 +259,49 @@
 
         UpdateInfo();
     }
+
+
+    private ApexChartOptions<BankAccountEntry> options { get; set; } = new()
+        {
+            Chart = new Chart
+            {
+                Sparkline = new ChartSparkline()
+                {
+                    Enabled = true,
+                },
+                Toolbar = new ApexCharts.Toolbar
+                {
+                    Show = false
+                },
+            },
+            Xaxis = new XAxis()
+            {
+                AxisTicks = new AxisTicks()
+                {
+                    Show = false,
+                },
+                AxisBorder = new AxisBorder()
+                {
+                    Show = false
+                },
+            },
+            Yaxis = new List<YAxis>()
+            {
+                new YAxis
+                {
+                    // AxisTicks = new AxisTicks()
+                    // {
+                    //     Show = false
+                    // },
+                 //   TickAmount = 1,
+                    Show = false,
+                    SeriesName = "Vaue",
+                    DecimalsInFloat = 0,
+                }
+            },
+            Colors = new List<string>
+            {
+                "#A9A9A9"
+            }
+        };
 }

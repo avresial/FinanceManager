@@ -1,20 +1,23 @@
-﻿@using FinanceManager.Core.Entities
+﻿@using ApexCharts
+@using FinanceManager.Core.Entities
 @using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Core.Repositories
 
 
-
-<div class="col-12 ">
-    <div class="card">
-        <div class="card-body">
-            <h5 class="card-title">Balance over time - Time series</h5>
-            <ChartSpinner></ChartSpinner>
-        </div>
-    </div>
-</div>
-
 @if (Account is not null && Account.Entries is not null)
 {
+    <div class="col-12" style="min-height:150px;">
+        <ApexChart @ref="chart" TItem="InvestmentEntry" Height="150" Options=@options XAxisType="XAxisType.Datetime">
+            <ApexPointSeries TItem="InvestmentEntry"
+                             Items="Account.Entries"
+                             Name="@Account.Name"
+                             XValue="e => e.PostingDate.ToLocalTime()"
+                             YValue="e=> e.Value"
+                             SeriesType="SeriesType.Area"
+                             OrderByDescending="@(e=>e.X)" />
+
+        </ApexChart>
+    </div>
     <div class="container">
 
         <table class="table">
@@ -53,6 +56,7 @@
 }
 
 @code {
+    private ApexChart<InvestmentEntry> chart;
     public StockAccount? Account { get; set; }
     public string ErrorMessage { get; set; } = string.Empty;
 
@@ -103,5 +107,47 @@
             ErrorMessage = ex.Message;
         }
     }
-
+    private ApexChartOptions<InvestmentEntry> options { get; set; } = new()
+        {
+            Chart = new Chart
+            {
+                Sparkline = new ChartSparkline()
+                {
+                    Enabled = true,
+                },
+                Toolbar = new ApexCharts.Toolbar
+                {
+                    Show = false
+                },
+            },
+            Xaxis = new XAxis()
+            {
+                AxisTicks = new AxisTicks()
+                {
+                    Show = false,
+                },
+                AxisBorder = new AxisBorder()
+                {
+                    Show = false
+                },
+            },
+            Yaxis = new List<YAxis>()
+            {
+                new YAxis
+                {
+                    // AxisTicks = new AxisTicks()
+                    // {
+                    //     Show = false
+                    // },
+                 //   TickAmount = 1,
+                    Show = false,
+                    SeriesName = "Vaue",
+                    DecimalsInFloat = 0,
+                }
+            },
+            Colors = new List<string>
+            {
+                "#A9A9A9"
+            }
+        };
 }
