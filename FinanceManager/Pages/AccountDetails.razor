@@ -12,49 +12,7 @@
 }
 else if (accountType == typeof(BankAccount))
 {
-	<div class="col-12 ">
-		<div class="card">
-			<div class="card-body">
-				<h5 class="card-title">Balance over time - Time series</h5>
-				<ChartSpinner></ChartSpinner>
-			</div>
-		</div>
-	</div>
-	if (Entries is not null)
-	{
-
-		<table class="table">
-			<thead>
-				<tr>
-					<th scope="col">Posting date</th>
-					<th scope="col">Balance</th>
-					<th scope="col">Balance change</th>
-					<th scope="col">Description</th>
-					<th scope="col">Expense type</th>
-				</tr>
-			</thead>
-			<tbody>
-
-				@foreach (var entry in Entries)
-				{
-					<tr>
-						<td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
-						<td>@entry.Value zł</td>
-						@if (entry.ValueChange > 0)
-						{
-							<td style="background-color:lightgreen">@entry.ValueChange zł</td>
-						}
-						else
-						{
-							<td style="background-color:lightcoral">@entry.ValueChange zł</td>
-						}
-						<td>@entry.Description</td>
-						<td>@entry.ExpenseType</td>
-					</tr>
-				}
-			</tbody>
-		</table>
-	}
+	<BankAccountDetailsPageContent AccountName="@AccountName"></BankAccountDetailsPageContent>
 }
 else if (accountType == typeof(StockAccount))
 {

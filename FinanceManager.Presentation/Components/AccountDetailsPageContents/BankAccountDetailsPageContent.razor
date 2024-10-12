@@ -1,0 +1,171 @@
+﻿@using FinanceManager.Core.Entities
+@using FinanceManager.Core.Entities.Accounts
+@using FinanceManager.Core.Repositories
+
+
+@* 
+<div class="col-12 ">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Balance over time - Time series</h5>
+            <ChartSpinner></ChartSpinner>
+        </div>
+    </div>
+</div> *@
+
+@if (Account is not null && Account.Entries is not null)
+{
+    <div class="row mt-2">
+        <div class="col-9 px-3">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Posting date</th>
+                        <th scope="col">Balance</th>
+                        <th scope="col">Balance change</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
+                    {
+                        <tr>
+                            <td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
+                            <td>@entry.Value @currency</td>
+                            @if (entry.ValueChange > 0)
+                            {
+                                <td class="text-success">@entry.ValueChange @currency</td>
+                            }
+                            else
+                            {
+                                <td class="text-danger">@entry.ValueChange @currency</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="col-3">
+            <div class="row">
+                @if (Top5 is not null)
+                {
+                    <h6 class="text-center mt-2">Positive top 5</h6>
+                    @foreach (var entry in Top5)
+                    {
+                        <div class="row mb-3 mx-0 px-0">
+                            <div class="col-6">
+                                <div class="row mb-1">
+                                    <div>
+                                        Dept repayment
+                                    </div>
+                                </div>
+                                <div class="row fs-6 text-muted">
+                                    <div style="font-size:0.8rem !important">
+                                        @entry.Description
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 text-end">
+                                <div class="row mb-1">
+                                    <div class="text-success">@entry.ValueChange @currency</div>
+                                </div>
+                                <div class="row fs-6 text-muted">
+                                    <div style="font-size:0.8rem !important">
+                                        @entry.PostingDate.ToString("yyyy-MM-dd")
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                @if (Bottom5 is not null)
+                {
+                    <h6 class="text-center mt-2">Negative top 5</h6>
+                    @foreach (var entry in Bottom5)
+                    {
+                        <div class="row mb-3 mx-0 px-0">
+                            <div class="col-6">
+                                <div class="row mb-1">
+                                    <div>
+                                        Dept repayment
+                                    </div>
+                                </div>
+                                <div class="row fs-6 text-muted">
+                                    <div style="font-size:0.8rem !important">
+                                        @entry.Description
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 text-end">
+                                <div class="row mb-1">
+                                    <div class="text-danger">@entry.ValueChange @currency</div>
+                                </div>
+                                <div class="row fs-6 text-muted">
+                                    <div style="font-size:0.8rem !important">
+                                        @entry.PostingDate.ToString("yyyy-MM-dd")
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    public BankAccount? Account { get; set; }
+    public string ErrorMessage { get; set; } = string.Empty;
+    internal List<BankAccountEntry>? Top5;
+    internal List<BankAccountEntry>? Bottom5;
+    internal string currency = "PLN";
+
+    [Parameter]
+    public required string AccountName { get; set; }
+
+    [Inject]
+    public IFinancalAccountRepository BankAccountRepository { get; set; }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await UpdateEntries();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await UpdateEntries();
+    }
+    public Type accountType;
+    private async Task UpdateEntries()
+    {
+        try
+        {
+            DateTime dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            var accounts = BankAccountRepository.GetAvailableAccounts();
+            if (accounts.ContainsKey(AccountName))
+            {
+                accountType = accounts[AccountName];
+                if (accountType == typeof(BankAccount))
+                {
+                    Account = BankAccountRepository.GetAccount<BankAccount>(AccountName, dateStart, DateTime.UtcNow);
+                    if (Account is not null && Account.Entries is not null)
+                    {
+                        var EntriesOrdered = Account.Entries.OrderByDescending(x => x.ValueChange);
+                        Top5 = EntriesOrdered.Take(5).ToList();
+                        Bottom5 = EntriesOrdered.Skip(Account.Entries.Count - 6).Take(5).OrderBy(x => x.ValueChange).ToList();
+                    }
+                }
+
+            }
+
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
+
+}
