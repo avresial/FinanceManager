@@ -135,7 +135,7 @@ namespace FinanceManager.Infrastructure.Repositories
                 ("Nvidia", InvestmentType.Stock),( "Intel", InvestmentType.Stock), ("Bond 1" , InvestmentType.Bond)
             });
 
-            AddStockAccount(DateTime.UtcNow.AddDays(-10), 10, "Wallet 3", new List<(string, InvestmentType)>()
+            AddStockAccount(DateTime.UtcNow.AddMonths(-1), 10, "Wallet 3", new List<(string, InvestmentType)>()
             {
                 ("Bond 2", InvestmentType.Bond),( "Bond 3", InvestmentType.Bond), ("Bond 4" , InvestmentType.Bond)
             });

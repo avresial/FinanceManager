@@ -6,59 +6,99 @@
 
 @if (Account is not null && Account.Entries is not null)
 {
-    <div class="col-12" style="min-height:150px;">
-        <ApexChart @ref="chart" TItem="InvestmentEntry" Height="150" Options=@options XAxisType="XAxisType.Datetime">
-            <ApexPointSeries TItem="InvestmentEntry"
-                             Items="Account.Entries"
+    <div class="col-12 mb-2" style="min-height:150px;">
+        <ApexChart @ref="chart" TItem="ChartEntryModel" Height="150" Options=@options XAxisType="XAxisType.Datetime">
+            <ApexPointSeries TItem="ChartEntryModel"
+                             Items="pricesDaily"
                              Name="@Account.Name"
-                             XValue="e => e.PostingDate.ToLocalTime()"
+                             XValue="e => e.Date.ToLocalTime()"
                              YValue="e=> e.Value"
                              SeriesType="SeriesType.Area"
                              OrderByDescending="@(e=>e.X)" />
-
         </ApexChart>
     </div>
     <div class="container">
+        <div class="row">
+            <div class="col-9">
+                <div class="row">
 
-        <table class="table">
-            <thead>
-                <tr>
-                    <th scope="col">Posting date</th>
-                    <th scope="col">Unit</th>
-                    <th scope="col">Unit change</th>
-                    <th scope="col">Ticker</th>
-                    <th scope="col">Price</th>
-                </tr>
-            </thead>
-            <tbody>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Ticker</th>
+                                <th scope="col">Unit</th>
+                                <th scope="col">Unit change</th>
+                                <th scope="col">Price</th>
+                                <th scope="col">Posting date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
 
-                @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
+                            @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
+                            {
+                                <tr>
+                                    <td>@entry.Ticker </td>
+                                    <td>@entry.Value</td>
+                                    @if (entry.ValueChange > 0)
+                                    {
+                                        <td class="text-success">@entry.ValueChange</td>
+                                    }
+                                    else
+                                    {
+                                        <td class="text-danger">@entry.ValueChange</td>
+                                    }
+
+                                    <td>
+                                        @if (prices.ContainsKey(entry))
+                                        {
+                                            @($"{(entry.Value * prices[entry].PricePerUnit).ToString("0.00")} {prices[entry].Currency}")
+                                        }
+                                    </td>
+                                    <td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @if (!LoadedAllData)
                 {
-                    <tr>
-                        <td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
-                        <td>@entry.Value</td>
-                        @if (entry.ValueChange > 0)
-                        {
-                            <td class="text-success">@entry.ValueChange</td>
-                        }
-                        else
-                        {
-                            <td class="text-danger">@entry.ValueChange</td>
-                        }
-                        <td>@entry.Ticker </td>
-
-                        <td>@((entry.Value * prices[entry].PricePerUnit).ToString("0.00")) @prices[entry].Currency</td>
-                    </tr>
+                    <div class="row">
+                        <button class="btn text-center" title="Load more" @onclick="LoadMore">
+                            <div>
+                                <i class="bi bi-arrow-bar-down"></i>
+                            </div>
+                        </button>
+                    </div>
                 }
-            </tbody>
-        </table>
+            </div>
+            <div class="col-3">
+                <div class="row">
+                    <h6 class="text-center">Stocks in wallet</h6>
+                    <div class="d-flex flex-wrap justify-content-center">
+                        @foreach (var stock in stocks)
+                        {
+                            <div class="px-2 m-1 rounded-pill border border-2">
+                                @stock
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 }
 
 @code {
-    private ApexChart<InvestmentEntry> chart;
+    private ApexChart<ChartEntryModel> chart;
+    private Dictionary<InvestmentEntry, StockPrice> prices = new();
+    private List<string> stocks = new List<string>();
+    private bool LoadedAllData = false;
+    private DateTime dateStart;
+    private List<ChartEntryModel> pricesDaily;
+
     public StockAccount? Account { get; set; }
     public string ErrorMessage { get; set; } = string.Empty;
+    public Type accountType;
 
     [Parameter]
     public required string AccountName { get; set; }
@@ -78,26 +118,22 @@
     {
         await UpdateEntries();
     }
-    public Type accountType;
-    private Dictionary<InvestmentEntry, StockPrice> prices = new();
     private async Task UpdateEntries()
     {
         try
         {
-            DateTime dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
             var accounts = BankAccountRepository.GetAvailableAccounts();
             if (accounts.ContainsKey(AccountName))
             {
                 accountType = accounts[AccountName];
                 if (accountType == typeof(StockAccount))
                 {
+                    LoadedAllData = false;
+                    prices.Clear();
                     Account = BankAccountRepository.GetAccount<StockAccount>(AccountName, dateStart, DateTime.UtcNow);
-
-                    foreach (var entry in Account.Entries)
-                    {
-                        var price = await StockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
-                        prices.Add(entry, price);
-                    }
+                    if (Account is not null && Account.Entries is not null)
+                        await UpdateInfo();
                 }
             }
 
@@ -105,9 +141,51 @@
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
+            Console.WriteLine(ex);
         }
     }
-    private ApexChartOptions<InvestmentEntry> options { get; set; } = new()
+
+    public async Task UpdateInfo()
+    {
+        if (Account is null || Account.Entries is null) return;
+        stocks = Account.GetStoredTickers();
+        foreach (var entry in Account.Entries)
+        {
+            if (prices.ContainsKey(entry)) continue;
+
+            var price = await StockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
+            prices.Add(entry, price);
+        }
+
+        if (Account.Entries.Last().PostingDate.Date > dateStart.Date)
+            LoadedAllData = true;
+        pricesDaily = (await Account.GetDailyPrice(StockRepository)).Select(x => new ChartEntryModel() { Date = x.Key.ToDateTime(new TimeOnly()), Value = x.Value }).ToList();
+        if (chart is not null)
+            await chart.RenderAsync();
+    }
+
+    public async Task LoadMore()
+    {
+        if (Account is null) return;
+
+        var newStartDate = Account.Start.AddMonths(-1);
+        var newData = BankAccountRepository.GetAccount<StockAccount>(AccountName, newStartDate, Account.Start);
+
+        if (Account.Entries is null || newData is null || newData.Entries is null) return;
+        if (newData.Entries.Last().PostingDate == Account.Entries.Last().PostingDate)
+        {
+            LoadedAllData = true;
+            return;
+        }
+
+        Account.Entries.AddRange(newData.Entries);
+        Account.SetDates(newStartDate, Account.End);
+       
+        await UpdateInfo();
+    }
+
+
+    private ApexChartOptions<ChartEntryModel> options { get; set; } = new()
         {
             Chart = new Chart
             {

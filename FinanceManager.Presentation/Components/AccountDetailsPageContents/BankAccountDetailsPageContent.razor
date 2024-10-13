@@ -5,7 +5,7 @@
 
 @if (Account is not null && Account.Entries is not null)
 {
-    <div class="col-12" style="min-height:150px;">
+    <div class="col-12 mb-2" style="min-height:150px;">
         <ApexChart @ref="chart" TItem="BankAccountEntry" Height="150" Options=@options XAxisType="XAxisType.Datetime">
             <ApexPointSeries TItem="BankAccountEntry"
                              Items="Account.Entries"
@@ -29,9 +29,9 @@
                     <table class="table">
                         <thead>
                             <tr>
-                                <th scope="col">Posting date</th>
                                 <th scope="col">Balance</th>
                                 <th scope="col">Balance change</th>
+                                <th scope="col">Posting date</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -39,7 +39,6 @@
                             @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
                             {
                                 <tr>
-                                    <td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
                                     <td>@entry.Value @currency</td>
                                     @if (entry.ValueChange > 0)
                                     {
@@ -49,6 +48,7 @@
                                     {
                                         <td class="text-danger">@entry.ValueChange @currency</td>
                                     }
+                                    <td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
                                 </tr>
                             }
                         </tbody>
@@ -175,14 +175,17 @@
 
 @code {
 
-    private ApexChart<BankAccountEntry> chart;
-    public BankAccount? Account { get; set; }
-    public string ErrorMessage { get; set; } = string.Empty;
+    private decimal balanceChange = 100;
+    private bool LoadedAllData = false;
+    private DateTime dateStart;
+
     internal List<BankAccountEntry>? Top5;
     internal List<BankAccountEntry>? Bottom5;
     internal string currency = "PLN";
-    decimal balanceChange = 100;
-    bool LoadedAllData = false;
+
+    private ApexChart<BankAccountEntry> chart;
+    public BankAccount? Account { get; set; }
+    public string ErrorMessage { get; set; } = string.Empty;
 
 
     [Parameter]
@@ -208,7 +211,7 @@
     {
         try
         {
-            DateTime dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
             var accounts = BankAccountRepository.GetAvailableAccounts();
             if (accounts.ContainsKey(AccountName))
             {
@@ -218,7 +221,6 @@
                     Account = BankAccountRepository.GetAccount<BankAccount>(AccountName, dateStart, DateTime.UtcNow);
                     if (Account is not null && Account.Entries is not null)
                         UpdateInfo();
-
                 }
             }
 
@@ -231,10 +233,14 @@
 
     public void UpdateInfo()
     {
+        if (Account is null || Account.Entries is null) return;
         var EntriesOrdered = Account.Entries.OrderByDescending(x => x.ValueChange);
         Top5 = EntriesOrdered.Take(5).ToList();
         Bottom5 = EntriesOrdered.Skip(Account.Entries.Count - 6).Take(5).OrderBy(x => x.ValueChange).ToList();
         balanceChange = Account.Entries.First().Value - Account.Entries.Last().Value;
+
+        if (Account.Entries.Last().PostingDate.Date > dateStart.Date)
+            LoadedAllData = true;
     }
 
     public async Task LoadMore()
