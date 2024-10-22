@@ -3,46 +3,39 @@
 @using FinanceManager.Presentation.Components.Dashboard.Cards
 
 <PageTitle>Assets</PageTitle>
-<div class="container">
-    <h3>Assets</h3>
-
+<div class="container mt-2">
     <div class="row">
-        @* <div class="d-flex flex-wrap"> *@
-
-        <div class="col-md-12 col-lg-4 p-1">
-            <AssetsPerTypeOverviewCard></AssetsPerTypeOverviewCard>
+        <div class="col-12 p-1">
+            <AssetsPerTypeTimeSeriesCard />
         </div>
 
         <div class="col-md-12 col-lg-4 p-1">
-            <AssetsPerAccountOverviewCard></AssetsPerAccountOverviewCard>
+            <AssetsPerTypeOverviewCard />
         </div>
 
         <div class="col-md-12 col-lg-4 p-1">
-            <AssetsPerAccountOverviewCard DisplayAsChart="false"></AssetsPerAccountOverviewCard>
+            <AssetsPerAccountOverviewCard />
+        </div>
+
+        <div class="col-md-12 col-lg-4 p-1">
+            <AssetsPerAccountOverviewCard DisplayAsChart="false" />
         </div>
 
         <div class="col-md-12 col-lg-6 p-1">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Stocks - Time series</h5>
-                    <div class="row">
-                        <div class="col-8">
-
-                            <ChartSpinner></ChartSpinner>
-                        </div>
-                        <div class="col-4">
-                            <div class="col-12 p-1">Select asset</div>
-                            <div class="placeholder col-9 p-1"></div>
-                            <div class="placeholder col-5 p-1"></div>
-                            <div class="placeholder col-8 p-1"></div>
-                            <div class="placeholder col-9 p-1"></div>
-                            <div class="placeholder col-3 p-1"></div>
-                            <div class="placeholder col-7 p-1"></div>
-                            <div class="placeholder col-5 p-1"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <InvestmentTypeTimeSeriesCard />
         </div>
+
+        <div class="col-md-12 col-lg-6 p-1">
+            <InvestmentTypeTimeSeriesCard />
+        </div>
+
+        <div class="col-md-12 col-lg-6 p-1">
+            <InvestmentTypeTimeSeriesCard />
+        </div>
+
+        <div class="col-md-12 col-lg-6 p-1">
+            <InvestmentTypeTimeSeriesCard />
+        </div>
+     
     </div>
 </div>
