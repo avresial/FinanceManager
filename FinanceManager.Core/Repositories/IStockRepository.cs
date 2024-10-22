@@ -2,8 +2,8 @@
 
 namespace FinanceManager.Core.Repositories
 {
-	public interface IStockRepository
-	{
-		Task<StockPrice> GetStockPrice(string ticker, DateTime Date);
-	}
+    public interface IStockRepository
+    {
+        Task<StockPrice> GetStockPrice(string ticker, DateTime Date);
+    }
 }

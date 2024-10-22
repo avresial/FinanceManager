@@ -107,7 +107,7 @@
                 <div class="row">
                     @if (Top5 is not null)
                     {
-                        <h6 class="text-center mt-2">Positive top 5</h6>
+                        <h6 class="text-center mt-2">Top 5</h6>
                         @foreach (var entry in Top5)
                         {
                             <div class="row mb-3 mx-0 px-0">
@@ -138,7 +138,7 @@
                     }
                     @if (Bottom5 is not null)
                     {
-                        <h6 class="text-center mt-2">Negative top 5</h6>
+                        <h6 class="text-center mt-2">Bottom 5</h6>
                         @foreach (var entry in Bottom5)
                         {
                             <div class="row mb-3 mx-0 px-0">
@@ -236,7 +236,7 @@
         if (Account is null || Account.Entries is null) return;
         var EntriesOrdered = Account.Entries.OrderByDescending(x => x.ValueChange);
         Top5 = EntriesOrdered.Take(5).ToList();
-        Bottom5 = EntriesOrdered.Skip(Account.Entries.Count - 6).Take(5).OrderBy(x => x.ValueChange).ToList();
+        Bottom5 = EntriesOrdered.Skip(Account.Entries.Count - 5).Take(5).OrderBy(x => x.ValueChange).ToList();
         balanceChange = Account.Entries.First().Value - Account.Entries.Last().Value;
 
         if (Account.Entries.Last().PostingDate.Date > dateStart.Date)

@@ -170,7 +170,7 @@
     async Task GetData()
     {
         await GetData<BankAccount, BankAccountEntry>(StartDateTime, DateTime.Now);
-        await GetData<StockAccount, InvestmentEntry>(StartDateTime, DateTime.Now);
+        await GetData<InvestmentAccount, InvestmentEntry>(StartDateTime, DateTime.Now);
 
         TotalAssets = Data.Sum(x => x.Value);
     }
@@ -188,7 +188,7 @@
                     GetDataFinancialAccount(bankAccount);
                     break;
 
-                case StockAccount stockAccount:
+                case InvestmentAccount stockAccount:
                     await GetDataFinancialAccount(stockAccount);
                     break;
             }
@@ -213,7 +213,7 @@
                 });
         }
     }
-    private async Task GetDataFinancialAccount(StockAccount stockAccount)
+    private async Task GetDataFinancialAccount(InvestmentAccount stockAccount)
     {
         if (stockAccount is null || stockAccount.Entries is null) return;
 

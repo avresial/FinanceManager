@@ -1,5 +1,4 @@
 ﻿using FinanceManager.Core.Enums;
-using FinanceManager.Core.Repositories;
 
 namespace FinanceManager.Core.Entities.Accounts
 {
@@ -79,14 +78,14 @@ namespace FinanceManager.Core.Entities.Accounts
         }
     }
 
-    public class StockAccount : FinancialAccountBase<InvestmentEntry>//, IFinancalAccount
+    public class InvestmentAccount : FinancialAccountBase<InvestmentEntry>//, IFinancalAccount
     {
-        public StockAccount(string name, IEnumerable<InvestmentEntry> entries)
+        public InvestmentAccount(string name, IEnumerable<InvestmentEntry> entries)
         {
             Name = name;
             Entries = entries.ToList();
         }
-        public StockAccount(string name, DateTime start, DateTime end) : base(name, start, end)
+        public InvestmentAccount(string name, DateTime start, DateTime end) : base(name, start, end)
         {
             Entries = new List<InvestmentEntry>();
         }
@@ -113,7 +112,7 @@ namespace FinanceManager.Core.Entities.Accounts
 
             return Entries.DistinctBy(x => x.Ticker).Select(x => x.Ticker).ToList();
         }
-        public async Task<Dictionary<DateOnly, decimal>> GetDailyPrice(IStockRepository stockRepository)
+        public async Task<Dictionary<DateOnly, decimal>> GetDailyPrice(Func<string, DateTime, Task<StockPrice>> getStockPrice)
         {
             var result = new Dictionary<DateOnly, decimal>();
             if (Entries is null) return result;
@@ -131,7 +130,7 @@ namespace FinanceManager.Core.Entities.Accounts
                 foreach (var entry in entriesOfTheDay)
                 {
                     countedTicker.RemoveAll(x => x == entry.Ticker);
-                    var price = entry.Value * (await stockRepository.GetStockPrice(entry.Ticker, index.ToDateTime(new TimeOnly()))).PricePerUnit;
+                    var price = entry.Value * (await getStockPrice(entry.Ticker, index.ToDateTime(new TimeOnly()))).PricePerUnit;
                     if (!lastTickerValue.ContainsKey(entry.Ticker))
                         lastTickerValue.Add(entry.Ticker, price);
                     else
