@@ -53,11 +53,11 @@ namespace FinanceManager.Infrastructure.Repositories
                 return bankAccount as T;
             }
 
-            if (typeof(T) == typeof(StockAccount))
+            if (typeof(T) == typeof(InvestmentAccount))
             {
-                StockAccount databaseBankAccount = firstAccount as StockAccount;
+                InvestmentAccount databaseBankAccount = firstAccount as InvestmentAccount;
 
-                StockAccount bankAccount = new StockAccount(name, databaseBankAccount.Entries);
+                InvestmentAccount bankAccount = new InvestmentAccount(name, databaseBankAccount.Entries);
                 bankAccount.SetDates(dateStart, dateEnd);
                 return bankAccount as T;
             }
@@ -135,7 +135,7 @@ namespace FinanceManager.Infrastructure.Repositories
                 ("Nvidia", InvestmentType.Stock),( "Intel", InvestmentType.Stock), ("Bond 1" , InvestmentType.Bond)
             });
 
-            AddStockAccount(DateTime.UtcNow.AddDays(-10), 10, "Wallet 3", new List<(string, InvestmentType)>()
+            AddStockAccount(DateTime.UtcNow.AddMonths(-1), 10, "Wallet 3", new List<(string, InvestmentType)>()
             {
                 ("Bond 2", InvestmentType.Bond),( "Bond 3", InvestmentType.Bond), ("Bond 4" , InvestmentType.Bond)
             });
@@ -143,7 +143,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
         private void AddStockAccount(DateTime startDay, decimal startingBalance, string accountName, List<(string, InvestmentType)> tickers)
         {
-            AddFinancialAccount(new StockAccount(accountName, DateTime.UtcNow, DateTime.UtcNow));
+            AddFinancialAccount(new InvestmentAccount(accountName, DateTime.UtcNow, DateTime.UtcNow));
             int tickerIndex = random.Next(tickers.Count);
             AddStockAccountEntry(accountName, tickers[tickerIndex].Item1, tickers[tickerIndex].Item2, startingBalance, startDay);
 
@@ -161,7 +161,7 @@ namespace FinanceManager.Infrastructure.Repositories
         }
         private void AddStockAccountEntry(string name, string ticker, InvestmentType investmentType, decimal balanceChange, DateTime? postingDate = null)
         {
-            var bankAccount = FindAccount<StockAccount>(name);
+            var bankAccount = FindAccount<InvestmentAccount>(name);
             if (bankAccount is null) return;
 
             decimal balance = balanceChange;

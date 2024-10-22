@@ -77,14 +77,15 @@ namespace FinanceManager.Core.Entities.Accounts
             base.SetDates(start, end);
         }
     }
-    public class StockAccount : FinancialAccountBase<InvestmentEntry>//, IFinancalAccount
+
+    public class InvestmentAccount : FinancialAccountBase<InvestmentEntry>//, IFinancalAccount
     {
-        public StockAccount(string name, IEnumerable<InvestmentEntry> entries)
+        public InvestmentAccount(string name, IEnumerable<InvestmentEntry> entries)
         {
             Name = name;
             Entries = entries.ToList();
         }
-        public StockAccount(string name, DateTime start, DateTime end) : base(name, start, end)
+        public InvestmentAccount(string name, DateTime start, DateTime end) : base(name, start, end)
         {
             Entries = new List<InvestmentEntry>();
         }
@@ -92,6 +93,11 @@ namespace FinanceManager.Core.Entities.Accounts
         {
             if (Entries is null) return;
             Entries.RemoveAll(x => x.PostingDate < start || x.PostingDate > end);
+
+            if (!Entries.Any()) return;
+
+            Start = Entries.Last().PostingDate;
+            End = Entries.First().PostingDate;
         }
 
         public List<InvestmentType> GetStoredTypes()
@@ -102,11 +108,48 @@ namespace FinanceManager.Core.Entities.Accounts
         }
         public List<string> GetStoredTickers()
         {
-            if (Entries is null) Enumerable.Empty<InvestmentType>();
+            if (Entries is null) return new List<string>();
 
             return Entries.DistinctBy(x => x.Ticker).Select(x => x.Ticker).ToList();
         }
+        public async Task<Dictionary<DateOnly, decimal>> GetDailyPrice(Func<string, DateTime, Task<StockPrice>> getStockPrice)
+        {
+            var result = new Dictionary<DateOnly, decimal>();
+            if (Entries is null) return result;
 
+            DateOnly index = DateOnly.FromDateTime(Start.Date);
+
+            Dictionary<string, decimal> lastTickerValue = new Dictionary<string, decimal>();
+
+            while (index <= DateOnly.FromDateTime(End))
+            {
+                var entriesOfTheDay = Entries.Where(x => DateOnly.FromDateTime(x.PostingDate) == index);
+                decimal dailyPrice = 0;
+
+                var countedTicker = GetStoredTickers();
+                foreach (var entry in entriesOfTheDay)
+                {
+                    countedTicker.RemoveAll(x => x == entry.Ticker);
+                    var price = entry.Value * (await getStockPrice(entry.Ticker, index.ToDateTime(new TimeOnly()))).PricePerUnit;
+                    if (!lastTickerValue.ContainsKey(entry.Ticker))
+                        lastTickerValue.Add(entry.Ticker, price);
+                    else
+                        lastTickerValue[entry.Ticker] = price;
+                    dailyPrice += price;
+                }
+
+                foreach (var item in countedTicker)
+                {
+                    if (!lastTickerValue.ContainsKey(item)) continue;
+                    dailyPrice += lastTickerValue[item];
+                }
+
+                result.Add(index, dailyPrice);
+                index = index.AddDays(+1);
+            }
+
+            return result;
+        }
     }
 
     public class BankAccount : FinancialAccountBase<BankAccountEntry>//, IFinancalAccount
