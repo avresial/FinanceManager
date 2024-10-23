@@ -2,102 +2,31 @@
 
 namespace FinanceManager.Core.Entities.Accounts
 {
-    public interface IFinancalAccount
-    {
-        void SetDates(DateTime start, DateTime end);
-
-        void SetDaily();
-        void SetMonthly();
-        void SetYearly();
-
-        void SetExpenses();
-        void SetEarnings();
-
-    }
-
     public class FinancialAccountBase
     {
         public string Name { get; set; }
-        public DateTime Start { get; protected set; }
-        public DateTime End { get; protected set; }
-    }
-
-    public class FinancialAccountBase<T> : FinancialAccountBase, IFinancalAccount where T : FinancialEntryBase
-    {
-        public List<T>? Entries { get; protected set; }
-
-        public FinancialAccountBase()
-        {
-
-        }
-        public FinancialAccountBase(string name, DateTime start, DateTime end)
-        {
-            Name = name;
-            Start = start;
-            End = end;
-        }
-
-        public virtual void SetDates(DateTime start, DateTime end)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SetDaily()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SetMonthly()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SetYearly()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SetExpenses()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SetEarnings()
-        {
-            throw new NotImplementedException();
-        }
+        public virtual DateTime? Start { get; protected set; }
+        public virtual DateTime? End { get; protected set; }
     }
 
     public class FixedAssetAccount : FinancialAccountBase<FixedAssetEntry>
     {
-        //	public List<FixedAssetEntry>? Entries { get; private set; }
-        public override void SetDates(DateTime start, DateTime end)
+        public FixedAssetAccount(string name) : base(name)
         {
 
-            base.SetDates(start, end);
         }
+        //	public List<FixedAssetEntry>? Entries { get; private set; }
     }
 
     public class InvestmentAccount : FinancialAccountBase<InvestmentEntry>//, IFinancalAccount
     {
-        public InvestmentAccount(string name, IEnumerable<InvestmentEntry> entries)
+        public InvestmentAccount(string name, IEnumerable<InvestmentEntry> entries) : base(name)
         {
-            Name = name;
             Entries = entries.ToList();
         }
-        public InvestmentAccount(string name, DateTime start, DateTime end) : base(name, start, end)
+        public InvestmentAccount(string name) : base(name)
         {
             Entries = new List<InvestmentEntry>();
-        }
-        public override void SetDates(DateTime start, DateTime end)
-        {
-            if (Entries is null) return;
-            Entries.RemoveAll(x => x.PostingDate < start || x.PostingDate > end);
-
-            if (!Entries.Any()) return;
-
-            Start = Entries.Last().PostingDate;
-            End = Entries.First().PostingDate;
         }
 
         public List<InvestmentType> GetStoredTypes()
@@ -115,13 +44,13 @@ namespace FinanceManager.Core.Entities.Accounts
         public async Task<Dictionary<DateOnly, decimal>> GetDailyPrice(Func<string, DateTime, Task<StockPrice>> getStockPrice)
         {
             var result = new Dictionary<DateOnly, decimal>();
-            if (Entries is null) return result;
+            if (Entries is null || Start is null || End is null) return result;
 
-            DateOnly index = DateOnly.FromDateTime(Start.Date);
+            DateOnly index = DateOnly.FromDateTime(Start.Value.Date);
 
             Dictionary<string, decimal> lastTickerValue = new Dictionary<string, decimal>();
 
-            while (index <= DateOnly.FromDateTime(End))
+            while (index <= DateOnly.FromDateTime(End.Value))
             {
                 var entriesOfTheDay = Entries.Where(x => DateOnly.FromDateTime(x.PostingDate) == index);
                 decimal dailyPrice = 0;
@@ -157,29 +86,19 @@ namespace FinanceManager.Core.Entities.Accounts
         //public List<BankAccountEntry>? Entries { get; private set; }
         public AccountType AccountType { get; private set; }
 
-        public BankAccount(string name, IEnumerable<BankAccountEntry> entries, AccountType accountType)
+        public BankAccount(string name, IEnumerable<BankAccountEntry> entries, AccountType accountType) : base(name)
         {
-            Name = name;
             Entries = entries.ToList();
             AccountType = accountType;
         }
-        public BankAccount(string name, AccountType accountType)
+        public BankAccount(string name, AccountType accountType) : base(name)
         {
-            Name = name;
             AccountType = accountType;
             Entries = new List<BankAccountEntry>();
         }
-
-        public override void SetDates(DateTime start, DateTime end)
+        public virtual void GetEntry(DateTime start)
         {
-            if (Entries is null) return;
-
-            Entries.RemoveAll(x => x.PostingDate < start || x.PostingDate > end);
-
-            if (!Entries.Any()) return;
-
-            Start = Entries.Last().PostingDate;
-            End = Entries.First().PostingDate;
+            throw new NotImplementedException();
         }
     }
 }

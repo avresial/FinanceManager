@@ -1,11 +1,194 @@
-﻿<div class="card">
+﻿@using ApexCharts
+@using FinanceManager.Core.Entities.Accounts
+@using FinanceManager.Core.Repositories
+@using FinanceManager.Presentation.ViewModels
+<div class="card">
     <div class="card-body">
         <h5 class="card-title">Net worth time series</h5>
-        <div class="row">
-            <ChartSpinner></ChartSpinner>
+        <div class="row" style="min-height: 150px">
+            <ApexChart @ref="chart" TItem="TimeSeriesModel" Height="150" Options=@options XAxisType="XAxisType.Datetime">
+                <ApexPointSeries TItem="TimeSeriesModel"
+                                 Items="priceTimeseries"
+                                 Name="Net worth"
+                                 XValue="e => e.DateTime.ToLocalTime()"
+                                 YValue="e=> e.Value"
+                                 SeriesType="SeriesType.Area"
+                                 OrderByDescending="@(e=>e.X)" />
+            </ApexChart>
         </div>
     </div>
 </div>
+
 @code {
 
+    private ApexChart<TimeSeriesModel> chart;
+    private DateTime dateStart;
+    List<TimeSeriesModel> priceTimeseries = new List<TimeSeriesModel>();
+
+    [Inject]
+    public IFinancalAccountRepository BankAccountRepository { get; set; }
+
+    [Inject]
+    public IStockRepository StockRepository { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        await UpdateEntries();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        DateTime iterationDate = dateStart;
+        while ((iterationDate - DateTime.UtcNow).TotalDays < 0)
+        {
+            if (!priceTimeseries.Any(x => x.DateTime == iterationDate))
+                priceTimeseries.Add(new() { DateTime = iterationDate });
+
+            iterationDate = iterationDate.AddDays(1);
+        }
+        await UpdateEntries();
+    }
+
+    private async Task UpdateEntries()
+    {
+        try
+        {
+            dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            Dictionary<string, Type> availableAccounts = BankAccountRepository.GetAvailableAccounts();
+            foreach (var availableAccount in availableAccounts)
+            {
+                Dictionary<DateTime, decimal> prices = new Dictionary<DateTime, decimal>();
+
+                if (availableAccount.Value == typeof(InvestmentAccount))
+                {
+                    var account = BankAccountRepository.GetAccount<InvestmentAccount>(availableAccount.Key, dateStart, DateTime.UtcNow);
+                    if (account is null || account.Entries is null) continue;
+
+                    var dates = account.Entries.DistinctBy(x => x.PostingDate.Date).Select(x => x.PostingDate.Date);
+
+                    foreach (var date in dates)
+                    {
+                        var tickerEntries = account.Entries.Where(x => x.PostingDate.Date == date).GroupBy(x => x.Ticker);
+
+                        foreach (var group in tickerEntries)
+                        {
+                            var newestEntry = group.OrderByDescending(x => x.PostingDate).FirstOrDefault();
+                            if (newestEntry is null) continue;
+                            var price = await StockRepository.GetStockPrice(newestEntry.Ticker, date);
+                            if (!prices.ContainsKey(date))
+                            {
+                                prices.Add(date, newestEntry.Value * price.PricePerUnit);
+                            }
+                            else
+                            {
+                                prices[date] += newestEntry.Value * price.PricePerUnit;
+                            }
+                        }
+                    }
+                }
+                else if (availableAccount.Value == typeof(BankAccount))
+                {
+                    var account = BankAccountRepository.GetAccount<BankAccount>(availableAccount.Key, dateStart, DateTime.UtcNow);
+                    if (account is null || account.Entries is null) continue;
+
+                    var dates = account.Entries.DistinctBy(x => x.PostingDate.Date).Select(x => x.PostingDate.Date);
+
+                    foreach (var date in dates)
+                    {
+                        var newestEntry = account.Entries.Where(x => x.PostingDate.Date == date).OrderByDescending(x => x.PostingDate).FirstOrDefault();
+                        if (newestEntry is null) continue;
+
+                        if (!prices.ContainsKey(date))
+                        {
+                            prices.Add(date, newestEntry.Value );
+                        }
+                        else
+                        {
+                            prices[date] += newestEntry.Value ;
+                        }
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Unhandled type: {availableAccount.Value}");
+                }
+
+                await AddData(prices);
+            }
+
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
+    }
+
+    async Task AddData(Dictionary<DateTime, decimal> data)
+    {
+        DateTime iterationDate = dateStart;
+
+        while ((iterationDate - DateTime.UtcNow).TotalDays < 0)
+        {
+            if (!data.ContainsKey(iterationDate))
+            {
+                iterationDate = iterationDate.AddDays(1);
+                continue;
+            }
+            var dataToUpdate = priceTimeseries.FirstOrDefault(x => x.DateTime == iterationDate);
+            if (dataToUpdate is null)
+            {
+                priceTimeseries.Add(new() { DateTime = iterationDate, Value = data[iterationDate] });
+            }
+            else
+            {
+                dataToUpdate.Value += data[iterationDate];
+            }
+
+            iterationDate = iterationDate.AddDays(1);
+        }
+
+    }
+    private ApexChartOptions<TimeSeriesModel> options { get; set; } = new()
+        {
+            Chart = new Chart
+            {
+                Sparkline = new ChartSparkline()
+                {
+                    Enabled = true,
+                },
+                Toolbar = new ApexCharts.Toolbar
+                {
+                    Show = false
+                },
+            },
+            Xaxis = new XAxis()
+            {
+                AxisTicks = new AxisTicks()
+                {
+                    Show = false,
+                },
+                AxisBorder = new AxisBorder()
+                {
+                    Show = false
+                },
+            },
+            Yaxis = new List<YAxis>()
+            {
+                new YAxis
+                {
+                    // AxisTicks = new AxisTicks()
+                    // {
+                    //     Show = false
+                    // },
+                 //   TickAmount = 1,
+                    Show = false,
+                    SeriesName = "Vaue",
+                    DecimalsInFloat = 0,
+                }
+            },
+            Colors = new List<string>
+            {
+                "#A9A9A9"
+            }
+        };
 }

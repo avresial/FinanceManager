@@ -48,8 +48,7 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 BankAccount databaseBankAccount = firstAccount as BankAccount;
 
-                BankAccount bankAccount = new BankAccount(name, databaseBankAccount.Entries, databaseBankAccount.AccountType);
-                bankAccount.SetDates(dateStart, dateEnd);
+                BankAccount bankAccount = new BankAccount(name, databaseBankAccount.Get(dateStart, dateEnd), databaseBankAccount.AccountType);
                 return bankAccount as T;
             }
 
@@ -57,8 +56,7 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 InvestmentAccount databaseBankAccount = firstAccount as InvestmentAccount;
 
-                InvestmentAccount bankAccount = new InvestmentAccount(name, databaseBankAccount.Entries);
-                bankAccount.SetDates(dateStart, dateEnd);
+                InvestmentAccount bankAccount = new InvestmentAccount(name, databaseBankAccount.Get(dateStart, dateEnd));
                 return bankAccount as T;
             }
 
@@ -66,8 +64,6 @@ namespace FinanceManager.Infrastructure.Repositories
         }
         public List<T>? GetEntries<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialEntryBase
         {
-
-
             return null;
         }
 
@@ -143,7 +139,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
         private void AddStockAccount(DateTime startDay, decimal startingBalance, string accountName, List<(string, InvestmentType)> tickers)
         {
-            AddFinancialAccount(new InvestmentAccount(accountName, DateTime.UtcNow, DateTime.UtcNow));
+            AddFinancialAccount(new InvestmentAccount(accountName));
             int tickerIndex = random.Next(tickers.Count);
             AddStockAccountEntry(accountName, tickers[tickerIndex].Item1, tickers[tickerIndex].Item2, startingBalance, startDay);
 
@@ -153,7 +149,6 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 tickerIndex = random.Next(tickers.Count);
                 decimal balanceChange = (decimal)(random.Next(-150, 200) + Math.Round(random.NextDouble(), 2));
-
 
                 AddStockAccountEntry(accountName, tickers[tickerIndex].Item1, tickers[tickerIndex].Item2, balanceChange, startDay);
                 startDay = startDay.AddDays(1);

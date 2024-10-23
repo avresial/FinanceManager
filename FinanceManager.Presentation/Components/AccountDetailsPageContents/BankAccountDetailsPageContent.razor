@@ -246,10 +246,10 @@
 
     public async Task LoadMore()
     {
-        if (Account is null) return;
+        if (Account is null || Account.Start is null) return;
 
-        var newStartDate = Account.Start.AddMonths(-1);
-        var newData = BankAccountRepository.GetAccount<BankAccount>(AccountName, newStartDate, Account.Start);
+        var newStartDate = Account.Start.Value.AddMonths(-1);
+        var newData = BankAccountRepository.GetAccount<BankAccount>(AccountName, newStartDate, Account.Start.Value);
 
         if (Account.Entries is null || newData is null || newData.Entries is null) return;
         if (newData.Entries.Last().PostingDate == Account.Entries.Last().PostingDate)
@@ -258,8 +258,7 @@
             return;
         }
 
-        Account.Entries.AddRange(newData.Entries);
-        Account.SetDates(newStartDate, Account.End);
+        Account.Add(newData.Entries);
 
         if (chart is not null)
             await chart.RenderAsync();
