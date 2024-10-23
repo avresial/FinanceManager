@@ -14,7 +14,7 @@
 		<div class="container-fluid d-flex flex-column h-100">
 			<div class="row">
 				<div class="col px-0">
-					<h5 class="card-title">Assets</h5>
+					<h5 class="card-title">Assets per type</h5>
 					<h6 class="card-subtitle mb-2 text-muted">@Math.Round(TotalAssets, 2) @currency</h6>
 				</div>
 			</div>
@@ -56,48 +56,7 @@
 
 	private ApexChart<WealthOverviewEntry> chart;
 
-	private ApexChartOptions<WealthOverviewEntry> options { get; set; } = new()
-		{
-			Chart = new Chart
-			{
-				Toolbar = new ApexCharts.Toolbar
-				{
-					Show = false
-				},
-			},
-			Xaxis = new XAxis()
-			{
-				AxisTicks = new AxisTicks()
-				{
-					Show = false,
-				},
-				AxisBorder = new AxisBorder()
-				{
-					Show = false
-				},
-				Position = XAxisPosition.Bottom,
-				Type = XAxisType.Category
-
-			},
-			Yaxis = new List<YAxis>()
-			{
-
-				new YAxis
-				{
-					AxisTicks = new AxisTicks()
-					{
-						Show = false
-					},
-					Show = false,
-					SeriesName = "NetValue",
-					DecimalsInFloat = 0,
-				}
-			},
-			Legend = new Legend()
-			{
-				Position = LegendPosition.Bottom,
-			}
-		};
+	
 
 	public List<WealthOverviewEntry> Data { get; set; } = new List<WealthOverviewEntry>();
 
@@ -172,6 +131,8 @@
 
 			var entry = stockAccount.Entries.First(x => x.InvestmentType == investmentType);
 
+            // Iterate over tickers!
+
 			if (entry.Value < 0)
 			{
 				if (dataEntry is not null)
@@ -202,6 +163,47 @@
 		public string Cathegory;
 		public decimal Value;
 	}
+    private ApexChartOptions<WealthOverviewEntry> options { get; set; } = new()
+        {
+            Chart = new Chart
+            {
+                Toolbar = new ApexCharts.Toolbar
+                {
+                    Show = false
+                },
+            },
+            Xaxis = new XAxis()
+            {
+                AxisTicks = new AxisTicks()
+                {
+                    Show = false,
+                },
+                AxisBorder = new AxisBorder()
+                {
+                    Show = false
+                },
+                Position = XAxisPosition.Bottom,
+                Type = XAxisType.Category
 
+            },
+            Yaxis = new List<YAxis>()
+            {
+
+                new YAxis
+                {
+                    AxisTicks = new AxisTicks()
+                    {
+                        Show = false
+                    },
+                    Show = false,
+                    SeriesName = "NetValue",
+                    DecimalsInFloat = 0,
+                }
+            },
+            Legend = new Legend()
+            {
+                Position = LegendPosition.Bottom,
+            }
+        };
 }
 

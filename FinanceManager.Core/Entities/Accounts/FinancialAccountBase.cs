@@ -16,6 +16,12 @@
             if (Entries is null) return [];
             return Entries;
         }
+        public virtual IEnumerable<T> Get(DateOnly date)
+        {
+            if (Entries is null) return [];
+            return Entries.Where(x => x.PostingDate.Year == date.Year && x.PostingDate.Month == date.Month && x.PostingDate.Day == date.Day);
+        }
+
         public virtual IEnumerable<T> Get(DateTime start, DateTime end)
         {
             if (Entries is null) return [];

@@ -243,7 +243,7 @@ namespace FinanceManager.Infrastructure.Repositories
             decimal balance = balanceChange;
 
             if (bankAccount.Entries is not null && bankAccount.Entries.Any())
-                balance += bankAccount.Entries.Last().Value;
+                balance += bankAccount.Entries.First().Value;
 
             BankAccountEntry bankAccountEntry = new BankAccountEntry(postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, balance, balanceChange)
             {

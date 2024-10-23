@@ -4,7 +4,7 @@
 @using FinanceManager.Presentation.ViewModels
 <div class="card">
     <div class="card-body">
-        <h5 class="card-title">Net worth time series</h5>
+        <h5 class="card-title">Assets value over time</h5>
         <div class="row" style="min-height: 150px">
             <ApexChart @ref="chart" TItem="TimeSeriesModel" Height="150" Options=@options XAxisType="XAxisType.Datetime">
                 <ApexPointSeries TItem="TimeSeriesModel"
