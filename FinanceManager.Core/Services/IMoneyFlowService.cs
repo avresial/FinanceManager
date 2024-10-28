@@ -4,6 +4,7 @@ namespace FinanceManager.Core.Services
 {
     public interface IMoneyFlowService
     {
-        Task<List<AssetsPerAcountEntry>> GetEndAssetsPerAcount(DateTime start, DateTime end);
+        Task<List<AssetEntry>> GetEndAssetsPerAcount(DateTime start, DateTime end);
+        Task<List<AssetEntry>> GetEndAssetsPerType(DateTime start, DateTime end);
     }
 }

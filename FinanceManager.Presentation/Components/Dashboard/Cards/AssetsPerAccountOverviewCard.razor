@@ -27,13 +27,13 @@
                 <div class="row flex-fill" style="height:1px;">
                     <div class="h-100">
 
-                        <ApexChart @ref="chart" Height="@("100%")" TItem="AssetsPerAcountEntry" Options="options">
+                        <ApexChart @ref="chart" Height="@("100%")" TItem="AssetEntry" Options="options">
 
 
-                            <ApexPointSeries TItem="AssetsPerAcountEntry"
+                            <ApexPointSeries TItem="AssetEntry"
                                              Items="Data"
                                              Name="Assets"
-                                             XValue="e => e.Cathegory.ToString()"
+                                             XValue="e => e.Name.ToString()"
                                              YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"
                                              SeriesType="SeriesType.Pie"
                                              OrderByDescending="@(e=>e.Y.Value)" />
@@ -50,7 +50,7 @@
                         {
                             <div class="row mb-2">
                                 <div class="col">
-                                    @wealthCategory.Cathegory
+                                    @wealthCategory.Name
                                 </div>
 
                                 <div class="col-auto">
@@ -100,9 +100,9 @@
     [Parameter]
     public DateTime StartDateTime { get; set; }
 
-    private ApexChart<AssetsPerAcountEntry> chart;
+    private ApexChart<AssetEntry> chart;
 
-    private ApexChartOptions<AssetsPerAcountEntry> options { get; set; } = new()
+    private ApexChartOptions<AssetEntry> options { get; set; } = new()
         {
             Chart = new Chart
             {
@@ -145,7 +145,7 @@
             }
         };
 
-    public List<AssetsPerAcountEntry> Data { get; set; } = new List<AssetsPerAcountEntry>();
+    public List<AssetEntry> Data { get; set; } = new List<AssetEntry>();
 
 
     protected override async Task OnInitializedAsync()

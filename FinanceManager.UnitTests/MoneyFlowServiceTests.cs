@@ -55,5 +55,18 @@ namespace FinanceManager.UnitTests
             Assert.Equal(_bankAccounts.Count + _investmentAccountAccounts.Count, result.Count);
             Assert.Equal(70, result.Sum(x => x.Value));
         }
+
+        [Fact]
+        public async Task GetEndAssetsPerType()
+        {
+            // Arrange
+
+            // Act
+            var result = await _moneyFlowService.GetEndAssetsPerType(startDate, endDate);
+
+            // Assert
+            Assert.Equal(2, result.Count);
+            Assert.Equal(70, result.Sum(x => x.Value));
+        }
     }
 }

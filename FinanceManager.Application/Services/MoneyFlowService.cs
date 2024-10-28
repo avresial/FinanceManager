@@ -18,17 +18,17 @@ namespace FinanceManager.Application.Services
             _settingsService = settingsService;
         }
 
-        public async Task<List<AssetsPerAcountEntry>> GetEndAssetsPerAcount(DateTime start, DateTime end)
+        public async Task<List<AssetEntry>> GetEndAssetsPerAcount(DateTime start, DateTime end)
         {
-            List<AssetsPerAcountEntry> result = new List<AssetsPerAcountEntry>();
+            List<AssetEntry> result = new List<AssetEntry>();
             var BankAccounts = _bankAccountRepository.GetAccounts<BankAccount>(start, end);
             foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
             {
                 if (account is null || account.Entries is null) return result;
 
-                result.Add(new AssetsPerAcountEntry()
+                result.Add(new AssetEntry()
                 {
-                    Cathegory = account.Name,
+                    Name = account.Name,
                     Value = account.Entries.First().Value
                 });
             }
@@ -44,12 +44,12 @@ namespace FinanceManager.Application.Services
                 {
                     var latestEntry = account.Entries.First(x => x.Ticker == ticker);
 
-                    var existingResult = result.FirstOrDefault(x => x.Cathegory == account.Name);
+                    var existingResult = result.FirstOrDefault(x => x.Name == account.Name);
                     if (existingResult is null)
                     {
-                        result.Add(new AssetsPerAcountEntry()
+                        result.Add(new AssetEntry()
                         {
-                            Cathegory = account.Name,
+                            Name = account.Name,
                             Value = latestEntry.Value * stockPrice.PricePerUnit
                         });
                     }
@@ -63,5 +63,56 @@ namespace FinanceManager.Application.Services
             return result;
         }
 
+        public async Task<List<AssetEntry>> GetEndAssetsPerType(DateTime start, DateTime end)
+        {
+            List<AssetEntry> result = new List<AssetEntry>();
+            var BankAccounts = _bankAccountRepository.GetAccounts<BankAccount>(start, end);
+            foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            {
+                if (account is null || account.Entries is null) return result;
+                var existingResult = result.FirstOrDefault(x => x.Name == account.AccountType.ToString());
+                if (existingResult is null)
+                {
+                    result.Add(new AssetEntry()
+                    {
+                        Name = account.AccountType.ToString(),
+                        Value = account.Entries.First().Value
+                    });
+                }
+                else
+                {
+                    existingResult.Value += account.Entries.First().Value;
+                }
+            }
+
+            var InvestmentAccounts = _bankAccountRepository.GetAccounts<InvestmentAccount>(start, end);
+            foreach (InvestmentAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            {
+                if (account is null || account.Entries is null) return result;
+                var latestStock = account.Entries.First();
+                var stockPrice = await _stockRepository.GetStockPrice(latestStock.Ticker, end);
+
+                foreach (var type in account.GetStoredTypes())
+                {
+                    var latestEntry = account.Entries.First(x => x.InvestmentType == type);
+
+                    var existingResult = result.FirstOrDefault(x => x.Name == type.ToString());
+                    if (existingResult is null)
+                    {
+                        result.Add(new AssetEntry()
+                        {
+                            Name = latestEntry.InvestmentType.ToString(),
+                            Value = latestEntry.Value * stockPrice.PricePerUnit
+                        });
+                    }
+                    else
+                    {
+                        existingResult.Value += latestEntry.Value * stockPrice.PricePerUnit;
+                    }
+                }
+            }
+
+            return result;
+        }
     }
 }
