@@ -33,12 +33,14 @@
         {
             Entries ??= new List<T>();
             Entries.Add(entry);
+            Entries = Entries.OrderByDescending(x => x.PostingDate).ToList();
         }
 
         public virtual void Add(IEnumerable<T> entries)
         {
             Entries ??= new List<T>();
             Entries.AddRange(entries);
+            Entries = Entries.OrderByDescending(x => x.PostingDate).ToList();
         }
 
         public IEnumerable<T> GetDaily()

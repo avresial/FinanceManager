@@ -18,14 +18,36 @@ namespace FinanceManager.Application.Services
             _settingsService = settingsService;
         }
 
-        public List<AssetsPerAcountEntry> GetAssetsPerAcount(DateTime start, DateTime end)
+        public async Task<List<AssetsPerAcountEntry>> GetEndAssetsPerAcount(DateTime start, DateTime end)
         {
-            return new List<AssetsPerAcountEntry>();
+            List<AssetsPerAcountEntry> result = new List<AssetsPerAcountEntry>();
+            var BankAccounts = _bankAccountRepository.GetAccounts<BankAccount>(start, end);
+            foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            {
+                if (account is null || account.Entries is null) return result;
+
+                result.Add(new AssetsPerAcountEntry()
+                {
+                    Cathegory = account.Name,
+                    Value = account.Entries.First().Value
+                });
+            }
+
+            var InvestmentAccounts = _bankAccountRepository.GetAccounts<InvestmentAccount>(start, end);
+            foreach (InvestmentAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            {
+                if (account is null || account.Entries is null) return result;
+                var latestStock = account.Entries.First();
+                var stockPrice = await _stockRepository.GetStockPrice(latestStock.Ticker, end);
+                result.Add(new AssetsPerAcountEntry()
+                {
+                    Cathegory = account.Name,
+                    Value = account.Entries.First().Value * stockPrice.PricePerUnit
+                });
+            }
+
+            return result;
         }
 
-        public List<AssetsPerAcountEntry> GetAssetsPerAcount(BankAccount bankAccount, DateTime start, DateTime end)
-        {
-            return new List<AssetsPerAcountEntry>();
-        }
     }
 }

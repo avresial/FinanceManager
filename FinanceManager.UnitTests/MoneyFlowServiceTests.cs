@@ -1,4 +1,5 @@
 using FinanceManager.Application.Services;
+using FinanceManager.Core.Entities;
 using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Enums;
 using FinanceManager.Core.Repositories;
@@ -8,35 +9,53 @@ namespace FinanceManager.UnitTests
 {
     public class MoneyFlowServiceTests
     {
-        private DateTime start = new DateTime(2020, 1, 1);
-        private DateTime end = new DateTime(2020, 1, 31);
+        private DateTime startDate = new DateTime(2020, 1, 1);
+        private DateTime endDate = new DateTime(2020, 1, 31);
+
         private MoneyFlowService _moneyFlowService;
         private Mock<IFinancalAccountRepository> _financalAccountRepositoryMock = new Mock<IFinancalAccountRepository>();
+        private Mock<IStockRepository> _stockRepository = new Mock<IStockRepository>();
+        private List<BankAccount> _bankAccounts;
+        private List<InvestmentAccount> _investmentAccountAccounts;
+
         public MoneyFlowServiceTests()
         {
-            BankAccount bankAccount = new BankAccount("testBank1", AccountType.Cash);
-            bankAccount.Add(new BankAccountEntry(start, 10, 10));
-            bankAccount.Add(new BankAccountEntry(start.AddDays(1), 20, 10));
+            BankAccount bankAccount1 = new BankAccount("testBank1", AccountType.Cash);
+            bankAccount1.Add(new BankAccountEntry(startDate, 10, 10));
+            bankAccount1.Add(new BankAccountEntry(startDate.AddDays(1), 20, 10));
 
-            _financalAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(start, end))
-                .Returns(new List<BankAccount>()
-                {
-                   bankAccount
-                });
+            BankAccount bankAccount2 = new BankAccount("testBank2", AccountType.Cash);
+            bankAccount2.Add(new BankAccountEntry(endDate, 10, 10));
+            _bankAccounts = new List<BankAccount>() {
+                   bankAccount1,
+                    bankAccount2
+                };
+            _financalAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(startDate, endDate))
+                                            .Returns(_bankAccounts);
 
-            _moneyFlowService = new MoneyFlowService(_financalAccountRepositoryMock.Object, null, null);
+            InvestmentAccount investmentAccount1 = new InvestmentAccount("testInvestmentAccount1");
+            investmentAccount1.Add(new InvestmentEntry(startDate, 10, 10, "testStock", InvestmentType.Stock));
+            _investmentAccountAccounts = new List<InvestmentAccount>() { investmentAccount1 };
+            _financalAccountRepositoryMock.Setup(x => x.GetAccounts<InvestmentAccount>(startDate, endDate))
+                .Returns(_investmentAccountAccounts);
+
+            _stockRepository.Setup(x => x.GetStockPrice(It.IsAny<string>(), It.IsAny<DateTime>()))
+                            .ReturnsAsync(new StockPrice() { Currency = "PLN", Ticker = "AnyTicker", PricePerUnit = 2 });
+
+            _moneyFlowService = new MoneyFlowService(_financalAccountRepositoryMock.Object, _stockRepository.Object, null);
         }
 
         [Fact]
-        public void GetAssetsPerAcount()
+        public async Task GetAssetsPerAcount()
         {
             // Arrange
 
             // Act
-            var result = _moneyFlowService.GetAssetsPerAcount(start, end);
+            var result = await _moneyFlowService.GetEndAssetsPerAcount(startDate, endDate);
 
             // Assert
-            Assert.Equal(2, result.Count);
+            Assert.Equal(_bankAccounts.Count + _investmentAccountAccounts.Count, result.Count);
+            Assert.Equal(50, result.Sum(x => x.Value));
         }
     }
 }
