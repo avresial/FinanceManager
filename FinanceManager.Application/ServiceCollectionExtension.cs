@@ -4,14 +4,15 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace FinanceManager.Application
 {
-	public static class ServiceCollectionExtension
-	{
-		public static IServiceCollection AddApplication(this IServiceCollection services)
-		{
-			services.AddScoped<IAccountService, AccountService>()
-					.AddScoped<ISettingsService, SettingsService>();
+    public static class ServiceCollectionExtension
+    {
+        public static IServiceCollection AddApplication(this IServiceCollection services)
+        {
+            services.AddScoped<IAccountService, AccountService>()
+                    .AddScoped<ISettingsService, SettingsService>()
+                    .AddScoped<IMoneyFlowService, MoneyFlowService>();
 
-			return services;
-		}
-	}
+            return services;
+        }
+    }
 }

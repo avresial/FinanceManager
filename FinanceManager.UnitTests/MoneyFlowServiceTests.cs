@@ -26,15 +26,13 @@ namespace FinanceManager.UnitTests
 
             BankAccount bankAccount2 = new BankAccount("testBank2", AccountType.Cash);
             bankAccount2.Add(new BankAccountEntry(endDate, 10, 10));
-            _bankAccounts = new List<BankAccount>() {
-                   bankAccount1,
-                    bankAccount2
-                };
+            _bankAccounts = new List<BankAccount>() { bankAccount1, bankAccount2 };
             _financalAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(startDate, endDate))
                                             .Returns(_bankAccounts);
 
             InvestmentAccount investmentAccount1 = new InvestmentAccount("testInvestmentAccount1");
-            investmentAccount1.Add(new InvestmentEntry(startDate, 10, 10, "testStock", InvestmentType.Stock));
+            investmentAccount1.Add(new InvestmentEntry(startDate, 10, 10, "testStock1", InvestmentType.Stock));
+            investmentAccount1.Add(new InvestmentEntry(endDate, 10, 10, "testStock2", InvestmentType.Stock));
             _investmentAccountAccounts = new List<InvestmentAccount>() { investmentAccount1 };
             _financalAccountRepositoryMock.Setup(x => x.GetAccounts<InvestmentAccount>(startDate, endDate))
                 .Returns(_investmentAccountAccounts);
@@ -42,7 +40,7 @@ namespace FinanceManager.UnitTests
             _stockRepository.Setup(x => x.GetStockPrice(It.IsAny<string>(), It.IsAny<DateTime>()))
                             .ReturnsAsync(new StockPrice() { Currency = "PLN", Ticker = "AnyTicker", PricePerUnit = 2 });
 
-            _moneyFlowService = new MoneyFlowService(_financalAccountRepositoryMock.Object, _stockRepository.Object, null);
+            _moneyFlowService = new MoneyFlowService(_financalAccountRepositoryMock.Object, _stockRepository.Object, new SettingsService());
         }
 
         [Fact]
@@ -55,7 +53,7 @@ namespace FinanceManager.UnitTests
 
             // Assert
             Assert.Equal(_bankAccounts.Count + _investmentAccountAccounts.Count, result.Count);
-            Assert.Equal(50, result.Sum(x => x.Value));
+            Assert.Equal(70, result.Sum(x => x.Value));
         }
     }
 }

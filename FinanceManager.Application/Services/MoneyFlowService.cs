@@ -39,11 +39,25 @@ namespace FinanceManager.Application.Services
                 if (account is null || account.Entries is null) return result;
                 var latestStock = account.Entries.First();
                 var stockPrice = await _stockRepository.GetStockPrice(latestStock.Ticker, end);
-                result.Add(new AssetsPerAcountEntry()
+
+                foreach (var ticker in account.GetStoredTickers())
                 {
-                    Cathegory = account.Name,
-                    Value = account.Entries.First().Value * stockPrice.PricePerUnit
-                });
+                    var latestEntry = account.Entries.First(x => x.Ticker == ticker);
+
+                    var existingResult = result.FirstOrDefault(x => x.Cathegory == account.Name);
+                    if (existingResult is null)
+                    {
+                        result.Add(new AssetsPerAcountEntry()
+                        {
+                            Cathegory = account.Name,
+                            Value = latestEntry.Value * stockPrice.PricePerUnit
+                        });
+                    }
+                    else
+                    {
+                        existingResult.Value += latestEntry.Value * stockPrice.PricePerUnit;
+                    }
+                }
             }
 
             return result;

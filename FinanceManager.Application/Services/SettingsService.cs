@@ -2,8 +2,8 @@
 
 namespace FinanceManager.Application.Services
 {
-	internal class SettingsService : ISettingsService
-	{
-		public string GetCurrency() => "PLN";
-	}
+    public class SettingsService : ISettingsService
+    {
+        public string GetCurrency() => "PLN";
+    }
 }
