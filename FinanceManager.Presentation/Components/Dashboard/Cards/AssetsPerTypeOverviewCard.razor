@@ -10,159 +10,155 @@
 @inject IStockRepository stockRepository;
 
 <div class="card" style="height:@Height;">
-	<div class="card-body">
-		<div class="container-fluid d-flex flex-column h-100">
-			<div class="row">
-				<div class="col px-0">
-					<h5 class="card-title">Assets per type</h5>
-					<h6 class="card-subtitle mb-2 text-muted">@Math.Round(TotalAssets, 2) @currency</h6>
-				</div>
-			</div>
+    <div class="card-body">
+        <div class="container-fluid d-flex flex-column h-100">
+            <div class="row">
+                <div class="col px-0">
+                    <h5 class="card-title">Assets per type</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">@Math.Round(TotalAssets, 2) @currency</h6>
+                </div>
+            </div>
 
-			<div class="row flex-fill" style="height:1px;">
-				<div class="h-100">
+            <div class="row flex-fill" style="height:1px;">
+                <div class="h-100">
 
-					<ApexChart @ref="chart" Height="@("100%")" TItem="WealthOverviewEntry" Options="options">
+                    <ApexChart @ref="chart" Height="@("100%")" TItem="WealthOverviewEntry" Options="options">
 
 
-						<ApexPointSeries TItem="WealthOverviewEntry"
-										 Items="Data"
-										 Name="Assets"
-										 XValue="e => e.Cathegory.ToString()"
-										 YAggregate="@(e =>Math.Round( e.Sum(e => e.Value),2))"
-										 SeriesType="SeriesType.Pie"
-										 OrderByDescending="@(e=>e.Y.Value)" />
+                        <ApexPointSeries TItem="WealthOverviewEntry"
+                                         Items="Data"
+                                         Name="Assets"
+                                         XValue="e => e.Cathegory.ToString()"
+                                         YAggregate="@(e =>Math.Round( e.Sum(e => e.Value),2))"
+                                         SeriesType="SeriesType.Pie"
+                                         OrderByDescending="@(e=>e.Y.Value)" />
 
-					</ApexChart>
+                    </ApexChart>
 
-				</div>
-			</div>
-		</div>
-	</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 
 
 
 @code {
-	private string currency = "";
-	decimal TotalAssets = 0;
+    private string currency = "";
+    decimal TotalAssets = 0;
 
-	[Parameter]
-	public string Height { get; set; } = "300px";
+    [Parameter]
+    public string Height { get; set; } = "300px";
 
-	[Parameter]
-	public DateTime StartDateTime { get; set; }
+    [Parameter]
+    public DateTime StartDateTime { get; set; }
 
-	private ApexChart<WealthOverviewEntry> chart;
+    private ApexChart<WealthOverviewEntry> chart;
 
-	
 
-	public List<WealthOverviewEntry> Data { get; set; } = new List<WealthOverviewEntry>();
 
-	protected override async Task OnInitializedAsync()
-	{
-		currency = settingsService.GetCurrency();
-	}
-	protected override async Task OnParametersSetAsync()
-	{
-		foreach (var dataEntry in Data)
-			dataEntry.Value = 0;
+    public List<WealthOverviewEntry> Data { get; set; } = new List<WealthOverviewEntry>();
 
-		await GetData();
-		StateHasChanged();
+    protected override async Task OnInitializedAsync()
+    {
+        currency = settingsService.GetCurrency();
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        foreach (var dataEntry in Data)
+            dataEntry.Value = 0;
 
-		if (chart is not null) await chart.UpdateSeriesAsync(true);
-	}
+        await GetData();
+        StateHasChanged();
 
-	private async Task GetData()
-	{
-		await GetData<BankAccount, BankAccountEntry>(StartDateTime, DateTime.Now);
-		await GetData<InvestmentAccount, InvestmentEntry>(StartDateTime, DateTime.Now);
+        if (chart is not null) await chart.UpdateSeriesAsync(true);
+    }
 
-		TotalAssets = Data.Sum(x => x.Value);
-	}
-	private async Task GetData<T, T2>(DateTime start, DateTime end) where T : FinancialAccountBase<T2> where T2 : FinancialEntryBase
-	{
-		var financialAccounts = bankAccountRepository.GetAccounts<T>(StartDateTime, DateTime.Now);
+    private async Task GetData()
+    {
+        await GetData<BankAccount, BankAccountEntry>(StartDateTime, DateTime.Now);
+        await GetData<InvestmentAccount, InvestmentEntry>(StartDateTime, DateTime.Now);
 
-		if (financialAccounts is null) return;
+        TotalAssets = Data.Sum(x => x.Value);
+    }
+    private async Task GetData<T, T2>(DateTime start, DateTime end) where T : FinancialAccountBase<T2> where T2 : FinancialEntryBase
+    {
+        var financialAccounts = bankAccountRepository.GetAccounts<T>(StartDateTime, DateTime.Now);
 
-		foreach (T account in financialAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
-		{
-			switch (account)
-			{
-				case BankAccount bankAccount:
-					GetDataFinancialAccount(bankAccount);
-					break;
+        if (financialAccounts is null) return;
 
-				case InvestmentAccount stockAccount:
-					await GetDataFinancialAccount(stockAccount);
-					break;
-			}
-		}
-	}
-	private void GetDataFinancialAccount(BankAccount bankAccount)
-	{
-		if (bankAccount is null || bankAccount.Entries is null) return;
+        foreach (T account in financialAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+        {
+            switch (account)
+            {
+                case BankAccount bankAccount:
+                    GetDataFinancialAccount(bankAccount);
+                    break;
 
-		var dataEntry = Data.FirstOrDefault(x => x.Cathegory == bankAccount.AccountType.ToString());
+                case InvestmentAccount stockAccount:
+                    await GetDataFinancialAccount(stockAccount);
+                    break;
+            }
+        }
+    }
+    private void GetDataFinancialAccount(BankAccount bankAccount)
+    {
+        if (bankAccount is null || bankAccount.Entries is null) return;
 
-		if (dataEntry is not null)
-		{
-			dataEntry.Value += bankAccount.Entries.First().Value;
-		}
-		else
-		{
-			Data.Add(new WealthOverviewEntry()
-				{
-					Cathegory = bankAccount.AccountType.ToString(),
-					Value = bankAccount.Entries.First().Value
-				});
-		}
-	}
-	private async Task GetDataFinancialAccount(InvestmentAccount stockAccount)
-	{
-		if (stockAccount is null || stockAccount.Entries is null) return;
+        var dataEntry = Data.FirstOrDefault(x => x.Cathegory == bankAccount.AccountType.ToString());
 
-		foreach (var investmentType in stockAccount.GetStoredTypes())
-		{
-			var dataEntry = Data.FirstOrDefault(x => x.Cathegory == investmentType.ToString());
+        if (dataEntry is not null)
+        {
+            dataEntry.Value += bankAccount.Entries.First().Value;
+        }
+        else
+        {
+            Data.Add(new WealthOverviewEntry()
+                {
+                    Cathegory = bankAccount.AccountType.ToString(),
+                    Value = bankAccount.Entries.First().Value
+                });
+        }
+    }
+    private async Task GetDataFinancialAccount(InvestmentAccount stockAccount)
+    {
+        if (stockAccount is null || stockAccount.Entries is null) return;
 
-			var entry = stockAccount.Entries.First(x => x.InvestmentType == investmentType);
+        foreach (var investmentType in stockAccount.GetStoredTypes())
+        {
+            var dataEntry = Data.FirstOrDefault(x => x.Cathegory == investmentType.ToString());
 
-            // Iterate over tickers!
+            var entries = stockAccount.Get(DateTime.UtcNow.Date);
+            foreach (var ticker in stockAccount.GetStoredTickers())
+            {
+                var entry = entries.First(x => x.Ticker == ticker);
+                if (entry.Value < 0)
+                    continue;
 
-			if (entry.Value < 0)
-			{
-				if (dataEntry is not null)
-					dataEntry.Value = 0;
+                if (dataEntry is not null)
+                {
+                    var price = await stockRepository.GetStockPrice(entry.Ticker, DateTime.UtcNow.Date);
+                    dataEntry.Value += price.PricePerUnit * entry.Value;
+                }
+                else
+                {
+                    var price = await stockRepository.GetStockPrice(entry.Ticker, DateTime.UtcNow.Date);
+                    Data.Add(new WealthOverviewEntry()
+                        {
+                            Cathegory = investmentType.ToString(),
+                            Value = price.PricePerUnit * entry.Value
+                        });
+                }
+            }
+        }
+    }
 
-				continue;
-			}
-
-			if (dataEntry is not null)
-			{
-				var price = await stockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
-				dataEntry.Value += price.PricePerUnit * entry.Value;
-			}
-			else
-			{
-				var price = await stockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
-				Data.Add(new WealthOverviewEntry()
-					{
-						Cathegory = investmentType.ToString(),
-						Value = price.PricePerUnit * entry.Value
-					});
-			}
-		}
-	}
-
-	public class WealthOverviewEntry
-	{
-		public string Cathegory;
-		public decimal Value;
-	}
+    public class WealthOverviewEntry
+    {
+        public string Cathegory;
+        public decimal Value;
+    }
     private ApexChartOptions<WealthOverviewEntry> options { get; set; } = new()
         {
             Chart = new Chart

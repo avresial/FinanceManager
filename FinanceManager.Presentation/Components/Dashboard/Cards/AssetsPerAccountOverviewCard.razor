@@ -169,14 +169,14 @@
 
     async Task GetData()
     {
-        await GetData<BankAccount, BankAccountEntry>(StartDateTime, DateTime.Now);
-        await GetData<InvestmentAccount, InvestmentEntry>(StartDateTime, DateTime.Now);
+        await GetData<BankAccount, BankAccountEntry>(StartDateTime, DateTime.UtcNow);
+        await GetData<InvestmentAccount, InvestmentEntry>(StartDateTime, DateTime.UtcNow);
 
         TotalAssets = Data.Sum(x => x.Value);
     }
     private async Task GetData<T, T2>(DateTime start, DateTime end) where T : FinancialAccountBase<T2> where T2 : FinancialEntryBase
     {
-        var financialAccounts = bankAccountRepository.GetAccounts<T>(StartDateTime, DateTime.Now);
+        var financialAccounts = bankAccountRepository.GetAccounts<T>(StartDateTime, DateTime.UtcNow);
 
         if (financialAccounts is null) return;
 
@@ -216,29 +216,27 @@
     private async Task GetDataFinancialAccount(InvestmentAccount stockAccount)
     {
         if (stockAccount is null || stockAccount.Entries is null) return;
+        var entries = stockAccount.Get(DateTime.UtcNow.Date);
 
+        var dataEntryToClear = Data.FirstOrDefault(x => x.Cathegory == stockAccount.Name);
+        var test = stockAccount.GetStoredTickers();
         foreach (var ticker in stockAccount.GetStoredTickers())
         {
             var dataEntry = Data.FirstOrDefault(x => x.Cathegory == stockAccount.Name);
 
-            var entry = stockAccount.Entries.First(x => x.Ticker == ticker);
+            var entry = entries.First(x => x.Ticker == ticker);
 
             if (entry.Value < 0)
-            {
-                if (dataEntry is not null)
-                    dataEntry.Value = 0;
-
                 continue;
-            }
 
             if (dataEntry is not null)
             {
-                var price = await stockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
+                var price = await stockRepository.GetStockPrice(entry.Ticker, DateTime.UtcNow.Date);
                 dataEntry.Value += price.PricePerUnit * entry.Value;
             }
             else
             {
-                var price = await stockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
+                var price = await stockRepository.GetStockPrice(entry.Ticker, DateTime.UtcNow.Date);
                 Data.Add(new WealthOverviewEntry()
                     {
                         Cathegory = stockAccount.Name,

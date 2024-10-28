@@ -19,7 +19,7 @@ namespace FinanceManager.Core.Entities.Accounts
 
             return Entries.DistinctBy(x => x.InvestmentType).Select(x => x.InvestmentType).ToList();
         }
-        public override IEnumerable<InvestmentEntry> Get(DateOnly date) // needs to be upgraded
+        public override IEnumerable<InvestmentEntry> Get(DateTime date) // needs to be upgraded
         {
             if (Entries is null) return [];
 
