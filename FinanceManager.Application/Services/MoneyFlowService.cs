@@ -92,11 +92,11 @@ namespace FinanceManager.Application.Services
                 var latestStock = account.Entries.First();
                 var stockPrice = await _stockRepository.GetStockPrice(latestStock.Ticker, end);
 
-                foreach (var type in account.GetStoredTypes())
+                foreach (var ticker in account.GetStoredTickers())
                 {
-                    var latestEntry = account.Entries.First(x => x.InvestmentType == type);
+                    var latestEntry = account.Entries.First(x => x.Ticker == ticker);
 
-                    var existingResult = result.FirstOrDefault(x => x.Name == type.ToString());
+                    var existingResult = result.FirstOrDefault(x => x.Name == latestEntry.InvestmentType.ToString());
                     if (existingResult is null)
                     {
                         result.Add(new AssetEntry()
