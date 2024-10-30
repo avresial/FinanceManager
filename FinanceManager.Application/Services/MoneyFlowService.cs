@@ -61,7 +61,6 @@ namespace FinanceManager.Application.Services
 
             return result;
         }
-
         public async Task<List<AssetEntry>> GetEndAssetsPerType(DateTime start, DateTime end)
         {
             List<AssetEntry> result = new List<AssetEntry>();
@@ -111,6 +110,72 @@ namespace FinanceManager.Application.Services
             }
 
             return result;
+        }
+        public async Task<List<TimeSeriesModel>> GetEndAssetsPerTypeTimeSeries(DateTime start, DateTime end)
+        {
+            Dictionary<DateTime, decimal> prices = new Dictionary<DateTime, decimal>();
+
+            List<DateTime> allDates = new List<DateTime>();
+            try
+            {
+                for (DateTime i = end; i >= start; i = i.AddDays(-1)) allDates.Add(i);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+            var BankAccounts = _bankAccountRepository.GetAccounts<BankAccount>(start, end);
+            foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            {
+                if (account is null || account.Entries is null) continue;
+
+                foreach (var date in allDates)
+                {
+                    var newestEntry = account.Get(date).OrderByDescending(x => x.PostingDate).FirstOrDefault();
+                    if (newestEntry is null) continue;
+
+                    if (!prices.ContainsKey(date))
+                    {
+                        prices.Add(date, newestEntry.Value);
+                    }
+                    else
+                    {
+                        prices[date] += newestEntry.Value;
+                    }
+                }
+            }
+
+            var InvestmentAccounts = _bankAccountRepository.GetAccounts<InvestmentAccount>(start, end);
+            foreach (InvestmentAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            {
+                if (account is null || account.Entries is null) continue;
+
+                foreach (var date in allDates)
+                {
+                    var tickerEntries = account.Get(date).GroupBy(x => x.Ticker);
+
+                    foreach (var group in tickerEntries)
+                    {
+                        var newestEntry = group.OrderByDescending(x => x.PostingDate).FirstOrDefault();
+                        if (newestEntry is null) continue;
+                        var price = await _stockRepository.GetStockPrice(newestEntry.Ticker, date);
+                        if (!prices.ContainsKey(date))
+                        {
+                            prices.Add(date, newestEntry.Value * price.PricePerUnit);
+                        }
+                        else
+                        {
+                            prices[date] += newestEntry.Value * price.PricePerUnit;
+                        }
+                    }
+                }
+            }
+
+
+
+            return prices.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value })
+                        .OrderByDescending(x => x.DateTime)
+                        .ToList();
         }
     }
 }

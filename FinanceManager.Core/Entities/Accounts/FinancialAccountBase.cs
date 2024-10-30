@@ -19,7 +19,13 @@
         public virtual IEnumerable<T> Get(DateTime date)
         {
             if (Entries is null) return [];
-            return Entries.Where(x => x.PostingDate.Year == date.Year && x.PostingDate.Month == date.Month && x.PostingDate.Day == date.Day);
+            var entries = Entries.Where(x => x.PostingDate.Year == date.Year && x.PostingDate.Month == date.Month && x.PostingDate.Day == date.Day);
+            if (entries.Any()) return entries;
+
+            var lastEntry = Entries.Where(x => x.PostingDate <= date).FirstOrDefault();
+            if (lastEntry is null) return [];
+
+            return [lastEntry];
         }
 
         public virtual IEnumerable<T> Get(DateTime start, DateTime end)

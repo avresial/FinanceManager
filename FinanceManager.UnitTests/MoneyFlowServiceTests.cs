@@ -11,6 +11,7 @@ namespace FinanceManager.UnitTests
     {
         private DateTime startDate = new DateTime(2020, 1, 1);
         private DateTime endDate = new DateTime(2020, 1, 31);
+        private decimal totalAssetsValue = 0;
 
         private MoneyFlowService _moneyFlowService;
         private Mock<IFinancalAccountRepository> _financalAccountRepositoryMock = new Mock<IFinancalAccountRepository>();
@@ -20,12 +21,14 @@ namespace FinanceManager.UnitTests
 
         public MoneyFlowServiceTests()
         {
+
             BankAccount bankAccount1 = new BankAccount("testBank1", AccountType.Cash);
             bankAccount1.Add(new BankAccountEntry(startDate, 10, 10));
             bankAccount1.Add(new BankAccountEntry(startDate.AddDays(1), 20, 10));
 
             BankAccount bankAccount2 = new BankAccount("testBank2", AccountType.Cash);
             bankAccount2.Add(new BankAccountEntry(endDate, 10, 10));
+
             _bankAccounts = new List<BankAccount>() { bankAccount1, bankAccount2 };
             _financalAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(startDate, endDate))
                                             .Returns(_bankAccounts);
@@ -33,9 +36,12 @@ namespace FinanceManager.UnitTests
             InvestmentAccount investmentAccount1 = new InvestmentAccount("testInvestmentAccount1");
             investmentAccount1.Add(new InvestmentEntry(startDate, 10, 10, "testStock1", InvestmentType.Stock));
             investmentAccount1.Add(new InvestmentEntry(endDate, 10, 10, "testStock2", InvestmentType.Stock));
+
             _investmentAccountAccounts = new List<InvestmentAccount>() { investmentAccount1 };
             _financalAccountRepositoryMock.Setup(x => x.GetAccounts<InvestmentAccount>(startDate, endDate))
                 .Returns(_investmentAccountAccounts);
+
+            totalAssetsValue = 90;
 
             _stockRepository.Setup(x => x.GetStockPrice("testStock1", It.IsAny<DateTime>()))
                             .ReturnsAsync(new StockPrice() { Currency = "PLN", Ticker = "AnyTicker", PricePerUnit = 2 });
@@ -55,7 +61,7 @@ namespace FinanceManager.UnitTests
 
             // Assert
             Assert.Equal(_bankAccounts.Count + _investmentAccountAccounts.Count, result.Count);
-            Assert.Equal(90, result.Sum(x => x.Value));
+            Assert.Equal(totalAssetsValue, result.Sum(x => x.Value));
         }
 
         [Fact]
@@ -68,7 +74,21 @@ namespace FinanceManager.UnitTests
 
             // Assert
             Assert.Equal(2, result.Count);
-            Assert.Equal(90, result.Sum(x => x.Value));
+            Assert.Equal(totalAssetsValue, result.Sum(x => x.Value));
         }
+
+        [Fact]
+        public async Task GetEndAssetsPerTypeTimeseries()
+        {
+            // Arrange
+
+            // Act
+            var result = await _moneyFlowService.GetEndAssetsPerTypeTimeSeries(startDate, endDate);
+
+            // Assert
+            Assert.NotEmpty(result);
+            Assert.Equal(totalAssetsValue, result.First(x => x.DateTime == endDate).Value);
+        }
+
     }
 }
