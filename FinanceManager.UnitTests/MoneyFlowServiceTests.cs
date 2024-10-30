@@ -37,8 +37,10 @@ namespace FinanceManager.UnitTests
             _financalAccountRepositoryMock.Setup(x => x.GetAccounts<InvestmentAccount>(startDate, endDate))
                 .Returns(_investmentAccountAccounts);
 
-            _stockRepository.Setup(x => x.GetStockPrice(It.IsAny<string>(), It.IsAny<DateTime>()))
+            _stockRepository.Setup(x => x.GetStockPrice("testStock1", It.IsAny<DateTime>()))
                             .ReturnsAsync(new StockPrice() { Currency = "PLN", Ticker = "AnyTicker", PricePerUnit = 2 });
+            _stockRepository.Setup(x => x.GetStockPrice("testStock2", It.IsAny<DateTime>()))
+                           .ReturnsAsync(new StockPrice() { Currency = "PLN", Ticker = "AnyTicker", PricePerUnit = 4 });
 
             _moneyFlowService = new MoneyFlowService(_financalAccountRepositoryMock.Object, _stockRepository.Object, new SettingsService());
         }
@@ -53,7 +55,7 @@ namespace FinanceManager.UnitTests
 
             // Assert
             Assert.Equal(_bankAccounts.Count + _investmentAccountAccounts.Count, result.Count);
-            Assert.Equal(70, result.Sum(x => x.Value));
+            Assert.Equal(90, result.Sum(x => x.Value));
         }
 
         [Fact]
@@ -66,7 +68,7 @@ namespace FinanceManager.UnitTests
 
             // Assert
             Assert.Equal(2, result.Count);
-            Assert.Equal(70, result.Sum(x => x.Value));
+            Assert.Equal(90, result.Sum(x => x.Value));
         }
     }
 }

@@ -88,11 +88,10 @@ namespace FinanceManager.Application.Services
             foreach (InvestmentAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
             {
                 if (account is null || account.Entries is null) return result;
-                var latestStock = account.Entries.First();
-                var stockPrice = await _stockRepository.GetStockPrice(latestStock.Ticker, end);
 
                 foreach (var ticker in account.GetStoredTickers())
                 {
+                    var stockPrice = await _stockRepository.GetStockPrice(ticker, end);
                     var latestEntry = account.Entries.First(x => x.Ticker == ticker);
 
                     var existingResult = result.FirstOrDefault(x => x.Name == latestEntry.InvestmentType.ToString());
