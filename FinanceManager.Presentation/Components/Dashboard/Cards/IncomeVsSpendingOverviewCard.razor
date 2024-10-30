@@ -142,19 +142,24 @@
 			if (bankAccounts is null) return;
 			foreach (var account in bankAccounts.Where(x => x.Entries is not null && x.Entries.Any()))
 			{
-				List<BankAccountEntry> entries = new List<BankAccountEntry>();
+				if (account.Entries is null) continue;
+			
+				List<BankAccountEntry> incomeEntries = account.Entries.Where(x=>x.ValueChange>0).ToList();
+				List<BankAccountEntry> spendingEntries = account.Entries.Where(x => x.ValueChange < 0).ToList();
 				if ((DateTime.Now - StartDateTime).TotalDays > 6 * 31)
 				{
-					entries = account.Entries.GetEntriesMonthly();
+					incomeEntries = incomeEntries.GetEntriesMonthly();
+					spendingEntries = spendingEntries.GetEntriesMonthly();
 				}
 				else if ((DateTime.Now - StartDateTime).TotalDays > 31)
 				{
-					entries = account.Entries.GetEntriesWeekly();
+					incomeEntries = incomeEntries.GetEntriesWeekly();
+					spendingEntries = spendingEntries.GetEntriesWeekly();
 				}
-				else
-				{
-					entries = account.Entries;
-				}
+
+				List<BankAccountEntry> entries = new();
+				entries.AddRange(incomeEntries);
+				entries.AddRange(spendingEntries);
 
 				foreach (var entry in entries)
 				{
