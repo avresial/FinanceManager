@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Entities.MoneyFlowModels;
+using FinanceManager.Core.Enums;
 using FinanceManager.Core.Repositories;
 using FinanceManager.Core.Services;
 
@@ -111,14 +112,17 @@ namespace FinanceManager.Application.Services
 
             return result;
         }
-        public async Task<List<TimeSeriesModel>> GetEndAssetsPerTypeTimeSeries(DateTime start, DateTime end)
+        public async Task<List<TimeSeriesModel>> GetAssetsPerTypeTimeSeries(DateTime start, DateTime end)
         {
+            if (start == new DateTime()) return new List<TimeSeriesModel>();
+
             Dictionary<DateTime, decimal> prices = new Dictionary<DateTime, decimal>();
 
             List<DateTime> allDates = new List<DateTime>();
             try
             {
                 for (DateTime i = end; i >= start; i = i.AddDays(-1)) allDates.Add(i);
+
             }
             catch (Exception ex)
             {
@@ -176,6 +180,11 @@ namespace FinanceManager.Application.Services
             return prices.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value })
                         .OrderByDescending(x => x.DateTime)
                         .ToList();
+        }
+
+        public async Task<List<TimeSeriesModel>> GetAssetsPerTypeTimeSeries(DateTime start, DateTime end, InvestmentType investmentType)
+        {
+            throw new NotImplementedException();
         }
     }
 }

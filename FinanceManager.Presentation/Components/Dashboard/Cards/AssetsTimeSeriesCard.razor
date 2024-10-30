@@ -42,12 +42,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        priceTimeseries = await MoneyFlowService.GetEndAssetsPerTypeTimeSeries(StartDateTime, DateTime.UtcNow);
+        priceTimeseries = await MoneyFlowService.GetAssetsPerTypeTimeSeries(StartDateTime, DateTime.UtcNow);
     }
 
     protected override async Task OnParametersSetAsync()
     {
-        priceTimeseries = await MoneyFlowService.GetEndAssetsPerTypeTimeSeries(StartDateTime, DateTime.UtcNow);
+        priceTimeseries = await MoneyFlowService.GetAssetsPerTypeTimeSeries(StartDateTime, DateTime.UtcNow);
     }
 
     private ApexChartOptions<TimeSeriesModel> options { get; set; } = new()
