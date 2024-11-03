@@ -112,7 +112,7 @@ namespace FinanceManager.Application.Services
 
             return result;
         }
-        public async Task<List<TimeSeriesModel>> GetAssetsPerTypeTimeSeries(DateTime start, DateTime end)
+        public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(DateTime start, DateTime end)
         {
             if (start == new DateTime()) return new List<TimeSeriesModel>();
 

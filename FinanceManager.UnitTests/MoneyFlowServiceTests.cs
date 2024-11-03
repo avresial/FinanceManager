@@ -83,7 +83,7 @@ namespace FinanceManager.UnitTests
             // Arrange
 
             // Act
-            var result = await _moneyFlowService.GetAssetsPerTypeTimeSeries(startDate, endDate);
+            var result = await _moneyFlowService.GetAssetsTimeSeries(startDate, endDate);
 
             // Assert
             Assert.NotEmpty(result);

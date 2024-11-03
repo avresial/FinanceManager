@@ -7,7 +7,7 @@ namespace FinanceManager.Core.Services
     {
         Task<List<AssetEntry>> GetEndAssetsPerAcount(DateTime start, DateTime end);
         Task<List<AssetEntry>> GetEndAssetsPerType(DateTime start, DateTime end);
-        Task<List<TimeSeriesModel>> GetAssetsPerTypeTimeSeries(DateTime start, DateTime end);
+        Task<List<TimeSeriesModel>> GetAssetsTimeSeries(DateTime start, DateTime end);
         Task<List<TimeSeriesModel>> GetAssetsPerTypeTimeSeries(DateTime start, DateTime end, InvestmentType investmentType);
     }
 }

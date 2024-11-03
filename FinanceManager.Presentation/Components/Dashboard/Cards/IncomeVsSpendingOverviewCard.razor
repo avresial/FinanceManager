@@ -144,12 +144,12 @@
 			{
 				if (account.Entries is null) continue;
 			
-				List<BankAccountEntry> incomeEntries = account.Entries.Where(x=>x.ValueChange>0).ToList();
-				List<BankAccountEntry> spendingEntries = account.Entries.Where(x => x.ValueChange < 0).ToList();
+				List<FinancialEntryBase> incomeEntries = account.Entries.Where(x => x.ValueChange > 0).Select(x => x as FinancialEntryBase).ToList();
+				List<FinancialEntryBase> spendingEntries = account.Entries.Where(x => x.ValueChange < 0).Select(x => x as FinancialEntryBase).ToList();
 				if ((DateTime.Now - StartDateTime).TotalDays > 6 * 31)
 				{
-					incomeEntries = incomeEntries.GetEntriesMonthly();
-					spendingEntries = spendingEntries.GetEntriesMonthly();
+					incomeEntries = incomeEntries.GetEntriesMonthlyValue();
+					spendingEntries = spendingEntries.GetEntriesMonthlyValue();
 				}
 				else if ((DateTime.Now - StartDateTime).TotalDays > 31)
 				{
@@ -157,7 +157,7 @@
 					spendingEntries = spendingEntries.GetEntriesWeekly();
 				}
 
-				List<BankAccountEntry> entries = new();
+				List<FinancialEntryBase> entries = new();
 				entries.AddRange(incomeEntries);
 				entries.AddRange(spendingEntries);
 

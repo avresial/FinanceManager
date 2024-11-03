@@ -112,23 +112,23 @@
 		if (chart is not null) await chart.UpdateSeriesAsync(true);
 		await Task.Run(() =>
 		{
-			var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now).Where(x => x.Entries is not null && x.Entries.Any());
+			var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now)
+			.Where(x => x.Entries is not null && x.Entries.Any());
 
 			foreach (var account in bankAccounts)
 			{
-				List<BankAccountEntry> entries = new List<BankAccountEntry>();
+				if (account.Entries is null)continue;
+			
+				List<FinancialEntryBase> entries = account.Entries.Select(x => x as FinancialEntryBase).ToList();
 				if ((DateTime.Now - StartDateTime).TotalDays > 6 * 31)
 				{
-					entries = account.Entries.GetEntriesMonthly();
+					entries = entries.GetEntriesMonthlyValue();
 				}
 				else if ((DateTime.Now - StartDateTime).TotalDays > 31)
 				{
-					entries = account.Entries.GetEntriesWeekly();
+					entries = entries.GetEntriesWeekly();
 				}
-				else
-				{
-					entries = account.Entries;
-				}
+				
 				foreach (var entry in entries.Where(x => x.ValueChange > 0))
 				{
 					var dataEntry = Data.FirstOrDefault();
