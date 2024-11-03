@@ -98,14 +98,19 @@ namespace FinanceManager.UnitTests
         public async Task GetAssetsPerTypeTimeseries_TypeAsParameter(InvestmentType investmentType, decimal finalValue)
         {
             // Arrange
-
             // Act
-            var result = await _moneyFlowService.GetAssetsPerTypeTimeSeries(startDate, endDate, investmentType);
+            var result = await _moneyFlowService.GetAssetsTimeSeries(startDate, endDate, investmentType);
 
             // Assert
-            Assert.NotEmpty(result);
-            Assert.Equal(result.First().Value, finalValue);
-            Assert.Equal(totalAssetsValue, result.First(x => x.DateTime == endDate).Value);
+            if (finalValue == 0)
+            {
+                Assert.Empty(result);
+            }
+            else
+            {
+                Assert.Equal(result.First().Value, finalValue);
+                Assert.Equal(result.First(x => x.DateTime == endDate).Value, finalValue);
+            }
         }
 
     }

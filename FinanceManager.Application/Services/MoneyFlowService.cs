@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Entities.MoneyFlowModels;
 using FinanceManager.Core.Enums;
+using FinanceManager.Core.Extensions;
 using FinanceManager.Core.Repositories;
 using FinanceManager.Core.Services;
 
@@ -182,9 +183,39 @@ namespace FinanceManager.Application.Services
                         .ToList();
         }
 
-        public async Task<List<TimeSeriesModel>> GetAssetsPerTypeTimeSeries(DateTime start, DateTime end, InvestmentType investmentType)
+        public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(DateTime start, DateTime end, InvestmentType investmentType)
         {
-            throw new NotImplementedException();
+            List<(DateTime, decimal)> assets = new();
+            var BankAccounts = _bankAccountRepository.GetAccounts<BankAccount>(start, end).Where(x => x.AccountType.ToString() == investmentType.ToString());
+            foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            {
+                if (account is null || account.Entries is null) continue;
+
+                assets.AddRange(account.Entries.GetAssets(start, end));
+            }
+
+            var InvestmentAccounts = _bankAccountRepository.GetAccounts<InvestmentAccount>(start, end);
+            foreach (InvestmentAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            {
+                if (account is null || account.Entries is null) continue;
+
+                assets.AddRange(account.Entries.Where(x => x.InvestmentType == investmentType).ToList().GetAssets(start, end));
+            }
+
+
+            List<TimeSeriesModel> result = new();
+            for (DateTime i = end; i >= start; i = i.AddDays(-1))
+            {
+                var assetsToSum = assets.Where(x => x.Item1 == i);
+                if (!assetsToSum.Any()) continue;
+
+                result.Add(new TimeSeriesModel()
+                {
+                    DateTime = i,
+                    Value = assetsToSum.Sum(x => x.Item2),
+                });
+            }
+            return result;
         }
     }
 }

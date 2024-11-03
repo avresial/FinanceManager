@@ -2,8 +2,19 @@
 
 namespace FinanceManager.Core.Extensions
 {
-    public static class AccountEntryExtension
+    public static class FinancialEntryBaseExtension
     {
+        public static IEnumerable<T> Get<T>(this IList<T> entries, DateTime date) where T : FinancialEntryBase
+        {
+            if (entries is null) return [];
+            var result = entries.Where(x => x.PostingDate.Year == date.Year && x.PostingDate.Month == date.Month && x.PostingDate.Day == date.Day);
+            if (result.Any()) return result;
+
+            var lastEntry = entries.Where(x => x.PostingDate <= date).FirstOrDefault();
+            if (lastEntry is null) return [];
+
+            return [lastEntry];
+        }
         public static List<FinancialEntryBase> GetEntriesMonthlyValue(this IList<FinancialEntryBase> entries)
         {
 
