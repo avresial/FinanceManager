@@ -78,16 +78,39 @@ namespace FinanceManager.UnitTests
         }
 
         [Fact]
-        public async Task GetEndAssetsPerTypeTimeseries()
+        public async Task GetAssetsPerTypeTimeseries()
         {
             // Arrange
 
             // Act
-            var result = await _moneyFlowService.GetEndAssetsPerTypeTimeSeries(startDate, endDate);
+            var result = await _moneyFlowService.GetAssetsTimeSeries(startDate, endDate);
 
             // Assert
             Assert.NotEmpty(result);
             Assert.Equal(totalAssetsValue, result.First(x => x.DateTime == endDate).Value);
+        }
+
+        [Theory]
+        [InlineData(InvestmentType.Bond, 0)]
+        [InlineData(InvestmentType.Stock, 60)]
+        [InlineData(InvestmentType.Cash, 30)]
+        [InlineData(InvestmentType.Property, 0)]
+        public async Task GetAssetsPerTypeTimeseries_TypeAsParameter(InvestmentType investmentType, decimal finalValue)
+        {
+            // Arrange
+            // Act
+            var result = await _moneyFlowService.GetAssetsTimeSeries(startDate, endDate, investmentType);
+
+            // Assert
+            if (finalValue == 0)
+            {
+                Assert.Empty(result);
+            }
+            else
+            {
+                Assert.Equal(result.First().Value, finalValue);
+                Assert.Equal(result.First(x => x.DateTime == endDate).Value, finalValue);
+            }
         }
 
     }

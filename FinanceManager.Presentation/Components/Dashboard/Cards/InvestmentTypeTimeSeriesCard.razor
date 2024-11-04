@@ -1,12 +1,96 @@
-﻿<div class="card">
+﻿@using ApexCharts
+@using FinanceManager.Core.Entities.Accounts
+@using FinanceManager.Core.Entities.MoneyFlowModels
+@using FinanceManager.Core.Repositories
+@using FinanceManager.Core.Services
+@using FinanceManager.Presentation.ViewModels
+
+<div class="card">
     <div class="card-body">
-        <h5 class="card-title">Stock/Bond/Cash/Property</h5>
-        <div class="row">
-            <ChartSpinner></ChartSpinner>
+        <h5 class="card-title">Assets per type</h5>
+        <div class="row" style="min-height: 150px">
+            <ApexChart @ref="chart" TItem="TimeSeriesModel" Height="150" Options=@options XAxisType="XAxisType.Datetime">
+                <ApexPointSeries TItem="TimeSeriesModel"
+                                 Items="priceTimeseries"
+                                 Name="Assets value"
+                                 XValue="e => e.DateTime.ToLocalTime()"
+                                 YValue="e=> e.Value"
+                                 SeriesType="SeriesType.Area"
+                                 OrderByDescending="@(e=>e.X)" />
+            </ApexChart>
         </div>
     </div>
 </div>
 
 @code {
 
+    private ApexChart<TimeSeriesModel> chart;
+    List<TimeSeriesModel> priceTimeseries = new List<TimeSeriesModel>();
+
+    [Parameter]
+    public DateTime StartDateTime { get; set; }
+
+    [Inject]
+    public IFinancalAccountRepository BankAccountRepository { get; set; }
+
+    [Inject]
+    public IStockRepository StockRepository { get; set; }
+
+    [Inject]
+    public IMoneyFlowService MoneyFlowService { get; set; }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(StartDateTime, DateTime.UtcNow);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(StartDateTime, DateTime.UtcNow);
+    }
+
+    private ApexChartOptions<TimeSeriesModel> options { get; set; } = new()
+        {
+            Chart = new Chart
+            {
+                Sparkline = new ChartSparkline()
+                {
+                    Enabled = true,
+                },
+                Toolbar = new ApexCharts.Toolbar
+                {
+                    Show = false
+                },
+            },
+            Xaxis = new XAxis()
+            {
+                AxisTicks = new AxisTicks()
+                {
+                    Show = false,
+                },
+                AxisBorder = new AxisBorder()
+                {
+                    Show = false
+                },
+            },
+            Yaxis = new List<YAxis>()
+            {
+                new YAxis
+                {
+                    // AxisTicks = new AxisTicks()
+                    // {
+                    //     Show = false
+                    // },
+                 //   TickAmount = 1,
+                    Show = false,
+                    SeriesName = "Vaue",
+                    DecimalsInFloat = 0,
+                }
+            },
+            Colors = new List<string>
+            {
+                "#A9A9A9"
+            }
+        };
 }

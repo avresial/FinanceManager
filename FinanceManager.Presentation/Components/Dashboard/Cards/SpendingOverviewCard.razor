@@ -80,10 +80,10 @@
             foreach (var account in bankAccounts)
             {
                 if (account.Entries is null) continue;
-                List<BankAccountEntry> entries = account.Entries.Where(x => x.ValueChange < 0).ToList();
+                List<FinancialEntryBase> entries = account.Entries.Where(x => x.ValueChange < 0).Select(x => x as FinancialEntryBase).ToList();
                 if ((DateTime.Now - StartDateTime).TotalDays > 6 * 31)
                 {
-                    entries = entries.GetEntriesMonthly();
+                    entries = entries.GetEntriesMonthlyValue();
                 }
                 else if ((DateTime.Now - StartDateTime).TotalDays > 31)
                 {
