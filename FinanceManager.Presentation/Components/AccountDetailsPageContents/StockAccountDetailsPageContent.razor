@@ -2,6 +2,8 @@
 @using FinanceManager.Core.Entities
 @using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Core.Repositories
+@using FinanceManager.Core.Services
+@using FinanceManager.Presentation.Helpers
 
 
 @if (Account is not null && Account.Entries is not null)
@@ -217,9 +219,19 @@
 
     [Inject]
     public IStockRepository StockRepository { get; set; }
+  
+    [Inject]
+    public ISettingsService settingsService { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        options.Tooltip = new ApexCharts.Tooltip
+        {
+            Y = new TooltipY
+            {
+                Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
+            }
+        };
         await UpdateEntries();
     }
 
