@@ -199,7 +199,7 @@ namespace FinanceManager.Application.Services
             {
                 if (account is null || account.Entries is null) continue;
 
-                assets.AddRange(account.Entries.Where(x => x.InvestmentType == investmentType).ToList().GetAssets(start, end));
+                assets.AddRange(await account.Entries.Where(x => x.InvestmentType == investmentType).ToList().GetAssets(start, end, _stockRepository.GetStockPrice));
             }
 
 

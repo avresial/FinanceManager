@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Core.Enums;
+using FinanceManager.Core.Extensions;
 
 namespace FinanceManager.Core.Entities.Accounts
 {
@@ -17,23 +18,12 @@ namespace FinanceManager.Core.Entities.Accounts
         {
             if (Entries is null) return [];
 
-            return Entries.DistinctBy(x => x.InvestmentType).Select(x => x.InvestmentType).ToList();
+            return Entries.GetStoredTypes();
         }
-        public override IEnumerable<InvestmentEntry> Get(DateTime date) // needs to be upgraded
+        public override IEnumerable<InvestmentEntry> Get(DateTime date)
         {
             if (Entries is null) return [];
-
-            var entries = Entries.Where(x => x.PostingDate.Year == date.Year && x.PostingDate.Month == date.Month && x.PostingDate.Day == date.Day).ToList();
-            if (entries.DistinctBy(x => x.Ticker).Count() == GetStoredTickers().Count())
-                return entries;
-
-            foreach (var ticker in GetStoredTickers())
-            {
-                if (entries.Any(x => x.Ticker == ticker)) continue;
-                entries.Add(Entries.First(x => x.Ticker == ticker));
-            }
-
-            return entries;
+            return Entries.Get(date);
         }
 
         public List<string> GetStoredTickers()
