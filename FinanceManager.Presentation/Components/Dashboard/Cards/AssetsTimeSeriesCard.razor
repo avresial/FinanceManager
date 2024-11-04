@@ -5,6 +5,8 @@
 @using FinanceManager.Core.Services
 @using FinanceManager.Presentation.ViewModels
 
+@inject ISettingsService settingsService;
+
 <div class="card">
     <div class="card-body">
         <h5 class="card-title">Assets value over time</h5>
@@ -43,6 +45,14 @@
     protected override async Task OnInitializedAsync()
     {
         priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(StartDateTime, DateTime.UtcNow);
+      
+        options.Tooltip = new ApexCharts.Tooltip
+            {
+                Y = new TooltipY
+                {
+                    Formatter = GetFormatter()
+                }
+            };
     }
 
     protected override async Task OnParametersSetAsync()
@@ -93,4 +103,11 @@
                 "#A9A9A9"
             }
         };
+
+    string GetFormatter()
+    {
+        return @"function(value, opts) {
+                    if (value === undefined) {return '';}
+                    return Number(value).toLocaleString() + " + $" ' {settingsService.GetCurrency()}' " + ";}";
+    }
 }
