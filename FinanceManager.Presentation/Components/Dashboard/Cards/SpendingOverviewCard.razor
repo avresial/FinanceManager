@@ -4,6 +4,7 @@
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Extensions
 @using FinanceManager.Core.Services
+@using FinanceManager.Presentation.Helpers
 
 @inject IFinancalAccountRepository bankAccountRepository;
 @inject ISettingsService settingsService;
@@ -165,7 +166,13 @@
 
             });
 
-
+        options.Tooltip = new ApexCharts.Tooltip
+            {
+                Y = new TooltipY
+                {
+                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
+                }
+            };
 
     }
     protected override void OnAfterRender(bool firstRender)
