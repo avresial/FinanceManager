@@ -10,43 +10,37 @@
 @inject ISettingsService settingsService;
 
 <div class="card" style="height:@Height;">
-    <div class="card-body">
-
-        <div class="container-fluid d-flex flex-column h-100">
-            <div class="row">
+    <div class="row">
+        <div class="card-body">
+            <div class="container-fluid d-flex flex-column h-100">
                 <div class="col px-0">
                     <h5 class="card-title">Spendings</h5>
                     <h6 class="card-subtitle mb-2 text-muted">@TotalSpending @currency</h6>
                 </div>
             </div>
-
-            <div class="row flex-fill" style="height:1px;">
-                <div class="h-100">
-                    @if (!Data.Any())
-                    {
-                        <ChartSpinner></ChartSpinner>
-                    }
-                    else
-                    {
-
-                        <ApexChart @ref="chart" TItem="SpendingOverviewEntry" Height="@("100%")" Options="options" XAxisType="XAxisType.Datetime">
-
-
-                            <ApexPointSeries TItem="SpendingOverviewEntry"
-                                             Items="Data"
-                                             Name="Spending"
-                                             XValue="@(e => e.Date.ToLocalTime())"
-                                             YValue="e=> e.Value"
-                                             SeriesType="SeriesType.Area" />
-
-                        </ApexChart>
-                    }
-                </div>
-            </div>
         </div>
     </div>
-</div>
+    <div class="row flex-fill" style="height:1px;">
+        <div class="h-100" style="position:relative; bottom:-2px">
+            @if (!Data.Any())
+            {
+                <ChartSpinner></ChartSpinner>
+            }
+            else
+            {
+                <ApexChart @ref="chart" TItem="SpendingOverviewEntry" Height="@("100%")" Options="options" XAxisType="XAxisType.Datetime">
+                    <ApexPointSeries TItem="SpendingOverviewEntry"
+                                     Items="Data"
+                                     Name="Spending"
+                                     XValue="@(e => e.Date.ToLocalTime())"
+                                     YValue="e=> e.Value"
+                                     SeriesType="SeriesType.Area" />
+                </ApexChart>
+            }
+        </div>
+    </div>
 
+</div>
 
 
 
