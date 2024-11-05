@@ -4,6 +4,7 @@
 @using FinanceManager.Core.Extensions
 @using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Core.Services
+@using FinanceManager.Presentation.Helpers
 @inject IFinancalAccountRepository bankAccountRepository;
 @inject ISettingsService settingsService;
 
@@ -80,7 +81,7 @@
             {
                 Y = new TooltipY
                 {
-                    Formatter = GetFormatter()
+                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
                 }
             };
         options.Chart = new Chart
@@ -206,12 +207,6 @@
         return result;
     }
 
-    string GetFormatter()
-    {
-        return @"function(value, opts) {
-                    if (value === undefined) {return '';}
-                    return Number(value).toLocaleString() + " + $" ' {settingsService.GetCurrency()}' " + ";}";
-    }
 
     public class IncomeVsSpendingEntry
     {

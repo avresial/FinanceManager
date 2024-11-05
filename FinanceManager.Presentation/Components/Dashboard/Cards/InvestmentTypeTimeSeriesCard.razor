@@ -3,7 +3,11 @@
 @using FinanceManager.Core.Entities.MoneyFlowModels
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
+@using FinanceManager.Presentation.Helpers
 @using FinanceManager.Presentation.ViewModels
+
+
+@inject ISettingsService settingsService;
 
 <div class="card">
     <div class="card-body">
@@ -42,6 +46,13 @@
 
     protected override async Task OnInitializedAsync()
     {
+        options.Tooltip = new ApexCharts.Tooltip
+            {
+                Y = new TooltipY
+                {
+                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
+                }
+            };
         priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(StartDateTime, DateTime.UtcNow);
     }
 

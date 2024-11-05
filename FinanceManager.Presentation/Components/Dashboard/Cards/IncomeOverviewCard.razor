@@ -4,6 +4,7 @@
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Extensions
 @using FinanceManager.Core.Services
+@using FinanceManager.Presentation.Helpers
 
 @inject IFinancalAccountRepository bankAccountRepository;
 @inject ISettingsService settingsService;
@@ -106,7 +107,13 @@
                 DecimalsInFloat = 0,
 
             });
-
+        options.Tooltip = new ApexCharts.Tooltip
+            {
+                Y = new TooltipY
+                {
+                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
+                }
+            };
 
     }
     private async Task<List<SpendingOverviewEntry>> GetData()
