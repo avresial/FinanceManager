@@ -4,6 +4,7 @@
 @using FinanceManager.Core.Entities.MoneyFlowModels
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
+@using FinanceManager.Presentation.Helpers
 
 @inject IMoneyFlowService moneyFlowService;
 @inject IFinancalAccountRepository bankAccountRepository;
@@ -150,6 +151,13 @@
 
     protected override async Task OnInitializedAsync()
     {
+        options.Tooltip = new ApexCharts.Tooltip
+            {
+                Y = new TooltipY
+                {
+                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
+                }
+            };
         currency = settingsService.GetCurrency();
     }
 
