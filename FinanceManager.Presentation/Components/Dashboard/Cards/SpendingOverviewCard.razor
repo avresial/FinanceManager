@@ -10,7 +10,7 @@
 @inject ISettingsService settingsService;
 
 <div class="card" style="height:@Height;">
-    <div class="row">
+    <div class="row m-0">
         <div class="card-body">
             <div class="container-fluid d-flex flex-column h-100 px-1">
                 <div class="col px-0">
@@ -166,6 +166,10 @@
                 {
                     Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
                 }
+            };
+        options.Colors = new List<string>
+            {
+                "#A9A9A9"
             };
 
     }

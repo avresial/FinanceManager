@@ -2,6 +2,7 @@
 @using FinanceManager.Core.Entities
 @using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Core.Entities.MoneyFlowModels
+@using FinanceManager.Core.Providers
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
 @using FinanceManager.Presentation.Helpers
@@ -12,40 +13,16 @@
 @inject IStockRepository stockRepository;
 
 <div class="card" style="height:@Height;">
-    <div class="card-body">
-        <div class="container-fluid d-flex flex-column h-100">
-            <div class="row">
-                <div class="col px-0">
-                    <h5 class="card-title">Assets per wallet</h5>
-                    @if (DisplayAsChart)
-                    {
-                        <h6 class="card-subtitle mb-2 text-muted">@Math.Round(TotalAssets, 2) @currency</h6>
-                    }
-                </div>
-            </div>
+    <div class="row m-0">
+        <div class="card-body">
+            <h5 class="card-title">Assets per wallet</h5>
             @if (DisplayAsChart)
             {
-                <div class="row flex-fill" style="height:1px;">
-                    <div class="h-100">
-
-                        <ApexChart @ref="chart" Height="@("100%")" TItem="AssetEntry" Options="options">
-
-
-                            <ApexPointSeries TItem="AssetEntry"
-                                             Items="Data"
-                                             Name="Assets"
-                                             XValue="e => e.Name.ToString()"
-                                             YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"
-                                             SeriesType="SeriesType.Pie"
-                                             OrderByDescending="@(e=>e.Y.Value)" />
-
-                        </ApexChart>
-                    </div>
-                </div>
+                <h6 class="card-subtitle mb-2 text-muted">@Math.Round(TotalAssets, 2) @currency</h6>
             }
-            else
-            {
-                <div class="row flex-fill overflow-auto" style="height:1px;">
+            <div class="row flex-fill overflow-auto">
+                @if (!DisplayAsChart)
+                {
                     <div class="h-100">
                         @foreach (var wealthCategory in Data)
                         {
@@ -79,11 +56,30 @@
                             }
                         </div>
                     </div>
-                </div>
-            }
-
+                }
+            </div>
         </div>
     </div>
+    @if (DisplayAsChart)
+    {
+        <div class="row flex-fill" style="height:1px;">
+            <div class="h-100">
+
+                <ApexChart @ref="chart" Height="@("100%")" TItem="AssetEntry" Options="options">
+
+
+                    <ApexPointSeries TItem="AssetEntry"
+                                     Items="Data"
+                                     Name="Assets"
+                                     XValue="e => e.Name.ToString()"
+                                     YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"
+                                     SeriesType="SeriesType.Pie"
+                                     OrderByDescending="@(e=>e.Y.Value)" />
+
+                </ApexChart>
+            </div>
+        </div>
+    }
 </div>
 
 
@@ -143,7 +139,8 @@
             Legend = new Legend()
             {
                 Position = LegendPosition.Bottom,
-            }
+            },
+            Colors = ColorsProvider.GetColors()
         };
 
     public List<AssetEntry> Data { get; set; } = new List<AssetEntry>();
