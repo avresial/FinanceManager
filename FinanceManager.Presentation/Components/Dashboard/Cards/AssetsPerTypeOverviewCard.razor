@@ -3,6 +3,7 @@
 @using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Core.Entities.MoneyFlowModels
 @using FinanceManager.Core.Enums
+@using FinanceManager.Core.Providers
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
 @using FinanceManager.Presentation.Helpers
@@ -13,33 +14,28 @@
 @inject IStockRepository stockRepository;
 
 <div class="card" style="height:@Height;">
-    <div class="card-body">
-        <div class="container-fluid d-flex flex-column h-100">
-            <div class="row">
+    <div class="row m-0">
+        <div class="card-body">
+            <div class="container-fluid d-flex flex-column h-100 px-1">
                 <div class="col px-0">
                     <h5 class="card-title">Assets per type</h5>
                     <h6 class="card-subtitle mb-2 text-muted">@Math.Round(TotalAssets, 2) @currency</h6>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div class="row flex-fill" style="height:1px;">
-                <div class="h-100">
-
-                    <ApexChart @ref="chart" Height="@("100%")" TItem="AssetEntry" Options="options">
-
-
-                        <ApexPointSeries TItem="AssetEntry"
-                                         Items="Data"
-                                         Name="Assets"
-                                         XValue="e => e.Name"
-                                         YAggregate="@(e =>Math.Round( e.Sum(e => e.Value),2))"
-                                         SeriesType="SeriesType.Pie"
-                                         OrderByDescending="@(e=>e.Y.Value)" />
-
-                    </ApexChart>
-
-                </div>
-            </div>
+    <div class="row flex-fill" style="height:1px;">
+        <div class="h-100" style="position:relative; bottom:-2px">
+            <ApexChart @ref="chart" Height="@("100%")" TItem="AssetEntry" Options="options">
+                <ApexPointSeries TItem="AssetEntry"
+                                 Items="Data"
+                                 Name="Assets"
+                                 XValue="e => e.Name"
+                                 YAggregate="@(e =>Math.Round( e.Sum(e => e.Value),2))"
+                                 SeriesType="SeriesType.Pie"
+                                 OrderByDescending="@(e=>e.Y.Value)" />
+            </ApexChart>
         </div>
     </div>
 </div>
@@ -131,6 +127,7 @@
             Legend = new Legend()
             {
                 Position = LegendPosition.Bottom,
-            }
+            },
+            Colors = ColorsProvider.GetColors()
         };
 }

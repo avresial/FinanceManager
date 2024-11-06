@@ -1,6 +1,7 @@
 ﻿@using ApexCharts
 @using FinanceManager.Core.Entities
 @using FinanceManager.Core.Entities.Accounts
+@using FinanceManager.Core.Providers
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
 
@@ -8,161 +9,162 @@
 @inject ISettingsService settingsService;
 
 <div class="card" style="height:@Height;">
-	<div class="card-body">
-		<div class="container-fluid d-flex flex-column h-100">
-			<div class="row">
-				<div class="col px-0">
-					<h5 class="card-title">Liabilities</h5>
-					<h6 class="card-subtitle mb-2 text-muted">@TotalAssets @currency</h6>
-				</div>
-			</div>
+    <div class="row m-0">
+        <div class="card-body">
+            <div class="container-fluid d-flex flex-column h-100 px-1">
+                <div class="col px-0">
+                    <h5 class="card-title">Liabilities</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">@TotalAssets @currency</h6>
+                </div>
+            </div>
+        </div>
+    </div>
 
-			<div class="row flex-fill" style="height:1px;">
-				<div class="h-100">
+    <div class="row flex-fill" style="height:1px;">
+        <div class="h-100">
 
-					<ApexChart @ref="chart" Height="@("100%")" TItem="LiabilityOverviewEntry" Options="options">
-						<ApexPointTooltip>
-							<div class="m-2">
-								@{
-									var point = context.DataPoint.Items.FirstOrDefault();
-									<span class="me-1">@context.DataPoint.X: -@point.Value @currency</span>
-								}
-							</div>
-						</ApexPointTooltip>
+            <ApexChart @ref="chart" Height="@("100%")" TItem="LiabilityOverviewEntry" Options="options">
+                <ApexPointTooltip>
+                    <div class="m-2">
+                        @{
+                            var point = context.DataPoint.Items.FirstOrDefault();
+                            <span class="me-1">@context.DataPoint.X: -@point.Value @currency</span>
+                        }
+                    </div>
+                </ApexPointTooltip>
 
-						<ChildContent>
-							<ApexPointSeries TItem="LiabilityOverviewEntry"
-											 Items="Data"
-											 Name="Assets"
-											 XValue="e => e.Cathegory.ToString()"
-											 YAggregate="@(e => e.Sum(e => e.Value))"
-											 SeriesType="SeriesType.Pie"
-											 OrderByDescending="@(e=>e.Y.Value)" />
-						</ChildContent>
+                <ChildContent>
+                    <ApexPointSeries TItem="LiabilityOverviewEntry"
+                                     Items="Data"
+                                     Name="Assets"
+                                     XValue="e => e.Cathegory.ToString()"
+                                     YAggregate="@(e => e.Sum(e => e.Value))"
+                                     SeriesType="SeriesType.Pie"
+                                     OrderByDescending="@(e=>e.Y.Value)" />
+                </ChildContent>
 
-					</ApexChart>
+            </ApexChart>
 
-				</div>
-			</div>
-		</div>
-	</div>
+        </div>
+    </div>
 </div>
 
 
 
 
 @code {
-	private string currency = "";
-	decimal TotalAssets = 0;
+    private string currency = "";
+    decimal TotalAssets = 0;
 
-	[Parameter]
-	public string Height { get; set; } = "300px";
+    [Parameter]
+    public string Height { get; set; } = "300px";
 
-	[Parameter]
-	public DateTime StartDateTime { get; set; }
+    [Parameter]
+    public DateTime StartDateTime { get; set; }
 
-	private ApexChart<LiabilityOverviewEntry> chart;
+    private ApexChart<LiabilityOverviewEntry> chart;
 
-	private ApexChartOptions<LiabilityOverviewEntry> options { get; set; } = new()
-		{
-			Chart = new Chart
-			{
-				Toolbar = new ApexCharts.Toolbar
-				{
-					Show = false
-				},
-			},
-			Xaxis = new XAxis()
-			{
-				AxisTicks = new AxisTicks()
-				{
-					Show = false,
-				},
-				AxisBorder = new AxisBorder()
-				{
-					Show = false
-				},
-				Position = XAxisPosition.Bottom,
-				Type = XAxisType.Category
+    private ApexChartOptions<LiabilityOverviewEntry> options { get; set; } = new()
+        {
+            Chart = new Chart
+            {
+                Toolbar = new ApexCharts.Toolbar
+                {
+                    Show = false
+                },
+            },
+            Xaxis = new XAxis()
+            {
+                AxisTicks = new AxisTicks()
+                {
+                    Show = false,
+                },
+                AxisBorder = new AxisBorder()
+                {
+                    Show = false
+                },
+                Position = XAxisPosition.Bottom,
+                Type = XAxisType.Category
 
-			},
-			Yaxis = new List<YAxis>()
-			{
+            },
+            Yaxis = new List<YAxis>()
+    {
 
-				new YAxis
-				{
-					AxisTicks = new AxisTicks()
-					{
-						Show = false
-					},
-					Show = false,
-					SeriesName = "NetValue",
-					DecimalsInFloat = 0,
-				}
-			},
-			Legend = new Legend()
-			{
-				Position = LegendPosition.Bottom,
-			}
-		};
+    new YAxis
+    {
+    AxisTicks = new AxisTicks()
+    {
+    Show = false
+    },
+    Show = false,
+    SeriesName = "NetValue",
+    DecimalsInFloat = 0,
+    }
+    },
+            Legend = new Legend()
+            {
+                Position = LegendPosition.Bottom,
+            },
+            Colors = ColorsProvider.GetColors()
+        };
 
-	public List<LiabilityOverviewEntry> Data { get; set; } = new List<LiabilityOverviewEntry>();
-
-
-	protected override async Task OnInitializedAsync()
-	{
-		currency = settingsService.GetCurrency();
-	}
+    public List<LiabilityOverviewEntry> Data { get; set; } = new List<LiabilityOverviewEntry>();
 
 
-	protected override async Task OnParametersSetAsync()
-	{
-		foreach (var dataEntry in Data)
-			dataEntry.Value = 0;
+    protected override async Task OnInitializedAsync()
+    {
+        currency = settingsService.GetCurrency();
+    }
 
-		if (chart is not null) await chart.UpdateSeriesAsync(true);
 
-		//Data.AddRange(await GetData());
-		await GetData();
-		StateHasChanged();
+    protected override async Task OnParametersSetAsync()
+    {
+        foreach (var dataEntry in Data)
+            dataEntry.Value = 0;
 
-		if (chart is not null) await chart.UpdateSeriesAsync(true);
+        if (chart is not null) await chart.UpdateSeriesAsync(true);
 
-	}
+        //Data.AddRange(await GetData());
+        await GetData();
+        StateHasChanged();
 
-	async Task GetData()
-	{
-		await Task.Run(() =>
-			{
-				var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now);
-				if (bankAccounts is null) return;
+        if (chart is not null) await chart.UpdateSeriesAsync(true);
 
-				bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value <= 0).ToList();
-				TotalAssets = bankAccounts.Sum(x => x.Entries.OrderByDescending(x => x.PostingDate).First().Value);
+    }
 
-				foreach (var account in bankAccounts)
-				{
-					var dataEntry = Data.FirstOrDefault(x => x.Cathegory == account.AccountType.ToString());
+    async Task GetData()
+    {
+        await Task.Run(() =>
+        {
+            var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now);
+            if (bankAccounts is null) return;
 
-					if (dataEntry is not null)
-					{
-						dataEntry.Value -= account.Entries.Last().Value;
-					}
-					else
-					{
-						Data.Add(new LiabilityOverviewEntry()
-							{
-								Cathegory = account.AccountType.ToString(),
-								Value = -account.Entries.Last().Value
-							});
-					}
-				}
-			});
-	}
+            bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value <= 0).ToList();
+            TotalAssets = bankAccounts.Sum(x => x.Entries.OrderByDescending(x => x.PostingDate).First().Value);
 
-	public class LiabilityOverviewEntry
-	{
-		public string Cathegory;
-		public decimal Value;
-	}
+            foreach (var account in bankAccounts)
+            {
+                var dataEntry = Data.FirstOrDefault(x => x.Cathegory == account.AccountType.ToString());
+
+                if (dataEntry is not null)
+                {
+                    dataEntry.Value -= account.Entries.Last().Value;
+                }
+                else
+                {
+                    Data.Add(new LiabilityOverviewEntry()
+                        {
+                            Cathegory = account.AccountType.ToString(),
+                            Value = -account.Entries.Last().Value
+                        });
+                }
+            }
+        });
+    }
+
+    public class LiabilityOverviewEntry
+    {
+        public string Cathegory;
+        public decimal Value;
+    }
 }

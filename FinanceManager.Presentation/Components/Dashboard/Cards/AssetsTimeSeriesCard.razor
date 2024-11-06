@@ -8,19 +8,21 @@
 @inject ISettingsService settingsService;
 
 <div class="card">
-    <div class="card-body">
+    <div class="row m-0">
+        <div class="card-body">
         <h5 class="card-title">Assets value over time</h5>
-        <div class="row" style="min-height: 150px">
-            <ApexChart @ref="chart" TItem="TimeSeriesModel" Height="150" Options=@options XAxisType="XAxisType.Datetime">
-                <ApexPointSeries TItem="TimeSeriesModel"
-                                 Items="priceTimeseries"
-                                 Name="Assets value"
-                                 XValue="e => e.DateTime.ToLocalTime()"
-                                 YValue="e=> e.Value"
-                                 SeriesType="SeriesType.Area"
-                                 OrderByDescending="@(e=>e.X)" />
-            </ApexChart>
         </div>
+    </div>
+    <div class="row" style="min-height: 150px; position:relative; bottom:-2px">
+        <ApexChart @ref="chart" TItem="TimeSeriesModel" Height="150" Options=@options XAxisType="XAxisType.Datetime">
+            <ApexPointSeries TItem="TimeSeriesModel"
+                             Items="priceTimeseries"
+                             Name="Assets value"
+                             XValue="e => e.DateTime.ToLocalTime()"
+                             YValue="e=> e.Value"
+                             SeriesType="SeriesType.Area"
+                             OrderByDescending="@(e=>e.X)" />
+        </ApexChart>
     </div>
 </div>
 
@@ -28,7 +30,7 @@
 
     private ApexChart<TimeSeriesModel> chart;
     List<TimeSeriesModel> priceTimeseries = new List<TimeSeriesModel>();
-    
+
     [Parameter]
     public DateTime StartDateTime { get; set; }
 
@@ -45,7 +47,7 @@
     protected override async Task OnInitializedAsync()
     {
         priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(StartDateTime, DateTime.UtcNow);
-      
+
         options.Tooltip = new ApexCharts.Tooltip
             {
                 Y = new TooltipY
