@@ -15,13 +15,16 @@
 <div class="">
 	Username
 </div>
-<div class="btn">
-	Logout
+<div class="px-2">
+	<NavLink href="login" class="mx-1" Match="NavLinkMatch.All">
+		 Login
+	</NavLink>
 </div>
+
 @code {
 	public void BeginLogOut()
 	{
-		Navigation.NavigateToLogout("authentication/logout");
+		Navigation.NavigateToLogout("login");
 	}
 	string showState = "show";
 
