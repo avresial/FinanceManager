@@ -6,7 +6,7 @@ namespace FinanceManager.Application.Services
 {
     public class LoginService : ILoginService
     {
-        private UserSession? LoggedUser;
+        private UserSession? LoggedUser = null;
         private ISessionStorageService _sessionStorageService;
 
         public LoginService(ISessionStorageService sessionStorageService)

@@ -1,4 +1,6 @@
-﻿@inject NavigationManager Navigation
+﻿@using FinanceManager.Presentation.ViewModels
+@using Microsoft.AspNetCore.Components.Forms
+@inject NavigationManager Navigation
 @inject ILoginService LoginService
 
 <section class="py-3 py-md-5">
@@ -14,18 +16,25 @@
                             <h1>Finance Manager</h1>
                         </div>
                         <h2 class="fs-6 fw-normal text-center text-secondary mb-4">Sign in to your account</h2>
-                        <form action="#!">
+                        <EditForm Model=@loginModel OnValidSubmit=@ValidFormSubmitted OnInvalidSubmit=@InvalidFormSubmitted>
                             <div class="row gy-2 overflow-hidden">
                                 <div class="col-12">
-                                    <div class="form-floating mb-3">
-                                        <input type="email" class="form-control" name="email" id="email" placeholder="name@example.com" required>
+                                  @*   <div class="form-floating mb-3">
                                         <label for="email" class="form-label">Email</label>
+                                        <InputText @bind-Value=loginModel.Login name="email" id="email" class="form-control" DisplayName="name@example.com" required />
+                                    </div> *@
+                                    <div class="form-group">
+                                        <label for="Name">Name</label>
+                                        <InputText @bind-Value=loginModel.Login class="form-control" id="Name" />
                                     </div>
+
                                 </div>
                                 <div class="col-12">
                                     <div class="form-floating mb-3">
-                                        <input type="password" class="form-control" name="password" id="password" value="" placeholder="Password" required>
-                                        <label for="password" class="form-label">Password</label>
+
+                                        <InputText @bind-Value=loginModel.Password class="form-control" />
+                                        @* <input type="password" class="form-control" name="password" id="password" value="" placeholder="Password" required>
+                                        <label for="password" class="form-label">Password</label> *@
                                     </div>
                                 </div>
                                 <div class="col-12">
@@ -48,7 +57,7 @@
                                     <p class="m-0 text-secondary text-center">Don't have an account? <a href="#!" class="link-primary text-decoration-none">Sign up</a></p>
                                 </div>
                             </div>
-                        </form>
+                        </EditForm>
                     </div>
                 </div>
             </div>
@@ -58,9 +67,26 @@
 
 @code
 {
+    LoginModel loginModel = new();
+
     protected override async Task OnInitializedAsync()
     {
-        await LoginService.Login("guest", "password");
+
+    }
+
+    async Task ValidFormSubmitted(EditContext editContext)
+    {
+        await LoginService.Login(loginModel.Login, loginModel.Password);
         Navigation.NavigateTo("");
     }
+
+    void InvalidFormSubmitted(EditContext editContext)
+    {
+    }
+
+    // async Task FormSubmitted(EditContext editContext)
+    // {
+    //     await LoginService.Login(loginModel.Login, loginModel.Password);
+    //     Navigation.NavigateTo("");
+    // }
 }

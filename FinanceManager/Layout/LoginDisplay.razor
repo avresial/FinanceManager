@@ -15,11 +15,9 @@
 </AuthorizeView> *@
 
 
+
 @if (userSession is null)
 {
-    <div class="">
-        @("Username")
-    </div>
     <div class="px-2">
         <NavLink href="login" class="mx-1" Match="NavLinkMatch.All">
             Login
