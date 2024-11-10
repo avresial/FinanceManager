@@ -44,6 +44,7 @@ namespace FinanceManager.Application.Services
         {
             await _sessionStorageService.RemoveItemAsync(sessionString);
             await _localStorageService.RemoveItemAsync(sessionString);
+            LoggedUser = null;
         }
     }
 }

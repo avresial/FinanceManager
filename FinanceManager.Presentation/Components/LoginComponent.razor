@@ -33,16 +33,16 @@
                                         <ValidationMessage For="() => loginModel.Password" />
                                     </div>
                                 </div>
-                              @*   <div class="col-12">
-                                    <div class="d-flex gap-2 justify-content-between">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="" name="rememberMe" id="rememberMe">
-                                            <label class="form-check-label text-secondary" for="rememberMe">
-                                                Keep me logged in
-                                            </label>
-                                        </div>
-                                        <a href="#!" class="link-primary text-decoration-none">Forgot password?</a>
-                                    </div>
+                                @*   <div class="col-12">
+                                <div class="d-flex gap-2 justify-content-between">
+                                <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" name="rememberMe" id="rememberMe">
+                                <label class="form-check-label text-secondary" for="rememberMe">
+                                Keep me logged in
+                                </label>
+                                </div>
+                                <a href="#!" class="link-primary text-decoration-none">Forgot password?</a>
+                                </div>
                                 </div> *@
                                 <div class="col-12">
                                     <div class="d-grid my-3">
@@ -50,8 +50,8 @@
                                         <button class="btn btn-lg mt-2" @onclick=LogGuest>Go to demo!</button>
                                     </div>
                                 </div>
-                              @*   <div class="col-12">
-                                    <p class="m-0 text-secondary text-center">Don't have an account? <a href="#!" class="link-primary text-decoration-none">Sign up</a></p>
+                                @*   <div class="col-12">
+                                <p class="m-0 text-secondary text-center">Don't have an account? <a href="#!" class="link-primary text-decoration-none">Sign up</a></p>
                                 </div> *@
                             </div>
                         </EditForm>
@@ -69,6 +69,23 @@
     protected override async Task OnInitializedAsync()
     {
 
+        var loggedUser = await LoginService.GetLoggedUser();
+        if (loggedUser is not null)
+            Navigation.NavigateTo("");
+
+        var getKeepMeLoggedinSession = await LoginService.GetKeepMeLoggedinSession();
+        if (getKeepMeLoggedinSession is not null)
+        {
+            await LoginService.Login(getKeepMeLoggedinSession.UserName, "shouldBeAToken"); 
+            Navigation.NavigateTo("");
+        }
+
+
+        // #if DEBUG
+        //     {
+        //        await LogGuest();
+        //     }
+        // #endif
     }
 
     async Task ValidFormSubmitted(EditContext editContext)
