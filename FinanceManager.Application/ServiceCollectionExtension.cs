@@ -10,6 +10,7 @@ namespace FinanceManager.Application
         {
             services.AddScoped<IAccountService, AccountService>()
                     .AddScoped<ISettingsService, SettingsService>()
+                    .AddScoped<ILoginService, LoginService>()
                     .AddScoped<IMoneyFlowService, MoneyFlowService>();
 
             return services;

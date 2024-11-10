@@ -1,0 +1,107 @@
+﻿@using FinanceManager.Presentation.ViewModels
+@using Microsoft.AspNetCore.Components.Forms
+@inject NavigationManager Navigation
+@inject ILoginService LoginService
+
+<section class="py-3 py-md-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5 col-xxl-4">
+                <div class="card border border-light-subtle rounded-3 shadow-sm">
+                    <div class="card-body pt-0 px-3 px-md-4 px-xl-5">
+                        <div class="text-center mb-3 pt-3 pt-md-4 pt-xl-5">
+                            @* <a href="#!">
+                            <img src="./assets/img/bsb-logo.svg" alt="BootstrapBrain Logo" width="175" height="57">
+                            </a>  *@
+                            <h1>Finance Manager</h1>
+                        </div>
+                        <h2 class="fs-6 fw-normal text-center text-secondary mb-4">Sign in to your account</h2>
+                        <EditForm Model=@loginModel OnValidSubmit=@ValidFormSubmitted OnInvalidSubmit=@InvalidFormSubmitted>
+                            <DataAnnotationsValidator />
+                            <div class="row gy-2 overflow-hidden">
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <InputText @bind-Value=loginModel.Login class="form-control" name="login" id="login" />
+                                        <label for="login" class="form-label">Login</label>
+                                        <ValidationMessage For="() => loginModel.Login" />
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-floating mb-3">
+                                        <InputText @bind-Value=loginModel.Password type="password" class="form-control" name="password" id="password" />
+                                        <label for="password" class="form-label">Password</label>
+                                        <ValidationMessage For="() => loginModel.Password" />
+                                    </div>
+                                </div>
+                                @*   <div class="col-12">
+                                <div class="d-flex gap-2 justify-content-between">
+                                <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" name="rememberMe" id="rememberMe">
+                                <label class="form-check-label text-secondary" for="rememberMe">
+                                Keep me logged in
+                                </label>
+                                </div>
+                                <a href="#!" class="link-primary text-decoration-none">Forgot password?</a>
+                                </div>
+                                </div> *@
+                                <div class="col-12">
+                                    <div class="d-grid my-3">
+                                        <button class="btn btn-primary btn-lg" type="submit" disabled="@(!context.IsModified() || !context.Validate())">Log in</button>
+                                        <button class="btn btn-lg mt-2" @onclick=LogGuest>Go to demo!</button>
+                                    </div>
+                                </div>
+                                @*   <div class="col-12">
+                                <p class="m-0 text-secondary text-center">Don't have an account? <a href="#!" class="link-primary text-decoration-none">Sign up</a></p>
+                                </div> *@
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@code
+{
+    LoginModel loginModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var loggedUser = await LoginService.GetLoggedUser();
+        if (loggedUser is not null)
+            Navigation.NavigateTo("");
+
+        var getKeepMeLoggedinSession = await LoginService.GetKeepMeLoggedinSession();
+        if (getKeepMeLoggedinSession is not null)
+        {
+            await LoginService.Login(getKeepMeLoggedinSession.UserName, "shouldBeAToken"); 
+            Navigation.NavigateTo("");
+        }
+
+
+        // #if DEBUG
+        //     {
+        //        await LogGuest();
+        //     }
+        // #endif
+    }
+
+    async Task ValidFormSubmitted(EditContext editContext)
+    {
+        await LoginService.Login(loginModel.Login, loginModel.Password);
+        Navigation.NavigateTo("");
+    }
+
+    void InvalidFormSubmitted(EditContext editContext)
+    {
+    }
+
+    async Task LogGuest()
+    {
+        await LoginService.Login("Guest", "GuestPassword");
+        Navigation.NavigateTo("");
+    }
+
+}
