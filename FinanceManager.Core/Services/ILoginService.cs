@@ -4,7 +4,9 @@ namespace FinanceManager.Core.Services
 {
     public interface ILoginService
     {
-        public Task<bool> Login(string username, string password);
-        public Task<UserSession?> GetLoggedUser();
+        Task<bool> Login(string username, string password);
+        Task Logout();
+        Task<UserSession?> GetLoggedUser();
+        Task<UserSession?> GetKeepMeLoggedinSession();
     }
 }
