@@ -15,24 +15,11 @@
 </AuthorizeView> *@
 
 
-
-@if (userSession is null)
+@if (userSession is not null)
 {
-    <div class="px-2">
-        <NavLink href="login" class="mx-1" Match="NavLinkMatch.All">
-            Login
-        </NavLink>
-    </div>
-}
-else
-{
-    @($"{userSession.UserName}")
-    <button class="btn btn-link mx-1" @onclick="BeginLogOut">Log out</button>
-   @*  <div class="px-2">
-        <NavLink href="loginout" class="mx-1" Match="NavLinkMatch.All">
-            Logout
-        </NavLink>
-    </div> *@
+    <MudMenu Label="@userSession.UserName" TransformOrigin="Origin.TopCenter" AnchorOrigin="Origin.BottomCenter" Dense="true">
+        <MudMenuItem OnClick="BeginLogOut">Log Out</MudMenuItem>
+    </MudMenu>
 }
 
 @code {
@@ -48,5 +35,5 @@ else
         await LoginService.Logout();
         Navigation.NavigateToLogout("login");
     }
-   
+
 }
