@@ -1,5 +1,8 @@
-﻿@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+﻿@using FinanceManager.Core.Entities.Login
+@using FinanceManager.Core.Services
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @inject NavigationManager Navigation
+@inject ILoginService LoginService
 
 @* <AuthorizeView>
     <Authorized>
@@ -12,27 +15,46 @@
 </AuthorizeView> *@
 
 
-<div class="">
-	Username
-</div>
-<div class="px-2">
-	<NavLink href="login" class="mx-1" Match="NavLinkMatch.All">
-		 Login
-	</NavLink>
-</div>
+@if (userSession is null)
+{
+    <div class="">
+        @("Username")
+    </div>
+    <div class="px-2">
+        <NavLink href="login" class="mx-1" Match="NavLinkMatch.All">
+            Login
+        </NavLink>
+    </div>
+}
+else
+{
+    @($"{userSession.UserName}")
+   @*  <div class="px-2">
+        <NavLink href="loginout" class="mx-1" Match="NavLinkMatch.All">
+            Logout
+        </NavLink>
+    </div> *@
+}
 
 @code {
-	public void BeginLogOut()
-	{
-		Navigation.NavigateToLogout("login");
-	}
-	string showState = "show";
+    UserSession? userSession { get; set; }
 
-	public void DropdownToggle()
-	{
-		if (showState == "show")
-			showState = "";
-		else
-			showState = "show";
-	}
+    protected override async Task OnInitializedAsync()
+    {
+        userSession = await LoginService.GetLoggedUser();
+    }
+
+    public void BeginLogOut()
+    {
+        Navigation.NavigateToLogout("login");
+    }
+    string showState = "show";
+
+    public void DropdownToggle()
+    {
+        if (showState == "show")
+            showState = "";
+        else
+            showState = "show";
+    }
 }

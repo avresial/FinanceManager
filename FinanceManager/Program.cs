@@ -1,3 +1,4 @@
+using Blazored.SessionStorage;
 using FinanceManager;
 using FinanceManager.Application;
 using FinanceManager.Infrastructure;
@@ -10,7 +11,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 //builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddApplication().AddInfrastructure();
-
+builder.Services.AddBlazoredSessionStorage();
 //builder.Services.AddOidcAuthentication(options =>
 //{
 //	// Configure your authentication provider options here.
