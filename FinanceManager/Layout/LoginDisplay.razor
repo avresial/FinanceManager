@@ -27,6 +27,7 @@
 else
 {
     @($"{userSession.UserName}")
+    <button class="btn btn-link mx-1" @onclick="BeginLogOut">Log out</button>
    @*  <div class="px-2">
         <NavLink href="loginout" class="mx-1" Match="NavLinkMatch.All">
             Logout
@@ -42,17 +43,10 @@ else
         userSession = await LoginService.GetLoggedUser();
     }
 
-    public void BeginLogOut()
+    public async Task BeginLogOut()
     {
+        await LoginService.Logout();
         Navigation.NavigateToLogout("login");
     }
-    string showState = "show";
-
-    public void DropdownToggle()
-    {
-        if (showState == "show")
-            showState = "";
-        else
-            showState = "show";
-    }
+   
 }
