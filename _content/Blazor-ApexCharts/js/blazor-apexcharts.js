@@ -1,4 +1,4 @@
-﻿import ApexCharts from './apexcharts.esm.js?ver=3.50.0'
+﻿import ApexCharts from './apexcharts.esm.js?ver=4.0.0'
 
 // export function for Blazor to point to the window.blazor_apexchart. To be compatible with the most JS Interop calls the window will be return.
 export function get_apexcharts() {
@@ -8,6 +8,31 @@ export function get_apexcharts() {
 
 window.blazor_apexchart = {
 
+    getDotNetObjectReference(index, w) {
+        var chartId = null;
+
+        if (w !== undefined && w.config !== undefined) {
+            chartId = w.config.chart.id;
+        }
+
+        if (w !== undefined && w.w !== undefined && w.w.config !== undefined) {
+            chartId = w.w.config.chart.id;
+        }
+
+        if (index !== undefined && index.w !== undefined && index.w.config !== undefined) {
+            chartId = index.w.config.chart.id;
+        }
+
+        if (index !== undefined && index.config !== undefined) {
+            chartId = index.config.chart.id;
+        }
+
+        if (chartId != null) {
+            return this.dotNetRefs.get(chartId);
+        }
+        return null;
+    },
+
     getXAxisLabel(value, index, w) {
 
         if (window.wasmBinaryFile === undefined && window.WebAssembly === undefined) {
@@ -15,20 +40,9 @@ window.blazor_apexchart = {
             return value;
         }
 
-        if (w !== undefined && w.w !== undefined) {
-            return w.w.config.dotNetObject.invokeMethod('JSGetFormattedXAxisValue', value);
-        }
-
-        if (w !== undefined && w.config !== undefined) {
-            return w.config.dotNetObject.invokeMethod('JSGetFormattedXAxisValue', value);
-        }
-
-        if (index !== undefined && index.w !== undefined && index.w.config !== undefined) {
-            return index.w.config.dotNetObject.invokeMethod('JSGetFormattedXAxisValue', value);
-        }
-
-        if (index !== undefined && index.config !== undefined && index.config.dotNetObject !== undefined) {
-            return index.config.dotNetObject.invokeMethod('JSGetFormattedXAxisValue', value);
+        var dotNetRef = this.getDotNetObjectReference(index, w);
+        if (dotNetRef != null) {
+            return dotNetRef.invokeMethod('JSGetFormattedXAxisValue', value);
         }
 
         return value;
@@ -41,19 +55,13 @@ window.blazor_apexchart = {
             return value;
         }
 
-        if (w !== undefined) {
-            return w.config.dotNetObject.invokeMethod('JSGetFormattedYAxisValue', value);
-        }
-
-        if (index !== undefined && index.w !== undefined && index.w.config !== undefined) {
-            return index.w.config.dotNetObject.invokeMethod('JSGetFormattedYAxisValue', value);
-        }
-
-        if (index !== undefined && index.config !== undefined && index.config.dotNetObject !== undefined) {
-            return index.config.dotNetObject.invokeMethod('JSGetFormattedYAxisValue', value);
+        var dotNetRef = this.getDotNetObjectReference(index, w);
+        if (dotNetRef != null) {
+            return dotNetRef.invokeMethod('JSGetFormattedYAxisValue', value);
         }
 
         return value;
+
     },
 
     findChart(id) {
@@ -69,6 +77,9 @@ window.blazor_apexchart = {
         if (chart !== undefined) {
             chart.destroy();
         }
+
+        this.dotNetRefs.delete(id);
+
     },
 
     LogMethodCall(chart, method, data) {
@@ -83,6 +94,20 @@ window.blazor_apexchart = {
                 console.log('------');
             }
         }
+    },
+
+    setGlobalOptions(options) {
+        var opt = this.parseOptions(options);
+      
+        if (opt.debug === true) {
+            console.log('------');
+            console.log('Method: setGlobalOptions');
+            console.log(opt);
+            console.log('------');
+        }
+
+        opt._chartInstances = Apex._chartInstances;
+        Apex = opt;
     },
 
     updateOptions(id, options, redrawPaths, animate, updateSyncedCharts, zoom) {
@@ -242,18 +267,23 @@ window.blazor_apexchart = {
         }
     },
 
-    renderChart(dotNetObject, container, options, events) {
-        if (options.debug == true) {
-            console.log(options);
+    highlightSeries(id, seriesName) {
+        var chart = this.findChart(id);
+        if (chart !== undefined) {
+            this.LogMethodCall(chart, 'highlightSeries', seriesName);
+            chart.highlightSeries(seriesName)
         }
+    },
 
+    dotNetRefs: new Map(),
+
+    renderChart(dotNetObject, container, options, events) {
         var options = this.parseOptions(options);
 
         if (options.debug == true) {
             console.log(options);
         }
 
-        options.dotNetObject = dotNetObject;
         options.chart.events = {};
 
         if (options.tooltip != undefined && options.tooltip.customTooltip == true) {
@@ -454,6 +484,7 @@ window.blazor_apexchart = {
 
         //Always destroy chart if it exists
         this.destroyChart(options.chart.id);
+        this.dotNetRefs.set(options.chart.id, dotNetObject)
 
         var chart = new ApexCharts(container, options);
         chart.render();
