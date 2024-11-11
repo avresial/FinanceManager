@@ -4,7 +4,7 @@
     {
         public static List<string> GetColors() => new List<string>
         {
-                "#DAB345",
+                "#FFAB00",
                 "#E69649",
                 "#476A5D",
                 "#4D4E8F",
