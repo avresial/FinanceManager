@@ -11,7 +11,8 @@ main[b-esfxu73dws] {
 
 .sidebar[b-esfxu73dws] {
     /*background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);*/
-    background-color:darkgray
+    /*    background-color:darkgray*/
+/*    border-right: 1px solid #d6d5d5;*/
 }
 
 .top-row[b-esfxu73dws] {
@@ -29,23 +30,23 @@ main[b-esfxu73dws] {
         text-decoration: none;
     }
 
-    .top-row[b-esfxu73dws]  a:hover, .top-row[b-esfxu73dws]  .btn-link:hover {
-        text-decoration: underline;
-    }
+        .top-row[b-esfxu73dws]  a:hover, .top-row[b-esfxu73dws]  .btn-link:hover {
+            text-decoration: underline;
+        }
 
-    .top-row[b-esfxu73dws]  a:first-child {
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+        .top-row[b-esfxu73dws]  a:first-child {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
 @media (max-width: 640.98px) {
     .top-row[b-esfxu73dws] {
         justify-content: space-between;
     }
 
-    .top-row[b-esfxu73dws]  a, .top-row[b-esfxu73dws]  .btn-link {
-        margin-left: 0;
-    }
+        .top-row[b-esfxu73dws]  a, .top-row[b-esfxu73dws]  .btn-link {
+            margin-left: 0;
+        }
 }
 
 @media (min-width: 641px) {
@@ -66,11 +67,11 @@ main[b-esfxu73dws] {
         z-index: 1;
     }
 
-    .top-row.auth[b-esfxu73dws]  a:first-child {
-        flex: 1;
-        text-align: right;
-        width: 0;
-    }
+        .top-row.auth[b-esfxu73dws]  a:first-child {
+            flex: 1;
+            text-align: right;
+            width: 0;
+        }
 
     .top-row[b-esfxu73dws], article[b-esfxu73dws] {
         padding-left: 2rem !important;
@@ -84,7 +85,8 @@ main[b-esfxu73dws] {
 
 .top-row[b-r9oa0pc17o] {
     height: 3.5rem;
-    background-color: rgba(0,0,0,0.4);
+    border-bottom: 1px solid #d6d5d5;
+    /*    background-color: rgba(0,0,0,0.4);*/
 }
 
 .navbar-brand[b-r9oa0pc17o] {
@@ -133,10 +135,10 @@ main[b-esfxu73dws] {
     .nav-item[b-r9oa0pc17o]  a {
         color: black;
         border-radius: 4px;
-        height: 3rem;
+        /*height: 3rem;*/
         display: flex;
         align-items: center;
-        line-height: 3rem;
+        /*line-height: 3rem;*/
     }
 
         .nav-item[b-r9oa0pc17o]  a.active {
