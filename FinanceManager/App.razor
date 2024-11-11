@@ -12,11 +12,29 @@
 </Router>
 
 
+@* Required *@
+<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" Theme="MyCustomTheme" />
+<MudPopoverProvider />
 
+@* Needed for dialogs *@
+<MudDialogProvider />
 
-<MudThemeProvider Theme="MyCustomTheme" />
+@* Needed for snackbars *@
+<MudSnackbarProvider />
 
 @code {
+    private bool _isDarkMode;
+    private MudThemeProvider _mudThemeProvider;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            //  _isDarkMode = await _mudThemeProvider.GetSystemPreference();
+            StateHasChanged();
+        }
+    }
+
     MudTheme MyCustomTheme = new MudTheme()
         {
             PaletteLight = new PaletteLight()
@@ -27,15 +45,18 @@
             },
             PaletteDark = new PaletteDark()
             {
-                Primary = Colors.Blue.Lighten1
+                Primary = Colors.Amber.Accent4,
+                Secondary = Colors.Green.Accent4,
+                AppbarBackground = Colors.Red.Default,
             },
-
         };
 }
 
 
 
-@* 
+
+
+@*
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">

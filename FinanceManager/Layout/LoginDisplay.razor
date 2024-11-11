@@ -4,6 +4,7 @@
 @inject NavigationManager Navigation
 @inject ILoginService LoginService
 
+
 @* <AuthorizeView>
     <Authorized>
         Hello, @context.User.Identity?.Name!
@@ -20,16 +21,39 @@
     <MudMenu Label="@userSession.UserName" TransformOrigin="Origin.TopCenter" AnchorOrigin="Origin.BottomCenter" Dense="true">
         <MudMenuItem OnClick="BeginLogOut">Log Out</MudMenuItem>
     </MudMenu>
+@* 
+    <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="MyCustomTheme" />
+    <MudSwitch @bind-Value="_isDarkMode" Color="Color.Primary" Class="ma-4" T="bool" Label="Toggle Light/Dark Mode" />
+
+    <MudText Class="ma-4">This is an example text!</MudText> *@
 }
 
 @code {
-    UserSession? userSession { get; set; }
+    MudTheme MyCustomTheme = new MudTheme()
+        {
+            PaletteLight = new PaletteLight()
+            {
+                Primary = Colors.Amber.Accent4,
+                Secondary = Colors.Green.Accent4,
+                AppbarBackground = Colors.Red.Default,
+            },
+            PaletteDark = new PaletteDark()
+            {
+                Primary = Colors.Amber.Accent4,
+                Secondary = Colors.Green.Accent4,
+                AppbarBackground = Colors.Red.Default,
+                Background = Colors.Gray.Default,
+            },
+
+        };
+    private bool _isDarkMode;
+    UserSession userSession = null;
 
     protected override async Task OnInitializedAsync()
     {
         userSession = await LoginService.GetLoggedUser();
+        
     }
-
     public async Task BeginLogOut()
     {
         await LoginService.Logout();
