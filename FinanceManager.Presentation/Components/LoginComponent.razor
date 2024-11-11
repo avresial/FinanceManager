@@ -1,13 +1,17 @@
-﻿@using FinanceManager.Presentation.ViewModels
+﻿@using Blazored.LocalStorage
+@using Blazored.SessionStorage
+@using FinanceManager.Presentation.ViewModels
 @using Microsoft.AspNetCore.Components.Forms
+
 @inject NavigationManager Navigation
 @inject ILoginService LoginService
+@inject ILocalStorageService LocalStorageService;
 
-<section class="py-3 py-md-5">
-    <div class="container">
-        <div class="row justify-content-center">
+<section>
+    <div class="container d-flex align-center" style="height:100vh;">
+        <div class="row justify-content-center d-flex flex-grow-1">
             <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5 col-xxl-4">
-                <div class="card border border-light-subtle rounded-3 shadow-sm">
+                <div class="card border border-light-subtle rounded-3 shadow-sm p-4">
                     <div class="card-body pt-0 px-3 px-md-4 px-xl-5">
                         <div class="text-center mb-3 pt-3 pt-md-4 pt-xl-5">
                             @* <a href="#!">
@@ -48,6 +52,7 @@
                                     <div class="d-grid my-3">
                                         <button class="btn btn-primary btn-lg" type="submit" disabled="@(!context.IsModified() || !context.Validate())">Log in</button>
                                         <button class="btn btn-lg mt-2" @onclick=LogGuest>Go to demo!</button>
+                                        <a href="landingpage">Landing page</a>
                                     </div>
                                 </div>
                                 @*   <div class="col-12">
@@ -69,6 +74,15 @@
     protected override async Task OnInitializedAsync()
     {
 
+        // bool isThisFirstVisit = true;
+        bool isThisFirstVisit = await LocalStorageService.ContainKeyAsync("isThisFirstVisit");
+        if (!isThisFirstVisit)
+        {
+            await LocalStorageService.SetItemAsync("isThisFirstVisit", false);
+            Navigation.NavigateTo("landingpage");
+            return;
+        }
+
         var loggedUser = await LoginService.GetLoggedUser();
         if (loggedUser is not null)
             Navigation.NavigateTo("");
@@ -76,16 +90,9 @@
         var getKeepMeLoggedinSession = await LoginService.GetKeepMeLoggedinSession();
         if (getKeepMeLoggedinSession is not null)
         {
-            await LoginService.Login(getKeepMeLoggedinSession.UserName, "shouldBeAToken"); 
+            await LoginService.Login(getKeepMeLoggedinSession.UserName, "shouldBeAToken");
             Navigation.NavigateTo("");
         }
-
-
-        // #if DEBUG
-        //     {
-        //        await LogGuest();
-        //     }
-        // #endif
     }
 
     async Task ValidFormSubmitted(EditContext editContext)

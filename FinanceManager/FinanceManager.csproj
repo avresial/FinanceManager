@@ -19,4 +19,8 @@
     <ProjectReference Include="..\FinanceManager.Presentation\FinanceManager.Presentation.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\IMGS\" />
+  </ItemGroup>
+
 </Project>
