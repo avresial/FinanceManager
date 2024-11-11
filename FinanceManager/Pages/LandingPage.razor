@@ -1,56 +1,169 @@
 ﻿@page "/landingpage"
+@using FinanceManager.Core.Services
 @layout NoNavbarLayout
 
+@inject NavigationManager Navigation
+@inject ILoginService LoginService
 
 
 <MudGrid>
-    <MudItem xs="12">
-        <MudPaper Elevation="25" Outlined="false">
-            <MudToolBar>
-                <MudSpacer />
-                <MudLink Href="login" Class="py-4" Underline="Underline.None">Login</MudLink>
-            </MudToolBar>
-        </MudPaper>
-    </MudItem>
+    @*  <MudItem xs="12">
+    <MudPaper Elevation="25" Outlined="false">
+    <MudToolBar>
+    <MudSpacer />
+    <MudLink Href="login" Class="py-4" Underline="Underline.None">Login</MudLink>
+    </MudToolBar>
+    </MudPaper>
+    </MudItem> *@
 
     <MudItem xs="12" Class="py-5">
-        <MudGrid Class="d-flex flex-grow-1 gap-4 align-center" style="min-height: 80vh;">
-            <MudItem xs="12" Class="m-4">
-                <MudStack>
-                    <MudText Typo="Typo.h3" Class="text-center m-1">Dashboard</MudText>
-                    <MudText Typo="Typo.subtitle1" Class="text-center m-1">Overview the most important</MudText>
-                </MudStack>
-            </MudItem>
+        <MudGrid style="min-height: 85vh;">
 
-            <MudItem xs="6" Class="mx-auto">
-                <MudImage Fluid="true" Src="imgs/dahboard.jpg" Alt="Swedish Farm House" Class="rounded-lg" />
-            </MudItem>
-        </MudGrid>
-    </MudItem>
-
-    <MudItem xs="12" Class="py-5">
-        <MudGrid>
-            <MudItem xs="6" Class="d-flex flex-grow-1 gap-4 align-center" style="min-height: 50vh;">
-
+            <MudItem xs="6" Class="d-flex flex-grow-1 gap-4 align-center">
                 <div class="d-flex flex-grow-1 gap-4">
-                    <MudPaper Class="flex-grow-1 py-8" Elevation="0">
-                        <MudText Typo="Typo.h3" Class="text-center m-1">Assets</MudText>
-                        <MudText Typo="Typo.subtitle1" Class="text-center m-1">Track your assets</MudText>
+                    <MudPaper Class="flex-grow-1 text-center" Elevation="0">
+                        <MudText Typo="Typo.h1">Finance</MudText>
+                        <MudText Typo="Typo.h1">Manager</MudText>
                     </MudPaper>
                 </div>
             </MudItem>
 
-            <MudItem xs="6" Class="d-flex align-center" style="min-height: 50vh;">
+            <MudItem xs="6" Class="d-flex flex-grow-1 gap-4 align-center">
                 <div class="d-flex flex-grow-1 gap-4">
-                    <MudImage Fluid="true" Src="imgs/dahboard.jpg" Alt="Swedish Farm House" Class="flex-grow-1 py-8 rounded-lg mx-auto" />
+                    <MudPaper Class="flex-grow-1" Elevation="0">
+                        <MudText Typo="Typo.h3" Class="py-5">Stop wasting  money on stuff you don't need.</MudText>
+                        <MudText Typo="Typo.h5" Class="py-5">Get your very own finance manager.</MudText>
+                        <div class="pt-5">
+                            <MudButton Href="login" Class="mr-3" Variant="Variant.Filled" Color="Color.Primary">
+                                <MudText Typo="Typo.h5" Class="">Register</MudText>
+                            </MudButton>
+                            <MudButton Class="ml-3" Variant="Variant.Outlined" Color="Color.Primary" @onclick=LogGuest>
+                                <MudText Typo="Typo.h5" Class="">Check out demo!</MudText>
+                            </MudButton>
+                        </div>
+                    </MudPaper>
+                </div>
+            </MudItem>
+
+        </MudGrid>
+    </MudItem>
+
+    <MudItem xs="12" Class="py-5">
+        <div class="d-flex flex-grow-1 justify-center ">
+            <MudPaper Elevation="0" Class="flex-grow-1 py-8 text-center">
+                <MudText Typo="Typo.h5" Class="text-center m-1">Learn more!</MudText>
+                <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Title="KeyboardArrowDown" Class="text-center m-1 upAndDownAnimation" />
+            </MudPaper>
+        </div>
+    </MudItem>
+
+    <MudItem xs="12" Class="py-5">
+        <MudGrid style="min-height: 60vh;">
+            <MudItem xs="6" Class="d-flex align-center">
+                <div class="d-flex flex-grow-1 gap-4">
+                    <MudImage Fluid="true" Src="imgs/Dashboard.jpg" Alt="Dashboard" Class="flex-grow-1 rounded-lg p-4" />
+                </div>
+            </MudItem>
+
+            <MudItem xs="6" Class="d-flex flex-grow-1 gap-4 align-center">
+                <div class="d-flex flex-grow-1 gap-4">
+                    <MudPaper Class="flex-grow-1 text-center" Elevation="0">
+                        <MudText Typo="Typo.h3">Intuitive dashboard design</MudText>
+                        <MudText Typo="Typo.h5" Class="mt-4">Keep it simple and gather your important data in one place.</MudText>
+                    </MudPaper>
+                </div>
+            </MudItem>
+
+        </MudGrid>
+    </MudItem>
+
+    <MudItem xs="12" Class="py-5">
+        <MudGrid style="min-height: 60vh;">
+            <MudItem xs="6" Class="d-flex flex-grow-1 gap-4 align-center">
+                <div class="d-flex flex-grow-1">
+                    <MudPaper Class="flex-grow-1 text-center" Elevation="0">
+                        <MudText Typo="Typo.h3">Assets</MudText>
+                        <MudText Typo="Typo.h5" Class="mt-4">Manage your assets like a real pro</MudText>
+                    </MudPaper>
+                </div>
+            </MudItem>
+
+            <MudItem xs="6" Class="d-flex align-center">
+                <div class="d-flex flex-grow-1 gap-4">
+                    <MudImage Fluid="true" Src="imgs/Assets.jpg" Alt="Assets" Class="flex-grow-1 rounded-lg p-4" />
                 </div>
             </MudItem>
         </MudGrid>
     </MudItem>
-   
+
+   @*  <MudItem xs="12" Class="py-5">
+        <MudGrid style="min-height: 60vh;">
+            <MudItem xs="6" Class="d-flex align-center">
+                <div class="d-flex flex-grow-1 gap-4">
+                    <MudImage Fluid="true" Src="imgs/Liabilities.jpg" Alt="Liabilities" Class="flex-grow-1 rounded-lg p-4" />
+                </div>
+            </MudItem>
+
+            <MudItem xs="6" Class="d-flex flex-grow-1 gap-4 align-center">
+                <div class="d-flex flex-grow-1">
+                    <MudPaper Class="flex-grow-1 text-center" Elevation="0">
+                        <MudText Typo="Typo.h3">Liabilities</MudText>
+                        <MudText Typo="Typo.h5" Class="mt-4">Reduce dept and plan your repayments</MudText>
+                    </MudPaper>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </MudItem> *@
+
+    <MudItem xs="12" Class="py-5">
+        <MudGrid style="min-height: 60vh;">
+
+            <MudItem xs="12" Class="d-flex flex-grow-1 gap-4 align-center">
+                <div class="d-flex flex-grow-1">
+                    <MudPaper Class="flex-grow-1 text-center" Elevation="0">
+                        <MudText Typo="Typo.h3">Accounts</MudText>
+                        <MudText Typo="Typo.h5" Class="mt-4">Track cash, shares, ETF, real estate value and more...</MudText>
+                    </MudPaper>
+                </div>
+            </MudItem>
+            <MudItem xs="6" Class="d-flex align-center mt-5">
+                <div class="d-flex flex-grow-1 gap-4">
+                    <MudImage Fluid="true" Src="imgs/CashAccount.jpg" Alt="CashAccount" Class="flex-grow-1 rounded-lg p-4" />
+                </div>
+            </MudItem>
+            <MudItem xs="6" Class="d-flex align-center">
+                <div class="d-flex flex-grow-1 gap-4">
+                    <MudImage Fluid="true" Src="imgs/SharesAccount.jpg" Alt="SharesAccount" Class="flex-grow-1 rounded-lg p-4" />
+                </div>
+            </MudItem>
+            <MudItem xs="6" Class="d-flex align-center">
+                <div class="d-flex flex-grow-1 gap-4">
+                    <MudImage Fluid="true" Src="imgs/RealEstateAccount.jpg" Alt="RealEstateAccount" Class="flex-grow-1 rounded-lg p-4" />
+                </div>
+            </MudItem>
+            <MudItem xs="6" Class="d-flex align-center">
+                <div class="d-flex flex-grow-1 gap-4">
+                    <MudImage Fluid="true" Src="imgs/LoanAccount.jpg" Alt="LoanAccount" Class="flex-grow-1 rounded-lg p-4" />
+                </div>
+            </MudItem>
+        </MudGrid>
+    </MudItem>
+
+    <MudItem xs="12" Class="py-5">
+        <div class="d-flex flex-grow-1 justify-center ">
+            <MudPaper Elevation="0" Class="flex-grow-1 py-8 text-center">
+                <MudText Typo="Typo.h5" Class="text-center m-1">And more</MudText>
+            </MudPaper>
+        </div>
+    </MudItem>
 </MudGrid>
 
-
 @code {
+    private MudTheme Theme = new MudTheme();
 
+    async Task LogGuest()
+    {
+        await LoginService.Login("Guest", "GuestPassword");
+        Navigation.NavigateTo("");
+    }
 }

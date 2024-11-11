@@ -50,9 +50,15 @@
                                 </div> *@
                                 <div class="col-12">
                                     <div class="d-grid my-3">
-                                        <button class="btn btn-primary btn-lg" type="submit" disabled="@(!context.IsModified() || !context.Validate())">Log in</button>
-                                        <button class="btn btn-lg mt-2" @onclick=LogGuest>Go to demo!</button>
-                                        <a href="landingpage">Landing page</a>
+                                        <MudButton Href="login" Class="my-2" Variant="Variant.Filled" Color="Color.Primary" type="submit" disabled="@(!context.IsModified() || !context.Validate())">
+                                            <MudText Typo="Typo.h5" Class="">Login</MudText>
+                                        </MudButton>
+                                        <MudButton Href="login" Class="mt-2" Variant="Variant.Outlined" Color="Color.Primary" @onclick=LogGuest>
+                                            <MudText Typo="Typo.h5" Class="">Check out demo!</MudText>
+                                        </MudButton>
+                                        <MudButton Href="landingpage" Class="mt-2" Variant="Variant.Text" Color="Color.Primary">
+                                            <MudText Typo="Typo.subtitle1" Class="">Learn more</MudText>
+                                        </MudButton>
                                     </div>
                                 </div>
                                 @*   <div class="col-12">
@@ -74,9 +80,9 @@
     protected override async Task OnInitializedAsync()
     {
 
-        // bool isThisFirstVisit = true;
-        bool isThisFirstVisit = await LocalStorageService.ContainKeyAsync("isThisFirstVisit");
-        if (!isThisFirstVisit)
+        // bool firstVisit = true;
+        bool firstVisit = !(await LocalStorageService.ContainKeyAsync("isThisFirstVisit"));
+        if (firstVisit)
         {
             await LocalStorageService.SetItemAsync("isThisFirstVisit", false);
             Navigation.NavigateTo("landingpage");
