@@ -34,12 +34,14 @@
                         <MudText Typo="Typo.h3" Class="py-5">Stop wasting  money on stuff you don't need.</MudText>
                         <MudText Typo="Typo.h5" Class="py-5">Get your very own finance manager.</MudText>
                         <div class="pt-5">
-                            <MudButton Href="login" Class="mr-3" Variant="Variant.Filled" Color="Color.Primary">
-                                <MudText Typo="Typo.h5" Class="">Register</MudText>
-                            </MudButton>
-                            <MudButton Class="ml-3" Variant="Variant.Outlined" Color="Color.Primary" @onclick=LogGuest>
-                                <MudText Typo="Typo.h5" Class="">Check out demo!</MudText>
-                            </MudButton>
+                            <MudStack Row="true" Wrap="Wrap.Wrap">
+                                <MudButton Href="login" Variant="Variant.Filled" Color="Color.Primary">
+                                    <MudText Typo="Typo.h5" Class="">Register</MudText>
+                                </MudButton>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Primary" @onclick=LogGuest>
+                                    <MudText Typo="Typo.h5" Class="">Check out demo!</MudText>
+                                </MudButton>
+                            </MudStack>
                         </div>
                     </MudPaper>
                 </div>
@@ -59,13 +61,13 @@
 
     <MudItem xs="12" Class="py-5">
         <MudGrid style="min-height: 60vh;">
-            <MudItem xs="12" md="6" Class="d-flex align-center">
+            <MudItem xs="12" md="6" Class="order-2 order-md-1 d-flex align-center ">
                 <div class="d-flex flex-grow-1 m-4">
                     <MudImage Fluid="true" Src="imgs/Dashboard.jpg" Alt="Dashboard" Class="flex-grow-1 rounded-lg p-4" Elevation="25" />
                 </div>
             </MudItem>
 
-            <MudItem xs="12" md="6" Class="d-flex flex-grow-1 gap-4 align-center">
+            <MudItem xs="12" md="6" Class="order-1 order-md-2 d-flex flex-grow-1 gap-4 align-center">
                 <div class="d-flex flex-grow-1 m-4">
                     <MudPaper Class="flex-grow-1 text-center" Elevation="0">
                         <MudText Typo="Typo.h3">Intuitive dashboard design</MudText>
@@ -73,7 +75,6 @@
                     </MudPaper>
                 </div>
             </MudItem>
-
         </MudGrid>
     </MudItem>
 
@@ -96,23 +97,23 @@
         </MudGrid>
     </MudItem>
 
-   @*  <MudItem xs="12" Class="py-5">
-        <MudGrid style="min-height: 60vh;">
-            <MudItem xs="6" Class="d-flex align-center">
-                <div class="d-flex flex-grow-1 m-4">
-                    <MudImage Fluid="true" Src="imgs/Liabilities.jpg" Alt="Liabilities" Class="flex-grow-1 rounded-lg p-4" />
-                </div>
-            </MudItem>
+    @*  <MudItem xs="12" Class="py-5">
+    <MudGrid style="min-height: 60vh;">
+    <MudItem xs="6" Class="d-flex align-center">
+    <div class="d-flex flex-grow-1 m-4">
+    <MudImage Fluid="true" Src="imgs/Liabilities.jpg" Alt="Liabilities" Class="flex-grow-1 rounded-lg p-4" />
+    </div>
+    </MudItem>
 
-            <MudItem xs="6" Class="d-flex flex-grow-1 gap-4 align-center">
-                <div class="d-flex flex-grow-1">
-                    <MudPaper Class="flex-grow-1 text-center" Elevation="0">
-                        <MudText Typo="Typo.h3">Liabilities</MudText>
-                        <MudText Typo="Typo.h5" Class="mt-4">Reduce dept and plan your repayments</MudText>
-                    </MudPaper>
-                </div>
-            </MudItem>
-        </MudGrid>
+    <MudItem xs="6" Class="d-flex flex-grow-1 gap-4 align-center">
+    <div class="d-flex flex-grow-1">
+    <MudPaper Class="flex-grow-1 text-center" Elevation="0">
+    <MudText Typo="Typo.h3">Liabilities</MudText>
+    <MudText Typo="Typo.h5" Class="mt-4">Reduce dept and plan your repayments</MudText>
+    </MudPaper>
+    </div>
+    </MudItem>
+    </MudGrid>
     </MudItem> *@
 
     <MudItem xs="12" Class="py-5">

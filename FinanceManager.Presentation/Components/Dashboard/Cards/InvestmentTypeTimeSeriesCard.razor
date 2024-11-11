@@ -1,6 +1,7 @@
 ﻿@using ApexCharts
 @using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Core.Entities.MoneyFlowModels
+@using FinanceManager.Core.Providers
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
 @using FinanceManager.Presentation.Helpers
@@ -101,7 +102,7 @@
             },
             Colors = new List<string>
             {
-                "#A9A9A9"
+               ColorsProvider.GetColors().First()
             }
         };
 }

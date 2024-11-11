@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "FinanceManager",
   "resources": {
-    "hash": "sha256-CT89uWuRNeoD6uS3l6FPY/uLs0EEeleDkKp8UI4S7ho=",
+    "hash": "sha256-7HMUxSOi5lgFMjZBEAH2fUiLv4M3zzP8AABKQxthD5M=",
     "jsModuleNative": {
       "dotnet.native.8.0.10.vu2vzauvbe.js": "sha256-QVxMlY7ohmjgde/bZMA0dlWDAeuUP+tEfkiSdg4DFcE="
     },
@@ -24,8 +24,8 @@
       "FinanceManager.Application.wasm": "sha256-+jkfb39sfmQgetCZeREbKKEJ3kGiRiV37yAAPOHuDRw=",
       "FinanceManager.Core.wasm": "sha256-xWHDTnFSDXNUkaJoaZdPU2yorEnPYMpFrvSqrP1k14c=",
       "FinanceManager.Infrastructure.wasm": "sha256-umVmykVwAAlCwAj8Ld0s34vF3qGNsO2s0LHViGrlxb4=",
-      "FinanceManager.Presentation.wasm": "sha256-v3LNc6aNY/T5IqKSdIBREyeIQ5kxAz6HN/DI8SRCzxY=",
-      "FinanceManager.wasm": "sha256-L9lKuu9syq5YyqaZVMdWFfizWhTMTmfuRpiRwjoU/2Y=",
+      "FinanceManager.Presentation.wasm": "sha256-Y4/VFb6ESuiEs/nn4wKZifinhQWgCksE6DLhE4uR67U=",
+      "FinanceManager.wasm": "sha256-HXLWxBWDVt96Dp6Teca0HAf84CryMLZ7U6AsadW2nV8=",
       "Microsoft.AspNetCore.Components.Authorization.wasm": "sha256-BQEZup8HES/GUGlnaa5vm6Add898CjQiTzXem2v2Q08=",
       "Microsoft.AspNetCore.Components.Forms.wasm": "sha256-PaVoqyMldglaIkc2jjbgDcPXx5icolAshqpkyApO/Os=",
       "Microsoft.AspNetCore.Components.wasm": "sha256-/8IX85gdPxJT9d2ataGzB8JApJDfdV1sTvc82z08kNI=",
@@ -49,7 +49,7 @@
       "Microsoft.Extensions.Primitives.wasm": "sha256-Ms2HR5Gpug/0uRAzdk4SUNT76Ml3CjFv9Jo+dUIMGac=",
       "Microsoft.JSInterop.wasm": "sha256-Tncs/qPSsNPYAaw2dYj6VvEv3pQEqyh/z+Iy4jYmAks=",
       "Microsoft.JSInterop.WebAssembly.wasm": "sha256-r/+bWAAxKn2+Wu3MRYDXvKEbHjLNuptflgNuNhQdK6w=",
-      "MudBlazor.wasm": "sha256-I34AEdZ1lsjx00IYFidFOYUrYF0J3tN4kHv120IXjSE=",
+      "MudBlazor.wasm": "sha256-pW6DsIAbu842BuWx7qT7xklp6QO1EUiYSoPSfOe3LWc=",
       "System.Collections.Concurrent.wasm": "sha256-C3PVS0iFRnU7BcAt2iCzSAXdKlcJBOEoRP7BPMEkD7E=",
       "System.Collections.Immutable.wasm": "sha256-m9nocOUTs0ZDAze3iYhoCSjWSJmZWHk4D1f0hJ9vDpM=",
       "System.Collections.NonGeneric.wasm": "sha256-AsYVp1FCWEKG5FtX91fxTwydYt4fzpqVLGCjRWQ/Ko8=",
