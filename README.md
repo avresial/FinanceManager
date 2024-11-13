@@ -6,17 +6,19 @@ Finance manager is an online budgeting tool. This software lets you keep track o
  - spending,
  - investments
 
- Check out the [DEMO](https://avresial.github.io/FinanceManager/)!
+ Check out the [DEMO](https://avresial.github.io/FinanceManager/landingpage)!
 
-### Track your money!
-![dashboard](ReadmeElements/Imgs/Dashboard.png)
+## Intuitive dashboard design
+### Keep it simple and gather your important data in one place.
+![dashboard](imgs/Dashboard.jpg)
 
-### Inspect accounts details!
+## Assets
+### Manage your assets like a real pro
+![dashboard](imgs/Assets.jpg)
 
-![dashboard](ReadmeElements/Imgs/AccountDetails.png)
+## Accounts
+### Track cash, shares, ETF, real estate value and more...
 
-### Calculate your net worth!
-
-![dashboard](ReadmeElements/Imgs/Assets.png)
+![dashboard](imgs/SharesAccount.jpg)
 
 

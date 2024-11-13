@@ -50,7 +50,7 @@
                                 </div> *@
                                 <div class="col-12">
                                     <div class="d-grid my-3">
-                                        <MudButton Href="login" Class="my-2" Variant="Variant.Filled" Color="Color.Primary" type="submit" disabled="@(!context.IsModified() || !context.Validate())">
+                                        <MudButton Href="login" Class="my-2" Variant="Variant.Filled" Color="Color.Primary" type="submit" disabled="@(!context.IsModified() || !context.Validate())" @onclick=Login>
                                             <MudText Typo="Typo.h5" Class="">Login</MudText>
                                         </MudButton>
                                         <MudButton Href="login" Class="mt-2" Variant="Variant.Outlined" Color="Color.Primary" @onclick=LogGuest>
@@ -106,7 +106,11 @@
         await LoginService.Login(loginModel.Login, loginModel.Password);
         Navigation.NavigateTo("");
     }
-
+    async Task Login()
+    {
+        await LoginService.Login(loginModel.Login, loginModel.Password);
+        Navigation.NavigateTo("");
+    }
     void InvalidFormSubmitted(EditContext editContext)
     {
     }

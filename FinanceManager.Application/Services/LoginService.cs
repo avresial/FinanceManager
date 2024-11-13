@@ -20,6 +20,9 @@ namespace FinanceManager.Application.Services
 
         public async Task<UserSession?> GetLoggedUser()
         {
+            if (await _localStorageService.ContainKeyAsync(sessionString))
+                LoggedUser = await GetKeepMeLoggedinSession();
+
             return LoggedUser;
         }
         public async Task<UserSession?> GetKeepMeLoggedinSession()
