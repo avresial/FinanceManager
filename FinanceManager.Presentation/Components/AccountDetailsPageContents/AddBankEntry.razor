@@ -1,0 +1,76 @@
+﻿@using FinanceManager.Core.Entities.Accounts
+@using System.ComponentModel.DataAnnotations
+@inject ISettingsService settingsService
+
+<MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+    <MudContainer MaxWidth="MaxWidth.Medium">
+
+        <MudGrid Justify="Justify.Center">
+            <MudItem xs="12" sm="12" md="12">
+                <MudText Typo="Typo.h4">Add new entry</MudText>
+                <MudText Typo="Typo.subtitle1">@BankAccount.Name</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="Balance" Label="Balance" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
+            </MudItem>
+            <MudItem xs="12" >
+                <MudTextField @bind-Value="Description" T="string" Label="Description" Variant="Variant.Text" MaxLines="5" AutoGrow="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTimePicker Label="Time" @bind-Time="Time" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker Label="Posting date" @bind-Date="Date" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add>Add</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel Class="mx-2">Cancel</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+</MudForm>
+
+@code {
+    string _currency = "";
+    bool success;
+    string[] errors = { };
+    MudTextField<string> pwField1;
+    MudForm form;
+    private DateTime? Date = DateTime.Today;
+    public string Description { get; set; }
+    private TimeSpan? Time = new TimeSpan(01, 00, 00);
+    public double? BalanceChange { get; set; } = null;
+    public double? Balance{ get; set; } = null;
+
+    [Parameter]
+    public Action ActionCompleted { get; set; }
+
+    [Required]
+    [Parameter]
+    public BankAccount BankAccount { get; set; }
+    
+    protected override Task OnParametersSetAsync()
+    {
+        _currency = settingsService.GetCurrency();
+        return base.OnParametersSetAsync();
+    }
+
+    public async Task Add()
+    {
+        await form.Validate();
+        if (!form.IsValid) return;
+
+        if (ActionCompleted is not null)
+            ActionCompleted();
+    }
+
+    public async Task Cancel()
+    {
+        if (ActionCompleted is not null)
+            ActionCompleted();
+    }
+
+}
