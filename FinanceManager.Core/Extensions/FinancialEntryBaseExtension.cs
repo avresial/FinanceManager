@@ -10,11 +10,17 @@ namespace FinanceManager.Core.Extensions
             var result = entries.Where(x => x.PostingDate.Year == date.Year && x.PostingDate.Month == date.Month && x.PostingDate.Day == date.Day);
             if (result.Any()) return result;
 
+            return entries.GetPrevious(date);
+        }
+
+        public static IEnumerable<T> GetPrevious<T>(this IList<T> entries, DateTime date) where T : FinancialEntryBase
+        {
             var lastEntry = entries.Where(x => x.PostingDate <= date).FirstOrDefault();
             if (lastEntry is null) return [];
 
             return [lastEntry];
         }
+
         public static List<FinancialEntryBase> GetEntriesMonthlyValue(this IList<FinancialEntryBase> entries)
         {
 

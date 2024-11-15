@@ -9,9 +9,9 @@
 @if (Account is not null && Account.Entries is not null)
 {
     @* <div class="col-12" style="position: absolute;  top: 50px; z-index: 50"> *@
-        <h3 class="m-3" style="position: absolute; z-index: 50; display: inline-block;">
-            @Account.Name
-        </h3>
+    <h3 class="m-3" style="position: absolute; z-index: 50; display: inline-block;">
+        @Account.Name
+    </h3>
     @* </div> *@
     <div class="col-12 mb-2" style="min-height:150px;">
         <ApexChart @ref="chart" TItem="BankAccountEntry" Height="150" Options=@options XAxisType="XAxisType.Datetime">
@@ -204,15 +204,18 @@
 
     private bool visible;
 
-    public void ShowOverlay()
+    public async Task ShowOverlay()
     {
         visible = true;
         StateHasChanged();
     }
 
-    public void HideOverlay()
+    public async Task HideOverlay()
     {
         visible = false;
+        UpdateInfo();
+        if (chart is not null)
+            await chart.RenderAsync();
         StateHasChanged();
     }
 
@@ -240,10 +243,19 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        if (chart is not null)
+        {
+            Account.Entries.Clear();
+            await chart.RenderAsync();
+        }
+
         LoadedAllData = false;
         await UpdateEntries();
         if (chart is not null)
+        {
+            StateHasChanged();
             await chart.RenderAsync();
+        }
     }
     public Type accountType;
     private async Task UpdateEntries()

@@ -14,9 +14,9 @@
             <MudItem xs="12" sm="6">
                 <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
             </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="Balance" Label="Balance" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
-            </MudItem>
+            @*   <MudItem xs="12" sm="6">
+            <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="Balance" Label="Balance" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
+            </MudItem> *@
             <MudItem xs="12">
                 <MudTextField @bind-Value="Description" T="string" Label="Description" Variant="Variant.Text" MaxLines="5" AutoGrow="true" />
             </MudItem>
@@ -24,7 +24,7 @@
                 <MudTimePicker Label="Time" @bind-Time="Time" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudDatePicker Label="Posting date" @bind-Date="PostingDate" />
+                <MudDatePicker Label="Posting date" @bind-Date="PostingDate" Validation="@(new WithinSixYearsAttribute())" />
             </MudItem>
             <MudItem xs="12">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add>Add</MudButton>
@@ -35,20 +35,46 @@
 </MudForm>
 
 @code {
+    public class CustomDateAttribute : RangeAttribute
+    {
+        public CustomDateAttribute()
+          : base(typeof(DateTime),
+                  DateTime.Now.AddYears(-6).ToShortDateString(),
+                  DateTime.Now.ToShortDateString())
+        { }
+    }
+    public class WithinSixYearsAttribute : ValidationAttribute
+    {
+        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        {
+            value = (DateTime)value;
+            // This assumes inclusivity, i.e. exactly six years ago is okay
+            if (DateTime.Now.AddYears(-6).CompareTo(value) <= 0 && DateTime.Now.CompareTo(value) >= 0)
+            {
+                return ValidationResult.Success;
+            }
+            else
+            {
+                return new ValidationResult("Date must be within the last six years!");
+            }
+        }
+    }
     string _currency = "";
     bool success;
     string[] errors = { };
     MudTextField<string> pwField1;
     MudForm form;
-
+  
+    [Required]
+    [WithinSixYearsAttribute]
     private DateTime? PostingDate = DateTime.Today;
     private TimeSpan? Time = new TimeSpan(01, 00, 00);
     public string Description { get; set; }
     public decimal? BalanceChange { get; set; } = null;
-    public decimal? Balance { get; set; } = null;
+    // public decimal? Balance { get; set; } = null;
 
     [Parameter]
-    public Action ActionCompleted { get; set; }
+    public Func<Task> ActionCompleted { get; set; }
 
     [Required]
     [Parameter]
@@ -67,10 +93,19 @@
     {
         await form.Validate();
         if (!form.IsValid) return;
+        if (!BalanceChange.HasValue) return;
+        if (!PostingDate.HasValue) return;
+        if (!Time.HasValue) return;
 
         DateTime date = new DateTime(PostingDate.Value.Year, PostingDate.Value.Month, PostingDate.Value.Day, Time.Value.Hours, Time.Value.Minutes, Time.Value.Seconds);
+        var closestEntry = BankAccount.Get(date);
+        decimal newValue = -1;
+        if (closestEntry is not null)
+        {
+            newValue = closestEntry.First().Value + BalanceChange.Value;
+        }
 
-        BankAccountEntry bankAccountEntry = new(date, Balance.Value, BalanceChange.Value)
+        BankAccountEntry bankAccountEntry = new(date, newValue, BalanceChange.Value)
             {
                 Description = Description
             };
@@ -85,7 +120,7 @@
         }
 
         if (ActionCompleted is not null)
-            ActionCompleted();
+            await ActionCompleted();
     }
 
     public async Task Cancel()

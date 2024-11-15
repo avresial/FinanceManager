@@ -34,8 +34,31 @@ namespace FinanceManager.Core.Entities.Accounts
         public virtual void Add(T entry)
         {
             Entries ??= new List<T>();
-            Entries.Add(entry);
-            Entries = Entries.OrderByDescending(x => x.PostingDate).ToList();
+            //  Entries.Add(entry);
+            // Entries = Entries.OrderByDescending(x => x.PostingDate).ToList();
+
+            var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();
+
+            var index = Entries.IndexOf(previousEntry);
+            if (index == -1)
+            {
+                if (Entries is not null)
+                    Entries.Insert(0, entry);
+            }
+            else
+            {
+                if (Entries is not null)
+                    Entries.Insert(index, entry);
+
+                for (int i = index; i >= 0; i--)
+                {
+                    if (Entries.Count() < i) continue;
+
+                    Entries[i].Value = Entries[i + 1].Value + Entries[i].ValueChange;
+                }
+            }
+
+
         }
 
         public virtual void Add(IEnumerable<T> entries)

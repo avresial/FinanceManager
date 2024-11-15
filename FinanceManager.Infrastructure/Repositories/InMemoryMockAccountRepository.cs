@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Enums;
+using FinanceManager.Core.Extensions;
 using FinanceManager.Core.Repositories;
 using System.ComponentModel.Design;
 
@@ -243,9 +244,10 @@ namespace FinanceManager.Infrastructure.Repositories
             if (bankAccount is null) return;
 
             decimal balance = balanceChange;
+            var previousEntry = bankAccount.Entries.GetPrevious(postingDate.Value).FirstOrDefault();
 
             if (bankAccount.Entries is not null && bankAccount.Entries.Any())
-                balance += bankAccount.Entries.First().Value;
+                balance += previousEntry.Value;
 
             BankAccountEntry bankAccountEntry = new BankAccountEntry(postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, balance, balanceChange)
             {
@@ -254,9 +256,9 @@ namespace FinanceManager.Infrastructure.Repositories
             };
 
             AddFinancialAccount<BankAccount, BankAccountEntry>(name, new List<BankAccountEntry>() { bankAccountEntry });
+            bankAccount.Add(bankAccountEntry);
 
-            if (bankAccount.Entries is not null)
-                bankAccount.Entries.Insert(0, bankAccountEntry);
+
         }
         private ExpenseType GetRandomType()
         {
