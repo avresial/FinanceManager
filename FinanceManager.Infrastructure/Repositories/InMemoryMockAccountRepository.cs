@@ -35,7 +35,6 @@ namespace FinanceManager.Infrastructure.Repositories
             }
             return result;
         }
-
         public T? GetAccount<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialAccountBase
         {
             List<T> accountsOfType = _bankAccounts.GetService(typeof(List<T>)) as List<T>;
@@ -66,7 +65,6 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             return null;
         }
-
         public void AddFinancialAccount<T>(T bankAccount) where T : FinancialAccountBase
         {
             if (_bankAccounts is null) return;
@@ -79,8 +77,6 @@ namespace FinanceManager.Infrastructure.Repositories
 
             nameTypeDictionary.Add(bankAccount.Name, typeof(T));
         }
-
-
         public void AddFinancialAccount<AccountType, EntryType>(string name, List<EntryType> data) where AccountType : FinancialAccountBase where EntryType : FinancialEntryBase
         {
             //var mainBankAccount = _bankAccounts.FirstOrDefault(x => x.Name == name);
@@ -89,10 +85,18 @@ namespace FinanceManager.Infrastructure.Repositories
             //foreach (var item in data)
             //	AddFinancialAccount(name, item.BalanceChange, item.Description, item.ExpenseType, item.PostingDate);
         }
-
-        public bool Exists(string name)
+        public void AddFinancialEntry<T>(T bankAccountEntry, string accountName) where T : FinancialEntryBase
+        {
+            if (bankAccountEntry is BankAccountEntry entry)
+                AddBankAccountEntry(accountName, entry.ValueChange, entry.Description, ExpenseType.Other, entry.PostingDate);
+        }
+        public bool AccountExists(string name)
         {
             return nameTypeDictionary.ContainsKey(name);
+        }
+        public Dictionary<string, Type> GetAvailableAccounts()
+        {
+            return nameTypeDictionary;
         }
 
         private T? FindAccount<T>(string name) where T : FinancialAccountBase
@@ -136,7 +140,6 @@ namespace FinanceManager.Infrastructure.Repositories
                 ("Bond 2", InvestmentType.Bond),( "Bond 3", InvestmentType.Bond), ("Bond 4" , InvestmentType.Bond)
             });
         }
-
         private void AddStockAccount(DateTime startDay, decimal startingBalance, string accountName, List<(string, InvestmentType)> tickers)
         {
             AddFinancialAccount(new InvestmentAccount(accountName));
@@ -186,7 +189,6 @@ namespace FinanceManager.Infrastructure.Repositories
             if (bankAccount.Entries is not null)
                 bankAccount.Entries.Insert(0, bankAccountEntry);
         }
-
         private void AddBankAccount(DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
         {
             ExpenseType expenseType = GetRandomType();
@@ -256,22 +258,16 @@ namespace FinanceManager.Infrastructure.Repositories
             if (bankAccount.Entries is not null)
                 bankAccount.Entries.Insert(0, bankAccountEntry);
         }
-
-
         private ExpenseType GetRandomType()
         {
             Array values = Enum.GetValues(typeof(ExpenseType));
             return (ExpenseType)values.GetValue(random.Next(values.Length));
         }
-
         private decimal GetRandomBalanceChange()
         {
             return (decimal)(random.Next(-100, 100) + Math.Round(random.NextDouble(), 2));
         }
 
-        public Dictionary<string, Type> GetAvailableAccounts()
-        {
-            return nameTypeDictionary;
-        }
+
     }
 }

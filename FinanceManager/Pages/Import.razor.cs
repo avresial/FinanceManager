@@ -32,7 +32,7 @@ namespace FinanceManager.Pages
 		public bool IsDisabled { get; set; }
 		public void IsDisableUpdate()
 		{
-			IsDisabled = BankAccountRepository.Exists(CurrentlyLoadedAccountName);
+			IsDisabled = BankAccountRepository.AccountExists(CurrentlyLoadedAccountName);
 		}
 
 		public async Task LoadFiles(InputFileChangeEventArgs e)
@@ -78,7 +78,7 @@ namespace FinanceManager.Pages
 		}
 		public void Add()
 		{
-			if (!BankAccountRepository.Exists(CurrentlyLoadedAccountName))
+			if (!BankAccountRepository.AccountExists(CurrentlyLoadedAccountName))
 			{
 				BankAccountRepository.AddFinancialAccount<BankAccount, BankAccountEntry>(CurrentlyLoadedAccountName, CurrentlyLoadedEntries.ToList());
 			}

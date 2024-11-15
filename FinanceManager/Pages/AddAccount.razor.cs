@@ -12,7 +12,7 @@ namespace FinanceManager.Pages
 
 		public void Add()
 		{
-			if (!AccountService.Exists(AccountName))
+			if (!AccountService.AccountExists(AccountName))
 			{
 				AccountService.AddFinancialAccount(new BankAccount(AccountName, Core.Enums.AccountType.Other));
 				StateHasChanged();

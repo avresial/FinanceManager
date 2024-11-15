@@ -1,5 +1,6 @@
 ﻿@using FinanceManager.Core.Entities.Accounts
 @using System.ComponentModel.DataAnnotations
+@using FinanceManager.Core.Repositories
 @inject ISettingsService settingsService
 
 <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
@@ -16,14 +17,14 @@
             <MudItem xs="12" sm="6">
                 <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="Balance" Label="Balance" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
             </MudItem>
-            <MudItem xs="12" >
+            <MudItem xs="12">
                 <MudTextField @bind-Value="Description" T="string" Label="Description" Variant="Variant.Text" MaxLines="5" AutoGrow="true" />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudTimePicker Label="Time" @bind-Time="Time" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudDatePicker Label="Posting date" @bind-Date="Date" />
+                <MudDatePicker Label="Posting date" @bind-Date="PostingDate" />
             </MudItem>
             <MudItem xs="12">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add>Add</MudButton>
@@ -39,11 +40,12 @@
     string[] errors = { };
     MudTextField<string> pwField1;
     MudForm form;
-    private DateTime? Date = DateTime.Today;
-    public string Description { get; set; }
+
+    private DateTime? PostingDate = DateTime.Today;
     private TimeSpan? Time = new TimeSpan(01, 00, 00);
-    public double? BalanceChange { get; set; } = null;
-    public double? Balance{ get; set; } = null;
+    public string Description { get; set; }
+    public decimal? BalanceChange { get; set; } = null;
+    public decimal? Balance { get; set; } = null;
 
     [Parameter]
     public Action ActionCompleted { get; set; }
@@ -51,7 +53,10 @@
     [Required]
     [Parameter]
     public BankAccount BankAccount { get; set; }
-    
+
+    [Inject]
+    public IFinancalAccountRepository BankAccountRepository { get; set; }
+
     protected override Task OnParametersSetAsync()
     {
         _currency = settingsService.GetCurrency();
@@ -62,6 +67,22 @@
     {
         await form.Validate();
         if (!form.IsValid) return;
+
+        DateTime date = new DateTime(PostingDate.Value.Year, PostingDate.Value.Month, PostingDate.Value.Day, Time.Value.Hours, Time.Value.Minutes, Time.Value.Seconds);
+
+        BankAccountEntry bankAccountEntry = new(date, Balance.Value, BalanceChange.Value)
+            {
+                Description = Description
+            };
+        try
+        {
+            BankAccount.Add(bankAccountEntry);
+            BankAccountRepository.AddFinancialEntry(bankAccountEntry, BankAccount.Name);
+        }
+        catch (Exception ex)
+        {
+            errors = [ex.ToString()];
+        }
 
         if (ActionCompleted is not null)
             ActionCompleted();

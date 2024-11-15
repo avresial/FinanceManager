@@ -37,7 +37,7 @@ else
                     </div>
                 </div>
 
-                @if (BankAccountRepository.Exists(CurrentlyLoadedAccountName))
+                @if (BankAccountRepository.AccountExists(CurrentlyLoadedAccountName))
                 {
                     <div class="row">
                         <div class="alert alert-warning" role="alert">
