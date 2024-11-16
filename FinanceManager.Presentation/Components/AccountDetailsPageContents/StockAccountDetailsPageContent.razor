@@ -9,6 +9,9 @@
 
 @if (Account is not null && Account.Entries is not null)
 {
+    <h3 class="m-3" style="position: absolute; z-index: 50; display: inline-block;">
+        @Account.Name
+    </h3>
     <div class="col-12 mb-2" style="min-height:150px;">
         <ApexChart @ref="chart" TItem="ChartEntryModel" Height="150" Options=@options XAxisType="XAxisType.Datetime">
             <ApexPointSeries TItem="ChartEntryModel"
@@ -21,12 +24,20 @@
         </ApexChart>
     </div>
     <div class="container">
-        <div class="col-12 py-2">
-            <h3>@Account.Name</h3>
-        </div>
-
         <div class="row mt-2">
-            <div class="col-xs-12 col-lg-9">
+            <div class="col-xs-12 col-lg-2">
+                <div class="row">
+                    <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick=ShowOverlay
+                            Style="margin-left: 30px; position: fixed; bottom: 3vh;" />
+
+                    <MudOverlay Visible="@visible" DarkBackground="true">
+                        <MudPaper Class="p-5">
+                            <AddStockEntry InvestmentAccount=Account ActionCompleted="HideOverlay" />
+                        </MudPaper>
+                    </MudOverlay>
+                </div>
+            </div>
+            <div class="col-xs-12 col-lg-7">
                 <div class="row">
 
                     <table class="table">
@@ -208,6 +219,7 @@
     internal List<(InvestmentEntry, decimal)>? Bottom5;
     internal string currency = "PLN";
 
+    private bool visible;
     public InvestmentAccount? Account { get; set; }
     public string ErrorMessage { get; set; } = string.Empty;
     public Type accountType;
@@ -220,19 +232,34 @@
 
     [Inject]
     public IStockRepository StockRepository { get; set; }
-  
+
     [Inject]
     public ISettingsService settingsService { get; set; }
+
+    public async Task ShowOverlay()
+    {
+        visible = true;
+        StateHasChanged();
+    }
+
+    public async Task HideOverlay()
+    {
+        visible = false;
+        await UpdateInfo();
+        if (chart is not null)
+            await chart.RenderAsync();
+        StateHasChanged();
+    }
 
     protected override async Task OnInitializedAsync()
     {
         options.Tooltip = new ApexCharts.Tooltip
-        {
-            Y = new TooltipY
             {
-                Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
-            }
-        };
+                Y = new TooltipY
+                {
+                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
+                }
+            };
         await UpdateEntries();
     }
 

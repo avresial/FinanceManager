@@ -8,11 +8,10 @@
 
 @if (Account is not null && Account.Entries is not null)
 {
-    @* <div class="col-12" style="position: absolute;  top: 50px; z-index: 50"> *@
     <h3 class="m-3" style="position: absolute; z-index: 50; display: inline-block;">
         @Account.Name
     </h3>
-    @* </div> *@
+
     <div class="col-12 mb-2" style="min-height:150px;">
         <ApexChart @ref="chart" TItem="BankAccountEntry" Height="150" Options=@options XAxisType="XAxisType.Datetime">
             <ApexPointSeries TItem="BankAccountEntry"
@@ -160,7 +159,7 @@
                                 <div class="col-6">
                                     <div class="row mb-1">
                                         <div>
-                                            Dept repayment
+                                           @entry.ExpenseType
                                         </div>
                                     </div>
                                     <div class="row fs-6 text-muted">
