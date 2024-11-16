@@ -63,6 +63,10 @@ namespace FinanceManager.Core.Entities.Accounts
 
         public virtual void Add(IEnumerable<T> entries)
         {
+            foreach (var entry in entries)
+                Add(entry);
+
+            return;
             Entries ??= new List<T>();
             Entries.AddRange(entries);
             Entries = Entries.OrderByDescending(x => x.PostingDate).ToList();

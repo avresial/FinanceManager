@@ -89,7 +89,7 @@ namespace FinanceManager.Infrastructure.Repositories
         public void AddFinancialEntry<T>(T bankAccountEntry, string accountName) where T : FinancialEntryBase
         {
             if (bankAccountEntry is BankAccountEntry entry)
-                AddBankAccountEntry(accountName, entry.ValueChange, entry.Description, ExpenseType.Other, entry.PostingDate);
+                AddBankAccountEntry(accountName, entry.ValueChange, entry.Description, entry.ExpenseType, entry.PostingDate);
         }
         public bool AccountExists(string name)
         {
