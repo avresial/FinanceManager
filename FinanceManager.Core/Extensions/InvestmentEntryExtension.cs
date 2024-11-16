@@ -45,7 +45,13 @@ namespace FinanceManager.Core.Extensions
 
             return bankAccountEntries.DistinctBy(x => x.Ticker).Select(x => x.Ticker).ToList();
         }
+        public static IEnumerable<InvestmentEntry> GetPrevious(this IList<InvestmentEntry> entries, DateTime date, string ticker)
+        {
+            var lastEntry = entries.LastOrDefault(x => x.PostingDate < date && x.Ticker == ticker);
+            if (lastEntry is null) return [];
 
+            return [lastEntry];
+        }
         public static IEnumerable<InvestmentEntry> Get(this List<InvestmentEntry> bankAccountEntries, DateTime date) // needs to be upgraded
         {
             if (bankAccountEntries is null) return [];
