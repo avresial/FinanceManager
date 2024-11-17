@@ -78,14 +78,6 @@ namespace FinanceManager.Infrastructure.Repositories
 
             nameTypeDictionary.Add(bankAccount.Name, typeof(T));
         }
-        public void AddFinancialAccount<AccountType, EntryType>(string name, List<EntryType> data) where AccountType : FinancialAccountBase where EntryType : FinancialEntryBase
-        {
-            //var mainBankAccount = _bankAccounts.FirstOrDefault(x => x.Name == name);
-
-            //if (mainBankAccount is null) return;
-            //foreach (var item in data)
-            //	AddFinancialAccount(name, item.BalanceChange, item.Description, item.ExpenseType, item.PostingDate);
-        }
         public void AddFinancialEntry<T>(T bankAccountEntry, string accountName) where T : FinancialEntryBase
         {
             if (bankAccountEntry is BankAccountEntry bankEntry)
@@ -235,10 +227,7 @@ namespace FinanceManager.Infrastructure.Repositories
                 ExpenseType = expenseType,
             };
 
-            AddFinancialAccount<BankAccount, BankAccountEntry>(name, new List<BankAccountEntry>() { bankAccountEntry });
             bankAccount.Add(bankAccountEntry);
-
-
         }
         private ExpenseType GetRandomType()
         {
@@ -250,6 +239,11 @@ namespace FinanceManager.Infrastructure.Repositories
             return (decimal)(random.Next(-100, 100) + Math.Round(random.NextDouble(), 2));
         }
 
-
+        public void AddFinancialAccount<AccountType, EntryType>(string name, List<EntryType> data)
+            where AccountType : FinancialAccountBase
+            where EntryType : FinancialEntryBase
+        {
+            throw new NotImplementedException();
+        }
     }
 }

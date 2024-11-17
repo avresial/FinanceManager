@@ -148,14 +148,14 @@
 
                 if (dataEntry is not null)
                 {
-                    dataEntry.Value -= account.Entries.Last().Value;
+                    dataEntry.Value -= account.Entries.First().Value;
                 }
                 else
                 {
                     Data.Add(new LiabilityOverviewEntry()
                         {
                             Cathegory = account.AccountType.ToString(),
-                            Value = -account.Entries.Last().Value
+                            Value = -account.Entries.First().Value
                         });
                 }
             }
