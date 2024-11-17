@@ -4,7 +4,7 @@ namespace FinanceManager.Core.Extensions
 {
     public static class FinancialEntryBaseExtension
     {
-        public static IEnumerable<T> Get<T>(this IList<T> entries, DateTime date) where T : FinancialEntryBase
+        public static IEnumerable<T> Get<T>(this IEnumerable<T> entries, DateTime date) where T : FinancialEntryBase
         {
             if (entries is null) return [];
             var result = entries.Where(x => x.PostingDate.Year == date.Year && x.PostingDate.Month == date.Month && x.PostingDate.Day == date.Day);
@@ -13,7 +13,7 @@ namespace FinanceManager.Core.Extensions
             return entries.GetPrevious(date);
         }
 
-        public static IEnumerable<T> GetPrevious<T>(this IList<T> entries, DateTime date) where T : FinancialEntryBase
+        public static IEnumerable<T> GetPrevious<T>(this IEnumerable<T> entries, DateTime date) where T : FinancialEntryBase
         {
             var lastEntry = entries.Where(x => x.PostingDate <= date).FirstOrDefault();
             if (lastEntry is null) return [];
@@ -23,7 +23,7 @@ namespace FinanceManager.Core.Extensions
 
 
 
-        public static List<FinancialEntryBase> GetEntriesMonthlyValue(this IList<FinancialEntryBase> entries)
+        public static List<FinancialEntryBase> GetEntriesMonthlyValue(this IEnumerable<FinancialEntryBase> entries)
         {
 
             var orderedEntries = entries.OrderBy(x => x.PostingDate).ToList();
@@ -52,7 +52,7 @@ namespace FinanceManager.Core.Extensions
 
             return result;
         }
-        public static List<FinancialEntryBase> GetEntriesWeekly(this IList<FinancialEntryBase> entries)
+        public static List<FinancialEntryBase> GetEntriesWeekly(this IEnumerable<FinancialEntryBase> entries)
         {
             List<FinancialEntryBase> result = new();
 
@@ -81,7 +81,7 @@ namespace FinanceManager.Core.Extensions
             return result;
         }
 
-        public static List<BankAccountEntry> GetSpendings(this List<BankAccountEntry> entries)
+        public static List<BankAccountEntry> GetSpendings(this IEnumerable<BankAccountEntry> entries)
         {
             return null;
         }

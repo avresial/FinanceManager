@@ -165,32 +165,10 @@ namespace FinanceManager.Infrastructure.Repositories
             var bankAccount = FindAccount<InvestmentAccount>(name);
             if (bankAccount is null) return;
 
-            decimal balance = balanceChange;
-
-            if (bankAccount.Entries is not null && bankAccount.Entries.Any(x => x.Ticker == ticker))
-            {
-                var lastBalance = bankAccount.Entries.First(x => x.Ticker == ticker).Value;
-                if (balance + lastBalance < 0)
-                {
-                    balance = 0;
-                    balanceChange = -lastBalance;
-                }
-                else
-                {
-                    balance += lastBalance;
-                }
-            }
-
-            if (balanceChange == 0) return;
-
-            InvestmentEntry bankAccountEntry = new InvestmentEntry(postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, balance, balanceChange, ticker, investmentType)
+            bankAccount.Add(new InvestmentEntry(postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, -1, balanceChange, ticker, investmentType)
             {
                 Ticker = ticker,
-            };
-
-
-            if (bankAccount.Entries is not null)
-                bankAccount.Entries.Insert(0, bankAccountEntry);
+            });
         }
         private void AddBankAccount(DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
         {
