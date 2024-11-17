@@ -5,7 +5,7 @@ namespace FinanceManager.Core.Entities.Accounts
     public class FinancialEntryBase
     {
         public DateTime PostingDate { get; internal set; }
-        public decimal Value { get; internal set; }
+        public decimal Value { get; set; }
         public decimal ValueChange { get; internal set; }
 
         public FinancialEntryBase(DateTime postingDate, decimal value, decimal valueChange)

@@ -25,7 +25,42 @@ namespace FinanceManager.Core.Entities.Accounts
             if (Entries is null) return [];
             return Entries.Get(date);
         }
+        public override void Add(InvestmentEntry entry)
+        {
+            Entries ??= new List<InvestmentEntry>();
+            var previousEntry = Entries.GetPrevious(entry.PostingDate, entry.Ticker).FirstOrDefault();
+            var index = -1;
 
+            if (previousEntry is not null)
+                index = Entries.IndexOf(previousEntry);
+
+            if (index == -1)
+            {
+                entry.Value = entry.ValueChange;
+                if (Entries is not null)
+                    Entries.Insert(0, entry);
+            }
+            else
+            {
+                if (Entries is not null)
+                    Entries.Insert(index, entry);
+
+                InvestmentEntry previousIterationEntry = null;
+
+                for (int i = index; i >= 0; i--)
+                {
+                    if (Entries[i].Ticker != entry.Ticker) continue;
+                    if (Entries.Count() < i) continue;
+
+                    if (i == index) previousIterationEntry = Entries.GetPrevious(Entries[i].PostingDate, Entries[i].Ticker).FirstOrDefault();
+
+                    if (previousIterationEntry is null) continue;
+
+                    Entries[i].Value = previousIterationEntry.Value + Entries[i].ValueChange; // error
+                    previousIterationEntry = Entries[i];
+                }
+            }
+        }
         public List<string> GetStoredTickers()
         {
             if (Entries is null) return [];

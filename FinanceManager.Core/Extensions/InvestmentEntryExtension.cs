@@ -6,7 +6,7 @@ namespace FinanceManager.Core.Extensions
 {
     public static class InvestmentEntryExtension
     {
-        public static async Task<List<(DateTime, decimal)>> GetAssets(this List<InvestmentEntry> bankAccountEntries,
+        public static async Task<List<(DateTime, decimal)>> GetAssets(this IEnumerable<InvestmentEntry> bankAccountEntries,
             DateTime start, DateTime end, Func<string, DateTime, Task<StockPrice>> getStockPrice)
         {
             List<(DateTime, decimal)> result = new();
@@ -33,20 +33,26 @@ namespace FinanceManager.Core.Extensions
             return result;
         }
 
-        public static List<InvestmentType> GetStoredTypes(this List<InvestmentEntry> bankAccountEntries)
+        public static List<InvestmentType> GetStoredTypes(this IEnumerable<InvestmentEntry> bankAccountEntries)
         {
             if (bankAccountEntries is null) return [];
 
             return bankAccountEntries.DistinctBy(x => x.InvestmentType).Select(x => x.InvestmentType).ToList();
         }
-        public static List<string> GetStoredTickers(this List<InvestmentEntry> bankAccountEntries)
+        public static List<string> GetStoredTickers(this IEnumerable<InvestmentEntry> bankAccountEntries)
         {
             if (bankAccountEntries is null) return [];
 
             return bankAccountEntries.DistinctBy(x => x.Ticker).Select(x => x.Ticker).ToList();
         }
+        public static IEnumerable<InvestmentEntry> GetPrevious(this IEnumerable<InvestmentEntry> entries, DateTime date, string ticker)
+        {
+            var lastEntry = entries.FirstOrDefault(x => x.PostingDate < date && x.Ticker == ticker);
+            if (lastEntry is null) return [];
 
-        public static IEnumerable<InvestmentEntry> Get(this List<InvestmentEntry> bankAccountEntries, DateTime date) // needs to be upgraded
+            return [lastEntry];
+        }
+        public static IEnumerable<InvestmentEntry> Get(this IEnumerable<InvestmentEntry> bankAccountEntries, DateTime date) // needs to be upgraded
         {
             if (bankAccountEntries is null) return [];
 
