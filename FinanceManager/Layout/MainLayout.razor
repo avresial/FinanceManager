@@ -10,7 +10,14 @@
         </div>
 
         <article class="px-0" style="padding: 0px !important;">
-            @Body
+            <AuthorizeView>
+                <NotAuthorized>
+                    <RedirectToLogin />
+                </NotAuthorized>
+                <Authorized>
+                    @Body
+                </Authorized>
+            </AuthorizeView>
         </article>
     </main>
 </div>

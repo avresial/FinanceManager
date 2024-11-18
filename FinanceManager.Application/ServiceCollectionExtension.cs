@@ -1,5 +1,7 @@
-﻿using FinanceManager.Application.Services;
+﻿using FinanceManager.Application.Providers;
+using FinanceManager.Application.Services;
 using FinanceManager.Core.Services;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FinanceManager.Application
@@ -11,8 +13,8 @@ namespace FinanceManager.Application
             services.AddScoped<IAccountService, AccountService>()
                     .AddScoped<ISettingsService, SettingsService>()
                     .AddScoped<ILoginService, LoginService>()
-                    .AddScoped<IMoneyFlowService, MoneyFlowService>();
-
+                    .AddScoped<IMoneyFlowService, MoneyFlowService>()
+                    .AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
             return services;
         }
     }

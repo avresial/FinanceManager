@@ -1,11 +1,14 @@
 ﻿@using Blazored.LocalStorage
 @using Blazored.SessionStorage
 @using FinanceManager.Presentation.ViewModels
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 
 @inject NavigationManager Navigation
 @inject ILoginService LoginService
 @inject ILocalStorageService LocalStorageService;
+
+
 
 <section>
     <div class="container d-flex align-center" style="height:100vh;">
