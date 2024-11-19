@@ -23,52 +23,28 @@
                             <h1>Finance Manager</h1>
                         </div>
                         <h2 class="fs-6 fw-normal text-center text-secondary mb-4">Sign in to your account</h2>
-                        <EditForm Model=@loginModel OnValidSubmit=@ValidFormSubmitted OnInvalidSubmit=@InvalidFormSubmitted>
-                            <DataAnnotationsValidator />
-                            <div class="row gy-2 overflow-hidden">
-                                <div class="col-12">
-                                    <div class="form-floating mb-3">
-                                        <InputText @bind-Value=loginModel.Login class="form-control" name="login" id="login" />
-                                        <label for="login" class="form-label">Login</label>
-                                        <ValidationMessage For="() => loginModel.Login" />
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="form-floating mb-3">
-                                        <InputText @bind-Value=loginModel.Password type="password" class="form-control" name="password" id="password" />
-                                        <label for="password" class="form-label">Password</label>
-                                        <ValidationMessage For="() => loginModel.Password" />
-                                    </div>
-                                </div>
-                                @*   <div class="col-12">
-                                <div class="d-flex gap-2 justify-content-between">
-                                <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" name="rememberMe" id="rememberMe">
-                                <label class="form-check-label text-secondary" for="rememberMe">
-                                Keep me logged in
-                                </label>
-                                </div>
-                                <a href="#!" class="link-primary text-decoration-none">Forgot password?</a>
-                                </div>
-                                </div> *@
-                                <div class="col-12">
-                                    <div class="d-grid my-3">
-                                        <MudButton Href="login" Class="my-2" Variant="Variant.Filled" Color="Color.Primary" type="submit" disabled="@(!context.IsModified() || !context.Validate())" @onclick=Login>
-                                            <MudText Typo="Typo.h5" Class="">Login</MudText>
-                                        </MudButton>
-                                        <MudButton Href="login" Class="mt-2" Variant="Variant.Outlined" Color="Color.Primary" @onclick=LogGuest>
-                                            <MudText Typo="Typo.h5" Class="">Check out demo!</MudText>
-                                        </MudButton>
-                                        <MudButton Href="landingpage" Class="mt-2" Variant="Variant.Text" Color="Color.Primary">
-                                            <MudText Typo="Typo.subtitle1" Class="">Learn more</MudText>
-                                        </MudButton>
-                                    </div>
-                                </div>
-                                @*   <div class="col-12">
-                                <p class="m-0 text-secondary text-center">Don't have an account? <a href="#!" class="link-primary text-decoration-none">Sign up</a></p>
-                                </div> *@
-                            </div>
-                        </EditForm>
+                        <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+                            <MudTextField @bind-Value="loginModel.Login" T="string" Label="Login" Variant="Variant.Outlined" Immediate Required />
+                            <MudTextField @bind-Value="loginModel.Password" T="string" Label="Password" Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
+
+                            <MudButton Href="login" Class="my-2 mt-5" Variant="Variant.Filled" Color="Color.Primary" type="submit" @onclick=Login>
+                                <MudText Typo="Typo.h5" Class="">Login</MudText>
+                            </MudButton>
+                            <MudButton Href="login" Class="mt-2" Variant="Variant.Outlined" Color="Color.Primary" @onclick=LogGuest>
+                                <MudText Typo="Typo.h5" Class="">Check out demo!</MudText>
+                            </MudButton>
+                            <MudButton Href="landingpage" Class="mt-2" Variant="Variant.Text" Color="Color.Primary">
+                                <MudText Typo="Typo.subtitle1" Class="">Learn more</MudText>
+                            </MudButton>
+                        </MudForm>
+
+                        @if (errors is not null)
+                        {
+                            @foreach (var error in errors)
+                            {
+                                <MudAlert Severity="Severity.Error">@error</MudAlert>
+                            }
+                        }
                     </div>
                 </div>
             </div>
@@ -78,12 +54,13 @@
 
 @code
 {
+    bool success;
+    string[] errors = { };
+    MudForm form;
     LoginModel loginModel = new();
 
     protected override async Task OnInitializedAsync()
     {
-
-        // bool firstVisit = true;
         bool firstVisit = !(await LocalStorageService.ContainKeyAsync("isThisFirstVisit"));
         if (firstVisit)
         {
@@ -111,8 +88,12 @@
     }
     async Task Login()
     {
-        await LoginService.Login(loginModel.Login, loginModel.Password);
-        Navigation.NavigateTo("");
+        await form.Validate();
+        var loginResult = await LoginService.Login(loginModel.Login, loginModel.Password);
+
+        if (loginResult)
+            Navigation.NavigateTo("");
+        errors = ["Wrong user or password"];
     }
     void InvalidFormSubmitted(EditContext editContext)
     {
