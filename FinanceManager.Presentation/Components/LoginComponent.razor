@@ -23,28 +23,29 @@
                             <h1>Finance Manager</h1>
                         </div>
                         <h2 class="fs-6 fw-normal text-center text-secondary mb-4">Sign in to your account</h2>
+                        @if (errors is not null)
+                        {
+                            @foreach (var error in errors)
+                            {
+                                <MudAlert Severity="Severity.Error" Class="my-3">@error</MudAlert>
+                            }
+                        }
                         <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
                             <MudTextField @bind-Value="loginModel.Login" T="string" Label="Login" Variant="Variant.Outlined" Immediate Required />
                             <MudTextField @bind-Value="loginModel.Password" T="string" Label="Password" Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
 
                             <MudButton Href="login" Class="my-2 mt-5" Variant="Variant.Filled" Color="Color.Primary" type="submit" @onclick=Login>
-                                <MudText Typo="Typo.h5" Class="">Login</MudText>
+                                <MudText Typo="Typo.h5">Login</MudText>
                             </MudButton>
                             <MudButton Href="login" Class="mt-2" Variant="Variant.Outlined" Color="Color.Primary" @onclick=LogGuest>
-                                <MudText Typo="Typo.h5" Class="">Check out demo!</MudText>
+                                <MudText Typo="Typo.h5">Check out demo!</MudText>
                             </MudButton>
                             <MudButton Href="landingpage" Class="mt-2" Variant="Variant.Text" Color="Color.Primary">
-                                <MudText Typo="Typo.subtitle1" Class="">Learn more</MudText>
+                                <MudText Typo="Typo.subtitle1">Learn more</MudText>
                             </MudButton>
                         </MudForm>
 
-                        @if (errors is not null)
-                        {
-                            @foreach (var error in errors)
-                            {
-                                <MudAlert Severity="Severity.Error">@error</MudAlert>
-                            }
-                        }
+                       
                     </div>
                 </div>
             </div>
@@ -93,7 +94,8 @@
 
         if (loginResult)
             Navigation.NavigateTo("");
-        errors = ["Wrong user or password"];
+        errors = ["Incorrect username or password."];
+        loginModel.Password = string.Empty;
     }
     void InvalidFormSubmitted(EditContext editContext)
     {

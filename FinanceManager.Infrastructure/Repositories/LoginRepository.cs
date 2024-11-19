@@ -49,7 +49,7 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 Login = login,
                 Password = password,
-                Id = userDtos.Count + 1
+                Id = userDtos.Count
             });
 
             try
