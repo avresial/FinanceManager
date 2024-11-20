@@ -1,0 +1,111 @@
+﻿@using Blazored.LocalStorage
+@using Blazored.SessionStorage
+@using FinanceManager.Core.Repositories
+@using FinanceManager.Presentation.ViewModels
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+
+@inject NavigationManager Navigation
+@inject ILoginService LoginService
+@inject ILocalStorageService LocalStorageService
+@inject ILoginRepository loginRepository
+
+
+<section>
+    <div class="container d-flex align-center" style="height:100vh;">
+        <div class="row justify-content-center d-flex flex-grow-1">
+            <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5 col-xxl-4">
+                <div class="card border border-light-subtle rounded-3 shadow-sm p-4">
+                    <div class="card-body pt-0 px-3 px-md-4 px-xl-5">
+                        <div class="text-center mb-3 pt-3 pt-md-4 pt-xl-5">
+                            @* <a href="#!">
+                            <img src="./assets/img/bsb-logo.svg" alt="BootstrapBrain Logo" width="175" height="57">
+                            </a>  *@
+                            <h1>Finance Manager</h1>
+                        </div>
+                        <h2 class="fs-6 fw-normal text-center text-secondary mb-4">Sign in to your account</h2>
+                        @if (errors is not null)
+                        {
+                            @foreach (var error in errors)
+                            {
+                                <MudAlert Severity="Severity.Error" Class="my-3">@error</MudAlert>
+                            }
+                        }
+                        <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+                            <MudTextField @bind-Value="loginModel.Login" T="string" Label="Login" Variant="Variant.Outlined" Immediate Required />
+                            <MudTextField @bind-Value="loginModel.Password" T="string" Label="Password" Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
+                            <MudTextField @bind-Value="ConfirmPassword" T="string" Label="Password" Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
+
+                            <MudButton Href="login" Class="my-2 mt-5" Variant="Variant.Filled" Color="Color.Primary" type="submit" @onclick=Register>
+                                <MudText Typo="Typo.h5">Register</MudText>
+                            </MudButton>
+                        </MudForm>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@code
+{
+    bool success;
+    string[] errors = [];
+    MudForm form;
+    LoginModel loginModel = new();
+
+    public string? ConfirmPassword { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        bool firstVisit = !(await LocalStorageService.ContainKeyAsync("isThisFirstVisit"));
+        if (firstVisit)
+        {
+            await LocalStorageService.SetItemAsync("isThisFirstVisit", false);
+            Navigation.NavigateTo("landingpage");
+            return;
+        }
+
+        var loggedUser = await LoginService.GetLoggedUser();
+        if (loggedUser is not null)
+            Navigation.NavigateTo("");
+
+        var getKeepMeLoggedinSession = await LoginService.GetKeepMeLoggedinSession();
+        if (getKeepMeLoggedinSession is not null)
+        {
+            await LoginService.Login(getKeepMeLoggedinSession.UserName, "shouldBeAToken");
+            Navigation.NavigateTo("");
+        }
+    }
+
+    async Task ValidFormSubmitted(EditContext editContext)
+    {
+        await LoginService.Login(loginModel.Login, loginModel.Password);
+        Navigation.NavigateTo("");
+    }
+
+    async Task Register()
+    {
+        await form.Validate();
+        if (!form.IsValid)
+        {
+            errors = ["Incorrect username or password"];
+            return;
+        }
+        List<string> newErrors = [];
+        var addingUserResult = await loginRepository.AddUser(loginModel.Login, loginModel.Password);
+
+        if (!addingUserResult)
+            newErrors.Add("Incorrect username or password.");
+
+        var loginResult = await LoginService.Login(loginModel.Login, loginModel.Password);
+
+        if (loginResult)
+            Navigation.NavigateTo("");
+
+        errors = newErrors.ToArray();
+        loginModel.Password = string.Empty;
+    }
+}
