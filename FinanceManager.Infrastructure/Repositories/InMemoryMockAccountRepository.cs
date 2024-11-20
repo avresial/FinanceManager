@@ -170,7 +170,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
             AddFinancialAccount(new BankAccount(accountName, accountType));
             AddBankAccountEntry(accountName, startingBalance, $"Lorem ipsum {0}", expenseType, startDay);
-
+            startDay = startDay.AddMinutes(1);
             int index = 0;
             while (startDay.Date <= DateTime.UtcNow.Date)
             {
@@ -191,7 +191,7 @@ namespace FinanceManager.Infrastructure.Repositories
             AddFinancialAccount(new BankAccount(accountName, AccountType.Loan));
 
             AddBankAccountEntry(accountName, startingBalance, $"Lorem ipsum {0}", ExpenseType.DebtRepayment, startDay);
-
+            startDay = startDay.AddMinutes(1);
             decimal repaidAmount = 0;
 
             int index = 0;
@@ -202,7 +202,7 @@ namespace FinanceManager.Infrastructure.Repositories
                 if (repaidAmount >= -startingBalance)
                     balanceChange = repaidAmount + startingBalance;
 
-                AddBankAccountEntry(accountName, balanceChange, $"Lorem ipsum {0}", ExpenseType.Other, startDay);
+                AddBankAccountEntry(accountName, balanceChange, $"Lorem ipsum {index++}", ExpenseType.Other, startDay);
 
                 //var mainBankAccount = FindAccount<BankAccount>("Main");
                 //if (mainBankAccount is not null)

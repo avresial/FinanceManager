@@ -68,16 +68,16 @@
                         </tbody>
                     </table>
                 </div>
-                @if (!LoadedAllData)
-                {
-                    <div class="row">
+                <div class="row" style="min-height:40px">
+                    @if (!LoadedAllData)
+                    {
                         <button class="btn text-center" title="Load more" @onclick="LoadMore">
                             <div>
                                 <i class="bi bi-arrow-bar-down"></i>
                             </div>
                         </button>
-                    </div>
-                }
+                    }
+                </div>
             </div>
 
             <div class="col-3 d-none d-lg-block">
@@ -159,7 +159,7 @@
                                 <div class="col-6">
                                     <div class="row mb-1">
                                         <div>
-                                           @entry.ExpenseType
+                                            @entry.ExpenseType
                                         </div>
                                     </div>
                                     <div class="row fs-6 text-muted">
@@ -301,13 +301,16 @@
         var newData = BankAccountRepository.GetAccount<BankAccount>(AccountName, newStartDate, Account.Start.Value);
 
         if (Account.Entries is null || newData is null || newData.Entries is null) return;
-        if (newData.Entries.Last().PostingDate == Account.Entries.Last().PostingDate)
+        if (!newData.Entries.Any() || newData.Entries.Last().PostingDate == Account.Entries.Last().PostingDate)
         {
             LoadedAllData = true;
             return;
         }
 
-        Account.Add(newData.Entries);
+        var lastExisting = Account.Entries.LastOrDefault();
+        var firstNew = newData.Entries.FirstOrDefault();
+
+        Account.Add(newData.Entries.Skip(1), false);
 
         if (chart is not null)
             await chart.RenderAsync();

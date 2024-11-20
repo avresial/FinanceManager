@@ -31,45 +31,34 @@ namespace FinanceManager.Core.Entities.Accounts
             return Entries.Where(x => x.PostingDate >= start && x.PostingDate <= end);
         }
 
-        public virtual void Add(T entry)
+        public virtual void Add(T entry, bool recalculateValues = true)
         {
             Entries ??= new List<T>();
-            //  Entries.Add(entry);
-            // Entries = Entries.OrderByDescending(x => x.PostingDate).ToList();
 
             var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();
 
             var index = Entries.IndexOf(previousEntry);
-            if (index == -1)
+            if (index < 0)
             {
                 if (Entries is not null)
-                    Entries.Insert(0, entry);
+                    Entries.Add(entry);
             }
             else
             {
                 if (Entries is not null)
                     Entries.Insert(index, entry);
 
-                for (int i = index; i >= 0; i--)
-                {
-                    if (Entries.Count() < i) continue;
-
-                    Entries[i].Value = Entries[i + 1].Value + Entries[i].ValueChange;
-                }
+                if (recalculateValues)
+                    RecalculateEntryValues(index);
             }
-
-
         }
 
-        public virtual void Add(IEnumerable<T> entries)
+
+
+        public virtual void Add(IEnumerable<T> entries, bool recalculateValues = true)
         {
             foreach (var entry in entries)
-                Add(entry);
-
-            return;
-            Entries ??= new List<T>();
-            Entries.AddRange(entries);
-            Entries = Entries.OrderByDescending(x => x.PostingDate).ToList();
+                Add(entry, recalculateValues);
         }
 
         public IEnumerable<T> GetDaily()
@@ -97,6 +86,22 @@ namespace FinanceManager.Core.Entities.Accounts
             throw new NotImplementedException();
         }
 
+        private void RecalculateEntryValues(int? startingIndex)
+        {
+            if (Entries is null || !Entries.Any()) return;
+
+            int startIndex = startingIndex.HasValue ? startingIndex.Value : Entries.Count() - 1;
+            for (int i = startIndex; i >= 0; i--)
+            {
+                if (Entries.Count() < i) continue;
+                var newValue = Entries[i + 1].Value + Entries[i].ValueChange;
+                if (Entries[i].Value != newValue)
+                {
+                    var difference = Entries[i].Value - newValue;
+                }
+                Entries[i].Value = newValue;
+            }
+        }
         private DateTime? GetStartDate()
         {
             if (Entries is null || !Entries.Any()) return null;

@@ -25,7 +25,7 @@ namespace FinanceManager.Core.Entities.Accounts
             if (Entries is null) return [];
             return Entries.Get(date);
         }
-        public override void Add(InvestmentEntry entry)
+        public override void Add(InvestmentEntry entry, bool recalculate = true)
         {
             Entries ??= new List<InvestmentEntry>();
             var previousEntry = Entries.GetPrevious(entry.PostingDate, entry.Ticker).FirstOrDefault();
@@ -46,18 +46,21 @@ namespace FinanceManager.Core.Entities.Accounts
                     Entries.Insert(index, entry);
 
                 InvestmentEntry previousIterationEntry = null;
-
-                for (int i = index; i >= 0; i--)
+                if (recalculate)
                 {
-                    if (Entries[i].Ticker != entry.Ticker) continue;
-                    if (Entries.Count() < i) continue;
 
-                    if (i == index) previousIterationEntry = Entries.GetPrevious(Entries[i].PostingDate, Entries[i].Ticker).FirstOrDefault();
+                    for (int i = index; i >= 0; i--)
+                    {
+                        if (Entries[i].Ticker != entry.Ticker) continue;
+                        if (Entries.Count() < i) continue;
 
-                    if (previousIterationEntry is null) continue;
+                        if (i == index) previousIterationEntry = Entries.GetPrevious(Entries[i].PostingDate, Entries[i].Ticker).FirstOrDefault();
 
-                    Entries[i].Value = previousIterationEntry.Value + Entries[i].ValueChange; // error
-                    previousIterationEntry = Entries[i];
+                        if (previousIterationEntry is null) continue;
+
+                        Entries[i].Value = previousIterationEntry.Value + Entries[i].ValueChange; // error
+                        previousIterationEntry = Entries[i];
+                    }
                 }
             }
         }

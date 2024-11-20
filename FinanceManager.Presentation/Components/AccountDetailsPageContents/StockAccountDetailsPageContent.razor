@@ -78,16 +78,16 @@
                         </tbody>
                     </table>
                 </div>
-                @if (!LoadedAllData)
-                {
-                    <div class="row">
+                <div class="row" style="min-height:40px">
+                    @if (!LoadedAllData)
+                    {
                         <button class="btn text-center" title="Load more" @onclick="LoadMore">
                             <div>
                                 <i class="bi bi-arrow-bar-down"></i>
                             </div>
                         </button>
-                    </div>
-                }
+                    }
+                </div>
             </div>
             <div class="col-3 d-none d-lg-block">
                 <div class="row">
@@ -345,7 +345,7 @@
             return;
         }
 
-        Account.Add(newData.Entries);
+        Account.Add(newData.Entries.Skip(1));
 
         await UpdateInfo();
     }
