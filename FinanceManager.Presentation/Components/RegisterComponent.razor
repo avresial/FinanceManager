@@ -33,8 +33,8 @@
                         }
                         <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
                             <MudTextField @bind-Value="loginModel.Login" T="string" Label="Login" Variant="Variant.Outlined" Immediate Required />
-                            <MudTextField @bind-Value="loginModel.Password" T="string" Label="Password" Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
-                            <MudTextField @bind-Value="ConfirmPassword" T="string" Label="Password" Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
+                            <MudTextField @bind-Value="loginModel.Password" T="string" Label="Password" Variant="Variant.Outlined" Immediate Required InputType="InputType.Password" />
+                            <MudTextField @bind-Value="ConfirmPassword" T="string" Label="ConfirmPassword" Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
 
                             <MudButton Href="login" Class="my-2 mt-5" Variant="Variant.Filled" Color="Color.Primary" type="submit" @onclick=Register>
                                 <MudText Typo="Typo.h5">Register</MudText>
