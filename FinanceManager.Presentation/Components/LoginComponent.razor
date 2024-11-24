@@ -31,21 +31,30 @@
                             }
                         }
                         <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
-                            <MudTextField @bind-Value="loginModel.Login" T="string" Label="Login" Variant="Variant.Outlined" Immediate Required />
+                            <MudTextField @bind-Value="loginModel.Login" T="string" Label="Login" Variant="Variant.Outlined" Immediate Required Class="mt-5" />
                             <MudTextField @bind-Value="loginModel.Password" T="string" Label="Password" Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
 
-                            <MudButton Href="login" Class="my-2 mt-5" Variant="Variant.Filled" Color="Color.Primary" type="submit" @onclick=Login>
+                            <MudButton Class="my-2" Variant="Variant.Filled" Color="Color.Primary" type="submit" @onclick=Login>
                                 <MudText Typo="Typo.h5">Login</MudText>
                             </MudButton>
-                            <MudButton Href="login" Class="mt-2" Variant="Variant.Outlined" Color="Color.Primary" @onclick=LogGuest>
-                                <MudText Typo="Typo.h5">Check out demo!</MudText>
+                            <MudButton Href="register" Class="my-2" Variant="Variant.Outlined" Color="Color.Primary">
+                                <MudText Typo="Typo.h5">Register</MudText>
+                            </MudButton>
+                         @*    <MudButton Class="mt-2" Variant="Variant.Text" Color="Color.Primary" @onclick=LogGuest>
+                                <MudText Typo="Typo.subtitle1">Check out demo!</MudText>
                             </MudButton>
                             <MudButton Href="landingpage" Class="mt-2" Variant="Variant.Text" Color="Color.Primary">
                                 <MudText Typo="Typo.subtitle1">Learn more</MudText>
-                            </MudButton>
+                            </MudButton> *@
+                            <MudLink Href="landingpage" Class="mt-3">
+                                <MudText Typo="Typo.subtitle1">Learn more</MudText>
+                            </MudLink>
+                            <MudLink  @onclick=LogGuest>
+                                <MudText Typo="Typo.subtitle1">Check out demo</MudText>
+                            </MudLink>
                         </MudForm>
 
-                       
+
                     </div>
                 </div>
             </div>
