@@ -17,6 +17,7 @@ namespace FinanceManager.Core.Entities.Accounts
         }
 
     }
+
     public class InvestmentEntry : FinancialEntryBase
     {
         public string Ticker { get; set; }
@@ -28,7 +29,6 @@ namespace FinanceManager.Core.Entities.Accounts
         }
 
     }
-
     public class FixedAssetEntry : FinancialEntryBase
     {
         public string Name { get; set; }

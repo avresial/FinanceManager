@@ -1,6 +1,6 @@
 ﻿namespace FinanceManager.Presentation.Helpers
 {
-    internal static class ChartHelper
+    public static class ChartHelper
     {
         public static string GetCurrencyFormatter(string currency)
         {
