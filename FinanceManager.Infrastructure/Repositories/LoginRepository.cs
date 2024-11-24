@@ -16,6 +16,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
         async Task<User?> ILoginRepository.GetUser(string login, string password)
         {
+            login = login.ToLower();
             List<UserDto>? databaseUserDtos = await _localStorageService.GetItemAsync<List<UserDto>>("Users");
             if (databaseUserDtos is null) return null;
 
@@ -26,6 +27,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
             var foundUser = userDtos.FirstOrDefault(x => x.Login == login);
             if (foundUser is null) return null;
+            if (foundUser.Password != password) return null;
 
             return new User()
             {
@@ -36,6 +38,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
         async Task<bool> ILoginRepository.AddUser(string login, string password)
         {
+            login = login.ToLower();
             List<UserDto>? databaseUserDtos = await _localStorageService.GetItemAsync<List<UserDto>>("Users");
             List<UserDto> userDtos = new List<UserDto>();
 

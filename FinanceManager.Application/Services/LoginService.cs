@@ -40,6 +40,7 @@ namespace FinanceManager.Application.Services
         }
         public async Task<bool> Login(string username, string password)
         {
+            username = username.ToLower();
             var userFromDatabase = await _loginRepository.GetUser(username, password);
             if (userFromDatabase is null)
             {
@@ -54,8 +55,8 @@ namespace FinanceManager.Application.Services
                 UserName = username,
             };
 
-            await _sessionStorageService.SetItemAsync<UserSession>(sessionString, LoggedUser);
-            await _localStorageService.SetItemAsync<UserSession>(sessionString, LoggedUser);
+            await _sessionStorageService.SetItemAsync(sessionString, LoggedUser);
+            await _localStorageService.SetItemAsync(sessionString, LoggedUser);
             var authState = await ((CustomAuthenticationStateProvider)_authState).ChangeUser(username, username, "Associate");
             return true;
         }
