@@ -23,18 +23,12 @@
                             </a>  *@
                             <h1>Finance Manager</h1>
                         </div>
-                        <h2 class="fs-6 fw-normal text-center text-secondary mb-4">Sign in to your account</h2>
-                        @if (errors is not null)
-                        {
-                            @foreach (var error in errors)
-                            {
-                                <MudAlert Severity="Severity.Error" Class="my-3">@error</MudAlert>
-                            }
-                        }
+                        <h2 class="fs-6 fw-normal text-center text-secondary mb-4">Create your account</h2>
+
                         <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
                             <MudTextField @bind-Value="loginModel.Login" T="string" Label="Login" Variant="Variant.Outlined" Immediate Required />
-                            <MudTextField @bind-Value="loginModel.Password" T="string" Label="Password" Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
-                            <MudTextField @bind-Value="ConfirmPassword" T="string" Label="Password" Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
+                            <MudTextField @bind-Value="loginModel.Password" T="string" Label="Password" Variant="Variant.Outlined" Immediate Required InputType="InputType.Password" />
+                            <MudTextField @bind-Value="ConfirmPassword" T="string" Label="ConfirmPassword" Validation="@(new Func<string, string>(PasswordMatch))" Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
 
                             <MudButton Href="login" Class="my-2 mt-5" Variant="Variant.Filled" Color="Color.Primary" type="submit" @onclick=Register>
                                 <MudText Typo="Typo.h5">Register</MudText>
@@ -80,21 +74,16 @@
         }
     }
 
-    async Task ValidFormSubmitted(EditContext editContext)
-    {
-        await LoginService.Login(loginModel.Login, loginModel.Password);
-        Navigation.NavigateTo("");
-    }
-
     async Task Register()
     {
         await form.Validate();
-        if (!form.IsValid)
+        if (!form.IsValid || loginModel is null || string.IsNullOrEmpty(loginModel.Login) || string.IsNullOrEmpty(loginModel.Password))
         {
             errors = ["Incorrect username or password"];
             return;
         }
         List<string> newErrors = [];
+
         var addingUserResult = await loginRepository.AddUser(loginModel.Login, loginModel.Password);
 
         if (!addingUserResult)
@@ -107,5 +96,12 @@
 
         errors = newErrors.ToArray();
         loginModel.Password = string.Empty;
+    }
+    private string PasswordMatch(string arg)
+    {
+        if (loginModel.Password != arg)
+            return "Passwords don't match";
+
+        return null;
     }
 }
