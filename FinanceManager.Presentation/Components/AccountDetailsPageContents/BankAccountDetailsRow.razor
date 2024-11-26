@@ -1,6 +1,25 @@
 ﻿@using FinanceManager.Core.Entities.Accounts
 
+<tr>
+    <td>@BankAccountEntry.Value @currency</td>
+    @if (BankAccountEntry.ValueChange > 0)
+    {
+        <td class="text-success">@BankAccountEntry.ValueChange @currency</td>
+    }
+    else
+    {
+        <td class="text-danger">@BankAccountEntry.ValueChange @currency</td>
+    }
+    <td>@BankAccountEntry.PostingDate.ToString("yyyy-MM-dd")</td>
+    <td>
+        <MudIconButton Icon="@Icons.Material.Filled.EditNote" Class="p-0" />
+        <MudIconButton Icon="@Icons.Material.Filled.EditNote" Class="p-0" />
+    </td>
+</tr>
+
 @code {
+
+    internal string currency = "PLN";
 
     [Parameter]
     public required BankAccountEntry BankAccountEntry { get; set; }

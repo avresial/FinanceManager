@@ -53,22 +53,23 @@
 
                             @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
                             {
-                                <tr>
-                                    <td>@entry.Value @currency</td>
-                                    @if (entry.ValueChange > 0)
-                                    {
-                                        <td class="text-success">@entry.ValueChange @currency</td>
-                                    }
-                                    else
-                                    {
-                                        <td class="text-danger">@entry.ValueChange @currency</td>
-                                    }
-                                    <td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
-                                    <td>
-                                        <MudIconButton Icon="@Icons.Material.Filled.EditNote" Class="p-0" />
-                                        <MudIconButton Icon="@Icons.Material.Filled.EditNote" Class="p-0" />
-                                    </td>
-                                </tr>
+                                <BankAccountDetailsRow BankAccountEntry="@entry" />
+                                 @* <tr>
+                                     <td>@entry.Value @currency</td>
+                                     @if (entry.ValueChange > 0)
+                                     {
+                                         <td class="text-success">@entry.ValueChange @currency</td>
+                                     }
+                                     else
+                                     {
+                                         <td class="text-danger">@entry.ValueChange @currency</td>
+                                     }
+                                     <td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
+                                     <td>
+                                         <MudIconButton Icon="@Icons.Material.Filled.EditNote" Class="p-0" />
+                                         <MudIconButton Icon="@Icons.Material.Filled.EditNote" Class="p-0" />
+                                     </td>
+                                 </tr> *@
                             }
                         </tbody>
                     </table>
