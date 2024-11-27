@@ -62,105 +62,107 @@
 
             <div class="col-3 d-none d-lg-block">
 
-                <div class="row">
-                    @if (balanceChange > 0)
-                    {
-                        <div class="row mb-3 mx-0 px-0">
-                            <div class="col-6">
-                                <div class="row mb-1">
-                                    <div>
-                                        Balance change
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6 text-end">
-                                <div class="row mb-1 text-success">
-                                    <div class="test-end">@balanceChange @currency <i class="fs-5 bi bi-arrow-up-right"></i></div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="row mb-3 mx-0 px-0">
-                            <div class="col-6">
-                                <div class="row mb-1">
-                                    <div>
-                                        Balance change
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6 text-end">
-                                <div class="row mb-1 text-danger">
-                                    <div class="test-end">@balanceChange @currency <i class="fs-5 bi bi-arrow-down-right"></i></div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-                <div class="row">
-                    @if (Top5 is not null)
-                    {
-                        <h6 class="text-center mt-2">Top 5</h6>
-                        @foreach (var entry in Top5)
+                <div class="container">
+                    <div class="row">
+                        @if (balanceChange > 0)
                         {
                             <div class="row mb-3 mx-0 px-0">
                                 <div class="col-6">
                                     <div class="row mb-1">
                                         <div>
-                                            @entry.ExpenseType
-                                        </div>
-                                    </div>
-                                    <div class="row text-muted">
-                                        <div style="font-size:0.8rem !important">
-                                            @entry.Description
+                                            Balance change
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-6 text-end">
-                                    <div class="row mb-1">
-                                        <div class="text-success">@entry.ValueChange @currency</div>
-                                    </div>
-                                    <div class="row text-muted">
-                                        <div style="font-size:0.8rem !important">
-                                            @entry.PostingDate.ToString("yyyy-MM-dd")
-                                        </div>
+                                    <div class="row mb-1 text-success">
+                                        <div class="test-end">@balanceChange @currency <i class="fs-5 bi bi-arrow-up-right"></i></div>
                                     </div>
                                 </div>
                             </div>
                         }
-                    }
-                    @if (Bottom5 is not null)
-                    {
-                        <h6 class="text-center mt-2">Bottom 5</h6>
-                        @foreach (var entry in Bottom5)
+                        else
                         {
                             <div class="row mb-3 mx-0 px-0">
                                 <div class="col-6">
                                     <div class="row mb-1">
                                         <div>
-                                            @entry.ExpenseType
-                                        </div>
-                                    </div>
-                                    <div class="row fs-6 text-muted">
-                                        <div style="font-size:0.8rem !important">
-                                            @entry.Description
+                                            Balance change
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-6 text-end">
-                                    <div class="row mb-1">
-                                        <div class="text-danger">@entry.ValueChange @currency</div>
-                                    </div>
-                                    <div class="row fs-6 text-muted">
-                                        <div style="font-size:0.8rem !important">
-                                            @entry.PostingDate.ToString("yyyy-MM-dd")
-                                        </div>
+                                    <div class="row mb-1 text-danger">
+                                        <div class="test-end">@balanceChange @currency <i class="fs-5 bi bi-arrow-down-right"></i></div>
                                     </div>
                                 </div>
                             </div>
                         }
-                    }
+                    </div>
+                    <div class="row">
+                        @if (Top5 is not null)
+                        {
+                            <h6 class="text-center mt-2">Top 5</h6>
+                            @foreach (var entry in Top5)
+                            {
+                                <div class="row mb-3 mx-0 px-0">
+                                    <div class="col-6">
+                                        <div class="row mb-1">
+                                            <div>
+                                                @entry.ExpenseType
+                                            </div>
+                                        </div>
+                                        <div class="row text-muted">
+                                            <div style="font-size:0.8rem !important">
+                                                @entry.Description
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                        <div class="row mb-1">
+                                            <div class="text-success">@entry.ValueChange @currency</div>
+                                        </div>
+                                        <div class="row text-muted">
+                                            <div style="font-size:0.8rem !important">
+                                                @entry.PostingDate.ToString("yyyy-MM-dd")
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        @if (Bottom5 is not null)
+                        {
+                            <h6 class="text-center mt-2">Bottom 5</h6>
+                            @foreach (var entry in Bottom5)
+                            {
+                                <div class="row mb-3 mx-0 px-0">
+                                    <div class="col-6">
+                                        <div class="row mb-1">
+                                            <div>
+                                                @entry.ExpenseType
+                                            </div>
+                                        </div>
+                                        <div class="row fs-6 text-muted">
+                                            <div style="font-size:0.8rem !important">
+                                                @entry.Description
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                        <div class="row mb-1">
+                                            <div class="text-danger">@entry.ValueChange @currency</div>
+                                        </div>
+                                        <div class="row fs-6 text-muted">
+                                            <div style="font-size:0.8rem !important">
+                                                @entry.PostingDate.ToString("yyyy-MM-dd")
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
                 </div>
             </div>
         </div>
