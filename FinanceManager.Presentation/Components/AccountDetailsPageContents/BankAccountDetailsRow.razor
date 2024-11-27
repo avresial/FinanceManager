@@ -1,23 +1,113 @@
 ﻿@using FinanceManager.Core.Entities.Accounts
+<MudExpansionPanel>
+    <TitleContent>
+        <div class="row">
+            <div class="col-4">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        Value
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        @BankAccountEntry.Value @currency
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        ValueChange
+                    </div>
+                </div>
+                <div class="row">
+                    @if (BankAccountEntry.ValueChange > 0)
+                    {
+                        <div class="text-success">
+                            @BankAccountEntry.ValueChange @currency
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-danger">
+                            @BankAccountEntry.ValueChange @currency
+                        </div>
+                    }
+                    
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        PostingDate
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        @BankAccountEntry.PostingDate.ToString("yyyy-MM-dd")
+                    </div>
+                </div>
+            </div>
+        </div>
+    </TitleContent>
 
-<tr>
-    <td>@BankAccountEntry.Value @currency</td>
-    @if (BankAccountEntry.ValueChange > 0)
-    {
-        <td class="text-success">@BankAccountEntry.ValueChange @currency</td>
-    }
-    else
-    {
-        <td class="text-danger">@BankAccountEntry.ValueChange @currency</td>
-    }
-    <td>@BankAccountEntry.PostingDate.ToString("yyyy-MM-dd")</td>
-    <td>
-        <MudIconButton Icon="@Icons.Material.Filled.EditNote" Class="p-0" />
-        <MudIconButton Icon="@Icons.Material.Filled.EditNote" Class="p-0" />
-    </td>
-</tr>
+    <ChildContent>
+        <div class="row">
+            <div class="col-12 my-4">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="row text-muted">
+                            <div style="font-size:0.8rem !important">
+                                ExpenseType
+                            </div>
+                        </div>
+                        <div class="row mb-1">
+                            <div>
+                                @BankAccountEntry.ExpenseType
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="row text-muted">
+                            <div style="font-size:0.8rem !important">
+                                PostingDate
+                            </div>
+                        </div>
+                        <div class="row mb-1">
+                            <div>
+                                @BankAccountEntry.PostingDate
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="row text-muted">
+                            <div style="font-size:0.8rem !important">
+                                Description
+                            </div>
+                        </div>
+                        <div class="row mb-1">
+                            <div>
+                                @BankAccountEntry.Description
+                            </div>
+                        </div>
+                    </div>
+
+                    <MudButton Class="col-6" Variant="Variant.Text" Disabled>Edit</MudButton>
+                    <MudButton Class="col-6" Variant="Variant.Text" Color="Color.Error" Disabled>Remove</MudButton>
+                </div>
+            </div>
+        </div>
+    </ChildContent>
+</MudExpansionPanel>
 
 @code {
+    bool _expanded = false;
+
+    private void OnExpandCollapseClick()
+    {
+        _expanded = !_expanded;
+    }
 
     internal string currency = "PLN";
 
