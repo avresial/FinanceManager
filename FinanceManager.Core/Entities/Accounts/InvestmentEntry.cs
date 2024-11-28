@@ -4,7 +4,7 @@ namespace FinanceManager.Core.Entities.Accounts
 {
     public class FinancialEntryBase
     {
-        public int Id { get; set; }
+        public int Id { get; internal set; }
         public DateTime PostingDate { get; internal set; }
         public decimal Value { get; set; }
         public decimal ValueChange { get; internal set; }
@@ -15,6 +15,14 @@ namespace FinanceManager.Core.Entities.Accounts
             Value = value;
             ValueChange = valueChange;
         }
+
+        public virtual void Update(FinancialEntryBase financialEntryBase)
+        {
+            PostingDate = financialEntryBase.PostingDate;
+            Value = financialEntryBase.Value;
+            ValueChange = financialEntryBase.ValueChange;
+        }
+
 
     }
 

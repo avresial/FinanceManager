@@ -31,6 +31,7 @@ namespace FinanceManager.Core.Entities.Accounts
             return Entries.Where(x => x.PostingDate >= start && x.PostingDate <= end);
         }
 
+
         public virtual void Add(T entry, bool recalculateValues = true)
         {
             Entries ??= new List<T>();
@@ -53,12 +54,35 @@ namespace FinanceManager.Core.Entities.Accounts
             }
         }
 
-
-
         public virtual void Add(IEnumerable<T> entries, bool recalculateValues = true)
         {
             foreach (var entry in entries)
                 Add(entry, recalculateValues);
+        }
+
+        public virtual void Update(T entry, bool recalculateValues = true)
+        {
+            Entries ??= new List<T>();
+
+            var previousEntry = Entries.FirstOrDefault(x => x.Id == entry.Id);
+            if (previousEntry is null) return;
+
+            previousEntry.Update(entry);
+
+            var index = Entries.IndexOf(previousEntry);
+            if (index < 0)
+            {
+                if (Entries is not null)
+                    Entries.Add(entry);
+            }
+            else
+            {
+                if (Entries is not null)
+                    Entries.Insert(index, entry);
+
+                if (recalculateValues)
+                    RecalculateEntryValues(index);
+            }
         }
 
         public IEnumerable<T> GetDaily()

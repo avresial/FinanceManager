@@ -49,5 +49,15 @@ namespace FinanceManager.Application.Services
         {
             _bankAccountRepository.AddFinancialEntry<T>(bankAccount, accountName);
         }
+
+        public void UpdateFinancialEntry<T>(T accountEntry, string accountName) where T : FinancialEntryBase
+        {
+            throw new NotImplementedException();
+        }
+
+        public void RemoveFinancialEntry<T>(int accountEntryId, string accountName) where T : FinancialEntryBase
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -9,10 +9,12 @@ namespace FinanceManager.Core.Repositories
         public T? GetAccount<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialAccountBase;
         public List<T>? GetEntries<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialEntryBase;
 
-        public void AddFinancialAccount<T>(T bankAccount) where T : FinancialAccountBase;
-        public void AddFinancialAccount<AccountType, EntryType>(string name, List<EntryType> data) where AccountType : FinancialAccountBase where EntryType : FinancialEntryBase;
-        public void AddFinancialEntry<T>(T bankAccountEntry, string accountName) where T : FinancialEntryBase;
+        public void AddFinancialAccount<T>(T account) where T : FinancialAccountBase;
+        public void AddFinancialAccount<AccountType, EntryType>(string accountName, List<EntryType> data) where AccountType : FinancialAccountBase where EntryType : FinancialEntryBase;
+        public void AddFinancialEntry<T>(T accountEntry, string accountName) where T : FinancialEntryBase;
+        public void UpdateFinancialEntry<T>(T accountEntry, string accountName) where T : FinancialEntryBase;
+        public void RemoveFinancialEntry<T>(int accountEntryId, string accountName) where T : FinancialEntryBase;
 
-        public bool AccountExists(string name);
+        public bool AccountExists(string accountName);
     }
 }

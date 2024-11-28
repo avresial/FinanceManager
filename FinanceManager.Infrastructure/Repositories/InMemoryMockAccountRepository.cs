@@ -62,7 +62,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
             return default;
         }
-        public List<T>? GetEntries<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialEntryBase
+        public List<T>? GetEntries<T>(string accountName, DateTime dateStart, DateTime dateEnd) where T : FinancialEntryBase
         {
             return null;
         }
@@ -239,9 +239,19 @@ namespace FinanceManager.Infrastructure.Repositories
             return (decimal)(random.Next(-100, 100) + Math.Round(random.NextDouble(), 2));
         }
 
-        public void AddFinancialAccount<AccountType, EntryType>(string name, List<EntryType> data)
+        public void AddFinancialAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
             where AccountType : FinancialAccountBase
             where EntryType : FinancialEntryBase
+        {
+            throw new NotImplementedException();
+        }
+
+        public void UpdateFinancialEntry<T>(T accountEntry, string accountName) where T : FinancialEntryBase
+        {
+            throw new NotImplementedException();
+        }
+
+        public void RemoveFinancialEntry<T>(int accountEntryId, string accountName) where T : FinancialEntryBase
         {
             throw new NotImplementedException();
         }
