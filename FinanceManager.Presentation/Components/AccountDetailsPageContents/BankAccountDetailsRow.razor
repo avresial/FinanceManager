@@ -33,7 +33,7 @@
                             @BankAccountEntry.ValueChange @currency
                         </div>
                     }
-                    
+
                 </div>
             </div>
             <div class="col-4">
@@ -93,7 +93,7 @@
                         </div>
                     </div>
 
-                    <MudButton Class="col-6" Variant="Variant.Text" Disabled>Edit</MudButton>
+                    <MudButton Class="col-6" Variant="Variant.Text"  OnClick=ShowOverlay>Edit</MudButton>
                     <MudButton Class="col-6" Variant="Variant.Text" Color="Color.Error" Disabled>Remove</MudButton>
                 </div>
             </div>
@@ -101,15 +101,32 @@
     </ChildContent>
 </MudExpansionPanel>
 
+<MudOverlay Visible="@UpdateEntryVisibility" DarkBackground="true">
+    <MudPaper Class="p-5">
+        <UpdateBankEntry BankAccount=BankAccount BankAccountEntry="BankAccountEntry" ActionCompleted="HideOverlay" />
+    </MudPaper>
+</MudOverlay>
 @code {
     bool _expanded = false;
-
+    public async Task HideOverlay()
+    {
+        UpdateEntryVisibility = false;
+        StateHasChanged();
+    }
+    public async Task ShowOverlay()
+    {
+        UpdateEntryVisibility = true;
+        StateHasChanged();
+    }
+    private bool UpdateEntryVisibility;
     private void OnExpandCollapseClick()
     {
         _expanded = !_expanded;
     }
 
     internal string currency = "PLN";
+    [Parameter]
+    public required BankAccount BankAccount { get; set; }
 
     [Parameter]
     public required BankAccountEntry BankAccountEntry { get; set; }

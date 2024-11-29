@@ -5,49 +5,52 @@
 @using FinanceManager.Presentation.CustomValidationAttributes
 @inject ISettingsService settingsService
 
-<MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
-    <MudContainer MaxWidth="MaxWidth.Medium">
-        <MudGrid Justify="Justify.Center">
-            <MudItem xs="12" sm="12" md="12">
-                <MudText Typo="Typo.h4">Add new entry</MudText>
-                <MudText Typo="Typo.subtitle1">@BankAccount.Name</MudText>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTimePicker Label="Time" @bind-Time="Time" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudDatePicker Label="Posting date" @bind-Date="PostingDate" Validation="@(new NotInFutureAttribute())" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text" SearchFunc="Search" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField @bind-Value="Description" T="string" Label="Description" Variant="Variant.Text" MaxLines="5" AutoGrow="true" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update</MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel Class="mx-2">Cancel</MudButton>
-            </MudItem>
-        </MudGrid>
-    </MudContainer>
-</MudForm>
+@if (BankAccountEntry is not null && BankAccount is not null)
+{
+    <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+        <MudContainer MaxWidth="MaxWidth.Medium">
+            <MudGrid Justify="Justify.Center">
+                <MudItem xs="12" sm="12" md="12">
+                    <MudText Typo="Typo.h4">Update</MudText>
+                    <MudText Typo="Typo.subtitle1">@BankAccount.Name</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTimePicker Label="Time" @bind-Time="Time" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Posting date" @bind-Date="PostingDate" Validation="@(new NotInFutureAttribute())" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text" SearchFunc="Search" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Description" T="string" Label="Description" Variant="Variant.Text" MaxLines="5" AutoGrow="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel Class="mx-2">Cancel</MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudContainer>
+    </MudForm>
+}
 
 @code {
-    private string? _currency;
+    private string _currency = string.Empty;
     private bool success;
     private string[] errors = { };
-    private MudForm? form;
+    private MudForm form;
 
     private List<string> ExpenseTypes = Enum.GetValues(typeof(ExpenseType)).Cast<ExpenseType>().Select(x => x.ToString()).ToList();
 
-    private TimeSpan? Time;
-    private DateTime? PostingDate;
-    private string? ExpenseType { get; set; }
-    private string? Description { get; set; }
-    private decimal? BalanceChange { get; set; } = null;
+    private TimeSpan? Time = new TimeSpan(01, 00, 00);
+    private DateTime? PostingDate = DateTime.Today;
+    private string? ExpenseType { get; set; } = FinanceManager.Core.Enums.ExpenseType.Other.ToString();
+    private string? Description { get; set; } = string.Empty;
+    private decimal? BalanceChange { get; set; } = 0;
 
     [Parameter]
     public Func<Task>? ActionCompleted { get; set; }

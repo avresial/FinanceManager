@@ -24,17 +24,17 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents
         public BankAccount? Account { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
 
-        private bool visible;
+        private bool AddEntryVisibility;
 
         public async Task ShowOverlay()
         {
-            visible = true;
+            AddEntryVisibility = true;
             StateHasChanged();
         }
 
         public async Task HideOverlay()
         {
-            visible = false;
+            AddEntryVisibility = false;
             UpdateInfo();
             if (chart is not null)
                 await chart.RenderAsync();

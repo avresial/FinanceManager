@@ -32,7 +32,7 @@
                     <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick=ShowOverlay
                             Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:1000;" />
 
-                    <MudOverlay Visible="@visible" DarkBackground="true">
+                    <MudOverlay Visible="@AddEntryVisibility" DarkBackground="true">
                         <MudPaper Class="p-5">
                             <AddBankEntry BankAccount=Account ActionCompleted="HideOverlay" />
                         </MudPaper>
@@ -44,7 +44,7 @@
                     <MudExpansionPanels Elevation="0" MultiExpansion>
                         @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
                         {
-                            <BankAccountDetailsRow BankAccountEntry="@entry" />
+                            <BankAccountDetailsRow BankAccountEntry="@entry" BankAccount=Account />
                         }
                     </MudExpansionPanels>
                 </div>
