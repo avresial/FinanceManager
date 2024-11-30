@@ -157,7 +157,12 @@ namespace FinanceManager.Infrastructure.Repositories
             var bankAccount = FindAccount<InvestmentAccount>(name);
             if (bankAccount is null) return;
 
-            bankAccount.Add(new InvestmentEntry(postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, -1, balanceChange, ticker, investmentType)
+            var id = 0;
+            var currentMaxId = bankAccount.GetMaxId();
+            if (currentMaxId is not null)
+                id += currentMaxId.Value + 1;
+
+            bankAccount.Add(new InvestmentEntry(id, postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, -1, balanceChange, ticker, investmentType)
             {
                 Ticker = ticker,
             });
@@ -210,9 +215,9 @@ namespace FinanceManager.Infrastructure.Repositories
                 startDay = startDay.AddDays(1);
             }
         }
-        private void AddBankAccountEntry(string name, decimal balanceChange, string senderName, ExpenseType expenseType, DateTime? postingDate = null)
+        private void AddBankAccountEntry(string accountName, decimal balanceChange, string senderName, ExpenseType expenseType, DateTime? postingDate = null)
         {
-            var bankAccount = FindAccount<BankAccount>(name);
+            var bankAccount = FindAccount<BankAccount>(accountName);
             if (bankAccount is null) return;
 
             decimal balance = balanceChange;
@@ -221,13 +226,45 @@ namespace FinanceManager.Infrastructure.Repositories
             if (bankAccount.Entries is not null && bankAccount.Entries.Any())
                 balance += previousEntry.Value;
 
-            BankAccountEntry bankAccountEntry = new BankAccountEntry(postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, balance, balanceChange)
+            var id = 0;
+            var currentMaxId = bankAccount.GetMaxId();
+            if (currentMaxId is not null)
+                id += currentMaxId.Value + 1;
+
+            BankAccountEntry bankAccountEntry = new BankAccountEntry(id, postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, balance, balanceChange)
             {
                 Description = senderName,
                 ExpenseType = expenseType,
             };
 
             bankAccount.Add(bankAccountEntry);
+        }
+        public void UpdateFinancialEntry<T>(T accountEntry, string accountName) where T : FinancialEntryBase
+        {
+            if (accountEntry is BankAccountEntry bankEntry)
+                UpdateBankAccountEntry(accountName, bankEntry);
+            if (accountEntry is InvestmentEntry investmentEntry)
+                UpdateStockAccountEntry(accountName, investmentEntry.Ticker, investmentEntry.InvestmentType, investmentEntry.ValueChange, investmentEntry.PostingDate);
+        }
+
+        private void UpdateBankAccountEntry(string accountName, BankAccountEntry bankAccountEntry)
+        {
+            var bankAccount = FindAccount<BankAccount>(accountName);
+            if (bankAccount is null || bankAccount.Entries is null) return;
+
+            var entryToUpdate = bankAccount.Entries.FirstOrDefault(x => x.Id == bankAccountEntry.Id);
+            if (entryToUpdate is null) return;
+
+            entryToUpdate.Update(bankAccountEntry);
+        }
+        private void UpdateStockAccountEntry(string name, string ticker, InvestmentType investmentType, decimal balanceChange, DateTime? postingDate = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void RemoveFinancialEntry<T>(int accountEntryId, string accountName) where T : FinancialEntryBase
+        {
+            throw new NotImplementedException();
         }
         private ExpenseType GetRandomType()
         {
@@ -246,14 +283,6 @@ namespace FinanceManager.Infrastructure.Repositories
             throw new NotImplementedException();
         }
 
-        public void UpdateFinancialEntry<T>(T accountEntry, string accountName) where T : FinancialEntryBase
-        {
-            throw new NotImplementedException();
-        }
 
-        public void RemoveFinancialEntry<T>(int accountEntryId, string accountName) where T : FinancialEntryBase
-        {
-            throw new NotImplementedException();
-        }
     }
 }

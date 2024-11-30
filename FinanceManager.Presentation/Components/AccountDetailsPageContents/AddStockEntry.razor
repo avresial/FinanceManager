@@ -90,13 +90,13 @@
             if (textField is null || textField.Label is null) return;
             if (!textField.Label.ToLower().Contains("ticker")) return;
         }
-     
+
         if (args.Field is MudNumericField<decimal?> numericField)
         {
             if (numericField is null || numericField.Label is null) return;
             if (!numericField.Label.ToLower().Contains("change")) return;
         }
-        
+
         var pricePerUnit = await stockRepository.GetStockPrice(Ticker, PostingDate.Value);
         if (pricePerUnit is null) return;
 
@@ -137,7 +137,8 @@
         catch (Exception)
         {
         }
-        InvestmentEntry bankAccountEntry = new(date, -1, BalanceChange.Value, Ticker, investmentType);
+        int id = InvestmentAccount.Entries.Max(x => x.Id) + 1;
+        InvestmentEntry bankAccountEntry = new(id, date, -1, BalanceChange.Value, Ticker, investmentType);
         try
         {
             InvestmentAccount.Add(bankAccountEntry);

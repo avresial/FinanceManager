@@ -14,9 +14,9 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         public void AddData_AddsNotOrderedData()
         {
             // Arrange
-            FinancialAccount.Add(new FinancialEntryBase(new DateTime(2000, 1, 29), 20, 10));
-            FinancialAccount.Add(new FinancialEntryBase(new DateTime(2000, 1, 30), 30, 10));
-            FinancialAccount.Add(new FinancialEntryBase(new DateTime(2000, 1, 28), 10, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, new DateTime(2000, 1, 29), 20, 10));
+            FinancialAccount.Add(new FinancialEntryBase(2, new DateTime(2000, 1, 30), 30, 10));
+            FinancialAccount.Add(new FinancialEntryBase(3, new DateTime(2000, 1, 28), 10, 10));
 
             // Act
 

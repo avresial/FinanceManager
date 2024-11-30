@@ -23,19 +23,19 @@ namespace FinanceManager.UnitTests
         {
 
             BankAccount bankAccount1 = new BankAccount("testBank1", AccountType.Cash);
-            bankAccount1.Add(new BankAccountEntry(startDate, 10, 10));
-            bankAccount1.Add(new BankAccountEntry(startDate.AddDays(1), 20, 10));
+            bankAccount1.Add(new BankAccountEntry(1, startDate, 10, 10));
+            bankAccount1.Add(new BankAccountEntry(2, startDate.AddDays(1), 20, 10));
 
             BankAccount bankAccount2 = new BankAccount("testBank2", AccountType.Cash);
-            bankAccount2.Add(new BankAccountEntry(endDate, 10, 10));
+            bankAccount2.Add(new BankAccountEntry(1, endDate, 10, 10));
 
             _bankAccounts = new List<BankAccount>() { bankAccount1, bankAccount2 };
             _financalAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(startDate, endDate))
                                             .Returns(_bankAccounts);
 
             InvestmentAccount investmentAccount1 = new InvestmentAccount("testInvestmentAccount1");
-            investmentAccount1.Add(new InvestmentEntry(startDate, 10, 10, "testStock1", InvestmentType.Stock));
-            investmentAccount1.Add(new InvestmentEntry(endDate, 10, 10, "testStock2", InvestmentType.Stock));
+            investmentAccount1.Add(new InvestmentEntry(1, startDate, 10, 10, "testStock1", InvestmentType.Stock));
+            investmentAccount1.Add(new InvestmentEntry(2, endDate, 10, 10, "testStock2", InvestmentType.Stock));
 
             _investmentAccountAccounts = new List<InvestmentAccount>() { investmentAccount1 };
             _financalAccountRepositoryMock.Setup(x => x.GetAccounts<InvestmentAccount>(startDate, endDate))

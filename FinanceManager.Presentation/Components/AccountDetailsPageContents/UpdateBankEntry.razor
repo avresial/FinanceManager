@@ -93,7 +93,8 @@
         catch (Exception)
         {
         }
-        BankAccountEntry bankAccountEntry = new(date, -1, BalanceChange.Value)
+
+        BankAccountEntry bankAccountEntry = new(BankAccountEntry.Id, date, -1, BalanceChange.Value)
             {
                 Description = Description,
                 ExpenseType = expenseType
@@ -101,7 +102,7 @@
         try
         {
             BankAccount.Update(bankAccountEntry);
-            BankAccountRepository.AddFinancialEntry(bankAccountEntry, BankAccount.Name);
+            BankAccountRepository.UpdateFinancialEntry(bankAccountEntry, BankAccount.Name);
         }
         catch (Exception ex)
         {

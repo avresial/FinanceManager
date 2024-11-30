@@ -15,6 +15,7 @@ namespace FinanceManager.Core.Entities.Accounts
         {
 
         }
+
         //	public List<FixedAssetEntry>? Entries { get; private set; }
     }
 

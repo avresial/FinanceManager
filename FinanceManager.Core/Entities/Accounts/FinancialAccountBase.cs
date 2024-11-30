@@ -64,27 +64,23 @@ namespace FinanceManager.Core.Entities.Accounts
         {
             Entries ??= new List<T>();
 
-            var previousEntry = Entries.FirstOrDefault(x => x.Id == entry.Id);
-            if (previousEntry is null) return;
+            var entryToUpdate = Entries.FirstOrDefault(x => x.Id == entry.Id);
+            if (entryToUpdate is null) return;
 
-            previousEntry.Update(entry);
+            entryToUpdate.Update(entry);
 
-            var index = Entries.IndexOf(previousEntry);
-            if (index < 0)
-            {
-                if (Entries is not null)
-                    Entries.Add(entry);
-            }
-            else
-            {
-                if (Entries is not null)
-                    Entries.Insert(index, entry);
+            var index = Entries.IndexOf(entryToUpdate);
 
-                if (recalculateValues)
-                    RecalculateEntryValues(index);
-            }
+            if (recalculateValues)
+                RecalculateEntryValues(index);
         }
+        public int? GetMaxId()
+        {
+            if (Entries is null || !Entries.Any())
+                return null;
 
+            return Entries.Max(x => x.Id);
+        }
         public IEnumerable<T> GetDaily()
         {
             throw new NotImplementedException();

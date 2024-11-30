@@ -37,14 +37,15 @@ namespace FinanceManager.Core.Extensions
             while (stepDate <= endDate)
             {
                 var entriesForStepMonth = orderedEntries.Where(x => x.PostingDate.Year == stepDate.Year && x.PostingDate.Month == stepDate.Month);
-
                 if (entriesForStepMonth is null || !entriesForStepMonth.Any())
                 {
                     stepDate = stepDate.AddMonths(1);
                     continue;
                 }
 
-                FinancialEntryBase bankAccountEntry = new FinancialEntryBase(stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2), Math.Round(entriesForStepMonth.Sum(x => x.ValueChange), 2));
+                int id = entriesForStepMonth.Last().Id;
+
+                FinancialEntryBase bankAccountEntry = new FinancialEntryBase(id, stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2), Math.Round(entriesForStepMonth.Sum(x => x.ValueChange), 2));
 
                 result.Add(bankAccountEntry);
                 stepDate = stepDate.AddMonths(1);
@@ -72,7 +73,8 @@ namespace FinanceManager.Core.Extensions
                     stepDate = stepDate.AddDays(7);
                     continue;
                 }
-                FinancialEntryBase bankAccountEntry = new FinancialEntryBase(stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2), Math.Round(entriesForStepMonth.Sum(x => x.ValueChange), 2));
+                int id = entriesForStepMonth.Last().Id;
+                FinancialEntryBase bankAccountEntry = new FinancialEntryBase(id, stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2), Math.Round(entriesForStepMonth.Sum(x => x.ValueChange), 2));
 
                 result.Add(bankAccountEntry);
                 stepDate = stepDate.AddDays(7);

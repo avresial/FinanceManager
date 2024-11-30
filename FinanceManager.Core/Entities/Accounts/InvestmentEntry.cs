@@ -9,8 +9,9 @@ namespace FinanceManager.Core.Entities.Accounts
         public decimal Value { get; set; }
         public decimal ValueChange { get; internal set; }
 
-        public FinancialEntryBase(DateTime postingDate, decimal value, decimal valueChange)
+        public FinancialEntryBase(int id, DateTime postingDate, decimal value, decimal valueChange)
         {
+            Id = id;
             PostingDate = postingDate;
             Value = value;
             ValueChange = valueChange;
@@ -19,7 +20,10 @@ namespace FinanceManager.Core.Entities.Accounts
         public virtual void Update(FinancialEntryBase financialEntryBase)
         {
             PostingDate = financialEntryBase.PostingDate;
-            Value = financialEntryBase.Value;
+
+            var valueChangeChange = financialEntryBase.ValueChange - ValueChange;
+            Value += valueChangeChange;
+
             ValueChange = financialEntryBase.ValueChange;
         }
 
@@ -30,7 +34,8 @@ namespace FinanceManager.Core.Entities.Accounts
     {
         public string Ticker { get; set; }
         public InvestmentType InvestmentType { get; set; }
-        public InvestmentEntry(DateTime postingDate, decimal value, decimal valueChange, string ticker, InvestmentType investmentType) : base(postingDate, value, valueChange)
+        public InvestmentEntry(int id, DateTime postingDate, decimal value, decimal valueChange, string ticker, InvestmentType investmentType)
+            : base(id, postingDate, value, valueChange)
         {
             Ticker = ticker;
             InvestmentType = investmentType;
@@ -42,7 +47,8 @@ namespace FinanceManager.Core.Entities.Accounts
         public string Name { get; set; }
         public string Currency { get; set; }
 
-        public FixedAssetEntry(DateTime postingDate, decimal value, decimal valueChange, string name, string currency) : base(postingDate, value, valueChange)
+        public FixedAssetEntry(int id, DateTime postingDate, decimal value, decimal valueChange, string name, string currency)
+            : base(id, postingDate, value, valueChange)
         {
             Name = name;
             Currency = currency;
@@ -54,7 +60,7 @@ namespace FinanceManager.Core.Entities.Accounts
         public string Description { get; set; }
         public ExpenseType ExpenseType { get; set; } = ExpenseType.Other;
 
-        public BankAccountEntry(DateTime postingDate, decimal value, decimal valueChange) : base(postingDate, value, valueChange)
+        public BankAccountEntry(int id, DateTime postingDate, decimal value, decimal valueChange) : base(id, postingDate, value, valueChange)
         {
         }
     }
