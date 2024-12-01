@@ -38,20 +38,17 @@ namespace FinanceManager.Core.Entities.Accounts
 
             var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();
 
-            var index = Entries.IndexOf(previousEntry);
-            if (index < 0)
-            {
-                if (Entries is not null)
-                    Entries.Add(entry);
-            }
-            else
-            {
-                if (Entries is not null)
-                    Entries.Insert(index, entry);
+            if (Entries is null) return;
 
-                if (recalculateValues)
-                    RecalculateEntryValues(index);
-            }
+            var index = Entries.IndexOf(previousEntry);
+
+            if (index < 0)
+                Entries.Add(entry);
+            else
+                Entries.Insert(index, entry);
+
+            if (recalculateValues)
+                RecalculateEntryValues(index);
         }
 
         public virtual void Add(IEnumerable<T> entries, bool recalculateValues = true)
@@ -68,8 +65,13 @@ namespace FinanceManager.Core.Entities.Accounts
             if (entryToUpdate is null) return;
 
             entryToUpdate.Update(entry);
-
+            Entries.Remove(entryToUpdate);
             var index = Entries.IndexOf(entryToUpdate);
+
+            if (index < 0)
+                Entries.Add(entry);
+            else
+                Entries.Insert(index, entry);
 
             if (recalculateValues)
                 RecalculateEntryValues(index);
