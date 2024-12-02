@@ -1,0 +1,175 @@
+﻿@using FinanceManager.Core.Entities.Accounts
+@using System.ComponentModel.DataAnnotations
+@using FinanceManager.Core.Enums
+@using FinanceManager.Core.Repositories
+@using FinanceManager.Presentation.CustomValidationAttributes
+@using Microsoft.AspNetCore.Components.Forms
+@using MudBlazor.Utilities
+@using static MudBlazor.CategoryTypes
+@inject ISettingsService settingsService
+@inject IStockRepository stockRepository
+
+<MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors" FieldChanged=OnFieldChanged>
+    <MudContainer MaxWidth="MaxWidth.Medium" onchange="">
+        <MudGrid Justify="Justify.Center">
+            <MudItem xs="12" sm="12" md="12">
+                <MudText Typo="Typo.h4">Update entry</MudText>
+                <MudText Typo="Typo.subtitle1">@InvestmentAccount.Name</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTimePicker Label="Time" @bind-Time="Time" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker Label="Posting date" @bind-Date="PostingDate" Validation="@(new NotInFutureAttribute())" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="Ticker" T="string" Label="Ticker" Variant="Variant.Text" MaxLines="5" AutoGrow="true" Immediate />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField ReadOnly HideSpinButtons="true" @bind-Value="PricePerUnit" Label="Price per unit" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange"
+                                 Label="Balance change" Variant="Variant.Text" Immediate/>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text"
+                                 SearchFunc="Search" />
+            </MudItem>
+            @*   <MudItem xs="12" sm="6">
+            <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="Balance" Label="Balance" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
+            </MudItem> *@
+        
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Add</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel Class="mx-2">Cancel</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+</MudForm>
+
+@code {
+
+    string _currency = "";
+    bool success;
+    string[] errors = { };
+    MudTextField<string> pwField1;
+    private MudForm form;
+
+    List<string> InvestmentType = Enum.GetValues(typeof(InvestmentType)).Cast<InvestmentType>().Select(x => x.ToString()).ToList();
+
+    [Required]
+    private DateTime? PostingDate = DateTime.Today;
+    private TimeSpan? Time = new TimeSpan(01, 00, 00);
+    public string ExpenseType { get; set; } = FinanceManager.Core.Enums.InvestmentType.Stock.ToString();
+    public string Ticker { get; set; } = string.Empty;
+    public decimal? BalanceChange;
+    public decimal? PricePerUnit { get; set; } = null;
+
+    [Parameter]
+    public Func<Task>? ActionCompleted { get; set; }
+
+    [Parameter]
+    public required InvestmentAccount InvestmentAccount { get; set; }
+
+    [Parameter]
+    public required InvestmentEntry InvestmentEntry { get; set; }
+
+    [Inject]
+    public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+
+    protected async Task OnFieldChanged(FormFieldChangedEventArgs args)
+    {
+        if (string.IsNullOrEmpty(Ticker)) return;
+        if (!PostingDate.HasValue) return;
+        if (args.Field is MudTextField<decimal?> textField) 
+        {
+            if (textField is null || textField.Label is null) return;
+            if (!textField.Label.ToLower().Contains("ticker")) return;
+        }
+
+        if (args.Field is MudNumericField<decimal?> numericField)
+        {
+            if (numericField is null || numericField.Label is null) return;
+            if (!numericField.Label.ToLower().Contains("change")) return;
+        }
+
+        var pricePerUnit = await stockRepository.GetStockPrice(Ticker, PostingDate.Value);
+        if (pricePerUnit is null) return;
+
+        PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;
+    }
+    protected override Task OnParametersSetAsync()
+    {
+        _currency = settingsService.GetCurrency();
+        Time = new TimeSpan(InvestmentEntry.PostingDate.Hour, InvestmentEntry.PostingDate.Minute, InvestmentEntry.PostingDate.Second);
+        ExpenseType = InvestmentEntry.InvestmentType.ToString();
+        Ticker = InvestmentEntry.Ticker;
+        BalanceChange = InvestmentEntry.ValueChange;
+
+        return base.OnParametersSetAsync();
+    }
+
+    public async Task RecalculatePrice()
+    {
+        if (!PricePerUnit.HasValue)
+        {
+            PricePerUnit = 0;
+        }
+        else
+        {
+            PricePerUnit += 1;
+        }
+
+    }
+    public async Task Update()
+    {
+        await form.Validate();
+        if (!form.IsValid) return;
+        if (!BalanceChange.HasValue) return;
+        if (!PostingDate.HasValue) return;
+        if (!Time.HasValue) return;
+
+        DateTime date = new DateTime(PostingDate.Value.Year, PostingDate.Value.Month, PostingDate.Value.Day, Time.Value.Hours, Time.Value.Minutes, Time.Value.Seconds);
+        InvestmentType investmentType = FinanceManager.Core.Enums.InvestmentType.Stock;
+        try
+        {
+            investmentType = (InvestmentType)Enum.Parse(typeof(InvestmentType), ExpenseType);
+        }
+        catch (Exception)
+        {
+        }
+
+        InvestmentEntry bankAccountEntry = new(InvestmentEntry.Id, date, -1, BalanceChange.Value, Ticker, investmentType);
+        
+        try
+        {
+            InvestmentAccount.Update(bankAccountEntry);
+            FinancalAccountRepository.UpdateFinancialEntry(bankAccountEntry, InvestmentAccount.Name);
+        }
+        catch (Exception ex)
+        {
+            errors = [ex.ToString()];
+        }
+
+        if (ActionCompleted is not null)
+            await ActionCompleted();
+    }
+
+    public async Task Cancel()
+    {
+        if (ActionCompleted is not null)
+            await ActionCompleted();
+    }
+    private async Task<IEnumerable<string>> Search(string value, CancellationToken token)
+    {
+        // In real life use an asynchronous function for fetching data from an api.
+        await Task.Delay(5, token);
+
+        // if text is null or empty, show complete list
+        if (string.IsNullOrEmpty(value))
+            return InvestmentType;
+
+        return InvestmentType.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+}
