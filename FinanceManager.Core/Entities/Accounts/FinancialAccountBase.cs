@@ -76,6 +76,13 @@ namespace FinanceManager.Core.Entities.Accounts
             if (recalculateValues)
                 RecalculateEntryValues(index);
         }
+
+        public virtual void Remove(int id)
+        {
+            if (Entries is null) return;
+
+            Entries.RemoveAll(x => x.Id == id);
+        }
         public int? GetMaxId()
         {
             if (Entries is null || !Entries.Any())

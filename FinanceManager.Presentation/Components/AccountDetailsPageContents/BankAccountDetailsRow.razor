@@ -93,17 +93,24 @@
                         </div>
                     </div>
 
-                    <MudButton Class="col-6" Variant="Variant.Text"  OnClick=ShowOverlay>Edit</MudButton>
-                    <MudButton Class="col-6" Variant="Variant.Text" Color="Color.Error" Disabled>Remove</MudButton>
+                    <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
+                    <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove</MudButton>
                 </div>
             </div>
         </div>
     </ChildContent>
 </MudExpansionPanel>
 
-<MudOverlay Visible="@UpdateEntryVisibility" DarkBackground="true">
+<MudOverlay Visible="@(UpdateEntryVisibility||RemoveEntryVisibility)" DarkBackground="true">
     <MudPaper Class="p-5">
-        <UpdateBankEntry BankAccount=BankAccount BankAccountEntry="BankAccountEntry" ActionCompleted="HideOverlay" />
+        @if (UpdateEntryVisibility)
+        {
+            <UpdateBankEntry BankAccount=BankAccount BankAccountEntry="BankAccountEntry" ActionCompleted="HideOverlay" />
+        }
+        else if (RemoveEntryVisibility)
+        {
+            <RemoveBankEntry BankAccount=BankAccount BankAccountEntry="BankAccountEntry" ActionCompleted="HideOverlay" />
+        }
     </MudPaper>
 </MudOverlay>
 @code {
@@ -111,13 +118,21 @@
     public async Task HideOverlay()
     {
         UpdateEntryVisibility = false;
+        RemoveEntryVisibility = false;
         StateHasChanged();
     }
-    public async Task ShowOverlay()
+    public async Task ShowEditOverlay()
     {
         UpdateEntryVisibility = true;
         StateHasChanged();
     }
+    public async Task ShowRemoveOverlay()
+    {
+        RemoveEntryVisibility = true;
+        StateHasChanged();
+    }
+
+    private bool RemoveEntryVisibility;
     private bool UpdateEntryVisibility;
     private void OnExpandCollapseClick()
     {

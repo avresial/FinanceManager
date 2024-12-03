@@ -55,7 +55,7 @@ namespace FinanceManager.Application.Services
             throw new NotImplementedException();
         }
 
-        public void RemoveFinancialEntry<T>(int accountEntryId, string accountName) where T : FinancialEntryBase
+        public void RemoveFinancialEntry(int accountEntryId, string accountName)
         {
             throw new NotImplementedException();
         }

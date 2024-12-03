@@ -10,7 +10,7 @@ namespace FinanceManager.Infrastructure.Repositories
     {
         private readonly Random random = new Random();
         private readonly ServiceContainer _bankAccounts = new ServiceContainer();
-        Dictionary<string, Type> nameTypeDictionary = new Dictionary<string, Type>();
+        private Dictionary<string, Type> nameTypeDictionary = new Dictionary<string, Type>();
 
         public InMemoryMockAccountRepository()
         {
@@ -93,7 +93,31 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             return nameTypeDictionary;
         }
+        private object? FindAccount(string name)
+        {
+            if (_bankAccounts is null) return null;
+            if (!nameTypeDictionary.ContainsKey(name)) return null;
 
+            Type accountType = nameTypeDictionary[name];
+
+            if (accountType == typeof(BankAccount))
+            {
+                var bankAccounts = _bankAccounts.GetService(typeof(List<BankAccount>)) as List<BankAccount>;
+                if (bankAccounts is null) return null;
+
+                return bankAccounts.FirstOrDefault(x => x.Name == name);
+            }
+
+            if (accountType == typeof(InvestmentAccount))
+            {
+                var investmentAccounts = _bankAccounts.GetService(typeof(List<InvestmentAccount>)) as List<InvestmentAccount>;
+                if (investmentAccounts is null) return null;
+
+                return investmentAccounts.FirstOrDefault(x => x.Name == name);
+            }
+
+            return null;
+        }
         private T? FindAccount<T>(string name) where T : FinancialAccountBase
         {
             List<T> accountsOfType = _bankAccounts.GetService(typeof(List<T>)) as List<T>;
@@ -262,9 +286,20 @@ namespace FinanceManager.Infrastructure.Repositories
             throw new NotImplementedException();
         }
 
-        public void RemoveFinancialEntry<T>(int accountEntryId, string accountName) where T : FinancialEntryBase
+        public void RemoveFinancialEntry(int accountEntryId, string accountName)
         {
-            throw new NotImplementedException();
+            var account = FindAccount(accountName);
+            if (account is null) return;
+
+            switch (account)
+            {
+                case BankAccount bankAccount:
+                    bankAccount.Remove(accountEntryId);
+                    break;
+                case InvestmentAccount investmentAccount:
+                    investmentAccount.Remove(accountEntryId);
+                    break;
+            }
         }
         private ExpenseType GetRandomType()
         {
