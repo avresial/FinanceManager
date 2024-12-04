@@ -29,18 +29,38 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         public void UpdateData_ChangeDate()
         {
             // Arrange
-            FinancialAccount.Add(new FinancialEntryBase(1, new DateTime(2000, 1, 29), 20, 10));
-            FinancialAccount.Add(new FinancialEntryBase(2, new DateTime(2000, 1, 30), 30, 10));
-            FinancialAccount.Add(new FinancialEntryBase(3, new DateTime(2000, 1, 28), 10, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, new DateTime(2000, 1, 29), 30, 10));
+            FinancialAccount.Add(new FinancialEntryBase(2, new DateTime(2000, 1, 30), 40, 10));
+            FinancialAccount.Add(new FinancialEntryBase(3, new DateTime(2000, 1, 28), 20, 10));
+            FinancialAccount.Add(new FinancialEntryBase(4, new DateTime(2000, 1, 26), 10, 10));
 
             // Act
             var entryToChange = FinancialAccount.Get(new DateTime(2000, 1, 30)).FirstOrDefault();
             FinancialEntryBase change = new FinancialEntryBase(entryToChange.Id, new DateTime(2000, 1, 27), entryToChange.Value, entryToChange.ValueChange);
-            FinancialAccount.Update(change);
+            FinancialAccount.Update(change, true);
 
             // Assert
-            Assert.Equal(20, FinancialAccount.Entries.First().Value);
-            Assert.Equal(30, FinancialAccount.Entries.Last().Value);
+            Assert.Equal(40, FinancialAccount.Entries.First().Value);
+            Assert.Equal(29, FinancialAccount.Entries.First().PostingDate.Day);
+            Assert.Equal(10, FinancialAccount.Entries.Last().Value);
+        }
+
+        [Fact]
+        public void RemoveData_RecalculatesValues()
+        {
+            // Arrange
+            FinancialAccount.Add(new FinancialEntryBase(1, new DateTime(2000, 1, 29), 40, 10));
+            FinancialAccount.Add(new FinancialEntryBase(2, new DateTime(2000, 1, 30), 50, 10));
+            FinancialAccount.Add(new FinancialEntryBase(3, new DateTime(2000, 1, 28), 30, 10));
+            FinancialAccount.Add(new FinancialEntryBase(4, new DateTime(2000, 1, 27), 20, 10));
+            FinancialAccount.Add(new FinancialEntryBase(5, new DateTime(2000, 1, 26), 10, 10));
+
+            // Act
+            FinancialAccount.Remove(3);
+
+            // Assert
+            Assert.Equal(50, FinancialAccount.Entries.First().Value);
+            Assert.Equal(10, FinancialAccount.Entries.Last().Value);
         }
     }
 }

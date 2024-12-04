@@ -66,13 +66,19 @@ namespace FinanceManager.Core.Entities.Accounts
 
             entryToUpdate.Update(entry);
             Entries.Remove(entryToUpdate);
-            var index = Entries.IndexOf(entryToUpdate);
+            var previousEntry = Entries.GetPrevious(entryToUpdate.PostingDate).FirstOrDefault();
 
-            if (index < 0)
-                Entries.Add(entry);
+            if (previousEntry is null)
+            {
+                Entries.Add(entryToUpdate);
+            }
             else
-                Entries.Insert(index, entry);
+            {
+                var newIndex = Entries.IndexOf(previousEntry);
+                Entries.Insert(newIndex, entryToUpdate);
+            }
 
+            var index = Entries.IndexOf(entryToUpdate);
             if (recalculateValues)
                 RecalculateEntryValues(index);
         }
@@ -122,7 +128,8 @@ namespace FinanceManager.Core.Entities.Accounts
             int startIndex = startingIndex.HasValue ? startingIndex.Value : Entries.Count() - 1;
             for (int i = startIndex; i >= 0; i--)
             {
-                if (Entries.Count() < i) continue;
+                if (Entries.Count() - 1 <= i) continue;
+
                 var newValue = Entries[i + 1].Value + Entries[i].ValueChange;
                 if (Entries[i].Value != newValue)
                 {
