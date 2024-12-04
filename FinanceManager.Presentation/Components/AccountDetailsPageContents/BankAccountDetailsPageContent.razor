@@ -44,7 +44,7 @@
                     <MudExpansionPanels Elevation="0" MultiExpansion>
                         @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
                         {
-                            <BankAccountDetailsRow BankAccountEntry="@entry" BankAccount=Account />
+                            <BankAccountDetailsRow BankAccountEntry="@entry" BankAccount=Account  />
                         }
                     </MudExpansionPanels>
                 </div>

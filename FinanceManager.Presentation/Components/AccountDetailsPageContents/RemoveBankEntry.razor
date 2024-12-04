@@ -7,7 +7,7 @@
         <MudGrid Justify="Justify.Center">
             <MudItem xs="12" sm="12" md="12">
                 <MudText Typo="Typo.h4">Update</MudText>
-                <MudText Typo="Typo.subtitle1">@BankAccount.Name</MudText>
+                <MudText Typo="Typo.subtitle1">@BankAccountName</MudText>
             </MudItem>
 
             <MudItem xs="12" sm="6">
@@ -37,19 +37,19 @@
     private string _currency = "PLN";
 
     [Parameter]
-    public Func<Task>? ActionCompleted { get; set; }
+    public required Func<Task> Confirm { get; set; }
 
     [Parameter]
-    public required BankAccount BankAccount { get; set; }
+    public required Func<Task> Cancel { get; set; }
+
+    [Parameter]
+    public required string BankAccountName { get; set; }
 
     [Parameter]
     public required BankAccountEntry BankAccountEntry { get; set; }
 
     [Inject]
     public required ISettingsService SettingsService { get; set; }
-
-    [Inject]
-    public required IFinancalAccountRepository BankAccountRepository { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -61,19 +61,4 @@
         base.OnParametersSet();
     }
 
-
-    public async Task Cancel()
-    {
-        if (ActionCompleted is not null)
-            await ActionCompleted();
-    }
-
-    public async Task Confirm()
-    {
-        BankAccount.Remove(BankAccountEntry.Id);
-        BankAccountRepository.RemoveFinancialEntry(BankAccountEntry.Id, BankAccount.Name);
-
-        if (ActionCompleted is not null)
-            await ActionCompleted();
-    }
 }
