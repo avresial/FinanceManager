@@ -128,7 +128,17 @@
 
     [Inject]
     public required IFinancalAccountRepository BankAccountRepository { get; set; }
+  
+    [Inject]
+    public required ISettingsService SettingsService { get; set; }
+    
+    protected override void OnParametersSet()
+    {
+        currency = SettingsService.GetCurrency();
 
+        base.OnParametersSet();
+    }
+    
     public async Task Confirm()
     {
         UpdateEntryVisibility = false;
@@ -147,13 +157,13 @@
         await InvokeAsync(StateHasChanged);
     }
 
-
     public async Task HideOverlay()
     {
         UpdateEntryVisibility = false;
         RemoveEntryVisibility = false;
         StateHasChanged();
     }
+
     public async Task ShowEditOverlay()
     {
         UpdateEntryVisibility = true;
