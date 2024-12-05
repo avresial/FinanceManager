@@ -3,19 +3,31 @@
 <MudExpansionPanel @bind-Expanded=_expanded>
     <TitleContent>
         <div class="row">
-            <div class="col-4">
+            <div class="col-3">
                 <div class="row text-muted mb-1">
                     <div style="font-size:0.8rem !important">
-                        Balance
+                        Ticker
                     </div>
                 </div>
                 <div class="row">
                     <div>
-                        @InvestmentEntry.Value @currency
+                        @InvestmentEntry.Ticker
                     </div>
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col-3">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        Value
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        @InvestmentEntry.Value
+                    </div>
+                </div>
+            </div>
+            <div class="col-3">
                 <div class="row text-muted mb-1">
                     <div style="font-size:0.8rem !important">
                         Change
@@ -25,19 +37,19 @@
                     @if (InvestmentEntry.ValueChange > 0)
                     {
                         <div class="text-success">
-                            @InvestmentEntry.ValueChange @currency
+                            @InvestmentEntry.ValueChange
                         </div>
                     }
                     else
                     {
                         <div class="text-danger">
-                            @InvestmentEntry.ValueChange @currency
+                            @InvestmentEntry.ValueChange
                         </div>
                     }
 
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col-3">
                 <div class="row text-muted mb-1">
                     <div style="font-size:0.8rem !important">
                         PostingDate
@@ -59,13 +71,6 @@
                     <div class="col-6">
                         <div class="row text-muted">
                             <div style="font-size:0.8rem !important">
-                                Type
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="row text-muted">
-                            <div style="font-size:0.8rem !important">
                                 Posting date
                             </div>
                         </div>
@@ -75,15 +80,8 @@
                             </div>
                         </div>
                     </div>
-
-                    <div class="col-12">
-                        <div class="row text-muted">
-                            <div style="font-size:0.8rem !important">
-                                Description
-                            </div>
-                        </div>
-                    </div>
-
+                </div>
+                <div class="row">
                     <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
                     <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove</MudButton>
                 </div>
