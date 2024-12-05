@@ -1,6 +1,8 @@
 ﻿@page "/AccountDetails/{AccountName}"
 @using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Presentation.Components.AccountDetailsPageContents
+@using FinanceManager.Presentation.Components.AccountDetailsPageContents.BankAccountComponents
+@using FinanceManager.Presentation.Components.AccountDetailsPageContents.StockAccountComponents
 
 <div class="container-fluid px-0">
     @if (ErrorMessage != string.Empty)

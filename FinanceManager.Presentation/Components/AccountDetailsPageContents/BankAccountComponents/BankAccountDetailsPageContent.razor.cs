@@ -7,11 +7,10 @@ using FinanceManager.Presentation.Helpers;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
-namespace FinanceManager.Presentation.Components.AccountDetailsPageContents
+namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.BankAccountComponents
 {
     public partial class BankAccountDetailsPageContent : ComponentBase
     {
-
         private decimal balanceChange = 100;
         private bool LoadedAllData = false;
         private DateTime dateStart;

@@ -39,7 +39,13 @@
             </div>
             <div class="col-xs-12 col-lg-7">
                 <div class="row">
+                    @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
+                    {
+                        <StockAccountDetailsRow InvestmentAccount=Account InvestmentEntry=entry />
+                    }
 
+                    @if (false)
+                    {
                     <table class="table">
                         <thead>
                             <tr>
@@ -54,6 +60,7 @@
 
                             @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
                             {
+                                <StockAccountDetailsRow />
                                 <tr>
                                     <td>@entry.Ticker </td>
                                     <td>@entry.Value</td>
@@ -77,6 +84,8 @@
                             }
                         </tbody>
                     </table>
+                    }
+
                 </div>
                 <div class="row" style="min-height:40px">
                     @if (!LoadedAllData)
