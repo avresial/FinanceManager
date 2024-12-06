@@ -92,8 +92,7 @@ namespace FinanceManager.Core.Entities.Accounts
             var index = Entries.IndexOf(entry);
 
             Entries.RemoveAt(index);
-            RecalculateEntryValues(index);
-
+            RecalculateEntryValues(index - 1);
         }
         public int? GetMaxId()
         {

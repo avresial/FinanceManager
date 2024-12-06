@@ -28,7 +28,7 @@
             <div class="col-xs-12 col-lg-2">
                 <div class="row">
                     <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick=ShowOverlay
-                            Style="margin-left: 30px; position: fixed; bottom: 3vh;" />
+                            Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:1000;" />
 
                     <MudOverlay Visible="@visible" DarkBackground="true">
                         <MudPaper Class="p-5">
@@ -39,12 +39,12 @@
             </div>
             <div class="col-xs-12 col-lg-7">
                 <div class="row">
-                    @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
-                    {
-                        <StockAccountDetailsRow InvestmentAccount=Account InvestmentEntry=entry />
-                    }
-
-
+                    <MudExpansionPanels Elevation="0" MultiExpansion>
+                        @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
+                        {
+                            <StockAccountDetailsRow InvestmentAccount=Account InvestmentEntry=entry />
+                        }
+                    </MudExpansionPanels>
                 </div>
                 <div class="row" style="min-height:40px">
                     @if (!LoadedAllData)
