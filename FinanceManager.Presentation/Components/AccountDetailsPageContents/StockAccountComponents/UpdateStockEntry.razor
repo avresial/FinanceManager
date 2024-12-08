@@ -30,16 +30,13 @@
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange"
-                                 Label="Balance change" Variant="Variant.Text" Immediate/>
+                                 Label="Balance change" Variant="Variant.Text" Immediate />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text"
                                  SearchFunc="Search" />
             </MudItem>
-            @*   <MudItem xs="12" sm="6">
-            <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="Balance" Label="Balance" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
-            </MudItem> *@
-        
+
             <MudItem xs="12">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update</MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel Class="mx-2">Cancel</MudButton>
@@ -51,7 +48,6 @@
 @code {
     private int? loadedEntryId = null;
     private string _currency = "";
-    private MudTextField<string> pwField1;
     private MudForm? form;
 
     List<string> InvestmentType = Enum.GetValues(typeof(InvestmentType)).Cast<InvestmentType>().Select(x => x.ToString()).ToList();
@@ -80,7 +76,7 @@
     {
         if (string.IsNullOrEmpty(Ticker)) return;
         if (!PostingDate.HasValue) return;
-        if (args.Field is MudTextField<decimal?> textField) 
+        if (args.Field is MudTextField<decimal?> textField)
         {
             if (textField is null || textField.Label is null) return;
             if (!textField.Label.ToLower().Contains("ticker")) return;
@@ -124,6 +120,8 @@
     }
     public async Task Update()
     {
+        if (form is null) return;
+
         await form.Validate();
         if (!form.IsValid) return;
         if (!BalanceChange.HasValue) return;
@@ -164,10 +162,6 @@
     }
     private async Task<IEnumerable<string>> Search(string value, CancellationToken token)
     {
-        // In real life use an asynchronous function for fetching data from an api.
-        await Task.Delay(5, token);
-
-        // if text is null or empty, show complete list
         if (string.IsNullOrEmpty(value))
             return InvestmentType;
 
