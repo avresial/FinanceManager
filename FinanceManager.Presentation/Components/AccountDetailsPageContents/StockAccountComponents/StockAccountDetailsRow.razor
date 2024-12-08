@@ -127,7 +127,7 @@
     public required InvestmentEntry InvestmentEntry { get; set; }
 
     [Inject]
-    public required IFinancalAccountRepository BankAccountRepository { get; set; }
+    public required IAccountService BankAccountService { get; set; }
 
     [Inject]
     public required ISettingsService SettingsService { get; set; }
@@ -147,7 +147,7 @@
         await InvokeAsync(StateHasChanged);
 
         InvestmentAccount.Remove(InvestmentEntry.Id);
-        BankAccountRepository.RemoveFinancialEntry(InvestmentEntry.Id, InvestmentAccount.Name);
+        BankAccountService.RemoveFinancialEntry(InvestmentEntry.Id, InvestmentAccount.Name);
     }
 
     public async Task Cancel()

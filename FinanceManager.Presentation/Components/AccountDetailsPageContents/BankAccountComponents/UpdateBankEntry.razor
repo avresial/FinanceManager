@@ -63,7 +63,7 @@
     public required BankAccountEntry BankAccountEntry { get; set; }
 
     [Inject]
-    public required IFinancalAccountRepository BankAccountRepository { get; set; }
+    public required IAccountService AccountService { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -104,7 +104,7 @@
         try
         {
             BankAccount.Update(bankAccountEntry);
-            BankAccountRepository.UpdateFinancialEntry(bankAccountEntry, BankAccount.Name);
+            AccountService.UpdateFinancialEntry(bankAccountEntry, BankAccount.Name);
         }
         catch (Exception ex)
         {

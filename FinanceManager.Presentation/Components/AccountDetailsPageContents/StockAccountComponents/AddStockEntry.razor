@@ -72,14 +72,13 @@
     // public decimal? Balance { get; set; } = null;
 
     [Parameter]
-    public Func<Task> ActionCompleted { get; set; }
+    public Func<Task>? ActionCompleted { get; set; }
 
-    [Required]
     [Parameter]
-    public InvestmentAccount InvestmentAccount { get; set; }
+    public required InvestmentAccount InvestmentAccount { get; set; }
 
     [Inject]
-    public IFinancalAccountRepository BankAccountRepository { get; set; }
+    public required IAccountService AccountService { get; set; }
 
     protected async Task OnFieldChanged(FormFieldChangedEventArgs args)
     {
@@ -142,7 +141,7 @@
         try
         {
             InvestmentAccount.Add(bankAccountEntry);
-            BankAccountRepository.AddFinancialEntry(bankAccountEntry, InvestmentAccount.Name);
+            AccountService.AddFinancialEntry(bankAccountEntry, InvestmentAccount.Name);
         }
         catch (Exception ex)
         {

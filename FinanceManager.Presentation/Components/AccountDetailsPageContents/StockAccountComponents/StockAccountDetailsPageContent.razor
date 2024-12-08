@@ -6,7 +6,7 @@
 @using FinanceManager.Core.Services
 @using FinanceManager.Presentation.Helpers
 
-@if (Account is not null && Account.Entries is not null && Account.Entries.Any())
+@if (Account is not null && Account.Entries is not null && (IsLoading || Account.Entries.Any()))
 {
     <div class="col-12 mb-2" style="min-height:150px;">
         <ApexChart @ref="chart" TItem="ChartEntryModel" Height="150" Options=@options XAxisType="XAxisType.Datetime">
@@ -43,7 +43,7 @@
                     </MudExpansionPanels>
                 </div>
                 <div class="row" style="min-height:40px">
-                    @if (!LoadedAllData)
+                    @if (!LoadedAllData && !IsLoading)
                     {
                         <button class="btn text-center" title="Load more" @onclick="LoadMore">
                             <div>
@@ -183,11 +183,13 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
     private bool LoadedAllData = false;
     private DateTime dateStart;
     private List<ChartEntryModel> pricesDaily;
+    private bool visible;
+
     internal List<(InvestmentEntry, decimal)>? Top5;
     internal List<(InvestmentEntry, decimal)>? Bottom5;
     internal string currency = "PLN";
 
-    private bool visible;
+    public bool IsLoading = false;
     public InvestmentAccount? Account { get; set; }
     public string ErrorMessage { get; set; } = string.Empty;
     public Type accountType;
@@ -196,7 +198,7 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
     public required string AccountName { get; set; }
 
     [Inject]
-    public IFinancalAccountRepository BankAccountRepository { get; set; }
+    public IAccountService AccountService { get; set; }
 
     [Inject]
     public IStockRepository StockRepository { get; set; }
@@ -228,13 +230,25 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
                     Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
                 }
             };
-        await UpdateEntries();
-    }
 
+        await UpdateEntries();
+
+        AccountService.AccountsChanged += AccountsService_AccountsChanged;
+    }
     protected override async Task OnParametersSetAsync()
     {
+        IsLoading = true;
+        if (chart is not null)
+        {
+            if (Account is not null && Account.Entries is not null)
+                Account.Entries.Clear();
+
+            await chart.RenderAsync();
+        }
+
         LoadedAllData = false;
         await UpdateEntries();
+        IsLoading = false;
     }
 
     private async Task UpdateEntries()
@@ -242,7 +256,7 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
         try
         {
             dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-            var accounts = BankAccountRepository.GetAvailableAccounts();
+            var accounts = AccountService.GetAvailableAccounts();
             if (accounts.ContainsKey(AccountName))
             {
                 accountType = accounts[AccountName];
@@ -250,7 +264,7 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
                 {
                     LoadedAllData = false;
                     prices.Clear();
-                    Account = BankAccountRepository.GetAccount<InvestmentAccount>(AccountName, dateStart, DateTime.UtcNow);
+                    Account = AccountService.GetAccount<InvestmentAccount>(AccountName, dateStart, DateTime.UtcNow);
                     if (Account is not null && Account.Entries is not null)
                         await UpdateInfo();
                 }
@@ -304,7 +318,7 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
         if (Account is null) return;
 
         var newStartDate = Account.Start.Value.AddMonths(-1);
-        var newData = BankAccountRepository.GetAccount<InvestmentAccount>(AccountName, newStartDate, Account.Start.Value);
+        var newData = AccountService.GetAccount<InvestmentAccount>(AccountName, newStartDate, Account.Start.Value);
 
         if (Account.Entries is null || newData is null || newData.Entries is null) return;
         if (newData.Entries.Last().PostingDate == Account.Entries.Last().PostingDate)
@@ -362,4 +376,13 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
                ColorsProvider.GetColors().First()
             }
         };
+
+    private void AccountsService_AccountsChanged()
+    {
+        if (chart is not null)
+            _ = UpdateInfo();
+
+        StateHasChanged();
+    }
+
 }
