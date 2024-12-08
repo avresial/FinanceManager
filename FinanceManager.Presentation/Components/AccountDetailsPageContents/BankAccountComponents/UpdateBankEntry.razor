@@ -39,6 +39,7 @@
 }
 
 @code {
+    private int? loadedEntryId = null;
     private string _currency = string.Empty;
     private bool success;
     private string[] errors = { };
@@ -64,16 +65,17 @@
     [Inject]
     public required IFinancalAccountRepository BankAccountRepository { get; set; }
 
-    protected override Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
-        _currency = settingsService.GetCurrency();
+        if (loadedEntryId.HasValue && loadedEntryId.Value == BankAccountEntry.Id) return;
+        loadedEntryId = BankAccountEntry.Id;
 
+        _currency = settingsService.GetCurrency();
         PostingDate = BankAccountEntry.PostingDate;
         Time = new TimeSpan(BankAccountEntry.PostingDate.Hour, BankAccountEntry.PostingDate.Minute, BankAccountEntry.PostingDate.Second);
         ExpenseType = BankAccountEntry.ExpenseType.ToString();
         Description = BankAccountEntry.Description;
         BalanceChange = BankAccountEntry.ValueChange;
-        return base.OnParametersSetAsync();
     }
 
     public async Task Update()

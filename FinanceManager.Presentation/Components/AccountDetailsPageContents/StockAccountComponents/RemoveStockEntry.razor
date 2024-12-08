@@ -10,10 +10,16 @@
             </MudItem>
 
             <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="ticker" T="string" Label="ticker" Variant="Variant.Text" MaxLines="5" AutoGrow="true" ReadOnly />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="balanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@currency" Adornment="Adornment.End" ReadOnly />
+            </MudItem>
+            <MudItem xs="12" sm="6">
                 <MudDatePicker Label="Posting date" @bind-Date="date" ReadOnly />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" ReadOnly />
+                <MudTextField @bind-Value="investmentType" T="string" Label="investmentType" Variant="Variant.Text" MaxLines="5" AutoGrow="true" ReadOnly />
             </MudItem>
             <MudItem xs="12">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Cancel>Cancel</MudButton>
@@ -25,8 +31,10 @@
 
 @code {
     private DateTime? date = new DateTime();
-    private decimal BalanceChange = 0;
-    private string _currency = "PLN";
+    private decimal balanceChange = 0;
+    private string currency = "PLN";
+    private string ticker = "Ticker";
+    private string investmentType = "InvestmentType";
 
     [Parameter]
     public required Func<Task> Confirm { get; set; }
@@ -46,8 +54,10 @@
     protected override void OnParametersSet()
     {
         date = InvestmentEntry.PostingDate;
-        BalanceChange = InvestmentEntry.ValueChange;
-        _currency = SettingsService.GetCurrency();
+        balanceChange = InvestmentEntry.ValueChange;
+        currency = SettingsService.GetCurrency();
+        ticker = InvestmentEntry.Ticker;
+        investmentType = InvestmentEntry.InvestmentType.ToString();
 
         base.OnParametersSet();
     }

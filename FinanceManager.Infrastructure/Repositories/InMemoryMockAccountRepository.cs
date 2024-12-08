@@ -268,7 +268,7 @@ namespace FinanceManager.Infrastructure.Repositories
             if (accountEntry is BankAccountEntry bankEntry)
                 UpdateBankAccountEntry(accountName, bankEntry);
             if (accountEntry is InvestmentEntry investmentEntry)
-                UpdateStockAccountEntry(accountName, investmentEntry.Ticker, investmentEntry.InvestmentType, investmentEntry.ValueChange, investmentEntry.PostingDate);
+                UpdateStockAccountEntry(accountName, investmentEntry);
         }
 
         private void UpdateBankAccountEntry(string accountName, BankAccountEntry bankAccountEntry)
@@ -281,9 +281,15 @@ namespace FinanceManager.Infrastructure.Repositories
 
             entryToUpdate.Update(bankAccountEntry);
         }
-        private void UpdateStockAccountEntry(string name, string ticker, InvestmentType investmentType, decimal balanceChange, DateTime? postingDate = null)
+        private void UpdateStockAccountEntry(string accountName, InvestmentEntry investmentEntry)
         {
-            throw new NotImplementedException();
+            var investmentAccount = FindAccount<InvestmentAccount>(accountName);
+            if (investmentAccount is null || investmentAccount.Entries is null) return;
+
+            var entryToUpdate = investmentAccount.Entries.FirstOrDefault(x => x.Id == investmentEntry.Id);
+            if (entryToUpdate is null) return;
+
+            entryToUpdate.Update(investmentEntry);
         }
 
         public void RemoveFinancialEntry(int accountEntryId, string accountName)

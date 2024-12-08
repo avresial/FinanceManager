@@ -9,15 +9,15 @@
                 <MudText Typo="Typo.h4">Update</MudText>
                 <MudText Typo="Typo.subtitle1">@BankAccountName</MudText>
             </MudItem>
-
             <MudItem xs="12" sm="6">
-                <MudDatePicker Label="Posting date" @bind-Date="date" ReadOnly />
+                <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text" ReadOnly />
             </MudItem>
+        
             <MudItem xs="12" sm="6">
                 <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" ReadOnly />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text" ReadOnly />
+                <MudDatePicker Label="Posting date" @bind-Date="date" ReadOnly />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudTextField @bind-Value="BankAccountEntry.Description" T="string" Label="Description" Variant="Variant.Text" MaxLines="5" AutoGrow="true" ReadOnly />
