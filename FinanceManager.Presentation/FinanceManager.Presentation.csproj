@@ -22,10 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Update="Components\AccountDetailsPageContents\UpdateStockEntry.razor">
+    <Content Update="Components\AccountDetailsPageContents\StockAccountComponents\UpdateStockEntry.razor">
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
-    <Content Update="Components\AccountDetailsPageContents\UpdateBankEntry.razor">
+    <Content Update="Components\AccountDetailsPageContents\BankAccountComponents\UpdateBankEntry.razor">
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
   </ItemGroup>

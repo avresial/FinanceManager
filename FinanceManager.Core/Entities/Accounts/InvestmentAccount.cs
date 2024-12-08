@@ -45,23 +45,71 @@ namespace FinanceManager.Core.Entities.Accounts
                 if (Entries is not null)
                     Entries.Insert(index, entry);
 
-                InvestmentEntry previousIterationEntry = null;
                 if (recalculate)
+                    RecalculateEntryValues(index, entry);
+            }
+        }
+        public override void Update(InvestmentEntry entry, bool recalculateValues = true)
+        {
+            Entries ??= new List<InvestmentEntry>();
+
+            var entryToUpdate = Entries.FirstOrDefault(x => x.Id == entry.Id);
+            if (entryToUpdate is null) return;
+
+            entryToUpdate.Update(entry);
+            Entries.Remove(entryToUpdate);
+            var previousEntry = Entries.GetPrevious(entryToUpdate.PostingDate).FirstOrDefault();
+
+            if (previousEntry is null)
+            {
+                Entries.Add(entryToUpdate);
+            }
+            else
+            {
+                var newIndex = Entries.IndexOf(previousEntry);
+                Entries.Insert(newIndex, entryToUpdate);
+            }
+
+            var index = Entries.IndexOf(entryToUpdate);
+            if (recalculateValues)
+                RecalculateEntryValues(index, entryToUpdate);
+        }
+        public override void Remove(int id)
+        {
+            if (Entries is null) return;
+
+            var entry = Entries.FirstOrDefault(x => x.Id == id);
+            if (entry is null) return;
+            var index = Entries.IndexOf(entry);
+
+            Entries.RemoveAt(index);
+            RecalculateEntryValues(index - 1, entry);
+        }
+
+        private void RecalculateEntryValues(int? startingIndex, InvestmentEntry? startEntry)
+        {
+            if (Entries is null) return;
+            InvestmentEntry? previousIterationEntry = startEntry;
+            int startIndex = startingIndex.HasValue ? startingIndex.Value : Entries.Count() - 1;
+
+            for (int i = startIndex; i >= 0; i--)
+            {
+                if (previousIterationEntry is not null && Entries[i].Ticker != previousIterationEntry.Ticker) continue;
+                if (Entries.Count() < i) continue;
+
+                if (i == startIndex && Entries[i] is not null)
                 {
-
-                    for (int i = index; i >= 0; i--)
-                    {
-                        if (Entries[i].Ticker != entry.Ticker) continue;
-                        if (Entries.Count() < i) continue;
-
-                        if (i == index) previousIterationEntry = Entries.GetPrevious(Entries[i].PostingDate, Entries[i].Ticker).FirstOrDefault();
-
-                        if (previousIterationEntry is null) continue;
-
-                        Entries[i].Value = previousIterationEntry.Value + Entries[i].ValueChange; // error
-                        previousIterationEntry = Entries[i];
-                    }
+                    var date = Entries[i].PostingDate;
+                    var ticker = Entries[i].Ticker;
+                    var previousElements = Entries.GetPrevious(date, ticker);
+                    if (previousElements is not null)
+                        previousIterationEntry = previousElements.FirstOrDefault();
                 }
+
+                if (previousIterationEntry is not null)
+                    Entries[i].Value = previousIterationEntry.Value + Entries[i].ValueChange; // error
+
+                previousIterationEntry = Entries[i];
             }
         }
         public List<string> GetStoredTickers()

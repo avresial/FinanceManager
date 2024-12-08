@@ -1,37 +1,44 @@
 using ApexCharts;
 using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Providers;
-using FinanceManager.Core.Repositories;
 using FinanceManager.Core.Services;
 using FinanceManager.Presentation.Helpers;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
-namespace FinanceManager.Presentation.Components.AccountDetailsPageContents
+namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.BankAccountComponents
 {
     public partial class BankAccountDetailsPageContent : ComponentBase
     {
-
         private decimal balanceChange = 100;
         private bool LoadedAllData = false;
         private DateTime dateStart;
+        private bool AddEntryVisibility;
+        private ApexChart<BankAccountEntry> chart;
 
         internal List<BankAccountEntry>? Top5;
         internal List<BankAccountEntry>? Bottom5;
         internal string currency = "PLN";
 
-        private ApexChart<BankAccountEntry> chart;
+        public bool IsLoading = false;
         public BankAccount? Account { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
 
-        private bool AddEntryVisibility;
+
+        [Parameter]
+        public required string AccountName { get; set; }
+
+        [Inject]
+        public required IAccountService AccountService { get; set; }
+
+        [Inject]
+        public required ISettingsService settingsService { get; set; }
 
         public async Task ShowOverlay()
         {
             AddEntryVisibility = true;
             StateHasChanged();
         }
-
         public async Task HideOverlay()
         {
             AddEntryVisibility = false;
@@ -40,75 +47,6 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents
                 await chart.RenderAsync();
             StateHasChanged();
         }
-
-        [Parameter]
-        public required string AccountName { get; set; }
-
-        [Inject]
-        public IFinancalAccountRepository BankAccountRepository { get; set; }
-
-        [Inject]
-        public ISettingsService settingsService { get; set; }
-
-        protected override async Task OnInitializedAsync()
-        {
-            options.Tooltip = new Tooltip
-            {
-                Y = new TooltipY
-                {
-                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
-                }
-            };
-
-            await UpdateEntries();
-        }
-
-        protected override async Task OnParametersSetAsync()
-        {
-            if (chart is not null)
-            {
-                if (Account is not null && Account.Entries is not null)
-                    Account.Entries.Clear();
-
-                await chart.RenderAsync();
-            }
-
-            LoadedAllData = false;
-            await UpdateEntries();
-
-            if (chart is not null)
-            {
-                StateHasChanged();
-                await chart.RenderAsync();
-            }
-        }
-
-        public Type accountType;
-
-        private async Task UpdateEntries()
-        {
-            try
-            {
-                dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-                var accounts = BankAccountRepository.GetAvailableAccounts();
-                if (accounts.ContainsKey(AccountName))
-                {
-                    accountType = accounts[AccountName];
-                    if (accountType == typeof(BankAccount))
-                    {
-                        Account = BankAccountRepository.GetAccount<BankAccount>(AccountName, dateStart, DateTime.UtcNow);
-                        if (Account is not null && Account.Entries is not null)
-                            UpdateInfo();
-                    }
-                }
-
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = ex.Message;
-            }
-        }
-
         public void UpdateInfo()
         {
             if (Account is null || Account.Entries is null) return;
@@ -120,13 +58,12 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents
             if (Account.Entries.Last().PostingDate.Date > dateStart.Date)
                 LoadedAllData = true;
         }
-
         public async Task LoadMore()
         {
             if (Account is null || Account.Start is null) return;
 
             var newStartDate = Account.Start.Value.AddMonths(-1);
-            var newData = BankAccountRepository.GetAccount<BankAccount>(AccountName, newStartDate, Account.Start.Value);
+            var newData = AccountService.GetAccount<BankAccount>(AccountName, newStartDate, Account.Start.Value);
 
             if (Account.Entries is null || newData is null || newData.Entries is null) return;
             if (!newData.Entries.Any() || newData.Entries.Last().PostingDate == Account.Entries.Last().PostingDate)
@@ -146,7 +83,65 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents
             UpdateInfo();
         }
 
+        protected override async Task OnInitializedAsync()
+        {
+            options.Tooltip = new Tooltip
+            {
+                Y = new TooltipY
+                {
+                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
+                }
+            };
 
+            await UpdateEntries();
+
+            AccountService.AccountsChanged += AccountsService_AccountsChanged;
+        }
+        protected override async Task OnParametersSetAsync()
+        {
+            IsLoading = true;
+            if (chart is not null)
+            {
+                if (Account is not null && Account.Entries is not null)
+                    Account.Entries.Clear();
+
+                await chart.RenderAsync();
+            }
+
+            LoadedAllData = false;
+            await UpdateEntries();
+
+            if (chart is not null)
+            {
+                StateHasChanged();
+                await chart.RenderAsync();
+            }
+            IsLoading = false;
+        }
+
+        private async Task UpdateEntries()
+        {
+            try
+            {
+                dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+                var accounts = AccountService.GetAvailableAccounts();
+                if (accounts.ContainsKey(AccountName))
+                {
+                    var accountType = accounts[AccountName];
+                    if (accountType == typeof(BankAccount))
+                    {
+                        Account = AccountService.GetAccount<BankAccount>(AccountName, dateStart, DateTime.UtcNow);
+                        if (Account is not null && Account.Entries is not null)
+                            UpdateInfo();
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+            }
+        }
         private ApexChartOptions<BankAccountEntry> options { get; set; } = new()
         {
             Chart = new Chart
@@ -185,5 +180,9 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents
                ColorsProvider.GetColors().First()
             }
         };
+        private void AccountsService_AccountsChanged()
+        {
+            StateHasChanged();
+        }
     }
 }

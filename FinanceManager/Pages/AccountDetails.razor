@@ -1,26 +1,35 @@
 ﻿@page "/AccountDetails/{AccountName}"
 @using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Presentation.Components.AccountDetailsPageContents
+@using FinanceManager.Presentation.Components.AccountDetailsPageContents.BankAccountComponents
+@using FinanceManager.Presentation.Components.AccountDetailsPageContents.StockAccountComponents
 
-<div class="container-fluid px-0">
-    @if (ErrorMessage != string.Empty)
-    {
-        <div class="alert alert-warning" role="alert">
-            @ErrorMessage
-        </div>
-    }
-    else if (accountType == typeof(BankAccount))
-    {
-        <BankAccountDetailsPageContent AccountName="@AccountName"></BankAccountDetailsPageContent>
-    }
-    else if (accountType == typeof(InvestmentAccount))
-    {
-        <StockAccountDetailsPageContent AccountName="@AccountName"></StockAccountDetailsPageContent>
-    }
-    else
-    {
-        <div class="alert alert-danger" role="alert">
-            @accountType type is not supported.
-        </div>
-    }
-</div>
+@if (accountType is null)
+{
+    <DisplaySpinner />
+}
+else
+{
+    <div class="container-fluid px-0" @ref=MyElementReference>
+        @if (ErrorMessage != string.Empty)
+        {
+            <div class="alert alert-warning" role="alert">
+                @ErrorMessage
+            </div>
+        }
+        else if (accountType == typeof(BankAccount))
+        {
+            <BankAccountDetailsPageContent AccountName="@AccountName"  />
+        }
+        else if (accountType == typeof(InvestmentAccount))
+        {
+            <StockAccountDetailsPageContent AccountName="@AccountName" />
+        }
+        else
+        {
+            <div class="alert alert-danger" role="alert">
+                @accountType type is not supported.
+            </div>
+        }
+    </div>
+}

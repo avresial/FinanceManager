@@ -9,11 +9,11 @@
 @inject ISettingsService settingsService
 @inject IStockRepository stockRepository
 
-<MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors" FieldChanged=OnFieldChanged>
+<MudForm @ref="form" FieldChanged=OnFieldChanged>
     <MudContainer MaxWidth="MaxWidth.Medium" onchange="">
         <MudGrid Justify="Justify.Center">
             <MudItem xs="12" sm="12" md="12">
-                <MudText Typo="Typo.h4">Update entry</MudText>
+                <MudText Typo="Typo.h4">Update</MudText>
                 <MudText Typo="Typo.subtitle1">@InvestmentAccount.Name</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
@@ -30,18 +30,15 @@
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange"
-                                 Label="Balance change" Variant="Variant.Text" Immediate/>
+                                 Label="Balance change" Variant="Variant.Text" Immediate />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text"
                                  SearchFunc="Search" />
             </MudItem>
-            @*   <MudItem xs="12" sm="6">
-            <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="Balance" Label="Balance" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
-            </MudItem> *@
-        
+
             <MudItem xs="12">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Add</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update</MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel Class="mx-2">Cancel</MudButton>
             </MudItem>
         </MudGrid>
@@ -49,12 +46,9 @@
 </MudForm>
 
 @code {
-
-    string _currency = "";
-    bool success;
-    string[] errors = { };
-    MudTextField<string> pwField1;
-    private MudForm form;
+    private int? loadedEntryId = null;
+    private string _currency = "";
+    private MudForm? form;
 
     List<string> InvestmentType = Enum.GetValues(typeof(InvestmentType)).Cast<InvestmentType>().Select(x => x.ToString()).ToList();
 
@@ -74,15 +68,15 @@
 
     [Parameter]
     public required InvestmentEntry InvestmentEntry { get; set; }
-
+     
     [Inject]
-    public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+    public required IAccountService BankAccountService { get; set; }
 
     protected async Task OnFieldChanged(FormFieldChangedEventArgs args)
     {
         if (string.IsNullOrEmpty(Ticker)) return;
         if (!PostingDate.HasValue) return;
-        if (args.Field is MudTextField<decimal?> textField) 
+        if (args.Field is MudTextField<decimal?> textField)
         {
             if (textField is null || textField.Label is null) return;
             if (!textField.Label.ToLower().Contains("ticker")) return;
@@ -99,15 +93,17 @@
 
         PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;
     }
-    protected override Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
+        if (loadedEntryId.HasValue && loadedEntryId.Value == InvestmentEntry.Id) return;
+        loadedEntryId = InvestmentEntry.Id;
+
         _currency = settingsService.GetCurrency();
         Time = new TimeSpan(InvestmentEntry.PostingDate.Hour, InvestmentEntry.PostingDate.Minute, InvestmentEntry.PostingDate.Second);
+        PostingDate = InvestmentEntry.PostingDate;
         ExpenseType = InvestmentEntry.InvestmentType.ToString();
         Ticker = InvestmentEntry.Ticker;
         BalanceChange = InvestmentEntry.ValueChange;
-
-        return base.OnParametersSetAsync();
     }
 
     public async Task RecalculatePrice()
@@ -124,6 +120,8 @@
     }
     public async Task Update()
     {
+        if (form is null) return;
+
         await form.Validate();
         if (!form.IsValid) return;
         if (!BalanceChange.HasValue) return;
@@ -141,15 +139,16 @@
         }
 
         InvestmentEntry bankAccountEntry = new(InvestmentEntry.Id, date, -1, BalanceChange.Value, Ticker, investmentType);
-        
+
         try
         {
             InvestmentAccount.Update(bankAccountEntry);
-            FinancalAccountRepository.UpdateFinancialEntry(bankAccountEntry, InvestmentAccount.Name);
+            BankAccountService.UpdateFinancialEntry(bankAccountEntry, InvestmentAccount.Name);
         }
         catch (Exception ex)
         {
-            errors = [ex.ToString()];
+            Console.WriteLine(ex);
+            //  errors = [ex.ToString()];
         }
 
         if (ActionCompleted is not null)
@@ -163,10 +162,6 @@
     }
     private async Task<IEnumerable<string>> Search(string value, CancellationToken token)
     {
-        // In real life use an asynchronous function for fetching data from an api.
-        await Task.Delay(5, token);
-
-        // if text is null or empty, show complete list
         if (string.IsNullOrEmpty(value))
             return InvestmentType;
 

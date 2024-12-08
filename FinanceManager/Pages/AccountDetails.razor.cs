@@ -1,60 +1,47 @@
-﻿using FinanceManager.Core.Entities.Accounts;
-using FinanceManager.Core.Repositories;
+﻿using FinanceManager.Core.Repositories;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Pages
 {
-	public partial class AccountDetails : ComponentBase
-	{
-		private const int maxTableSize = 500;
+    public partial class AccountDetails : ComponentBase
+    {
+        public ElementReference MyElementReference;
 
-		[Parameter]
-		public string AccountName { get; set; }
+        public Type? accountType = null;
 
-		[Inject]
-		public IFinancalAccountRepository BankAccountRepository { get; set; }
+        [Parameter]
+        public required string AccountName { get; set; }
 
-		public string ErrorMessage { get; set; } = string.Empty;
+        [Inject]
+        public required IFinancalAccountRepository BankAccountRepository { get; set; }
 
-		public IEnumerable<BankAccountEntry> Entries { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
 
-		protected override async Task OnInitializedAsync()
-		{
-			UpdateEntries();
-		}
 
-		protected override async Task OnParametersSetAsync()
-		{
-			UpdateEntries();
-		}
-		public Type accountType;
-		private void UpdateEntries()
-		{
-			try
-			{
-				DateTime dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+        protected override void OnInitialized()
+        {
+            UpdateEntries();
+        }
 
-				if (DateTime.UtcNow.Day == 1)
-					dateStart = DateTime.UtcNow.AddMonths(-1);
+        protected override void OnParametersSet()
+        {
+            MyElementReference = default;
+            accountType = null;
+            UpdateEntries();
+        }
+        private void UpdateEntries()
+        {
+            try
+            {
+                var accounts = BankAccountRepository.GetAvailableAccounts();
+                if (accounts.ContainsKey(AccountName))
+                    accountType = accounts[AccountName];
 
-				var accounts = BankAccountRepository.GetAvailableAccounts();
-				if (accounts.ContainsKey(AccountName))
-				{
-					accountType = accounts[AccountName];
-					if (accountType == typeof(BankAccount))
-					{
-						Entries = BankAccountRepository.GetAccount<BankAccount>(AccountName, dateStart, DateTime.Now)
-							.Entries
-							.Take(maxTableSize)
-							.OrderByDescending(x => x.PostingDate);
-					}
-				}
-
-			}
-			catch (Exception ex)
-			{
-				ErrorMessage = ex.Message;
-			}
-		}
-	}
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+            }
+        }
+    }
 }

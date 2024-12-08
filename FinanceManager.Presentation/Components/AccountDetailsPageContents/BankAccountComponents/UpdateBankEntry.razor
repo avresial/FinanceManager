@@ -39,6 +39,7 @@
 }
 
 @code {
+    private int? loadedEntryId = null;
     private string _currency = string.Empty;
     private bool success;
     private string[] errors = { };
@@ -62,18 +63,19 @@
     public required BankAccountEntry BankAccountEntry { get; set; }
 
     [Inject]
-    public required IFinancalAccountRepository BankAccountRepository { get; set; }
+    public required IAccountService AccountService { get; set; }
 
-    protected override Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
-        _currency = settingsService.GetCurrency();
+        if (loadedEntryId.HasValue && loadedEntryId.Value == BankAccountEntry.Id) return;
+        loadedEntryId = BankAccountEntry.Id;
 
+        _currency = settingsService.GetCurrency();
         PostingDate = BankAccountEntry.PostingDate;
         Time = new TimeSpan(BankAccountEntry.PostingDate.Hour, BankAccountEntry.PostingDate.Minute, BankAccountEntry.PostingDate.Second);
         ExpenseType = BankAccountEntry.ExpenseType.ToString();
         Description = BankAccountEntry.Description;
         BalanceChange = BankAccountEntry.ValueChange;
-        return base.OnParametersSetAsync();
     }
 
     public async Task Update()
@@ -102,7 +104,7 @@
         try
         {
             BankAccount.Update(bankAccountEntry);
-            BankAccountRepository.UpdateFinancialEntry(bankAccountEntry, BankAccount.Name);
+            AccountService.UpdateFinancialEntry(bankAccountEntry, BankAccount.Name);
         }
         catch (Exception ex)
         {
@@ -120,10 +122,6 @@
     }
     private async Task<IEnumerable<string>> Search(string value, CancellationToken token)
     {
-        // In real life use an asynchronous function for fetching data from an api.
-        await Task.Delay(5, token);
-
-        // if text is null or empty, show complete list
         if (string.IsNullOrEmpty(value))
             return ExpenseTypes;
 

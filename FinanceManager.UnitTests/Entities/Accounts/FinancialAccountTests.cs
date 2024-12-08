@@ -62,7 +62,34 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             Assert.Equal(40, FinancialAccount.Entries.First().Value);
             Assert.Equal(10, FinancialAccount.Entries.Last().Value);
         }
+        [Fact]
+        public void RemoveData_RemovesOldestElement_RecalculatesValues()
+        {
+            // Arrange
+            FinancialAccount.Add(new FinancialEntryBase(3, new DateTime(2000, 1, 28), 30, 10));
+            FinancialAccount.Add(new FinancialEntryBase(4, new DateTime(2000, 1, 27), 20, 10));
+            FinancialAccount.Add(new FinancialEntryBase(5, new DateTime(2000, 1, 26), 10, 10));
 
+            // Act
+            FinancialAccount.Remove(5);
+
+            // Assert
+            Assert.Equal(20, FinancialAccount.Entries.First().Value);
+            Assert.Equal(10, FinancialAccount.Entries.Last().Value);
+        }
+        [Fact]
+        public void RemoveData_OnlyOneElement_RecalculatesValues()
+        {
+            // Arrange
+            FinancialAccount.Add(new FinancialEntryBase(1, new DateTime(2000, 1, 28), 30, 10));
+
+            // Act
+            FinancialAccount.Remove(1);
+
+            // Assert
+            Assert.NotNull(FinancialAccount.Entries);
+            Assert.Empty(FinancialAccount.Entries);
+        }
         [Fact]
         public void RemoveData_SingleElementGetsDeleted_NoEntriesAreLEft()
         {

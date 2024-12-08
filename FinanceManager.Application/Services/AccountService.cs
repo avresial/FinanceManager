@@ -6,12 +6,11 @@ namespace FinanceManager.Application.Services
 {
     public class AccountService(IFinancalAccountRepository bankAccountRepository) : IAccountService
     {
-        private readonly IFinancalAccountRepository? _bankAccountRepository = bankAccountRepository;
+        private readonly IFinancalAccountRepository _bankAccountRepository = bankAccountRepository;
 
         public event Action? AccountsChanged;
         public IEnumerable<T> GetAccounts<T>(DateTime dateStart, DateTime dateEnd) where T : FinancialAccountBase
         {
-            if (_bankAccountRepository is null) throw new Exception();
             return _bankAccountRepository.GetAccounts<T>(dateStart, dateEnd);
         }
         public T? GetAccount<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialAccountBase
@@ -36,7 +35,6 @@ namespace FinanceManager.Application.Services
 
         public bool AccountExists(string name)
         {
-            if (_bankAccountRepository is null) throw new Exception();
             return _bankAccountRepository.AccountExists(name);
         }
 
@@ -48,16 +46,19 @@ namespace FinanceManager.Application.Services
         public void AddFinancialEntry<T>(T bankAccount, string accountName) where T : FinancialEntryBase
         {
             _bankAccountRepository.AddFinancialEntry<T>(bankAccount, accountName);
+            AccountsChanged?.Invoke();
         }
 
         public void UpdateFinancialEntry<T>(T accountEntry, string accountName) where T : FinancialEntryBase
         {
-            throw new NotImplementedException();
+            _bankAccountRepository.UpdateFinancialEntry<T>(accountEntry, accountName);
+            AccountsChanged?.Invoke();
         }
 
         public void RemoveFinancialEntry(int accountEntryId, string accountName)
         {
-            throw new NotImplementedException();
+            _bankAccountRepository.RemoveFinancialEntry(accountEntryId, accountName);
+            AccountsChanged?.Invoke();
         }
     }
 }

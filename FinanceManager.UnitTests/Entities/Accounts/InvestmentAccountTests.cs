@@ -52,5 +52,26 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             Assert.Equal(400, resultValues.Get(new DateTime(2000, 1, 4)).FirstOrDefault().Value);
         }
 
+        [Fact]
+        public async Task UpdateEntries_SingleTicker()
+        {
+            // Arrange
+            InvestmentEntry investmentEntry0 = new InvestmentEntry(2, new DateTime(2000, 1, 3), 0, 100, "Ticker1", InvestmentType.Stock);
+            InvestmentEntry investmentEntry1 = new InvestmentEntry(3, new DateTime(2000, 1, 3), 0, 99, "TickerToUpdate", InvestmentType.Stock);
+            InvestmentEntry investmentEntry2 = new InvestmentEntry(4, new DateTime(2000, 1, 2), 0, 100, "Ticker1", InvestmentType.Stock);
+
+            investmentAccount.Add(investmentEntry0);
+            investmentAccount.Add(investmentEntry1);
+            investmentAccount.Add(investmentEntry2);
+
+            // Act
+            var test = investmentAccount.Get(new DateTime(2000, 1, 3)).First(x => x.Ticker == "TickerToUpdate");
+            test.Update(new InvestmentEntry(3, new DateTime(2000, 1, 3), 0, 50, "TickerToUpdate_TickerChanged", InvestmentType.Stock));
+
+            // Assert
+            var updateResult = investmentAccount.Get(new DateTime(2000, 1, 3)).FirstOrDefault(x => x.Ticker == "TickerToUpdate_TickerChanged");
+            Assert.Equal(50, updateResult.ValueChange);
+        }
+
     }
 }

@@ -6,7 +6,7 @@
 @using FinanceManager.Core.Services
 @using FinanceManager.Presentation.Helpers
 
-@if (Account is not null && Account.Entries is not null)
+@if (Account is not null && Account.Entries is not null && (IsLoading || Account.Entries.Any()))
 {
     <h3 class="m-3" style="position: absolute; z-index: 50; display: inline-block;">
         @Account.Name
@@ -49,7 +49,7 @@
                     </MudExpansionPanels>
                 </div>
                 <div class="row" style="min-height:40px">
-                    @if (!LoadedAllData)
+                    @if (!LoadedAllData && !IsLoading)
                     {
                         <button class="btn text-center" title="Load more" @onclick="LoadMore">
                             <div>
@@ -167,4 +167,7 @@
             </div>
         </div>
     </div>
+}else if (Account is not null && (Account.Entries is null || !Account.Entries.Any()))
+{
+       <AddBankEntry BankAccount=Account ActionCompleted="HideOverlay" />
 }

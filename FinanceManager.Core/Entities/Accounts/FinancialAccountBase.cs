@@ -89,11 +89,13 @@ namespace FinanceManager.Core.Entities.Accounts
 
             var entry = Entries.FirstOrDefault(x => x.Id == id);
             if (entry is null) return;
-            var index = Entries.IndexOf(entry);
+            var indexToRemove = Entries.IndexOf(entry);
+            Entries.RemoveAt(indexToRemove);
 
-            Entries.RemoveAt(index);
-            RecalculateEntryValues(index);
+            if (indexToRemove > 0)
+                Entries[indexToRemove - 1].Value -= entry.ValueChange;
 
+            RecalculateEntryValues(indexToRemove - 1);
         }
         public int? GetMaxId()
         {
@@ -127,14 +129,15 @@ namespace FinanceManager.Core.Entities.Accounts
             throw new NotImplementedException();
         }
 
-        private void RecalculateEntryValues(int? startingIndex)
+        internal void RecalculateEntryValues(int? startingIndex)
         {
             if (Entries is null || !Entries.Any()) return;
 
             int startIndex = startingIndex.HasValue ? startingIndex.Value : Entries.Count() - 1;
             for (int i = startIndex; i >= 0; i--)
             {
-                if (Entries.Count() - 1 <= i) continue;
+                if (Entries.Count() - 1 <= i)
+                    continue;
 
                 var newValue = Entries[i + 1].Value + Entries[i].ValueChange;
                 if (Entries[i].Value != newValue)

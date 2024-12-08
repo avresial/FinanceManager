@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Core.Enums;
+using FinanceManager.Core.Extensions;
 
 namespace FinanceManager.Core.Entities.Accounts
 {
@@ -33,6 +34,31 @@ namespace FinanceManager.Core.Entities.Accounts
         {
             AccountType = accountType;
             Entries = new List<BankAccountEntry>();
+        }
+        public override void Update(BankAccountEntry entry, bool recalculateValues = true)
+        {
+            Entries ??= new List<BankAccountEntry>();
+
+            var entryToUpdate = Entries.FirstOrDefault(x => x.Id == entry.Id);
+            if (entryToUpdate is null) return;
+
+            entryToUpdate.Update(entry);
+            Entries.Remove(entryToUpdate);
+            var previousEntry = Entries.GetPrevious(entryToUpdate.PostingDate).FirstOrDefault();
+
+            if (previousEntry is null)
+            {
+                Entries.Add(entryToUpdate);
+            }
+            else
+            {
+                var newIndex = Entries.IndexOf(previousEntry);
+                Entries.Insert(newIndex, entryToUpdate);
+            }
+
+            var index = Entries.IndexOf(entryToUpdate);
+            if (recalculateValues)
+                RecalculateEntryValues(index);
         }
         public virtual void GetEntry(DateTime start)
         {

@@ -55,19 +55,18 @@
     private DateTime? PostingDate = DateTime.Today;
     private TimeSpan? Time = new TimeSpan(01, 00, 00);
     public string ExpenseType { get; set; } = FinanceManager.Core.Enums.ExpenseType.Other.ToString();
-    public string Description { get; set; }
+    public string Description { get; set; } = string.Empty;
     public decimal? BalanceChange { get; set; } = null;
     // public decimal? Balance { get; set; } = null;
 
     [Parameter]
-    public Func<Task> ActionCompleted { get; set; }
+    public Func<Task>? ActionCompleted { get; set; }
 
-    [Required]
     [Parameter]
-    public BankAccount BankAccount { get; set; }
+    public required BankAccount BankAccount { get; set; }
 
     [Inject]
-    public IFinancalAccountRepository BankAccountRepository { get; set; }
+    public required IAccountService AccountService { get; set; }
 
     protected override Task OnParametersSetAsync()
     {
@@ -104,7 +103,7 @@
         try
         {
             BankAccount.Add(bankAccountEntry);
-            BankAccountRepository.AddFinancialEntry(bankAccountEntry, BankAccount.Name);
+            AccountService.AddFinancialEntry(bankAccountEntry, BankAccount.Name);
         }
         catch (Exception ex)
         {

@@ -6,12 +6,8 @@
 @using FinanceManager.Core.Services
 @using FinanceManager.Presentation.Helpers
 
-
-@if (Account is not null && Account.Entries is not null)
+@if (Account is not null && Account.Entries is not null && (IsLoading || Account.Entries.Any()))
 {
-    <h3 class="m-3" style="position: absolute; z-index: 50; display: inline-block;">
-        @Account.Name
-    </h3>
     <div class="col-12 mb-2" style="min-height:150px;">
         <ApexChart @ref="chart" TItem="ChartEntryModel" Height="150" Options=@options XAxisType="XAxisType.Datetime">
             <ApexPointSeries TItem="ChartEntryModel"
@@ -28,7 +24,7 @@
             <div class="col-xs-12 col-lg-2">
                 <div class="row">
                     <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick=ShowOverlay
-                            Style="margin-left: 30px; position: fixed; bottom: 3vh;" />
+                            Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:1000;" />
 
                     <MudOverlay Visible="@visible" DarkBackground="true">
                         <MudPaper Class="p-5">
@@ -39,47 +35,15 @@
             </div>
             <div class="col-xs-12 col-lg-7">
                 <div class="row">
-
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th scope="col">Ticker</th>
-                                <th scope="col">Unit</th>
-                                <th scope="col">Unit change</th>
-                                <th scope="col">Price</th>
-                                <th scope="col">Posting date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-
-                            @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
-                            {
-                                <tr>
-                                    <td>@entry.Ticker </td>
-                                    <td>@entry.Value</td>
-                                    @if (entry.ValueChange > 0)
-                                    {
-                                        <td class="text-success">@entry.ValueChange</td>
-                                    }
-                                    else
-                                    {
-                                        <td class="text-danger">@entry.ValueChange</td>
-                                    }
-
-                                    <td>
-                                        @if (prices.ContainsKey(entry))
-                                        {
-                                            @($"{(entry.Value * prices[entry].PricePerUnit).ToString("0.00")} {prices[entry].Currency}")
-                                        }
-                                    </td>
-                                    <td>@entry.PostingDate.ToString("yyyy-MM-dd")</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                    <MudExpansionPanels Elevation="0" MultiExpansion>
+                        @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
+                        {
+                            <StockAccountDetailsRow InvestmentAccount=@Account InvestmentEntry=entry />
+                        }
+                    </MudExpansionPanels>
                 </div>
                 <div class="row" style="min-height:40px">
-                    @if (!LoadedAllData)
+                    @if (!LoadedAllData && !IsLoading)
                     {
                         <button class="btn text-center" title="Load more" @onclick="LoadMore">
                             <div>
@@ -206,6 +170,10 @@
         </div>
     </div>
 }
+else if (Account is not null && (Account.Entries is null || !Account.Entries.Any()))
+{
+    <AddStockEntry InvestmentAccount=Account ActionCompleted="HideOverlay" />
+}
 
 @code {
     private decimal? balanceChange = null;
@@ -215,11 +183,13 @@
     private bool LoadedAllData = false;
     private DateTime dateStart;
     private List<ChartEntryModel> pricesDaily;
+    private bool visible;
+
     internal List<(InvestmentEntry, decimal)>? Top5;
     internal List<(InvestmentEntry, decimal)>? Bottom5;
     internal string currency = "PLN";
 
-    private bool visible;
+    public bool IsLoading = false;
     public InvestmentAccount? Account { get; set; }
     public string ErrorMessage { get; set; } = string.Empty;
     public Type accountType;
@@ -228,7 +198,7 @@
     public required string AccountName { get; set; }
 
     [Inject]
-    public IFinancalAccountRepository BankAccountRepository { get; set; }
+    public IAccountService AccountService { get; set; }
 
     [Inject]
     public IStockRepository StockRepository { get; set; }
@@ -260,13 +230,25 @@
                     Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
                 }
             };
-        await UpdateEntries();
-    }
 
+        await UpdateEntries();
+
+        AccountService.AccountsChanged += AccountsService_AccountsChanged;
+    }
     protected override async Task OnParametersSetAsync()
     {
+        IsLoading = true;
+        if (chart is not null)
+        {
+            if (Account is not null && Account.Entries is not null)
+                Account.Entries.Clear();
+
+            await chart.RenderAsync();
+        }
+
         LoadedAllData = false;
         await UpdateEntries();
+        IsLoading = false;
     }
 
     private async Task UpdateEntries()
@@ -274,7 +256,7 @@
         try
         {
             dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-            var accounts = BankAccountRepository.GetAvailableAccounts();
+            var accounts = AccountService.GetAvailableAccounts();
             if (accounts.ContainsKey(AccountName))
             {
                 accountType = accounts[AccountName];
@@ -282,7 +264,7 @@
                 {
                     LoadedAllData = false;
                     prices.Clear();
-                    Account = BankAccountRepository.GetAccount<InvestmentAccount>(AccountName, dateStart, DateTime.UtcNow);
+                    Account = AccountService.GetAccount<InvestmentAccount>(AccountName, dateStart, DateTime.UtcNow);
                     if (Account is not null && Account.Entries is not null)
                         await UpdateInfo();
                 }
@@ -336,7 +318,7 @@
         if (Account is null) return;
 
         var newStartDate = Account.Start.Value.AddMonths(-1);
-        var newData = BankAccountRepository.GetAccount<InvestmentAccount>(AccountName, newStartDate, Account.Start.Value);
+        var newData = AccountService.GetAccount<InvestmentAccount>(AccountName, newStartDate, Account.Start.Value);
 
         if (Account.Entries is null || newData is null || newData.Entries is null) return;
         if (newData.Entries.Last().PostingDate == Account.Entries.Last().PostingDate)
@@ -394,4 +376,13 @@
                ColorsProvider.GetColors().First()
             }
         };
+
+    private void AccountsService_AccountsChanged()
+    {
+        if (chart is not null)
+            _ = UpdateInfo();
+
+        StateHasChanged();
+    }
+
 }
