@@ -6,12 +6,8 @@
 @using FinanceManager.Core.Services
 @using FinanceManager.Presentation.Helpers
 
-
-@if (Account is not null && Account.Entries is not null)
+@if (Account is not null && Account.Entries is not null && Account.Entries.Any())
 {
-    <h3 class="m-3" style="position: absolute; z-index: 50; display: inline-block;">
-        @Account.Name
-    </h3>
     <div class="col-12 mb-2" style="min-height:150px;">
         <ApexChart @ref="chart" TItem="ChartEntryModel" Height="150" Options=@options XAxisType="XAxisType.Datetime">
             <ApexPointSeries TItem="ChartEntryModel"
@@ -42,7 +38,7 @@
                     <MudExpansionPanels Elevation="0" MultiExpansion>
                         @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
                         {
-                            <StockAccountDetailsRow InvestmentAccount=Account InvestmentEntry=entry />
+                            <StockAccountDetailsRow InvestmentAccount=@Account InvestmentEntry=entry />
                         }
                     </MudExpansionPanels>
                 </div>
@@ -173,6 +169,10 @@
             </div>
         </div>
     </div>
+}
+else if (Account is not null && (Account.Entries is null || !Account.Entries.Any()))
+{
+    <AddStockEntry InvestmentAccount=Account ActionCompleted="HideOverlay" />
 }
 
 @code {

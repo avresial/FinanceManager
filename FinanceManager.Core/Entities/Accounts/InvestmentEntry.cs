@@ -26,8 +26,6 @@ namespace FinanceManager.Core.Entities.Accounts
 
             ValueChange = financialEntryBase.ValueChange;
         }
-
-
     }
 
     public class InvestmentEntry : FinancialEntryBase
@@ -40,7 +38,17 @@ namespace FinanceManager.Core.Entities.Accounts
             Ticker = ticker;
             InvestmentType = investmentType;
         }
+        public void Update(InvestmentEntry entry)
+        {
+            PostingDate = entry.PostingDate;
 
+            var valueChangeChange = entry.ValueChange - ValueChange;
+            Value += valueChangeChange;
+
+            ValueChange = entry.ValueChange;
+            Ticker = entry.Ticker;
+            InvestmentType = entry.InvestmentType;
+        }
     }
     public class FixedAssetEntry : FinancialEntryBase
     {
@@ -62,6 +70,18 @@ namespace FinanceManager.Core.Entities.Accounts
 
         public BankAccountEntry(int id, DateTime postingDate, decimal value, decimal valueChange) : base(id, postingDate, value, valueChange)
         {
+        }
+
+        public void Update(BankAccountEntry entry)
+        {
+            PostingDate = entry.PostingDate;
+
+            var valueChangeChange = entry.ValueChange - ValueChange;
+            Value += valueChangeChange;
+
+            ValueChange = entry.ValueChange;
+            Description = entry.Description;
+            ExpenseType = entry.ExpenseType;
         }
     }
 }

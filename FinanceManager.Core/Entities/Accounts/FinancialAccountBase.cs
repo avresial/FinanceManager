@@ -126,7 +126,7 @@ namespace FinanceManager.Core.Entities.Accounts
             throw new NotImplementedException();
         }
 
-        private void RecalculateEntryValues(int? startingIndex)
+        internal void RecalculateEntryValues(int? startingIndex)
         {
             if (Entries is null || !Entries.Any()) return;
 
