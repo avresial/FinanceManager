@@ -25,10 +25,15 @@ namespace FinanceManager.Core.Entities.Accounts
             if (Entries is null) return [];
             return Entries.Get(date);
         }
+        public virtual void Add(IEnumerable<InvestmentEntry> entries, bool recalculateValues = true)
+        {
+            foreach (var entry in entries)
+                Add(entry, recalculateValues);
+        }
         public override void Add(InvestmentEntry entry, bool recalculate = true)
         {
             Entries ??= new List<InvestmentEntry>();
-            var previousEntry = Entries.GetPrevious(entry.PostingDate, entry.Ticker).FirstOrDefault();
+            var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();
             var index = -1;
 
             if (previousEntry is not null)
@@ -38,7 +43,7 @@ namespace FinanceManager.Core.Entities.Accounts
             {
                 entry.Value = entry.ValueChange;
                 if (Entries is not null)
-                    Entries.Insert(0, entry);
+                    Entries.Add(entry);
             }
             else
             {

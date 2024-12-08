@@ -65,17 +65,23 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
             var newStartDate = Account.Start.Value.AddMonths(-1);
             var newData = AccountService.GetAccount<BankAccount>(AccountName, newStartDate, Account.Start.Value);
 
-            if (Account.Entries is null || newData is null || newData.Entries is null) return;
-            if (!newData.Entries.Any() || newData.Entries.Last().PostingDate == Account.Entries.Last().PostingDate)
+            if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
             {
                 LoadedAllData = true;
                 return;
             }
 
-            var lastExisting = Account.Entries.LastOrDefault();
-            var firstNew = newData.Entries.FirstOrDefault();
+            var newEntriesWithoutOldest = newData.Entries.Skip(1);
+            if (Account.Entries.Any(x => x.Id == newEntriesWithoutOldest.First().Id))
+            {
+                LoadedAllData = true;
+                return;
+            }
 
-            Account.Add(newData.Entries.Skip(1), false);
+            Account.Add(newEntriesWithoutOldest, false);
+
+            if ((Account.Entries.Last().PostingDate - newStartDate).TotalDays > 1)
+                LoadedAllData = true;
 
             if (chart is not null)
                 await chart.RenderAsync();

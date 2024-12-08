@@ -320,14 +320,23 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
         var newStartDate = Account.Start.Value.AddMonths(-1);
         var newData = AccountService.GetAccount<InvestmentAccount>(AccountName, newStartDate, Account.Start.Value);
 
-        if (Account.Entries is null || newData is null || newData.Entries is null) return;
-        if (newData.Entries.Last().PostingDate == Account.Entries.Last().PostingDate)
+        if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
         {
             LoadedAllData = true;
             return;
         }
 
-        Account.Add(newData.Entries.Skip(1));
+        var newEntriesWithoutOldest = newData.Entries.Skip(1);
+        if (Account.Entries.Any(x => x.Id == newEntriesWithoutOldest.First().Id))
+        {
+            LoadedAllData = true;
+            return;
+        }
+
+        if ((Account.Entries.Last().PostingDate - newStartDate).TotalDays > 1)
+            LoadedAllData = true;
+
+        Account.Add(newEntriesWithoutOldest, false);
 
         await UpdateInfo();
     }
