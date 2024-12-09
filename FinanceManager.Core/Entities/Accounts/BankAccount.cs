@@ -5,6 +5,7 @@ namespace FinanceManager.Core.Entities.Accounts
 {
     public class FinancialAccountBase
     {
+        public int Id { get; set; }
         public string Name { get; set; }
         public virtual DateTime? Start { get; protected set; }
         public virtual DateTime? End { get; protected set; }
@@ -12,25 +13,22 @@ namespace FinanceManager.Core.Entities.Accounts
 
     public class FixedAssetAccount : FinancialAccountBase<FixedAssetEntry>
     {
-        public FixedAssetAccount(string name) : base(name)
+        public FixedAssetAccount(int id, string name) : base(id, name)
         {
 
         }
-
-        //	public List<FixedAssetEntry>? Entries { get; private set; }
     }
 
     public class BankAccount : FinancialAccountBase<BankAccountEntry>//, IFinancalAccount
     {
-        //public List<BankAccountEntry>? Entries { get; private set; }
         public AccountType AccountType { get; private set; }
 
-        public BankAccount(string name, IEnumerable<BankAccountEntry> entries, AccountType accountType) : base(name)
+        public BankAccount(int id, string name, IEnumerable<BankAccountEntry> entries, AccountType accountType) : base(id, name)
         {
             Entries = entries.ToList();
             AccountType = accountType;
         }
-        public BankAccount(string name, AccountType accountType) : base(name)
+        public BankAccount(int id, string name, AccountType accountType) : base(id, name)
         {
             AccountType = accountType;
             Entries = new List<BankAccountEntry>();

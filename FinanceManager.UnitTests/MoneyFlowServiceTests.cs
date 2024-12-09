@@ -22,18 +22,18 @@ namespace FinanceManager.UnitTests
         public MoneyFlowServiceTests()
         {
 
-            BankAccount bankAccount1 = new BankAccount("testBank1", AccountType.Cash);
+            BankAccount bankAccount1 = new BankAccount(1, "testBank1", AccountType.Cash);
             bankAccount1.Add(new BankAccountEntry(1, startDate, 10, 10));
             bankAccount1.Add(new BankAccountEntry(2, startDate.AddDays(1), 20, 10));
 
-            BankAccount bankAccount2 = new BankAccount("testBank2", AccountType.Cash);
+            BankAccount bankAccount2 = new BankAccount(2, "testBank2", AccountType.Cash);
             bankAccount2.Add(new BankAccountEntry(1, endDate, 10, 10));
 
             _bankAccounts = new List<BankAccount>() { bankAccount1, bankAccount2 };
             _financalAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(startDate, endDate))
                                             .Returns(_bankAccounts);
 
-            InvestmentAccount investmentAccount1 = new InvestmentAccount("testInvestmentAccount1");
+            InvestmentAccount investmentAccount1 = new InvestmentAccount(3, "testInvestmentAccount1");
             investmentAccount1.Add(new InvestmentEntry(1, startDate, 10, 10, "testStock1", InvestmentType.Stock));
             investmentAccount1.Add(new InvestmentEntry(2, endDate, 10, 10, "testStock2", InvestmentType.Stock));
 

@@ -9,7 +9,7 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         private InvestmentAccount investmentAccount;
         public InvestmentAccountTests()
         {
-            investmentAccount = new InvestmentAccount("TestAccount");
+            investmentAccount = new InvestmentAccount(1, "TestAccount");
         }
 
 
