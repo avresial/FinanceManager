@@ -7,7 +7,7 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         private FinancialAccountBase<FinancialEntryBase> FinancialAccount;
         public FinancialAccountTests()
         {
-            FinancialAccount = new FinancialAccountBase<FinancialEntryBase>("Test account");
+            FinancialAccount = new FinancialAccountBase<FinancialEntryBase>(1, "Test account");
         }
 
         [Fact]

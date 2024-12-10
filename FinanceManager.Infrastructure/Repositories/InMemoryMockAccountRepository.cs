@@ -8,6 +8,7 @@ namespace FinanceManager.Infrastructure.Repositories
 {
     public class InMemoryMockAccountRepository : IFinancalAccountRepository
     {
+        int lastAccointId = 0;
         private readonly Random random = new Random();
         private readonly ServiceContainer _bankAccounts = new ServiceContainer();
         private Dictionary<string, Type> nameTypeDictionary = new Dictionary<string, Type>();
@@ -17,6 +18,8 @@ namespace FinanceManager.Infrastructure.Repositories
             AddMockData();
         }
 
+
+        public int GetLastAccountId() => lastAccointId;
         public IEnumerable<T> GetAccounts<T>(DateTime dateStart, DateTime dateEnd) where T : FinancialAccountBase
         {
             var accountsOfType = _bankAccounts.GetService(typeof(List<T>)) as List<T>;
@@ -48,7 +51,7 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 BankAccount databaseBankAccount = firstAccount as BankAccount;
 
-                BankAccount bankAccount = new BankAccount(name, databaseBankAccount.Get(dateStart, dateEnd), databaseBankAccount.AccountType);
+                BankAccount bankAccount = new BankAccount(databaseBankAccount.Id, name, databaseBankAccount.Get(dateStart, dateEnd), databaseBankAccount.AccountType);
                 return bankAccount as T;
             }
 
@@ -56,7 +59,7 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 InvestmentAccount databaseBankAccount = firstAccount as InvestmentAccount;
 
-                InvestmentAccount bankAccount = new InvestmentAccount(name, databaseBankAccount.Get(dateStart, dateEnd));
+                InvestmentAccount bankAccount = new InvestmentAccount(databaseBankAccount.Id, name, databaseBankAccount.Get(dateStart, dateEnd));
                 return bankAccount as T;
             }
 
@@ -78,12 +81,40 @@ namespace FinanceManager.Infrastructure.Repositories
 
             nameTypeDictionary.Add(bankAccount.Name, typeof(T));
         }
+        public void AddFinancialAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
+            where AccountType : FinancialAccountBase
+            where EntryType : FinancialEntryBase
+        {
+            throw new NotImplementedException();
+        }
         public void AddFinancialEntry<T>(T bankAccountEntry, string accountName) where T : FinancialEntryBase
         {
             if (bankAccountEntry is BankAccountEntry bankEntry)
                 AddBankAccountEntry(accountName, bankEntry.ValueChange, bankEntry.Description, bankEntry.ExpenseType, bankEntry.PostingDate);
             if (bankAccountEntry is InvestmentEntry investmentEntry)
                 AddStockAccountEntry(accountName, investmentEntry.Ticker, investmentEntry.InvestmentType, investmentEntry.ValueChange, investmentEntry.PostingDate);
+        }
+        public void UpdateFinancialEntry<T>(T accountEntry, string accountName) where T : FinancialEntryBase
+        {
+            if (accountEntry is BankAccountEntry bankEntry)
+                UpdateBankAccountEntry(accountName, bankEntry);
+            if (accountEntry is InvestmentEntry investmentEntry)
+                UpdateStockAccountEntry(accountName, investmentEntry);
+        }
+        public void RemoveFinancialEntry(int accountEntryId, string accountName)
+        {
+            var account = FindAccount(accountName);
+            if (account is null) return;
+
+            switch (account)
+            {
+                case BankAccount bankAccount:
+                    bankAccount.Remove(accountEntryId);
+                    break;
+                case InvestmentAccount investmentAccount:
+                    investmentAccount.Remove(accountEntryId);
+                    break;
+            }
         }
         public bool AccountExists(string name)
         {
@@ -93,6 +124,7 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             return nameTypeDictionary;
         }
+
         private object? FindAccount(string name)
         {
             if (_bankAccounts is null) return null;
@@ -161,7 +193,7 @@ namespace FinanceManager.Infrastructure.Repositories
         }
         private void AddStockAccount(DateTime startDay, decimal startingBalance, string accountName, List<(string, InvestmentType)> tickers)
         {
-            AddFinancialAccount(new InvestmentAccount(accountName));
+            AddFinancialAccount(new InvestmentAccount(lastAccointId++, accountName));
             int tickerIndex = random.Next(tickers.Count);
             AddStockAccountEntry(accountName, tickers[tickerIndex].Item1, tickers[tickerIndex].Item2, startingBalance, startDay);
 
@@ -197,7 +229,7 @@ namespace FinanceManager.Infrastructure.Repositories
             if (accountType == AccountType.Stock)
                 expenseType = ExpenseType.Investment;
 
-            AddFinancialAccount(new BankAccount(accountName, accountType));
+            AddFinancialAccount(new BankAccount(lastAccointId++, accountName, accountType));
             AddBankAccountEntry(accountName, startingBalance, $"Lorem ipsum {0}", expenseType, startDay);
             startDay = startDay.AddMinutes(1);
             int index = 0;
@@ -217,7 +249,7 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             var creditDays = (DateTime.UtcNow - startDay).TotalDays;
 
-            AddFinancialAccount(new BankAccount(accountName, AccountType.Loan));
+            AddFinancialAccount(new BankAccount(lastAccointId++, accountName, AccountType.Loan));
 
             AddBankAccountEntry(accountName, startingBalance, $"Lorem ipsum {0}", ExpenseType.DebtRepayment, startDay);
             startDay = startDay.AddMinutes(1);
@@ -263,14 +295,6 @@ namespace FinanceManager.Infrastructure.Repositories
 
             bankAccount.Add(bankAccountEntry);
         }
-        public void UpdateFinancialEntry<T>(T accountEntry, string accountName) where T : FinancialEntryBase
-        {
-            if (accountEntry is BankAccountEntry bankEntry)
-                UpdateBankAccountEntry(accountName, bankEntry);
-            if (accountEntry is InvestmentEntry investmentEntry)
-                UpdateStockAccountEntry(accountName, investmentEntry);
-        }
-
         private void UpdateBankAccountEntry(string accountName, BankAccountEntry bankAccountEntry)
         {
             var bankAccount = FindAccount<BankAccount>(accountName);
@@ -291,22 +315,6 @@ namespace FinanceManager.Infrastructure.Repositories
 
             entryToUpdate.Update(investmentEntry);
         }
-
-        public void RemoveFinancialEntry(int accountEntryId, string accountName)
-        {
-            var account = FindAccount(accountName);
-            if (account is null) return;
-
-            switch (account)
-            {
-                case BankAccount bankAccount:
-                    bankAccount.Remove(accountEntryId);
-                    break;
-                case InvestmentAccount investmentAccount:
-                    investmentAccount.Remove(accountEntryId);
-                    break;
-            }
-        }
         private ExpenseType GetRandomType()
         {
             Array values = Enum.GetValues(typeof(ExpenseType));
@@ -316,14 +324,5 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             return (decimal)(random.Next(-100, 100) + Math.Round(random.NextDouble(), 2));
         }
-
-        public void AddFinancialAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
-            where AccountType : FinancialAccountBase
-            where EntryType : FinancialEntryBase
-        {
-            throw new NotImplementedException();
-        }
-
-
     }
 }

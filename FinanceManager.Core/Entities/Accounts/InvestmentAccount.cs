@@ -5,11 +5,11 @@ namespace FinanceManager.Core.Entities.Accounts
 {
     public class InvestmentAccount : FinancialAccountBase<InvestmentEntry>
     {
-        public InvestmentAccount(string name, IEnumerable<InvestmentEntry> entries) : base(name)
+        public InvestmentAccount(int id, string name, IEnumerable<InvestmentEntry> entries) : base(id, name)
         {
             Entries = entries.ToList();
         }
-        public InvestmentAccount(string name) : base(name)
+        public InvestmentAccount(int id, string name) : base(id, name)
         {
             Entries = new List<InvestmentEntry>();
         }

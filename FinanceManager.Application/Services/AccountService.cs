@@ -60,5 +60,7 @@ namespace FinanceManager.Application.Services
             _bankAccountRepository.RemoveFinancialEntry(accountEntryId, accountName);
             AccountsChanged?.Invoke();
         }
+
+        public int GetLastAccountId() => _bankAccountRepository.GetLastAccountId();
     }
 }

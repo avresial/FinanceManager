@@ -46,7 +46,7 @@ namespace FinanceManager.Pages
                     List<BankAccountEntry> entries = account.Entries.Where(x => (DateTime.Now - x.PostingDate).Duration() < timeSpan).ToList();
                     if (!entries.Any()) continue;
 
-                    Accounts.Add(new BankAccount(account.Name, entries, account.AccountType));
+                    Accounts.Add(new BankAccount(account.Id, account.Name, entries, account.AccountType));
                 }
                 StateHasChanged();
             }
