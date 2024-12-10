@@ -52,28 +52,7 @@
 
     public string? ConfirmPassword { get; set; }
 
-    protected override async Task OnInitializedAsync()
-    {
-        bool firstVisit = !(await LocalStorageService.ContainKeyAsync("isThisFirstVisit"));
-        if (firstVisit)
-        {
-            await LocalStorageService.SetItemAsync("isThisFirstVisit", false);
-            Navigation.NavigateTo("landingpage");
-            return;
-        }
-
-        var loggedUser = await LoginService.GetLoggedUser();
-        if (loggedUser is not null)
-            Navigation.NavigateTo("");
-
-        var getKeepMeLoggedinSession = await LoginService.GetKeepMeLoggedinSession();
-        if (getKeepMeLoggedinSession is not null)
-        {
-            await LoginService.Login(getKeepMeLoggedinSession.UserName, "shouldBeAToken");
-            Navigation.NavigateTo("");
-        }
-    }
-
+   
     async Task Register()
     {
         await form.Validate();
@@ -84,7 +63,7 @@
         }
         List<string> newErrors = [];
 
-        var addingUserResult = await loginRepository.AddUser(loginModel.Login, loginModel.Password);
+        var addingUserResult = await LoginService.AddUser(loginModel.Login, loginModel.Password);
 
         if (!addingUserResult)
             newErrors.Add("Incorrect username or password.");

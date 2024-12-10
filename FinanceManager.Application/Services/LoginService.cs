@@ -5,6 +5,7 @@ using FinanceManager.Core.Entities.Login;
 using FinanceManager.Core.Repositories;
 using FinanceManager.Core.Services;
 using Microsoft.AspNetCore.Components.Authorization;
+using System.Security.Cryptography;
 
 namespace FinanceManager.Application.Services
 {
@@ -24,7 +25,7 @@ namespace FinanceManager.Application.Services
             _localStorageService = localStorageService;
             this._authState = AuthState;
             _loginRepository = loginRepository;
-            _ = _loginRepository.AddUser("Guest", "GuestPassword");
+            _ = _loginRepository.AddUser("Guest", EncryptPassword("GuestPassword"));
         }
 
         public async Task<UserSession?> GetLoggedUser()
@@ -38,27 +39,35 @@ namespace FinanceManager.Application.Services
         {
             return await _localStorageService.GetItemAsync<UserSession>(sessionString);
         }
-        public async Task<bool> Login(string username, string password)
+
+        public async Task<bool> Login(UserSession userSession)
         {
-            username = username.ToLower();
-            var userFromDatabase = await _loginRepository.GetUser(username, password);
+            var userFromDatabase = await _loginRepository.GetUser(userSession.UserName, userSession.Password);
             if (userFromDatabase is null)
             {
-                Console.WriteLine($"INFO - {username} user was not found.");
+                Console.WriteLine($"INFO - {userSession.UserName} user was not found.");
                 await Logout();
                 return false;
             }
 
-            LoggedUser = new UserSession()
-            {
-                UserId = 0,
-                UserName = username,
-            };
+            LoggedUser = userSession;
 
             await _sessionStorageService.SetItemAsync(sessionString, LoggedUser);
             await _localStorageService.SetItemAsync(sessionString, LoggedUser);
-            var authState = await ((CustomAuthenticationStateProvider)_authState).ChangeUser(username, username, "Associate");
+            var authState = await ((CustomAuthenticationStateProvider)_authState).ChangeUser(userSession.UserName, userSession.UserName, "Associate");
             return true;
+        }
+        public async Task<bool> Login(string username, string password)
+        {
+            username = username.ToLower();
+            var encryptedPassword = EncryptPassword(password);
+
+            return await Login(new UserSession()
+            {
+                UserId = 0,
+                UserName = username,
+                Password = encryptedPassword
+            });
         }
 
         public async Task Logout()
@@ -67,6 +76,22 @@ namespace FinanceManager.Application.Services
             await _localStorageService.RemoveItemAsync(sessionString);
             await ((CustomAuthenticationStateProvider)_authState).Logout();
             LoggedUser = null;
+        }
+
+        public async Task<bool> AddUser(string login, string password)
+        {
+            return await _loginRepository.AddUser(login, EncryptPassword(password));
+        }
+
+        private string EncryptPassword(string inputString)
+        {
+            byte[] data = System.Text.Encoding.ASCII.GetBytes(inputString);
+            var hashAlgorithm = SHA256.Create();
+
+            data = hashAlgorithm.ComputeHash(data);
+            string hash = System.Text.Encoding.ASCII.GetString(data);
+
+            return hash;
         }
     }
 }
