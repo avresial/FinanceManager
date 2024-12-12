@@ -1,99 +1,34 @@
-﻿@page "/Import"
+﻿@page "/Import/{AccountName}"
+@using FinanceManager.Core.Entities.Accounts
+@using FinanceManager.Presentation.Components.ImportData
 
-<h3>Import data</h3>
-
-<div class="mb-3">
-    @* <label for="formFile" class="form-label">Load data</label> *@
-    <InputFile class="form-control" type="file" id="formFile" OnChange="LoadFiles" />
-</div>
-
-@if (IsLoading)
+@if (accountType is null)
 {
     <DisplaySpinner />
 }
 else
 {
-    @if (ErrorMessage != string.Empty)
-    {
-        <div class="alert alert-warning" role="alert">
-            @ErrorMessage
-        </div>
-    }
-    else
-    {
-
-        @if (CurrentlyLoadedEntries != null)
+    <div class="container-fluid px-0" @ref=MyElementReference>
+        @if (ErrorMessage != string.Empty)
         {
-            <div>
-                <div class="row">
-
-                    <div class="input-group mb-3">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text" id="basic-addon1">Account name</span>
-                        </div>
-                        <input type="text" class="form-control" placeholder="@CurrentlyLoadedAccountName" aria-label="Username" aria-describedby="basic-addon1" 
-                        @bind="CurrentlyLoadedAccountName" @bind:event="oninput">
-                        <button class="btn btn-primary" type="submit" onclick="@Add" disabled="@IsDisabled">Add data</button>
-                    </div>
-                </div>
-
-                @if (BankAccountRepository.AccountExists(CurrentlyLoadedAccountName))
-                {
-                    <div class="row">
-                        <div class="alert alert-warning" role="alert">
-                            Data table with name @CurrentlyLoadedAccountName already exists in database. In order to add this data table, change a name.
-                        </div>
-                    </div>
-                }
-
-                <div class="row">
-                    <p>There is @CurrentlyLoadedEntries.Count() rows of data to import.</p>
-                </div>
-              
-                <div class="row">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th scope="col">PostingDate</th>
-                                <th scope="col">Balance</th>
-                                <th scope="col">BalanceChange</th>
-                                <th scope="col">Sender name</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-
-                            @foreach (var entry in CurrentlyLoadedEntries.Take(20))
-                            {
-                                <tr>
-                                    <td>@entry.PostingDate</td>
-                                    <td>@entry.Value zł</td>
-                                    @if (entry.ValueChange > 0)
-                                    {
-                                        <td style="background-color:lightgreen">@entry.ValueChange zł</td>
-                                    }
-                                    else
-                                    {
-                                        <td style="background-color:lightcoral">@entry.ValueChange zł</td>
-                                    }
-                                    <td>@entry.Description</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+            <div class="alert alert-warning" role="alert">
+                @ErrorMessage
             </div>
-
         }
-
-
-        @if (ImportSucess.HasValue && ImportSucess.Value == true)
+        else if (accountType == typeof(BankAccount))
         {
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <strong>Data table imported succesfuly.</strong><br />
-                Add next one or go to <a href="/">Home</a> page.
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" onclick="@CloseImportNotification"></button>
-            </div>
-           
+            <ImportBankEntriesComponent AccountName="@AccountName" />
         }
-    }
+        else if (accountType == typeof(InvestmentAccount))
+        {
+            <ImportStockEntriesComponent AccountName="@AccountName" />
+        }
+        else
+        {
+            <div class="alert alert-danger" role="alert">
+                @accountType type is not supported.
+            </div>
+        }
+    </div>
 }
+

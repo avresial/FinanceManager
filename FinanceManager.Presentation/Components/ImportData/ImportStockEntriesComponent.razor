@@ -1,0 +1,86 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+<MudContainer>
+
+    <MudText Typo="Typo.h1">@AccountName</MudText>
+
+
+    <MudExpansionPanels MultiExpansion="true">
+        <MudExpansionPanel Text="Select file" Expanded=@Step1Expand ExpandedChanged="@(()=>ExpandStep(1))" Disabled="@(!Step1Enabled)">
+            <InputFile class="form-control" type="file" id="formFile" OnChange="LoadFiles" @onclick=Clear />
+        </MudExpansionPanel>
+        <MudExpansionPanel Text="Validate" Expanded=@Step2Expand ExpandedChanged="@(()=>ExpandStep(2))" Disabled="@(!Step2Enabled)">
+            @foreach (var file in LoadedFiles)
+            {
+                @file.Name
+            }
+            <MudButton Variant="Variant.Text" Class="col-12" OnClick=FilesAreValid>IsValid</MudButton>
+
+        </MudExpansionPanel>
+        <MudExpansionPanel Text="Confirm import" Expanded=@Step3Expand ExpandedChanged="@(()=>ExpandStep(3))" Disabled="@(!Step3Enabled)">
+            No content
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+
+    <MudButton Variant="Variant.Text" Class="col-12" href="@($"AccountDetails/{AccountName}")">Go back</MudButton>
+</MudContainer>
+@code {
+    public bool Step1Expand = true;
+    public bool Step1Enabled = true;
+
+    public bool Step2Expand = false;
+    public bool Step2Enabled = false;
+
+    public bool Step3Expand = false;
+    public bool Step3Enabled = false;
+
+    public List<IBrowserFile> LoadedFiles = new();
+
+    [Parameter]
+    public required string AccountName { get; set; }
+
+    public async Task Clear()
+    {
+        if (LoadedFiles is not null)
+            LoadedFiles.Clear();
+
+        Step2Enabled = false;
+        Step3Enabled = false;
+    }
+    public async Task ExpandStep(int step)
+    {
+        if (step == 1)
+        {
+            Step1Expand = true;
+            Step2Expand = false;
+            Step3Expand = false;
+        }
+        else if (step == 2)
+        {
+            Step1Expand = false;
+            Step2Expand = true;
+            Step3Expand = false;
+        }
+        else if (step == 3)
+        {
+            Step1Expand = false;
+            Step2Expand = false;
+            Step3Expand = true;
+        }
+    }
+
+
+    public async Task LoadFiles(InputFileChangeEventArgs e)
+    {
+        LoadedFiles = e.GetMultipleFiles(6).ToList();
+        Step2Enabled = LoadedFiles.Any();
+
+        await ExpandStep(2);
+    }
+
+    public async Task FilesAreValid()
+    {
+        Step3Enabled = LoadedFiles.Any();
+
+        await ExpandStep(3);
+    }
+}

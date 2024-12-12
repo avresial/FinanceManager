@@ -13,6 +13,8 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
         private decimal balanceChange = 100;
         private bool LoadedAllData = false;
         private DateTime dateStart;
+
+        private bool ImportFinancialEntriesComponentVisibility;
         private bool AddEntryVisibility;
         private ApexChart<BankAccountEntry> chart;
 
