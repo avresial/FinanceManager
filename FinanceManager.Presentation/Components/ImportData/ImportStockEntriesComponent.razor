@@ -1,86 +1,235 @@
 ﻿@using Microsoft.AspNetCore.Components.Forms
 <MudContainer>
 
-    <MudText Typo="Typo.h1">@AccountName</MudText>
+    <MudText Typo="Typo.h2">Import data to @AccountName account</MudText>
 
+    <MudPaper>
+        <MudStepper @bind-ActiveIndex="_index" OnPreviewInteraction="OnPreviewInteraction">
+            <ChildContent>
 
-    <MudExpansionPanels MultiExpansion="true">
-        <MudExpansionPanel Text="Select file" Expanded=@Step1Expand ExpandedChanged="@(()=>ExpandStep(1))" Disabled="@(!Step1Enabled)">
-            <InputFile class="form-control" type="file" id="formFile" OnChange="LoadFiles" @onclick=Clear />
-        </MudExpansionPanel>
-        <MudExpansionPanel Text="Validate" Expanded=@Step2Expand ExpandedChanged="@(()=>ExpandStep(2))" Disabled="@(!Step2Enabled)">
-            @foreach (var file in LoadedFiles)
-            {
-                @file.Name
-            }
-            <MudButton Variant="Variant.Text" Class="col-12" OnClick=FilesAreValid>IsValid</MudButton>
+                <MudStep Title="Select file" SecondaryText="Step1" @bind-Completed="_step1Complete">
+                    <MudStack Style="width: 100%">
+                        <MudForm Model="@File"
+                                 @bind-IsValid="_isValid"
+                                 @bind-IsTouched="_isTouched">
+                            <MudItem xs="12">
+                                <MudFileUpload T="IBrowserFile"
+                                               @bind-File="File"
+                                               For="@(() => File)"
+                                               Hidden="@false"
+                                               InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
+                                               InputStyle="opacity:0"
+                                               ErrorText="@string.Empty"
+                                               tabindex="-1"
+                                               @ondrop="@ClearDragClass"
+                                               @ondragenter="@SetDragClass"
+                                               @ondragleave="@ClearDragClass"
+                                               @ondragend="@ClearDragClass"
+                                               OnFilesChanged="UploadFiles">
 
-        </MudExpansionPanel>
-        <MudExpansionPanel Text="Confirm import" Expanded=@Step3Expand ExpandedChanged="@(()=>ExpandStep(3))" Disabled="@(!Step3Enabled)">
-            No content
-        </MudExpansionPanel>
-    </MudExpansionPanels>
+                                    <ActivatorContent>
+                                        <MudPaper Height="300px"
+                                                  Outlined="true"
+                                                  Class="@_dragClass">
+                                            <MudText Typo="Typo.h6">
+                                                Drag and drop file here or click
+                                            </MudText>
+                                            @if (LoadedFiles is not null && LoadedFiles.Any())
+                                            {
+                                                @foreach (var item in LoadedFiles)
+                                                {
+                                                    <MudChip T="string" Color="Color.Dark" Text="@item.Name" />
+                                                }
+                                            }
+                                        </MudPaper>
+                                    </ActivatorContent>
+                                </MudFileUpload>
+                                <MudToolBar Gutters="@false"
+                                            Class="relative d-flex justify-end gap-4">
+                                   
+                                    <MudButton Color="Color.Error"
+                                               Disabled="@(!LoadedFiles.Any())"
+                                               OnClick="@ClearFiles"
+                                               Variant="Variant.Filled">
+                                        Clear
+                                    </MudButton>
+                                </MudToolBar>
+                            </MudItem>
+                           
+                        </MudForm>
+                    </MudStack>
+                </MudStep>
 
-    <MudButton Variant="Variant.Text" Class="col-12" href="@($"AccountDetails/{AccountName}")">Go back</MudButton>
+                <MudStep Title="Validate" SecondaryText="Step2" @bind-Completed="_step2Complete" Disabled="@(_step1Complete == false)">
+
+                    <MudGrid>
+                        <MudItem xs="12">
+                            @foreach (var file in LoadedFiles)
+                            {
+                                @file.Name
+                            }
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            @if (_isImportingData)
+                            {
+                                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                            }
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudButton @onclick=FinishImport>Accept</MudButton>
+                        </MudItem>
+                    </MudGrid>
+
+                </MudStep>
+                <MudStep Title="Summary" SecondaryText="Step3" @bind-Completed="_step3Complete" Disabled="@(_step2Complete == false)">
+
+                    Summary
+
+                    <MudButton Variant="Variant.Text" Class="col-12" href="@($"AccountDetails/{AccountName}")">Go back to @AccountName</MudButton>
+                </MudStep>
+            </ChildContent>
+
+            <ActionContent Context="stepper">
+                <MudIconButton OnClick="@(() => stepper.PreviousStepAsync())" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary" Disabled="@(_index <= 0)" />
+                <MudSpacer />
+                <MudIconButton OnClick="@(() => stepper.NextStepAsync())" Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Primary" />
+            </ActionContent>
+        </MudStepper>
+    </MudPaper>
+
 </MudContainer>
 @code {
-    public bool Step1Expand = true;
-    public bool Step1Enabled = true;
+    private int _index;
 
-    public bool Step2Expand = false;
-    public bool Step2Enabled = false;
+    private bool _isImportingData = false;
+    private bool _step1Complete;
+    private bool _step2Complete;
+    private bool _step3Complete;
 
-    public bool Step3Expand = false;
-    public bool Step3Enabled = false;
+    public async Task UploadFiles(InputFileChangeEventArgs e)
+    {
+        LoadedFiles = e.GetMultipleFiles(6).ToList();
+
+        _step1Complete = LoadedFiles.Any();
+
+        // _index++;
+    }
+
+
+    public IBrowserFile? File { get; set; } = null;
+    private bool _isValid;
+    private bool _isTouched;
+    private const string FileContent = "this is content";
+    private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
+    private string _dragClass = DefaultDragClass;
+
+
+
+    private void SetDragClass()
+        => _dragClass = $"{DefaultDragClass} mud-border-primary";
+
+    private void ClearDragClass()
+        => _dragClass = DefaultDragClass;
+
+
+
+    private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
+    {
+        if (arg.Action == StepAction.Complete)
+        {
+            await ControlStepCompletion(arg);
+        }
+        else if (arg.Action == StepAction.Activate)
+        {
+            await ControlStepNavigation(arg);
+        }
+    }
+
+    private async Task ControlStepCompletion(StepperInteractionEventArgs arg)
+    {
+        switch (arg.StepIndex)
+        {
+            case 0:
+                if (_step1Complete != true)
+                {
+                    arg.Cancel = true;
+                }
+                break;
+            case 1:
+                if (_step2Complete != true)
+                {
+                    arg.Cancel = true;
+                }
+                break;
+            case 2:
+                if (_step3Complete != true)
+                {
+                    arg.Cancel = true;
+                }
+                break;
+        }
+    }
+
+    private async Task ControlStepNavigation(StepperInteractionEventArgs arg)
+    {
+        switch (arg.StepIndex)
+        {
+            case 1:
+                if (_step1Complete != true)
+                {
+                    arg.Cancel = true;
+                }
+                break;
+            case 2:
+                if (_step2Complete != true)
+                {
+                    arg.Cancel = true;
+                }
+                break;
+            case 3:
+                if (_step3Complete != true)
+                {
+                    arg.Cancel = true;
+                }
+                break;
+        }
+    }
+
+
+
 
     public List<IBrowserFile> LoadedFiles = new();
 
     [Parameter]
     public required string AccountName { get; set; }
 
-    public async Task Clear()
+
+    public async Task ClearFiles()
     {
         if (LoadedFiles is not null)
             LoadedFiles.Clear();
 
-        Step2Enabled = false;
-        Step3Enabled = false;
+        _step1Complete = false;
+        _step2Complete = false;
+        _step3Complete = false;
     }
-    public async Task ExpandStep(int step)
-    {
-        if (step == 1)
-        {
-            Step1Expand = true;
-            Step2Expand = false;
-            Step3Expand = false;
-        }
-        else if (step == 2)
-        {
-            Step1Expand = false;
-            Step2Expand = true;
-            Step3Expand = false;
-        }
-        else if (step == 3)
-        {
-            Step1Expand = false;
-            Step2Expand = false;
-            Step3Expand = true;
-        }
-    }
-
 
     public async Task LoadFiles(InputFileChangeEventArgs e)
     {
         LoadedFiles = e.GetMultipleFiles(6).ToList();
-        Step2Enabled = LoadedFiles.Any();
 
-        await ExpandStep(2);
+        _step1Complete = LoadedFiles.Any();
+
+        _index++;
     }
-
-    public async Task FilesAreValid()
+    public async Task FinishImport()
     {
-        Step3Enabled = LoadedFiles.Any();
-
-        await ExpandStep(3);
+        _isImportingData = true;
+        await Task.Delay(3000);
+        _step2Complete = true;
+        _isImportingData = false;
+        _index++;
     }
 }
