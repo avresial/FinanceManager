@@ -1,5 +1,6 @@
 ﻿@using CsvHelper
 @using CsvHelper.Configuration
+@using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Infrastructure.Dtos
 @using Microsoft.AspNetCore.Components.Forms
 @using System.Globalization
@@ -156,6 +157,9 @@
     [Parameter]
     public required string AccountName { get; set; }
 
+    [Inject]
+    public required IAccountService AccountService { get; set; }
+
     public async Task UploadFiles(InputFileChangeEventArgs e)
     {
         _isImportingData = true;
@@ -203,6 +207,12 @@
     public async Task FinishImport()
     {
         _isImportingData = true;
+
+        foreach (var result in result)
+        {
+            InvestmentEntry bankAccountEntry = new(-1, result.PostingDate, -1, result.ValueChange, "TestTicker", Core.Enums.InvestmentType.Unknown);
+            AccountService.AddFinancialEntry(bankAccountEntry, AccountName);
+        }
 
         StateHasChanged();
 

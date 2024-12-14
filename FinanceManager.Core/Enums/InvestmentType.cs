@@ -1,10 +1,11 @@
 ﻿namespace FinanceManager.Core.Enums
 {
-	public enum InvestmentType
-	{
-		Cash,
-		Stock,
-		Bond,
-		Property
-	}
+    public enum InvestmentType
+    {
+        Unknown = -1,
+        Cash,
+        Stock,
+        Bond,
+        Property
+    }
 }

@@ -18,6 +18,15 @@ namespace FinanceManager.Application.Services
             if (_bankAccountRepository is null) throw new Exception();
             return _bankAccountRepository.GetAccount<T>(name, dateStart, dateEnd);
         }
+        public DateTime? GetStartDate(string name)
+        {
+            return _bankAccountRepository?.GetStartDate(name);
+        }
+
+        public DateTime? GetEndDate(string name)
+        {
+            return _bankAccountRepository?.GetEndDate(name);
+        }
         public List<T>? GetEntries<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialEntryBase
         {
             return null;
@@ -62,5 +71,7 @@ namespace FinanceManager.Application.Services
         }
 
         public int GetLastAccountId() => _bankAccountRepository.GetLastAccountId();
+
+
     }
 }

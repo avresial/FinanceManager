@@ -7,6 +7,8 @@ namespace FinanceManager.Core.Repositories
         public Dictionary<string, Type> GetAvailableAccounts();
         public int GetLastAccountId();
         public IEnumerable<T> GetAccounts<T>(DateTime dateStart, DateTime dateEnd) where T : FinancialAccountBase;
+        public DateTime? GetStartDate(string name);
+        public DateTime? GetEndDate(string name);
         public T? GetAccount<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialAccountBase;
         public List<T>? GetEntries<T>(string name, DateTime dateStart, DateTime dateEnd) where T : FinancialEntryBase;
 

@@ -181,12 +181,14 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
 }
 
 @code {
+
     private decimal? balanceChange = null;
     private ApexChart<ChartEntryModel> chart;
     private Dictionary<InvestmentEntry, StockPrice> prices = new();
     private List<string> stocks = new List<string>();
     private bool LoadedAllData = false;
     private DateTime dateStart;
+    private DateTime FirstEntryDate;
     private List<ChartEntryModel> pricesDaily;
     private bool visible;
 
@@ -255,7 +257,6 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
         await UpdateEntries();
         IsLoading = false;
     }
-
     private async Task UpdateEntries()
     {
         try
@@ -270,7 +271,12 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
                     LoadedAllData = false;
                     prices.Clear();
                     Account = AccountService.GetAccount<InvestmentAccount>(AccountName, dateStart, DateTime.UtcNow);
-                    if (Account is not null && Account.Entries is not null)
+                    
+                    DateTime? firstEntryDate = AccountService.GetStartDate(AccountName);
+                    if (firstEntryDate is not null)
+                        FirstEntryDate = firstEntryDate.Value;
+               
+                        if (Account is not null && Account.Entries is not null)
                         await UpdateInfo();
                 }
             }
@@ -295,8 +301,8 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
             prices.Add(entry, price);
         }
 
-        if (Account.Entries.Last().PostingDate.Date > dateStart.Date) LoadedAllData = true;
-
+       // if (Account.Entries.Last().PostingDate.Date > dateStart.Date) LoadedAllData = true;
+        LoadedAllData = (FirstEntryDate >= Account.Entries.Last().PostingDate);
         pricesDaily = (await Account.GetDailyPrice(StockRepository.GetStockPrice))
                                     .Select(x => new ChartEntryModel() { Date = x.Key.ToDateTime(new TimeOnly()), Value = x.Value })
                                     .ToList();
@@ -322,8 +328,8 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
     {
         if (Account is null) return;
 
-        var newStartDate = Account.Start.Value.AddMonths(-1);
-        var newData = AccountService.GetAccount<InvestmentAccount>(AccountName, newStartDate, Account.Start.Value);
+        dateStart = dateStart.AddMonths(-1);
+        var newData = AccountService.GetAccount<InvestmentAccount>(AccountName, dateStart, Account.Start.Value);
 
         if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
         {
@@ -332,16 +338,10 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
         }
 
         var newEntriesWithoutOldest = newData.Entries.Skip(1);
-        if (Account.Entries.Any(x => x.Id == newEntriesWithoutOldest.First().Id))
-        {
-            LoadedAllData = true;
-            return;
-        }
-
-        if ((Account.Entries.Last().PostingDate - newStartDate).TotalDays > 1)
-            LoadedAllData = true;
 
         Account.Add(newEntriesWithoutOldest, false);
+
+        LoadedAllData = (FirstEntryDate >= Account.Entries.Last().PostingDate);
 
         await UpdateInfo();
     }
