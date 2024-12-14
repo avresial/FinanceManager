@@ -14,19 +14,19 @@
                 <MudStep Title="Select file" SecondaryText="Step1" @bind-Completed="_step1Complete">
                     <MudStack Style="width: 100%">
                         <MudForm @bind-IsValid="_isValid"
-                        @bind-IsTouched="_isTouched">
+                                 @bind-IsTouched="_isTouched">
                             <MudItem xs="12">
                                 <MudFileUpload T="IBrowserFile"
-                                Hidden="@false"
-                                InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
-                                InputStyle="opacity:0"
-                                ErrorText="@string.Empty"
-                                tabindex="-1"
-                                @ondrop="@ClearDragClass"
-                                @ondragenter="@SetDragClass"
-                                @ondragleave="@ClearDragClass"
-                                @ondragend="@ClearDragClass"
-                                OnFilesChanged="UploadFiles">
+                                               Hidden="@false"
+                                               InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
+                                               InputStyle="opacity:0"
+                                               ErrorText="@string.Empty"
+                                               tabindex="-1"
+                                               @ondrop="@ClearDragClass"
+                                               @ondragenter="@SetDragClass"
+                                               @ondragleave="@ClearDragClass"
+                                               @ondragend="@ClearDragClass"
+                                               OnFilesChanged="UploadFiles">
 
                                     <ActivatorContent>
                                         <MudPaper Height="300px" Outlined="true" Class="@_dragClass">
@@ -71,30 +71,21 @@
                             }
                         </MudItem>
                         <MudItem xs="12">
-                            @if (rawRecords is not null && rawRecords.Any())
+                            @if (result is not null && result.Any())
                             {
-                                <MudSimpleTable>
-                                    <thead>
-                                        <tr>
-                                            @foreach (string p in rawRecords.First())
-                                            {
-                                                <th>@p</th>
-                                            }
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var values in rawRecords.Skip(1))
-                                        {
-                                            <tr>
-                                                @foreach (var value in values)
-                                                {
-                                                    <td>@value</td>
-                                                }
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </MudSimpleTable>
-
+                                <MudTable Items="@result" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_isImportingData" RowsPerPage="10">
+                                    <HeaderContent>
+                                        <MudTh>Posting date</MudTh>
+                                        <MudTh>Value change</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="Posting date">@context.PostingDate</MudTd>
+                                        <MudTd DataLabel="Value change">@context.ValueChange</MudTd>
+                                    </RowTemplate>
+                                    <PagerContent>
+                                        <MudTablePager />
+                                    </PagerContent>
+                                </MudTable>
                             }
                             else
                             {
@@ -109,19 +100,9 @@
                                 <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
                             }
                         </MudItem>
-                        <MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudTextField @bind-Value="PostingDateHeader" Label="Posting date header" Variant="Variant.Text"></MudTextField>
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudTextField @bind-Value="ValueChangeHeader" Label="Value change" Variant="Variant.Text"></MudTextField>
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudTextField @bind-Value="TickerHeader" Label="Ticker" Variant="Variant.Text"></MudTextField>
-                            </MudItem>
-                        </MudItem>
+
                         <MudItem xs="12">
-                            <MudButton @onclick=FinishImport Variant="Variant.Filled">Begin import</MudButton>
+                            <MudButton @onclick=FinishImport Variant="Variant.Filled" Color="Color.Primary">Begin import</MudButton>
                         </MudItem>
                     </MudGrid>
 
@@ -144,11 +125,15 @@
 
 </MudContainer>
 @code {
-    public string PostingDateHeader { get; set; } = "PostingDate";
-    public string ValueChangeHeader { get; set; } = "Balance change";
-    public string TickerHeader { get; set; } = "Ticker";
+    
 
-    private List<List<string>> rawRecords = new();
+    private CsvConfiguration config = new CsvConfiguration(new CultureInfo("de-DE"))
+        {
+            Delimiter = ";",
+            HasHeaderRecord = true,
+        };
+
+    private List<ImportStockModel> result = new();
     private List<string> _erorrs = new();
     private int _index;
 
@@ -163,24 +148,69 @@
     private const string FileContent = "this is content";
     private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
     private string _dragClass = DefaultDragClass;
+    
     public List<IBrowserFile> LoadedFiles = new();
+    public string PostingDateHeader { get; set; } = "PostingDate";
+    public string ValueChangeHeader { get; set; } = "ValueChange";
+
+    [Parameter]
+    public required string AccountName { get; set; }
 
     public async Task UploadFiles(InputFileChangeEventArgs e)
     {
+        _isImportingData = true;
+        result.Clear();
         _erorrs.Clear();
         if (Path.GetExtension(e.File.Name) != ".csv")
         {
             _erorrs.Add($"{e.File.Name} is not a csv file. Select csv file to continue.");
+            _isImportingData = false;
             return;
         }
 
         LoadedFiles = e.GetMultipleFiles(1).ToList();
 
-        _step1Complete = LoadedFiles.Any();
+        var file = LoadedFiles.FirstOrDefault();
+        if (file is null) return;
 
-        _index++;
-        _ = LoadFilePreview();
+        try
+        {
+            using (var reader = new StreamReader(file.OpenReadStream()))
+            using (var csv = new CsvReader(reader, config))
+            {
+                csv.Context.RegisterClassMap(new ImportStockModeloMap(PostingDateHeader, ValueChangeHeader));
+                result = await csv.GetRecordsAsync<ImportStockModel>().ToListAsync();
+            }
+
+        }
+        catch (HeaderValidationException ex)
+        {
+            _erorrs.Add($"Invalid headers. Required headers:{PostingDateHeader}, {ValueChangeHeader}  ");
+        }
+
+        _step1Complete = result.Any();
+
+        if (_step1Complete)
+        {
+            _index++;
+        }
+        else
+        {
+            _erorrs.Add("Loading failed");
+        }
+        _isImportingData = false;
     }
+    public async Task FinishImport()
+    {
+        _isImportingData = true;
+
+        StateHasChanged();
+
+        _step2Complete = true;
+        _isImportingData = false;
+        _index++;
+    }
+
     public async Task ClearFiles()
     {
         if (LoadedFiles is not null)
@@ -189,26 +219,6 @@
         _step1Complete = false;
         _step2Complete = false;
         _step3Complete = false;
-    }
-    public async Task FinishImport()
-    {
-        _isImportingData = true;
-        List<ImportStockModel> result = new();
-        var file = LoadedFiles.FirstOrDefault();
-        if (file is null) return;
-        using (var reader = new StreamReader(file.OpenReadStream()))
-        using (var csv = new CsvReader(reader, config))
-        {
-            csv.Context.RegisterClassMap<ImportStockModeloMap>();
-            await csv.ReadAsync();
-            result = await csv.GetRecordsAsync<ImportStockModel>().ToListAsync();
-            
-        }
-        StateHasChanged();
-
-        _step2Complete = true;
-        _isImportingData = false;
-        _index++;
     }
 
 
@@ -278,46 +288,14 @@
         }
     }
 
-    CsvConfiguration config = new CsvConfiguration(new CultureInfo("de-DE"))
-            {
-                Delimiter = ";",
-                HasHeaderRecord = true,
-            };
-    private async Task LoadFilePreview()
+    
+
+    internal sealed class ImportStockModeloMap : ClassMap<ImportStockModel>
     {
-        rawRecords.Clear();
-        var file = LoadedFiles.FirstOrDefault();
-        if (file is null) return;
-
-
-        using (var reader = new StreamReader(file.OpenReadStream()))
-        using (var csv = new CsvReader(reader, config))
+        internal ImportStockModeloMap(string postingDateHeader, string valueChangeHeader)
         {
-            await csv.ReadAsync();
-            csv.ReadHeader();
-            var headers = csv.HeaderRecord;
-            rawRecords.Add(headers.ToList());
-            var records = new List<dynamic>();
-
-            while (await csv.ReadAsync())
-            {
-                rawRecords.Add(csv.Parser.RawRecord.Split(';').ToList());
-                if (rawRecords.Count() > 10) break;
-            }
-        }
-        StateHasChanged();
-    }
-
-
-    [Parameter]
-    public required string AccountName { get; set; }
-   
-    public sealed class ImportStockModeloMap : ClassMap<ImportStockModel>
-    {
-        public ImportStockModeloMap()
-        {
-            Map(m => m.PostingDate).Name("PostingDate");
-            Map(m => m.ValueChange).Name("ValueChange");
+            Map(m => m.PostingDate).Name(postingDateHeader);
+            Map(m => m.ValueChange).Name(valueChangeHeader);
         }
     }
 
