@@ -272,10 +272,6 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
                     prices.Clear();
                     Account = AccountService.GetAccount<InvestmentAccount>(AccountName, dateStart, DateTime.UtcNow);
 
-                    DateTime? firstEntryDate = AccountService.GetStartDate(AccountName);
-                    if (firstEntryDate is not null)
-                        FirstEntryDate = firstEntryDate.Value;
-
                     if (Account is not null && Account.Entries is not null)
                         await UpdateInfo();
                 }
@@ -292,6 +288,11 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
     public async Task UpdateInfo()
     {
         if (Account is null || Account.Entries is null) return;
+     
+        DateTime? firstEntryDate = AccountService.GetStartDate(AccountName);
+        if (firstEntryDate is not null)
+            FirstEntryDate = firstEntryDate.Value;
+
         stocks = Account.GetStoredTickers();
         foreach (var entry in Account.Entries)
         {
@@ -327,15 +328,13 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
 
     public async Task LoadMore()
     {
-        if (Account is null) return;
+        if (Account is null || Account.Start is null) return;
 
         dateStart = dateStart.AddMonths(-1);
         var newData = AccountService.GetAccount<InvestmentAccount>(AccountName, dateStart, Account.Start.Value);
 
         if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
-        {
             return;
-        }
 
         var newEntriesWithoutOldest = newData.Entries.Skip(1);
 
