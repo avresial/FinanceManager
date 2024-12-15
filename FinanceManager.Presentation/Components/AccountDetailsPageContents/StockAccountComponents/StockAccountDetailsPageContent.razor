@@ -271,12 +271,12 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
                     LoadedAllData = false;
                     prices.Clear();
                     Account = AccountService.GetAccount<InvestmentAccount>(AccountName, dateStart, DateTime.UtcNow);
-                    
+
                     DateTime? firstEntryDate = AccountService.GetStartDate(AccountName);
                     if (firstEntryDate is not null)
                         FirstEntryDate = firstEntryDate.Value;
-               
-                        if (Account is not null && Account.Entries is not null)
+
+                    if (Account is not null && Account.Entries is not null)
                         await UpdateInfo();
                 }
             }
@@ -301,8 +301,9 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
             prices.Add(entry, price);
         }
 
-       // if (Account.Entries.Last().PostingDate.Date > dateStart.Date) LoadedAllData = true;
-        LoadedAllData = (FirstEntryDate >= Account.Entries.Last().PostingDate);
+        if (Account.Entries is not null && Account.Entries.Any())
+            LoadedAllData = (FirstEntryDate >= Account.Entries.Last().PostingDate);
+
         pricesDaily = (await Account.GetDailyPrice(StockRepository.GetStockPrice))
                                     .Select(x => new ChartEntryModel() { Date = x.Key.ToDateTime(new TimeOnly()), Value = x.Value })
                                     .ToList();
@@ -333,7 +334,6 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
 
         if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
         {
-            LoadedAllData = true;
             return;
         }
 

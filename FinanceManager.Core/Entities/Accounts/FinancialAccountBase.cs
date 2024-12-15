@@ -36,7 +36,12 @@ namespace FinanceManager.Core.Entities.Accounts
         public virtual void Add(T entry, bool recalculateValues = true)
         {
             Entries ??= new List<T>();
-
+            var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
+            if (alredyExistingEntry is not null)
+            {
+                Console.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.Id}, Posting date{alredyExistingEntry.PostingDate}, Value change {alredyExistingEntry.ValueChange}");
+                return;
+            }
             var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();
 
             if (Entries is null) return;
