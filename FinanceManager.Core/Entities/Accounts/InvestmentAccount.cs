@@ -33,6 +33,14 @@ namespace FinanceManager.Core.Entities.Accounts
         public override void Add(InvestmentEntry entry, bool recalculate = true)
         {
             Entries ??= new List<InvestmentEntry>();
+            var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.Ticker == entry.Ticker && x.ValueChange == entry.ValueChange);
+            if (alredyExistingEntry is not null)
+            {
+                Console.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.Id}, Posting date{alredyExistingEntry.PostingDate}, " +
+                    $"Ticker {alredyExistingEntry.Ticker}, Value change {alredyExistingEntry.ValueChange}");
+                return;
+            }
+
             var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();
             var index = -1;
 

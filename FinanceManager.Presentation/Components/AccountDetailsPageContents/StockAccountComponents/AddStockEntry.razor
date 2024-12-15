@@ -136,7 +136,10 @@
         catch (Exception)
         {
         }
-        int id = InvestmentAccount.Entries.Max(x => x.Id) + 1;
+        var id = 0;
+        var currentMaxId = InvestmentAccount.GetMaxId();
+        if (currentMaxId is not null)
+            id += currentMaxId.Value + 1;
         InvestmentEntry bankAccountEntry = new(id, date, -1, BalanceChange.Value, Ticker, investmentType);
         try
         {

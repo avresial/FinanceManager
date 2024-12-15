@@ -25,11 +25,8 @@
             <MudItem xs="12" sm="6">
                 <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text"
                                  SearchFunc="Search" />
-
             </MudItem>
-            @*   <MudItem xs="12" sm="6">
-            <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="Balance" Label="Balance" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
-            </MudItem> *@
+
             <MudItem xs="12">
                 <MudTextField @bind-Value="Description" T="string" Label="Description" Variant="Variant.Text" MaxLines="5" AutoGrow="true" />
             </MudItem>
@@ -92,8 +89,9 @@
         {
         }
         var id = 0;
-        if (BankAccount.Entries is not null && BankAccount.Entries.Any())
-            id = BankAccount.Entries.Max(x => x.Id) + 1;
+        var currentMaxId = BankAccount.GetMaxId();
+        if (currentMaxId is not null)
+            id += currentMaxId.Value + 1;
 
         BankAccountEntry bankAccountEntry = new(id, date, -1, BalanceChange.Value)
             {

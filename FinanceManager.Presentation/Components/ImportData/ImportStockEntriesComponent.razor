@@ -1,0 +1,313 @@
+﻿@using CsvHelper
+@using CsvHelper.Configuration
+@using FinanceManager.Core.Entities.Accounts
+@using FinanceManager.Infrastructure.Dtos
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Globalization
+<MudContainer>
+
+    <MudText Typo="Typo.h2">Import data to @AccountName account</MudText>
+
+    <MudPaper>
+        <MudStepper @bind-ActiveIndex="_index" OnPreviewInteraction="OnPreviewInteraction">
+            <ChildContent>
+
+                <MudStep Title="Select file" SecondaryText="Step1" @bind-Completed="_step1Complete">
+                    <MudStack Style="width: 100%">
+                        <MudForm @bind-IsValid="_isValid"
+                                 @bind-IsTouched="_isTouched">
+                            <MudItem xs="12">
+                                <MudFileUpload T="IBrowserFile"
+                                               Hidden="@false"
+                                               InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
+                                               InputStyle="opacity:0"
+                                               ErrorText="@string.Empty"
+                                               tabindex="-1"
+                                               @ondrop="@ClearDragClass"
+                                               @ondragenter="@SetDragClass"
+                                               @ondragleave="@ClearDragClass"
+                                               @ondragend="@ClearDragClass"
+                                               OnFilesChanged="UploadFiles">
+
+                                    <ActivatorContent>
+                                        <MudPaper Height="300px" Outlined="true" Class="@_dragClass">
+
+                                            <MudText Typo="Typo.h6"> Drag and drop file here or click </MudText>
+
+                                            @if (LoadedFiles is not null && LoadedFiles.Any())
+                                            {
+                                                @foreach (var item in LoadedFiles)
+                                                {
+                                                    <MudChip T="string" Color="Color.Dark" Text="@item.Name" />
+                                                }
+                                            }
+                                        </MudPaper>
+                                    </ActivatorContent>
+                                </MudFileUpload>
+                                <MudToolBar Gutters="@false" Class="relative d-flex justify-end gap-4">
+                                    <MudButton Color="Color.Error" Disabled="@(!LoadedFiles.Any())" OnClick="@ClearFiles" Variant="Variant.Filled">
+                                        Clear
+                                    </MudButton>
+                                </MudToolBar>
+                            </MudItem>
+                            <MudItem>
+                                @foreach (var error in _erorrs)
+                                {
+                                    <MudText Color="Color.Error" Typo="@Typo.caption">
+                                        @error
+                                    </MudText>
+                                }
+                            </MudItem>
+                        </MudForm>
+                    </MudStack>
+                </MudStep>
+
+                <MudStep Title="Validate" SecondaryText="Step2" @bind-Completed="_step2Complete" Disabled="@(_step1Complete == false)">
+
+                    <MudGrid>
+                        <MudItem xs="12">
+                            @foreach (var file in LoadedFiles)
+                            {
+                                <MudText Typo="Typo.h4">@file.Name</MudText>
+                            }
+                        </MudItem>
+                        <MudItem xs="12">
+                            @if (result is not null && result.Any())
+                            {
+                                <MudTable Items="@result" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_isImportingData" RowsPerPage="10">
+                                    <HeaderContent>
+                                        <MudTh>Posting date</MudTh>
+                                        <MudTh>Value change</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="Posting date">@context.PostingDate</MudTd>
+                                        <MudTd DataLabel="Value change">@context.ValueChange</MudTd>
+                                    </RowTemplate>
+                                    <PagerContent>
+                                        <MudTablePager />
+                                    </PagerContent>
+                                </MudTable>
+                            }
+                            else
+                            {
+                                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                            }
+
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            @if (_isImportingData)
+                            {
+                                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                            }
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudButton @onclick=FinishImport Variant="Variant.Filled" Color="Color.Primary">Begin import</MudButton>
+                        </MudItem>
+                    </MudGrid>
+
+                </MudStep>
+                <MudStep Title="Summary" SecondaryText="Step3" @bind-Completed="_step3Complete" Disabled="@(_step2Complete == false)">
+
+                    Summary
+
+                    <MudButton Variant="Variant.Text" Class="col-12" href="@($"AccountDetails/{AccountName}")">Go back to @AccountName</MudButton>
+                </MudStep>
+            </ChildContent>
+
+            <ActionContent Context="stepper">
+                <MudIconButton OnClick="@(() => stepper.PreviousStepAsync())" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary" Disabled="@(_index <= 0)" />
+                <MudSpacer />
+                <MudIconButton OnClick="@(() => stepper.NextStepAsync())" Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Primary" />
+            </ActionContent>
+        </MudStepper>
+    </MudPaper>
+
+</MudContainer>
+@code {
+    
+
+    private CsvConfiguration config = new CsvConfiguration(new CultureInfo("de-DE"))
+        {
+            Delimiter = ";",
+            HasHeaderRecord = true,
+        };
+
+    private List<ImportStockModel> result = new();
+    private List<string> _erorrs = new();
+    private int _index;
+
+    private bool _isImportingData = false;
+
+    private bool _step1Complete;
+    private bool _step2Complete;
+    private bool _step3Complete;
+
+    private bool _isValid;
+    private bool _isTouched;
+    private const string FileContent = "this is content";
+    private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
+    private string _dragClass = DefaultDragClass;
+    
+    public List<IBrowserFile> LoadedFiles = new();
+    public string PostingDateHeader { get; set; } = "PostingDate";
+    public string ValueChangeHeader { get; set; } = "ValueChange";
+
+    [Parameter]
+    public required string AccountName { get; set; }
+
+    [Inject]
+    public required IAccountService AccountService { get; set; }
+
+    public async Task UploadFiles(InputFileChangeEventArgs e)
+    {
+        _isImportingData = true;
+        result.Clear();
+        _erorrs.Clear();
+        if (Path.GetExtension(e.File.Name) != ".csv")
+        {
+            _erorrs.Add($"{e.File.Name} is not a csv file. Select csv file to continue.");
+            _isImportingData = false;
+            return;
+        }
+
+        LoadedFiles = e.GetMultipleFiles(1).ToList();
+
+        var file = LoadedFiles.FirstOrDefault();
+        if (file is null) return;
+
+        try
+        {
+            using (var reader = new StreamReader(file.OpenReadStream()))
+            using (var csv = new CsvReader(reader, config))
+            {
+                csv.Context.RegisterClassMap(new ImportStockModeloMap(PostingDateHeader, ValueChangeHeader));
+                result = await csv.GetRecordsAsync<ImportStockModel>().ToListAsync();
+            }
+
+        }
+        catch (HeaderValidationException ex)
+        {
+            _erorrs.Add($"Invalid headers. Required headers:{PostingDateHeader}, {ValueChangeHeader}  ");
+        }
+
+        _step1Complete = result.Any();
+
+        if (_step1Complete)
+        {
+            _index++;
+        }
+        else
+        {
+            _erorrs.Add("Loading failed");
+        }
+        _isImportingData = false;
+    }
+    public async Task FinishImport()
+    {
+        _isImportingData = true;
+
+        foreach (var result in result)
+        {
+            InvestmentEntry bankAccountEntry = new(-1, result.PostingDate, -1, result.ValueChange, "TestTicker", Core.Enums.InvestmentType.Unknown);
+            AccountService.AddFinancialEntry(bankAccountEntry, AccountName);
+        }
+
+        StateHasChanged();
+
+        _step2Complete = true;
+        _isImportingData = false;
+        _index++;
+    }
+
+    public async Task ClearFiles()
+    {
+        if (LoadedFiles is not null)
+            LoadedFiles.Clear();
+
+        _step1Complete = false;
+        _step2Complete = false;
+        _step3Complete = false;
+    }
+
+
+
+    private void SetDragClass() => _dragClass = $"{DefaultDragClass} mud-border-primary";
+    private void ClearDragClass() => _dragClass = DefaultDragClass;
+
+    private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
+    {
+        if (arg.Action == StepAction.Complete)
+        {
+            await ControlStepCompletion(arg);
+        }
+        else if (arg.Action == StepAction.Activate)
+        {
+            await ControlStepNavigation(arg);
+        }
+    }
+    private async Task ControlStepCompletion(StepperInteractionEventArgs arg)
+    {
+        _erorrs.Clear();
+        switch (arg.StepIndex)
+        {
+            case 0:
+                if (_step1Complete != true)
+                {
+                    _erorrs.Add($"Can not continue. Select csv file");
+                    arg.Cancel = true;
+                }
+                break;
+            case 1:
+                if (_step2Complete != true)
+                {
+                    arg.Cancel = true;
+                }
+                break;
+            case 2:
+                if (_step3Complete != true)
+                {
+                    arg.Cancel = true;
+                }
+                break;
+        }
+    }
+    private async Task ControlStepNavigation(StepperInteractionEventArgs arg)
+    {
+        switch (arg.StepIndex)
+        {
+            case 1:
+                if (_step1Complete != true)
+                {
+                    arg.Cancel = true;
+                }
+                break;
+            case 2:
+                if (_step2Complete != true)
+                {
+                    arg.Cancel = true;
+                }
+                break;
+            case 3:
+                if (_step3Complete != true)
+                {
+                    arg.Cancel = true;
+                }
+                break;
+        }
+    }
+
+    
+
+    internal sealed class ImportStockModeloMap : ClassMap<ImportStockModel>
+    {
+        internal ImportStockModeloMap(string postingDateHeader, string valueChangeHeader)
+        {
+            Map(m => m.PostingDate).Name(postingDateHeader);
+            Map(m => m.ValueChange).Name(valueChangeHeader);
+        }
+    }
+
+
+}

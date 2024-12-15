@@ -65,6 +65,35 @@ namespace FinanceManager.Infrastructure.Repositories
 
             return default;
         }
+        public DateTime? GetStartDate(string accountName)
+        {
+            var account = FindAccount(accountName);
+            if (account is null) return null;
+
+            switch (account)
+            {
+                case BankAccount bankAccount:
+                    return bankAccount.Start;
+                case InvestmentAccount investmentAccount:
+                    return investmentAccount.Start;
+            }
+            return null;
+        }
+
+        public DateTime? GetEndDate(string accountName)
+        {
+            var account = FindAccount(accountName);
+            if (account is null) return null;
+
+            switch (account)
+            {
+                case BankAccount bankAccount:
+                    return bankAccount.End;
+                case InvestmentAccount investmentAccount:
+                    return investmentAccount.End;
+            }
+            return null;
+        }
         public List<T>? GetEntries<T>(string accountName, DateTime dateStart, DateTime dateEnd) where T : FinancialEntryBase
         {
             return null;
@@ -190,10 +219,12 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 ("Bond 2", InvestmentType.Bond),( "Bond 3", InvestmentType.Bond), ("Bond 4" , InvestmentType.Bond)
             });
+            AddStockAccount(DateTime.UtcNow.AddMonths(-1), 10, "Empty Wallet", new List<(string, InvestmentType)>());
         }
         private void AddStockAccount(DateTime startDay, decimal startingBalance, string accountName, List<(string, InvestmentType)> tickers)
         {
             AddFinancialAccount(new InvestmentAccount(lastAccointId++, accountName));
+            if (tickers is null || !tickers.Any()) return;
             int tickerIndex = random.Next(tickers.Count);
             AddStockAccountEntry(accountName, tickers[tickerIndex].Item1, tickers[tickerIndex].Item2, startingBalance, startDay);
 
@@ -324,5 +355,7 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             return (decimal)(random.Next(-100, 100) + Math.Round(random.NextDouble(), 2));
         }
+
+
     }
 }

@@ -13,6 +13,9 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
         private decimal balanceChange = 100;
         private bool LoadedAllData = false;
         private DateTime dateStart;
+        private DateTime FirstEntryDate;
+
+        private bool ImportFinancialEntriesComponentVisibility;
         private bool AddEntryVisibility;
         private ApexChart<BankAccountEntry> chart;
 
@@ -50,6 +53,14 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
         public void UpdateInfo()
         {
             if (Account is null || Account.Entries is null) return;
+
+            DateTime? firstEntryDate = AccountService.GetStartDate(AccountName);
+            if (firstEntryDate is not null)
+                FirstEntryDate = firstEntryDate.Value;
+
+            if (Account.Entries is not null && Account.Entries.Any())
+                LoadedAllData = (FirstEntryDate >= Account.Entries.Last().PostingDate);
+
             var EntriesOrdered = Account.Entries.OrderByDescending(x => x.ValueChange);
             Top5 = EntriesOrdered.Take(5).ToList();
             Bottom5 = EntriesOrdered.Skip(Account.Entries.Count - 5).Take(5).OrderBy(x => x.ValueChange).ToList();
@@ -62,26 +73,14 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
         {
             if (Account is null || Account.Start is null) return;
 
-            var newStartDate = Account.Start.Value.AddMonths(-1);
-            var newData = AccountService.GetAccount<BankAccount>(AccountName, newStartDate, Account.Start.Value);
+            dateStart = dateStart.AddMonths(-1);
+            var newData = AccountService.GetAccount<BankAccount>(AccountName, dateStart, Account.Start.Value);
 
             if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
-            {
-                LoadedAllData = true;
                 return;
-            }
 
             var newEntriesWithoutOldest = newData.Entries.Skip(1);
-            if (Account.Entries.Any(x => x.Id == newEntriesWithoutOldest.First().Id))
-            {
-                LoadedAllData = true;
-                return;
-            }
-
             Account.Add(newEntriesWithoutOldest, false);
-
-            if ((Account.Entries.Last().PostingDate - newStartDate).TotalDays > 1)
-                LoadedAllData = true;
 
             if (chart is not null)
                 await chart.RenderAsync();

@@ -1,95 +1,47 @@
-﻿using CsvHelper;
-using CsvHelper.Configuration;
-using FinanceManager.Core.Entities.Accounts;
-using FinanceManager.Core.Repositories;
+﻿using FinanceManager.Core.Repositories;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
-using System.Globalization;
 
 namespace FinanceManager.Pages
 {
-	public partial class Import : ComponentBase
-	{
-		[Inject]
-		public IFinancalAccountRepository BankAccountRepository { get; set; }
+    public partial class Import : ComponentBase
+    {
+        public ElementReference MyElementReference;
 
-		public List<BankAccountEntry> CurrentlyLoadedEntries { get; set; }
+        public Type? accountType = null;
 
-		private string currentlyLoadedAccountName;
-		public string CurrentlyLoadedAccountName
-		{
-			get { return currentlyLoadedAccountName; }
-			set
-			{
-				currentlyLoadedAccountName = value;
-				IsDisableUpdate();
-			}
-		}
+        [Parameter]
+        public required string AccountName { get; set; }
 
-		public bool IsLoading { get; set; }
-		public bool? ImportSucess { get; set; }
-		public string ErrorMessage { get; set; } = string.Empty;
-		public bool IsDisabled { get; set; }
-		public void IsDisableUpdate()
-		{
-			IsDisabled = BankAccountRepository.AccountExists(CurrentlyLoadedAccountName);
-		}
+        [Inject]
+        public required IFinancalAccountRepository BankAccountRepository { get; set; }
 
-		public async Task LoadFiles(InputFileChangeEventArgs e)
-		{
-			IsLoading = true;
-			ErrorMessage = string.Empty;
-			//var config = new CsvConfiguration(CultureInfo.InvariantCulture)
-			var config = new CsvConfiguration(new CultureInfo("de-DE"))
-			{
-				Delimiter = ";",
-				HasHeaderRecord = true,
-			};
-			if (e.File is null)
-			{
-				IsLoading = false;
-				return;
-			}
+        public string ErrorMessage { get; set; } = string.Empty;
 
-			foreach (var file in e.GetMultipleFiles(6))
-			{
-				try
-				{
-					using (var reader = new StreamReader(file.OpenReadStream()))
-					using (var csv = new CsvReader(reader, config))
-					{
-						CurrentlyLoadedAccountName = Path.GetFileNameWithoutExtension(file.Name);
-						CurrentlyLoadedEntries = await csv.GetRecordsAsync<BankAccountEntry>().ToListAsync();
-					}
-				}
-				catch (Exception ex)
-				{
-					ErrorMessage = ex.Message;
-				}
-			}
-			CloseImportNotification();
-			IsLoading = false;
-			//StateHasChanged();
-		}
 
-		public void CloseImportNotification()
-		{
-			ImportSucess = null;
-		}
-		public void Add()
-		{
-			if (!BankAccountRepository.AccountExists(CurrentlyLoadedAccountName))
-			{
-				BankAccountRepository.AddFinancialAccount<BankAccount, BankAccountEntry>(CurrentlyLoadedAccountName, CurrentlyLoadedEntries.ToList());
-			}
-			else
-			{
-				ImportSucess = false;
-				return;
-			}
+        protected override void OnInitialized()
+        {
+            UpdateEntries();
+        }
 
-			CurrentlyLoadedEntries = null;
-			ImportSucess = true;
-		}
-	}
+        protected override void OnParametersSet()
+        {
+            MyElementReference = default;
+            accountType = null;
+            UpdateEntries();
+        }
+        private void UpdateEntries()
+        {
+            try
+            {
+                var accounts = BankAccountRepository.GetAvailableAccounts();
+                if (accounts.ContainsKey(AccountName))
+                    accountType = accounts[AccountName];
+
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+            }
+        }
+    }
 }

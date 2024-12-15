@@ -6,6 +6,7 @@ using FinanceManager.Core.Repositories;
 using FinanceManager.Core.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace FinanceManager.Application.Services
 {
@@ -37,7 +38,16 @@ namespace FinanceManager.Application.Services
         }
         public async Task<UserSession?> GetKeepMeLoggedinSession()
         {
-            return await _localStorageService.GetItemAsync<UserSession>(sessionString);
+            try
+            {
+                return await _localStorageService.GetItemAsync<UserSession>(sessionString);
+            }
+            catch (JsonException ex)
+            {
+                Console.WriteLine(ex);
+                await _localStorageService.RemoveItemAsync(sessionString);
+                return null;
+            }
         }
 
         public async Task<bool> Login(UserSession userSession)

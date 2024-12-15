@@ -4,6 +4,7 @@
 @using FinanceManager.Core.Providers
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Core.Services
+@using FinanceManager.Presentation.Components.ImportData
 @using FinanceManager.Presentation.Helpers
 
 @if (Account is not null && Account.Entries is not null && (IsLoading || Account.Entries.Any()))
@@ -30,13 +31,13 @@
             <div class="col-xs-12 col-lg-2">
 
                 <div class="row">
-                    <MudButton Variant="Variant.Text" Class="col-12" Disabled>Import</MudButton>
+                    <MudButton Variant="Variant.Text" Class="col-12" href="@($"Import/{Account.Name}")">Import</MudButton>
                     <MudButton Variant="Variant.Text" Class="col-12" Disabled>Export</MudButton>
                     <MudButton Variant="Variant.Text" Class="col-12" Disabled>Edit</MudButton>
                 </div>
                 <div class="row">
                     <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick=ShowOverlay
-                            Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:1000;" />
+                            Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:2;" />
 
                     <MudOverlay Visible="@AddEntryVisibility" DarkBackground="true">
                         <MudPaper Class="p-5">
