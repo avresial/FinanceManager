@@ -8,6 +8,10 @@
 
 @if (Account is not null && Account.Entries is not null && (IsLoading || Account.Entries.Any()))
 {
+    <h3 class="m-3" style="position: absolute; z-index: 50; display: inline-block;">
+        @Account.Name
+    </h3>
+
     <div class="col-12 mb-2" style="min-height:150px;">
         <ApexChart @ref="chart" TItem="ChartEntryModel" Height="150" Options=@options XAxisType="XAxisType.Datetime">
             <ApexPointSeries TItem="ChartEntryModel"
