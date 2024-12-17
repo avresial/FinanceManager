@@ -50,17 +50,15 @@ namespace FinanceManager.Core.Entities.Accounts
             if (index == -1)
             {
                 entry.Value = entry.ValueChange;
-                if (Entries is not null)
-                    Entries.Add(entry);
+                Entries.Add(entry);
+                index = Entries.Count() - 1;
             }
             else
             {
-                if (Entries is not null)
-                    Entries.Insert(index, entry);
-
-                if (recalculate)
-                    RecalculateEntryValues(index, entry);
+                Entries.Insert(index, entry);
             }
+            if (recalculate)
+                RecalculateEntryValues(index, entry);
         }
         public override void Update(InvestmentEntry entry, bool recalculateValues = true)
         {
