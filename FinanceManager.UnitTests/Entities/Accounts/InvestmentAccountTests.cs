@@ -53,6 +53,24 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         }
 
         [Fact]
+        public async Task AddEntries_FromYoungersToOldest_SingleTickers()
+        {
+            // Arrange
+            InvestmentEntry investmentEntry1 = new InvestmentEntry(1, new DateTime(2000, 1, 3), 100, 100, "Ticker1", InvestmentType.Stock);
+            InvestmentEntry investmentEntry2 = new InvestmentEntry(2, new DateTime(2000, 1, 2), 100, 100, "Ticker1", InvestmentType.Stock);
+            InvestmentEntry investmentEntry3 = new InvestmentEntry(3, new DateTime(2000, 1, 1), 100, 100, "Ticker1", InvestmentType.Stock);
+
+            // Act
+            investmentAccount.Add(investmentEntry1);
+            investmentAccount.Add(investmentEntry2);
+            investmentAccount.Add(investmentEntry3);
+
+            // Assert
+            IEnumerable<InvestmentEntry> resultValues = investmentAccount.Get(new DateTime(2000, 1, 4));
+            Assert.Equal(300, resultValues.Get(new DateTime(2000, 1, 4)).FirstOrDefault().Value);
+        }
+
+        [Fact]
         public async Task UpdateEntries_SingleTicker()
         {
             // Arrange

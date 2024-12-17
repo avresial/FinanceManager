@@ -24,6 +24,20 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             Assert.Equal(30, FinancialAccount.Entries.First().Value);
             Assert.Equal(10, FinancialAccount.Entries.Last().Value);
         }
+        [Fact]
+        public async Task AddEntries_FromYoungersToOldest_SingleTickers()
+        {
+            // Arrange
+            FinancialAccount.Add(new FinancialEntryBase(1, new DateTime(2000, 1, 30), 10, 10));
+            FinancialAccount.Add(new FinancialEntryBase(2, new DateTime(2000, 1, 29), 10, 10));
+            FinancialAccount.Add(new FinancialEntryBase(3, new DateTime(2000, 1, 28), 10, 10));
+
+            // Act
+
+            // Assert
+            Assert.Equal(30, FinancialAccount.Entries.First().Value);
+            Assert.Equal(10, FinancialAccount.Entries.Last().Value);
+        }
 
         [Fact]
         public void UpdateData_ChangeDate()
