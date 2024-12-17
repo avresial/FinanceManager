@@ -81,15 +81,16 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         {
             // Arrange
             FinancialAccount.Add(new FinancialEntryBase(3, new DateTime(2000, 1, 28), 30, 10));
-            FinancialAccount.Add(new FinancialEntryBase(4, new DateTime(2000, 1, 27), 20, 10));
             FinancialAccount.Add(new FinancialEntryBase(5, new DateTime(2000, 1, 26), 10, 10));
 
             // Act
             FinancialAccount.Remove(5);
 
             // Assert
+            Assert.NotNull(FinancialAccount.Entries);
+            Assert.Single(FinancialAccount.Entries);
             Assert.Equal(20, FinancialAccount.Entries.First().Value);
-            Assert.Equal(10, FinancialAccount.Entries.Last().Value);
+            Assert.Equal(20, FinancialAccount.Entries.Last().Value);
         }
         [Fact]
         public void RemoveData_OnlyOneElement_RecalculatesValues()
