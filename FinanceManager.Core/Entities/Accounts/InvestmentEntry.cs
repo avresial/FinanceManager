@@ -49,6 +49,12 @@ namespace FinanceManager.Core.Entities.Accounts
             Ticker = entry.Ticker;
             InvestmentType = entry.InvestmentType;
         }
+
+        public InvestmentEntry GetCopy()
+        {
+            return new InvestmentEntry(Id, PostingDate, Value, ValueChange, Ticker, InvestmentType);
+        }
+
     }
     public class FixedAssetEntry : FinancialEntryBase
     {

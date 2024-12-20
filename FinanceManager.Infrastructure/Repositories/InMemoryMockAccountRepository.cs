@@ -59,7 +59,11 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 InvestmentAccount databaseBankAccount = firstAccount as InvestmentAccount;
 
-                InvestmentAccount bankAccount = new InvestmentAccount(databaseBankAccount.Id, name, databaseBankAccount.Get(dateStart, dateEnd));
+                InvestmentAccount bankAccount = new InvestmentAccount(databaseBankAccount.Id, name, new List<InvestmentEntry>());
+
+                foreach (var element in databaseBankAccount.Get(dateStart, dateEnd))
+                    bankAccount.Add(element.GetCopy(), false);
+
                 return bankAccount as T;
             }
 

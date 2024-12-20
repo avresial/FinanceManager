@@ -30,7 +30,43 @@ namespace FinanceManager.Core.Entities.Accounts
             foreach (var entry in entries)
                 Add(entry, recalculateValues);
         }
-        public override void Add(InvestmentEntry entry, bool recalculate = true)
+
+
+
+        public void Add(AddInvestmentEntryDto entry)
+        {
+            Entries ??= new List<InvestmentEntry>();
+            var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.Ticker == entry.Ticker && x.ValueChange == entry.ValueChange);
+            if (alredyExistingEntry is not null)
+            {
+                Console.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.Id}, Posting date{alredyExistingEntry.PostingDate}, " +
+                    $"Ticker {alredyExistingEntry.Ticker}, Value change {alredyExistingEntry.ValueChange}");
+                return;
+            }
+
+            var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();
+            var index = -1;
+
+            if (previousEntry is not null)
+                index = Entries.IndexOf(previousEntry);
+            InvestmentEntry newEntry = null;
+            if (index == -1)
+            {
+                index = Entries.Count();
+                newEntry = new InvestmentEntry(index, entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType);
+                Entries.Add(newEntry);
+                index = Entries.Count() - 1;
+            }
+            else
+            {
+                newEntry = new InvestmentEntry(index, entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType);
+                Entries.Insert(index, newEntry);
+            }
+            RecalculateEntryValues(index, newEntry);
+        }
+
+
+        public override void Add(InvestmentEntry entry, bool recalculateValues = true)
         {
             Entries ??= new List<InvestmentEntry>();
             var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.Ticker == entry.Ticker && x.ValueChange == entry.ValueChange);
@@ -49,7 +85,6 @@ namespace FinanceManager.Core.Entities.Accounts
 
             if (index == -1)
             {
-                entry.Value = entry.ValueChange;
                 Entries.Add(entry);
                 index = Entries.Count() - 1;
             }
@@ -57,8 +92,10 @@ namespace FinanceManager.Core.Entities.Accounts
             {
                 Entries.Insert(index, entry);
             }
-            if (recalculate)
-                RecalculateEntryValues(index, entry);
+
+            if (recalculateValues)
+                RecalculateEntryValues(index);
+
         }
         public override void Update(InvestmentEntry entry, bool recalculateValues = true)
         {
