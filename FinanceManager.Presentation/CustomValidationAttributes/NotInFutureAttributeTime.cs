@@ -2,14 +2,19 @@
 
 namespace FinanceManager.Presentation.CustomValidationAttributes
 {
-    internal class NotInFutureAttribute : ValidationAttribute
+    internal class NotInFutureAttributeTime : ValidationAttribute
     {
         protected override ValidationResult IsValid(object value, ValidationContext validationContext)
         {
-            DateTime dateTime = (DateTime)value;
+            TimeSpan timespan = (TimeSpan)value;
+            DateTime dt = DateTime.Now.Date.Add(timespan);
+            DateTime dtUtc = dt.ToUniversalTime();
+            TimeSpan tsUtc = dtUtc.TimeOfDay;
+
             var now = DateTime.UtcNow;
-            var testResult = now.CompareTo(dateTime.ToUniversalTime());
-            if (now.CompareTo(dateTime.ToUniversalTime()) >= 0)
+            var compareReusult = now.CompareTo(dtUtc);
+
+            if (compareReusult >= 0)
             {
                 return ValidationResult.Success!;
             }
@@ -19,4 +24,5 @@ namespace FinanceManager.Presentation.CustomValidationAttributes
             }
         }
     }
+
 }

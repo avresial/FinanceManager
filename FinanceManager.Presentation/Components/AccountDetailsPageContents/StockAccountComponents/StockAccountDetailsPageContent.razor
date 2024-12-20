@@ -6,7 +6,7 @@
 @using FinanceManager.Core.Services
 @using FinanceManager.Presentation.Helpers
 
-@if (Account is not null && Account.Entries is not null && (IsLoading || Account.Entries.Any()))
+@if (Account is not null && Account.Entries is not null && (IsLoading || Account.Entries.Any() || !LoadedAllData))
 {
     <h3 class="m-3" style="position: absolute; z-index: 50; display: inline-block;">
         @Account.Name
@@ -257,7 +257,7 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
             await chart.RenderAsync();
         }
 
-        LoadedAllData = false;
+        LoadedAllData = true;
         await UpdateEntries();
         IsLoading = false;
     }
@@ -272,8 +272,8 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
                 accountType = accounts[AccountName];
                 if (accountType == typeof(InvestmentAccount))
                 {
-                    LoadedAllData = false;
                     prices.Clear();
+                    LoadedAllData = true;
                     Account = AccountService.GetAccount<InvestmentAccount>(AccountName, dateStart, DateTime.UtcNow);
 
                     if (Account is not null && Account.Entries is not null)
@@ -292,7 +292,7 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
     public async Task UpdateInfo()
     {
         if (Account is null || Account.Entries is null) return;
-     
+
         DateTime? firstEntryDate = AccountService.GetStartDate(AccountName);
         if (firstEntryDate is not null)
             FirstEntryDate = firstEntryDate.Value;

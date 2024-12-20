@@ -18,7 +18,7 @@
                 <MudText Typo="Typo.subtitle1">@InvestmentAccount.Name</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTimePicker Label="Time" @bind-Time="Time" />
+                <MudTimePicker Label="Time" @bind-Time="Time" Validation="@(new NotInFutureAttributeTime())" />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudDatePicker Label="Posting date" @bind-Date="PostingDate" Validation="@(new NotInFutureAttribute())" />
@@ -31,16 +31,16 @@
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange"
-                                 Label="Balance change" Variant="Variant.Text" Immediate/>
+                Label="Balance change" Variant="Variant.Text" Immediate/>
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text"
-                                 SearchFunc="Search" />
+                SearchFunc="Search" />
             </MudItem>
             @*   <MudItem xs="12" sm="6">
             <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="Balance" Label="Balance" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
             </MudItem> *@
-        
+
             <MudItem xs="12">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add>Add</MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel Class="mx-2">Cancel</MudButton>
@@ -140,7 +140,7 @@
         var currentMaxId = InvestmentAccount.GetMaxId();
         if (currentMaxId is not null)
             id += currentMaxId.Value + 1;
-        InvestmentEntry bankAccountEntry = new(id, date, -1, BalanceChange.Value, Ticker, investmentType);
+        InvestmentEntry bankAccountEntry = new(id, date.ToUniversalTime(), -1, BalanceChange.Value, Ticker, investmentType);
         try
         {
             InvestmentAccount.Add(bankAccountEntry);

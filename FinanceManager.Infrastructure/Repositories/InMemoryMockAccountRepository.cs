@@ -252,11 +252,9 @@ namespace FinanceManager.Infrastructure.Repositories
             var currentMaxId = bankAccount.GetMaxId();
             if (currentMaxId is not null)
                 id += currentMaxId.Value + 1;
-
-            bankAccount.Add(new InvestmentEntry(id, postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, -1, balanceChange, ticker, investmentType)
-            {
-                Ticker = ticker,
-            });
+            var finalPostingDate = postingDate.HasValue ? postingDate.Value : DateTime.UtcNow;
+            AddInvestmentEntryDto addInvestmentEntryDto = new AddInvestmentEntryDto(finalPostingDate, balanceChange, ticker, investmentType);
+            bankAccount.Add(addInvestmentEntryDto);
         }
         private void AddBankAccount(DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
         {

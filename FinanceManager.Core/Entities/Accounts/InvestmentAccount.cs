@@ -31,8 +31,6 @@ namespace FinanceManager.Core.Entities.Accounts
                 Add(entry, recalculateValues);
         }
 
-
-
         public void Add(AddInvestmentEntryDto entry)
         {
             Entries ??= new List<InvestmentEntry>();
