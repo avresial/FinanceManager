@@ -14,17 +14,17 @@
                 <MudText Typo="Typo.subtitle1">@BankAccount.Name</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTimePicker Label="Time" @bind-Time="Time" />
+                <MudDatePicker Label="Posting date" @bind-Date="PostingDate" Validation="@(new NotInFutureAttribute())" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudDatePicker Label="Posting date" @bind-Date="PostingDate" Validation="@(new NotInFutureAttribute())" />
+                <MudTimePicker Label="Time" @bind-Time="Time" Validation="@(new NotInFutureAttributeTime(PostingDate))" />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text"
-                                 SearchFunc="Search" />
+                SearchFunc="Search" />
             </MudItem>
 
             <MudItem xs="12">
@@ -43,7 +43,6 @@
     string _currency = "";
     bool success;
     string[] errors = { };
-    MudTextField<string> pwField1;
     MudForm form;
 
     List<string> ExpenseTypes = Enum.GetValues(typeof(ExpenseType)).Cast<ExpenseType>().Select(x => x.ToString()).ToList();
@@ -54,7 +53,6 @@
     public string ExpenseType { get; set; } = FinanceManager.Core.Enums.ExpenseType.Other.ToString();
     public string Description { get; set; } = string.Empty;
     public decimal? BalanceChange { get; set; } = null;
-    // public decimal? Balance { get; set; } = null;
 
     [Parameter]
     public Func<Task>? ActionCompleted { get; set; }
@@ -85,8 +83,9 @@
         {
             expenseType = (ExpenseType)Enum.Parse(typeof(ExpenseType), ExpenseType);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Console.WriteLine(ex);
         }
         var id = 0;
         var currentMaxId = BankAccount.GetMaxId();
@@ -119,10 +118,6 @@
     }
     private async Task<IEnumerable<string>> Search(string value, CancellationToken token)
     {
-        // In real life use an asynchronous function for fetching data from an api.
-        await Task.Delay(5, token);
-
-        // if text is null or empty, show complete list
         if (string.IsNullOrEmpty(value))
             return ExpenseTypes;
 

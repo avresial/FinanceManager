@@ -32,7 +32,6 @@ namespace FinanceManager.Core.Entities.Accounts
             return Entries.Where(x => x.PostingDate >= start && x.PostingDate <= end);
         }
 
-
         public virtual void Add(T entry, bool recalculateValues = true)
         {
             Entries ??= new List<T>();

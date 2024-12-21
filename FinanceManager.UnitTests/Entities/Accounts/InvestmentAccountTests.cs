@@ -91,5 +91,22 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             Assert.Equal(50, updateResult.ValueChange);
         }
 
+        [Fact]
+        public void RemoveData_RemovesOldestElement_RecalculatesValues()
+        {
+            // Arrange
+            investmentAccount.Add(new InvestmentEntry(1, new DateTime(2000, 1, 3), 10, 10, "Ticker1", InvestmentType.Stock));
+            investmentAccount.Add(new InvestmentEntry(2, new DateTime(2000, 1, 4), 20, 10, "Ticker1", InvestmentType.Stock));
+
+            // Act
+            investmentAccount.Remove(1);
+
+            // Assert
+            Assert.NotNull(investmentAccount.Entries);
+            Assert.Single(investmentAccount.Entries);
+            Assert.Equal(10, investmentAccount.Entries.First().Value);
+            Assert.Equal(10, investmentAccount.Entries.Last().Value);
+        }
+
     }
 }

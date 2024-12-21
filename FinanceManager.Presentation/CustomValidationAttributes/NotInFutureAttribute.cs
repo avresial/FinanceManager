@@ -6,15 +6,12 @@ namespace FinanceManager.Presentation.CustomValidationAttributes
     {
         protected override ValidationResult IsValid(object value, ValidationContext validationContext)
         {
-            value = (DateTime)value;
-            if (DateTime.Now.CompareTo(value) >= 0)
-            {
-                return ValidationResult.Success;
-            }
-            else
-            {
-                return new ValidationResult("Date must not be in the future!");
-            }
+            DateTime dateTime = (DateTime)value;
+
+            if (DateTime.UtcNow.CompareTo(dateTime.ToUniversalTime()) >= 0)
+                return ValidationResult.Success!;
+
+            return new ValidationResult("Date must not be in the future!");
         }
     }
 }

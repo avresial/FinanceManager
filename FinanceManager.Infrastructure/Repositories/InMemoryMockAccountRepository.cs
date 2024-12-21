@@ -59,7 +59,11 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 InvestmentAccount databaseBankAccount = firstAccount as InvestmentAccount;
 
-                InvestmentAccount bankAccount = new InvestmentAccount(databaseBankAccount.Id, name, databaseBankAccount.Get(dateStart, dateEnd));
+                InvestmentAccount bankAccount = new InvestmentAccount(databaseBankAccount.Id, name, new List<InvestmentEntry>());
+
+                foreach (var element in databaseBankAccount.Get(dateStart, dateEnd))
+                    bankAccount.Add(element.GetCopy(), false);
+
                 return bankAccount as T;
             }
 
@@ -228,8 +232,6 @@ namespace FinanceManager.Infrastructure.Repositories
             int tickerIndex = random.Next(tickers.Count);
             AddStockAccountEntry(accountName, tickers[tickerIndex].Item1, tickers[tickerIndex].Item2, startingBalance, startDay);
 
-            Console.WriteLine($"WARNING - now {DateTime.UtcNow.Date}");
-
             while (startDay.Date <= DateTime.UtcNow.Date)
             {
                 tickerIndex = random.Next(tickers.Count);
@@ -244,15 +246,9 @@ namespace FinanceManager.Infrastructure.Repositories
             var bankAccount = FindAccount<InvestmentAccount>(name);
             if (bankAccount is null) return;
 
-            var id = 0;
-            var currentMaxId = bankAccount.GetMaxId();
-            if (currentMaxId is not null)
-                id += currentMaxId.Value + 1;
+            var finalPostingDate = postingDate.HasValue ? postingDate.Value : DateTime.UtcNow;
 
-            bankAccount.Add(new InvestmentEntry(id, postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, -1, balanceChange, ticker, investmentType)
-            {
-                Ticker = ticker,
-            });
+            bankAccount.Add(new AddInvestmentEntryDto(finalPostingDate, balanceChange, ticker, investmentType));
         }
         private void AddBankAccount(DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
         {
