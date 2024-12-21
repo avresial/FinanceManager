@@ -30,7 +30,13 @@ namespace FinanceManager.Core.Entities.Accounts
             foreach (var entry in entries)
                 Add(entry, recalculateValues);
         }
-
+        public int GetNextFreeId()
+        {
+            var currentMaxId = GetMaxId();
+            if (currentMaxId is not null)
+                return currentMaxId.Value + 1;
+            return 0;
+        }
         public void Add(AddInvestmentEntryDto entry)
         {
             Entries ??= new List<InvestmentEntry>();
@@ -47,20 +53,21 @@ namespace FinanceManager.Core.Entities.Accounts
 
             if (previousEntry is not null)
                 index = Entries.IndexOf(previousEntry);
+
             InvestmentEntry newEntry = null;
             if (index == -1)
             {
                 index = Entries.Count();
-                newEntry = new InvestmentEntry(index, entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType);
+                newEntry = new InvestmentEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType);
                 Entries.Add(newEntry);
-                index = Entries.Count() - 1;
+                index -= 1;
             }
             else
             {
-                newEntry = new InvestmentEntry(index, entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType);
+                newEntry = new InvestmentEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType);
                 Entries.Insert(index, newEntry);
             }
-            RecalculateEntryValues(index, newEntry);
+            RecalculateEntryValues(index);
         }
 
 
@@ -118,7 +125,7 @@ namespace FinanceManager.Core.Entities.Accounts
 
             var index = Entries.IndexOf(entryToUpdate);
             if (recalculateValues)
-                RecalculateEntryValues(index, entryToUpdate);
+                RecalculateEntryValues(index);
         }
         public override void Remove(int id)
         {
@@ -129,31 +136,31 @@ namespace FinanceManager.Core.Entities.Accounts
             var index = Entries.IndexOf(entry);
 
             Entries.RemoveAt(index);
-            RecalculateEntryValues(index - 1, entry);
+            RecalculateEntryValues(index - 1);
         }
-
-        private void RecalculateEntryValues(int? startingIndex, InvestmentEntry? startEntry)
+        private void RecalculateEntryValues(int? startingIndex)
         {
             if (Entries is null) return;
-            InvestmentEntry? previousIterationEntry = startEntry;
             int startIndex = startingIndex.HasValue ? startingIndex.Value : Entries.Count() - 1;
 
             for (int i = startIndex; i >= 0; i--)
             {
-                if (previousIterationEntry is not null && Entries[i].Ticker != previousIterationEntry.Ticker) continue;
                 if (Entries.Count() < i) continue;
 
-                if (i == startIndex && Entries[i] is not null)
-                {
-                    var date = Entries[i].PostingDate;
-                    var ticker = Entries[i].Ticker;
-                    var previousElements = Entries.GetPrevious(date, ticker);
-                    if (previousElements is not null)
-                        previousIterationEntry = previousElements.FirstOrDefault();
-                }
+                InvestmentEntry? previousIterationEntry = null; // could be stored in local dictionary to improve speed
+                var previousElements = Entries.GetPrevious(Entries[i].PostingDate, Entries[i].Ticker);
+                if (previousElements is not null && previousElements.Any())
+                    previousIterationEntry = previousElements.FirstOrDefault();
 
                 if (previousIterationEntry is not null)
-                    Entries[i].Value = previousIterationEntry.Value + Entries[i].ValueChange; // error
+                {
+                    Entries[i].Value = previousIterationEntry.Value + Entries[i].ValueChange;
+                }
+                else
+                {
+                    Entries[i].Value = Entries[i].ValueChange;
+                }
+
 
                 previousIterationEntry = Entries[i];
             }

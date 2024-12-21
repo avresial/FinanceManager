@@ -26,6 +26,8 @@ namespace FinanceManager.Core.Entities.Accounts
 
             ValueChange = financialEntryBase.ValueChange;
         }
+
+
     }
 
     public class InvestmentEntry : FinancialEntryBase
