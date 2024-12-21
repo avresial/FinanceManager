@@ -4,24 +4,25 @@ namespace FinanceManager.Presentation.CustomValidationAttributes
 {
     internal class NotInFutureAttributeTime : ValidationAttribute
     {
+        private readonly DateTime date;
+
+        public NotInFutureAttributeTime(DateTime? date)
+        {
+            this.date = date is null ? DateTime.Now.Date : date.Value.Date;
+        }
         protected override ValidationResult IsValid(object value, ValidationContext validationContext)
         {
             TimeSpan timespan = (TimeSpan)value;
-            DateTime dt = DateTime.Now.Date.Add(timespan);
+            DateTime dt = date.Add(timespan);
             DateTime dtUtc = dt.ToUniversalTime();
             TimeSpan tsUtc = dtUtc.TimeOfDay;
 
-            var now = DateTime.UtcNow;
-            var compareReusult = now.CompareTo(dtUtc);
+            var compareReusult = DateTime.UtcNow.CompareTo(dtUtc);
 
             if (compareReusult >= 0)
-            {
                 return ValidationResult.Success!;
-            }
-            else
-            {
-                return new ValidationResult("Date must not be in the future!");
-            }
+
+            return new ValidationResult("Date must not be in the future!");
         }
     }
 

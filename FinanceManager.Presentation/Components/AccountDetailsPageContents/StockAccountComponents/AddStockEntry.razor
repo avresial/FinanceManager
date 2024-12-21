@@ -18,10 +18,10 @@
                 <MudText Typo="Typo.subtitle1">@InvestmentAccount.Name</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTimePicker Label="Time" @bind-Time="Time" Validation="@(new NotInFutureAttributeTime())" />
+                <MudDatePicker Label="Posting date" @bind-Date="PostingDate" Validation="@(new NotInFutureAttribute())" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudDatePicker Label="Posting date" @bind-Date="PostingDate" Validation="@(new NotInFutureAttribute())" />
+                <MudTimePicker Label="Time" @bind-Time="Time" Validation="@(new NotInFutureAttributeTime(PostingDate))" />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudTextField @bind-Value="Ticker" T="string" Label="Ticker" Variant="Variant.Text" MaxLines="5" AutoGrow="true" Immediate />
@@ -31,15 +31,12 @@
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange"
-                Label="Balance change" Variant="Variant.Text" Immediate/>
+                                 Label="Balance change" Variant="Variant.Text" Immediate />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text"
-                SearchFunc="Search" />
+                                 SearchFunc="Search" />
             </MudItem>
-            @*   <MudItem xs="12" sm="6">
-            <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="Balance" Label="Balance" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
-            </MudItem> *@
 
             <MudItem xs="12">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add>Add</MudButton>
@@ -84,7 +81,7 @@
     {
         if (string.IsNullOrEmpty(Ticker)) return;
         if (!PostingDate.HasValue) return;
-        if (args.Field is MudTextField<decimal?> textField) 
+        if (args.Field is MudTextField<decimal?> textField)
         {
             if (textField is null || textField.Label is null) return;
             if (!textField.Label.ToLower().Contains("ticker")) return;
@@ -107,18 +104,6 @@
         return base.OnParametersSetAsync();
     }
 
-    public async Task RecalculatePrice()
-    {
-        if (!PricePerUnit.HasValue)
-        {
-            PricePerUnit = 0;
-        }
-        else
-        {
-            PricePerUnit += 1;
-        }
-
-    }
     public async Task Add()
     {
         await form.Validate();
@@ -129,22 +114,27 @@
 
         DateTime date = new DateTime(PostingDate.Value.Year, PostingDate.Value.Month, PostingDate.Value.Day, Time.Value.Hours, Time.Value.Minutes, Time.Value.Seconds);
         InvestmentType investmentType = FinanceManager.Core.Enums.InvestmentType.Stock;
+
         try
         {
             investmentType = (InvestmentType)Enum.Parse(typeof(InvestmentType), ExpenseType);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Console.WriteLine(ex);
         }
+
         var id = 0;
         var currentMaxId = InvestmentAccount.GetMaxId();
         if (currentMaxId is not null)
             id += currentMaxId.Value + 1;
-        InvestmentEntry bankAccountEntry = new(id, date.ToUniversalTime(), -1, BalanceChange.Value, Ticker, investmentType);
+
+        InvestmentEntry entry = new(id, date.ToUniversalTime(), -1, BalanceChange.Value, Ticker, investmentType);
+
         try
         {
-            InvestmentAccount.Add(bankAccountEntry);
-            AccountService.AddFinancialEntry(bankAccountEntry, InvestmentAccount.Name);
+            InvestmentAccount.Add(new AddInvestmentEntryDto(entry.PostingDate, entry.ValueChange, entry.Ticker, entry.InvestmentType));
+            AccountService.AddFinancialEntry(entry, InvestmentAccount.Name);
         }
         catch (Exception ex)
         {
@@ -162,10 +152,6 @@
     }
     private async Task<IEnumerable<string>> Search(string value, CancellationToken token)
     {
-        // In real life use an asynchronous function for fetching data from an api.
-        await Task.Delay(5, token);
-
-        // if text is null or empty, show complete list
         if (string.IsNullOrEmpty(value))
             return InvestmentType;
 

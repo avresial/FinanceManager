@@ -7,16 +7,11 @@ namespace FinanceManager.Presentation.CustomValidationAttributes
         protected override ValidationResult IsValid(object value, ValidationContext validationContext)
         {
             DateTime dateTime = (DateTime)value;
-            var now = DateTime.UtcNow;
-            var testResult = now.CompareTo(dateTime.ToUniversalTime());
-            if (now.CompareTo(dateTime.ToUniversalTime()) >= 0)
-            {
+
+            if (DateTime.UtcNow.CompareTo(dateTime.ToUniversalTime()) >= 0)
                 return ValidationResult.Success!;
-            }
-            else
-            {
-                return new ValidationResult("Date must not be in the future!");
-            }
+
+            return new ValidationResult("Date must not be in the future!");
         }
     }
 }
