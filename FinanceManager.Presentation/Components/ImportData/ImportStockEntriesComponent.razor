@@ -1,7 +1,9 @@
 ﻿@using CsvHelper
 @using CsvHelper.Configuration
 @using FinanceManager.Core.Entities.Accounts
+@using FinanceManager.Infrastructure.DtoMapping
 @using FinanceManager.Infrastructure.Dtos
+@using FinanceManager.Infrastructure.Readers
 @using Microsoft.AspNetCore.Components.Forms
 @using System.Globalization
 
@@ -11,7 +13,6 @@
     <MudPaper>
         <MudStepper @bind-ActiveIndex="_index" OnPreviewInteraction="OnPreviewInteraction">
             <ChildContent>
-
                 <MudStep Title="Select file" SecondaryText="Step1" @bind-Completed="_step1Complete">
                     <MudStack Style="width: 100%">
                         <MudForm @bind-IsValid="_isValid" @bind-IsTouched="_isTouched">
@@ -46,8 +47,8 @@
                                             <tr>
                                                 <th>@PostingDateHeader</th>
                                                 <th>@ValueChangeHeader</th>
-                                                <th>@TickerChangeHeader</th>
-                                                <th>@InvestmentTypeChangeHeader</th>
+                                                <th>@TickerHeader</th>
+                                                <th>@InvestmentTypeHeader</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -62,17 +63,17 @@
                                 }
 
                                 <MudFileUpload Class="mt-3" T="IBrowserFile"
-                                Hidden="@false"
-                                InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
-                                InputStyle="opacity:0"
-                                ErrorText="@string.Empty"
-                                tabindex="-1"
-                                @ondrop="@ClearDragClass"
-                                @ondragenter="@SetDragClass"
-                                @ondragleave="@ClearDragClass"
-                                @ondragend="@ClearDragClass"
-                                OnFilesChanged="UploadFiles"
-                                Disabled="@( !DatasetCointainsAdditionalInformation && string.IsNullOrEmpty(Ticker))">
+                                               Hidden="@false"
+                                               InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
+                                               InputStyle="opacity:0"
+                                               ErrorText="@string.Empty"
+                                               tabindex="-1"
+                                               @ondrop="@ClearDragClass"
+                                               @ondragenter="@SetDragClass"
+                                               @ondragleave="@ClearDragClass"
+                                               @ondragend="@ClearDragClass"
+                                               OnFilesChanged="UploadFiles"
+                                               Disabled="@( !DatasetCointainsAdditionalInformation && string.IsNullOrEmpty(Ticker))">
 
                                     <ActivatorContent>
                                         <MudPaper Height="300px" Outlined="true" Class="@_dragClass">
@@ -89,11 +90,6 @@
                                         </MudPaper>
                                     </ActivatorContent>
                                 </MudFileUpload>
-                                <MudToolBar Gutters="@false" Class="relative d-flex justify-end gap-4">
-                                    <MudButton Color="Color.Error" Disabled="@(!LoadedFiles.Any())" OnClick="@ClearFiles" Variant="Variant.Filled">
-                                        Clear
-                                    </MudButton>
-                                </MudToolBar>
                             </MudItem>
                             <MudItem>
                                 @foreach (var error in _erorrs)
@@ -106,7 +102,6 @@
                         </MudForm>
                     </MudStack>
                 </MudStep>
-
                 <MudStep Title="Validate" SecondaryText="Step2" @bind-Completed="_step2Complete" Disabled="@(_step1Complete == false)">
 
                     <MudGrid>
@@ -119,7 +114,7 @@
                         <MudItem xs="12">
                             @if (importStockModels is not null && importStockModels.Any())
                             {
-                                <MudTable Items="@importStockModels" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_isImportingData" RowsPerPage="10">
+                                <MudTable Items="@importStockModels" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_isImportingData" RowsPerPage="8">
                                     <HeaderContent>
                                         <MudTh>Posting date</MudTh>
                                         <MudTh>Value change</MudTh>
@@ -127,6 +122,26 @@
                                     <RowTemplate>
                                         <MudTd DataLabel="Posting date">@context.PostingDate</MudTd>
                                         <MudTd DataLabel="Value change">@context.ValueChange</MudTd>
+                                    </RowTemplate>
+                                    <PagerContent>
+                                        <MudTablePager />
+                                    </PagerContent>
+                                </MudTable>
+                            }
+                            else if (importStockExtendedModels is not null && importStockExtendedModels.Any())
+                            {
+                                <MudTable Items="@importStockExtendedModels" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_isImportingData" RowsPerPage="8">
+                                    <HeaderContent>
+                                        <MudTh>Posting date</MudTh>
+                                        <MudTh>Change</MudTh>
+                                        <MudTh>Ticker</MudTh>
+                                        <MudTh>Type</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="@PostingDateHeader">@context.PostingDate</MudTd>
+                                        <MudTd DataLabel="@ValueChangeHeader">@context.ValueChange</MudTd>
+                                        <MudTd DataLabel="@TickerHeader">@context.Ticker</MudTd>
+                                        <MudTd DataLabel="@InvestmentTypeHeader">@context.InvestmentType</MudTd>
                                     </RowTemplate>
                                     <PagerContent>
                                         <MudTablePager />
@@ -146,32 +161,42 @@
                                 <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
                             }
                         </MudItem>
-
-                        <MudItem xs="12">
-                            <MudButton @onclick=FinishImport Variant="Variant.Filled" Color="Color.Primary">Begin import</MudButton>
-                        </MudItem>
                     </MudGrid>
-
                 </MudStep>
                 <MudStep Title="Summary" SecondaryText="Step3" @bind-Completed="_step3Complete" Disabled="@(_step2Complete == false)">
-
                     <MudText Class="my-5" Typo="Typo.h5">Summary</MudText>
+                    <MudStack Spacing="4" Class="my-3">
+                        @foreach (var errorInfo in _erorrs)
+                        {
+                            <MudAlert Severity="Severity.Error" Variant="Variant.Text"> @errorInfo</MudAlert>
+                        }
+                        @foreach (var warningInfo in _warnings)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Text"> @warningInfo</MudAlert>
+                        }
+                        @foreach (var summaryInfo in _summaryInfos)
+                        {
+                            <MudAlert Severity="Severity.Success" Variant="Variant.Text"> @summaryInfo</MudAlert>
+                        }
 
-                    @foreach (var summaryInfo in summaryInfos)
-                    {
-                        <p>
-                            @summaryInfo
-                        </p>
-                    }
-
-                    <MudButton Variant="Variant.Text" Class="col-12" href="@($"AccountDetails/{AccountName}")">Go back to @AccountName</MudButton>
+                    </MudStack>
                 </MudStep>
             </ChildContent>
 
             <ActionContent Context="stepper">
-                <MudIconButton OnClick="@(() => stepper.PreviousStepAsync())" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary" Disabled="@(_index <= 0)" />
-                <MudSpacer />
-                <MudIconButton OnClick="@(() => stepper.NextStepAsync())" Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Primary" />
+                @if (_index != 2)
+                {
+                    <MudButton Color="Color.Error" Disabled="@(!LoadedFiles.Any())" OnClick="@ClearFiles" Variant="Variant.Outlined">Clear</MudButton>
+                    <MudSpacer />
+                }
+                @if (_index == 1)
+                {
+                    <MudButton @onclick=BeginImport Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Begin import</MudButton>
+                }
+                @if (_index == 2)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" href="@($"AccountDetails/{AccountName}")" Class="ml-auto">Go back to @AccountName</MudButton>
+                }
             </ActionContent>
         </MudStepper>
     </MudPaper>
@@ -189,7 +214,8 @@
     private List<ImportStockModel> importStockModels = new();
     private List<ImportStockExtendedModel> importStockExtendedModels = new();
     private List<string> _erorrs = new();
-    private List<string> summaryInfos = new();
+    private List<string> _warnings = new();
+    private List<string> _summaryInfos = new();
     private int _index;
     private bool DatasetCointainsAdditionalInformation = false;
     private bool _isImportingData = false;
@@ -208,8 +234,8 @@
     public List<IBrowserFile> LoadedFiles = new();
     public string PostingDateHeader { get; set; } = "PostingDate";
     public string ValueChangeHeader { get; set; } = "ValueChange";
-    public string TickerChangeHeader { get; set; } = "Ticker";
-    public string InvestmentTypeChangeHeader { get; set; } = "InvestmentType";
+    public string TickerHeader { get; set; } = "Ticker";
+    public string InvestmentTypeHeader { get; set; } = "InvestmentType";
 
     [Parameter]
     public required string AccountName { get; set; }
@@ -236,31 +262,28 @@
 
         var file = LoadedFiles.FirstOrDefault();
         if (file is null) return;
-        try
-        {
-            if (DatasetCointainsAdditionalInformation)
-            {
-                using (var reader = new StreamReader(file.OpenReadStream()))
-                using (var csv = new CsvReader(reader, config))
-                {
-                    csv.Context.RegisterClassMap(new ImportStockExtendedModelMap(PostingDateHeader, ValueChangeHeader, TickerChangeHeader, InvestmentTypeChangeHeader));
-                    importStockExtendedModels = await csv.GetRecordsAsync<ImportStockExtendedModel>().ToListAsync();
-                }
-            }
-            else
-            {
-                using (var reader = new StreamReader(file.OpenReadStream()))
-                using (var csv = new CsvReader(reader, config))
-                {
-                    csv.Context.RegisterClassMap(new ImportStockModelMap(PostingDateHeader, ValueChangeHeader));
-                    importStockModels = await csv.GetRecordsAsync<ImportStockModel>().ToListAsync();
-                }
-            }
 
-        }
-        catch (HeaderValidationException ex)
+        if (DatasetCointainsAdditionalInformation)
         {
-            _erorrs.Add($"Invalid headers. Required headers:{PostingDateHeader}, {ValueChangeHeader}  ");
+            try
+            {
+                importStockExtendedModels = await ImportStockExtendedModelReader.Read(config, file, PostingDateHeader, ValueChangeHeader, TickerHeader, InvestmentTypeHeader);
+            }
+            catch (HeaderValidationException ex)
+            {
+                _erorrs.Add($"Invalid headers. Required headers:{PostingDateHeader}, {ValueChangeHeader},{TickerHeader}, {InvestmentTypeHeader}.");
+            }
+        }
+        else
+        {
+            try
+            {
+                importStockModels = await ImportStockModelReader.Read(config, file, PostingDateHeader, ValueChangeHeader);
+            }
+            catch (HeaderValidationException ex)
+            {
+                _erorrs.Add($"Invalid headers. Required headers:{PostingDateHeader}, {ValueChangeHeader}.");
+            }
         }
 
         _step1Complete = importStockModels.Any() || importStockExtendedModels.Any();
@@ -275,7 +298,7 @@
         }
         _isImportingData = false;
     }
-    public async Task FinishImport()
+    public void BeginImport()
     {
         _isImportingData = true;
 
@@ -285,22 +308,36 @@
         {
             foreach (var result in importStockModels)
             {
-                InvestmentEntry bankAccountEntry = new(-1, result.PostingDate, -1, result.ValueChange, Ticker, Core.Enums.InvestmentType.Unknown);
-                AccountService.AddFinancialEntry(bankAccountEntry, AccountName);
-                importedEntriesCount++;
+                try
+                {
+                    AccountService.AddFinancialEntry(new InvestmentEntry(-1, result.PostingDate, -1, result.ValueChange, Ticker, Core.Enums.InvestmentType.Unknown), AccountName);
+                    importedEntriesCount++;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex);
+                    _warnings.Add(ex.Message);
+                }
             }
         }
         else if (importStockExtendedModels.Any())
         {
             foreach (var result in importStockExtendedModels)
             {
-                InvestmentEntry bankAccountEntry = new(-1, result.PostingDate, -1, result.ValueChange, result.Ticker, result.InvestmentType);
-                AccountService.AddFinancialEntry(bankAccountEntry, AccountName);
-                importedEntriesCount++;
+                try
+                {
+                    AccountService.AddFinancialEntry(new InvestmentEntry(-1, result.PostingDate, -1, result.ValueChange, result.Ticker, result.InvestmentType), AccountName);
+                    importedEntriesCount++;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex);
+                    _warnings.Add(ex.Message);
+                }
             }
         }
-        
-        summaryInfos.Add($"Imported {importedEntriesCount} rows.");
+
+        _summaryInfos.Add($"Imported {importedEntriesCount} rows.");
 
         StateHasChanged();
 
@@ -308,7 +345,6 @@
         _isImportingData = false;
         _index++;
     }
-
     public async Task ClearFiles()
     {
         if (LoadedFiles is not null)
@@ -317,9 +353,8 @@
         _step1Complete = false;
         _step2Complete = false;
         _step3Complete = false;
+        _index = 0;
     }
-
-
 
     private void SetDragClass() => _dragClass = $"{DefaultDragClass} mud-border-primary";
     private void ClearDragClass() => _dragClass = DefaultDragClass;
@@ -385,27 +420,4 @@
                 break;
         }
     }
-
-
-
-    internal sealed class ImportStockModelMap : ClassMap<ImportStockModel>
-    {
-        internal ImportStockModelMap(string postingDateHeader, string valueChangeHeader)
-        {
-            Map(m => m.PostingDate).Name(postingDateHeader);
-            Map(m => m.ValueChange).Name(valueChangeHeader);
-        }
-    }
-
-    internal sealed class ImportStockExtendedModelMap : ClassMap<ImportStockExtendedModel>
-    {
-        internal ImportStockExtendedModelMap(string postingDateHeader, string valueChangeHeader, string tickerChangeHeader, string investmentTypeChangeHeader)
-        {
-            Map(m => m.PostingDate).Name(postingDateHeader);
-            Map(m => m.ValueChange).Name(valueChangeHeader);
-            Map(m => m.Ticker).Name(valueChangeHeader);
-            Map(m => m.InvestmentType).Name(investmentTypeChangeHeader);
-        }
-    }
-
 }

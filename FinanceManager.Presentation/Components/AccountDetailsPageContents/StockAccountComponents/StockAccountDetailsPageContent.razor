@@ -181,7 +181,18 @@
 }
 else if (Account is not null && (Account.Entries is null || !Account.Entries.Any()))
 {
-    <AddStockEntry InvestmentAccount=Account ActionCompleted="HideOverlay" />
+    <MudGrid Spacing="5">
+        <MudItem xs="12" >
+            <MudButton Variant="Variant.Text" Class="col-12" href="@($"Import/{Account.Name}")">
+                <MudText Typo="Typo.h4">Import</MudText>
+            </MudButton>
+        </MudItem>
+        <MudItem xs="12">
+            <AddStockEntry InvestmentAccount=Account ActionCompleted="HideOverlay" />
+        </MudItem>
+
+    </MudGrid>
+
 }
 
 @code {
@@ -209,13 +220,13 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
     public required string AccountName { get; set; }
 
     [Inject]
-    public IAccountService AccountService { get; set; }
+    public required IAccountService AccountService { get; set; }
 
     [Inject]
-    public IStockRepository StockRepository { get; set; }
+    public required IStockRepository StockRepository { get; set; }
 
     [Inject]
-    public ISettingsService settingsService { get; set; }
+    public required ISettingsService settingsService { get; set; }
 
     public async Task ShowOverlay()
     {
