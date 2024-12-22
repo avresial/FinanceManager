@@ -1,118 +1,114 @@
-using CsvHelper;
-using CsvHelper.Configuration;
-using FinanceManager.Core.Entities.Accounts;
-using FinanceManager.Core.Repositories;
+using FinanceManager.Core.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
-using System.Globalization;
+using MudBlazor;
 
 namespace FinanceManager.Presentation.Components.ImportData
 {
     public partial class ImportBankEntriesComponent : ComponentBase
     {
-        public List<string> RequiredHeders = new List<string>() { "Id", "PostingDate", "ValueChange" };
+        private List<string> _erorrs = new();
+        private List<string> _warnings = new();
+        private List<string> _summaryInfos = new();
+
+        private bool _step1Complete;
+        private bool _step2Complete;
+        private bool _step3Complete;
+
+        private int _index;
+
+        public List<IBrowserFile> LoadedFiles = new();
 
         [Parameter]
         public required string AccountName { get; set; }
 
         [Inject]
-        public IFinancalAccountRepository BankAccountRepository { get; set; }
-
-        public List<BankAccountEntry> CurrentlyLoadedEntries { get; set; }
-
-        private string currentlyLoadedAccountName;
-        public string CurrentlyLoadedAccountName
+        public required IAccountService AccountService { get; set; }
+        public void BeginImport()
         {
-            get { return currentlyLoadedAccountName; }
-            set
+            //       _isImportingData = true;
+
+            int importedEntriesCount = 0;
+
+
+            _summaryInfos.Add($"Imported {importedEntriesCount} rows.");
+
+            StateHasChanged();
+
+            _step2Complete = true;
+            //     _isImportingData = false;
+            _index++;
+        }
+        public async Task Clear()
+        {
+            if (LoadedFiles is not null)
+                LoadedFiles.Clear();
+
+            _step1Complete = false;
+            _step2Complete = false;
+            _step3Complete = false;
+            _index = 0;
+        }
+        private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
+        {
+            if (arg.Action == StepAction.Complete)
             {
-                currentlyLoadedAccountName = value;
-                IsDisableUpdate();
+                await ControlStepCompletion(arg);
+            }
+            else if (arg.Action == StepAction.Activate)
+            {
+                await ControlStepNavigation(arg);
             }
         }
-
-        public bool IsLoading { get; set; }
-        public bool? ImportSucess { get; set; }
-        public string ErrorMessage { get; set; } = string.Empty;
-        public bool IsDisabled { get; set; }
-        public void IsDisableUpdate()
+        private async Task ControlStepCompletion(StepperInteractionEventArgs arg)
         {
-            IsDisabled = BankAccountRepository.AccountExists(CurrentlyLoadedAccountName);
-        }
-
-        public async Task LoadFiles(InputFileChangeEventArgs e)
-        {
-            IsLoading = true;
-            ErrorMessage = string.Empty;
-            //var config = new CsvConfiguration(CultureInfo.InvariantCulture)
-            var config = new CsvConfiguration(new CultureInfo("de-DE"))
+            _erorrs.Clear();
+            switch (arg.StepIndex)
             {
-                Delimiter = ";",
-                HasHeaderRecord = true,
-            };
-            if (e.File is null)
-            {
-                IsLoading = false;
-                return;
-            }
-
-
-
-            foreach (var file in e.GetMultipleFiles(6))
-            {
-                try
-                {
-                    using (var reader = new StreamReader(file.OpenReadStream()))
-                    using (var csv = new CsvReader(reader, config))
+                case 0:
+                    if (_step1Complete != true)
                     {
-                        await csv.ReadAsync();
-                        csv.ReadHeader();
-                        var headers = csv.HeaderRecord;
-                        if (headers is null) continue;
-                        bool containsAllColums = true;
-
-                        foreach (var item in RequiredHeders)
-                        {
-                            if (!headers.Contains(item))
-                                containsAllColums = false;
-                        }
-
-                        if (!containsAllColums)
-                        {
-                            ErrorMessage = "Lacks some fields";
-                            continue;
-                        }
+                        _erorrs.Add($"Can not continue. Select csv file");
+                        arg.Cancel = true;
                     }
-
-                }
-                catch (Exception ex)
-                {
-                    ErrorMessage = ex.Message;
-                }
+                    break;
+                case 1:
+                    if (_step2Complete != true)
+                    {
+                        arg.Cancel = true;
+                    }
+                    break;
+                case 2:
+                    if (_step3Complete != true)
+                    {
+                        arg.Cancel = true;
+                    }
+                    break;
             }
-
-            CloseImportNotification();
-            IsLoading = false;
         }
-
-        public void CloseImportNotification()
+        private async Task ControlStepNavigation(StepperInteractionEventArgs arg)
         {
-            ImportSucess = null;
-        }
-        public void Add()
-        {
-            if (!BankAccountRepository.AccountExists(CurrentlyLoadedAccountName))
+            switch (arg.StepIndex)
             {
-                BankAccountRepository.AddFinancialAccount<BankAccount, BankAccountEntry>(CurrentlyLoadedAccountName, CurrentlyLoadedEntries.ToList());
+                case 1:
+                    if (_step1Complete != true)
+                    {
+                        arg.Cancel = true;
+                    }
+                    break;
+                case 2:
+                    if (_step2Complete != true)
+                    {
+                        arg.Cancel = true;
+                    }
+                    break;
+                case 3:
+                    if (_step3Complete != true)
+                    {
+                        arg.Cancel = true;
+                    }
+                    break;
             }
-            else
-            {
-                ImportSucess = false;
-                return;
-            }
-
-            CurrentlyLoadedEntries = null;
-            ImportSucess = true;
         }
     }
 }

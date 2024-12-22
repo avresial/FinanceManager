@@ -41,6 +41,7 @@
             <MudItem xs="12">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add>Add</MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel Class="mx-2">Cancel</MudButton>
+                @CustomButton
             </MudItem>
         </MudGrid>
     </MudContainer>
@@ -67,7 +68,8 @@
 
     public decimal? PricePerUnit { get; set; } = null;
     // public decimal? Balance { get; set; } = null;
-
+    [Parameter]
+    public RenderFragment CustomButton { get; set; }
     [Parameter]
     public Func<Task>? ActionCompleted { get; set; }
 
