@@ -6,16 +6,11 @@ using MudBlazor;
 
 namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.BankAccountComponents
 {
-    public partial class EditBankAccount
+    public partial class ManageBankAccount
     {
         private MudForm form;
         private bool success;
         private string[] errors = { };
-        private string[] types =
-    {
-        "Cash",
-        "Stock",
-    };
 
         private BankAccount? BankAccount { get; set; } = null;
 
@@ -28,6 +23,8 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
         [Inject]
         public required IAccountService AccountService { get; set; }
 
+        [Inject]
+        public NavigationManager Navigation { get; set; }
 
         protected override void OnParametersSet()
         {
@@ -38,6 +35,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
             AccountName = BankAccount.Name;
             AccountType = BankAccount.AccountType;
         }
+
 
         public async Task Update()
         {
@@ -51,8 +49,14 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
             }
 
             if (BankAccount is null) return;
+
             BankAccount updatedAccount = new BankAccount(BankAccount.Id, AccountName, AccountType);
             AccountService.UpdateAccount(updatedAccount);
+            Navigation.NavigateTo($"AccountDetails/{AccountId}");
+        }
+
+        public async Task Remove()
+        {
         }
     }
 }

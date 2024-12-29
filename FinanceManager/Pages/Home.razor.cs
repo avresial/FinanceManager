@@ -13,6 +13,7 @@ namespace FinanceManager.Pages
 
         [Inject]
         public ILoginService LoginService { get; set; }
+
         [Inject]
         public NavigationManager Navigation { get; set; }
 
