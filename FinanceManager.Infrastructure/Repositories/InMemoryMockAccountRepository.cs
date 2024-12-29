@@ -50,8 +50,15 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 BankAccount databaseBankAccount = firstAccount as BankAccount;
 
-                BankAccount bankAccount = new BankAccount(databaseBankAccount.Id, name, databaseBankAccount.Get(dateStart, dateEnd), databaseBankAccount.AccountType);
-                return bankAccount as T;
+                BankAccount account = new BankAccount(databaseBankAccount.Id, name, new List<BankAccountEntry>(), databaseBankAccount.AccountType);
+
+                foreach (var element in databaseBankAccount.Get(dateStart, dateEnd))
+                {
+                    var testValue = element.GetCopy();
+                    account.Add(testValue, false);
+                }
+
+                return account as T;
             }
 
             if (typeof(T) == typeof(InvestmentAccount))

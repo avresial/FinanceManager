@@ -3,23 +3,7 @@ using FinanceManager.Core.Extensions;
 
 namespace FinanceManager.Core.Entities.Accounts
 {
-    public class FinancialAccountBase
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public virtual DateTime? Start { get; protected set; }
-        public virtual DateTime? End { get; protected set; }
-    }
-
-    public class FixedAssetAccount : FinancialAccountBase<FixedAssetEntry>
-    {
-        public FixedAssetAccount(int id, string name) : base(id, name)
-        {
-
-        }
-    }
-
-    public class BankAccount : FinancialAccountBase<BankAccountEntry>//, IFinancalAccount
+    public class BankAccount : FinancialAccountBase<BankAccountEntry>
     {
         public AccountType AccountType { get; private set; }
 
@@ -64,6 +48,7 @@ namespace FinanceManager.Core.Entities.Accounts
                 newEntry = new BankAccountEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange);
                 Entries.Insert(index, newEntry);
             }
+
             RecalculateEntryValues(index);
         }
         public override void Update(BankAccountEntry entry, bool recalculateValues = true)

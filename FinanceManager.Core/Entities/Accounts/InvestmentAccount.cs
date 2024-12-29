@@ -69,8 +69,6 @@ namespace FinanceManager.Core.Entities.Accounts
             }
             RecalculateEntryValues(index);
         }
-
-
         public override void Add(InvestmentEntry entry, bool recalculateValues = true)
         {
             Entries ??= new List<InvestmentEntry>();

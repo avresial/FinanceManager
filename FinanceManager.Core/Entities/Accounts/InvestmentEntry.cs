@@ -91,5 +91,10 @@ namespace FinanceManager.Core.Entities.Accounts
             Description = entry.Description;
             ExpenseType = entry.ExpenseType;
         }
+
+        public BankAccountEntry GetCopy()
+        {
+            return new BankAccountEntry(Id, PostingDate, Value, ValueChange);
+        }
     }
 }

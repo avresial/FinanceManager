@@ -49,7 +49,6 @@ namespace FinanceManager.Core.Entities.Accounts
 
             if (index < 0)
             {
-                entry.Value = entry.ValueChange;
                 Entries.Add(entry);
                 index = Entries.Count() - 1;
             }
