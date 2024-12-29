@@ -1,4 +1,4 @@
-﻿@page "/Import/{AccountName}"
+﻿@page "/Import/{AccountId:int}"
 @using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Presentation.Components.ImportData
 
@@ -17,11 +17,11 @@ else
         }
         else if (accountType == typeof(BankAccount))
         {
-            <ImportBankEntriesComponent AccountName="@AccountName" />
+            <ImportBankEntriesComponent AccountId="@AccountId" />
         }
         else if (accountType == typeof(InvestmentAccount))
         {
-            <ImportStockEntriesComponent AccountName="@AccountName" />
+            <ImportStockEntriesComponent AccountId="@AccountId" />
         }
         else
         {

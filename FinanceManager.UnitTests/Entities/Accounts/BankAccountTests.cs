@@ -22,7 +22,7 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             // Act
             var entryToChange = BankAccount.Get(new DateTime(2000, 1, 30)).FirstOrDefault();
             var change = new BankAccountEntry(entryToChange.Id, new DateTime(2000, 1, 27), entryToChange.Value, entryToChange.ValueChange) { Description = "Test1" };
-            BankAccount.Update(change, true);
+            BankAccount.UpdateEntry(change, true);
 
             // Assert
             Assert.Equal(40, BankAccount.Entries.First().Value);

@@ -1,0 +1,77 @@
+﻿@page "/EditAccount/{AccountId:int}"
+@using FinanceManager.Core.Entities.Accounts
+@using FinanceManager.Core.Repositories
+@using FinanceManager.Presentation.Components.AccountDetailsPageContents.BankAccountComponents
+
+
+@if (accountType is null)
+{
+    <DisplaySpinner />
+}
+else
+{
+    <div class="container-fluid px-0" @ref=MyElementReference>
+        @if (ErrorMessage != string.Empty)
+        {
+            <div class="alert alert-warning" role="alert">
+                @ErrorMessage
+            </div>
+        }
+        else if (accountType == typeof(BankAccount))
+        {
+            <EditBankAccount AccountId="@AccountId" />
+        }
+        else if (accountType == typeof(InvestmentAccount))
+        {
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">Go back to @AccountId</MudButton>
+        }
+        else
+        {
+            <div class="alert alert-danger" role="alert">
+                @accountType type is not supported.
+            </div>
+        }
+    </div>
+}
+
+
+@code {
+    public ElementReference MyElementReference;
+    public Type? accountType = null;
+
+    [Parameter]
+    public required int AccountId { get; set; }
+
+    [Inject]
+    public required IFinancalAccountRepository BankAccountRepository { get; set; }
+
+    public string ErrorMessage { get; set; } = string.Empty;
+
+
+    protected override void OnInitialized()
+    {
+        UpdateEntries();
+    }
+
+    protected override void OnParametersSet()
+    {
+        MyElementReference = default;
+        accountType = null;
+        UpdateEntries();
+    }
+    private void UpdateEntries()
+    {
+        try
+        {
+            var accounts = BankAccountRepository.GetAvailableAccounts();
+            if (accounts.ContainsKey(AccountId))
+                accountType = accounts[AccountId];
+
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
+}

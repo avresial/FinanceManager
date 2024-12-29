@@ -51,7 +51,7 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             // Act
             var entryToChange = FinancialAccount.Get(new DateTime(2000, 1, 30)).FirstOrDefault();
             FinancialEntryBase change = new FinancialEntryBase(entryToChange.Id, new DateTime(2000, 1, 27), entryToChange.Value, entryToChange.ValueChange);
-            FinancialAccount.Update(change, true);
+            FinancialAccount.UpdateEntry(change, true);
 
             // Assert
             Assert.Equal(40, FinancialAccount.Entries.First().Value);

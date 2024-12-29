@@ -45,7 +45,7 @@ namespace FinanceManager.Presentation.Components.ImportData
         private string _investmentTypeHeader = "InvestmentType";
 
         [Parameter]
-        public required string AccountName { get; set; }
+        public required int AccountId { get; set; }
 
         [Inject]
         public required IAccountService AccountService { get; set; }
@@ -101,7 +101,7 @@ namespace FinanceManager.Presentation.Components.ImportData
                 {
                     try
                     {
-                        AccountService.AddFinancialEntry(new BankAccountEntry(-1, result.PostingDate, -1, result.ValueChange), AccountName);
+                        AccountService.AddEntry(new BankAccountEntry(-1, result.PostingDate, -1, result.ValueChange), AccountId);
                         importedEntriesCount++;
                     }
                     catch (Exception ex)

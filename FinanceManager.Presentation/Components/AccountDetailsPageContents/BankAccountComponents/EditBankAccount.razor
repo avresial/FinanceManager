@@ -1,0 +1,34 @@
+﻿@using FinanceManager.Core.Enums
+@if (BankAccount is not null)
+{
+    <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+        <MudContainer MaxWidth="MaxWidth.Medium">
+            <MudGrid Justify="Justify.Center">
+                <MudItem xs="12" sm="12" md="12">
+                    <MudText Typo="Typo.h4">Update</MudText>
+                    <MudText Typo="Typo.subtitle1">@BankAccount.Name</MudText>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="AccountName" T="string" Label="Account name" Variant="Variant.Text" />
+                </MudItem>
+                <MudItem>
+                    <MudSelect @bind-Value="AccountType" Label="Type">
+                        @foreach (var type in Enum.GetValues(typeof(AccountType)).Cast<AccountType>())
+                        {
+                            <MudSelectItem Value="type">@type</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update</MudButton>
+                    @* <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel Class="mx-2">Cancel</MudButton> *@
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">Cancel</MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudContainer>
+    </MudForm>
+}
+else
+{
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">Cancel</MudButton>
+}

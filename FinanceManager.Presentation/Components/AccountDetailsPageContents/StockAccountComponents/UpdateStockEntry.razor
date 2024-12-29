@@ -142,8 +142,8 @@
 
         try
         {
-            InvestmentAccount.Update(bankAccountEntry);
-            BankAccountService.UpdateFinancialEntry(bankAccountEntry, InvestmentAccount.Name);
+            InvestmentAccount.UpdateEntry(bankAccountEntry);
+            BankAccountService.UpdateEntry(bankAccountEntry, InvestmentAccount.Id);
         }
         catch (Exception ex)
         {

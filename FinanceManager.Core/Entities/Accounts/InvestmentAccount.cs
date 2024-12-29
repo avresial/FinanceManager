@@ -98,7 +98,7 @@ namespace FinanceManager.Core.Entities.Accounts
                 RecalculateEntryValues(index);
 
         }
-        public override void Update(InvestmentEntry entry, bool recalculateValues = true)
+        public override void UpdateEntry(InvestmentEntry entry, bool recalculateValues = true)
         {
             Entries ??= new List<InvestmentEntry>();
 

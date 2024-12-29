@@ -5,7 +5,7 @@ namespace FinanceManager.Core.Entities.Accounts
 {
     public class BankAccount : FinancialAccountBase<BankAccountEntry>
     {
-        public AccountType AccountType { get; private set; }
+        public AccountType AccountType { get; set; }
 
         public BankAccount(int id, string name, IEnumerable<BankAccountEntry> entries, AccountType accountType) : base(id, name)
         {
@@ -18,7 +18,11 @@ namespace FinanceManager.Core.Entities.Accounts
             Entries = new List<BankAccountEntry>();
         }
 
-        public void Add(AddBankEntryDto entry)
+        public virtual void GetEntry(DateTime start)
+        {
+            throw new NotImplementedException();
+        }
+        public void AddEntry(AddBankEntryDto entry)
         {
             Entries ??= new List<BankAccountEntry>();
             var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
@@ -50,7 +54,7 @@ namespace FinanceManager.Core.Entities.Accounts
 
             RecalculateEntryValues(index);
         }
-        public override void Update(BankAccountEntry entry, bool recalculateValues = true)
+        public override void UpdateEntry(BankAccountEntry entry, bool recalculateValues = true)
         {
             Entries ??= new List<BankAccountEntry>();
 
@@ -75,10 +79,7 @@ namespace FinanceManager.Core.Entities.Accounts
             if (recalculateValues)
                 RecalculateEntryValues(index);
         }
-        public virtual void GetEntry(DateTime start)
-        {
-            throw new NotImplementedException();
-        }
+
         public int GetNextFreeId()
         {
             var currentMaxId = GetMaxId();

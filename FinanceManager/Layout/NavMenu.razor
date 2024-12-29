@@ -35,13 +35,13 @@
             Accounts
         </div>
 
-        @if (AccountNames is not null && AccountNames.Any())
+        @if (Accounts is not null && Accounts.Any())
         {
-            @foreach (var accountName in AccountNames)
+            @foreach (var account in Accounts)
             {
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link py-0" href="@($"AccountDetails/{accountName}")" Match="NavLinkMatch.All">
-                        <span class="bi bi-wallet-fill navbarIcon" aria-hidden="true"></span>@accountName
+                    <NavLink class="nav-link py-0" href="@($"AccountDetails/{account.Key}")" Match="NavLinkMatch.All">
+                        <span class="bi bi-wallet-fill navbarIcon" aria-hidden="true"></span>@account.Value
                     </NavLink>
                 </div>
             }
