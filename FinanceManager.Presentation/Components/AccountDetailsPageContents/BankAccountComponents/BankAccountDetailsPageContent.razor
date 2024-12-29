@@ -31,7 +31,7 @@
             <div class="col-xs-12 col-lg-2">
 
                 <div class="row">
-                    <MudButton Variant="Variant.Text" Class="col-12" href="@($"Import/{Account.Name}")" Disabled>Import</MudButton>
+                    <MudButton Variant="Variant.Text" Class="col-12" href="@($"Import/{Account.Name}")">Import</MudButton>
                     <MudButton Variant="Variant.Text" Class="col-12" Disabled>Export</MudButton>
                     <MudButton Variant="Variant.Text" Class="col-12" Disabled>Edit</MudButton>
                 </div>
@@ -177,5 +177,9 @@
 }
 else if (Account is not null && (Account.Entries is null || !Account.Entries.Any()))
 {
-    <AddBankEntry BankAccount=Account ActionCompleted="HideOverlay" />
+    <AddBankEntry BankAccount=Account ActionCompleted="HideOverlay">
+        <CustomButton>
+            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.Name}")" > Import</MudButton>
+        </CustomButton>
+    </AddBankEntry>
 }

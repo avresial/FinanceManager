@@ -1,6 +1,5 @@
 ﻿using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Enums;
-using FinanceManager.Core.Extensions;
 using FinanceManager.Core.Repositories;
 using System.ComponentModel.Design;
 
@@ -51,8 +50,15 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 BankAccount databaseBankAccount = firstAccount as BankAccount;
 
-                BankAccount bankAccount = new BankAccount(databaseBankAccount.Id, name, databaseBankAccount.Get(dateStart, dateEnd), databaseBankAccount.AccountType);
-                return bankAccount as T;
+                BankAccount account = new BankAccount(databaseBankAccount.Id, name, new List<BankAccountEntry>(), databaseBankAccount.AccountType);
+
+                foreach (var element in databaseBankAccount.Get(dateStart, dateEnd))
+                {
+                    var testValue = element.GetCopy();
+                    account.Add(testValue, false);
+                }
+
+                return account as T;
             }
 
             if (typeof(T) == typeof(InvestmentAccount))
@@ -196,6 +202,7 @@ namespace FinanceManager.Infrastructure.Repositories
         private void AddMockData()
         {
             AddBankAccount(DateTime.UtcNow.AddMonths(-8), 100, "Main", AccountType.Cash);
+            AddBankAccount(DateTime.UtcNow.AddMinutes(-1), 0, "Empty Bank", AccountType.Cash);
             //		AddBankAccount(DateTime.UtcNow.AddMonths(-8), 10, "Cash", AccountType.Cash);
 
             //AddBankAccount(DateTime.UtcNow.AddMonths(-8), 10, "Bonds", AccountType.Bond);
@@ -223,6 +230,7 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 ("Bond 2", InvestmentType.Bond),( "Bond 3", InvestmentType.Bond), ("Bond 4" , InvestmentType.Bond)
             });
+
             AddStockAccount(DateTime.UtcNow.AddMonths(-1), 10, "Empty Wallet", new List<(string, InvestmentType)>());
         }
         private void AddStockAccount(DateTime startDay, decimal startingBalance, string accountName, List<(string, InvestmentType)> tickers)
@@ -241,14 +249,14 @@ namespace FinanceManager.Infrastructure.Repositories
                 startDay = startDay.AddDays(1);
             }
         }
-        private void AddStockAccountEntry(string name, string ticker, InvestmentType investmentType, decimal balanceChange, DateTime? postingDate = null)
+        private void AddStockAccountEntry(string accountName, string ticker, InvestmentType investmentType, decimal balanceChange, DateTime? postingDate = null)
         {
-            var bankAccount = FindAccount<InvestmentAccount>(name);
-            if (bankAccount is null) return;
+            var account = FindAccount<InvestmentAccount>(accountName);
+            if (account is null) return;
 
             var finalPostingDate = postingDate.HasValue ? postingDate.Value : DateTime.UtcNow;
 
-            bankAccount.Add(new AddInvestmentEntryDto(finalPostingDate, balanceChange, ticker, investmentType));
+            account.Add(new AddInvestmentEntryDto(finalPostingDate, balanceChange, ticker, investmentType));
         }
         private void AddBankAccount(DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
         {
@@ -300,27 +308,13 @@ namespace FinanceManager.Infrastructure.Repositories
         }
         private void AddBankAccountEntry(string accountName, decimal balanceChange, string senderName, ExpenseType expenseType, DateTime? postingDate = null)
         {
-            var bankAccount = FindAccount<BankAccount>(accountName);
-            if (bankAccount is null) return;
 
-            decimal balance = balanceChange;
-            var previousEntry = bankAccount.Entries.GetPrevious(postingDate.Value).FirstOrDefault();
+            var account = FindAccount<BankAccount>(accountName);
+            if (account is null) return;
 
-            if (bankAccount.Entries is not null && bankAccount.Entries.Any())
-                balance += previousEntry.Value;
+            var finalPostingDate = postingDate.HasValue ? postingDate.Value : DateTime.UtcNow;
 
-            var id = 0;
-            var currentMaxId = bankAccount.GetMaxId();
-            if (currentMaxId is not null)
-                id += currentMaxId.Value + 1;
-
-            BankAccountEntry bankAccountEntry = new BankAccountEntry(id, postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, balance, balanceChange)
-            {
-                Description = senderName,
-                ExpenseType = expenseType,
-            };
-
-            bankAccount.Add(bankAccountEntry);
+            account.Add(new AddBankEntryDto(finalPostingDate, balanceChange));
         }
         private void UpdateBankAccountEntry(string accountName, BankAccountEntry bankAccountEntry)
         {

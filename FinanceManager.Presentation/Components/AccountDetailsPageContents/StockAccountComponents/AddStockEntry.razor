@@ -41,6 +41,7 @@
             <MudItem xs="12">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add>Add</MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel Class="mx-2">Cancel</MudButton>
+                @CustomButton
             </MudItem>
         </MudGrid>
     </MudContainer>
@@ -48,26 +49,25 @@
 
 @code {
 
-    string _currency = "";
-    bool success;
-    string[] errors = { };
-    MudTextField<string> pwField1;
+    private string _currency = string.Empty;
+    private bool success;
+    private string[] errors = { };
+    private MudTextField<string> pwField1;
     private MudForm form;
 
     List<string> InvestmentType = Enum.GetValues(typeof(InvestmentType)).Cast<InvestmentType>().Select(x => x.ToString()).ToList();
 
-    [Required]
     private DateTime? PostingDate = DateTime.Today;
     private TimeSpan? Time = new TimeSpan(01, 00, 00);
     public string ExpenseType { get; set; } = FinanceManager.Core.Enums.InvestmentType.Stock.ToString();
     public string Ticker { get; set; }
-
     public decimal? BalanceChange;
-
-
     public decimal? PricePerUnit { get; set; } = null;
-    // public decimal? Balance { get; set; } = null;
 
+
+    [Parameter]
+    public RenderFragment CustomButton { get; set; }
+    
     [Parameter]
     public Func<Task>? ActionCompleted { get; set; }
 

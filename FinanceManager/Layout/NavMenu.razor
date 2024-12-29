@@ -1,6 +1,11 @@
 ﻿<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand mud-primary-text" href="">Finance Manager @ApplicationVersion.Version</a>
+        <MudLink Class="px-4" href="" Underline="Underline.None">
+            <MudText Typo="Typo.h6" >Finance Manager</MudText>
+        </MudLink>
+
+        <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">@ApplicationVersion.Version</MudText>
+
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <MudIcon Icon="@Icons.Material.Filled.Menu" Color="Color.Primary" />
         </button>
@@ -19,11 +24,6 @@
                 <span class="bi bi-currency-exchange navbarIcon" aria-hidden="true"></span> Assets
             </NavLink>
         </div>
-        @* 	<div class="nav-item px-3">
-        <NavLink class="nav-link" href="Investments" Match="NavLinkMatch.All">
-        <span class="bi bi-graph-up-arrow navbarIcon" aria-hidden="true"></span> Investments
-        </NavLink>
-        </div> *@
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="Lliabilities" Match="NavLinkMatch.All">
                 <span class="bi bi-clipboard2-data navbarIcon" aria-hidden="true"></span> Lliabilities
@@ -47,16 +47,6 @@
             }
         }
 
-        @* <div class="nav-item px-3">
-        <NavLink class="nav-link py-0" href="AddAccount" Match="NavLinkMatch.All">
-        <span class="bi bi-plus-circle-fill navbarIcon" aria-hidden="true"></span>Add
-        </NavLink>
-        </div>
-        <div class="nav-item px-3">
-        <NavLink class="nav-link py-0" href="Import" Match="NavLinkMatch.All">
-        <span class="bi bi-cloud-upload-fill navbarIcon" aria-hidden="true"></span> Import
-        </NavLink>
-        </div> *@
     </nav>
 </div>
 

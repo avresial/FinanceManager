@@ -43,9 +43,8 @@ namespace FinanceManager.Core.Entities.Accounts
             var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.Ticker == entry.Ticker && x.ValueChange == entry.ValueChange);
             if (alredyExistingEntry is not null)
             {
-                Console.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.Id}, Posting date{alredyExistingEntry.PostingDate}, " +
+                throw new Exception($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.Id}, Posting date{alredyExistingEntry.PostingDate}, " +
                     $"Ticker {alredyExistingEntry.Ticker}, Value change {alredyExistingEntry.ValueChange}");
-                return;
             }
 
             var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();
@@ -69,17 +68,14 @@ namespace FinanceManager.Core.Entities.Accounts
             }
             RecalculateEntryValues(index);
         }
-
-
         public override void Add(InvestmentEntry entry, bool recalculateValues = true)
         {
             Entries ??= new List<InvestmentEntry>();
             var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.Ticker == entry.Ticker && x.ValueChange == entry.ValueChange);
             if (alredyExistingEntry is not null)
             {
-                Console.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.Id}, Posting date{alredyExistingEntry.PostingDate}, " +
+                throw new Exception($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.Id}, Posting date{alredyExistingEntry.PostingDate}, " +
                     $"Ticker {alredyExistingEntry.Ticker}, Value change {alredyExistingEntry.ValueChange}");
-                return;
             }
 
             var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();

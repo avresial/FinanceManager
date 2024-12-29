@@ -11,7 +11,7 @@ using System.Globalization;
 
 namespace FinanceManager.Presentation.Components.ImportData
 {
-    public partial class ImportBankEntriesComponent : ComponentBase
+    public partial class ImportStockEntriesComponent
     {
         private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
         private string _dragClass = DefaultDragClass;
@@ -22,7 +22,8 @@ namespace FinanceManager.Presentation.Components.ImportData
             HasHeaderRecord = true,
         };
 
-        private List<ImportBankModel> importModels = new();
+        private List<ImportStockModel> importStockModels = new();
+        private List<ImportStockExtendedModel> importStockExtendedModels = new();
 
         public List<IBrowserFile> LoadedFiles = new();
         private List<string> _erorrs = new();
@@ -30,6 +31,7 @@ namespace FinanceManager.Presentation.Components.ImportData
         private List<string> _summaryInfos = new();
 
         private int _stepIndex;
+        private bool _datasetCointainsAdditionalInformation = false;
         private bool _isImportingData = false;
 
         private bool _step1Complete;
@@ -39,6 +41,7 @@ namespace FinanceManager.Presentation.Components.ImportData
         private bool _isFormValid;
         private bool _isTouched;
 
+        private string _exportTicker = string.Empty;
         private string _postingDateHeader = "PostingDate";
         private string _valueChangeHeader = "ValueChange";
         private string _tickerHeader = "Ticker";
@@ -54,7 +57,8 @@ namespace FinanceManager.Presentation.Components.ImportData
         {
             _isImportingData = true;
 
-            importModels.Clear();
+            importStockModels.Clear();
+            importStockExtendedModels.Clear();
 
             _erorrs.Clear();
             if (Path.GetExtension(e.File.Name) != ".csv")
@@ -69,16 +73,30 @@ namespace FinanceManager.Presentation.Components.ImportData
             var file = LoadedFiles.FirstOrDefault();
             if (file is null) return;
 
-            try
+            if (_datasetCointainsAdditionalInformation)
             {
-                importModels = await ImportBankModelReader.Read(config, file, _postingDateHeader, _valueChangeHeader);
+                try
+                {
+                    importStockExtendedModels = await ImportStockExtendedModelReader.Read(config, file, _postingDateHeader, _valueChangeHeader, _tickerHeader, _investmentTypeHeader);
+                }
+                catch (HeaderValidationException ex)
+                {
+                    _erorrs.Add($"Invalid headers. Required headers:{_postingDateHeader}, {_valueChangeHeader},{_tickerHeader}, {_investmentTypeHeader}.");
+                }
             }
-            catch (HeaderValidationException ex)
+            else
             {
-                _erorrs.Add($"Invalid headers. Required headers:{_postingDateHeader}, {_valueChangeHeader},{_tickerHeader}, {_investmentTypeHeader}.");
+                try
+                {
+                    importStockModels = await ImportStockModelReader.Read(config, file, _postingDateHeader, _valueChangeHeader);
+                }
+                catch (HeaderValidationException ex)
+                {
+                    _erorrs.Add($"Invalid headers. Required headers:{_postingDateHeader}, {_valueChangeHeader}.");
+                }
             }
 
-            _step1Complete = importModels.Any();
+            _step1Complete = importStockModels.Any() || importStockExtendedModels.Any();
 
             if (_step1Complete)
             {
@@ -94,14 +112,15 @@ namespace FinanceManager.Presentation.Components.ImportData
         {
             _isImportingData = true;
 
+            string ticker = _exportTicker;
             int importedEntriesCount = 0;
-            if (importModels.Any())
+            if (importStockModels.Any())
             {
-                foreach (var result in importModels)
+                foreach (var result in importStockModels)
                 {
                     try
                     {
-                        AccountService.AddFinancialEntry(new BankAccountEntry(-1, result.PostingDate, -1, result.ValueChange), AccountName);
+                        AccountService.AddFinancialEntry(new InvestmentEntry(-1, result.PostingDate, -1, result.ValueChange, _exportTicker, Core.Enums.InvestmentType.Unknown), AccountName);
                         importedEntriesCount++;
                     }
                     catch (Exception ex)
@@ -111,7 +130,22 @@ namespace FinanceManager.Presentation.Components.ImportData
                     }
                 }
             }
-
+            else if (importStockExtendedModels.Any())
+            {
+                foreach (var result in importStockExtendedModels)
+                {
+                    try
+                    {
+                        AccountService.AddFinancialEntry(new InvestmentEntry(-1, result.PostingDate, -1, result.ValueChange, result.Ticker, result.InvestmentType), AccountName);
+                        importedEntriesCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex);
+                        _warnings.Add(ex.Message);
+                    }
+                }
+            }
             if (importedEntriesCount > 0)
                 _summaryInfos.Add($"Imported {importedEntriesCount} rows.");
 
