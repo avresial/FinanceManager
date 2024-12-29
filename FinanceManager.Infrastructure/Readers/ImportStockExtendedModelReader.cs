@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Components.Forms;
 
 namespace FinanceManager.Infrastructure.Readers
 {
+
     public static class ImportStockExtendedModelReader
     {
         public static async Task<List<ImportStockExtendedModel>> Read(CsvConfiguration config, IBrowserFile file, string postingDateHeader, string valueChangeHeader,
@@ -21,4 +22,6 @@ namespace FinanceManager.Infrastructure.Readers
             return result;
         }
     }
+
+
 }

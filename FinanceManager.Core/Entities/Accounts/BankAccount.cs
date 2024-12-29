@@ -33,6 +33,39 @@ namespace FinanceManager.Core.Entities.Accounts
             AccountType = accountType;
             Entries = new List<BankAccountEntry>();
         }
+
+        public void Add(AddBankEntryDto entry)
+        {
+            Entries ??= new List<BankAccountEntry>();
+            var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
+            if (alredyExistingEntry is not null)
+            {
+                Console.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.Id}, Posting date{alredyExistingEntry.PostingDate}, " +
+                    $"Value change {alredyExistingEntry.ValueChange}");
+                return;
+            }
+
+            var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();
+            var index = -1;
+
+            if (previousEntry is not null)
+                index = Entries.IndexOf(previousEntry);
+
+            BankAccountEntry newEntry = null;
+            if (index == -1)
+            {
+                index = Entries.Count();
+                newEntry = new BankAccountEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange);
+                Entries.Add(newEntry);
+                index -= 1;
+            }
+            else
+            {
+                newEntry = new BankAccountEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange);
+                Entries.Insert(index, newEntry);
+            }
+            RecalculateEntryValues(index);
+        }
         public override void Update(BankAccountEntry entry, bool recalculateValues = true)
         {
             Entries ??= new List<BankAccountEntry>();
@@ -62,5 +95,13 @@ namespace FinanceManager.Core.Entities.Accounts
         {
             throw new NotImplementedException();
         }
+        public int GetNextFreeId()
+        {
+            var currentMaxId = GetMaxId();
+            if (currentMaxId is not null)
+                return currentMaxId.Value + 1;
+            return 0;
+        }
+
     }
 }

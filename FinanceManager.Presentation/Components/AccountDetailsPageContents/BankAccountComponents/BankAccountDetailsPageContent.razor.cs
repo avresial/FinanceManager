@@ -65,9 +65,6 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
             Top5 = EntriesOrdered.Take(5).ToList();
             Bottom5 = EntriesOrdered.Skip(Account.Entries.Count - 5).Take(5).OrderBy(x => x.ValueChange).ToList();
             balanceChange = Account.Entries.First().Value - Account.Entries.Last().Value;
-
-            if (Account.Entries.Last().PostingDate.Date > dateStart.Date)
-                LoadedAllData = true;
         }
         public async Task LoadMore()
         {

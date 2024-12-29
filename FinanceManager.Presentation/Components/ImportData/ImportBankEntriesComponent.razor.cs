@@ -1,43 +1,124 @@
+using CsvHelper;
+using CsvHelper.Configuration;
+using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Services;
+using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Infrastructure.Readers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using MudBlazor;
+using System.Globalization;
 
 namespace FinanceManager.Presentation.Components.ImportData
 {
     public partial class ImportBankEntriesComponent : ComponentBase
     {
+        private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
+        private string _dragClass = DefaultDragClass;
+
+        private CsvConfiguration config = new CsvConfiguration(new CultureInfo("de-DE"))
+        {
+            Delimiter = ";",
+            HasHeaderRecord = true,
+        };
+
+        private List<ImportBankModel> importModels = new();
+
+        public List<IBrowserFile> LoadedFiles = new();
         private List<string> _erorrs = new();
         private List<string> _warnings = new();
         private List<string> _summaryInfos = new();
+
+        private int _stepIndex;
+        private bool _isImportingData = false;
 
         private bool _step1Complete;
         private bool _step2Complete;
         private bool _step3Complete;
 
-        private int _index;
+        private bool _isFormValid;
+        private bool _isTouched;
 
-        public List<IBrowserFile> LoadedFiles = new();
+        private string _postingDateHeader = "PostingDate";
+        private string _valueChangeHeader = "ValueChange";
+        private string _tickerHeader = "Ticker";
+        private string _investmentTypeHeader = "InvestmentType";
 
         [Parameter]
         public required string AccountName { get; set; }
 
         [Inject]
         public required IAccountService AccountService { get; set; }
+
+        public async Task UploadFiles(InputFileChangeEventArgs e)
+        {
+            _isImportingData = true;
+
+            importModels.Clear();
+
+            _erorrs.Clear();
+            if (Path.GetExtension(e.File.Name) != ".csv")
+            {
+                _erorrs.Add($"{e.File.Name} is not a csv file. Select csv file to continue.");
+                _isImportingData = false;
+                return;
+            }
+
+            LoadedFiles = e.GetMultipleFiles(1).ToList();
+
+            var file = LoadedFiles.FirstOrDefault();
+            if (file is null) return;
+
+            try
+            {
+                importModels = await ImportBankModelReader.Read(config, file, _postingDateHeader, _valueChangeHeader);
+            }
+            catch (HeaderValidationException ex)
+            {
+                _erorrs.Add($"Invalid headers. Required headers:{_postingDateHeader}, {_valueChangeHeader},{_tickerHeader}, {_investmentTypeHeader}.");
+            }
+
+            _step1Complete = importModels.Any();
+
+            if (_step1Complete)
+            {
+                _stepIndex++;
+            }
+            else
+            {
+                _erorrs.Add("Step 1 can not be completed - loading files failed.");
+            }
+            _isImportingData = false;
+        }
         public void BeginImport()
         {
-            //       _isImportingData = true;
+            _isImportingData = true;
 
             int importedEntriesCount = 0;
-
+            if (importModels.Any())
+            {
+                foreach (var result in importModels)
+                {
+                    try
+                    {
+                        AccountService.AddFinancialEntry(new BankAccountEntry(-1, result.PostingDate, -1, result.ValueChange), AccountName);
+                        importedEntriesCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex);
+                        _warnings.Add(ex.Message);
+                    }
+                }
+            }
 
             _summaryInfos.Add($"Imported {importedEntriesCount} rows.");
 
             StateHasChanged();
 
             _step2Complete = true;
-            //     _isImportingData = false;
-            _index++;
+            _isImportingData = false;
+            _stepIndex++;
         }
         public async Task Clear()
         {
@@ -47,8 +128,15 @@ namespace FinanceManager.Presentation.Components.ImportData
             _step1Complete = false;
             _step2Complete = false;
             _step3Complete = false;
-            _index = 0;
+
+            _stepIndex = 0;
+
+            _erorrs.Clear();
         }
+
+        private void SetDragClass() => _dragClass = $"{DefaultDragClass} mud-border-primary";
+        private void ClearDragClass() => _dragClass = DefaultDragClass;
+
         private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
         {
             if (arg.Action == StepAction.Complete)
