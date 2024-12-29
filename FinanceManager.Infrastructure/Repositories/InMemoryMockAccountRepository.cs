@@ -315,28 +315,6 @@ namespace FinanceManager.Infrastructure.Repositories
             var finalPostingDate = postingDate.HasValue ? postingDate.Value : DateTime.UtcNow;
 
             account.Add(new AddBankEntryDto(finalPostingDate, balanceChange));
-
-            //var bankAccount = FindAccount<BankAccount>(accountName);
-            //if (bankAccount is null) return;
-
-            //decimal balance = balanceChange;
-            //var previousEntry = bankAccount.Entries.GetPrevious(postingDate.Value).FirstOrDefault();
-
-            //if (bankAccount.Entries is not null && bankAccount.Entries.Any())
-            //    balance += previousEntry.Value;
-
-            //var id = 0;
-            //var currentMaxId = bankAccount.GetMaxId();
-            //if (currentMaxId is not null)
-            //    id += currentMaxId.Value + 1;
-
-            //BankAccountEntry bankAccountEntry = new BankAccountEntry(id, postingDate.HasValue ? postingDate.Value : DateTime.UtcNow, balance, balanceChange)
-            //{
-            //    Description = senderName,
-            //    ExpenseType = expenseType,
-            //};
-
-            //bankAccount.Add(bankAccountEntry);
         }
         private void UpdateBankAccountEntry(string accountName, BankAccountEntry bankAccountEntry)
         {

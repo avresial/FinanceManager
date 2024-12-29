@@ -13,7 +13,8 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
         private decimal balanceChange = 100;
         private bool LoadedAllData = false;
         private DateTime dateStart;
-        private DateTime FirstEntryDate;
+        private DateTime? oldestEntryDate;
+        private DateTime? youngestEntryDate;
 
         private bool ImportFinancialEntriesComponentVisibility;
         private bool AddEntryVisibility;
@@ -54,12 +55,10 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
         {
             if (Account is null || Account.Entries is null) return;
 
-            DateTime? firstEntryDate = AccountService.GetStartDate(AccountName);
-            if (firstEntryDate is not null)
-                FirstEntryDate = firstEntryDate.Value;
+            UpdateDates();
 
-            if (Account.Entries is not null && Account.Entries.Any())
-                LoadedAllData = (FirstEntryDate >= Account.Entries.Last().PostingDate);
+            if (Account.Entries is not null && Account.Entries.Any() && oldestEntryDate is not null)
+                LoadedAllData = (oldestEntryDate >= Account.Entries.Last().PostingDate);
 
             var EntriesOrdered = Account.Entries.OrderByDescending(x => x.ValueChange);
             Top5 = EntriesOrdered.Take(5).ToList();
@@ -132,6 +131,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
                     var accountType = accounts[AccountName];
                     if (accountType == typeof(BankAccount))
                     {
+                        UpdateDates();
                         Account = AccountService.GetAccount<BankAccount>(AccountName, dateStart, DateTime.UtcNow);
                         if (Account is not null && Account.Entries is not null)
                             UpdateInfo();
@@ -143,6 +143,14 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
             {
                 ErrorMessage = ex.Message;
             }
+        }
+        private void UpdateDates()
+        {
+            oldestEntryDate = AccountService.GetStartDate(AccountName);
+            youngestEntryDate = AccountService.GetEndDate(AccountName);
+
+            if (youngestEntryDate is not null && dateStart > youngestEntryDate)
+                dateStart = new DateTime(youngestEntryDate.Value.Date.Year, youngestEntryDate.Value.Date.Month, 1);
         }
         private ApexChartOptions<BankAccountEntry> options { get; set; } = new()
         {

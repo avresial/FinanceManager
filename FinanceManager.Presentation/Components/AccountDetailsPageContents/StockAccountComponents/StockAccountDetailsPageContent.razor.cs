@@ -19,13 +19,15 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
         private List<string> stocks = new List<string>();
         private bool LoadedAllData = false;
         private DateTime dateStart;
-        private DateTime FirstEntryDate;
+        private DateTime? oldestEntryDate;
+        private DateTime? youngestEntryDate;
+
         private List<ChartEntryModel> pricesDaily;
         private bool visible;
 
         internal List<(InvestmentEntry, decimal)>? Top5;
         internal List<(InvestmentEntry, decimal)>? Bottom5;
-        internal string currency = "PLN";
+        internal string currency;
 
         public bool IsLoading = false;
         public InvestmentAccount? Account { get; set; }
@@ -76,6 +78,8 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
         protected override async Task OnParametersSetAsync()
         {
             IsLoading = true;
+            currency = settingsService.GetCurrency();
+
             if (chart is not null)
             {
                 if (Account is not null && Account.Entries is not null)
@@ -97,6 +101,9 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
                 if (accounts.ContainsKey(AccountName))
                 {
                     accountType = accounts[AccountName];
+
+                    UpdateDates();
+
                     if (accountType == typeof(InvestmentAccount))
                     {
                         prices.Clear();
@@ -115,15 +122,10 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
                 Console.WriteLine(ex);
             }
         }
-
         public async Task UpdateInfo()
         {
             if (Account is null || Account.Entries is null) return;
-
-            DateTime? firstEntryDate = AccountService.GetStartDate(AccountName);
-            if (firstEntryDate is not null)
-                FirstEntryDate = firstEntryDate.Value;
-
+            UpdateDates();
             stocks = Account.GetStoredTickers();
             foreach (var entry in Account.Entries)
             {
@@ -133,8 +135,8 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
                 prices.Add(entry, price);
             }
 
-            if (Account.Entries is not null && Account.Entries.Any())
-                LoadedAllData = (FirstEntryDate >= Account.Entries.Last().PostingDate);
+            if (Account.Entries is not null && Account.Entries.Any() && oldestEntryDate is not null)
+                LoadedAllData = (oldestEntryDate >= Account.Entries.Last().PostingDate);
 
             pricesDaily = (await Account.GetDailyPrice(StockRepository.GetStockPrice))
                                         .Select(x => new ChartEntryModel() { Date = x.Key.ToDateTime(new TimeOnly()), Value = x.Value })
@@ -170,13 +172,20 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
             var newEntriesWithoutOldest = newData.Entries.Skip(1);
 
             Account.Add(newEntriesWithoutOldest, false);
-
-            LoadedAllData = (FirstEntryDate >= Account.Entries.Last().PostingDate);
+            if (oldestEntryDate is not null)
+                LoadedAllData = (oldestEntryDate >= Account.Entries.Last().PostingDate);
 
             await UpdateInfo();
         }
 
+        private void UpdateDates()
+        {
+            oldestEntryDate = AccountService.GetStartDate(AccountName);
+            youngestEntryDate = AccountService.GetEndDate(AccountName);
 
+            if (youngestEntryDate is not null && dateStart > youngestEntryDate)
+                dateStart = new DateTime(youngestEntryDate.Value.Date.Year, youngestEntryDate.Value.Date.Month, 1);
+        }
         private ApexChartOptions<ChartEntryModel> options { get; set; } = new()
         {
             Chart = new Chart

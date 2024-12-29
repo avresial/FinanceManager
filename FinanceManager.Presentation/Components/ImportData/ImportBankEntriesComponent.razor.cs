@@ -112,7 +112,8 @@ namespace FinanceManager.Presentation.Components.ImportData
                 }
             }
 
-            _summaryInfos.Add($"Imported {importedEntriesCount} rows.");
+            if (importedEntriesCount > 0)
+                _summaryInfos.Add($"Imported {importedEntriesCount} rows.");
 
             StateHasChanged();
 

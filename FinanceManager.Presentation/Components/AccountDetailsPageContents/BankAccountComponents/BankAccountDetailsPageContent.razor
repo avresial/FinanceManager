@@ -177,5 +177,9 @@
 }
 else if (Account is not null && (Account.Entries is null || !Account.Entries.Any()))
 {
-    <AddBankEntry BankAccount=Account ActionCompleted="HideOverlay" />
+    <AddBankEntry BankAccount=Account ActionCompleted="HideOverlay">
+        <CustomButton>
+            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.Name}")" > Import</MudButton>
+        </CustomButton>
+    </AddBankEntry>
 }
