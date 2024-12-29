@@ -1,51 +1,73 @@
 ﻿@page "/Lliabilities"
+@using FinanceManager.Core.Entities.Accounts
+@using FinanceManager.Core.Repositories
+@using FinanceManager.Core.Services
 @using FinanceManager.Presentation.Components.Dashboard.Cards
+
+@inject ISettingsService settingsService;
+@inject IFinancalAccountRepository bankAccountRepository;
 
 <PageTitle>Lliabilities</PageTitle>
 
 <div class="container mt-2">
+    <MudGrid Spacing="2">
+        <MudItem xs="12">
+            <MudItem xs="12">
+                <MudCard style="@($"height:{UnitHeight}px;")" Elevation="0" Outlined>
+                    <MudCardHeader class="pb-1 pt-2">
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Total liabilities over time</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Class="py-0">
+                        <MudSkeleton Width="100%" Height="100%" />
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudItem>
 
-    <div class="row g-2">
-        <div class="col-sm-12 col-lg-4">
-            <LiabilityOverviewCard StartDateTime="@DateTime.Now.AddMonths(-1)"></LiabilityOverviewCard>
-        </div>
+        <MudItem xs="12" md="12" lg="8">
+            <MudCard style="@($"height:{1.5 * UnitHeight}px;")" Elevation="0" Outlined>
+                <MudCardContent>
+                    <MudSkeleton Width="30%" Height="42px;" />
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="160px" />
+                    <MudSkeleton Width="80%" />
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
 
-       @*  <div class="col-sm-12 col-lg-8  p-1">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Lliabilities distribution pie chart</h5>
-                    <ChartSpinner></ChartSpinner>
-                </div>
-            </div>
-        </div> *@
+        <MudItem xs="12" md="6" lg="4">
+            <LiabilityOverviewCard StartDateTime="@DateTime.Now.AddMonths(-1)" Height="@($"{1.5 * UnitHeight}px")" />
+        </MudItem>
 
-       @*  <div class="col-md-12 col-lg-10 p-1">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Repayment - Time series</h5>
-                    <div class="row">
-                        <div class="col-8">
-
-                            <ChartSpinner></ChartSpinner>
-                        </div>
-                        <div class="col-4">
-                            <div class="col-12 p-1">Select asset</div>
-                            <div class="placeholder col-6 m-0 p-0"></div>
-                            <div class="placeholder col-5 m-0 p-0"></div>
-                            <div class="placeholder col-6 m-0 p-0"></div>
-                            <div class="placeholder col-5 m-0 p-0"></div>
-                            <div class="placeholder col-6 m-0 p-0"></div>
-                            <div class="placeholder col-5 m-0 p-0"></div>
-                            <div class="placeholder col-6 m-0 p-0"></div>
-                            <div class="placeholder col-5 m-0 p-0"></div>
-                            <div class="placeholder col-6 m-0 p-0"></div>
-                            <div class="placeholder col-5 m-0 p-0"></div>
-                            <div class="placeholder col-6 m-0 p-0"></div>
-                            <div class="placeholder col-5 m-0 p-0"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div> *@
-    </div>
+        @for (int i = 0; i < 3; i++)
+        {
+            <MudItem xs="12" md="6" lg="4">
+                <MudCard style="@($"height:{1.5 * UnitHeight}px;")" Elevation="0" Outlined>
+                    <MudCardContent>
+                        <MudSkeleton Width="30%" Height="42px;" />
+                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="160px" />
+                        <MudSkeleton Width="80%" />
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
 </div>
+
+@code
+{
+    const int UnitHeight = 190;
+
+    public decimal TotalLiabilities;
+    public DateTime StartDateTime { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now);
+        if (bankAccounts is null) return;
+
+        bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value <= 0).ToList();
+        TotalLiabilities = bankAccounts.Sum(x => x.Entries.OrderByDescending(x => x.PostingDate).First().Value);
+    }
+}
