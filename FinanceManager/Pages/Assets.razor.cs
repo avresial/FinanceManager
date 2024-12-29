@@ -4,13 +4,15 @@ using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Pages
 {
-	public partial class Assets
-	{
-		[Inject]
-		public IFinancalAccountRepository BankAccountRepository { get; set; }
+    public partial class Assets
+    {
+        const int UnitHeight = 190;
 
-		[Inject]
-		public ISettingsService SettingsService { get; set; }
+        [Inject]
+        public IFinancalAccountRepository BankAccountRepository { get; set; }
 
-	}
+        [Inject]
+        public ISettingsService SettingsService { get; set; }
+
+    }
 }
