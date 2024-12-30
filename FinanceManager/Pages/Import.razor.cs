@@ -10,7 +10,7 @@ namespace FinanceManager.Pages
         public Type? accountType = null;
 
         [Parameter]
-        public required string AccountName { get; set; }
+        public required int AccountId { get; set; }
 
         [Inject]
         public required IFinancalAccountRepository BankAccountRepository { get; set; }
@@ -34,8 +34,8 @@ namespace FinanceManager.Pages
             try
             {
                 var accounts = BankAccountRepository.GetAvailableAccounts();
-                if (accounts.ContainsKey(AccountName))
-                    accountType = accounts[AccountName];
+                if (accounts.ContainsKey(AccountId))
+                    accountType = accounts[AccountId];
 
             }
             catch (Exception ex)

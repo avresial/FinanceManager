@@ -183,7 +183,7 @@
         await InvokeAsync(StateHasChanged);
 
         InvestmentAccount.Remove(InvestmentEntry.Id);
-        BankAccountService.RemoveFinancialEntry(InvestmentEntry.Id, InvestmentAccount.Name);
+        BankAccountService.RemoveEntry(InvestmentEntry.Id, InvestmentAccount.Id);
     }
 
     public async Task Cancel()

@@ -1,4 +1,4 @@
-﻿@page "/AccountDetails/{AccountName}"
+﻿@page "/AccountDetails/{AccountId:int}"
 @using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Presentation.Components.AccountDetailsPageContents
 @using FinanceManager.Presentation.Components.AccountDetailsPageContents.BankAccountComponents
@@ -19,11 +19,11 @@ else
         }
         else if (accountType == typeof(BankAccount))
         {
-            <BankAccountDetailsPageContent AccountName="@AccountName"  />
+            <BankAccountDetailsPageContent AccountId="@AccountId" />
         }
         else if (accountType == typeof(InvestmentAccount))
         {
-            <StockAccountDetailsPageContent AccountName="@AccountName" />
+            <StockAccountDetailsPageContent AccountId="@AccountId" />
         }
         else
         {

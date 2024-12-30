@@ -67,7 +67,7 @@ namespace FinanceManager.Core.Entities.Accounts
                 Add(entry, recalculateValues);
         }
 
-        public virtual void Update(T entry, bool recalculateValues = true)
+        public virtual void UpdateEntry(T entry, bool recalculateValues = true)
         {
             Entries ??= new List<T>();
 

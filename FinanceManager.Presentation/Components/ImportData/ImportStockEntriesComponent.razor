@@ -8,7 +8,7 @@
 @using System.Globalization
 
 <MudContainer>
-    <MudText Typo="Typo.h2">Import data to @AccountName account</MudText>
+    <MudText Typo="Typo.h2">Import data to @AccountId account</MudText>
 
     <MudPaper>
         <MudStepper @bind-ActiveIndex="_stepIndex" OnPreviewInteraction="OnPreviewInteraction">
@@ -172,7 +172,7 @@
                 }
                 @if (_stepIndex == 2)
                 {
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" href="@($"AccountDetails/{AccountName}")" Class="ml-auto">Go back to @AccountName</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">Go back to @AccountId</MudButton>
                 }
             </ActionContent>
         </MudStepper>

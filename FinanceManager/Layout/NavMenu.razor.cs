@@ -1,4 +1,6 @@
-﻿using FinanceManager.Core.Services;
+﻿using FinanceManager.Application.Services;
+using FinanceManager.Core.Entities.Accounts;
+using FinanceManager.Core.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Layout
@@ -8,7 +10,10 @@ namespace FinanceManager.Layout
         [Inject]
         public required IAccountService AccountsService { get; set; }
 
-        public List<string> AccountNames = new List<string>();
+        [Inject]
+        public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
+
+        public Dictionary<int, string> Accounts = new Dictionary<int, string>();
 
         public string ErrorMessage { get; set; } = string.Empty;
 
@@ -16,8 +21,10 @@ namespace FinanceManager.Layout
         {
             try
             {
-                AccountNames = AccountsService.GetAvailableAccounts().Keys.ToList();
+                UpdateAccounts();
                 AccountsService.AccountsChanged += AccountsService_AccountsChanged;
+                AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
+
             }
             catch (Exception ex)
             {
@@ -25,18 +32,52 @@ namespace FinanceManager.Layout
             }
         }
 
+        private void AccountDataSynchronizationService_AccountsChanged()
+        {
+            UpdateAccounts();
+            StateHasChanged();
+        }
+
         private void AccountsService_AccountsChanged()
+        {
+            UpdateAccounts();
+            StateHasChanged();
+        }
+
+        private void UpdateAccounts()
         {
             try
             {
-                AccountNames = AccountsService.GetAvailableAccounts().Keys.ToList();
+                Accounts.Clear();
+                foreach (var account in AccountsService.GetAvailableAccounts())
+                {
+
+                    var name = string.Empty;
+                    if (account.Value == typeof(BankAccount))
+                    {
+                        var existinhAccount = AccountsService.GetAccount<BankAccount>(account.Key, DateTime.UtcNow, DateTime.UtcNow);
+                        if (existinhAccount is not null)
+                            name = existinhAccount.Name;
+                    }
+                    else if (account.Value == typeof(InvestmentAccount))
+                    {
+                        var existinhAccount = AccountsService.GetAccount<InvestmentAccount>(account.Key, DateTime.UtcNow, DateTime.UtcNow);
+                        if (existinhAccount is not null)
+                            name = existinhAccount.Name;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Error - type can not be handled, Account id {account.Key}");
+                        continue;
+                    }
+
+                    Accounts.Add(account.Key, name);
+                }
             }
             catch (Exception ex)
             {
                 ErrorMessage = ex.Message;
             }
-
-            StateHasChanged();
         }
     }
 }

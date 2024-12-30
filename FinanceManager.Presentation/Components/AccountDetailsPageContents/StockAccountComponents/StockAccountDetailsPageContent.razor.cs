@@ -35,7 +35,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
         public Type accountType;
 
         [Parameter]
-        public required string AccountName { get; set; }
+        public required int AccountId { get; set; }
 
         [Inject]
         public required IAccountService AccountService { get; set; }
@@ -98,9 +98,9 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
             {
                 dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
                 var accounts = AccountService.GetAvailableAccounts();
-                if (accounts.ContainsKey(AccountName))
+                if (accounts.ContainsKey(AccountId))
                 {
-                    accountType = accounts[AccountName];
+                    accountType = accounts[AccountId];
 
                     UpdateDates();
 
@@ -108,7 +108,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
                     {
                         prices.Clear();
                         LoadedAllData = true;
-                        Account = AccountService.GetAccount<InvestmentAccount>(AccountName, dateStart, DateTime.UtcNow);
+                        Account = AccountService.GetAccount<InvestmentAccount>(AccountId, dateStart, DateTime.UtcNow);
 
                         if (Account is not null && Account.Entries is not null)
                             await UpdateInfo();
@@ -164,7 +164,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
             if (Account is null || Account.Start is null) return;
 
             dateStart = dateStart.AddMonths(-1);
-            var newData = AccountService.GetAccount<InvestmentAccount>(AccountName, dateStart, Account.Start.Value);
+            var newData = AccountService.GetAccount<InvestmentAccount>(AccountId, dateStart, Account.Start.Value);
 
             if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
                 return;
@@ -180,8 +180,8 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
 
         private void UpdateDates()
         {
-            oldestEntryDate = AccountService.GetStartDate(AccountName);
-            youngestEntryDate = AccountService.GetEndDate(AccountName);
+            oldestEntryDate = AccountService.GetStartDate(AccountId);
+            youngestEntryDate = AccountService.GetEndDate(AccountId);
 
             if (youngestEntryDate is not null && dateStart > youngestEntryDate)
                 dateStart = new DateTime(youngestEntryDate.Value.Date.Year, youngestEntryDate.Value.Date.Month, 1);

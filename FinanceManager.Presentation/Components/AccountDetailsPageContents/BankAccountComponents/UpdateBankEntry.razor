@@ -103,8 +103,8 @@
             };
         try
         {
-            BankAccount.Update(bankAccountEntry);
-            AccountService.UpdateFinancialEntry(bankAccountEntry, BankAccount.Name);
+            BankAccount.UpdateEntry(bankAccountEntry);
+            AccountService.UpdateEntry(bankAccountEntry, BankAccount.Id);
         }
         catch (Exception ex)
         {

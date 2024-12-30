@@ -104,7 +104,7 @@
         try
         {
             BankAccount.Add(bankAccountEntry);
-            AccountService.AddFinancialEntry(bankAccountEntry, BankAccount.Name);
+            AccountService.AddEntry(bankAccountEntry, BankAccount.Id);
         }
         catch (Exception ex)
         {

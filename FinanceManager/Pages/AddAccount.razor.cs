@@ -12,17 +12,10 @@ namespace FinanceManager.Pages
 
         public void Add()
         {
-            if (!AccountService.AccountExists(AccountName))
-            {
-                var lastAccountId = AccountService.GetLastAccountId();
+            var lastAccountId = AccountService.GetLastAccountId();
 
-                AccountService.AddFinancialAccount(new BankAccount(++lastAccountId, AccountName, Core.Enums.AccountType.Other));
-                StateHasChanged();
-            }
-            else
-            {
-                return;
-            }
+            AccountService.AddAccount(new BankAccount(++lastAccountId, AccountName, Core.Enums.AccountType.Other));
+            StateHasChanged();
             AccountName = "";
         }
     }

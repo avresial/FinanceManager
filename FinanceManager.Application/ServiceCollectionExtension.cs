@@ -14,6 +14,7 @@ namespace FinanceManager.Application
                     .AddScoped<ISettingsService, SettingsService>()
                     .AddScoped<ILoginService, LoginService>()
                     .AddScoped<IMoneyFlowService, MoneyFlowService>()
+                    .AddScoped<AccountDataSynchronizationService, AccountDataSynchronizationService>()
                     .AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
             return services;
         }
