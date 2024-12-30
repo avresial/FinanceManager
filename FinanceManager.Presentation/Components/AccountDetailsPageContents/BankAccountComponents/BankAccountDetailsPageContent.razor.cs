@@ -1,6 +1,8 @@
 using ApexCharts;
+using FinanceManager.Application.Services;
 using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Providers;
+using FinanceManager.Core.Repositories;
 using FinanceManager.Core.Services;
 using FinanceManager.Presentation.Helpers;
 using Microsoft.AspNetCore.Components;
@@ -33,7 +35,9 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
         public required int AccountId { get; set; }
 
         [Inject]
-        public required IAccountService AccountService { get; set; }
+        public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+        [Inject]
+        public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
         [Inject]
         public required ISettingsService settingsService { get; set; }
@@ -70,7 +74,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
             if (Account is null || Account.Start is null) return;
 
             dateStart = dateStart.AddMonths(-1);
-            var newData = AccountService.GetAccount<BankAccount>(AccountId, dateStart, Account.Start.Value);
+            var newData = FinancalAccountRepository.GetAccount<BankAccount>(AccountId, dateStart, Account.Start.Value);
 
             if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
                 return;
@@ -96,7 +100,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
 
             await UpdateEntries();
 
-            AccountService.AccountsChanged += AccountsService_AccountsChanged;
+            AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
         }
         protected override async Task OnParametersSetAsync()
         {
@@ -125,14 +129,14 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
             try
             {
                 dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-                var accounts = AccountService.GetAvailableAccounts();
+                var accounts = FinancalAccountRepository.GetAvailableAccounts();
                 if (accounts.ContainsKey(AccountId))
                 {
                     var accountType = accounts[AccountId];
                     if (accountType == typeof(BankAccount))
                     {
                         UpdateDates();
-                        Account = AccountService.GetAccount<BankAccount>(AccountId, dateStart, DateTime.UtcNow);
+                        Account = FinancalAccountRepository.GetAccount<BankAccount>(AccountId, dateStart, DateTime.UtcNow);
                         if (Account is not null && Account.Entries is not null)
                             UpdateInfo();
                     }
@@ -146,8 +150,8 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
         }
         private void UpdateDates()
         {
-            oldestEntryDate = AccountService.GetStartDate(AccountId);
-            youngestEntryDate = AccountService.GetEndDate(AccountId);
+            oldestEntryDate = FinancalAccountRepository.GetStartDate(AccountId);
+            youngestEntryDate = FinancalAccountRepository.GetEndDate(AccountId);
 
             if (youngestEntryDate is not null && dateStart > youngestEntryDate)
                 dateStart = new DateTime(youngestEntryDate.Value.Date.Year, youngestEntryDate.Value.Date.Month, 1);
@@ -190,7 +194,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
                ColorsProvider.GetColors().First()
             }
         };
-        private void AccountsService_AccountsChanged()
+        private void AccountDataSynchronizationService_AccountsChanged()
         {
             StateHasChanged();
         }

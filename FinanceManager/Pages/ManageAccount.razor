@@ -2,6 +2,7 @@
 @using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Presentation.Components.AccountDetailsPageContents.BankAccountComponents
+@using FinanceManager.Presentation.Components.AccountDetailsPageContents.StockAccountComponents
 
 
 @if (accountType is null)
@@ -10,7 +11,7 @@
 }
 else
 {
-    <div class="container-fluid px-0" @ref=MyElementReference>
+    <div class="container-fluid px-0 mt-3" @ref=MyElementReference>
         @if (ErrorMessage != string.Empty)
         {
             <div class="alert alert-warning" role="alert">
@@ -23,8 +24,7 @@ else
         }
         else if (accountType == typeof(InvestmentAccount))
         {
-
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">Go back to @AccountId</MudButton>
+            <ManageStockAccount AccountId="@AccountId" />
         }
         else
         {
