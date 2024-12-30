@@ -8,6 +8,12 @@
                     <MudText Typo="Typo.h4">Update</MudText>
                     <MudText Typo="Typo.subtitle1">@BankAccount.Name</MudText>
                 </MudItem>
+                <MudItem xs="12">
+                    @foreach (var errorInfo in errors)
+                    {
+                        <MudAlert Severity="Severity.Error" Variant="Variant.Text"> @errorInfo</MudAlert>
+                    }
+                </MudItem>
                 <MudItem xs="8">
                     <MudTextField @bind-Value="AccountName" T="string" Label="Account name" Variant="Variant.Text" />
                 </MudItem>
@@ -21,8 +27,7 @@
                 </MudItem>
                 <MudItem xs="12">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update</MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Error" DropShadow="false" OnClick=Remove>Remove</MudButton>
-                    @* <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel Class="mx-2">Cancel</MudButton> *@
+                    <MudButton Variant="Variant.Filled" Color="Color.Error" DropShadow="false" OnClick=Remove>Delete</MudButton>
                     <MudButton Variant="Variant.Outlined" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">Cancel</MudButton>
                 </MudItem>
             </MudGrid>

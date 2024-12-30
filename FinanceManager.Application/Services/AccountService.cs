@@ -4,6 +4,7 @@ using FinanceManager.Core.Services;
 
 namespace FinanceManager.Application.Services
 {
+    [Obsolete("This service should be no longer in use. Use AccountDataSynchronizationService.cs")]
     public class AccountService(IFinancalAccountRepository bankAccountRepository) : IAccountService
     {
         private readonly IFinancalAccountRepository _bankAccountRepository = bankAccountRepository;

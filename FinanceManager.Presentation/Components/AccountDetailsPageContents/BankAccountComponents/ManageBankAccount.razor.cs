@@ -1,3 +1,4 @@
+using FinanceManager.Application.Services;
 using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Enums;
 using FinanceManager.Core.Services;
@@ -24,7 +25,13 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
         public required IAccountService AccountService { get; set; }
 
         [Inject]
-        public NavigationManager Navigation { get; set; }
+        public required NavigationManager Navigation { get; set; }
+
+        [Inject]
+        public required IDialogService DialogService { get; set; }
+
+        [Inject]
+        public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
         protected override void OnParametersSet()
         {
@@ -35,7 +42,6 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
             AccountName = BankAccount.Name;
             AccountType = BankAccount.AccountType;
         }
-
 
         public async Task Update()
         {
@@ -57,6 +63,16 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
 
         public async Task Remove()
         {
+            var options = new DialogOptions { CloseOnEscapeKey = true };
+            var dialog = await DialogService.ShowAsync<ConfirmRemoveDialog>("Simple Dialog", options);
+            var result = await dialog.Result;
+
+            if (result is not null && !result.Canceled)
+            {
+                AccountService.RemoveAccount(AccountId);
+                Navigation.NavigateTo($"");
+                await AccountDataSynchronizationService.AccountChanged();
+            }
         }
     }
 }

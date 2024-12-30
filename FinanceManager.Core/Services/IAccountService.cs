@@ -2,8 +2,9 @@
 
 namespace FinanceManager.Core.Services
 {
-	public interface IAccountService : IFinancalAccountRepository
-	{
-		public event Action AccountsChanged;
-	}
+    [Obsolete("This service should be no longer in use. Use AccountDataSynchronizationService.cs")]
+    public interface IAccountService : IFinancalAccountRepository
+    {
+        public event Action AccountsChanged;
+    }
 }

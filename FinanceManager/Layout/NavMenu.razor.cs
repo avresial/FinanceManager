@@ -1,4 +1,5 @@
-﻿using FinanceManager.Core.Entities.Accounts;
+﻿using FinanceManager.Application.Services;
+using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Services;
 using Microsoft.AspNetCore.Components;
 
@@ -8,6 +9,9 @@ namespace FinanceManager.Layout
     {
         [Inject]
         public required IAccountService AccountsService { get; set; }
+
+        [Inject]
+        public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
         public Dictionary<int, string> Accounts = new Dictionary<int, string>();
 
@@ -19,11 +23,19 @@ namespace FinanceManager.Layout
             {
                 UpdateAccounts();
                 AccountsService.AccountsChanged += AccountsService_AccountsChanged;
+                AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
+
             }
             catch (Exception ex)
             {
                 ErrorMessage = ex.Message;
             }
+        }
+
+        private void AccountDataSynchronizationService_AccountsChanged()
+        {
+            UpdateAccounts();
+            StateHasChanged();
         }
 
         private void AccountsService_AccountsChanged()
