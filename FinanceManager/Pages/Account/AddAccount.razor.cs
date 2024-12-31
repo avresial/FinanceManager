@@ -9,6 +9,8 @@ namespace FinanceManager.Pages.Account
     {
         private string _accountName { get; set; } = string.Empty;
         private string _selectedAccountType = string.Empty;
+
+        private int? _addedAccountId = null;
         private bool _success;
         private string[] _errors = { };
 
@@ -31,10 +33,12 @@ namespace FinanceManager.Pages.Account
             {
                 case "Bank account":
                     FinancalAccountRepository.AddAccount(new BankAccount(++lastAccountId, _accountName, Core.Enums.AccountType.Other));
+                    _addedAccountId = lastAccountId;
                     break;
 
                 case "Stock":
                     FinancalAccountRepository.AddAccount(new InvestmentAccount(++lastAccountId, _accountName));
+                    _addedAccountId = lastAccountId;
                     break;
             }
 
@@ -52,9 +56,9 @@ namespace FinanceManager.Pages.Account
                 yield return "Account name is required!";
                 yield break;
             }
+
             if (name.Length < 3)
                 yield return "Account name must be at least of length 3";
-
         }
     }
 }
