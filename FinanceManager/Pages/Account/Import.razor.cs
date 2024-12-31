@@ -1,9 +1,9 @@
 ﻿using FinanceManager.Core.Repositories;
 using Microsoft.AspNetCore.Components;
 
-namespace FinanceManager.Pages
+namespace FinanceManager.Pages.Account
 {
-    public partial class AccountDetails : ComponentBase
+    public partial class Import : ComponentBase
     {
         public ElementReference MyElementReference;
 
@@ -34,7 +34,6 @@ namespace FinanceManager.Pages
             try
             {
                 var accounts = BankAccountRepository.GetAvailableAccounts();
-
                 if (accounts.ContainsKey(AccountId))
                     accountType = accounts[AccountId];
 

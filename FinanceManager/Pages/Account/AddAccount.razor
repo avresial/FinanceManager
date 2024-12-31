@@ -1,0 +1,29 @@
+﻿@page "/AddAccount"
+
+<MudContainer MaxWidth="MaxWidth.Small">
+    <MudForm Spacing="3" @bind-IsValid="@_success" @bind-Errors="@_errors" Class="mt-4">
+        <MudText Typo="Typo.h4">Add new account</MudText>
+        <MudTextField T="string" @bind-Value=_accountName Label="Account name" Required="true" RequiredError="User name is required!"
+                      Validation="@(new Func<string, IEnumerable<string>>(AccountNameValidation))" />
+
+        <MudStack>
+            <MudSelect @bind-Value="_selectedAccountType"
+                       Variant="Variant.Text"
+                       Label="Account type" Required>
+                @foreach (var state in _accountTypes)
+                {
+                    <MudSelectItem Value="state">@state</MudSelectItem>
+                }
+            </MudSelect>
+        </MudStack>
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_success)" Class="ml-auto" @onclick=Add>Add</MudButton>
+        @if (_addedAccountId is not null)
+        {
+            <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="my-3">
+                Account was succesfully added.
+                <MudLink Color="Color.Success" Href="@($"AccountDetails/{_addedAccountId}")" Class="ml-2"><b>Go!</b></MudLink>
+            </MudAlert>
+        }
+    </MudForm>
+</MudContainer>

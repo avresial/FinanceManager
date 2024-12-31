@@ -7,7 +7,6 @@ namespace FinanceManager.Infrastructure.Repositories
 {
     public class InMemoryMockAccountRepository : IFinancalAccountRepository
     {
-        int lastAccointId = 0;
         private readonly Random random = new Random();
         private readonly ServiceContainer _bankAccounts = new ServiceContainer();
         private Dictionary<int, Type> nameTypeDictionary = new Dictionary<int, Type>();
@@ -21,7 +20,11 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             return nameTypeDictionary;
         }
-        public int GetLastAccountId() => lastAccointId;
+        public int GetLastAccountId()
+        {
+            if (nameTypeDictionary.Keys is null || !nameTypeDictionary.Keys.Any()) return 0;
+            return nameTypeDictionary.Keys.Max();
+        }
         public DateTime? GetStartDate(int id)
         {
             var account = FindAccount(id);
@@ -296,7 +299,7 @@ namespace FinanceManager.Infrastructure.Repositories
         }
         private void AddStockAccount(DateTime startDay, decimal startingBalance, string accountName, List<(string, InvestmentType)> tickers)
         {
-            int accountId = lastAccointId++;
+            int accountId = GetLastAccountId() + 1;
             AddAccount(new InvestmentAccount(accountId, accountName));
             if (tickers is null || !tickers.Any()) return;
             int tickerIndex = random.Next(tickers.Count);
@@ -322,7 +325,7 @@ namespace FinanceManager.Infrastructure.Repositories
         }
         private void AddBankAccount(DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
         {
-            int accountId = lastAccointId++;
+            int accountId = GetLastAccountId() + 1;
             ExpenseType expenseType = GetRandomType();
             if (accountType == AccountType.Stock)
                 expenseType = ExpenseType.Investment;
@@ -345,7 +348,7 @@ namespace FinanceManager.Infrastructure.Repositories
         }
         private void AddLoanAccount(DateTime startDay, decimal startingBalance, string accountName)
         {
-            int accountId = lastAccointId++;
+            int accountId = GetLastAccountId() + 1;
             var creditDays = (DateTime.UtcNow - startDay).TotalDays;
 
             AddAccount(new BankAccount(accountId, accountName, AccountType.Loan));
