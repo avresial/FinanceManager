@@ -6,8 +6,7 @@ namespace FinanceManager.Presentation.CustomValidationAttributes
     {
         protected override ValidationResult IsValid(object? value, ValidationContext validationContext)
         {
-            if (value is null)
-                return new ValidationResult("Value is null, validation can not be proceeded!"); ;
+            if (value is null) return new ValidationResult("Value is null, validation can not be proceeded!");
 
             DateTime dateTime = (DateTime)value;
 

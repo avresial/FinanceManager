@@ -123,7 +123,8 @@
         if (ActionCompleted is not null)
             await ActionCompleted();
     }
-    private async Task<IEnumerable<string>> Search(string value, CancellationToken token)
+
+    private async Task<IEnumerable<string?>> Search(string value, CancellationToken token)
     {
         if (string.IsNullOrEmpty(value))
             return ExpenseTypes;

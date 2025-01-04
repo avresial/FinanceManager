@@ -404,7 +404,10 @@ namespace FinanceManager.Infrastructure.Repositories
         private ExpenseType GetRandomType()
         {
             Array values = Enum.GetValues(typeof(ExpenseType));
-            return (ExpenseType)values.GetValue(random.Next(values.Length));
+            var result = values.GetValue(random.Next(values.Length));
+            if (result is null)
+                return ExpenseType.Other;
+            return (ExpenseType)result;
         }
     }
 }

@@ -13,7 +13,6 @@
 }
 
 @code {
-    private bool _isDarkMode;
     private UserSession? userSession = null;
     private MudTheme MyCustomTheme = new MudTheme()
         {
@@ -32,8 +31,6 @@
             },
 
         };
-
-
 
     protected override async Task OnInitializedAsync()
     {

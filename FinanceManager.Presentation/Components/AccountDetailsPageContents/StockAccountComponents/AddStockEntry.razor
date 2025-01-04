@@ -53,7 +53,6 @@
     private string _currency = string.Empty;
     private bool success;
     private string[] errors = { };
-    private MudTextField<string>? pwField1;
     private MudForm? form;
 
     private List<string> InvestmentType = Enum.GetValues(typeof(InvestmentType)).Cast<InvestmentType>().Select(x => x.ToString()).ToList();

@@ -21,6 +21,7 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             // Act
 
             // Assert
+            Assert.NotNull(FinancialAccount.Entries);
             Assert.Equal(30, FinancialAccount.Entries.First().Value);
             Assert.Equal(10, FinancialAccount.Entries.Last().Value);
         }
@@ -35,6 +36,7 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             // Act
 
             // Assert
+            Assert.NotNull(FinancialAccount.Entries);
             Assert.Equal(30, FinancialAccount.Entries.First().Value);
             Assert.Equal(10, FinancialAccount.Entries.Last().Value);
         }
@@ -74,6 +76,7 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             FinancialAccount.Remove(3);
 
             // Assert
+            Assert.NotNull(FinancialAccount.Entries);
             Assert.Equal(40, FinancialAccount.Entries.First().Value);
             Assert.Equal(10, FinancialAccount.Entries.Last().Value);
         }
@@ -116,6 +119,8 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             FinancialAccount.Remove(1);
 
             // Assert
+            Assert.NotNull(FinancialAccount);
+            Assert.NotNull(FinancialAccount.Entries);
             Assert.Empty(FinancialAccount.Entries);
         }
     }

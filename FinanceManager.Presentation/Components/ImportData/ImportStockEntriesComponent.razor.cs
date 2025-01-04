@@ -81,6 +81,7 @@ namespace FinanceManager.Presentation.Components.ImportData
                 }
                 catch (HeaderValidationException ex)
                 {
+                    Console.WriteLine(ex);
                     _erorrs.Add($"Invalid headers. Required headers:{_postingDateHeader}, {_valueChangeHeader},{_tickerHeader}, {_investmentTypeHeader}.");
                 }
             }
@@ -92,6 +93,7 @@ namespace FinanceManager.Presentation.Components.ImportData
                 }
                 catch (HeaderValidationException ex)
                 {
+                    Console.WriteLine(ex);
                     _erorrs.Add($"Invalid headers. Required headers:{_postingDateHeader}, {_valueChangeHeader}.");
                 }
             }

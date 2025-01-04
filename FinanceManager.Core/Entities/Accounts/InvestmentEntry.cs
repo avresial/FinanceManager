@@ -71,14 +71,10 @@ namespace FinanceManager.Core.Entities.Accounts
         }
 
     }
-    public class BankAccountEntry : FinancialEntryBase
+    public class BankAccountEntry(int id, DateTime postingDate, decimal value, decimal valueChange) : FinancialEntryBase(id, postingDate, value, valueChange)
     {
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
         public ExpenseType ExpenseType { get; set; } = ExpenseType.Other;
-
-        public BankAccountEntry(int id, DateTime postingDate, decimal value, decimal valueChange) : base(id, postingDate, value, valueChange)
-        {
-        }
 
         public void Update(BankAccountEntry entry)
         {

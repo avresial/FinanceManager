@@ -67,14 +67,13 @@
 
                 <ApexChart @ref="chart" Height="@("100%")" TItem="AssetEntry" Options="options">
 
-
                     <ApexPointSeries TItem="AssetEntry"
                     Items="Data"
                     Name="Assets"
                     XValue="e => e.Name.ToString()"
                     YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"
                     SeriesType="SeriesType.Pie"
-                    OrderByDescending="@(e=>e.Y.Value)" />
+                    OrderByDescending="@(e=>e.Y)" />
 
                 </ApexChart>
             </div>

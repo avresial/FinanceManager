@@ -43,7 +43,7 @@ namespace FinanceManager.Core.Entities.Accounts
             }
             var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();
 
-            if (Entries is null) return;
+            if (Entries is null || previousEntry is null) return;
 
             var index = Entries.IndexOf(previousEntry);
 
