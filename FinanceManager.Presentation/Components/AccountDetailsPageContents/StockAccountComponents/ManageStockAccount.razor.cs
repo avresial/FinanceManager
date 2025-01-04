@@ -55,6 +55,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
 
             InvestmentAccount updatedAccount = new InvestmentAccount(InvestmentAccount.Id, AccountName);
             FinancalAccountRepository.UpdateAccount(updatedAccount);
+            await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");
         }
 

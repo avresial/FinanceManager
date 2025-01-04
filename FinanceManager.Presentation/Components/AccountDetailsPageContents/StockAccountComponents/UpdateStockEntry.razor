@@ -70,7 +70,7 @@
     public required InvestmentEntry InvestmentEntry { get; set; }
      
     [Inject]
-    public required IAccountService BankAccountService { get; set; }
+    public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
 
     protected async Task OnFieldChanged(FormFieldChangedEventArgs args)
     {
@@ -143,7 +143,7 @@
         try
         {
             InvestmentAccount.UpdateEntry(bankAccountEntry);
-            BankAccountService.UpdateEntry(bankAccountEntry, InvestmentAccount.Id);
+            FinancalAccountRepository.UpdateEntry(bankAccountEntry, InvestmentAccount.Id);
         }
         catch (Exception ex)
         {

@@ -1,7 +1,7 @@
 using CsvHelper;
 using CsvHelper.Configuration;
 using FinanceManager.Core.Entities.Accounts;
-using FinanceManager.Core.Services;
+using FinanceManager.Core.Repositories;
 using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Readers;
 using Microsoft.AspNetCore.Components;
@@ -51,7 +51,7 @@ namespace FinanceManager.Presentation.Components.ImportData
         public required int AccountId { get; set; }
 
         [Inject]
-        public required IAccountService AccountService { get; set; }
+        public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
 
         public async Task UploadFiles(InputFileChangeEventArgs e)
         {
@@ -120,7 +120,7 @@ namespace FinanceManager.Presentation.Components.ImportData
                 {
                     try
                     {
-                        AccountService.AddEntry(new InvestmentEntry(-1, result.PostingDate, -1, result.ValueChange, _exportTicker, Core.Enums.InvestmentType.Unknown), AccountId);
+                        FinancalAccountRepository.AddEntry(new InvestmentEntry(-1, result.PostingDate, -1, result.ValueChange, _exportTicker, Core.Enums.InvestmentType.Unknown), AccountId);
                         importedEntriesCount++;
                     }
                     catch (Exception ex)
@@ -136,7 +136,7 @@ namespace FinanceManager.Presentation.Components.ImportData
                 {
                     try
                     {
-                        AccountService.AddEntry(new InvestmentEntry(-1, result.PostingDate, -1, result.ValueChange, result.Ticker, result.InvestmentType), AccountId);
+                        FinancalAccountRepository.AddEntry(new InvestmentEntry(-1, result.PostingDate, -1, result.ValueChange, result.Ticker, result.InvestmentType), AccountId);
                         importedEntriesCount++;
                     }
                     catch (Exception ex)

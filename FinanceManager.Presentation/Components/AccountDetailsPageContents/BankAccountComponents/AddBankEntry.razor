@@ -65,7 +65,7 @@
     public required BankAccount BankAccount { get; set; }
 
     [Inject]
-    public required IAccountService AccountService { get; set; }
+    public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
 
     protected override Task OnParametersSetAsync()
     {
@@ -104,7 +104,7 @@
         try
         {
             BankAccount.Add(bankAccountEntry);
-            AccountService.AddEntry(bankAccountEntry, BankAccount.Id);
+            FinancalAccountRepository.AddEntry(bankAccountEntry, BankAccount.Id);
         }
         catch (Exception ex)
         {

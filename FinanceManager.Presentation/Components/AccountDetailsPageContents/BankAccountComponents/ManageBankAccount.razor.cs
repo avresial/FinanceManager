@@ -1,7 +1,7 @@
 using FinanceManager.Application.Services;
 using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Enums;
-using FinanceManager.Core.Services;
+using FinanceManager.Core.Repositories;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
@@ -22,7 +22,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
         public required int AccountId { get; set; }
 
         [Inject]
-        public required IAccountService AccountService { get; set; }
+        public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
 
         [Inject]
         public required NavigationManager Navigation { get; set; }
@@ -35,7 +35,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
 
         protected override void OnParametersSet()
         {
-            BankAccount = AccountService.GetAccount<BankAccount>(AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            BankAccount = FinancalAccountRepository.GetAccount<BankAccount>(AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
             if (BankAccount is null) return;
 
@@ -57,7 +57,8 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
             if (BankAccount is null) return;
 
             BankAccount updatedAccount = new BankAccount(BankAccount.Id, AccountName, AccountType);
-            AccountService.UpdateAccount(updatedAccount);
+            FinancalAccountRepository.UpdateAccount(updatedAccount);
+            await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");
         }
 
@@ -69,7 +70,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
 
             if (result is not null && !result.Canceled)
             {
-                AccountService.RemoveAccount(AccountId);
+                FinancalAccountRepository.RemoveAccount(AccountId);
                 Navigation.NavigateTo($"");
                 await AccountDataSynchronizationService.AccountChanged();
             }

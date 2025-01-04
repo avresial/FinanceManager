@@ -10,8 +10,7 @@ namespace FinanceManager.Application
     {
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
-            services.AddScoped<IAccountService, AccountService>()
-                    .AddScoped<ISettingsService, SettingsService>()
+            services.AddScoped<ISettingsService, SettingsService>()
                     .AddScoped<ILoginService, LoginService>()
                     .AddScoped<IMoneyFlowService, MoneyFlowService>()
                     .AddScoped<AccountDataSynchronizationService, AccountDataSynchronizationService>()
