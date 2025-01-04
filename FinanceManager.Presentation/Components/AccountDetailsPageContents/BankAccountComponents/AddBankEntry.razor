@@ -3,7 +3,6 @@
 @using FinanceManager.Core.Enums
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Presentation.CustomValidationAttributes
-@inject ISettingsService settingsService
 
 <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
     <MudContainer MaxWidth="MaxWidth.Medium">
@@ -24,7 +23,7 @@
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text"
-                                 SearchFunc="Search" />
+                SearchFunc="Search" />
             </MudItem>
 
             <MudItem xs="12">
@@ -57,7 +56,7 @@
 
     [Parameter]
     public RenderFragment CustomButton { get; set; }
-    
+
     [Parameter]
     public Func<Task>? ActionCompleted { get; set; }
 
@@ -67,10 +66,12 @@
     [Inject]
     public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
 
-    protected override Task OnParametersSetAsync()
+    [Inject]
+    public required ISettingsService settingsService { get; set; }
+
+    protected override void OnParametersSet()
     {
         _currency = settingsService.GetCurrency();
-        return base.OnParametersSetAsync();
     }
 
     public async Task Add()
@@ -125,6 +126,7 @@
         if (string.IsNullOrEmpty(value))
             return ExpenseTypes;
 
-        return ExpenseTypes.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+        var result = ExpenseTypes.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+        return await Task.FromResult(result);
     }
 }

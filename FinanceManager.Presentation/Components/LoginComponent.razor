@@ -8,8 +8,6 @@
 @inject ILoginService LoginService
 @inject ILocalStorageService LocalStorageService;
 
-
-
 <section>
     <div class="container d-flex align-center" style="height:100vh;">
         <div class="row justify-content-center d-flex flex-grow-1">
@@ -40,16 +38,10 @@
                             <MudButton Href="register" Class="my-2" Variant="Variant.Outlined" Color="Color.Primary">
                                 <MudText Typo="Typo.h5">Register</MudText>
                             </MudButton>
-                         @*    <MudButton Class="mt-2" Variant="Variant.Text" Color="Color.Primary" @onclick=LogGuest>
-                                <MudText Typo="Typo.subtitle1">Check out demo!</MudText>
-                            </MudButton>
-                            <MudButton Href="landingpage" Class="mt-2" Variant="Variant.Text" Color="Color.Primary">
-                                <MudText Typo="Typo.subtitle1">Learn more</MudText>
-                            </MudButton> *@
                             <MudLink Href="landingpage" Class="mt-3">
                                 <MudText Typo="Typo.subtitle1">Learn more</MudText>
                             </MudLink>
-                            <MudLink  @onclick=LogGuest>
+                            <MudLink @onclick=LogGuest>
                                 <MudText Typo="Typo.subtitle1">Check out demo</MudText>
                             </MudLink>
                         </MudForm>
@@ -64,10 +56,10 @@
 
 @code
 {
-    bool success;
-    string[] errors = { };
-    MudForm form;
-    LoginModel loginModel = new();
+    private bool success;
+    private string[] errors = { };
+    private MudForm? form;
+    private LoginModel loginModel = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -93,19 +85,25 @@
 
     async Task ValidFormSubmitted(EditContext editContext)
     {
+        if (loginModel.Login is null || loginModel.Password is null) return;
+        
         await LoginService.Login(loginModel.Login, loginModel.Password);
         Navigation.NavigateTo("");
     }
     async Task Login()
     {
+        if (loginModel.Login is null || loginModel.Password is null) return;
+        if (form is null ) return;
         await form.Validate();
+
         var loginResult = await LoginService.Login(loginModel.Login, loginModel.Password);
 
-        if (loginResult)
-            Navigation.NavigateTo("");
+        if (loginResult) Navigation.NavigateTo("");
+
         errors = ["Incorrect username or password."];
         loginModel.Password = string.Empty;
     }
+
     void InvalidFormSubmitted(EditContext editContext)
     {
     }

@@ -15,7 +15,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
     {
 
         private decimal? balanceChange = null;
-        private ApexChart<ChartEntryModel> chart;
+        private ApexChart<ChartEntryModel>? chart;
         private Dictionary<InvestmentEntry, StockPrice> prices = new();
         private List<string> stocks = new List<string>();
         private bool LoadedAllData = false;
@@ -23,12 +23,12 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
         private DateTime? oldestEntryDate;
         private DateTime? youngestEntryDate;
 
-        private List<ChartEntryModel> pricesDaily;
+        private List<ChartEntryModel> pricesDaily = new();
         private bool visible;
 
         internal List<(InvestmentEntry, decimal)>? Top5;
         internal List<(InvestmentEntry, decimal)>? Bottom5;
-        internal string currency;
+        internal string currency = string.Empty;
 
         public bool IsLoading = false;
         public InvestmentAccount? Account { get; set; }
@@ -52,6 +52,8 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
         {
             visible = true;
             StateHasChanged();
+
+            await Task.CompletedTask;
         }
 
         public async Task HideOverlay()
@@ -218,11 +220,6 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
             {
                 new YAxis
                 {
-                    // AxisTicks = new AxisTicks()
-                    // {
-                    //     Show = false
-                    // },
-                 //   TickAmount = 1,
                     Show = false,
                     SeriesName = "Vaue",
                     DecimalsInFloat = 0,

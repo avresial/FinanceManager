@@ -48,8 +48,8 @@
 
 @code {
 
-    string height = "100%";
-    private ApexChart<IncomeVsSpendingEntry> chart;
+    private string height = "100%";
+    private ApexChart<IncomeVsSpendingEntry>? chart;
 
     private ApexChartOptions<IncomeVsSpendingEntry> options { get; set; } = new()
         {
@@ -75,7 +75,7 @@
 
     public List<IncomeVsSpendingEntry> Data { get; set; } = new List<IncomeVsSpendingEntry>();
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         options.Tooltip = new ApexCharts.Tooltip
             {

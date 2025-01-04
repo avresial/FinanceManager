@@ -41,8 +41,8 @@
 
 
 @code {
-    private string currency = "";
-    private ApexChart<SpendingOverviewEntry> chart;
+    private string currency = string.Empty;
+    private ApexChart<SpendingOverviewEntry>? chart;
 
     private ApexChartOptions<SpendingOverviewEntry> options { get; set; } = new();
 
@@ -56,7 +56,7 @@
 
     public decimal TotalIncome = 0;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         currency = settingsService.GetCurrency();
         options.Chart = new Chart

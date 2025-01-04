@@ -43,7 +43,7 @@
     private string _currency = string.Empty;
     private bool success;
     private string[] errors = { };
-    private MudForm form;
+    private MudForm? form;
 
     private List<string> ExpenseTypes = Enum.GetValues(typeof(ExpenseType)).Cast<ExpenseType>().Select(x => x.ToString()).ToList();
 
@@ -80,7 +80,9 @@
 
     public async Task Update()
     {
+        if (form is null) return;
         await form.Validate();
+
         if (!form.IsValid) return;
         if (!BalanceChange.HasValue) return;
         if (!PostingDate.HasValue) return;
@@ -90,7 +92,8 @@
         ExpenseType expenseType = FinanceManager.Core.Enums.ExpenseType.Other;
         try
         {
-            expenseType = (ExpenseType)Enum.Parse(typeof(ExpenseType), ExpenseType);
+            if (ExpenseType is not null)
+                expenseType = (ExpenseType)Enum.Parse(typeof(ExpenseType), ExpenseType);
         }
         catch (Exception)
         {
@@ -98,7 +101,7 @@
 
         BankAccountEntry bankAccountEntry = new(BankAccountEntry.Id, date, -1, BalanceChange.Value)
             {
-                Description = Description,
+                Description = this.Description is null ? string.Empty : this.Description,
                 ExpenseType = expenseType
             };
         try
@@ -125,6 +128,6 @@
         if (string.IsNullOrEmpty(value))
             return ExpenseTypes;
 
-        return ExpenseTypes.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+        return await Task.FromResult(ExpenseTypes.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase)));
     }
 }

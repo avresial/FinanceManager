@@ -57,15 +57,11 @@
 
 @code {
     private string currency = "";
-    decimal TotalAssets = 0;
+    private decimal TotalAssets = 0;
 
-    [Parameter]
-    public string Height { get; set; } = "300px";
+    
 
-    [Parameter]
-    public DateTime StartDateTime { get; set; }
-
-    private ApexChart<LiabilityOverviewEntry> chart;
+    private ApexChart<LiabilityOverviewEntry>? chart;
 
     private ApexChartOptions<LiabilityOverviewEntry> options { get; set; } = new()
         {
@@ -91,19 +87,19 @@
 
             },
             Yaxis = new List<YAxis>()
-    {
+            {
 
-    new YAxis
-    {
-    AxisTicks = new AxisTicks()
-    {
-    Show = false
-    },
-    Show = false,
-    SeriesName = "NetValue",
-    DecimalsInFloat = 0,
-    }
-    },
+                new YAxis
+                {
+                    AxisTicks = new AxisTicks()
+                    {
+                        Show = false
+                    },
+                    Show = false,
+                    SeriesName = "NetValue",
+                    DecimalsInFloat = 0,
+                }
+            },
             Legend = new Legend()
             {
                 Position = LegendPosition.Bottom,
@@ -111,10 +107,16 @@
             Colors = ColorsProvider.GetColors()
         };
 
-    public List<LiabilityOverviewEntry> Data { get; set; } = new List<LiabilityOverviewEntry>();
+    [Parameter]
+    public string Height { get; set; } = "300px";
+
+    [Parameter]
+    public DateTime StartDateTime { get; set; }
+
+    public List<LiabilityOverviewEntry> Data { get; set; } = new();
 
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         currency = settingsService.GetCurrency();
     }
@@ -127,12 +129,10 @@
 
         if (chart is not null) await chart.UpdateSeriesAsync(true);
 
-        //Data.AddRange(await GetData());
         await GetData();
         StateHasChanged();
 
         if (chart is not null) await chart.UpdateSeriesAsync(true);
-
     }
 
     async Task GetData()
