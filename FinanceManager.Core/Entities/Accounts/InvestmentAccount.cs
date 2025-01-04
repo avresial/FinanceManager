@@ -25,7 +25,7 @@ namespace FinanceManager.Core.Entities.Accounts
             if (Entries is null) return [];
             return Entries.Get(date);
         }
-        public virtual void Add(IEnumerable<InvestmentEntry> entries, bool recalculateValues = true)
+        public override void Add(IEnumerable<InvestmentEntry> entries, bool recalculateValues = true)
         {
             foreach (var entry in entries)
                 Add(entry, recalculateValues);
@@ -53,19 +53,17 @@ namespace FinanceManager.Core.Entities.Accounts
             if (previousEntry is not null)
                 index = Entries.IndexOf(previousEntry);
 
-            InvestmentEntry newEntry = null;
             if (index == -1)
             {
                 index = Entries.Count();
-                newEntry = new InvestmentEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType);
-                Entries.Add(newEntry);
+                Entries.Add(new InvestmentEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType));
                 index -= 1;
             }
             else
             {
-                newEntry = new InvestmentEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType);
-                Entries.Insert(index, newEntry);
+                Entries.Insert(index, new InvestmentEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType));
             }
+
             RecalculateEntryValues(index);
         }
         public override void Add(InvestmentEntry entry, bool recalculateValues = true)
@@ -134,7 +132,7 @@ namespace FinanceManager.Core.Entities.Accounts
             Entries.RemoveAt(index);
             RecalculateEntryValues(index - 1);
         }
-        private void RecalculateEntryValues(int? startingIndex)
+        private new void RecalculateEntryValues(int? startingIndex)
         {
             if (Entries is null) return;
             int startIndex = startingIndex.HasValue ? startingIndex.Value : Entries.Count() - 1;

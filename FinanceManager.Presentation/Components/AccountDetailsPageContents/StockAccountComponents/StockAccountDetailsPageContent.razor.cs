@@ -33,7 +33,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
         public bool IsLoading = false;
         public InvestmentAccount? Account { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
-        public Type accountType;
+        public Type? accountType;
 
         [Parameter]
         public required int AccountId { get; set; }
@@ -148,6 +148,8 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
                 balanceChange = pricesDaily.Last().Value - pricesDaily.First().Value;
 
             if (chart is not null) await chart.RenderAsync();
+
+            if (Account.Entries is null) return;
 
             List<(InvestmentEntry, decimal)> orderedByPrice = new List<(InvestmentEntry, decimal)>();
             foreach (var entry in Account.Entries)

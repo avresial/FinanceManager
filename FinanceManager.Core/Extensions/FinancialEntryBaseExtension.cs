@@ -26,9 +26,11 @@ namespace FinanceManager.Core.Extensions
         public static List<FinancialEntryBase> GetEntriesMonthlyValue(this IEnumerable<FinancialEntryBase> entries)
         {
 
-            var orderedEntries = entries.OrderBy(x => x.PostingDate).ToList();
-            var beginingDate = orderedEntries.FirstOrDefault().PostingDate.Date;
-            var endDate = orderedEntries.LastOrDefault().PostingDate.Date;
+            List<FinancialEntryBase> orderedEntries = entries.OrderBy(x => x.PostingDate).ToList();
+            if (!orderedEntries.Any()) return new();
+
+            var beginingDate = orderedEntries.First().PostingDate.Date;
+            var endDate = orderedEntries.Last().PostingDate.Date;
 
             List<FinancialEntryBase> result = new();
 
@@ -59,8 +61,9 @@ namespace FinanceManager.Core.Extensions
 
             var orderedEntries = entries.OrderBy(x => x.PostingDate).ToList();
             if (!orderedEntries.Any()) return result;
-            var beginingDate = orderedEntries.FirstOrDefault().PostingDate.Date;
-            var endDate = orderedEntries.LastOrDefault().PostingDate.Date;
+
+            var beginingDate = orderedEntries.First().PostingDate.Date;
+            var endDate = orderedEntries.Last().PostingDate.Date;
 
             DateTime stepDate = new DateTime(beginingDate.Year, beginingDate.Month, 1);
             stepDate = stepDate.AddDays(-(int)stepDate.DayOfWeek + 1);// might skip one day
@@ -82,11 +85,5 @@ namespace FinanceManager.Core.Extensions
 
             return result;
         }
-
-        public static List<BankAccountEntry> GetSpendings(this IEnumerable<BankAccountEntry> entries)
-        {
-            return null;
-        }
-
     }
 }

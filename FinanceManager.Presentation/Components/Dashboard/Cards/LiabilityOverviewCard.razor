@@ -28,7 +28,10 @@
                     <div class="m-2">
                         @{
                             var point = context.DataPoint.Items.FirstOrDefault();
-                            <span class="me-1">@context.DataPoint.X: -@point.Value @currency</span>
+                            if (point is not null)
+                            {
+                                <span class="me-1">@context.DataPoint.X: -@point.Value @currency</span>
+                            }
                         }
                     </div>
                 </ApexPointTooltip>
@@ -140,7 +143,7 @@
             if (bankAccounts is null) return;
 
             bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value <= 0).ToList();
-            TotalAssets = bankAccounts.Sum(x => x.Entries.OrderByDescending(x => x.PostingDate).First().Value);
+            TotalAssets = bankAccounts.Sum(x => x.Entries!.OrderByDescending(x => x.PostingDate).First().Value);
 
             foreach (var account in bankAccounts)
             {
@@ -148,14 +151,14 @@
 
                 if (dataEntry is not null)
                 {
-                    dataEntry.Value -= account.Entries.First().Value;
+                    dataEntry.Value -= account.Entries!.First().Value;
                 }
                 else
                 {
                     Data.Add(new LiabilityOverviewEntry()
                         {
                             Cathegory = account.AccountType.ToString(),
-                            Value = -account.Entries.First().Value
+                            Value = -account.Entries!.First().Value
                         });
                 }
             }
@@ -164,7 +167,7 @@
 
     public class LiabilityOverviewEntry
     {
-        public string Cathegory;
+        public string Cathegory = string.Empty;
         public decimal Value;
     }
 }

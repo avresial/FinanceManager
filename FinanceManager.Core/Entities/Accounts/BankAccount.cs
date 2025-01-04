@@ -38,18 +38,15 @@ namespace FinanceManager.Core.Entities.Accounts
             if (previousEntry is not null)
                 index = Entries.IndexOf(previousEntry);
 
-            BankAccountEntry newEntry = null;
             if (index == -1)
             {
                 index = Entries.Count();
-                newEntry = new BankAccountEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange);
-                Entries.Add(newEntry);
+                Entries.Add(new BankAccountEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange));
                 index -= 1;
             }
             else
             {
-                newEntry = new BankAccountEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange);
-                Entries.Insert(index, newEntry);
+                Entries.Insert(index, new BankAccountEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange));
             }
 
             RecalculateEntryValues(index);

@@ -20,15 +20,17 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             BankAccount.Add(new BankAccountEntry(4, new DateTime(2000, 1, 26), 10, 10));
 
             // Act
-            var entryToChange = BankAccount.Get(new DateTime(2000, 1, 30)).FirstOrDefault();
-            var change = new BankAccountEntry(entryToChange.Id, new DateTime(2000, 1, 27), entryToChange.Value, entryToChange.ValueChange) { Description = "Test1" };
+            var entryToChange = BankAccount.Get(new DateTime(2000, 1, 30)).First();
+            var change = new BankAccountEntry(entryToChange.Id, new DateTime(2000, 1, 27), entryToChange.Value, entryToChange.ValueChange)
+            { Description = "Test1" };
             BankAccount.UpdateEntry(change, true);
 
             // Assert
+            Assert.NotNull(BankAccount.Entries);
             Assert.Equal(40, BankAccount.Entries.First().Value);
             Assert.Equal(29, BankAccount.Entries.First().PostingDate.Day);
             Assert.Equal(10, BankAccount.Entries.Last().Value);
-            Assert.Equal("Test1", BankAccount.Get(new DateTime(2000, 1, 27)).FirstOrDefault().Description);
+            Assert.Equal("Test1", BankAccount.Get(new DateTime(2000, 1, 27)).First().Description);
         }
     }
 }

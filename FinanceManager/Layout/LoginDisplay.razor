@@ -1,35 +1,21 @@
 ﻿@using FinanceManager.Core.Entities.Login
 @using FinanceManager.Core.Services
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+
 @inject NavigationManager Navigation
 @inject ILoginService LoginService
-
-
-@* <AuthorizeView>
-    <Authorized>
-        Hello, @context.User.Identity?.Name!
-        <button class="nav-link btn btn-link" @onclick="BeginLogOut">Log out</button>
-    </Authorized>
-    <NotAuthorized>
-        <a href="authentication/login">Log in</a>
-    </NotAuthorized>
-</AuthorizeView> *@
-
 
 @if (userSession is not null)
 {
     <MudMenu Label="@userSession.UserName" TransformOrigin="Origin.TopCenter" AnchorOrigin="Origin.BottomCenter" Dense="true">
         <MudMenuItem OnClick="BeginLogOut">Log Out</MudMenuItem>
     </MudMenu>
-@* 
-    <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="MyCustomTheme" />
-    <MudSwitch @bind-Value="_isDarkMode" Color="Color.Primary" Class="ma-4" T="bool" Label="Toggle Light/Dark Mode" />
-
-    <MudText Class="ma-4">This is an example text!</MudText> *@
 }
 
 @code {
-    MudTheme MyCustomTheme = new MudTheme()
+    private bool _isDarkMode;
+    private UserSession? userSession = null;
+    private MudTheme MyCustomTheme = new MudTheme()
         {
             PaletteLight = new PaletteLight()
             {
@@ -46,18 +32,17 @@
             },
 
         };
-    private bool _isDarkMode;
-    UserSession userSession = null;
+
+
 
     protected override async Task OnInitializedAsync()
     {
         userSession = await LoginService.GetLoggedUser();
-        
     }
+
     public async Task BeginLogOut()
     {
         await LoginService.Logout();
         Navigation.NavigateToLogout("login");
     }
-
 }
