@@ -1,4 +1,5 @@
-﻿using FinanceManager.Core.Repositories;
+﻿using FinanceManager.Application.Services;
+using FinanceManager.Core.Repositories;
 using FinanceManager.Core.Services;
 using Microsoft.AspNetCore.Components;
 
@@ -14,13 +15,26 @@ namespace FinanceManager.Pages
 
         [Inject]
         public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+        [Inject]
+        public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
         protected override async Task OnInitializedAsync()
         {
-            if (await LoginService.GetLoggedUser() is null)
+            var loggedUser = await LoginService.GetLoggedUser();
+
+            if (loggedUser is null)
+            {
                 Navigation.NavigateTo("login");
+                return;
+            }
 
             var availableAccounts = FinancalAccountRepository.GetAvailableAccounts();
+            if ((availableAccounts is null || availableAccounts.Count == 0) && loggedUser.UserName.ToLower() == "guest")
+            {
+                FinancalAccountRepository.InitializeMock();
+                availableAccounts = FinancalAccountRepository.GetAvailableAccounts();
+                await AccountDataSynchronizationService.AccountChanged();
+            }
 
             if (availableAccounts is null || availableAccounts.Count == 0)
                 Navigation.NavigateTo("AddAccount");
