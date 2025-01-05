@@ -65,7 +65,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
             if (Account.Entries is not null && Account.Entries.Any() && oldestEntryDate is not null)
                 LoadedAllData = (oldestEntryDate >= Account.Entries.Last().PostingDate);
 
-            if (Account.Entries is null) return;
+            if (Account.Entries is null || Account.Entries.Count == 0) return;
 
             var EntriesOrdered = Account.Entries.OrderByDescending(x => x.ValueChange);
             Top5 = EntriesOrdered.Take(5).ToList();

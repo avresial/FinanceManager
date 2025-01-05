@@ -4,6 +4,7 @@ namespace FinanceManager.Core.Services
 {
     public interface ILoginService
     {
+        event Action<bool>? LogginStateChanged;
         Task<bool> Login(string username, string password);
         Task<bool> Login(UserSession userSession);
         Task Logout();
