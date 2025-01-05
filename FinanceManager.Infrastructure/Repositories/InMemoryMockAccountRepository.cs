@@ -64,7 +64,14 @@ namespace FinanceManager.Infrastructure.Repositories
             if (typeof(T) == typeof(BankAccount))
             {
                 if (firstAccount is not BankAccount databaseBankAccount) return default;
-                BankAccount account = new(databaseBankAccount.Id, databaseBankAccount.Name, [], databaseBankAccount.AccountType);
+                DateTime? olderThenLoadedEntryDate = null;
+
+                var olderThenLoadedEntry = databaseBankAccount.Get(dateStart.AddSeconds(-1)).FirstOrDefault();
+
+                if (olderThenLoadedEntry is not null)
+                    olderThenLoadedEntryDate = olderThenLoadedEntry.PostingDate;
+
+                BankAccount account = new(databaseBankAccount.Id, databaseBankAccount.Name, [], databaseBankAccount.AccountType, olderThenLoadedEntryDate);
 
                 foreach (var element in databaseBankAccount.Get(dateStart, dateEnd))
                 {
@@ -78,8 +85,13 @@ namespace FinanceManager.Infrastructure.Repositories
             if (typeof(T) == typeof(InvestmentAccount))
             {
                 if (firstAccount is not InvestmentAccount databaseInvestmentAccount) return default;
-
-                InvestmentAccount bankAccount = new(databaseInvestmentAccount.Id, databaseInvestmentAccount.Name, []);
+                Dictionary<string, DateTime> olderThenLoadedEntry = [];
+                foreach (var entry in databaseInvestmentAccount.Get(dateStart.AddSeconds(-1)))
+                {
+                    if (!olderThenLoadedEntry.ContainsKey(entry.Ticker))
+                        olderThenLoadedEntry.Add(entry.Ticker, entry.PostingDate);
+                }
+                InvestmentAccount bankAccount = new(databaseInvestmentAccount.Id, databaseInvestmentAccount.Name, [], olderThenLoadedEntry);
 
                 foreach (var element in databaseInvestmentAccount.Get(dateStart, dateEnd))
                     bankAccount.Add(element.GetCopy(), false);
@@ -250,7 +262,7 @@ namespace FinanceManager.Infrastructure.Repositories
         }
         private void AddMockData()
         {
-            AddBankAccount(DateTime.UtcNow.AddMonths(-8), 100, "Main", AccountType.Cash);
+            //AddBankAccount(DateTime.UtcNow.AddMonths(-8), 100, "Main", AccountType.Cash);
             AddBankAccount(DateTime.UtcNow.AddMinutes(-1), 0, "Empty Bank", AccountType.Cash);
             //		AddBankAccount(DateTime.UtcNow.AddMonths(-8), 10, "Cash", AccountType.Cash);
 
@@ -260,27 +272,27 @@ namespace FinanceManager.Infrastructure.Repositories
             //AddBankAccount(DateTime.UtcNow.AddMonths(-12), 10, "S&P 500", AccountType.Stock);
             //AddBankAccount(DateTime.UtcNow.AddMonths(-2), 10, "PPK", AccountType.Stock);
 
-            AddBankAccount(DateTime.UtcNow.AddMonths(-3), 10000, "Apartment 1", AccountType.RealEstate);
-            AddLoanAccount(DateTime.UtcNow.AddMonths(-2), -300 * 62, "Loan 1");
+            //AddBankAccount(DateTime.UtcNow.AddMonths(-3), 10000, "Apartment 1", AccountType.RealEstate);
+            //AddLoanAccount(DateTime.UtcNow.AddMonths(-2), -300 * 62, "Loan 1");
 
-            AddStockAccount(DateTime.UtcNow.AddDays(-10), 10, "Wallet 1",
-            [
-                ("S&P 500", InvestmentType.Stock)
-                ,( "Orlen", InvestmentType.Stock), 
-                //("Nvidia", InvestmentType.Stock),( "Intel", InvestmentType.Stock), ("Bonds" , InvestmentType.Bond)
-            ]);
+            //AddStockAccount(DateTime.UtcNow.AddDays(-10), 10, "Wallet 1",
+            //[
+            //    ("S&P 500", InvestmentType.Stock)
+            //    ,( "Orlen", InvestmentType.Stock), 
+            //    //("Nvidia", InvestmentType.Stock),( "Intel", InvestmentType.Stock), ("Bonds" , InvestmentType.Bond)
+            //]);
 
-            AddStockAccount(DateTime.UtcNow.AddDays(-10), 10, "Wallet 2",
-            [
-                ("Nvidia", InvestmentType.Stock),( "Intel", InvestmentType.Stock), ("Bond 1" , InvestmentType.Bond)
-            ]);
+            //AddStockAccount(DateTime.UtcNow.AddDays(-10), 10, "Wallet 2",
+            //[
+            //    ("Nvidia", InvestmentType.Stock),( "Intel", InvestmentType.Stock), ("Bond 1" , InvestmentType.Bond)
+            //]);
 
-            AddStockAccount(DateTime.UtcNow.AddMonths(-1), 10, "Wallet 3",
-            [
-                ("Bond 2", InvestmentType.Bond),( "Bond 3", InvestmentType.Bond), ("Bond 4" , InvestmentType.Bond)
-            ]);
+            //AddStockAccount(DateTime.UtcNow.AddMonths(-1), 10, "Wallet 3",
+            //[
+            //    ("Bond 2", InvestmentType.Bond),( "Bond 3", InvestmentType.Bond), ("Bond 4" , InvestmentType.Bond)
+            //]);
 
-            AddStockAccount(DateTime.UtcNow.AddMonths(-1), 10, "Empty Wallet", []);
+            //AddStockAccount(DateTime.UtcNow.AddMonths(-1), 10, "Empty Wallet", []);
         }
         private void AddStockAccount(DateTime startDay, decimal startingBalance, string accountName, List<(string, InvestmentType)> tickers)
         {

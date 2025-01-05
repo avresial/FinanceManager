@@ -9,5 +9,7 @@ namespace FinanceManager.Core.Services
         Task<List<AssetEntry>> GetEndAssetsPerType(DateTime start, DateTime end);
         Task<List<TimeSeriesModel>> GetAssetsTimeSeries(DateTime start, DateTime end);
         Task<List<TimeSeriesModel>> GetAssetsTimeSeries(DateTime start, DateTime end, InvestmentType investmentType);
+        Task<decimal?> GetNetWorth(DateTime date);
+        Task<Dictionary<DateTime, decimal>> GetNetWorth(DateTime start, DateTime end);
     }
 }

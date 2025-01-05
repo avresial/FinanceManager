@@ -5,12 +5,17 @@ namespace FinanceManager.Core.Entities.Accounts
 {
     public class BankAccount : FinancialAccountBase<BankAccountEntry>
     {
+        public readonly DateTime? OlderThenLoadedEntry = new();
+        public readonly DateTime? YoungerThenLoadedEntry;
         public AccountType AccountType { get; set; }
 
-        public BankAccount(int id, string name, IEnumerable<BankAccountEntry> entries, AccountType accountType) : base(id, name)
+        public BankAccount(int id, string name, IEnumerable<BankAccountEntry> entries, AccountType accountType, DateTime? olderThenLoadedEntry = null,
+            DateTime? youngerThenLoadedEntry = null) : base(id, name)
         {
             Entries = entries.ToList();
             AccountType = accountType;
+            OlderThenLoadedEntry = olderThenLoadedEntry;
+            YoungerThenLoadedEntry = youngerThenLoadedEntry;
         }
         public BankAccount(int id, string name, AccountType accountType) : base(id, name)
         {
