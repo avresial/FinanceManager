@@ -8,7 +8,7 @@ namespace FinanceManager.Presentation.Components.Dashboard
         private const int UnitHeight = 130;
 
         [Inject]
-        public required IFinancalAccountRepository AccountsService { get; set; }
+        public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
 
         public DateTime StartDateTime { get; set; }
 

@@ -5,14 +5,21 @@ namespace FinanceManager.Core.Entities.Accounts
 {
     public class InvestmentAccount : FinancialAccountBase<InvestmentEntry>
     {
-        public InvestmentAccount(int id, string name, IEnumerable<InvestmentEntry> entries) : base(id, name)
+        public readonly Dictionary<string, DateTime> OlderThenLoadedEntry = new();
+        public readonly Dictionary<string, DateTime> YoungerThenLoadedEntry = new();
+
+        public InvestmentAccount(int id, string name, IEnumerable<InvestmentEntry> entries, Dictionary<string, DateTime>? olderThenLoadedEntry = null, Dictionary<string, DateTime>? youngerThenLoadedEntry = null)
+            : base(id, name)
         {
             Entries = entries.ToList();
+            OlderThenLoadedEntry = olderThenLoadedEntry ?? [];
+            YoungerThenLoadedEntry = youngerThenLoadedEntry;
         }
         public InvestmentAccount(int id, string name) : base(id, name)
         {
             Entries = new List<InvestmentEntry>();
         }
+
 
         public List<InvestmentType> GetStoredTypes()
         {
@@ -132,33 +139,6 @@ namespace FinanceManager.Core.Entities.Accounts
             Entries.RemoveAt(index);
             RecalculateEntryValues(index - 1);
         }
-        private new void RecalculateEntryValues(int? startingIndex)
-        {
-            if (Entries is null) return;
-            int startIndex = startingIndex.HasValue ? startingIndex.Value : Entries.Count() - 1;
-
-            for (int i = startIndex; i >= 0; i--)
-            {
-                if (Entries.Count() < i) continue;
-
-                InvestmentEntry? previousIterationEntry = null; // could be stored in local dictionary to improve speed
-                var previousElements = Entries.GetPrevious(Entries[i].PostingDate, Entries[i].Ticker);
-                if (previousElements is not null && previousElements.Any())
-                    previousIterationEntry = previousElements.FirstOrDefault();
-
-                if (previousIterationEntry is not null)
-                {
-                    Entries[i].Value = previousIterationEntry.Value + Entries[i].ValueChange;
-                }
-                else
-                {
-                    Entries[i].Value = Entries[i].ValueChange;
-                }
-
-
-                previousIterationEntry = Entries[i];
-            }
-        }
         public List<string> GetStoredTickers()
         {
             if (Entries is null) return [];
@@ -202,6 +182,33 @@ namespace FinanceManager.Core.Entities.Accounts
             }
 
             return result;
+        }
+        private new void RecalculateEntryValues(int? startingIndex)
+        {
+            if (Entries is null) return;
+            int startIndex = startingIndex.HasValue ? startingIndex.Value : Entries.Count() - 1;
+
+            for (int i = startIndex; i >= 0; i--)
+            {
+                if (Entries.Count() < i) continue;
+
+                InvestmentEntry? previousIterationEntry = null; // could be stored in local dictionary to improve speed
+                var previousElements = Entries.GetPrevious(Entries[i].PostingDate, Entries[i].Ticker);
+                if (previousElements is not null && previousElements.Any())
+                    previousIterationEntry = previousElements.FirstOrDefault();
+
+                if (previousIterationEntry is not null)
+                {
+                    Entries[i].Value = previousIterationEntry.Value + Entries[i].ValueChange;
+                }
+                else
+                {
+                    Entries[i].Value = Entries[i].ValueChange;
+                }
+
+
+                previousIterationEntry = Entries[i];
+            }
         }
     }
 }

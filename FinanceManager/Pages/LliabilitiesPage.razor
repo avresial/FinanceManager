@@ -60,11 +60,11 @@
     private const int UnitHeight = 190;
 
     public decimal TotalLiabilities;
-    public DateTime StartDateTime { get; set; }
+    public DateTime StartDateTime { get; set; } 
 
     protected override void OnInitialized()
     {
-        var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now);
+        var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
         if (bankAccounts is null) return;
 
         bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value <= 0).ToList();

@@ -115,7 +115,6 @@ namespace FinanceManager.Application.Services
             try
             {
                 for (DateTime i = end; i >= start; i = i.AddDays(-1)) allDates.Add(i);
-
             }
             catch (Exception ex)
             {
@@ -174,7 +173,6 @@ namespace FinanceManager.Application.Services
                         .OrderByDescending(x => x.DateTime)
                         .ToList();
         }
-
         public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(DateTime start, DateTime end, InvestmentType investmentType)
         {
             List<(DateTime, decimal)> assets = [];
@@ -206,6 +204,75 @@ namespace FinanceManager.Application.Services
                     DateTime = i,
                     Value = assetsToSum.Sum(x => x.Item2),
                 });
+            }
+            return result;
+        }
+        public async Task<decimal?> GetNetWorth(DateTime date)
+        {
+            decimal result = 0;
+
+            var BankAccounts = _bankAccountRepository.GetAccounts<BankAccount>(date.Date, date);
+            foreach (var bankAccount in BankAccounts)
+            {
+                if (bankAccount.OlderThenLoadedEntry is null) continue;
+                if (bankAccount.Entries is null) continue;
+
+                var newBankAccount = _bankAccountRepository.GetAccount<BankAccount>(bankAccount.Id, bankAccount.OlderThenLoadedEntry.Value, bankAccount.OlderThenLoadedEntry.Value.AddSeconds(1));
+                if (newBankAccount is not null && newBankAccount.Entries is not null)
+                    bankAccount.Add(newBankAccount.Entries, false);
+            }
+
+            var InvestmentAccounts = _bankAccountRepository.GetAccounts<InvestmentAccount>(date.Date, date);
+            foreach (var investmentAccount in InvestmentAccounts)
+            {
+                foreach (var item in investmentAccount.OlderThenLoadedEntry)
+                {
+                    if (investmentAccount.Entries is null) continue;
+                    if (investmentAccount.Entries.Any(x => x.Ticker == item.Key)) continue;
+
+                    var newInvestmentAccount = _bankAccountRepository.GetAccount<InvestmentAccount>(investmentAccount.Id, item.Value, item.Value.AddSeconds(1));
+                    if (newInvestmentAccount is not null && newInvestmentAccount.Entries is not null)
+                        investmentAccount.Add(newInvestmentAccount.Entries, false);
+                }
+            }
+
+            foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0))
+            {
+                if (account is null || account.Entries is null) continue;
+
+                var newestEntry = account.Get(date).OrderByDescending(x => x.PostingDate).FirstOrDefault();
+                if (newestEntry is null) continue;
+
+                result += newestEntry.Value;
+            }
+
+            foreach (InvestmentAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0))
+            {
+                if (account is null || account.Entries is null) continue;
+
+                foreach (var tickerGroup in account.Get(date).GroupBy(x => x.Ticker))
+                {
+                    var newestEntry = tickerGroup.OrderByDescending(x => x.PostingDate).FirstOrDefault();
+                    if (newestEntry is null) continue;
+
+                    var price = await _stockRepository.GetStockPrice(newestEntry.Ticker, date);
+                    result += newestEntry.Value * price.PricePerUnit;
+                }
+            }
+
+            return result;
+        }
+        public async Task<Dictionary<DateTime, decimal>> GetNetWorth(DateTime start, DateTime end)
+        {
+            if (start == new DateTime()) return [];
+
+            Dictionary<DateTime, decimal> result = [];
+
+            for (DateTime date = end; date >= start; date = date.AddDays(-1))
+            {
+                var netWorth = await GetNetWorth(date);
+                if (netWorth is null) continue;
+                result.Add(date, netWorth.Value);
             }
             return result;
         }
