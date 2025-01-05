@@ -178,6 +178,13 @@
 
     async Task GetData()
     {
+        if (StartDateTime == new DateTime())
+        {
+            Data.Clear();
+            TotalAssets = 0;
+            return;
+        }
+
         Data = await moneyFlowService.GetEndAssetsPerAcount(StartDateTime, DateTime.UtcNow);
         TotalAssets = Data.Sum(x => x.Value);
     }

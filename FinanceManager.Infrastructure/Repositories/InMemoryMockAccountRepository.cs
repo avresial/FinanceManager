@@ -57,6 +57,7 @@ namespace FinanceManager.Infrastructure.Repositories
         public T? GetAccount<T>(int id, DateTime dateStart, DateTime dateEnd) where T : FinancialAccountBase
         {
             if (_bankAccounts.GetService(typeof(List<T>)) is not List<T> accountsOfType) return default;
+            if (dateStart == new DateTime() || dateEnd == new DateTime()) return default;
 
             var firstAccount = accountsOfType.FirstOrDefault(x => x.Id == id);
             if (firstAccount is null) return default;
