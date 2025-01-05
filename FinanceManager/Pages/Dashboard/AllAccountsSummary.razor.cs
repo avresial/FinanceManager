@@ -74,19 +74,17 @@ namespace FinanceManager.Pages.Dashboard
 
             while ((iterationDate - DateTime.UtcNow).TotalDays < 0)
             {
-
-
                 foreach (var account in Accounts)
                 {
+                    if (account.Entries is null) continue;
+
                     foreach (var expenseType in expenseTypes)
                     {
                         var cathegory = SpendingByCategory.FirstOrDefault(x => x.ExpenseType == expenseType);
-                        if (cathegory is null)
-                        {
-                            continue;
-                        }
+                        if (cathegory is null) continue;
 
-                        var spendingDuringDay = account.Entries.Where(x => x.ExpenseType == expenseType && x.PostingDate.Year == iterationDate.Year && x.PostingDate.Month == iterationDate.Month && x.PostingDate.Day == iterationDate.Day).ToList();
+                        var spendingDuringDay = account.Entries.Where(x => x.ExpenseType == expenseType && x.PostingDate.Year == iterationDate.Year &&
+                                                                    x.PostingDate.Month == iterationDate.Month && x.PostingDate.Day == iterationDate.Day).ToList();
 
                         cathegory.Value += spendingDuringDay.Sum(x => x.ValueChange);
                         ExpensesCathegoriesAgregate[expenseType].AddRange(spendingDuringDay);

@@ -34,7 +34,7 @@ namespace FinanceManager.Core.Entities.Accounts
 
         public virtual void Add(T entry, bool recalculateValues = true)
         {
-            Entries ??= new List<T>();
+            Entries ??= [];
             var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
             if (alredyExistingEntry is not null)
             {
@@ -43,14 +43,16 @@ namespace FinanceManager.Core.Entities.Accounts
             }
             var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();
 
-            if (Entries is null || previousEntry is null) return;
+            if (Entries is null) return;
 
-            var index = Entries.IndexOf(previousEntry);
+            var index = -1;
+            if (previousEntry is not null)
+                index = Entries.IndexOf(previousEntry);
 
             if (index < 0)
             {
                 Entries.Add(entry);
-                index = Entries.Count() - 1;
+                index = Entries.Count - 1;
             }
             else
             {
@@ -69,7 +71,7 @@ namespace FinanceManager.Core.Entities.Accounts
 
         public virtual void UpdateEntry(T entry, bool recalculateValues = true)
         {
-            Entries ??= new List<T>();
+            Entries ??= [];
 
             var entryToUpdate = Entries.FirstOrDefault(x => x.Id == entry.Id);
             if (entryToUpdate is null) return;
@@ -109,7 +111,7 @@ namespace FinanceManager.Core.Entities.Accounts
         }
         public int? GetMaxId()
         {
-            if (Entries is null || !Entries.Any())
+            if (Entries is null || Entries.Count == 0)
                 return null;
 
             return Entries.Max(x => x.Id);
@@ -141,31 +143,27 @@ namespace FinanceManager.Core.Entities.Accounts
 
         internal void RecalculateEntryValues(int? startingIndex)
         {
-            if (Entries is null || !Entries.Any()) return;
+            if (Entries is null || Entries.Count == 0) return;
 
-            int startIndex = startingIndex.HasValue ? startingIndex.Value : Entries.Count() - 1;
+            int startIndex = startingIndex ?? Entries.Count - 1;
             for (int i = startIndex; i >= 0; i--)
             {
-                if (Entries.Count() - 1 <= i)
+                if (Entries.Count - 1 <= i)
                     continue;
 
                 var newValue = Entries[i + 1].Value + Entries[i].ValueChange;
-                if (Entries[i].Value != newValue)
-                {
-                    var difference = Entries[i].Value - newValue;
-                }
                 Entries[i].Value = newValue;
             }
         }
         private DateTime? GetStartDate()
         {
-            if (Entries is null || !Entries.Any()) return null;
+            if (Entries is null || Entries.Count == 0) return null;
             var minDate = Entries.Min(x => x.PostingDate);
             return Entries.First(x => x.PostingDate == minDate).PostingDate;
         }
         private DateTime? GetEndDate()
         {
-            if (Entries is null || !Entries.Any()) return null;
+            if (Entries is null || Entries.Count == 0) return null;
             var maxDate = Entries.Max(x => x.PostingDate);
             return Entries.First(x => x.PostingDate == maxDate).PostingDate;
         }

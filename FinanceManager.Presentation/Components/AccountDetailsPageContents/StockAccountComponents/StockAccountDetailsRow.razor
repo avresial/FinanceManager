@@ -197,16 +197,18 @@
     {
         UpdateEntryVisibility = false;
         RemoveEntryVisibility = false;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     public async Task ShowEditOverlay()
     {
         UpdateEntryVisibility = true;
+                await Task.CompletedTask;
     }
     public async Task ShowRemoveOverlay()
     {
         RemoveEntryVisibility = true;
+        await Task.CompletedTask;
     }
 
 }

@@ -7,24 +7,16 @@ using FinanceManager.Core.Services;
 
 namespace FinanceManager.Application.Services
 {
-    public class MoneyFlowService : IMoneyFlowService
+    public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, IStockRepository stockRepository) : IMoneyFlowService
     {
-        private IFinancalAccountRepository _bankAccountRepository;
-        private ISettingsService _settingsService;
-        private IStockRepository _stockRepository;
-
-        public MoneyFlowService(IFinancalAccountRepository bankAccountRepository, IStockRepository stockRepository, ISettingsService settingsService)
-        {
-            _bankAccountRepository = bankAccountRepository;
-            _stockRepository = stockRepository;
-            _settingsService = settingsService;
-        }
+        private readonly IFinancalAccountRepository _bankAccountRepository = bankAccountRepository;
+        private readonly IStockRepository _stockRepository = stockRepository;
 
         public async Task<List<AssetEntry>> GetEndAssetsPerAcount(DateTime start, DateTime end)
         {
-            List<AssetEntry> result = new List<AssetEntry>();
+            List<AssetEntry> result = [];
             var BankAccounts = _bankAccountRepository.GetAccounts<BankAccount>(start, end);
-            foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
             {
                 if (account is null || account.Entries is null) return result;
 
@@ -36,7 +28,7 @@ namespace FinanceManager.Application.Services
             }
 
             var InvestmentAccounts = _bankAccountRepository.GetAccounts<InvestmentAccount>(start, end);
-            foreach (InvestmentAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            foreach (InvestmentAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
             {
                 if (account is null || account.Entries is null) return result;
 
@@ -65,9 +57,9 @@ namespace FinanceManager.Application.Services
         }
         public async Task<List<AssetEntry>> GetEndAssetsPerType(DateTime start, DateTime end)
         {
-            List<AssetEntry> result = new List<AssetEntry>();
+            List<AssetEntry> result = [];
             var BankAccounts = _bankAccountRepository.GetAccounts<BankAccount>(start, end);
-            foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
             {
                 if (account is null || account.Entries is null) return result;
                 var existingResult = result.FirstOrDefault(x => x.Name == account.AccountType.ToString());
@@ -86,7 +78,7 @@ namespace FinanceManager.Application.Services
             }
 
             var InvestmentAccounts = _bankAccountRepository.GetAccounts<InvestmentAccount>(start, end);
-            foreach (InvestmentAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            foreach (InvestmentAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
             {
                 if (account is null || account.Entries is null) return result;
 
@@ -115,11 +107,11 @@ namespace FinanceManager.Application.Services
         }
         public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(DateTime start, DateTime end)
         {
-            if (start == new DateTime()) return new List<TimeSeriesModel>();
+            if (start == new DateTime()) return [];
 
-            Dictionary<DateTime, decimal> prices = new Dictionary<DateTime, decimal>();
+            Dictionary<DateTime, decimal> prices = [];
 
-            List<DateTime> allDates = new List<DateTime>();
+            List<DateTime> allDates = [];
             try
             {
                 for (DateTime i = end; i >= start; i = i.AddDays(-1)) allDates.Add(i);
@@ -130,7 +122,7 @@ namespace FinanceManager.Application.Services
                 Console.WriteLine(ex);
             }
             var BankAccounts = _bankAccountRepository.GetAccounts<BankAccount>(start, end);
-            foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
             {
                 if (account is null || account.Entries is null) continue;
 
@@ -151,7 +143,7 @@ namespace FinanceManager.Application.Services
             }
 
             var InvestmentAccounts = _bankAccountRepository.GetAccounts<InvestmentAccount>(start, end);
-            foreach (InvestmentAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            foreach (InvestmentAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
             {
                 if (account is null || account.Entries is null) continue;
 
@@ -185,9 +177,9 @@ namespace FinanceManager.Application.Services
 
         public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(DateTime start, DateTime end, InvestmentType investmentType)
         {
-            List<(DateTime, decimal)> assets = new();
+            List<(DateTime, decimal)> assets = [];
             var BankAccounts = _bankAccountRepository.GetAccounts<BankAccount>(start, end).Where(x => x.AccountType.ToString() == investmentType.ToString());
-            foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
             {
                 if (account is null || account.Entries is null) continue;
 
@@ -195,7 +187,7 @@ namespace FinanceManager.Application.Services
             }
 
             var InvestmentAccounts = _bankAccountRepository.GetAccounts<InvestmentAccount>(start, end);
-            foreach (InvestmentAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value >= 0))
+            foreach (InvestmentAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
             {
                 if (account is null || account.Entries is null) continue;
 
@@ -203,7 +195,7 @@ namespace FinanceManager.Application.Services
             }
 
 
-            List<TimeSeriesModel> result = new();
+            List<TimeSeriesModel> result = [];
             for (DateTime i = end; i >= start; i = i.AddDays(-1))
             {
                 var assetsToSum = assets.Where(x => x.Item1 == i);

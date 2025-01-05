@@ -13,11 +13,10 @@ namespace FinanceManager.Layout
         [Inject]
         public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
-        public Dictionary<int, string> Accounts = new Dictionary<int, string>();
-
+        public Dictionary<int, string> Accounts = [];
         public string ErrorMessage { get; set; } = string.Empty;
 
-        protected override async Task OnInitializedAsync()
+        protected override void OnInitialized()
         {
             try
             {

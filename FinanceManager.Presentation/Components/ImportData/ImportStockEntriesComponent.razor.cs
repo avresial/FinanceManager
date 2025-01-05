@@ -169,6 +169,7 @@ namespace FinanceManager.Presentation.Components.ImportData
             _stepIndex = 0;
 
             _erorrs.Clear();
+            await Task.CompletedTask;
         }
 
         private void SetDragClass() => _dragClass = $"{DefaultDragClass} mud-border-primary";
@@ -210,6 +211,7 @@ namespace FinanceManager.Presentation.Components.ImportData
                     }
                     break;
             }
+            await Task.CompletedTask;
         }
         private async Task ControlStepNavigation(StepperInteractionEventArgs arg)
         {
@@ -234,6 +236,7 @@ namespace FinanceManager.Presentation.Components.ImportData
                     }
                     break;
             }
+            await Task.CompletedTask;
         }
     }
 }

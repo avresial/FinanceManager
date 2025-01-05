@@ -15,7 +15,7 @@ namespace FinanceManager.Core.Entities.Accounts
         public BankAccount(int id, string name, AccountType accountType) : base(id, name)
         {
             AccountType = accountType;
-            Entries = new List<BankAccountEntry>();
+            Entries = [];
         }
 
         public virtual void GetEntry(DateTime start)
@@ -24,7 +24,7 @@ namespace FinanceManager.Core.Entities.Accounts
         }
         public void AddEntry(AddBankEntryDto entry)
         {
-            Entries ??= new List<BankAccountEntry>();
+            Entries ??= [];
             var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
             if (alredyExistingEntry is not null)
             {
@@ -40,8 +40,8 @@ namespace FinanceManager.Core.Entities.Accounts
 
             if (index == -1)
             {
-                index = Entries.Count();
-                Entries.Add(new BankAccountEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange));
+                index = Entries.Count;
+                Entries.Add(new BankAccountEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange) { Description = entry.Description });
                 index -= 1;
             }
             else
@@ -53,7 +53,7 @@ namespace FinanceManager.Core.Entities.Accounts
         }
         public override void UpdateEntry(BankAccountEntry entry, bool recalculateValues = true)
         {
-            Entries ??= new List<BankAccountEntry>();
+            Entries ??= [];
 
             var entryToUpdate = Entries.FirstOrDefault(x => x.Id == entry.Id);
             if (entryToUpdate is null) return;
