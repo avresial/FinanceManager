@@ -17,6 +17,7 @@ namespace FinanceManager.Application.Services
         private ISessionStorageService _sessionStorageService;
         private ILocalStorageService _localStorageService;
         private readonly ILoginRepository _loginRepository;
+        public event Action<bool>? LogginStateChanged;
 
         private AuthenticationStateProvider _authState { get; set; }
         public LoginService(ISessionStorageService sessionStorageService, ILocalStorageService localStorageService,
@@ -65,19 +66,23 @@ namespace FinanceManager.Application.Services
             await _sessionStorageService.SetItemAsync(sessionString, LoggedUser);
             await _localStorageService.SetItemAsync(sessionString, LoggedUser);
             var authState = await ((CustomAuthenticationStateProvider)_authState).ChangeUser(userSession.UserName, userSession.UserName, "Associate");
+            LogginStateChanged?.Invoke(true);
             return true;
         }
         public async Task<bool> Login(string username, string password)
         {
             username = username.ToLower();
             var encryptedPassword = EncryptPassword(password);
-
-            return await Login(new UserSession()
+            var loginResult = await Login(new UserSession()
             {
                 UserId = 0,
                 UserName = username,
                 Password = encryptedPassword
             });
+
+            LogginStateChanged?.Invoke(loginResult);
+
+            return loginResult;
         }
 
         public async Task Logout()
@@ -85,6 +90,7 @@ namespace FinanceManager.Application.Services
             await _sessionStorageService.RemoveItemAsync(sessionString);
             await _localStorageService.RemoveItemAsync(sessionString);
             await ((CustomAuthenticationStateProvider)_authState).Logout();
+            LogginStateChanged?.Invoke(false);
             LoggedUser = null;
         }
 

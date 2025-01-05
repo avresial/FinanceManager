@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Core.Entities.Accounts;
 using FinanceManager.Core.Enums;
 using FinanceManager.Core.Repositories;
+using FinanceManager.Core.Services;
 using System.ComponentModel.Design;
 
 namespace FinanceManager.Infrastructure.Repositories
@@ -8,13 +9,17 @@ namespace FinanceManager.Infrastructure.Repositories
     public class InMemoryMockAccountRepository : IFinancalAccountRepository
     {
         private readonly Random random = new();
-        private readonly ServiceContainer _bankAccounts = new();
+        private ServiceContainer _bankAccounts = new();
         private readonly Dictionary<int, Type> nameTypeDictionary = [];
+        private readonly ILoginService loginService;
 
-        public InMemoryMockAccountRepository()
+        public InMemoryMockAccountRepository(ILoginService loginService)
         {
-            AddMockData();
+            this.loginService = loginService;
+            this.loginService.LogginStateChanged += LoginService_LogginStateChanged;
         }
+
+
 
         public Dictionary<int, Type> GetAvailableAccounts()
         {
@@ -231,7 +236,12 @@ namespace FinanceManager.Infrastructure.Repositories
                     break;
             }
         }
-
+        public void Clear()
+        {
+            _bankAccounts.Dispose();
+            _bankAccounts = new();
+            nameTypeDictionary.Clear();
+        }
         private object? FindAccount(int id)
         {
             if (_bankAccounts is null) return null;
@@ -263,7 +273,7 @@ namespace FinanceManager.Infrastructure.Repositories
         }
         private void AddMockData()
         {
-            //AddBankAccount(DateTime.UtcNow.AddMonths(-8), 100, "Main", AccountType.Cash);
+            AddBankAccount(DateTime.UtcNow.AddMonths(-8), 100, "Main", AccountType.Cash);
             AddBankAccount(DateTime.UtcNow.AddMinutes(-1), 0, "Empty Bank", AccountType.Cash);
             //		AddBankAccount(DateTime.UtcNow.AddMonths(-8), 10, "Cash", AccountType.Cash);
 
@@ -403,6 +413,14 @@ namespace FinanceManager.Infrastructure.Repositories
             if (result is null)
                 return ExpenseType.Other;
             return (ExpenseType)result;
+        }
+        public void InitializeMock()
+        {
+            AddMockData();
+        }
+        private void LoginService_LogginStateChanged(bool obj)
+        {
+            if (!obj) Clear();
         }
     }
 }

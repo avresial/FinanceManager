@@ -21,6 +21,6 @@ namespace FinanceManager.Core.Repositories
         public void AddEntry<T>(T accountEntry, int id) where T : FinancialEntryBase;
         public void UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase;
         public void RemoveEntry(int accountEntryId, int id);
-
+        public void InitializeMock();
     }
 }
