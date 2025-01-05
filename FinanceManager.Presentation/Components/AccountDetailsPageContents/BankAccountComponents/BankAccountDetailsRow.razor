@@ -1,5 +1,6 @@
 ﻿@using FinanceManager.Core.Entities.Accounts
 @using FinanceManager.Core.Repositories
+
 <MudExpansionPanel @bind-Expanded=_expanded>
     <TitleContent>
         <div class="row">
@@ -128,17 +129,15 @@
 
     [Inject]
     public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
-  
+
     [Inject]
     public required ISettingsService SettingsService { get; set; }
-    
+
     protected override void OnParametersSet()
     {
         currency = SettingsService.GetCurrency();
-
-        base.OnParametersSet();
     }
-    
+
     public async Task Confirm()
     {
         UpdateEntryVisibility = false;
@@ -161,16 +160,18 @@
     {
         UpdateEntryVisibility = false;
         RemoveEntryVisibility = false;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     public async Task ShowEditOverlay()
     {
         UpdateEntryVisibility = true;
+        await Task.CompletedTask;
     }
     public async Task ShowRemoveOverlay()
     {
         RemoveEntryVisibility = true;
+        await Task.CompletedTask;
     }
 
 }

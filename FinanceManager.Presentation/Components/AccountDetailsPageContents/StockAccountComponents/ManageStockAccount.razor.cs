@@ -8,7 +8,7 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
 {
     public partial class ManageStockAccount : ComponentBase
     {
-        private MudForm form;
+        private MudForm? form;
         private bool success;
         private string[] errors = { };
 
@@ -42,7 +42,9 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Stoc
 
         public async Task Update()
         {
+            if (form is null) return;
             await form.Validate();
+
             if (!form.IsValid) return;
             if (InvestmentAccount is null) return;
             if (string.IsNullOrEmpty(AccountName))

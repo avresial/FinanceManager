@@ -14,13 +14,14 @@ namespace FinanceManager.UnitTests.Entities.Accounts
 
 
         [Fact]
-        public async Task AddEntries_SingleTicker()
+        public void AddEntries_SingleTicker()
         {
             // Arrange
             InvestmentEntry investmentEntry1 = new InvestmentEntry(1, new DateTime(2000, 1, 1), 0, 100, "Ticker1", InvestmentType.Stock);
             InvestmentEntry investmentEntry2 = new InvestmentEntry(2, new DateTime(2000, 1, 3), 0, 100, "Ticker1", InvestmentType.Stock);
             InvestmentEntry investmentEntry3 = new InvestmentEntry(3, new DateTime(2000, 1, 2), 0, 100, "Ticker1", InvestmentType.Stock);
             InvestmentEntry investmentEntry4 = new InvestmentEntry(4, new DateTime(2000, 1, 4), 0, 100, "Ticker1", InvestmentType.Stock);
+
             // Act
             investmentAccount.Add(investmentEntry1);
             investmentAccount.Add(investmentEntry2);
@@ -28,11 +29,12 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             investmentAccount.Add(investmentEntry4);
 
             // Assert
+            Assert.NotNull(investmentAccount.Entries);
             Assert.Equal(400, investmentAccount.Entries.First().Value);
         }
 
         [Fact]
-        public async Task AddEntries_MultipleTickers()
+        public void AddEntries_MultipleTickers()
         {
             // Arrange
             InvestmentEntry investmentEntry1 = new InvestmentEntry(1, new DateTime(2000, 1, 1), 0, 100, "Ticker1", InvestmentType.Stock);
@@ -49,11 +51,11 @@ namespace FinanceManager.UnitTests.Entities.Accounts
 
             // Assert
             IEnumerable<InvestmentEntry> resultValues = investmentAccount.Get(new DateTime(2000, 1, 4));
-            Assert.Equal(400, resultValues.Get(new DateTime(2000, 1, 4)).FirstOrDefault().Value);
+            Assert.Equal(400, resultValues.Get(new DateTime(2000, 1, 4)).First().Value);
         }
 
         [Fact]
-        public async Task AddEntries_FromYoungersToOldest_SingleTickers()
+        public void AddEntries_FromYoungersToOldest_SingleTickers()
         {
             // Arrange
             InvestmentEntry investmentEntry1 = new InvestmentEntry(1, new DateTime(2000, 1, 3), 100, 100, "Ticker1", InvestmentType.Stock);
@@ -67,11 +69,11 @@ namespace FinanceManager.UnitTests.Entities.Accounts
 
             // Assert
             IEnumerable<InvestmentEntry> resultValues = investmentAccount.Get(new DateTime(2000, 1, 4));
-            Assert.Equal(300, resultValues.Get(new DateTime(2000, 1, 4)).FirstOrDefault().Value);
+            Assert.Equal(300, resultValues.Get(new DateTime(2000, 1, 4)).First().Value);
         }
 
         [Fact]
-        public async Task UpdateEntries_SingleTicker()
+        public void UpdateEntries_SingleTicker()
         {
             // Arrange
             InvestmentEntry investmentEntry0 = new InvestmentEntry(2, new DateTime(2000, 1, 3), 0, 100, "Ticker1", InvestmentType.Stock);
@@ -87,7 +89,7 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             test.Update(new InvestmentEntry(3, new DateTime(2000, 1, 3), 0, 50, "TickerToUpdate_TickerChanged", InvestmentType.Stock));
 
             // Assert
-            var updateResult = investmentAccount.Get(new DateTime(2000, 1, 3)).FirstOrDefault(x => x.Ticker == "TickerToUpdate_TickerChanged");
+            var updateResult = investmentAccount.Get(new DateTime(2000, 1, 3)).First(x => x.Ticker == "TickerToUpdate_TickerChanged");
             Assert.Equal(50, updateResult.ValueChange);
         }
 

@@ -41,8 +41,8 @@
 
 @code {
 
-	private string currency = "";
-	private ApexChart<IncomeSourceOverviewEntry> chart;
+	private string currency = string.Empty;
+	private ApexChart<IncomeSourceOverviewEntry>? chart;
 
 	private ApexChartOptions<IncomeSourceOverviewEntry> options { get; set; } = new();
 
@@ -54,14 +54,16 @@
 			Value = 0
 		},
 	};
+
 	public decimal Total;
+
 	[Parameter]
 	public string Height { get; set; } = "300px";
 
 	[Parameter]
 	public DateTime StartDateTime { get; set; }
 
-	protected override async Task OnInitializedAsync()
+	protected override void OnInitialized()
 	{
 		currency = settingsService.GetCurrency();
 		options.Chart = new Chart
@@ -162,7 +164,7 @@
 	}
 	public class IncomeSourceOverviewEntry
 	{
-		public string Source;
+		public string Source = string.Empty;
 		public decimal Value;
 	}
 

@@ -112,7 +112,7 @@
 
         if (chart is not null) await chart.UpdateSeriesAsync(true);
     }
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         currency = settingsService.GetCurrency();
         options.Chart = new Chart

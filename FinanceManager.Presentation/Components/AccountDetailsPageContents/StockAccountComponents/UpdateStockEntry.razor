@@ -68,7 +68,7 @@
 
     [Parameter]
     public required InvestmentEntry InvestmentEntry { get; set; }
-     
+
     [Inject]
     public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
 
@@ -109,15 +109,13 @@
     public async Task RecalculatePrice()
     {
         if (!PricePerUnit.HasValue)
-        {
             PricePerUnit = 0;
-        }
         else
-        {
             PricePerUnit += 1;
-        }
 
+        await Task.CompletedTask;
     }
+
     public async Task Update()
     {
         if (form is null) return;
@@ -134,8 +132,9 @@
         {
             investmentType = (InvestmentType)Enum.Parse(typeof(InvestmentType), ExpenseType);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Console.WriteLine(ex);
         }
 
         InvestmentEntry bankAccountEntry = new(InvestmentEntry.Id, date, -1, BalanceChange.Value, Ticker, investmentType);
@@ -165,6 +164,6 @@
         if (string.IsNullOrEmpty(value))
             return InvestmentType;
 
-        return InvestmentType.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+        return await Task.FromResult(InvestmentType.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase)));
     }
 }

@@ -21,18 +21,21 @@
 
 @code {
     private bool _isDarkMode;
-    private MudThemeProvider _mudThemeProvider;
+    private bool _useSystemPreferences = false;
+    private MudThemeProvider? _mudThemeProvider;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            //  _isDarkMode = await _mudThemeProvider.GetSystemPreference();
-            StateHasChanged();
+            if (_useSystemPreferences && _mudThemeProvider is not null)
+              _isDarkMode = await _mudThemeProvider.GetSystemPreference();
+            
+              StateHasChanged();
         }
     }
 
-    MudTheme MyCustomTheme = new MudTheme()
+    private MudTheme MyCustomTheme = new MudTheme()
         {
             PaletteLight = new PaletteLight()
             {

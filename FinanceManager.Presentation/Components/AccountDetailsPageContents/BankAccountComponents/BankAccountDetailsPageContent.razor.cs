@@ -18,18 +18,16 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
         private DateTime? oldestEntryDate;
         private DateTime? youngestEntryDate;
 
-        private bool ImportFinancialEntriesComponentVisibility;
         private bool AddEntryVisibility;
-        private ApexChart<BankAccountEntry> chart;
+        private ApexChart<BankAccountEntry>? chart;
 
-        internal List<BankAccountEntry>? Top5;
-        internal List<BankAccountEntry>? Bottom5;
-        internal string currency = "PLN";
+        private List<BankAccountEntry>? Top5;
+        private List<BankAccountEntry>? Bottom5;
+        private string currency = "PLN";
 
         public bool IsLoading = false;
         public BankAccount? Account { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
-
 
         [Parameter]
         public required int AccountId { get; set; }
@@ -46,13 +44,16 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
         {
             AddEntryVisibility = true;
             StateHasChanged();
+            await Task.CompletedTask;
         }
         public async Task HideOverlay()
         {
             AddEntryVisibility = false;
             UpdateInfo();
+
             if (chart is not null)
                 await chart.RenderAsync();
+
             StateHasChanged();
         }
         public void UpdateInfo()
@@ -64,9 +65,15 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
             if (Account.Entries is not null && Account.Entries.Any() && oldestEntryDate is not null)
                 LoadedAllData = (oldestEntryDate >= Account.Entries.Last().PostingDate);
 
+            if (Account.Entries is null) return;
+
             var EntriesOrdered = Account.Entries.OrderByDescending(x => x.ValueChange);
             Top5 = EntriesOrdered.Take(5).ToList();
-            Bottom5 = EntriesOrdered.Skip(Account.Entries.Count - 5).Take(5).OrderBy(x => x.ValueChange).ToList();
+            Bottom5 = EntriesOrdered.Skip(Account.Entries.Count - 5)
+                                    .Take(5)
+                                    .OrderBy(x => x.ValueChange)
+                                    .ToList();
+
             balanceChange = Account.Entries.First().Value - Account.Entries.Last().Value;
         }
         public async Task LoadMore()
@@ -147,6 +154,8 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
             {
                 ErrorMessage = ex.Message;
             }
+
+            await Task.CompletedTask;
         }
         private void UpdateDates()
         {

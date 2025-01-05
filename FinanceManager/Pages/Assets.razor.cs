@@ -6,13 +6,13 @@ namespace FinanceManager.Pages
 {
     public partial class Assets
     {
-        const int UnitHeight = 190;
+        private const int UnitHeight = 190;
 
         [Inject]
-        public IFinancalAccountRepository BankAccountRepository { get; set; }
+        public required IFinancalAccountRepository BankAccountRepository { get; set; }
 
         [Inject]
-        public ISettingsService SettingsService { get; set; }
+        public required ISettingsService SettingsService { get; set; }
 
     }
 }

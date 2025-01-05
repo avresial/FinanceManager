@@ -9,10 +9,9 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
 {
     public partial class ManageBankAccount
     {
-        private MudForm form;
+        private MudForm? form;
         private bool success;
         private string[] errors = { };
-
         private BankAccount? BankAccount { get; set; } = null;
 
         public string AccountName { get; set; } = string.Empty;
@@ -45,12 +44,14 @@ namespace FinanceManager.Presentation.Components.AccountDetailsPageContents.Bank
 
         public async Task Update()
         {
+            if (form is null) return;
             await form.Validate();
+
             if (!form.IsValid) return;
             if (BankAccount is null) return;
             if (string.IsNullOrEmpty(AccountName))
             {
-                errors = new string[] { $"AccountName can not be empty" };
+                errors = [$"AccountName can not be empty"];
                 return;
             }
 

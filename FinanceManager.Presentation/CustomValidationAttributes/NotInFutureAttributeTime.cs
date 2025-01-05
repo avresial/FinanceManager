@@ -10,8 +10,11 @@ namespace FinanceManager.Presentation.CustomValidationAttributes
         {
             this.date = date is null ? DateTime.Now.Date : date.Value.Date;
         }
-        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+
+        protected override ValidationResult IsValid(object? value, ValidationContext validationContext)
         {
+            if (value is null) return new ValidationResult("Value is null, validation can not be proceeded!");
+
             TimeSpan timespan = (TimeSpan)value;
             DateTime dt = date.Add(timespan);
             DateTime dtUtc = dt.ToUniversalTime();
@@ -19,8 +22,7 @@ namespace FinanceManager.Presentation.CustomValidationAttributes
 
             var compareReusult = DateTime.UtcNow.CompareTo(dtUtc);
 
-            if (compareReusult >= 0)
-                return ValidationResult.Success!;
+            if (compareReusult >= 0) return ValidationResult.Success!;
 
             return new ValidationResult("Date must not be in the future!");
         }

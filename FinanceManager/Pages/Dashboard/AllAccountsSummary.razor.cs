@@ -5,107 +5,95 @@ using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Pages.Dashboard
 {
-	public partial class AllAccountsSummary : ComponentBase
-	{
-		private Random random = new Random();
-		[Parameter]
-		public List<BankAccount> Accounts { get; set; }
-		public List<ExpenseTypeSummaryViewModel> SpendingByCategory { get; set; } = new List<ExpenseTypeSummaryViewModel>();
-		public List<Tuple<string, decimal>> WealthByCategory { get; set; } = new List<Tuple<string, decimal>>();
+    public partial class AllAccountsSummary : ComponentBase
+    {
+        [Parameter]
+        public List<BankAccount> Accounts { get; set; } = [];
 
-		protected override async Task OnParametersSetAsync()
-		{
+        public List<ExpenseTypeSummaryViewModel> SpendingByCategory { get; set; } = [];
+        public List<Tuple<string, decimal>> WealthByCategory { get; set; } = [];
 
-			InitializeWealthByCategory();
-			InitializeSpendingByCathegory();
-		}
+        protected override void OnParametersSet()
+        {
+            InitializeWealthByCategory();
+            InitializeSpendingByCathegory();
+        }
 
-		public Dictionary<AccountType, List<BankAccountEntry>> ExpensesTypesAgregate { get; set; } = new Dictionary<AccountType, List<BankAccountEntry>>();
-		public Dictionary<ExpenseType, List<BankAccountEntry>> ExpensesCathegoriesAgregate { get; set; } = new Dictionary<ExpenseType, List<BankAccountEntry>>();
+        public Dictionary<AccountType, List<BankAccountEntry>> ExpensesTypesAgregate { get; set; } = [];
+        public Dictionary<ExpenseType, List<BankAccountEntry>> ExpensesCathegoriesAgregate { get; set; } = [];
 
-		void InitializeWealthByCategory()
-		{
-			ExpensesTypesAgregate.Clear();
-			WealthByCategory.Clear();
+        void InitializeWealthByCategory()
+        {
+            ExpensesTypesAgregate.Clear();
+            WealthByCategory.Clear();
 
-			Dictionary<string, decimal> WealthByCategoryTmp = new Dictionary<string, decimal>();
+            Dictionary<string, decimal> WealthByCategoryTmp = new Dictionary<string, decimal>();
 
-			foreach (var account in Accounts.OrderBy(x => x.Name))
-			{
-				var newValue = account.Entries.LastOrDefault();
-				if (newValue is null) continue;
-				if (!WealthByCategoryTmp.ContainsKey(account.AccountType.ToString()))
-				{
-					if (newValue is null) continue;
-					WealthByCategoryTmp.Add(account.AccountType.ToString(), newValue.Value);
-					ExpensesTypesAgregate.Add(account.AccountType, account.Entries);
-				}
-				else
-				{
-					WealthByCategoryTmp[account.AccountType.ToString()] += newValue.Value;
+            foreach (var account in Accounts.OrderBy(x => x.Name))
+            {
+                if (account.Entries is null) continue;
 
-					ExpensesTypesAgregate[account.AccountType].Add(newValue);
-					ExpensesTypesAgregate[account.AccountType] = ExpensesTypesAgregate[account.AccountType].OrderByDescending(x => x.PostingDate).ToList();
-				}
-			}
+                var newValue = account.Entries.LastOrDefault();
+                if (newValue is null) continue;
+                if (!WealthByCategoryTmp.ContainsKey(account.AccountType.ToString()))
+                {
+                    if (newValue is null) continue;
+                    WealthByCategoryTmp.Add(account.AccountType.ToString(), newValue.Value);
+                    ExpensesTypesAgregate.Add(account.AccountType, account.Entries);
+                }
+                else
+                {
+                    WealthByCategoryTmp[account.AccountType.ToString()] += newValue.Value;
 
-			foreach (var category in WealthByCategoryTmp)
-				WealthByCategory.Add(new Tuple<string, decimal>(category.Key, category.Value));
+                    ExpensesTypesAgregate[account.AccountType].Add(newValue);
+                    ExpensesTypesAgregate[account.AccountType] = ExpensesTypesAgregate[account.AccountType].OrderByDescending(x => x.PostingDate).ToList();
+                }
+            }
 
-			WealthByCategory = WealthByCategory.OrderBy(x => x.Item1).ToList();
+            foreach (var category in WealthByCategoryTmp)
+                WealthByCategory.Add(new Tuple<string, decimal>(category.Key, category.Value));
 
-			foreach (var item in ExpensesTypesAgregate.Values)
-			{
-				foreach (var element in item)
-				{
-					//	element.PostingDate = new DateTime(element.PostingDate.Year, element.PostingDate.Month, element.PostingDate.Day);
-				}
-			}
-		}
-		void InitializeSpendingByCathegory()
-		{
-			SpendingByCategory.Clear();
-			ExpensesCathegoriesAgregate.Clear();
+            WealthByCategory = WealthByCategory.OrderBy(x => x.Item1).ToList();
 
-			List<ExpenseType> expenseTypes = Enum.GetValues(typeof(ExpenseType)).Cast<ExpenseType>().ToList();
+        }
+        void InitializeSpendingByCathegory()
+        {
+            SpendingByCategory.Clear();
+            ExpensesCathegoriesAgregate.Clear();
 
-			foreach (var expenseType in expenseTypes)
-			{
-				ExpensesCathegoriesAgregate.Add(expenseType, new List<BankAccountEntry>());
-				SpendingByCategory.Add(new ExpenseTypeSummaryViewModel() { ExpenseType = expenseType, Value = 0 });
-			}
+            List<ExpenseType> expenseTypes = Enum.GetValues(typeof(ExpenseType)).Cast<ExpenseType>().ToList();
 
-			DateTime iterationDate = Accounts.Min(x => x.Entries.Min(z => z.PostingDate));
+            foreach (var expenseType in expenseTypes)
+            {
+                ExpensesCathegoriesAgregate.Add(expenseType, new List<BankAccountEntry>());
+                SpendingByCategory.Add(new ExpenseTypeSummaryViewModel() { ExpenseType = expenseType, Value = 0 });
+            }
 
-			while ((iterationDate - DateTime.UtcNow).TotalDays < 0)
-			{
+            DateTime iterationDate = Accounts.Where(x => x is not null && x.Entries is not null)
+                                             .Min(x => x.Entries!.Min(z => z.PostingDate));
 
+            while ((iterationDate - DateTime.UtcNow).TotalDays < 0)
+            {
+                foreach (var account in Accounts)
+                {
+                    if (account.Entries is null) continue;
 
-				foreach (var account in Accounts)
-				{
-					foreach (var expenseType in expenseTypes)
-					{
-						var cathegory = SpendingByCategory.FirstOrDefault(x => x.ExpenseType == expenseType);
-						if (cathegory is null)
-						{
-							//ExpensesCathegoriesAgregate[expenseType].Add(new BankAccountEntry() { PostingDate = iterationDate, ExpenseType = expenseType });
-							continue;
-						}
+                    foreach (var expenseType in expenseTypes)
+                    {
+                        var cathegory = SpendingByCategory.FirstOrDefault(x => x.ExpenseType == expenseType);
+                        if (cathegory is null) continue;
 
-						var spendingDuringDay = account.Entries.Where(x => x.ExpenseType == expenseType && x.PostingDate.Year == iterationDate.Year && x.PostingDate.Month == iterationDate.Month && x.PostingDate.Day == iterationDate.Day).ToList();
-						if (!spendingDuringDay.Any())
-						{
-							//ExpensesCathegoriesAgregate[expenseType].Add(new BankAccountEntry() { PostingDate = iterationDate, ExpenseType = expenseType });
-						}
+                        var spendingDuringDay = account.Entries.Where(x => x.ExpenseType == expenseType && x.PostingDate.Year == iterationDate.Year &&
+                                                                    x.PostingDate.Month == iterationDate.Month && x.PostingDate.Day == iterationDate.Day).ToList();
 
-						cathegory.Value += spendingDuringDay.Sum(x => x.ValueChange);
-						ExpensesCathegoriesAgregate[expenseType].AddRange(spendingDuringDay);
-					}
-				}
+                        cathegory.Value += spendingDuringDay.Sum(x => x.ValueChange);
+                        ExpensesCathegoriesAgregate[expenseType].AddRange(spendingDuringDay);
+                    }
+                }
 
-				iterationDate = iterationDate.AddDays(1);
-			}
+                iterationDate = iterationDate.AddDays(1);
+            }
 
-		}
-	}
+        }
+    }
 }

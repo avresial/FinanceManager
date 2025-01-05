@@ -3,7 +3,6 @@
 @using FinanceManager.Core.Enums
 @using FinanceManager.Core.Repositories
 @using FinanceManager.Presentation.CustomValidationAttributes
-@inject ISettingsService settingsService
 
 <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
     <MudContainer MaxWidth="MaxWidth.Medium">
@@ -24,7 +23,7 @@
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text"
-                                 SearchFunc="Search" />
+                SearchFunc="Search" />
             </MudItem>
 
             <MudItem xs="12">
@@ -33,7 +32,10 @@
             <MudItem xs="12">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add>Add</MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel Class="mx-2">Cancel</MudButton>
-                @CustomButton
+                @if (CustomButton is not null)
+                {
+                    @CustomButton
+                }
             </MudItem>
         </MudGrid>
     </MudContainer>
@@ -44,7 +46,7 @@
     private string _currency = string.Empty;
     private bool success;
     private string[] errors = { };
-    private MudForm form;
+    private MudForm? form;
 
     List<string> ExpenseTypes = Enum.GetValues(typeof(ExpenseType)).Cast<ExpenseType>().Select(x => x.ToString()).ToList();
 
@@ -56,8 +58,8 @@
     public decimal? BalanceChange { get; set; } = null;
 
     [Parameter]
-    public RenderFragment CustomButton { get; set; }
-    
+    public RenderFragment? CustomButton { get; set; }
+
     [Parameter]
     public Func<Task>? ActionCompleted { get; set; }
 
@@ -67,15 +69,19 @@
     [Inject]
     public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
 
-    protected override Task OnParametersSetAsync()
+    [Inject]
+    public required ISettingsService settingsService { get; set; }
+
+    protected override void OnParametersSet()
     {
         _currency = settingsService.GetCurrency();
-        return base.OnParametersSetAsync();
     }
 
     public async Task Add()
     {
+        if (form is null) return;
         await form.Validate();
+        
         if (!form.IsValid) return;
         if (!BalanceChange.HasValue) return;
         if (!PostingDate.HasValue) return;
@@ -125,6 +131,7 @@
         if (string.IsNullOrEmpty(value))
             return ExpenseTypes;
 
-        return ExpenseTypes.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+        var result = ExpenseTypes.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+        return await Task.FromResult(result);
     }
 }

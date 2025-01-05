@@ -29,20 +29,20 @@
 
 @code {
 
-    private ApexChart<TimeSeriesModel> chart;
+    private ApexChart<TimeSeriesModel>? chart;
     List<TimeSeriesModel> priceTimeseries = new List<TimeSeriesModel>();
 
     [Parameter]
     public DateTime StartDateTime { get; set; }
 
     [Inject]
-    public IFinancalAccountRepository BankAccountRepository { get; set; }
+    public required IFinancalAccountRepository BankAccountRepository { get; set; }
 
     [Inject]
-    public IStockRepository StockRepository { get; set; }
+    public required IStockRepository StockRepository { get; set; }
 
     [Inject]
-    public IMoneyFlowService MoneyFlowService { get; set; }
+    public required IMoneyFlowService MoneyFlowService { get; set; }
 
 
     protected override async Task OnInitializedAsync()
@@ -90,11 +90,6 @@
             {
                 new YAxis
                 {
-                    // AxisTicks = new AxisTicks()
-                    // {
-                    //     Show = false
-                    // },
-                 //   TickAmount = 1,
                     Show = false,
                     SeriesName = "Vaue",
                     DecimalsInFloat = 0,

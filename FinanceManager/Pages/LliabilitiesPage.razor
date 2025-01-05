@@ -57,17 +57,17 @@
 
 @code
 {
-    const int UnitHeight = 190;
+    private const int UnitHeight = 190;
 
     public decimal TotalLiabilities;
     public DateTime StartDateTime { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now);
         if (bankAccounts is null) return;
 
         bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value <= 0).ToList();
-        TotalLiabilities = bankAccounts.Sum(x => x.Entries.OrderByDescending(x => x.PostingDate).First().Value);
+        TotalLiabilities = bankAccounts.Sum(x => x.Entries!.OrderByDescending(x => x.PostingDate).First().Value);
     }
 }
