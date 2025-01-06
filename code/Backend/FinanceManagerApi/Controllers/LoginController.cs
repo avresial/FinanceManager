@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using FinanceManagerApi.Models;
+using FinanceManagerApi.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceManagerApi.Controllers
 {
@@ -6,10 +9,30 @@ namespace FinanceManagerApi.Controllers
     [ApiController]
     public class LoginController : ControllerBase
     {
-        [HttpGet(Name = "Login")]
-        public bool Login()
+        private readonly JwtTokenGenerator jwtTokenGenerator;
+
+        public LoginController(JwtTokenGenerator jwtTokenGenerator)
         {
-            return false;
+            this.jwtTokenGenerator = jwtTokenGenerator;
+        }
+
+        [AllowAnonymous]
+        [HttpPost(Name = "Login")]
+        public async Task<ActionResult<LoginResponseModel>> Login(LoginRequestModel requestModel)
+        {
+            var response = jwtTokenGenerator.GenerateToken(requestModel);
+            if (response is null)
+                return Unauthorized();
+
+            return response;
+        }
+
+
+        [Authorize]
+        [HttpGet(Name = "Ping")]
+        public async Task<ActionResult<bool>> Ping()
+        {
+            return true;
         }
     }
 }

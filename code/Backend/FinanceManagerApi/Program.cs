@@ -1,12 +1,15 @@
+using FinanceManagerApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+//builder.Services.AddOpenApi();
+builder.Services.AddOpenApi("v1", options => { options.AddDocumentTransformer<BearerSecuritySchemeTransformer>(); });
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -28,13 +31,22 @@ builder.Services.AddAuthentication(options =>
     };
 });
 builder.Services.AddAuthorization();
+builder.Services.AddScoped<JwtTokenGenerator, JwtTokenGenerator>();
 
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Finance manager api"));
+
+    app.MapScalarApiReference(options =>
+    {
+        options.WithPreferredScheme("Bearer")
+        .WithHttpBearerAuthentication(bearer =>
+        {
+            bearer.Token = "your-bearer-token";
+        });
+    });
 }
 
 app.UseHttpsRedirection();

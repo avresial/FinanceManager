@@ -30,7 +30,7 @@ namespace FinanceManagerApi.Services
                 new(JwtRegisteredClaimNames.Sub, loginRequestModel.UserName),
             };
 
-            var tokenValidityInMins = configuration.GetValue<int>("JwtConfig:TokenValidity");
+            var tokenValidityInMins = configuration.GetValue<int>("JwtConfig:TokenValidityMins");
             var tokenExpiryTimeStamp = DateTime.UtcNow.AddMinutes(tokenValidityInMins);
 
             var tokenDescriptor = new SecurityTokenDescriptor()
