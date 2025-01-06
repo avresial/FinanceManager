@@ -22,8 +22,6 @@ namespace FinanceManagerApi.Services
 
             // Check user validity with database
 
-            var key = "testkey"u8.ToArray();
-
             var claims = new List<Claim>()
             {
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),

@@ -29,7 +29,8 @@ namespace FinanceManagerApi.Controllers
 
 
         [Authorize]
-        [HttpGet(Name = "Ping")]
+        [Route("Ping")]
+        [HttpGet]
         public async Task<ActionResult<bool>> Ping()
         {
             return true;
