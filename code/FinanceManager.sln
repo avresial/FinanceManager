@@ -1,0 +1,82 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34728.123
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{61771FDE-F454-4282-9CAE-036FBE65F805}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FinanceManager.UnitTests", "FinanceManager.UnitTests\FinanceManager.UnitTests.csproj", "{2BE36E10-6DE6-4DD3-B022-CDDC558EBD6B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionElements", "SolutionElements", "{A9C3628F-FD81-46A5-8C40-2CC6924E00DD}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Frontend", "Frontend", "{CEA7AC3E-4F8D-4D46-85E9-FF6C91A64A72}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceManager.Core", "Frontend\FinanceManager.Core\FinanceManager.Core.csproj", "{9ACD2DDB-FE22-43F7-B0C9-AD2A28FEE074}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceManager.Application", "Frontend\FinanceManager.Application\FinanceManager.Application.csproj", "{AE148643-BF1C-4FDB-8E60-00BD8D90D0AC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceManager.Components", "Frontend\FinanceManager.Components\FinanceManager.Components.csproj", "{19363094-4A2A-4CCC-9E75-0D8A99408115}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceManager.Infrastructure", "Frontend\FinanceManager.Infrastructure\FinanceManager.Infrastructure.csproj", "{3A174CDA-6F1F-4575-844A-6FE0123FAAB9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceManager", "Frontend\FinanceManager\FinanceManager.csproj", "{CC214840-0AD3-4E14-902C-F20F8CFFFD78}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Backend", "Backend", "{0B27C8DF-2727-4268-8FA0-5185310FEF31}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceManagerApi", "Backend\FinanceManagerApi\FinanceManagerApi.csproj", "{ED8FC2AB-D706-40AA-8633-660E1CE28A4C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2BE36E10-6DE6-4DD3-B022-CDDC558EBD6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2BE36E10-6DE6-4DD3-B022-CDDC558EBD6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2BE36E10-6DE6-4DD3-B022-CDDC558EBD6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2BE36E10-6DE6-4DD3-B022-CDDC558EBD6B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9ACD2DDB-FE22-43F7-B0C9-AD2A28FEE074}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9ACD2DDB-FE22-43F7-B0C9-AD2A28FEE074}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9ACD2DDB-FE22-43F7-B0C9-AD2A28FEE074}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9ACD2DDB-FE22-43F7-B0C9-AD2A28FEE074}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE148643-BF1C-4FDB-8E60-00BD8D90D0AC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE148643-BF1C-4FDB-8E60-00BD8D90D0AC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE148643-BF1C-4FDB-8E60-00BD8D90D0AC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE148643-BF1C-4FDB-8E60-00BD8D90D0AC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{19363094-4A2A-4CCC-9E75-0D8A99408115}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19363094-4A2A-4CCC-9E75-0D8A99408115}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19363094-4A2A-4CCC-9E75-0D8A99408115}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19363094-4A2A-4CCC-9E75-0D8A99408115}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A174CDA-6F1F-4575-844A-6FE0123FAAB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A174CDA-6F1F-4575-844A-6FE0123FAAB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A174CDA-6F1F-4575-844A-6FE0123FAAB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A174CDA-6F1F-4575-844A-6FE0123FAAB9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC214840-0AD3-4E14-902C-F20F8CFFFD78}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC214840-0AD3-4E14-902C-F20F8CFFFD78}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC214840-0AD3-4E14-902C-F20F8CFFFD78}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC214840-0AD3-4E14-902C-F20F8CFFFD78}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ED8FC2AB-D706-40AA-8633-660E1CE28A4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ED8FC2AB-D706-40AA-8633-660E1CE28A4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ED8FC2AB-D706-40AA-8633-660E1CE28A4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED8FC2AB-D706-40AA-8633-660E1CE28A4C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{61771FDE-F454-4282-9CAE-036FBE65F805} = {CEA7AC3E-4F8D-4D46-85E9-FF6C91A64A72}
+		{2BE36E10-6DE6-4DD3-B022-CDDC558EBD6B} = {61771FDE-F454-4282-9CAE-036FBE65F805}
+		{9ACD2DDB-FE22-43F7-B0C9-AD2A28FEE074} = {CEA7AC3E-4F8D-4D46-85E9-FF6C91A64A72}
+		{AE148643-BF1C-4FDB-8E60-00BD8D90D0AC} = {CEA7AC3E-4F8D-4D46-85E9-FF6C91A64A72}
+		{19363094-4A2A-4CCC-9E75-0D8A99408115} = {CEA7AC3E-4F8D-4D46-85E9-FF6C91A64A72}
+		{3A174CDA-6F1F-4575-844A-6FE0123FAAB9} = {CEA7AC3E-4F8D-4D46-85E9-FF6C91A64A72}
+		{CC214840-0AD3-4E14-902C-F20F8CFFFD78} = {CEA7AC3E-4F8D-4D46-85E9-FF6C91A64A72}
+		{ED8FC2AB-D706-40AA-8633-660E1CE28A4C} = {0B27C8DF-2727-4268-8FA0-5185310FEF31}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D98AAC2C-B239-4E2D-9E6A-1AD342A76CDB}
+	EndGlobalSection
+EndGlobal
