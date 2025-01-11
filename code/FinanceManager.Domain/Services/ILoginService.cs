@@ -8,7 +8,6 @@ namespace FinanceManager.Domain.Services
         Task<bool> Login(string username, string password);
         Task<bool> Login(UserSession userSession);
         Task Logout();
-        Task<bool> AddUser(string login, string password);
         Task<UserSession?> GetLoggedUser();
         Task<UserSession?> GetKeepMeLoggedinSession();
     }

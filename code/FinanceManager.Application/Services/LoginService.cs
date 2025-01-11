@@ -5,7 +5,6 @@ using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components.Authorization;
-using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace FinanceManager.Application.Services
@@ -27,7 +26,7 @@ namespace FinanceManager.Application.Services
             _localStorageService = localStorageService;
             this._authState = AuthState;
             _loginRepository = loginRepository;
-            _ = _loginRepository.AddUser("Guest", EncryptPassword("GuestPassword"));
+            _ = _loginRepository.AddUser("Guest", PasswordEncryptionProvider.EncryptPassword("GuestPassword"));
         }
 
         public async Task<UserSession?> GetLoggedUser()
@@ -72,7 +71,8 @@ namespace FinanceManager.Application.Services
         public async Task<bool> Login(string username, string password)
         {
             username = username.ToLower();
-            var encryptedPassword = EncryptPassword(password);
+
+            var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(password);
             var loginResult = await Login(new UserSession()
             {
                 UserId = 0,
@@ -92,22 +92,6 @@ namespace FinanceManager.Application.Services
             await ((CustomAuthenticationStateProvider)_authState).Logout();
             LogginStateChanged?.Invoke(false);
             LoggedUser = null;
-        }
-
-        public async Task<bool> AddUser(string login, string password)
-        {
-            return await _loginRepository.AddUser(login, EncryptPassword(password));
-        }
-
-        private string EncryptPassword(string inputString)
-        {
-            byte[] data = System.Text.Encoding.ASCII.GetBytes(inputString);
-            var hashAlgorithm = SHA256.Create();
-
-            data = hashAlgorithm.ComputeHash(data);
-            string hash = System.Text.Encoding.ASCII.GetString(data);
-
-            return hash;
         }
     }
 }

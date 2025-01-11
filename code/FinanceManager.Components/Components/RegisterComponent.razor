@@ -6,6 +6,8 @@
 @using Microsoft.AspNetCore.Components.Forms
 
 @inject NavigationManager Navigation
+
+@inject IUserService UserService
 @inject ILoginService LoginService
 @inject ILocalStorageService LocalStorageService
 @inject ILoginRepository loginRepository
@@ -62,7 +64,7 @@
         List<string> newErrors = [];
         if (loginModel.Login is not null && loginModel.Password is not null)
         {
-            var addingUserResult = await LoginService.AddUser(loginModel.Login, loginModel.Password);
+            var addingUserResult = await UserService.AddUser(loginModel.Login, loginModel.Password);
 
             if (!addingUserResult)
                 newErrors.Add("Incorrect username or password.");
