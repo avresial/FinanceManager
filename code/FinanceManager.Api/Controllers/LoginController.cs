@@ -18,22 +18,13 @@ namespace FinanceManager.Api.Controllers
 
         [AllowAnonymous]
         [HttpPost(Name = "Login")]
-        public async Task<ActionResult<LoginResponseModel>> Login(LoginRequestModel requestModel)
+        public async Task<IActionResult> Login(LoginRequestModel requestModel)
         {
             var response = jwtTokenGenerator.GenerateToken(requestModel);
             if (response is null)
                 return Unauthorized();
 
-            return response;
-        }
-
-
-        [Authorize]
-        [Route("Ping")]
-        [HttpGet]
-        public async Task<ActionResult<bool>> Ping()
-        {
-            return true;
+            return Ok(response);
         }
     }
 }
