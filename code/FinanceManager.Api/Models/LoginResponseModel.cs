@@ -1,4 +1,4 @@
-﻿namespace FinanceManagerApi.Models
+﻿namespace FinanceManager.Api.Models
 {
     public class LoginResponseModel
     {

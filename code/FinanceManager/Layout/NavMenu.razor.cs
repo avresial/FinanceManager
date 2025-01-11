@@ -3,7 +3,7 @@ using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Components;
 
-namespace FinanceManager.Layout
+namespace FinanceManager.WebUi.Layout
 {
     public partial class NavMenu : ComponentBase
     {

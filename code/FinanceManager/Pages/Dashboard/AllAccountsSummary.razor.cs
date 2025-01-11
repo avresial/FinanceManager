@@ -3,7 +3,7 @@ using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Enums;
 using Microsoft.AspNetCore.Components;
 
-namespace FinanceManager.Pages.Dashboard
+namespace FinanceManager.WebUi.Pages.Dashboard
 {
     public partial class AllAccountsSummary : ComponentBase
     {

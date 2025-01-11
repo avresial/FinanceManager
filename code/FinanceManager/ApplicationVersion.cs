@@ -1,4 +1,4 @@
-﻿namespace FinanceManager
+﻿namespace FinanceManager.WebUi
 {
     public static class ApplicationVersion
     {

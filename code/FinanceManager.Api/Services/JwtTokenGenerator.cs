@@ -1,10 +1,10 @@
-﻿using FinanceManagerApi.Models;
+﻿using FinanceManager.Api.Models;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-namespace FinanceManagerApi.Services
+namespace FinanceManager.Api.Services
 {
     public class JwtTokenGenerator
     {

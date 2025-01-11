@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Enums
+﻿namespace FinanceManager.WebUi.Enums
 {
     public enum AccountType
     {

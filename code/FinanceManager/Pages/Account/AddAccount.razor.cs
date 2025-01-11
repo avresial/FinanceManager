@@ -3,7 +3,7 @@ using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Components;
 
-namespace FinanceManager.Pages.Account
+namespace FinanceManager.WebUi.Pages.Account
 {
     public partial class AddAccount : ComponentBase
     {

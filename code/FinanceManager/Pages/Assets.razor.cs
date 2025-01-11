@@ -2,7 +2,7 @@ using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 
-namespace FinanceManager.Pages
+namespace FinanceManager.WebUi.Pages
 {
     public partial class Assets
     {

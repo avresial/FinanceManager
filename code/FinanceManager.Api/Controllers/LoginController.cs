@@ -1,9 +1,9 @@
-﻿using FinanceManagerApi.Models;
-using FinanceManagerApi.Services;
+﻿using FinanceManager.Api.Models;
+using FinanceManager.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FinanceManagerApi.Controllers
+namespace FinanceManager.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]

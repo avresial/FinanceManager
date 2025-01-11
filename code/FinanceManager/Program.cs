@@ -1,8 +1,8 @@
 using Blazored.LocalStorage;
 using Blazored.SessionStorage;
-using FinanceManager;
 using FinanceManager.Application;
 using FinanceManager.Infrastructure;
+using FinanceManager.WebUi;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;

@@ -1,7 +1,7 @@
 ﻿using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Components;
 
-namespace FinanceManager.Pages.Account
+namespace FinanceManager.WebUi.Pages.Account
 {
     public partial class Import : ComponentBase
     {
