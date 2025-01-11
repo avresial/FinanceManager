@@ -1,0 +1,64 @@
+﻿@using FinanceManager.Domain.Entities.Accounts
+@using FinanceManager.Domain.Enums
+@using FinanceManager.Domain.Repositories
+@if (BankAccountEntry is not null)
+{
+    <MudContainer MaxWidth="MaxWidth.Medium">
+        <MudGrid Justify="Justify.Center">
+            <MudItem xs="12" sm="12" md="12">
+                <MudText Typo="Typo.h4">Remove</MudText>
+                <MudText Typo="Typo.subtitle1">@BankAccountName</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text" ReadOnly />
+            </MudItem>
+        
+            <MudItem xs="12" sm="6">
+                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" ReadOnly />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker Label="Posting date" @bind-Date="date" ReadOnly />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="BankAccountEntry.Description" T="string" Label="Description" Variant="Variant.Text" MaxLines="5" AutoGrow="true" ReadOnly />
+            </MudItem>
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Cancel>Cancel</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Confirm Class="mx-2">Confirm</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+}
+
+@code {
+    private DateTime? date = new DateTime();
+    private decimal BalanceChange = 0;
+    private string ExpenseType = string.Empty;
+    private string _currency = "PLN";
+
+    [Parameter]
+    public required Func<Task> Confirm { get; set; }
+
+    [Parameter]
+    public required Func<Task> Cancel { get; set; }
+
+    [Parameter]
+    public required string BankAccountName { get; set; }
+
+    [Parameter]
+    public required BankAccountEntry BankAccountEntry { get; set; }
+
+    [Inject]
+    public required ISettingsService SettingsService { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        date = BankAccountEntry.PostingDate;
+        BalanceChange = BankAccountEntry.ValueChange;
+        ExpenseType = BankAccountEntry.ExpenseType.ToString();
+        _currency = SettingsService.GetCurrency();
+
+        base.OnParametersSet();
+    }
+
+}

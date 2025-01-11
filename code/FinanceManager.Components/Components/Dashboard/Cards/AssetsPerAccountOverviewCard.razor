@@ -1,0 +1,191 @@
+﻿@using ApexCharts
+@using FinanceManager.Domain.Entities
+@using FinanceManager.Domain.Entities.Accounts
+@using FinanceManager.Domain.Entities.MoneyFlowModels
+@using FinanceManager.Domain.Providers
+@using FinanceManager.Domain.Repositories
+@using FinanceManager.Domain.Services
+@using FinanceManager.Components.Helpers
+
+@inject IMoneyFlowService moneyFlowService;
+@inject IFinancalAccountRepository bankAccountRepository;
+@inject ISettingsService settingsService;
+@inject IStockRepository stockRepository;
+
+<div class="card" style="height:@Height;">
+    <div class="row m-0">
+        <div class="card-body">
+            <h5 class="card-title">Assets per wallet</h5>
+            @if (DisplayAsChart)
+            {
+                <h6 class="card-subtitle mb-2 text-muted">@Math.Round(TotalAssets, 2) @currency</h6>
+            }
+            <div class="row flex-fill overflow-auto">
+                @if (!DisplayAsChart)
+                {
+                    <div class="h-100">
+                        @foreach (var wealthCategory in Data)
+                        {
+                            <div class="row mb-2">
+                                <div class="col">
+                                    @wealthCategory.Name
+                                </div>
+
+                                <div class="col-auto">
+                                    @wealthCategory.Value.ToString("0.00") @currency
+                                </div>
+                            </div>
+                        }
+
+                        <hr class="mt-1 mb-1" />
+                        <div class="row mb-2">
+                            <div class="col">
+                                Sum
+                            </div>
+                            @if (@TotalAssets < 0)
+                            {
+                                <div class="col-auto" style="color:red">
+                                    @TotalAssets.ToString("0.00") @currency
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="col-auto" style="color:green">
+                                    @TotalAssets.ToString("0.00") @currency
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    @if (DisplayAsChart)
+    {
+        <div class="row flex-fill pb-2" style="height:1px;">
+            <div class="h-100">
+
+                <ApexChart @ref="chart" Height="@("100%")" TItem="AssetEntry" Options="options">
+
+                    <ApexPointSeries TItem="AssetEntry"
+                    Items="Data"
+                    Name="Assets"
+                    XValue="e => e.Name.ToString()"
+                    YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"
+                    SeriesType="SeriesType.Pie"
+                    OrderByDescending="@(e=>e.Y)" />
+
+                </ApexChart>
+            </div>
+        </div>
+    }
+</div>
+
+
+
+
+@code {
+    private string currency = "";
+    private decimal TotalAssets = 0;
+
+    [Parameter]
+    public bool DisplayAsChart { get; set; } = true;
+
+    [Parameter]
+    public string Height { get; set; } = "300px";
+
+    [Parameter]
+    public DateTime StartDateTime { get; set; }
+
+    private ApexChart<AssetEntry>? chart;
+
+    private ApexChartOptions<AssetEntry> options { get; set; } = new()
+        {
+            Chart = new Chart
+            {
+                Toolbar = new ApexCharts.Toolbar
+                {
+                    Show = false
+                },
+            },
+            Xaxis = new XAxis()
+            {
+                AxisTicks = new AxisTicks()
+                {
+                    Show = false,
+                },
+                AxisBorder = new AxisBorder()
+                {
+                    Show = false
+                },
+                Position = XAxisPosition.Bottom,
+                Type = XAxisType.Category
+
+            },
+            Yaxis = new List<YAxis>()
+            {
+
+                new YAxis
+                {
+                    AxisTicks = new AxisTicks()
+                    {
+                        Show = false
+                    },
+                    Show = false,
+                    SeriesName = "NetValue",
+                    DecimalsInFloat = 0,
+                }
+            },
+            Legend = new Legend()
+            {
+                Position = LegendPosition.Bottom,
+            },
+            Colors = ColorsProvider.GetColors()
+        };
+
+    public List<AssetEntry> Data { get; set; } = new List<AssetEntry>();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        options.Tooltip = new ApexCharts.Tooltip
+            {
+                Y = new TooltipY
+                {
+                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
+                }
+            };
+
+        currency = settingsService.GetCurrency();
+
+        await Task.CompletedTask;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        foreach (var dataEntry in Data)
+            dataEntry.Value = 0;
+
+        if (chart is not null) await chart.UpdateSeriesAsync(true);
+
+        await GetData();
+
+        StateHasChanged();
+
+        if (chart is not null) await chart.UpdateSeriesAsync(true);
+
+    }
+
+    async Task GetData()
+    {
+        if (StartDateTime == new DateTime())
+        {
+            Data.Clear();
+            TotalAssets = 0;
+            return;
+        }
+
+        Data = await moneyFlowService.GetEndAssetsPerAcount(StartDateTime, DateTime.UtcNow);
+        TotalAssets = Data.Sum(x => x.Value);
+    }
+}

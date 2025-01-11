@@ -1,0 +1,214 @@
+﻿@using FinanceManager.Domain.Entities.Accounts
+@using FinanceManager.Domain.Repositories
+<MudExpansionPanel @bind-Expanded=_expanded>
+    <TitleContent>
+        <div class="row">
+            <div class="col-3">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        Ticker
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        @InvestmentEntry.Ticker
+                    </div>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        Value
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        @InvestmentEntry.Value
+                    </div>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        Change
+                    </div>
+                </div>
+                <div class="row">
+                    @if (InvestmentEntry.ValueChange > 0)
+                    {
+                        <div class="text-success">
+                            @InvestmentEntry.ValueChange
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-danger">
+                            @InvestmentEntry.ValueChange
+                        </div>
+                    }
+
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        Posting date
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        @InvestmentEntry.PostingDate.ToString("yyyy-MM-dd")
+                    </div>
+                </div>
+            </div>
+        </div>
+    </TitleContent>
+
+    <ChildContent>
+        <div class="row">
+            <div class="col-12 mt-4">
+                <div class="row">
+                    <div class="col-4">
+                        <div class="row text-muted">
+                            <div style="font-size:0.8rem !important">
+                                Investment type
+                            </div>
+                        </div>
+                        <div class="row mb-1">
+                            <div>
+                                @InvestmentEntry.InvestmentType
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="row text-muted">
+                            <div style="font-size:0.8rem !important">
+                                Posting date
+                            </div>
+                        </div>
+                        <div class="row mb-1">
+                            <div>
+                                @InvestmentEntry.PostingDate
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="row text-muted">
+                            <div style="font-size:0.8rem !important">
+                                Price
+                            </div>
+                        </div>
+                        <div class="row mb-1">
+                            <div>
+                                @if (_price.HasValue)
+                                {
+                                    @($"{_price.Value.ToString("0.00")} {currency}")
+                                }
+                                else
+                                {
+                                    @("Price can not be calculated")
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
+                    <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove</MudButton>
+                </div>
+            </div>
+        </div>
+    </ChildContent>
+</MudExpansionPanel>
+
+<MudOverlay @bind-Visible=UpdateEntryVisibility DarkBackground="true">
+    <MudPaper Class="p-5">
+        <UpdateStockEntry InvestmentAccount=InvestmentAccount InvestmentEntry="InvestmentEntry" ActionCompleted="HideOverlay" />
+    </MudPaper>
+</MudOverlay>
+
+<MudOverlay @bind-Visible=RemoveEntryVisibility DarkBackground="true">
+    <MudPaper Class="p-5">
+        <RemoveStockEntry InvestmentAccountName=@InvestmentAccount.Name InvestmentEntry="InvestmentEntry" Cancel="HideOverlay" Confirm="Confirm" />
+    </MudPaper>
+</MudOverlay>
+
+@code {
+    private decimal? _price = null;
+    private bool _expanded = false;
+    private bool RemoveEntryVisibility;
+    private bool UpdateEntryVisibility;
+    internal string currency = "PLN";
+
+    [Parameter]
+    public required InvestmentAccount InvestmentAccount { get; set; }
+
+    [Parameter]
+    public required InvestmentEntry InvestmentEntry { get; set; }
+
+    [Inject]
+    public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+
+    [Inject]
+    public required ISettingsService SettingsService { get; set; }
+
+    [Inject]
+    public required IStockRepository StockRepository { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            _price = (await StockRepository.GetStockPrice(InvestmentEntry.Ticker, InvestmentEntry.PostingDate)).PricePerUnit * InvestmentEntry.Value;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            _price = null;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        currency = SettingsService.GetCurrency();
+
+        base.OnParametersSet();
+    }
+
+    public async Task Confirm()
+    {
+        UpdateEntryVisibility = false;
+        RemoveEntryVisibility = false;
+        _expanded = false;
+        await InvokeAsync(StateHasChanged);
+
+        InvestmentAccount.Remove(InvestmentEntry.Id);
+        FinancalAccountRepository.RemoveEntry(InvestmentEntry.Id, InvestmentAccount.Id);
+    }
+
+    public async Task Cancel()
+    {
+        UpdateEntryVisibility = false;
+        RemoveEntryVisibility = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task HideOverlay()
+    {
+        UpdateEntryVisibility = false;
+        RemoveEntryVisibility = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task ShowEditOverlay()
+    {
+        UpdateEntryVisibility = true;
+                await Task.CompletedTask;
+    }
+    public async Task ShowRemoveOverlay()
+    {
+        RemoveEntryVisibility = true;
+        await Task.CompletedTask;
+    }
+
+}
