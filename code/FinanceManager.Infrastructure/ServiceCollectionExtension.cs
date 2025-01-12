@@ -10,7 +10,16 @@ namespace FinanceManager.Infrastructure
         {
             services.AddScoped<IFinancalAccountRepository, InMemoryMockAccountRepository>()
                     .AddScoped<IStockRepository, StockRepositoryMock>()
-                    .AddScoped<ILoginRepository, LoginRepository>();
+                    .AddScoped<IUserRepository, UserLocalStorageRepository>();
+
+            return services;
+        }
+
+        public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
+        {
+            services.AddScoped<IFinancalAccountRepository, InMemoryMockAccountRepository>()
+                    .AddScoped<IStockRepository, StockRepositoryMock>()
+                    .AddSingleton<IUserRepository, UserInMemoryRepository>();
 
             return services;
         }

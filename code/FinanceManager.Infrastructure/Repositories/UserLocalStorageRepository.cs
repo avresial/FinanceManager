@@ -5,22 +5,22 @@ using FinanceManager.Infrastructure.Dtos;
 
 namespace FinanceManager.Infrastructure.Repositories
 {
-    public class LoginRepository : ILoginRepository
+    public class UserLocalStorageRepository : IUserRepository
     {
         private readonly ILocalStorageService _localStorageService;
 
-        public LoginRepository(ILocalStorageService localStorageService)
+        public UserLocalStorageRepository(ILocalStorageService localStorageService)
         {
             _localStorageService = localStorageService;
         }
 
-        async Task<User?> ILoginRepository.GetUser(string login, string password)
+        async Task<User?> IUserRepository.GetUser(string login, string password)
         {
             login = login.ToLower();
             List<UserDto>? databaseUserDtos = await _localStorageService.GetItemAsync<List<UserDto>>("Users");
             if (databaseUserDtos is null) return null;
 
-            List<UserDto> userDtos = new List<UserDto>();
+            List<UserDto> userDtos = [];
 
             if (databaseUserDtos is not null)
                 userDtos = databaseUserDtos;
@@ -36,7 +36,7 @@ namespace FinanceManager.Infrastructure.Repositories
             };
         }
 
-        async Task<bool> ILoginRepository.AddUser(string login, string password)
+        async Task<bool> IUserRepository.AddUser(string login, string password)
         {
             login = login.ToLower();
             List<UserDto>? databaseUserDtos = await _localStorageService.GetItemAsync<List<UserDto>>("Users");
@@ -68,7 +68,7 @@ namespace FinanceManager.Infrastructure.Repositories
             return true;
         }
 
-        async Task<bool> ILoginRepository.RemoveUser(int userId)
+        async Task<bool> IUserRepository.RemoveUser(int userId)
         {
             List<UserDto>? databaseUserDtos = await _localStorageService.GetItemAsync<List<UserDto>>("Users");
             if (databaseUserDtos is null) return false;

@@ -1,4 +1,6 @@
 using FinanceManager.Api.Services;
+using FinanceManager.Application;
+using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -6,6 +8,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddApplicationApi().AddInfrastructureApi();
 
 builder.Services.AddControllers();
 //builder.Services.AddOpenApi();

@@ -7,7 +7,7 @@ using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Text.Json;
 
-namespace FinanceManager.Application.Services
+namespace FinanceManager.Components.Services
 {
     public class LoginService : ILoginService
     {
@@ -15,16 +15,17 @@ namespace FinanceManager.Application.Services
         private UserSession? LoggedUser = null;
         private ISessionStorageService _sessionStorageService;
         private ILocalStorageService _localStorageService;
-        private readonly ILoginRepository _loginRepository;
+        private readonly IUserRepository _loginRepository;
         public event Action<bool>? LogginStateChanged;
 
         private AuthenticationStateProvider _authState { get; set; }
         public LoginService(ISessionStorageService sessionStorageService, ILocalStorageService localStorageService,
-            AuthenticationStateProvider AuthState, ILoginRepository loginRepository)
+            AuthenticationStateProvider AuthState, IUserRepository loginRepository)
         {
             _sessionStorageService = sessionStorageService;
             _localStorageService = localStorageService;
-            this._authState = AuthState;
+            _authState = AuthState;
+
             _loginRepository = loginRepository;
             _ = _loginRepository.AddUser("Guest", PasswordEncryptionProvider.EncryptPassword("GuestPassword"));
         }

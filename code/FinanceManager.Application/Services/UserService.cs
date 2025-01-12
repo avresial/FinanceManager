@@ -4,9 +4,9 @@ using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Services
 {
-    public class UserService(ILoginRepository loginRepository) : IUserService
+    public class UserService(IUserRepository loginRepository) : IUserService
     {
-        private readonly ILoginRepository _loginRepository = loginRepository;
+        private readonly IUserRepository _loginRepository = loginRepository;
 
         public async Task<bool> AddUser(string login, string password)
         {

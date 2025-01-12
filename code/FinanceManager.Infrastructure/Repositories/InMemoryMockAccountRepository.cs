@@ -1,7 +1,6 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Services;
 using System.ComponentModel.Design;
 
 namespace FinanceManager.Infrastructure.Repositories
@@ -11,14 +10,6 @@ namespace FinanceManager.Infrastructure.Repositories
         private readonly Random random = new();
         private ServiceContainer _bankAccounts = new();
         private readonly Dictionary<int, Type> nameTypeDictionary = [];
-        private readonly ILoginService loginService;
-
-        public InMemoryMockAccountRepository(ILoginService loginService)
-        {
-            this.loginService = loginService;
-            this.loginService.LogginStateChanged += LoginService_LogginStateChanged;
-        }
-
 
 
         public Dictionary<int, Type> GetAvailableAccounts()
@@ -417,10 +408,6 @@ namespace FinanceManager.Infrastructure.Repositories
         public void InitializeMock()
         {
             AddMockData();
-        }
-        private void LoginService_LogginStateChanged(bool obj)
-        {
-            if (!obj) Clear();
         }
     }
 }

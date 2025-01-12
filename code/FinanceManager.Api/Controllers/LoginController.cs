@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Api.Models;
 using FinanceManager.Api.Services;
+using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,22 +10,30 @@ namespace FinanceManager.Api.Controllers
     [ApiController]
     public class LoginController : ControllerBase
     {
-        private readonly JwtTokenGenerator jwtTokenGenerator;
-
-        public LoginController(JwtTokenGenerator jwtTokenGenerator)
+        private readonly JwtTokenGenerator _jwtTokenGenerator;
+        private readonly IUserRepository _userRepository;
+        public LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepository userRepository)
         {
-            this.jwtTokenGenerator = jwtTokenGenerator;
+            _jwtTokenGenerator = jwtTokenGenerator;
+            _userRepository = userRepository;
         }
 
         [AllowAnonymous]
         [HttpPost(Name = "Login")]
         public async Task<IActionResult> Login(LoginRequestModel requestModel)
         {
-            var response = jwtTokenGenerator.GenerateToken(requestModel);
-            if (response is null)
+            var user = await _userRepository.GetUser(requestModel.UserName, requestModel.Password);
+
+            if (user is null)
                 return Unauthorized();
 
-            return Ok(response);
+            LoginResponseModel token = _jwtTokenGenerator.GenerateToken(new LoginRequestModel()
+            {
+                UserName = requestModel.UserName,
+                Password = requestModel.Password,
+            });
+
+            return Ok(token);
         }
     }
 }

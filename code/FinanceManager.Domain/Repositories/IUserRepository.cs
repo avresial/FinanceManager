@@ -2,7 +2,7 @@
 
 namespace FinanceManager.Domain.Repositories
 {
-    public interface ILoginRepository
+    public interface IUserRepository
     {
         public Task<User?> GetUser(string login, string password);
         public Task<bool> AddUser(string login, string password);
