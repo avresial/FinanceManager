@@ -1,4 +1,4 @@
-﻿using FinanceManager.Core.Entities.Accounts;
+﻿using FinanceManager.Domain.Entities.Accounts;
 
 namespace FinanceManager.UnitTests.Entities.Accounts
 {

@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Api.Models;
+using FinanceManager.Application.Commands;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,9 +15,9 @@ namespace FinanceManager.Api.Controllers
         [AllowAnonymous]
         [HttpGet]
         [Route("Get")]
-        public async Task<IActionResult> Get(UserRequestModel requestModel)
+        public async Task<IActionResult> Get(GetUser getUserCommand)
         {
-            var result = await _loginRepository.GetUser(requestModel.UserName, requestModel.Password);
+            var result = await _loginRepository.GetUser(getUserCommand.userName, getUserCommand.password);
 
             if (result is not null) return Ok(result);
             return BadRequest();
@@ -25,9 +26,9 @@ namespace FinanceManager.Api.Controllers
         [AllowAnonymous]
         [HttpPost]
         [Route("Add")]
-        public async Task<IActionResult> Add(UserRequestModel requestModel)
+        public async Task<IActionResult> Add(AddUser addUserCommand)
         {
-            var result = await _loginRepository.AddUser(requestModel.UserName, requestModel.Password);
+            var result = await _loginRepository.AddUser(addUserCommand.userName, addUserCommand.password);
 
             if (result) return Ok();
             return BadRequest();
@@ -35,13 +36,9 @@ namespace FinanceManager.Api.Controllers
 
         [HttpDelete]
         [Route("Delete")]
-        public async Task<IActionResult> Delete(UserRequestModel requestModel)
+        public async Task<IActionResult> Delete(DeleteUser deleteUserCommand)
         {
-            var user = await _loginRepository.GetUser(requestModel.UserName, requestModel.Password);
-
-            if (user is null) return BadRequest(user);
-
-            var result = await _loginRepository.RemoveUser(user.Id);
+            var result = await _loginRepository.RemoveUser(deleteUserCommand.userId);
 
             return Ok(result);
         }

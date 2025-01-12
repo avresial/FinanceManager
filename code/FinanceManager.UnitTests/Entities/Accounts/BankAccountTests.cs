@@ -1,4 +1,4 @@
-﻿using FinanceManager.Core.Entities.Accounts;
+﻿using FinanceManager.Domain.Entities.Accounts;
 
 namespace FinanceManager.UnitTests.Entities.Accounts
 {
@@ -7,7 +7,7 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         private BankAccount BankAccount;
         public BankAccountTests()
         {
-            BankAccount = new BankAccount(1, "Test account", Core.Enums.AccountType.Other);
+            BankAccount = new BankAccount(1, "Test account", Domain.Enums.AccountType.Other);
         }
 
         [Fact]

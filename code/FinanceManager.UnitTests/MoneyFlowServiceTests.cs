@@ -1,8 +1,8 @@
 using FinanceManager.Application.Services;
-using FinanceManager.Core.Entities;
-using FinanceManager.Core.Entities.Accounts;
-using FinanceManager.Core.Enums;
-using FinanceManager.Core.Repositories;
+using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Repositories;
 using Moq;
 
 namespace FinanceManager.UnitTests

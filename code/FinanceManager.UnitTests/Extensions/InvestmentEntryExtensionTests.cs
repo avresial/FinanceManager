@@ -1,6 +1,6 @@
-﻿using FinanceManager.Core.Entities.Accounts;
-using FinanceManager.Core.Enums;
-using FinanceManager.Core.Extensions;
+﻿using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Extensions;
 
 namespace FinanceManager.UnitTests.Extensions
 {
