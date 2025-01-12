@@ -16,27 +16,24 @@ namespace FinanceManager.Api.Services
         }
 
 
-        public LoginResponseModel GenerateToken(LoginRequestModel loginRequestModel)
+        public LoginResponseModel? GenerateToken(string userName, int userId, string password)
         {
-            if (string.IsNullOrEmpty(loginRequestModel.UserName) || string.IsNullOrEmpty(loginRequestModel.Password)) return null;
+            if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password)) return null;
 
             // Check user validity with database
-
-            var claims = new List<Claim>()
-            {
-                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new(JwtRegisteredClaimNames.Sub, loginRequestModel.UserName),
-            };
 
             var tokenValidityInMins = configuration.GetValue<int>("JwtConfig:TokenValidityMins");
             var tokenExpiryTimeStamp = DateTime.UtcNow.AddMinutes(tokenValidityInMins);
 
             var tokenDescriptor = new SecurityTokenDescriptor()
             {
+
                 Subject = new ClaimsIdentity(new[]
                 {
-                    new Claim(JwtRegisteredClaimNames.Name, loginRequestModel.UserName)
+                    new Claim(JwtRegisteredClaimNames.Name, userName),
+                    new Claim("userId", userId.ToString())
                 }),
+
                 Expires = tokenExpiryTimeStamp,
                 Issuer = configuration["JwtConfig:Issuer"],
                 Audience = configuration["JwtConfig:Audience"],
@@ -51,7 +48,7 @@ namespace FinanceManager.Api.Services
             return new LoginResponseModel()
             {
                 AccessToken = accessToken,
-                UserName = loginRequestModel.UserName,
+                UserName = userName,
                 ExpiresIn = tokenValidityInMins
             };
         }

@@ -34,10 +34,17 @@ namespace FinanceManager.Api.Controllers
             return BadRequest();
         }
 
+        [Authorize]
         [HttpDelete]
         [Route("Delete")]
         public async Task<IActionResult> Delete(DeleteUser deleteUserCommand)
         {
+            var idValue = User?.Claims.FirstOrDefault(c => c.Type == "userId")?.Value;
+            if (idValue is null) return BadRequest();
+
+            int id = int.Parse(idValue);
+            if (id != deleteUserCommand.userId) return BadRequest();
+
             var result = await _loginRepository.RemoveUser(deleteUserCommand.userId);
 
             return Ok(result);

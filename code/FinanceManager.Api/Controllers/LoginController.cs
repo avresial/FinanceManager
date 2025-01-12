@@ -22,16 +22,12 @@ namespace FinanceManager.Api.Controllers
         [HttpPost(Name = "Login")]
         public async Task<IActionResult> Login(LoginRequestModel requestModel)
         {
-            var user = await _userRepository.GetUser(requestModel.UserName, requestModel.Password);
+            var user = await _userRepository.GetUser(requestModel.userName, requestModel.password);
 
             if (user is null)
                 return Unauthorized();
 
-            LoginResponseModel token = _jwtTokenGenerator.GenerateToken(new LoginRequestModel()
-            {
-                UserName = requestModel.UserName,
-                Password = requestModel.Password,
-            });
+            LoginResponseModel? token = _jwtTokenGenerator.GenerateToken(requestModel.userName, user.Id, requestModel.password);
 
             return Ok(token);
         }
