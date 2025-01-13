@@ -12,19 +12,13 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-//builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddMudServices();
-builder.Services.AddApplication().AddInfrastructure().AddUIComponents();
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddBlazoredSessionStorage();
 
-//builder.Services.AddOidcAuthentication(options =>
-//{
-//	// Configure your authentication provider options here.
-//	// For more information, see https://aka.ms/blazor-standalone-auth
-//	builder.Configuration.Bind("Local", options.ProviderOptions);
-//});
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:7060/") });
+builder.Services.AddApplication().AddInfrastructure().AddUIComponents();
 
 await builder.Build().RunAsync();

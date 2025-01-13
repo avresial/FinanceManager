@@ -16,9 +16,9 @@ namespace FinanceManager.Api.Services
         }
 
 
-        public LoginResponseModel? GenerateToken(string userName, int userId, string password)
+        public LoginResponseModel? GenerateToken(string userName, int userId)
         {
-            if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password)) return null;
+            if (string.IsNullOrEmpty(userName)) return null;
 
             // Check user validity with database
 

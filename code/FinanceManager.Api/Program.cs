@@ -35,7 +35,15 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenGenerator, JwtTokenGenerator>();
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("aaa",
+        builder =>
+        {
+            builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()
+                .SetIsOriginAllowedToAllowWildcardSubdomains();
+        });
+});
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -58,5 +66,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.UseCors("aaa");
+//app.UseCors(policy => policy.WithOrigins("http://localhost:7206", "https://localhost:5235")
+//        .AllowAnyMethod()
+//        .WithHeaders(HeaderNames.ContentType));
 
 app.Run();

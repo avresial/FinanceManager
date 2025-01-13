@@ -81,8 +81,9 @@
         var getKeepMeLoggedinSession = await LoginService.GetKeepMeLoggedinSession();
         if (getKeepMeLoggedinSession is not null)
         {
-            await LoginService.Login(getKeepMeLoggedinSession);
-            Navigation.NavigateTo("");
+            var result = await LoginService.Login(getKeepMeLoggedinSession);
+            if (result)
+                Navigation.NavigateTo("");
         }
     }
 

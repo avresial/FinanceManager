@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Api.Models;
 using FinanceManager.Application.Commands;
+using FinanceManager.Application.Providers;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +18,8 @@ namespace FinanceManager.Api.Controllers
         [Route("Get")]
         public async Task<IActionResult> Get(GetUser getUserCommand)
         {
-            var result = await _loginRepository.GetUser(getUserCommand.userName, getUserCommand.password);
+            var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(getUserCommand.password);
+            var result = await _loginRepository.GetUser(getUserCommand.userName, encryptedPassword);
 
             if (result is not null) return Ok(result);
             return BadRequest();
@@ -28,7 +30,8 @@ namespace FinanceManager.Api.Controllers
         [Route("Add")]
         public async Task<IActionResult> Add(AddUser addUserCommand)
         {
-            var result = await _loginRepository.AddUser(addUserCommand.userName, addUserCommand.password);
+            var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(addUserCommand.password);
+            var result = await _loginRepository.AddUser(addUserCommand.userName, encryptedPassword);
 
             if (result) return Ok();
             return BadRequest();

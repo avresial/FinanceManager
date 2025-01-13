@@ -1,6 +1,8 @@
 ﻿using Blazored.LocalStorage;
 using Blazored.SessionStorage;
+using FinanceManager.Api.Models;
 using FinanceManager.Application.Providers;
+using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
@@ -16,17 +18,20 @@ namespace FinanceManager.Components.Services
         private ISessionStorageService _sessionStorageService;
         private ILocalStorageService _localStorageService;
         private readonly IUserRepository _loginRepository;
+        private readonly HttpClient _httpClient;
+
         public event Action<bool>? LogginStateChanged;
 
         private AuthenticationStateProvider _authState { get; set; }
         public LoginService(ISessionStorageService sessionStorageService, ILocalStorageService localStorageService,
-            AuthenticationStateProvider AuthState, IUserRepository loginRepository)
+            AuthenticationStateProvider AuthState, IUserRepository loginRepository, HttpClient httpClient)
         {
             _sessionStorageService = sessionStorageService;
             _localStorageService = localStorageService;
             _authState = AuthState;
 
             _loginRepository = loginRepository;
+            _httpClient = httpClient;
             _ = _loginRepository.AddUser("Guest", PasswordEncryptionProvider.EncryptPassword("GuestPassword"));
         }
 
@@ -53,6 +58,21 @@ namespace FinanceManager.Components.Services
 
         public async Task<bool> Login(UserSession userSession)
         {
+
+            LoginRequestModel loginRequestModel = new LoginRequestModel(userSession.UserName, userSession.Password);
+            HttpResponseMessage? response = null;
+            try
+            {
+                response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/Login",
+                    JsonHelper.GenerateStringContent(JsonHelper.SerializeObj(loginRequestModel)));
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+
+
             var userFromDatabase = await _loginRepository.GetUser(userSession.UserName, userSession.Password);
             if (userFromDatabase is null)
             {

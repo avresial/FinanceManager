@@ -1,8 +1,10 @@
 ﻿@inject NavigationManager Navigation
+@inject ILoginService LoginService
 
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        await LoginService.Logout();
         Navigation.NavigateTo("login");
     }
 }
