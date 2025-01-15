@@ -8,7 +8,8 @@ namespace FinanceManager.Components
     {
         public static IServiceCollection AddUIComponents(this IServiceCollection services)
         {
-            services.AddScoped<ILoginService, LoginService>();
+            services.AddScoped<ILoginService, LoginService>()
+                    .AddScoped<IUserService, UserService>();
 
             return services;
         }

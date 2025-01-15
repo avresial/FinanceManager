@@ -33,7 +33,7 @@ namespace FinanceManager.Api.Controllers
             var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(addUserCommand.password);
             var result = await _loginRepository.AddUser(addUserCommand.userName, encryptedPassword);
 
-            if (result) return Ok();
+            if (result) return Ok(result);
             return BadRequest();
         }
 
