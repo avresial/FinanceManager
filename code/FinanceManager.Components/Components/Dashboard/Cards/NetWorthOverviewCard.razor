@@ -1,0 +1,40 @@
+﻿@using ApexCharts
+@using FinanceManager.Domain.Entities
+@using FinanceManager.Domain.Entities.Accounts
+@using FinanceManager.Domain.Repositories
+@using FinanceManager.Domain.Services
+
+@inject IMoneyFlowService moneyFlowService;
+@inject ISettingsService settingsService;
+
+<div class="card" style="height:@Height;">
+    <div class="card-body">
+        <h5 class="card-title">Total net worth</h5>
+        <h1 class="card-subtitle mb-2 text-muted">@TotalNetWorth @currency</h1>
+    </div>
+</div>
+
+
+@code {
+    private string currency = string.Empty;
+    private decimal TotalNetWorth = 0;
+
+    [Parameter]
+    public string Height { get; set; } = "300px";
+
+    [Parameter]
+    public DateTime StartDateTime { get; set; }
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        currency = settingsService.GetCurrency();
+        TotalNetWorth = 0;
+
+        var result = await moneyFlowService.GetNetWorth(DateTime.UtcNow);
+
+        if (result is not null)
+            TotalNetWorth = result.Value;
+    }
+}
+

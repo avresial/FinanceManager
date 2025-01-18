@@ -1,0 +1,128 @@
+﻿@using Blazored.LocalStorage
+@using Blazored.SessionStorage
+@using FinanceManager.Domain.Repositories
+@using FinanceManager.Components.ViewModels
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+
+@inject NavigationManager Navigation
+@inject ILoginService LoginService
+@inject ILocalStorageService LocalStorageService;
+@inject IFinancalAccountRepository FinancalAccountRepository;
+
+<section>
+    <div class="container d-flex align-center" style="height:100vh;">
+        <div class="row justify-content-center d-flex flex-grow-1">
+            <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5 col-xxl-4">
+                <div class="card border border-light-subtle rounded-3 shadow-sm p-4">
+                    <div class="card-body pt-0 px-3 px-md-4 px-xl-5">
+                        <div class="text-center mb-3 pt-3 pt-md-4 pt-xl-5">
+                            @* <a href="#!">
+                            <img src="./assets/img/bsb-logo.svg" alt="BootstrapBrain Logo" width="175" height="57">
+                            </a>  *@
+                            <h1>Finance Manager</h1>
+                        </div>
+                        <h2 class="fs-6 fw-normal text-center text-secondary mb-4">Sign in to your account</h2>
+                        @if (errors is not null)
+                        {
+                            @foreach (var error in errors)
+                            {
+                                <MudAlert Severity="Severity.Error" Class="my-3">@error</MudAlert>
+                            }
+                        }
+                        <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+                            <MudTextField @bind-Value="loginModel.Login" T="string" Label="Login" Variant="Variant.Outlined" Immediate Required Class="mt-5" />
+                            <MudTextField @bind-Value="loginModel.Password" T="string" Label="Password" Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
+
+                            <MudButton Class="my-2" Variant="Variant.Filled" Color="Color.Primary" type="submit" @onclick=Login>
+                                <MudText Typo="Typo.h5">Login</MudText>
+                            </MudButton>
+                            <MudButton Href="register" Class="my-2" Variant="Variant.Outlined" Color="Color.Primary">
+                                <MudText Typo="Typo.h5">Register</MudText>
+                            </MudButton>
+                            <MudLink Href="landingpage" Class="mt-3">
+                                <MudText Typo="Typo.subtitle1">Learn more</MudText>
+                            </MudLink>
+                            <MudLink @onclick=LogGuest>
+                                <MudText Typo="Typo.subtitle1">Check out demo</MudText>
+                            </MudLink>
+                        </MudForm>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@code
+{
+    private const string guestLogin = "Guest";
+    private bool success;
+    private string[] errors = { };
+    private MudForm? form;
+    private LoginModel loginModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        bool firstVisit = !(await LocalStorageService.ContainKeyAsync("isThisFirstVisit"));
+        if (firstVisit)
+        {
+            await LocalStorageService.SetItemAsync("isThisFirstVisit", false);
+            Navigation.NavigateTo("landingpage");
+            return;
+        }
+
+        var loggedUser = await LoginService.GetLoggedUser();
+        if (loggedUser is not null)
+            Navigation.NavigateTo("");
+
+        var getKeepMeLoggedinSession = await LoginService.GetKeepMeLoggedinSession();
+        if (getKeepMeLoggedinSession is not null)
+        {
+            var result = await LoginService.Login(getKeepMeLoggedinSession);
+            if (result)
+                Navigation.NavigateTo("");
+        }
+    }
+
+    private async Task ValidFormSubmitted(EditContext editContext)
+    {
+        if (loginModel.Login is null || loginModel.Password is null) return;
+        if (loginModel.Login == guestLogin)
+        {
+            await LogGuest();
+        }
+        else
+        {
+            await LoginService.Login(loginModel.Login, loginModel.Password);
+            Navigation.NavigateTo("");
+        }
+    }
+
+    private async Task Login()
+    {
+        if (loginModel.Login is null || loginModel.Password is null) return;
+        if (form is null) return;
+        await form.Validate();
+
+        var loginResult = await LoginService.Login(loginModel.Login, loginModel.Password);
+
+        if (loginResult) Navigation.NavigateTo("");
+
+        errors = ["Incorrect username or password."];
+        loginModel.Password = string.Empty;
+    }
+
+    private void InvalidFormSubmitted(EditContext editContext)
+    {
+    }
+
+    private async Task LogGuest()
+    {
+        FinancalAccountRepository.InitializeMock();
+        await LoginService.Login(guestLogin, "GuestPassword");
+        Navigation.NavigateTo("");
+    }
+}

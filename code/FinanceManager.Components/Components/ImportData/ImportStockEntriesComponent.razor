@@ -1,0 +1,182 @@
+﻿@using CsvHelper
+@using CsvHelper.Configuration
+@using FinanceManager.Domain.Entities.Accounts
+@using FinanceManager.Infrastructure.DtoMapping
+@using FinanceManager.Infrastructure.Dtos
+@using FinanceManager.Infrastructure.Readers
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Globalization
+
+<MudContainer>
+    <MudText Typo="Typo.h2">Import data to @AccountId account</MudText>
+
+    <MudPaper>
+        <MudStepper @bind-ActiveIndex="_stepIndex" OnPreviewInteraction="OnPreviewInteraction">
+            <ChildContent>
+                <MudStep Title="Select file" SecondaryText="Step1" @bind-Completed="_step1Complete">
+                    <MudStack Style="width: 100%">
+                        <MudForm @bind-IsValid="_isFormValid" @bind-IsTouched="_isTouched">
+                            <MudItem xs="12">
+                                <MudSwitch @bind-Value="_datasetCointainsAdditionalInformation" Label="Dataset Cointains Ticker Column" />
+
+                                <MudTextField @bind-Value="_exportTicker" Label="Ticker for imported data" Variant="Variant.Text" Class=@(_datasetCointainsAdditionalInformation ? "my-5 d-none" : "my-5")></MudTextField>
+                                @foreach (var error in _erorrs)
+                                {
+                                    <MudAlert Severity="Severity.Error" Class="my-2">@error</MudAlert>
+                                }
+                                <MudFileUpload Class="mt-3" T="IBrowserFile"
+                                               Hidden="@false"
+                                               InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
+                                               InputStyle="opacity:0"
+                                               ErrorText="@string.Empty"
+                                               tabindex="-1"
+                                               @ondrop="@ClearDragClass"
+                                               @ondragenter="@SetDragClass"
+                                               @ondragleave="@ClearDragClass"
+                                               @ondragend="@ClearDragClass"
+                                               OnFilesChanged="UploadFiles"
+                                               Disabled="@( !_datasetCointainsAdditionalInformation && string.IsNullOrEmpty(_exportTicker))">
+
+                                    <ActivatorContent>
+                                        <MudPaper Height="150px" Outlined="true" Class="@_dragClass">
+                                            <MudText Typo="Typo.h6"> Drag and drop file here or click </MudText>
+                                            @foreach (var item in LoadedFiles)
+                                            {
+                                                <MudChip T="string" Color="Color.Dark" Text="@item.Name" />
+                                            }
+
+                                        </MudPaper>
+                                    </ActivatorContent>
+                                </MudFileUpload>
+
+                                <MudText Class="mt-5" Typo="Typo.h5">Reqired import data csv file template</MudText>
+
+                                <MudSimpleTable Class="my-3">
+                                    <thead>
+                                        <tr>
+                                            <th>@_postingDateHeader</th>
+                                            <th>@_valueChangeHeader</th>
+                                            @if (_datasetCointainsAdditionalInformation)
+                                            {
+                                                <th>@_tickerHeader</th>
+                                                <th>@_investmentTypeHeader</th>
+                                            }
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Date</td>
+                                            <td>Decimal value</td>
+                                            @if (_datasetCointainsAdditionalInformation)
+                                            {
+                                                <td>String</td>
+                                                <td>String</td>
+                                            }
+                                        </tr>
+                                    </tbody>
+                                </MudSimpleTable>
+                            </MudItem>
+                        </MudForm>
+                    </MudStack>
+                </MudStep>
+                <MudStep Title="Validate" SecondaryText="Step2" @bind-Completed="_step2Complete" Disabled="@(_step1Complete == false)">
+
+                    <MudGrid>
+                        <MudItem xs="12">
+                            @foreach (var file in LoadedFiles)
+                            {
+                                <MudText Typo="Typo.h4">@file.Name</MudText>
+                            }
+                        </MudItem>
+                        <MudItem xs="12">
+                            @if (importStockModels is not null && importStockModels.Any())
+                            {
+                                <MudTable Items="@importStockModels" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_isImportingData" RowsPerPage="8">
+                                    <HeaderContent>
+                                        <MudTh>Posting date</MudTh>
+                                        <MudTh>Value change</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="Posting date">@context.PostingDate</MudTd>
+                                        <MudTd DataLabel="Value change">@context.ValueChange</MudTd>
+                                    </RowTemplate>
+                                    <PagerContent>
+                                        <MudTablePager />
+                                    </PagerContent>
+                                </MudTable>
+                            }
+                            else if (importStockExtendedModels is not null && importStockExtendedModels.Any())
+                            {
+                                <MudTable Items="@importStockExtendedModels" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_isImportingData" RowsPerPage="8">
+                                    <HeaderContent>
+                                        <MudTh>Posting date</MudTh>
+                                        <MudTh>Change</MudTh>
+                                        <MudTh>Ticker</MudTh>
+                                        <MudTh>Type</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="@_postingDateHeader">@context.PostingDate</MudTd>
+                                        <MudTd DataLabel="@_valueChangeHeader">@context.ValueChange</MudTd>
+                                        <MudTd DataLabel="@_tickerHeader">@context.Ticker</MudTd>
+                                        <MudTd DataLabel="@_investmentTypeHeader">@context.InvestmentType</MudTd>
+                                    </RowTemplate>
+                                    <PagerContent>
+                                        <MudTablePager />
+                                    </PagerContent>
+                                </MudTable>
+                            }
+                            else
+                            {
+                                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                            }
+
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            @if (_isImportingData)
+                            {
+                                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                            }
+                        </MudItem>
+                    </MudGrid>
+                </MudStep>
+                <MudStep Title="Summary" SecondaryText="Step3" @bind-Completed="_step3Complete" Disabled="@(_step2Complete == false)">
+                    <MudText Class="my-5" Typo="Typo.h5">Summary</MudText>
+                    <MudStack Spacing="4" Class="my-3">
+                        @foreach (var errorInfo in _erorrs)
+                        {
+                            <MudAlert Severity="Severity.Error" Variant="Variant.Text"> @errorInfo</MudAlert>
+                        }
+                        @foreach (var warningInfo in _warnings)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Text"> @warningInfo</MudAlert>
+                        }
+                        @foreach (var summaryInfo in _summaryInfos)
+                        {
+                            <MudAlert Severity="Severity.Success" Variant="Variant.Text"> @summaryInfo</MudAlert>
+                        }
+
+                    </MudStack>
+                </MudStep>
+            </ChildContent>
+
+            <ActionContent Context="stepper">
+                @if (_stepIndex != 2)
+                {
+                    <MudButton Color="Color.Error" Disabled="@(!LoadedFiles.Any())" OnClick="@Clear" Variant="Variant.Outlined">Clear</MudButton>
+                    <MudSpacer />
+                }
+                @if (_stepIndex == 1)
+                {
+                    <MudButton @onclick=BeginImport Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Begin import</MudButton>
+                }
+                @if (_stepIndex == 2)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">Go back to @AccountId</MudButton>
+                }
+            </ActionContent>
+        </MudStepper>
+    </MudPaper>
+
+</MudContainer>
+

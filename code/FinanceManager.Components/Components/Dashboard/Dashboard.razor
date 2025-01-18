@@ -1,0 +1,65 @@
+﻿@using FinanceManager.Components.Components.Dashboard.Cards
+
+<div class="container mt-2">
+    <div class="row g-2">
+
+        <div class="col-md-12 col-lg-8">
+            <div class="row justify-content-center g-2">
+                <div class="col-xs-12 col-md-12">
+                    <NetWorthOverviewCard Height="@($"{UnitHeight}px")" StartDateTime="@StartDateTime" />
+                </div>
+
+                <div class="col-xs-12 col-md-6">
+                    <SpendingOverviewCard Height="@($"{UnitHeight*2}px")" StartDateTime="@StartDateTime" />
+                </div>
+
+                <div class="col-xs-12 col-md-6">
+                    <IncomeOverviewCard Height="@($"{UnitHeight*2}px")" StartDateTime="@StartDateTime" />
+                </div>
+            </div>
+
+
+        </div>
+
+        <div class="col-xs-12 col-md-6 col-lg-4">
+
+            <SpendingCathegoryOverviewCard Height="@($"{UnitHeight * 3 + 8}px")" StartDateTime="@StartDateTime" />
+
+        </div>
+
+        <div class="col-xs-12 col-md-6 col-lg-4">
+            <div class="row g-1">
+                <div class="col-xs-12 col-md-12">
+                    <LiabilityOverviewCard Height="@($"{UnitHeight * 3}px")" StartDateTime="@StartDateTime" />
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-12 col-lg-8">
+
+            <div class="row justify-content-center g-2">
+                <div class="col-xs-12 col-md-6">
+                    <AssetsPerTypeOverviewCard Height="@($"{UnitHeight*3}px")" StartDateTime="@StartDateTime" />
+                </div>
+                <div class="col-xs-12 col-md-6">
+                    <IncomeVsSpendingOverviewCard Height="@($"{UnitHeight * 3}px")" StartDateTime="@StartDateTime" />
+                </div>
+            </div>
+
+        </div>
+
+        <div class="btn-group btn-group-justified col-12 gap-xs-0 gap-md-2 mb-2" role="group" aria-label="Basic radio toggle button group">
+            <input type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" @onclick=GetThisMonth checked>
+            <label class="btn btn-outline-secondary col-4" for="btnradio1">This month</label>
+
+            <input type="radio" class="btn-check" name="btnradio" id="btnradio3" autocomplete="off" @onclick=GetQuater>
+            <label class="btn btn-outline-secondary col-4" for="btnradio3">This quater</label>
+
+            <input type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off" @onclick=GetThisYear>
+            <label class="btn btn-outline-secondary col-4" for="btnradio2">This year</label>
+        </div>
+    </div>
+</div>
+
+
+
