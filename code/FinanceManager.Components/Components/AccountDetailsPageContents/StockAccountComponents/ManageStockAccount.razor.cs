@@ -1,6 +1,7 @@
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
@@ -12,7 +13,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         private bool success;
         private string[] errors = { };
 
-        private InvestmentAccount? InvestmentAccount { get; set; } = null;
+        private StockAccount? InvestmentAccount { get; set; } = null;
 
         public string AccountName { get; set; } = string.Empty;
 
@@ -29,11 +30,17 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         public required IDialogService DialogService { get; set; }
 
         [Inject]
+        public required ILoginService loginService { get; set; }
+
+        [Inject]
         public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
-        protected override void OnParametersSet()
+        protected override async Task OnParametersSetAsync()
         {
-            InvestmentAccount = FinancalAccountRepository.GetAccount<InvestmentAccount>(AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            var user = await loginService.GetLoggedUser();
+            if (user is null) return;
+
+            InvestmentAccount = FinancalAccountRepository.GetAccount<StockAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
             if (InvestmentAccount is null) return;
 
@@ -55,7 +62,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
             if (InvestmentAccount is null) return;
 
-            InvestmentAccount updatedAccount = new InvestmentAccount(InvestmentAccount.Id, AccountName);
+            StockAccount updatedAccount = new StockAccount(InvestmentAccount.UserId, InvestmentAccount.Id, AccountName);
             FinancalAccountRepository.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");

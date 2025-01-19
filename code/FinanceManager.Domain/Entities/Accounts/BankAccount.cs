@@ -10,7 +10,7 @@ namespace FinanceManager.Domain.Entities.Accounts
         public AccountType AccountType { get; set; }
 
         public BankAccount(int userId, int id, string name, IEnumerable<BankAccountEntry>? entries = null, AccountType accountType = AccountType.Other, DateTime? olderThenLoadedEntry = null,
-            DateTime? youngerThenLoadedEntry = null) : base(id, name)
+            DateTime? youngerThenLoadedEntry = null) : base(userId, id, name)
         {
             this.UserId = userId;
             Entries = entries is null ? ([]) : entries.ToList();
@@ -18,7 +18,7 @@ namespace FinanceManager.Domain.Entities.Accounts
             OlderThenLoadedEntry = olderThenLoadedEntry;
             YoungerThenLoadedEntry = youngerThenLoadedEntry;
         }
-        public BankAccount(int id, string name, AccountType accountType) : base(id, name)
+        public BankAccount(int userId, int id, string name, AccountType accountType) : base(userId, id, name)
         {
             AccountType = accountType;
             Entries = [];

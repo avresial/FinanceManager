@@ -1,6 +1,7 @@
 ﻿@using ApexCharts
 @using FinanceManager.Domain.Entities
 @using FinanceManager.Domain.Entities.Accounts
+@using FinanceManager.Domain.Entities.Login
 @using FinanceManager.Domain.Entities.MoneyFlowModels
 @using FinanceManager.Domain.Enums
 @using FinanceManager.Domain.Providers
@@ -13,6 +14,7 @@
 @inject IFinancalAccountRepository bankAccountRepository;
 @inject ISettingsService settingsService;
 @inject IStockRepository stockRepository;
+@inject ILoginService loginService;
 
 <div class="card" style="height:@Height;">
     <div class="row m-0">
@@ -30,12 +32,12 @@
         <div class="h-100" style="position:relative; bottom:-2px">
             <ApexChart @ref="chart" Height="@("100%")" TItem="AssetEntry" Options="options">
                 <ApexPointSeries TItem="AssetEntry"
-                Items="Data"
-                Name="Assets"
-                XValue="e => e.Name"
-                YAggregate="@(e =>Math.Round( e.Sum(e => e.Value),2))"
-                SeriesType="SeriesType.Pie"
-                OrderByDescending="@(e=>e.Y)" />
+                                 Items="Data"
+                                 Name="Assets"
+                                 XValue="e => e.Name"
+                                 YAggregate="@(e =>Math.Round( e.Sum(e => e.Value),2))"
+                                 SeriesType="SeriesType.Pie"
+                                 OrderByDescending="@(e=>e.Y)" />
             </ApexChart>
         </div>
     </div>
@@ -47,6 +49,7 @@
 @code {
     private string currency = "";
     private decimal TotalAssets = 0;
+    private UserSession? user;
 
     [Parameter]
     public string Height { get; set; } = "300px";
@@ -76,6 +79,9 @@
     }
     protected override async Task OnParametersSetAsync()
     {
+        user = await loginService.GetLoggedUser();
+        if (user is null) return;
+
         foreach (var dataEntry in Data)
             dataEntry.Value = 0;
 
@@ -93,7 +99,10 @@
             TotalAssets = 0;
             return;
         }
-        Data = await moneyFlowService.GetEndAssetsPerType(StartDateTime, DateTime.Now);
+
+        if (user is not null)
+            Data = await moneyFlowService.GetEndAssetsPerType(user.UserId, StartDateTime, DateTime.Now);
+
         TotalAssets = Data.Sum(x => x.Value);
     }
 

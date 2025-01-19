@@ -7,7 +7,7 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         private BankAccount BankAccount;
         public BankAccountTests()
         {
-            BankAccount = new BankAccount(1, "Test account", Domain.Enums.AccountType.Other);
+            BankAccount = new BankAccount(1, 1, "Test account", Domain.Enums.AccountType.Other);
         }
 
         [Fact]

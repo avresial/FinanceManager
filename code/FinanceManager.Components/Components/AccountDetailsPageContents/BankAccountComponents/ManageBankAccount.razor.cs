@@ -57,7 +57,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
 
             if (BankAccount is null) return;
 
-            BankAccount updatedAccount = new BankAccount(BankAccount.Id, AccountName, AccountType);
+            BankAccount updatedAccount = new BankAccount(BankAccount.UserId, BankAccount.Id, AccountName, AccountType);
             FinancalAccountRepository.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");

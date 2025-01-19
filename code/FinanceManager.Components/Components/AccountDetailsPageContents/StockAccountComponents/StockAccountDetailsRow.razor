@@ -143,10 +143,10 @@
     internal string currency = "PLN";
 
     [Parameter]
-    public required InvestmentAccount InvestmentAccount { get; set; }
+    public required StockAccount InvestmentAccount { get; set; }
 
     [Parameter]
-    public required InvestmentEntry InvestmentEntry { get; set; }
+    public required StockEntry InvestmentEntry { get; set; }
 
     [Inject]
     public required IFinancalAccountRepository FinancalAccountRepository { get; set; }

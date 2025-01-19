@@ -37,7 +37,7 @@ namespace FinanceManager.WebUi.Pages.Account
                     break;
 
                 case "Stock":
-                    FinancalAccountRepository.AddAccount(new InvestmentAccount(++lastAccountId, _accountName));
+                    FinancalAccountRepository.AddAccount(new StockAccount(++lastAccountId, _accountName));
                     _addedAccountId = lastAccountId;
                     break;
             }

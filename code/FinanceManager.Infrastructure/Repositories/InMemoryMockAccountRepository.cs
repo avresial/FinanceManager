@@ -29,7 +29,7 @@ namespace FinanceManager.Infrastructure.Repositories
             return account switch
             {
                 BankAccount bankAccount => bankAccount.Start,
-                InvestmentAccount investmentAccount => investmentAccount.Start,
+                StockAccount investmentAccount => investmentAccount.Start,
                 _ => null,
             };
         }
@@ -41,7 +41,7 @@ namespace FinanceManager.Infrastructure.Repositories
             return account switch
             {
                 BankAccount bankAccount => bankAccount.End,
-                InvestmentAccount investmentAccount => investmentAccount.End,
+                StockAccount investmentAccount => investmentAccount.End,
                 _ => null,
             };
         }
@@ -50,12 +50,12 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             return nameTypeDictionary.ContainsKey(id);
         }
-        public T? GetAccount<T>(int id, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
+        public T? GetAccount<T>(int userId, int accountId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
         {
             if (_bankAccounts.GetService(typeof(List<T>)) is not List<T> accountsOfType) return default;
             if (dateStart == new DateTime() || dateEnd == new DateTime()) return default;
 
-            var firstAccount = accountsOfType.FirstOrDefault(x => x.Id == id);
+            var firstAccount = accountsOfType.FirstOrDefault(x => x.Id == accountId);
             if (firstAccount is null) return default;
 
             if (typeof(T) == typeof(BankAccount))
@@ -68,7 +68,7 @@ namespace FinanceManager.Infrastructure.Repositories
                 if (olderThenLoadedEntry is not null)
                     olderThenLoadedEntryDate = olderThenLoadedEntry.PostingDate;
 
-                BankAccount account = new(-1, databaseBankAccount.Id, databaseBankAccount.Name, [], databaseBankAccount.AccountType, olderThenLoadedEntryDate);
+                BankAccount account = new(userId, databaseBankAccount.Id, databaseBankAccount.Name, [], databaseBankAccount.AccountType, olderThenLoadedEntryDate);
 
                 foreach (var element in databaseBankAccount.Get(dateStart, dateEnd))
                 {
@@ -79,16 +79,16 @@ namespace FinanceManager.Infrastructure.Repositories
                 return account as T;
             }
 
-            if (typeof(T) == typeof(InvestmentAccount))
+            if (typeof(T) == typeof(StockAccount))
             {
-                if (firstAccount is not InvestmentAccount databaseInvestmentAccount) return default;
+                if (firstAccount is not StockAccount databaseInvestmentAccount) return default;
                 Dictionary<string, DateTime> olderThenLoadedEntry = [];
                 foreach (var entry in databaseInvestmentAccount.Get(dateStart.AddSeconds(-1)))
                 {
                     if (!olderThenLoadedEntry.ContainsKey(entry.Ticker))
                         olderThenLoadedEntry.Add(entry.Ticker, entry.PostingDate);
                 }
-                InvestmentAccount bankAccount = new(databaseInvestmentAccount.Id, databaseInvestmentAccount.Name, [], olderThenLoadedEntry);
+                StockAccount bankAccount = new(userId, databaseInvestmentAccount.Id, databaseInvestmentAccount.Name, [], olderThenLoadedEntry);
 
                 foreach (var element in databaseInvestmentAccount.Get(dateStart, dateEnd))
                     bankAccount.Add(element.GetCopy(), false);
@@ -98,11 +98,11 @@ namespace FinanceManager.Infrastructure.Repositories
 
             return default;
         }
-        public T? GetAccount<T>(int id) where T : BasicAccountInformation
+        public T? GetAccount<T>(int userId, int id) where T : BasicAccountInformation
         {
-            return GetAccount<T>(id, DateTime.UtcNow, DateTime.UtcNow);
+            return GetAccount<T>(userId, id, DateTime.UtcNow, DateTime.UtcNow);
         }
-        public IEnumerable<T> GetAccounts<T>(DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
+        public IEnumerable<T> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
         {
             if (_bankAccounts.GetService(typeof(List<T>)) is not List<T> accountsOfType)
                 return [];
@@ -112,7 +112,7 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 if (account is null) continue;
 
-                var newAccount = GetAccount<T>(account.Id, dateStart, dateEnd);
+                var newAccount = GetAccount<T>(userId, account.Id, dateStart, dateEnd);
                 if (newAccount is null) continue;
 
                 result.Add(newAccount);
@@ -159,8 +159,8 @@ namespace FinanceManager.Infrastructure.Repositories
                         }
                     }
                     break;
-                case InvestmentAccount investmentAccount:
-                    List<InvestmentAccount>? investmentAccounts = _bankAccounts.GetService(typeof(List<InvestmentAccount>)) as List<InvestmentAccount>;
+                case StockAccount investmentAccount:
+                    List<StockAccount>? investmentAccounts = _bankAccounts.GetService(typeof(List<StockAccount>)) as List<StockAccount>;
                     if (investmentAccounts is not null)
                     {
                         var accountToUpdate = investmentAccounts.FirstOrDefault(x => x.Id == investmentAccount.Id);
@@ -185,9 +185,9 @@ namespace FinanceManager.Infrastructure.Repositories
                 List<BankAccount>? accountsOfType = _bankAccounts.GetService(typeof(List<BankAccount>)) as List<BankAccount>;
                 accountsOfType?.RemoveAll(x => x.Id == id);
             }
-            else if (accountType == typeof(InvestmentAccount))
+            else if (accountType == typeof(StockAccount))
             {
-                List<InvestmentAccount>? accountsOfType = _bankAccounts.GetService(typeof(List<InvestmentAccount>)) as List<InvestmentAccount>;
+                List<StockAccount>? accountsOfType = _bankAccounts.GetService(typeof(List<StockAccount>)) as List<StockAccount>;
                 accountsOfType?.RemoveAll(x => x.Id == id);
             }
             else
@@ -202,14 +202,14 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             if (bankAccountEntry is BankAccountEntry bankEntry)
                 AddBankAccountEntry(id, bankEntry.ValueChange, bankEntry.Description, bankEntry.ExpenseType, bankEntry.PostingDate);
-            if (bankAccountEntry is InvestmentEntry investmentEntry)
+            if (bankAccountEntry is StockEntry investmentEntry)
                 AddStockAccountEntry(id, investmentEntry.Ticker, investmentEntry.InvestmentType, investmentEntry.ValueChange, investmentEntry.PostingDate);
         }
         public void UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase
         {
             if (accountEntry is BankAccountEntry bankEntry)
                 UpdateBankAccountEntry(id, bankEntry);
-            if (accountEntry is InvestmentEntry investmentEntry)
+            if (accountEntry is StockEntry investmentEntry)
                 UpdateStockAccountEntry(id, investmentEntry);
         }
         public void RemoveEntry(int accountEntryId, int id)
@@ -222,7 +222,7 @@ namespace FinanceManager.Infrastructure.Repositories
                 case BankAccount bankAccount:
                     bankAccount.Remove(accountEntryId);
                     break;
-                case InvestmentAccount investmentAccount:
+                case StockAccount investmentAccount:
                     investmentAccount.Remove(accountEntryId);
                     break;
             }
@@ -244,9 +244,9 @@ namespace FinanceManager.Infrastructure.Repositories
                 return bankAccounts.FirstOrDefault(x => x.Id == id);
             }
 
-            if (accountType == typeof(InvestmentAccount))
+            if (accountType == typeof(StockAccount))
             {
-                if (_bankAccounts.GetService(typeof(List<InvestmentAccount>)) is not List<InvestmentAccount> investmentAccounts) return null;
+                if (_bankAccounts.GetService(typeof(List<StockAccount>)) is not List<StockAccount> investmentAccounts) return null;
 
                 return investmentAccounts.FirstOrDefault(x => x.Id == id);
             }
@@ -264,8 +264,8 @@ namespace FinanceManager.Infrastructure.Repositories
         }
         private void AddMockData()
         {
-            AddBankAccount(DateTime.UtcNow.AddMonths(-8), 100, "Main", AccountType.Cash);
-            AddBankAccount(DateTime.UtcNow.AddMinutes(-1), 0, "Empty Bank", AccountType.Cash);
+            AddBankAccount(1, DateTime.UtcNow.AddMonths(-8), 100, "Main", AccountType.Cash);
+            AddBankAccount(1, DateTime.UtcNow.AddMinutes(-1), 0, "Empty Bank", AccountType.Cash);
             //		AddBankAccount(DateTime.UtcNow.AddMonths(-8), 10, "Cash", AccountType.Cash);
 
             //AddBankAccount(DateTime.UtcNow.AddMonths(-8), 10, "Bonds", AccountType.Bond);
@@ -296,10 +296,10 @@ namespace FinanceManager.Infrastructure.Repositories
 
             //AddStockAccount(DateTime.UtcNow.AddMonths(-1), 10, "Empty Wallet", []);
         }
-        private void AddStockAccount(DateTime startDay, decimal startingBalance, string accountName, List<(string, InvestmentType)> tickers)
+        private void AddStockAccount(int userId, DateTime startDay, decimal startingBalance, string accountName, List<(string, InvestmentType)> tickers)
         {
             int accountId = GetLastAccountId() + 1;
-            AddAccount(new InvestmentAccount(accountId, accountName));
+            AddAccount(new StockAccount(userId, accountId, accountName));
             if (tickers is null || tickers.Count == 0) return;
             int tickerIndex = random.Next(tickers.Count);
             AddStockAccountEntry(accountId, tickers[tickerIndex].Item1, tickers[tickerIndex].Item2, startingBalance, startDay);
@@ -315,21 +315,21 @@ namespace FinanceManager.Infrastructure.Repositories
         }
         private void AddStockAccountEntry(int id, string ticker, InvestmentType investmentType, decimal balanceChange, DateTime? postingDate = null)
         {
-            var account = FindAccount<InvestmentAccount>(id);
+            var account = FindAccount<StockAccount>(id);
             if (account is null) return;
 
             var finalPostingDate = postingDate ?? DateTime.UtcNow;
 
             account.Add(new AddInvestmentEntryDto(finalPostingDate, balanceChange, ticker, investmentType));
         }
-        private void AddBankAccount(DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
+        private void AddBankAccount(int userId, DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
         {
             int accountId = GetLastAccountId() + 1;
             ExpenseType expenseType = GetRandomType();
             if (accountType == AccountType.Stock)
                 expenseType = ExpenseType.Investment;
 
-            AddAccount(new BankAccount(accountId, accountName, accountType));
+            AddAccount(new BankAccount(userId, accountId, accountName, accountType));
             AddBankAccountEntry(accountId, startingBalance, $"Lorem ipsum {0}", expenseType, startDay);
             startDay = startDay.AddMinutes(1);
             int index = 0;
@@ -345,11 +345,11 @@ namespace FinanceManager.Infrastructure.Repositories
                 startDay = startDay.AddDays(1);
             }
         }
-        private void AddLoanAccount(DateTime startDay, decimal startingBalance, string accountName)
+        private void AddLoanAccount(int userId, DateTime startDay, decimal startingBalance, string accountName)
         {
             int accountId = GetLastAccountId() + 1;
 
-            AddAccount(new BankAccount(accountId, accountName, AccountType.Loan));
+            AddAccount(new BankAccount(userId, accountId, accountName, AccountType.Loan));
 
             AddBankAccountEntry(accountId, startingBalance, $"Lorem ipsum {0}", ExpenseType.DebtRepayment, startDay);
             startDay = startDay.AddMinutes(1);
@@ -387,9 +387,9 @@ namespace FinanceManager.Infrastructure.Repositories
 
             entryToUpdate.Update(bankAccountEntry);
         }
-        private void UpdateStockAccountEntry(int id, InvestmentEntry investmentEntry)
+        private void UpdateStockAccountEntry(int id, StockEntry investmentEntry)
         {
-            var investmentAccount = FindAccount<InvestmentAccount>(id);
+            var investmentAccount = FindAccount<StockAccount>(id);
             if (investmentAccount is null || investmentAccount.Entries is null) return;
 
             var entryToUpdate = investmentAccount.Entries.FirstOrDefault(x => x.Id == investmentEntry.Id);

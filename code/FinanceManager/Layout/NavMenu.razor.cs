@@ -50,9 +50,9 @@ namespace FinanceManager.WebUi.Layout
                         if (existinhAccount is not null)
                             name = existinhAccount.Name;
                     }
-                    else if (account.Value == typeof(InvestmentAccount))
+                    else if (account.Value == typeof(StockAccount))
                     {
-                        var existinhAccount = FinancalAccountRepository.GetAccount<InvestmentAccount>(account.Key, DateTime.UtcNow, DateTime.UtcNow);
+                        var existinhAccount = FinancalAccountRepository.GetAccount<StockAccount>(account.Key, DateTime.UtcNow, DateTime.UtcNow);
                         if (existinhAccount is not null)
                             name = existinhAccount.Name;
                     }

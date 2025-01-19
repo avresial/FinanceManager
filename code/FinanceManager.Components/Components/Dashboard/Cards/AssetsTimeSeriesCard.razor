@@ -10,18 +10,18 @@
 <div class="card">
     <div class="row m-0">
         <div class="card-body">
-        <h5 class="card-title">Assets value over time</h5>
+            <h5 class="card-title">Assets value over time</h5>
         </div>
     </div>
     <div class="row" style="min-height: 150px; position:relative; bottom:-2px">
         <ApexChart @ref="chart" TItem="TimeSeriesModel" Height="150" Options=@options XAxisType="XAxisType.Datetime">
             <ApexPointSeries TItem="TimeSeriesModel"
-                             Items="priceTimeseries"
-                             Name="Assets value"
-                             XValue="e => e.DateTime.ToLocalTime()"
-                             YValue="e=> e.Value"
-                             SeriesType="SeriesType.Area"
-                             OrderByDescending="@(e=>e.X)" />
+            Items="priceTimeseries"
+            Name="Assets value"
+            XValue="e => e.DateTime.ToLocalTime()"
+            YValue="e=> e.Value"
+            SeriesType="SeriesType.Area"
+            OrderByDescending="@(e=>e.X)" />
         </ApexChart>
     </div>
 </div>
@@ -46,10 +46,17 @@
     [Inject]
     public required ISettingsService settingsService { get; set; }
 
+    [Inject]
+    public required ILoginService loginService { get; set; }
+
+
 
     protected override async Task OnInitializedAsync()
     {
-        priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(StartDateTime, DateTime.UtcNow);
+        var user = await loginService.GetLoggedUser();
+        if (user is null) return;
+
+        priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow);
 
         options.Tooltip = new ApexCharts.Tooltip
             {
@@ -62,7 +69,10 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(StartDateTime, DateTime.UtcNow);
+        var user = await loginService.GetLoggedUser();
+        if (user is null) return;
+
+        priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow);
     }
 
     private ApexChartOptions<TimeSeriesModel> options { get; set; } = new()

@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
+using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,9 +10,9 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
-public class BankAccountController(IBankAccountRepository bankAccountRepository) : ControllerBase
+public class BankAccountController(IAccountRepository<BankAccount> bankAccountRepository) : ControllerBase
 {
-    private readonly IBankAccountRepository bankAccountRepository = bankAccountRepository;
+    private readonly IAccountRepository<BankAccount> bankAccountRepository = bankAccountRepository;
 
     [HttpGet("{accountId:int}")]
     public async Task<IActionResult> Get(int accountId)

@@ -10,6 +10,7 @@
 
 @inject IFinancalAccountRepository bankAccountRepository;
 @inject ISettingsService settingsService;
+@inject ILoginService loginService;
 
 
 <div class="card" style="height:@Height;">
@@ -121,9 +122,12 @@
     private async Task<List<SpendingOverviewEntry>> GetData()
     {
         var result = new List<SpendingOverviewEntry>();
-        await Task.Run(() =>
+        await Task.Run(async () =>
         {
-            var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now);
+            var user = await loginService.GetLoggedUser();
+            if (user is null) return;
+
+            var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now);
             if (bankAccounts is null) return;
 
             foreach (var account in bankAccounts)

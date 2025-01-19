@@ -1,6 +1,7 @@
 ﻿@using ApexCharts
 @using FinanceManager.Domain.Entities
 @using FinanceManager.Domain.Entities.Accounts
+@using FinanceManager.Domain.Entities.Login
 @using FinanceManager.Domain.Entities.MoneyFlowModels
 @using FinanceManager.Domain.Providers
 @using FinanceManager.Domain.Repositories
@@ -12,6 +13,7 @@
 @inject IFinancalAccountRepository bankAccountRepository;
 @inject ISettingsService settingsService;
 @inject IStockRepository stockRepository;
+@inject ILoginService loginService;
 
 <div class="card" style="height:@Height;">
     <div class="row m-0">
@@ -69,12 +71,12 @@
                 <ApexChart @ref="chart" Height="@("100%")" TItem="AssetEntry" Options="options">
 
                     <ApexPointSeries TItem="AssetEntry"
-                    Items="Data"
-                    Name="Assets"
-                    XValue="e => e.Name.ToString()"
-                    YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"
-                    SeriesType="SeriesType.Pie"
-                    OrderByDescending="@(e=>e.Y)" />
+                                     Items="Data"
+                                     Name="Assets"
+                                     XValue="e => e.Name.ToString()"
+                                     YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"
+                                     SeriesType="SeriesType.Pie"
+                                     OrderByDescending="@(e=>e.Y)" />
 
                 </ApexChart>
             </div>
@@ -88,6 +90,7 @@
 @code {
     private string currency = "";
     private decimal TotalAssets = 0;
+    private UserSession? user;
 
     [Parameter]
     public bool DisplayAsChart { get; set; } = true;
@@ -164,6 +167,9 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        user = await loginService.GetLoggedUser();
+        if (user is null) return;
+
         foreach (var dataEntry in Data)
             dataEntry.Value = 0;
 
@@ -186,7 +192,8 @@
             return;
         }
 
-        Data = await moneyFlowService.GetEndAssetsPerAcount(StartDateTime, DateTime.UtcNow);
+        if (user is not null)
+            Data = await moneyFlowService.GetEndAssetsPerAcount(user.UserId, StartDateTime, DateTime.UtcNow);
         TotalAssets = Data.Sum(x => x.Value);
     }
 }

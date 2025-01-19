@@ -46,7 +46,7 @@
     public required string InvestmentAccountName { get; set; }
 
     [Parameter]
-    public required InvestmentEntry InvestmentEntry { get; set; }
+    public required StockEntry InvestmentEntry { get; set; }
 
     [Inject]
     public required ISettingsService SettingsService { get; set; }

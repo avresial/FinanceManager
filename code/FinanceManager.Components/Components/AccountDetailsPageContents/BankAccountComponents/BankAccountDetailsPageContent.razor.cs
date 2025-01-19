@@ -2,6 +2,7 @@ using ApexCharts;
 using FinanceManager.Application.Services;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
@@ -24,6 +25,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
         private List<BankAccountEntry>? Top5;
         private List<BankAccountEntry>? Bottom5;
         private string currency = "PLN";
+        private UserSession? user;
 
         public bool IsLoading = false;
         public BankAccount? Account { get; set; }
@@ -39,6 +41,9 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
 
         [Inject]
         public required ISettingsService settingsService { get; set; }
+
+        [Inject]
+        public required ILoginService loginService { get; set; }
 
         public async Task ShowOverlay()
         {
@@ -81,7 +86,9 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
             if (Account is null || Account.Start is null) return;
 
             dateStart = dateStart.AddMonths(-1);
-            var newData = FinancalAccountRepository.GetAccount<BankAccount>(AccountId, dateStart, Account.Start.Value);
+            if (user is null) return;
+
+            var newData = FinancalAccountRepository.GetAccount<BankAccount>(user.UserId, AccountId, dateStart, Account.Start.Value);
 
             if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
                 return;
@@ -112,6 +119,9 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
         protected override async Task OnParametersSetAsync()
         {
             IsLoading = true;
+            user = await loginService.GetLoggedUser();
+            if (user is null) return;
+
             if (chart is not null)
             {
                 if (Account is not null && Account.Entries is not null)
@@ -143,9 +153,12 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
                     if (accountType == typeof(BankAccount))
                     {
                         UpdateDates();
-                        Account = FinancalAccountRepository.GetAccount<BankAccount>(AccountId, dateStart, DateTime.UtcNow);
-                        if (Account is not null && Account.Entries is not null)
-                            UpdateInfo();
+                        if (user is not null)
+                        {
+                            Account = FinancalAccountRepository.GetAccount<BankAccount>(user.UserId, AccountId, dateStart, DateTime.UtcNow);
+                            if (Account is not null && Account.Entries is not null)
+                                UpdateInfo();
+                        }
                     }
                 }
 

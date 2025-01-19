@@ -73,7 +73,7 @@
     public Func<Task>? ActionCompleted { get; set; }
 
     [Parameter]
-    public required InvestmentAccount InvestmentAccount { get; set; }
+    public required StockAccount InvestmentAccount { get; set; }
 
     [Inject]
     public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
@@ -139,7 +139,7 @@
         if (currentMaxId is not null)
             id += currentMaxId.Value + 1;
 
-        InvestmentEntry entry = new(id, date.ToUniversalTime(), -1, BalanceChange.Value, Ticker, investmentType);
+        StockEntry entry = new(id, date.ToUniversalTime(), -1, BalanceChange.Value, Ticker, investmentType);
 
         try
         {

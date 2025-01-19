@@ -17,7 +17,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
         private decimal? balanceChange = null;
         private ApexChart<ChartEntryModel>? chart;
-        private Dictionary<InvestmentEntry, StockPrice> prices = new();
+        private Dictionary<StockEntry, StockPrice> prices = new();
         private List<string> stocks = new List<string>();
         private bool LoadedAllData = false;
         private DateTime dateStart;
@@ -27,12 +27,12 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         private List<ChartEntryModel> pricesDaily = new();
         private bool visible;
 
-        internal List<(InvestmentEntry, decimal)>? Top5;
-        internal List<(InvestmentEntry, decimal)>? Bottom5;
+        internal List<(StockEntry, decimal)>? Top5;
+        internal List<(StockEntry, decimal)>? Bottom5;
         internal string currency = string.Empty;
 
         public bool IsLoading = false;
-        public InvestmentAccount? Account { get; set; }
+        public StockAccount? Account { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
         public Type? accountType;
 
@@ -109,11 +109,11 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
                     UpdateDates();
 
-                    if (accountType == typeof(InvestmentAccount))
+                    if (accountType == typeof(StockAccount))
                     {
                         prices.Clear();
                         LoadedAllData = true;
-                        Account = FinancalAccountRepository.GetAccount<InvestmentAccount>(AccountId, dateStart, DateTime.UtcNow);
+                        Account = FinancalAccountRepository.GetAccount<StockAccount>(AccountId, dateStart, DateTime.UtcNow);
 
                         if (Account is not null && Account.Entries is not null)
                             await UpdateInfo();
@@ -154,7 +154,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
             if (Account.Entries is null) return;
 
-            List<(InvestmentEntry, decimal)> orderedByPrice = new List<(InvestmentEntry, decimal)>();
+            List<(StockEntry, decimal)> orderedByPrice = new List<(StockEntry, decimal)>();
             foreach (var entry in Account.Entries)
             {
                 var price = await StockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
@@ -171,7 +171,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             if (Account is null || Account.Start is null) return;
 
             dateStart = dateStart.AddMonths(-1);
-            var newData = FinancalAccountRepository.GetAccount<InvestmentAccount>(AccountId, dateStart, Account.Start.Value);
+            var newData = FinancalAccountRepository.GetAccount<StockAccount>(Account.UserId, AccountId, dateStart, Account.Start.Value);
 
             if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
                 return;
