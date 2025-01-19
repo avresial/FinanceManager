@@ -3,7 +3,7 @@ using FinanceManager.Application.Services;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Providers;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;

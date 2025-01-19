@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
 
-namespace FinanceManager.Domain.Repositories
+namespace FinanceManager.Domain.Repositories.Account
 {
     public interface IFinancalAccountRepository
     {

@@ -3,6 +3,7 @@ using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Repositories.Account;
 using Moq;
 
 namespace FinanceManager.UnitTests

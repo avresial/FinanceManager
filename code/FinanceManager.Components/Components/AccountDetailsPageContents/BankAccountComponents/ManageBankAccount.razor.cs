@@ -1,7 +1,7 @@
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Repositories.Account;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 

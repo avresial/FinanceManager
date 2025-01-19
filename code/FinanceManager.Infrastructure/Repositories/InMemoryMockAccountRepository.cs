@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Repositories.Account;
 using System.ComponentModel.Design;
 
 namespace FinanceManager.Infrastructure.Repositories
@@ -68,7 +68,7 @@ namespace FinanceManager.Infrastructure.Repositories
                 if (olderThenLoadedEntry is not null)
                     olderThenLoadedEntryDate = olderThenLoadedEntry.PostingDate;
 
-                BankAccount account = new(databaseBankAccount.Id, databaseBankAccount.Name, [], databaseBankAccount.AccountType, olderThenLoadedEntryDate);
+                BankAccount account = new(-1, databaseBankAccount.Id, databaseBankAccount.Name, [], databaseBankAccount.AccountType, olderThenLoadedEntryDate);
 
                 foreach (var element in databaseBankAccount.Get(dateStart, dateEnd))
                 {

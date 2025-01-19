@@ -1,6 +1,6 @@
 ﻿using Blazored.LocalStorage;
 using Blazored.SessionStorage;
-using FinanceManager.Api.Models;
+using FinanceManager.Application.Commands.Login;
 using FinanceManager.Application.Providers;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.Entities.Login;

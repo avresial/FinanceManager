@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Repositories;
+﻿using FinanceManager.Domain.Repositories.Account;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.WebUi.Pages.Account
