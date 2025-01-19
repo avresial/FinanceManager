@@ -143,7 +143,7 @@
         try
         {
             InvestmentAccount.UpdateEntry(bankAccountEntry);
-            FinancalAccountRepository.UpdateEntry(bankAccountEntry, InvestmentAccount.Id);
+            FinancalAccountRepository.UpdateEntry(bankAccountEntry, InvestmentAccount.AccountId);
         }
         catch (Exception ex)
         {

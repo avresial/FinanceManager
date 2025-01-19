@@ -15,21 +15,21 @@ namespace FinanceManager.Infrastructure.Repositories
 
         public bool Delete(int accountId)
         {
-            if (!_bankAccounts.Any(x => x.Id == accountId))
+            if (!_bankAccounts.Any(x => x.AccountId == accountId))
                 return false;
 
-            _bankAccounts.RemoveAll(x => x.Id == accountId);
+            _bankAccounts.RemoveAll(x => x.AccountId == accountId);
 
             return true;
         }
 
-        public IList<(int, string)> GetAvailableAccounts(int accountId) => _bankAccounts.Where(x => x.UserId == accountId).Select(x => (x.Id, x.Name)).ToList();
+        public IList<(int, string)> GetAvailableAccounts(int userId) => _bankAccounts.Where(x => x.UserId == userId).Select(x => (x.AccountId, x.Name)).ToList();
 
-        public BankAccount? Get(int accountId) => _bankAccounts.FirstOrDefault(x => x.Id == accountId);
+        public BankAccount? Get(int accountId) => _bankAccounts.FirstOrDefault(x => x.AccountId == accountId);
 
         public bool Update(int accountId, string accountName)
         {
-            var bankAccount = _bankAccounts.FirstOrDefault(x => x.Id == accountId);
+            var bankAccount = _bankAccounts.FirstOrDefault(x => x.AccountId == accountId);
             if (bankAccount == null) return false;
 
             bankAccount.Name = accountName;

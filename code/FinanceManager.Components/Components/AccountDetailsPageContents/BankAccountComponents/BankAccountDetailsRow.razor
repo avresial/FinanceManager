@@ -147,7 +147,7 @@
         await InvokeAsync(StateHasChanged);
 
         BankAccount.Remove(BankAccountEntry.Id);
-        FinancalAccountRepository.RemoveEntry(BankAccountEntry.Id, BankAccount.Id);
+        FinancalAccountRepository.RemoveEntry(BankAccountEntry.Id, BankAccount.AccountId);
     }
 
     public async Task Cancel()

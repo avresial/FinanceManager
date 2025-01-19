@@ -144,7 +144,7 @@
         try
         {
             InvestmentAccount.Add(new AddInvestmentEntryDto(entry.PostingDate, entry.ValueChange, entry.Ticker, entry.InvestmentType));
-            FinancalAccountRepository.AddEntry(entry, InvestmentAccount.Id);
+            FinancalAccountRepository.AddEntry(entry, InvestmentAccount.AccountId);
         }
         catch (Exception ex)
         {

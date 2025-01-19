@@ -31,9 +31,9 @@
             <div class="col-xs-12 col-lg-2">
 
                 <div class="row">
-                    <MudButton Variant="Variant.Text" Class="col-12" href="@($"Import/{Account.Id}")">Import</MudButton>
+                    <MudButton Variant="Variant.Text" Class="col-12" href="@($"Import/{Account.AccountId}")">Import</MudButton>
                     <MudButton Variant="Variant.Text" Class="col-12" Disabled>Export</MudButton>
-                    <MudButton Variant="Variant.Text" Class="col-12" href="@($"ManageAccount/{Account.Id}")">Manage</MudButton>
+                    <MudButton Variant="Variant.Text" Class="col-12" href="@($"ManageAccount/{Account.AccountId}")">Manage</MudButton>
                 </div>
                 <div class="row">
                     <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick=ShowOverlay

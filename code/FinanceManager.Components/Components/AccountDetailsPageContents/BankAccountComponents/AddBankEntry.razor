@@ -111,7 +111,7 @@
         try
         {
             BankAccount.Add(bankAccountEntry);
-            FinancalAccountRepository.AddEntry(bankAccountEntry, BankAccount.Id);
+            FinancalAccountRepository.AddEntry(bankAccountEntry, BankAccount.AccountId);
         }
         catch (Exception ex)
         {

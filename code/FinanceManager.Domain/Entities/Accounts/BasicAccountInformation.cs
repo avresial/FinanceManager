@@ -2,7 +2,7 @@
 {
     public class BasicAccountInformation
     {
-        public int Id { get; set; }
+        public int AccountId { get; set; }
 
         /// <summary>
         /// Owner

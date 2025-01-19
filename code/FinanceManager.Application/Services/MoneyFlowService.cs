@@ -218,7 +218,7 @@ namespace FinanceManager.Application.Services
                 if (bankAccount.OlderThenLoadedEntry is null) continue;
                 if (bankAccount.Entries is null) continue;
 
-                var newBankAccount = _bankAccountRepository.GetAccount<BankAccount>(userId, bankAccount.Id, bankAccount.OlderThenLoadedEntry.Value, bankAccount.OlderThenLoadedEntry.Value.AddSeconds(1));
+                var newBankAccount = _bankAccountRepository.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThenLoadedEntry.Value, bankAccount.OlderThenLoadedEntry.Value.AddSeconds(1));
                 if (newBankAccount is not null && newBankAccount.Entries is not null)
                     bankAccount.Add(newBankAccount.Entries, false);
             }
@@ -231,7 +231,7 @@ namespace FinanceManager.Application.Services
                     if (investmentAccount.Entries is null) continue;
                     if (investmentAccount.Entries.Any(x => x.Ticker == item.Key)) continue;
 
-                    var newInvestmentAccount = _bankAccountRepository.GetAccount<StockAccount>(userId, investmentAccount.Id, item.Value, item.Value.AddSeconds(1));
+                    var newInvestmentAccount = _bankAccountRepository.GetAccount<StockAccount>(userId, investmentAccount.AccountId, item.Value, item.Value.AddSeconds(1));
                     if (newInvestmentAccount is not null && newInvestmentAccount.Entries is not null)
                         investmentAccount.Add(newInvestmentAccount.Entries, false);
                 }

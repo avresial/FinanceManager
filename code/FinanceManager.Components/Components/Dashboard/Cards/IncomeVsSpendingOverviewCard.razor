@@ -1,13 +1,16 @@
 ﻿@using ApexCharts
 @using FinanceManager.Domain.Entities
+@using FinanceManager.Domain.Entities.Login
 @using FinanceManager.Domain.Repositories
 @using FinanceManager.Domain.Extensions
 @using FinanceManager.Domain.Entities.Accounts
 @using FinanceManager.Domain.Repositories.Account
 @using FinanceManager.Domain.Services
 @using FinanceManager.Components.Helpers
+
 @inject IFinancalAccountRepository bankAccountRepository;
 @inject ISettingsService settingsService;
+@inject ILoginService loginService;
 
 
 <div class="card" style="height:@Height;">
@@ -48,6 +51,7 @@
 
 
 @code {
+    private UserSession? user;
 
     private ApexChart<IncomeVsSpendingEntry>? chart;
 
@@ -139,6 +143,9 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        user = await loginService.GetLoggedUser();
+        if (user is null) return;
+
         Data.Clear();
         Data.AddRange(await GetData());
 
@@ -150,7 +157,9 @@
         List<IncomeVsSpendingEntry> result = new List<IncomeVsSpendingEntry>();
         await Task.Run(() =>
         {
-            var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now);
+            IEnumerable<BankAccount>? bankAccounts = null;
+            if (user is not null)
+                bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now);
             if (bankAccounts is null) return;
             foreach (var account in bankAccounts.Where(x => x.Entries is not null && x.Entries.Any()))
             {

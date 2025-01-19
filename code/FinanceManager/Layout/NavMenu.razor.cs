@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.WebUi.Layout
@@ -12,15 +13,17 @@ namespace FinanceManager.WebUi.Layout
 
         [Inject]
         public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
+        [Inject]
+        public required ILoginService loginService { get; set; }
 
         public Dictionary<int, string> Accounts = [];
         public string ErrorMessage { get; set; } = string.Empty;
 
-        protected override void OnInitialized()
+        protected override async Task OnInitializedAsync()
         {
             try
             {
-                UpdateAccounts();
+                await UpdateAccounts();
                 AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
             }
             catch (Exception ex)
@@ -31,14 +34,16 @@ namespace FinanceManager.WebUi.Layout
 
         private void AccountDataSynchronizationService_AccountsChanged()
         {
-            UpdateAccounts();
-            StateHasChanged();
+            _ = UpdateAccounts();
+            _ = InvokeAsync(StateHasChanged);
         }
 
-        private void UpdateAccounts()
+        private async Task UpdateAccounts()
         {
             try
             {
+                var user = await loginService.GetLoggedUser();
+                if (user is null) return;
                 Accounts.Clear();
                 foreach (var account in FinancalAccountRepository.GetAvailableAccounts())
                 {
@@ -46,13 +51,13 @@ namespace FinanceManager.WebUi.Layout
                     var name = string.Empty;
                     if (account.Value == typeof(BankAccount))
                     {
-                        var existinhAccount = FinancalAccountRepository.GetAccount<BankAccount>(account.Key, DateTime.UtcNow, DateTime.UtcNow);
+                        var existinhAccount = FinancalAccountRepository.GetAccount<BankAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
                         if (existinhAccount is not null)
                             name = existinhAccount.Name;
                     }
                     else if (account.Value == typeof(StockAccount))
                     {
-                        var existinhAccount = FinancalAccountRepository.GetAccount<StockAccount>(account.Key, DateTime.UtcNow, DateTime.UtcNow);
+                        var existinhAccount = FinancalAccountRepository.GetAccount<StockAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
                         if (existinhAccount is not null)
                             name = existinhAccount.Name;
                     }

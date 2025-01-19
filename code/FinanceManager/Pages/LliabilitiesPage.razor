@@ -7,6 +7,7 @@
 
 @inject ISettingsService settingsService;
 @inject IFinancalAccountRepository bankAccountRepository;
+@inject ILoginService loginService;
 
 <PageTitle>Lliabilities</PageTitle>
 
@@ -61,11 +62,13 @@
     private const int UnitHeight = 190;
 
     public decimal TotalLiabilities;
-    public DateTime StartDateTime { get; set; } 
+    public DateTime StartDateTime { get; set; }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
+        var user = await loginService.GetLoggedUser();
+        if (user is null) return;
+        var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(user.UserId, DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
         if (bankAccounts is null) return;
 
         bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value <= 0).ToList();

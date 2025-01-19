@@ -55,7 +55,7 @@ namespace FinanceManager.Infrastructure.Repositories
             if (_bankAccounts.GetService(typeof(List<T>)) is not List<T> accountsOfType) return default;
             if (dateStart == new DateTime() || dateEnd == new DateTime()) return default;
 
-            var firstAccount = accountsOfType.FirstOrDefault(x => x.Id == accountId);
+            var firstAccount = accountsOfType.FirstOrDefault(x => x.AccountId == accountId);
             if (firstAccount is null) return default;
 
             if (typeof(T) == typeof(BankAccount))
@@ -68,7 +68,7 @@ namespace FinanceManager.Infrastructure.Repositories
                 if (olderThenLoadedEntry is not null)
                     olderThenLoadedEntryDate = olderThenLoadedEntry.PostingDate;
 
-                BankAccount account = new(userId, databaseBankAccount.Id, databaseBankAccount.Name, [], databaseBankAccount.AccountType, olderThenLoadedEntryDate);
+                BankAccount account = new(userId, databaseBankAccount.AccountId, databaseBankAccount.Name, [], databaseBankAccount.AccountType, olderThenLoadedEntryDate);
 
                 foreach (var element in databaseBankAccount.Get(dateStart, dateEnd))
                 {
@@ -88,7 +88,7 @@ namespace FinanceManager.Infrastructure.Repositories
                     if (!olderThenLoadedEntry.ContainsKey(entry.Ticker))
                         olderThenLoadedEntry.Add(entry.Ticker, entry.PostingDate);
                 }
-                StockAccount bankAccount = new(userId, databaseInvestmentAccount.Id, databaseInvestmentAccount.Name, [], olderThenLoadedEntry);
+                StockAccount bankAccount = new(userId, databaseInvestmentAccount.AccountId, databaseInvestmentAccount.Name, [], olderThenLoadedEntry);
 
                 foreach (var element in databaseInvestmentAccount.Get(dateStart, dateEnd))
                     bankAccount.Add(element.GetCopy(), false);
@@ -112,7 +112,7 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 if (account is null) continue;
 
-                var newAccount = GetAccount<T>(userId, account.Id, dateStart, dateEnd);
+                var newAccount = GetAccount<T>(userId, account.AccountId, dateStart, dateEnd);
                 if (newAccount is null) continue;
 
                 result.Add(newAccount);
@@ -130,7 +130,7 @@ namespace FinanceManager.Infrastructure.Repositories
             else
                 accountsOfType.Add(bankAccount);
 
-            nameTypeDictionary.Add(bankAccount.Id, typeof(T));
+            nameTypeDictionary.Add(bankAccount.AccountId, typeof(T));
         }
         public void AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
             where AccountType : BasicAccountInformation
@@ -142,7 +142,7 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             if (_bankAccounts is null) return;
 
-            if (!AccountExists(account.Id)) throw new Exception("Account does not exist");
+            if (!AccountExists(account.AccountId)) throw new Exception("Account does not exist");
 
             switch (account)
             {
@@ -150,7 +150,7 @@ namespace FinanceManager.Infrastructure.Repositories
                     List<BankAccount>? bankAccounts = _bankAccounts.GetService(typeof(List<BankAccount>)) as List<BankAccount>;
                     if (bankAccounts is not null)
                     {
-                        var accountToUpdate = bankAccounts.FirstOrDefault(x => x.Id == bankAccount.Id);
+                        var accountToUpdate = bankAccounts.FirstOrDefault(x => x.AccountId == bankAccount.AccountId);
                         if (accountToUpdate is not null)
                         {
                             accountToUpdate.Name = bankAccount.Name;
@@ -163,13 +163,13 @@ namespace FinanceManager.Infrastructure.Repositories
                     List<StockAccount>? investmentAccounts = _bankAccounts.GetService(typeof(List<StockAccount>)) as List<StockAccount>;
                     if (investmentAccounts is not null)
                     {
-                        var accountToUpdate = investmentAccounts.FirstOrDefault(x => x.Id == investmentAccount.Id);
+                        var accountToUpdate = investmentAccounts.FirstOrDefault(x => x.AccountId == investmentAccount.AccountId);
                         if (accountToUpdate is not null)
                             accountToUpdate.Name = investmentAccount.Name;
                     }
                     break;
                 default:
-                    throw new Exception($"Unexpected type: {account.GetType()} - account id:{account.Id}"); // make new exception
+                    throw new Exception($"Unexpected type: {account.GetType()} - account id:{account.AccountId}"); // make new exception
             }
         }
         public void RemoveAccount(int id)
@@ -183,12 +183,12 @@ namespace FinanceManager.Infrastructure.Repositories
             if (accountType == typeof(BankAccount))
             {
                 List<BankAccount>? accountsOfType = _bankAccounts.GetService(typeof(List<BankAccount>)) as List<BankAccount>;
-                accountsOfType?.RemoveAll(x => x.Id == id);
+                accountsOfType?.RemoveAll(x => x.AccountId == id);
             }
             else if (accountType == typeof(StockAccount))
             {
                 List<StockAccount>? accountsOfType = _bankAccounts.GetService(typeof(List<StockAccount>)) as List<StockAccount>;
-                accountsOfType?.RemoveAll(x => x.Id == id);
+                accountsOfType?.RemoveAll(x => x.AccountId == id);
             }
             else
             {
@@ -241,14 +241,14 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 if (_bankAccounts.GetService(typeof(List<BankAccount>)) is not List<BankAccount> bankAccounts) return null;
 
-                return bankAccounts.FirstOrDefault(x => x.Id == id);
+                return bankAccounts.FirstOrDefault(x => x.AccountId == id);
             }
 
             if (accountType == typeof(StockAccount))
             {
                 if (_bankAccounts.GetService(typeof(List<StockAccount>)) is not List<StockAccount> investmentAccounts) return null;
 
-                return investmentAccounts.FirstOrDefault(x => x.Id == id);
+                return investmentAccounts.FirstOrDefault(x => x.AccountId == id);
             }
 
             return null;
@@ -257,7 +257,7 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             if (_bankAccounts.GetService(typeof(List<T>)) is not List<T> accountsOfType) return default;
 
-            var firstAccount = accountsOfType.FirstOrDefault(x => x.Id == id);
+            var firstAccount = accountsOfType.FirstOrDefault(x => x.AccountId == id);
             if (firstAccount is null) return default;
 
             return firstAccount;

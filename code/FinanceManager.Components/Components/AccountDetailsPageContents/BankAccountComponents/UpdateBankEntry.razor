@@ -108,7 +108,7 @@
         try
         {
             BankAccount.UpdateEntry(bankAccountEntry);
-            FinancalAccountRepository.UpdateEntry(bankAccountEntry, BankAccount.Id);
+            FinancalAccountRepository.UpdateEntry(bankAccountEntry, BankAccount.AccountId);
         }
         catch (Exception ex)
         {

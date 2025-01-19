@@ -62,7 +62,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
             if (InvestmentAccount is null) return;
 
-            StockAccount updatedAccount = new StockAccount(InvestmentAccount.UserId, InvestmentAccount.Id, AccountName);
+            StockAccount updatedAccount = new StockAccount(InvestmentAccount.UserId, InvestmentAccount.AccountId, AccountName);
             FinancalAccountRepository.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");

@@ -14,6 +14,20 @@ public class BankAccountController(IAccountRepository<BankAccount> bankAccountRe
 {
     private readonly IAccountRepository<BankAccount> bankAccountRepository = bankAccountRepository;
 
+    [HttpGet]
+    public async Task<IActionResult> Get()
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (userId is null) return BadRequest();
+
+        var account = bankAccountRepository.GetAvailableAccounts(userId.Value);
+
+        if (account == null) return NoContent();
+
+        return Ok(account);
+    }
+
+
     [HttpGet("{accountId:int}")]
     public async Task<IActionResult> Get(int accountId)
     {
@@ -23,7 +37,7 @@ public class BankAccountController(IAccountRepository<BankAccount> bankAccountRe
         var account = bankAccountRepository.Get(accountId);
 
         if (account == null) return NoContent();
-        if (account.Id != userId) return BadRequest();
+        if (account.UserId != userId) return BadRequest();
 
         return Ok(account);
     }
@@ -47,7 +61,7 @@ public class BankAccountController(IAccountRepository<BankAccount> bankAccountRe
 
         var account = bankAccountRepository.Get(updateAccount.accountId);
 
-        if (account == null || account.Id != userId) return BadRequest();
+        if (account == null || account.UserId != userId) return BadRequest();
         return Ok(bankAccountRepository.Update(updateAccount.accountId, updateAccount.accountName));
     }
 
@@ -61,7 +75,7 @@ public class BankAccountController(IAccountRepository<BankAccount> bankAccountRe
 
         var account = bankAccountRepository.Get(deleteAccount.accountId);
 
-        if (account == null || account.Id != userId) return BadRequest();
+        if (account == null || account.UserId != userId) return BadRequest();
         return Ok(bankAccountRepository.Delete(deleteAccount.accountId));
     }
 }

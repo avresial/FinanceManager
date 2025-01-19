@@ -12,7 +12,7 @@ namespace FinanceManager.Domain.Entities.Accounts
         public FinancialAccountBase(int userId, int id, string name)
         {
             UserId = userId;
-            Id = id;
+            AccountId = id;
             Name = name;
         }
         public virtual IEnumerable<T> Get()

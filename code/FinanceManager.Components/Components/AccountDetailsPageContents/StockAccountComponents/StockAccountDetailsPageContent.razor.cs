@@ -3,6 +3,7 @@ using FinanceManager.Application.Services;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
@@ -23,6 +24,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         private DateTime dateStart;
         private DateTime? oldestEntryDate;
         private DateTime? youngestEntryDate;
+        private UserSession? user;
 
         private List<ChartEntryModel> pricesDaily = new();
         private bool visible;
@@ -48,6 +50,8 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
         [Inject]
         public required ISettingsService settingsService { get; set; }
+        [Inject]
+        public required ILoginService loginService { get; set; }
 
         public async Task ShowOverlay()
         {
@@ -84,7 +88,8 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         {
             IsLoading = true;
             currency = settingsService.GetCurrency();
-
+            user = await loginService.GetLoggedUser();
+            if (user is null) return;
             if (chart is not null)
             {
                 if (Account is not null && Account.Entries is not null)
@@ -113,7 +118,8 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
                     {
                         prices.Clear();
                         LoadedAllData = true;
-                        Account = FinancalAccountRepository.GetAccount<StockAccount>(AccountId, dateStart, DateTime.UtcNow);
+                        if (user is not null)
+                            Account = FinancalAccountRepository.GetAccount<StockAccount>(user.UserId, AccountId, dateStart, DateTime.UtcNow);
 
                         if (Account is not null && Account.Entries is not null)
                             await UpdateInfo();
