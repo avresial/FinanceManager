@@ -9,9 +9,10 @@ namespace FinanceManager.Domain.Entities.Accounts
 
         public List<T>? Entries { get; protected set; }
 
-        public FinancialAccountBase(int id, string name)
+        public FinancialAccountBase(int userId, int id, string name)
         {
-            Id = id;
+            UserId = userId;
+            AccountId = id;
             Name = name;
         }
         public virtual IEnumerable<T> Get()

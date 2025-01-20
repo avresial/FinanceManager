@@ -2,10 +2,12 @@
 @using FinanceManager.Domain.Entities.Accounts
 @using FinanceManager.Domain.Enums
 @using FinanceManager.Domain.Repositories
+@using FinanceManager.Domain.Repositories.Account
 @using FinanceManager.Domain.Services
 
 @inject IFinancalAccountRepository bankAccountRepository;
 @inject ISettingsService settingsService;
+@inject ILoginService loginService;
 
 <div class="card" style="height:@Height;">
     <div class="card-body">
@@ -40,10 +42,11 @@
     protected override async Task OnParametersSetAsync()
     {
         Data.Clear();
-
+        var user = await loginService.GetLoggedUser();
+        if (user is null) return;
         await Task.Run(() =>
         {
-            var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(StartDateTime, DateTime.Now);
+            var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now);
             if (bankAccounts is null) return;
 
             foreach (var account in bankAccounts)

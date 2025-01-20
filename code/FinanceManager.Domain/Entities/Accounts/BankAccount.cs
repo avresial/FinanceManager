@@ -9,15 +9,16 @@ namespace FinanceManager.Domain.Entities.Accounts
         public readonly DateTime? YoungerThenLoadedEntry;
         public AccountType AccountType { get; set; }
 
-        public BankAccount(int id, string name, IEnumerable<BankAccountEntry> entries, AccountType accountType, DateTime? olderThenLoadedEntry = null,
-            DateTime? youngerThenLoadedEntry = null) : base(id, name)
+        public BankAccount(int userId, int id, string name, IEnumerable<BankAccountEntry>? entries = null, AccountType accountType = AccountType.Other, DateTime? olderThenLoadedEntry = null,
+            DateTime? youngerThenLoadedEntry = null) : base(userId, id, name)
         {
-            Entries = entries.ToList();
+            this.UserId = userId;
+            Entries = entries is null ? ([]) : entries.ToList();
             AccountType = accountType;
             OlderThenLoadedEntry = olderThenLoadedEntry;
             YoungerThenLoadedEntry = youngerThenLoadedEntry;
         }
-        public BankAccount(int id, string name, AccountType accountType) : base(id, name)
+        public BankAccount(int userId, int id, string name, AccountType accountType) : base(userId, id, name)
         {
             AccountType = accountType;
             Entries = [];

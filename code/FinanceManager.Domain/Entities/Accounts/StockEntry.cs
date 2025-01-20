@@ -30,17 +30,17 @@ namespace FinanceManager.Domain.Entities.Accounts
 
     }
 
-    public class InvestmentEntry : FinancialEntryBase
+    public class StockEntry : FinancialEntryBase
     {
         public string Ticker { get; set; }
         public InvestmentType InvestmentType { get; set; }
-        public InvestmentEntry(int id, DateTime postingDate, decimal value, decimal valueChange, string ticker, InvestmentType investmentType)
+        public StockEntry(int id, DateTime postingDate, decimal value, decimal valueChange, string ticker, InvestmentType investmentType)
             : base(id, postingDate, value, valueChange)
         {
             Ticker = ticker;
             InvestmentType = investmentType;
         }
-        public void Update(InvestmentEntry entry)
+        public void Update(StockEntry entry)
         {
             PostingDate = entry.PostingDate;
 
@@ -52,9 +52,9 @@ namespace FinanceManager.Domain.Entities.Accounts
             InvestmentType = entry.InvestmentType;
         }
 
-        public InvestmentEntry GetCopy()
+        public StockEntry GetCopy()
         {
-            return new InvestmentEntry(Id, PostingDate, Value, ValueChange, Ticker, InvestmentType);
+            return new StockEntry(Id, PostingDate, Value, ValueChange, Ticker, InvestmentType);
         }
 
     }

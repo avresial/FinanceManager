@@ -1,4 +1,4 @@
-﻿using FinanceManager.Api.Models;
+﻿using FinanceManager.Application.Commands.Login;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;

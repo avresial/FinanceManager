@@ -6,6 +6,7 @@
 
 @inject IMoneyFlowService moneyFlowService;
 @inject ISettingsService settingsService;
+@inject ILoginService loginService;
 
 <div class="card" style="height:@Height;">
     <div class="card-body">
@@ -30,8 +31,9 @@
     {
         currency = settingsService.GetCurrency();
         TotalNetWorth = 0;
-
-        var result = await moneyFlowService.GetNetWorth(DateTime.UtcNow);
+        var user = await loginService.GetLoggedUser();
+        if (user is null) return;
+        var result = await moneyFlowService.GetNetWorth(user.UserId, DateTime.UtcNow);
 
         if (result is not null)
             TotalNetWorth = result.Value;

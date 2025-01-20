@@ -1,5 +1,5 @@
-﻿using FinanceManager.Api.Models;
-using FinanceManager.Application.Commands;
+﻿using FinanceManager.Application.Commands;
+using FinanceManager.Application.Commands.User;
 using FinanceManager.Application.Providers;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;

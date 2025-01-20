@@ -3,21 +3,21 @@ using FinanceManager.Domain.Extensions;
 
 namespace FinanceManager.Domain.Entities.Accounts
 {
-    public class InvestmentAccount : FinancialAccountBase<InvestmentEntry>
+    public class StockAccount : FinancialAccountBase<StockEntry>
     {
         public readonly Dictionary<string, DateTime> OlderThenLoadedEntry = new();
         public readonly Dictionary<string, DateTime> YoungerThenLoadedEntry = new();
 
-        public InvestmentAccount(int id, string name, IEnumerable<InvestmentEntry> entries, Dictionary<string, DateTime>? olderThenLoadedEntry = null, Dictionary<string, DateTime>? youngerThenLoadedEntry = null)
-            : base(id, name)
+        public StockAccount(int userId, int accountId, string name, IEnumerable<StockEntry> entries, Dictionary<string, DateTime>? olderThenLoadedEntry = null, Dictionary<string, DateTime>? youngerThenLoadedEntry = null)
+            : base(userId, accountId, name)
         {
             Entries = entries.ToList();
             OlderThenLoadedEntry = olderThenLoadedEntry ?? [];
             YoungerThenLoadedEntry = youngerThenLoadedEntry;
         }
-        public InvestmentAccount(int id, string name) : base(id, name)
+        public StockAccount(int userId, int id, string name) : base(userId, id, name)
         {
-            Entries = new List<InvestmentEntry>();
+            Entries = new List<StockEntry>();
         }
 
 
@@ -27,12 +27,12 @@ namespace FinanceManager.Domain.Entities.Accounts
 
             return Entries.GetStoredTypes();
         }
-        public override IEnumerable<InvestmentEntry> Get(DateTime date)
+        public override IEnumerable<StockEntry> Get(DateTime date)
         {
             if (Entries is null) return [];
             return Entries.Get(date);
         }
-        public override void Add(IEnumerable<InvestmentEntry> entries, bool recalculateValues = true)
+        public override void Add(IEnumerable<StockEntry> entries, bool recalculateValues = true)
         {
             foreach (var entry in entries)
                 Add(entry, recalculateValues);
@@ -46,7 +46,7 @@ namespace FinanceManager.Domain.Entities.Accounts
         }
         public void Add(AddInvestmentEntryDto entry)
         {
-            Entries ??= new List<InvestmentEntry>();
+            Entries ??= new List<StockEntry>();
             var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.Ticker == entry.Ticker && x.ValueChange == entry.ValueChange);
             if (alredyExistingEntry is not null)
             {
@@ -63,19 +63,19 @@ namespace FinanceManager.Domain.Entities.Accounts
             if (index == -1)
             {
                 index = Entries.Count();
-                Entries.Add(new InvestmentEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType));
+                Entries.Add(new StockEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType));
                 index -= 1;
             }
             else
             {
-                Entries.Insert(index, new InvestmentEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType));
+                Entries.Insert(index, new StockEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType));
             }
 
             RecalculateEntryValues(index);
         }
-        public override void Add(InvestmentEntry entry, bool recalculateValues = true)
+        public override void Add(StockEntry entry, bool recalculateValues = true)
         {
-            Entries ??= new List<InvestmentEntry>();
+            Entries ??= new List<StockEntry>();
             var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.Ticker == entry.Ticker && x.ValueChange == entry.ValueChange);
             if (alredyExistingEntry is not null)
             {
@@ -103,9 +103,9 @@ namespace FinanceManager.Domain.Entities.Accounts
                 RecalculateEntryValues(index);
 
         }
-        public override void UpdateEntry(InvestmentEntry entry, bool recalculateValues = true)
+        public override void UpdateEntry(StockEntry entry, bool recalculateValues = true)
         {
-            Entries ??= new List<InvestmentEntry>();
+            Entries ??= new List<StockEntry>();
 
             var entryToUpdate = Entries.FirstOrDefault(x => x.Id == entry.Id);
             if (entryToUpdate is null) return;
@@ -192,7 +192,7 @@ namespace FinanceManager.Domain.Entities.Accounts
             {
                 if (Entries.Count() < i) continue;
 
-                InvestmentEntry? previousIterationEntry = null; // could be stored in local dictionary to improve speed
+                StockEntry? previousIterationEntry = null; // could be stored in local dictionary to improve speed
                 var previousElements = Entries.GetPrevious(Entries[i].PostingDate, Entries[i].Ticker);
                 if (previousElements is not null && previousElements.Any())
                     previousIterationEntry = previousElements.FirstOrDefault();

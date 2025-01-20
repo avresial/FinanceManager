@@ -1,5 +1,6 @@
 ﻿@using FinanceManager.Domain.Entities.Accounts
-@using FinanceManager.Domain.Repositories
+@using FinanceManager.Domain.Repositories;
+@using FinanceManager.Domain.Repositories.Account
 
 <MudExpansionPanel @bind-Expanded=_expanded>
     <TitleContent>
@@ -146,7 +147,7 @@
         await InvokeAsync(StateHasChanged);
 
         BankAccount.Remove(BankAccountEntry.Id);
-        FinancalAccountRepository.RemoveEntry(BankAccountEntry.Id, BankAccount.Id);
+        FinancalAccountRepository.RemoveEntry(BankAccountEntry.Id, BankAccount.AccountId);
     }
 
     public async Task Cancel()

@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.WebUi.Pages.Account
@@ -25,19 +26,24 @@ namespace FinanceManager.WebUi.Pages.Account
         [Inject]
         public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
-        public void Add()
+        [Inject]
+        public required ILoginService loginService { get; set; }
+
+        public async Task Add()
         {
             var lastAccountId = FinancalAccountRepository.GetLastAccountId();
+            var user = await loginService.GetLoggedUser();
+            if (user is null) return;
 
             switch (_selectedAccountType)
             {
                 case "Bank account":
-                    FinancalAccountRepository.AddAccount(new BankAccount(++lastAccountId, _accountName, Domain.Enums.AccountType.Other));
+                    FinancalAccountRepository.AddAccount(new BankAccount(user.UserId, ++lastAccountId, _accountName, Domain.Enums.AccountType.Other));
                     _addedAccountId = lastAccountId;
                     break;
 
                 case "Stock":
-                    FinancalAccountRepository.AddAccount(new InvestmentAccount(++lastAccountId, _accountName));
+                    FinancalAccountRepository.AddAccount(new StockAccount(user.UserId, ++lastAccountId, _accountName));
                     _addedAccountId = lastAccountId;
                     break;
             }

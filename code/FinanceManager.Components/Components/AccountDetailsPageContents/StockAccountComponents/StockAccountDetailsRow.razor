@@ -1,5 +1,7 @@
 ﻿@using FinanceManager.Domain.Entities.Accounts
-@using FinanceManager.Domain.Repositories
+@using FinanceManager.Domain.Repositories;
+@using FinanceManager.Domain.Repositories.Account
+
 <MudExpansionPanel @bind-Expanded=_expanded>
     <TitleContent>
         <div class="row">
@@ -141,10 +143,10 @@
     internal string currency = "PLN";
 
     [Parameter]
-    public required InvestmentAccount InvestmentAccount { get; set; }
+    public required StockAccount InvestmentAccount { get; set; }
 
     [Parameter]
-    public required InvestmentEntry InvestmentEntry { get; set; }
+    public required StockEntry InvestmentEntry { get; set; }
 
     [Inject]
     public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
@@ -183,7 +185,7 @@
         await InvokeAsync(StateHasChanged);
 
         InvestmentAccount.Remove(InvestmentEntry.Id);
-        FinancalAccountRepository.RemoveEntry(InvestmentEntry.Id, InvestmentAccount.Id);
+        FinancalAccountRepository.RemoveEntry(InvestmentEntry.Id, InvestmentAccount.AccountId);
     }
 
     public async Task Cancel()

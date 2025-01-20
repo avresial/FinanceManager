@@ -2,7 +2,7 @@
 {
     public class FixedAssetAccount : FinancialAccountBase<FixedAssetEntry>
     {
-        public FixedAssetAccount(int id, string name) : base(id, name)
+        public FixedAssetAccount(int userId, int id, string name) : base(userId, id, name)
         {
 
         }

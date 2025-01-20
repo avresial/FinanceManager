@@ -1,7 +1,8 @@
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
@@ -30,11 +31,17 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
         public required IDialogService DialogService { get; set; }
 
         [Inject]
+        public required ILoginService loginService { get; set; }
+
+        [Inject]
         public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
-        protected override void OnParametersSet()
+        protected override async Task OnParametersSetAsync()
         {
-            BankAccount = FinancalAccountRepository.GetAccount<BankAccount>(AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            var user = await loginService.GetLoggedUser();
+            if (user is null) return;
+
+            BankAccount = FinancalAccountRepository.GetAccount<BankAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
             if (BankAccount is null) return;
 
@@ -57,7 +64,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
 
             if (BankAccount is null) return;
 
-            BankAccount updatedAccount = new BankAccount(BankAccount.Id, AccountName, AccountType);
+            BankAccount updatedAccount = new BankAccount(BankAccount.UserId, BankAccount.AccountId, AccountName, AccountType);
             FinancalAccountRepository.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");

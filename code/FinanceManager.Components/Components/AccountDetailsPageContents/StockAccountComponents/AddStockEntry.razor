@@ -3,6 +3,7 @@
 @using FinanceManager.Domain.Enums
 @using FinanceManager.Domain.Repositories
 @using FinanceManager.Components.CustomValidationAttributes
+@using FinanceManager.Domain.Repositories.Account
 @using Microsoft.AspNetCore.Components.Forms
 @using MudBlazor.Utilities
 @using static MudBlazor.CategoryTypes
@@ -72,7 +73,7 @@
     public Func<Task>? ActionCompleted { get; set; }
 
     [Parameter]
-    public required InvestmentAccount InvestmentAccount { get; set; }
+    public required StockAccount InvestmentAccount { get; set; }
 
     [Inject]
     public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
@@ -138,12 +139,12 @@
         if (currentMaxId is not null)
             id += currentMaxId.Value + 1;
 
-        InvestmentEntry entry = new(id, date.ToUniversalTime(), -1, BalanceChange.Value, Ticker, investmentType);
+        StockEntry entry = new(id, date.ToUniversalTime(), -1, BalanceChange.Value, Ticker, investmentType);
 
         try
         {
             InvestmentAccount.Add(new AddInvestmentEntryDto(entry.PostingDate, entry.ValueChange, entry.Ticker, entry.InvestmentType));
-            FinancalAccountRepository.AddEntry(entry, InvestmentAccount.Id);
+            FinancalAccountRepository.AddEntry(entry, InvestmentAccount.AccountId);
         }
         catch (Exception ex)
         {

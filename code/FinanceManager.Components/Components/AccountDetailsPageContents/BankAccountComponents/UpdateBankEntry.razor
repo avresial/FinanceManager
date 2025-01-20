@@ -3,6 +3,7 @@
 @using FinanceManager.Domain.Enums
 @using FinanceManager.Domain.Repositories
 @using FinanceManager.Components.CustomValidationAttributes
+@using FinanceManager.Domain.Repositories.Account
 @inject ISettingsService settingsService
 
 @if (BankAccountEntry is not null && BankAccount is not null)
@@ -107,7 +108,7 @@
         try
         {
             BankAccount.UpdateEntry(bankAccountEntry);
-            FinancalAccountRepository.UpdateEntry(bankAccountEntry, BankAccount.Id);
+            FinancalAccountRepository.UpdateEntry(bankAccountEntry, BankAccount.AccountId);
         }
         catch (Exception ex)
         {

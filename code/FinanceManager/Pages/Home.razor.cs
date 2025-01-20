@@ -1,5 +1,5 @@
 ﻿using FinanceManager.Application.Services;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 

@@ -6,10 +6,10 @@ namespace FinanceManager.UnitTests.Entities.Accounts
 {
     public class InvestmentAccountTests
     {
-        private InvestmentAccount investmentAccount;
+        private StockAccount investmentAccount;
         public InvestmentAccountTests()
         {
-            investmentAccount = new InvestmentAccount(1, "TestAccount");
+            investmentAccount = new StockAccount(1, 1, "TestAccount");
         }
 
 
@@ -17,10 +17,10 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         public void AddEntries_SingleTicker()
         {
             // Arrange
-            InvestmentEntry investmentEntry1 = new InvestmentEntry(1, new DateTime(2000, 1, 1), 0, 100, "Ticker1", InvestmentType.Stock);
-            InvestmentEntry investmentEntry2 = new InvestmentEntry(2, new DateTime(2000, 1, 3), 0, 100, "Ticker1", InvestmentType.Stock);
-            InvestmentEntry investmentEntry3 = new InvestmentEntry(3, new DateTime(2000, 1, 2), 0, 100, "Ticker1", InvestmentType.Stock);
-            InvestmentEntry investmentEntry4 = new InvestmentEntry(4, new DateTime(2000, 1, 4), 0, 100, "Ticker1", InvestmentType.Stock);
+            StockEntry investmentEntry1 = new StockEntry(1, new DateTime(2000, 1, 1), 0, 100, "Ticker1", InvestmentType.Stock);
+            StockEntry investmentEntry2 = new StockEntry(2, new DateTime(2000, 1, 3), 0, 100, "Ticker1", InvestmentType.Stock);
+            StockEntry investmentEntry3 = new StockEntry(3, new DateTime(2000, 1, 2), 0, 100, "Ticker1", InvestmentType.Stock);
+            StockEntry investmentEntry4 = new StockEntry(4, new DateTime(2000, 1, 4), 0, 100, "Ticker1", InvestmentType.Stock);
 
             // Act
             investmentAccount.Add(investmentEntry1);
@@ -37,11 +37,11 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         public void AddEntries_MultipleTickers()
         {
             // Arrange
-            InvestmentEntry investmentEntry1 = new InvestmentEntry(1, new DateTime(2000, 1, 1), 0, 100, "Ticker1", InvestmentType.Stock);
-            InvestmentEntry investmentEntry2 = new InvestmentEntry(2, new DateTime(2000, 1, 3), 0, 100, "Ticker1", InvestmentType.Stock);
-            InvestmentEntry investmentEntryy2 = new InvestmentEntry(3, new DateTime(2000, 1, 3), 0, 99, "Ticker2", InvestmentType.Stock);
-            InvestmentEntry investmentEntry3 = new InvestmentEntry(4, new DateTime(2000, 1, 2), 0, 100, "Ticker1", InvestmentType.Stock);
-            InvestmentEntry investmentEntry4 = new InvestmentEntry(5, new DateTime(2000, 1, 4), 0, 100, "Ticker1", InvestmentType.Stock);
+            StockEntry investmentEntry1 = new StockEntry(1, new DateTime(2000, 1, 1), 0, 100, "Ticker1", InvestmentType.Stock);
+            StockEntry investmentEntry2 = new StockEntry(2, new DateTime(2000, 1, 3), 0, 100, "Ticker1", InvestmentType.Stock);
+            StockEntry investmentEntryy2 = new StockEntry(3, new DateTime(2000, 1, 3), 0, 99, "Ticker2", InvestmentType.Stock);
+            StockEntry investmentEntry3 = new StockEntry(4, new DateTime(2000, 1, 2), 0, 100, "Ticker1", InvestmentType.Stock);
+            StockEntry investmentEntry4 = new StockEntry(5, new DateTime(2000, 1, 4), 0, 100, "Ticker1", InvestmentType.Stock);
             // Act
             investmentAccount.Add(investmentEntry1);
             investmentAccount.Add(investmentEntry2);
@@ -50,7 +50,7 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             investmentAccount.Add(investmentEntry4);
 
             // Assert
-            IEnumerable<InvestmentEntry> resultValues = investmentAccount.Get(new DateTime(2000, 1, 4));
+            IEnumerable<StockEntry> resultValues = investmentAccount.Get(new DateTime(2000, 1, 4));
             Assert.Equal(400, resultValues.Get(new DateTime(2000, 1, 4)).First().Value);
         }
 
@@ -58,9 +58,9 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         public void AddEntries_FromYoungersToOldest_SingleTickers()
         {
             // Arrange
-            InvestmentEntry investmentEntry1 = new InvestmentEntry(1, new DateTime(2000, 1, 3), 100, 100, "Ticker1", InvestmentType.Stock);
-            InvestmentEntry investmentEntry2 = new InvestmentEntry(2, new DateTime(2000, 1, 2), 100, 100, "Ticker1", InvestmentType.Stock);
-            InvestmentEntry investmentEntry3 = new InvestmentEntry(3, new DateTime(2000, 1, 1), 100, 100, "Ticker1", InvestmentType.Stock);
+            StockEntry investmentEntry1 = new StockEntry(1, new DateTime(2000, 1, 3), 100, 100, "Ticker1", InvestmentType.Stock);
+            StockEntry investmentEntry2 = new StockEntry(2, new DateTime(2000, 1, 2), 100, 100, "Ticker1", InvestmentType.Stock);
+            StockEntry investmentEntry3 = new StockEntry(3, new DateTime(2000, 1, 1), 100, 100, "Ticker1", InvestmentType.Stock);
 
             // Act
             investmentAccount.Add(investmentEntry1);
@@ -68,7 +68,7 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             investmentAccount.Add(investmentEntry3);
 
             // Assert
-            IEnumerable<InvestmentEntry> resultValues = investmentAccount.Get(new DateTime(2000, 1, 4));
+            IEnumerable<StockEntry> resultValues = investmentAccount.Get(new DateTime(2000, 1, 4));
             Assert.Equal(300, resultValues.Get(new DateTime(2000, 1, 4)).First().Value);
         }
 
@@ -76,9 +76,9 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         public void UpdateEntries_SingleTicker()
         {
             // Arrange
-            InvestmentEntry investmentEntry0 = new InvestmentEntry(2, new DateTime(2000, 1, 3), 0, 100, "Ticker1", InvestmentType.Stock);
-            InvestmentEntry investmentEntry1 = new InvestmentEntry(3, new DateTime(2000, 1, 3), 0, 99, "TickerToUpdate", InvestmentType.Stock);
-            InvestmentEntry investmentEntry2 = new InvestmentEntry(4, new DateTime(2000, 1, 2), 0, 100, "Ticker1", InvestmentType.Stock);
+            StockEntry investmentEntry0 = new StockEntry(2, new DateTime(2000, 1, 3), 0, 100, "Ticker1", InvestmentType.Stock);
+            StockEntry investmentEntry1 = new StockEntry(3, new DateTime(2000, 1, 3), 0, 99, "TickerToUpdate", InvestmentType.Stock);
+            StockEntry investmentEntry2 = new StockEntry(4, new DateTime(2000, 1, 2), 0, 100, "Ticker1", InvestmentType.Stock);
 
             investmentAccount.Add(investmentEntry0);
             investmentAccount.Add(investmentEntry1);
@@ -86,7 +86,7 @@ namespace FinanceManager.UnitTests.Entities.Accounts
 
             // Act
             var test = investmentAccount.Get(new DateTime(2000, 1, 3)).First(x => x.Ticker == "TickerToUpdate");
-            test.Update(new InvestmentEntry(3, new DateTime(2000, 1, 3), 0, 50, "TickerToUpdate_TickerChanged", InvestmentType.Stock));
+            test.Update(new StockEntry(3, new DateTime(2000, 1, 3), 0, 50, "TickerToUpdate_TickerChanged", InvestmentType.Stock));
 
             // Assert
             var updateResult = investmentAccount.Get(new DateTime(2000, 1, 3)).First(x => x.Ticker == "TickerToUpdate_TickerChanged");
@@ -97,8 +97,8 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         public void RemoveData_RemovesOldestElement_RecalculatesValues()
         {
             // Arrange
-            investmentAccount.Add(new InvestmentEntry(1, new DateTime(2000, 1, 3), 10, 10, "Ticker1", InvestmentType.Stock));
-            investmentAccount.Add(new InvestmentEntry(2, new DateTime(2000, 1, 4), 20, 10, "Ticker1", InvestmentType.Stock));
+            investmentAccount.Add(new StockEntry(1, new DateTime(2000, 1, 3), 10, 10, "Ticker1", InvestmentType.Stock));
+            investmentAccount.Add(new StockEntry(2, new DateTime(2000, 1, 4), 20, 10, "Ticker1", InvestmentType.Stock));
 
             // Act
             investmentAccount.Remove(1);
