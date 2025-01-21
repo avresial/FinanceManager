@@ -3,6 +3,7 @@ using FinanceManager.Application.Services;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories;
@@ -18,7 +19,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
         private decimal? balanceChange = null;
         private ApexChart<ChartEntryModel>? chart;
-        private Dictionary<StockEntry, StockPrice> prices = new();
+        private Dictionary<StockAccountEntry, StockPrice> prices = new();
         private List<string> stocks = new List<string>();
         private bool LoadedAllData = false;
         private DateTime dateStart;
@@ -29,8 +30,8 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         private List<ChartEntryModel> pricesDaily = new();
         private bool visible;
 
-        internal List<(StockEntry, decimal)>? Top5;
-        internal List<(StockEntry, decimal)>? Bottom5;
+        internal List<(StockAccountEntry, decimal)>? Top5;
+        internal List<(StockAccountEntry, decimal)>? Bottom5;
         internal string currency = string.Empty;
 
         public bool IsLoading = false;
@@ -160,7 +161,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
             if (Account.Entries is null) return;
 
-            List<(StockEntry, decimal)> orderedByPrice = new List<(StockEntry, decimal)>();
+            List<(StockAccountEntry, decimal)> orderedByPrice = new List<(StockAccountEntry, decimal)>();
             foreach (var entry in Account.Entries)
             {
                 var price = await StockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);

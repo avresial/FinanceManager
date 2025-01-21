@@ -1,6 +1,7 @@
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
@@ -24,19 +25,19 @@ namespace FinanceManager.UnitTests
         {
 
             BankAccount bankAccount1 = new(1, 1, "testBank1", AccountType.Cash);
-            bankAccount1.Add(new BankAccountEntry(1, startDate, 10, 10));
-            bankAccount1.Add(new BankAccountEntry(2, startDate.AddDays(1), 20, 10));
+            bankAccount1.Add(new BankAccountEntry(1, 1, startDate, 10, 10));
+            bankAccount1.Add(new BankAccountEntry(1, 2, startDate.AddDays(1), 20, 10));
 
             BankAccount bankAccount2 = new(1, 2, "testBank2", AccountType.Cash);
-            bankAccount2.Add(new BankAccountEntry(1, endDate, 10, 10));
+            bankAccount2.Add(new BankAccountEntry(1, 1, endDate, 10, 10));
 
             _bankAccounts = [bankAccount1, bankAccount2];
             _financalAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(1, startDate, endDate))
                                             .Returns(_bankAccounts);
 
             StockAccount investmentAccount1 = new(1, 3, "testInvestmentAccount1");
-            investmentAccount1.Add(new StockEntry(1, startDate, 10, 10, "testStock1", InvestmentType.Stock));
-            investmentAccount1.Add(new StockEntry(2, endDate, 10, 10, "testStock2", InvestmentType.Stock));
+            investmentAccount1.Add(new StockAccountEntry(1, 1, startDate, 10, 10, "testStock1", InvestmentType.Stock));
+            investmentAccount1.Add(new StockAccountEntry(1, 2, endDate, 10, 10, "testStock2", InvestmentType.Stock));
 
             _investmentAccountAccounts = [investmentAccount1];
             _financalAccountRepositoryMock.Setup(x => x.GetAccounts<StockAccount>(1, startDate, endDate))

@@ -1,6 +1,6 @@
 using CsvHelper;
 using CsvHelper.Configuration;
-using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Readers;
@@ -122,7 +122,7 @@ namespace FinanceManager.Components.Components.ImportData
                 {
                     try
                     {
-                        FinancalAccountRepository.AddEntry(new StockEntry(-1, result.PostingDate, -1, result.ValueChange, _exportTicker, Domain.Enums.InvestmentType.Unknown), AccountId);
+                        FinancalAccountRepository.AddEntry(new StockAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange, _exportTicker, Domain.Enums.InvestmentType.Unknown), AccountId);
                         importedEntriesCount++;
                     }
                     catch (Exception ex)
@@ -138,7 +138,7 @@ namespace FinanceManager.Components.Components.ImportData
                 {
                     try
                     {
-                        FinancalAccountRepository.AddEntry(new StockEntry(-1, result.PostingDate, -1, result.ValueChange, result.Ticker, result.InvestmentType), AccountId);
+                        FinancalAccountRepository.AddEntry(new StockAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange, result.Ticker, result.InvestmentType), AccountId);
                         importedEntriesCount++;
                     }
                     catch (Exception ex)

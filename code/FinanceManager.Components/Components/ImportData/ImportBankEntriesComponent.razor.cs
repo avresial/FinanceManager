@@ -1,6 +1,6 @@
 using CsvHelper;
 using CsvHelper.Configuration;
-using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Readers;
@@ -102,7 +102,7 @@ namespace FinanceManager.Components.Components.ImportData
                 {
                     try
                     {
-                        FinancalAccountRepository.AddEntry(new BankAccountEntry(-1, result.PostingDate, -1, result.ValueChange), AccountId);
+                        FinancalAccountRepository.AddEntry(new BankAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange), AccountId);
                         importedEntriesCount++;
                     }
                     catch (Exception ex)

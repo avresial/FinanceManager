@@ -1,7 +1,7 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Repositories.Account;
 
-namespace FinanceManager.Infrastructure.Repositories
+namespace FinanceManager.Infrastructure.Repositories.Account
 {
     internal class InMemoryStockAccountRepository : IAccountRepository<StockAccount>
     {

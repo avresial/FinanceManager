@@ -1,12 +1,12 @@
 ﻿using FinanceManager.Domain.Entities;
-using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
 
 namespace FinanceManager.Domain.Extensions
 {
     public static class InvestmentEntryExtension
     {
-        public static async Task<List<(DateTime, decimal)>> GetAssets(this IEnumerable<StockEntry> accountEntries,
+        public static async Task<List<(DateTime, decimal)>> GetAssets(this IEnumerable<StockAccountEntry> accountEntries,
             DateTime start, DateTime end, Func<string, DateTime, Task<StockPrice>> getStockPrice)
         {
             List<(DateTime, decimal)> result = new();
@@ -29,26 +29,26 @@ namespace FinanceManager.Domain.Extensions
             return result;
         }
 
-        public static List<InvestmentType> GetStoredTypes(this IEnumerable<StockEntry> accountEntries)
+        public static List<InvestmentType> GetStoredTypes(this IEnumerable<StockAccountEntry> accountEntries)
         {
             if (accountEntries is null) return [];
 
             return accountEntries.DistinctBy(x => x.InvestmentType).Select(x => x.InvestmentType).ToList();
         }
-        public static List<string> GetStoredTickers(this IEnumerable<StockEntry> accountEntries)
+        public static List<string> GetStoredTickers(this IEnumerable<StockAccountEntry> accountEntries)
         {
             if (accountEntries is null) return [];
 
             return accountEntries.DistinctBy(x => x.Ticker).Select(x => x.Ticker).ToList();
         }
-        public static IEnumerable<StockEntry> GetPrevious(this IEnumerable<StockEntry> entries, DateTime date, string ticker)
+        public static IEnumerable<StockAccountEntry> GetPrevious(this IEnumerable<StockAccountEntry> entries, DateTime date, string ticker)
         {
             var lastEntry = entries.FirstOrDefault(x => x.PostingDate < date && x.Ticker == ticker);
             if (lastEntry is null) return [];
 
             return [lastEntry];
         }
-        public static IEnumerable<StockEntry> Get(this IEnumerable<StockEntry> accountEntries, DateTime date) // needs to be upgraded
+        public static IEnumerable<StockAccountEntry> Get(this IEnumerable<StockAccountEntry> accountEntries, DateTime date) // needs to be upgraded
         {
             if (accountEntries is null) return [];
 

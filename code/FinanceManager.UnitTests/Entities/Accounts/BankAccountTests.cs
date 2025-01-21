@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
 
 namespace FinanceManager.UnitTests.Entities.Accounts
 {
@@ -14,14 +15,14 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         public void UpdateData_ChangeDate()
         {
             // Arrange
-            BankAccount.Add(new BankAccountEntry(1, new DateTime(2000, 1, 29), 30, 10));
-            BankAccount.Add(new BankAccountEntry(2, new DateTime(2000, 1, 30), 40, 10) { Description = "Test0" });
-            BankAccount.Add(new BankAccountEntry(3, new DateTime(2000, 1, 28), 20, 10));
-            BankAccount.Add(new BankAccountEntry(4, new DateTime(2000, 1, 26), 10, 10));
+            BankAccount.Add(new BankAccountEntry(1, 1, new DateTime(2000, 1, 29), 30, 10));
+            BankAccount.Add(new BankAccountEntry(1, 2, new DateTime(2000, 1, 30), 40, 10) { Description = "Test0" });
+            BankAccount.Add(new BankAccountEntry(1, 3, new DateTime(2000, 1, 28), 20, 10));
+            BankAccount.Add(new BankAccountEntry(1, 4, new DateTime(2000, 1, 26), 10, 10));
 
             // Act
             var entryToChange = BankAccount.Get(new DateTime(2000, 1, 30)).First();
-            var change = new BankAccountEntry(entryToChange.Id, new DateTime(2000, 1, 27), entryToChange.Value, entryToChange.ValueChange)
+            var change = new BankAccountEntry(entryToChange.AccountId, entryToChange.EntryId, new DateTime(2000, 1, 27), entryToChange.Value, entryToChange.ValueChange)
             { Description = "Test1" };
             BankAccount.UpdateEntry(change, true);
 

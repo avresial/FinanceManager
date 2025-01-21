@@ -2,6 +2,7 @@ using ApexCharts;
 using FinanceManager.Application.Services;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories.Account;

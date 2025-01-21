@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.Accounts;
+﻿using FinanceManager.Domain.Entities.Accounts.Entries;
 
 namespace FinanceManager.Domain.Extensions
 {

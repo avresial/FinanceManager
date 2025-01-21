@@ -45,9 +45,10 @@ namespace FinanceManager.Domain.Extensions
                     continue;
                 }
 
-                int id = entriesForStepMonth.Last().Id;
+                int entryId = entriesForStepMonth.Last().EntryId;
+                int accountId = entriesForStepMonth.Last().AccountId;
 
-                FinancialEntryBase bankAccountEntry = new FinancialEntryBase(id, stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2), Math.Round(entriesForStepMonth.Sum(x => x.ValueChange), 2));
+                FinancialEntryBase bankAccountEntry = new FinancialEntryBase(accountId, entryId, stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2), Math.Round(entriesForStepMonth.Sum(x => x.ValueChange), 2));
 
                 result.Add(bankAccountEntry);
                 stepDate = stepDate.AddMonths(1);
@@ -76,8 +77,9 @@ namespace FinanceManager.Domain.Extensions
                     stepDate = stepDate.AddDays(7);
                     continue;
                 }
-                int id = entriesForStepMonth.Last().Id;
-                FinancialEntryBase bankAccountEntry = new FinancialEntryBase(id, stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2), Math.Round(entriesForStepMonth.Sum(x => x.ValueChange), 2));
+                int entryId = entriesForStepMonth.Last().EntryId;
+                int accountId = entriesForStepMonth.Last().AccountId;
+                FinancialEntryBase bankAccountEntry = new FinancialEntryBase(accountId, entryId, stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2), Math.Round(entriesForStepMonth.Sum(x => x.ValueChange), 2));
 
                 result.Add(bankAccountEntry);
                 stepDate = stepDate.AddDays(7);

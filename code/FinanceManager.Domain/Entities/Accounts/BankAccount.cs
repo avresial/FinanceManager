@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Enums;
+﻿using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
 
 namespace FinanceManager.Domain.Entities.Accounts
@@ -34,7 +35,7 @@ namespace FinanceManager.Domain.Entities.Accounts
             var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
             if (alredyExistingEntry is not null)
             {
-                throw new Exception($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.Id}, Posting date{alredyExistingEntry.PostingDate}, " +
+                throw new Exception($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.EntryId}, Posting date{alredyExistingEntry.PostingDate}, " +
                     $"Value change {alredyExistingEntry.ValueChange}");
             }
 
@@ -47,12 +48,12 @@ namespace FinanceManager.Domain.Entities.Accounts
             if (index == -1)
             {
                 index = Entries.Count;
-                Entries.Add(new BankAccountEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange) { Description = entry.Description });
+                Entries.Add(new BankAccountEntry(AccountId, GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange) { Description = entry.Description });
                 index -= 1;
             }
             else
             {
-                Entries.Insert(index, new BankAccountEntry(GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange));
+                Entries.Insert(index, new BankAccountEntry(AccountId, GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange));
             }
 
             RecalculateEntryValues(index);
@@ -61,7 +62,7 @@ namespace FinanceManager.Domain.Entities.Accounts
         {
             Entries ??= [];
 
-            var entryToUpdate = Entries.FirstOrDefault(x => x.Id == entry.Id);
+            var entryToUpdate = Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
             if (entryToUpdate is null) return;
 
             entryToUpdate.Update(entry);

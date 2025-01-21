@@ -1,5 +1,6 @@
 ﻿@using FinanceManager.Domain.Entities.Accounts
 @using System.ComponentModel.DataAnnotations
+@using FinanceManager.Domain.Entities.Accounts.Entries
 @using FinanceManager.Domain.Enums
 @using FinanceManager.Domain.Repositories
 @using FinanceManager.Components.CustomValidationAttributes
@@ -24,7 +25,7 @@
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text"
-                SearchFunc="Search" />
+                                 SearchFunc="Search" />
             </MudItem>
 
             <MudItem xs="12">
@@ -82,7 +83,7 @@
     {
         if (form is null) return;
         await form.Validate();
-        
+
         if (!form.IsValid) return;
         if (!BalanceChange.HasValue) return;
         if (!PostingDate.HasValue) return;
@@ -103,7 +104,7 @@
         if (currentMaxId is not null)
             id += currentMaxId.Value + 1;
 
-        BankAccountEntry bankAccountEntry = new(id, date, -1, BalanceChange.Value)
+        BankAccountEntry bankAccountEntry = new(BankAccount.AccountId, id, date, -1, BalanceChange.Value)
             {
                 Description = Description,
                 ExpenseType = expenseType

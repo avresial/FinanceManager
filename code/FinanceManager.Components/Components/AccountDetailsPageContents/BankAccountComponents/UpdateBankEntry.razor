@@ -1,9 +1,11 @@
 ﻿@using FinanceManager.Domain.Entities.Accounts
 @using System.ComponentModel.DataAnnotations
+@using FinanceManager.Domain.Entities.Accounts.Entries
 @using FinanceManager.Domain.Enums
 @using FinanceManager.Domain.Repositories
 @using FinanceManager.Components.CustomValidationAttributes
 @using FinanceManager.Domain.Repositories.Account
+
 @inject ISettingsService settingsService
 
 @if (BankAccountEntry is not null && BankAccount is not null)
@@ -68,8 +70,8 @@
 
     protected override void OnParametersSet()
     {
-        if (loadedEntryId.HasValue && loadedEntryId.Value == BankAccountEntry.Id) return;
-        loadedEntryId = BankAccountEntry.Id;
+        if (loadedEntryId.HasValue && loadedEntryId.Value == BankAccountEntry.EntryId) return;
+        loadedEntryId = BankAccountEntry.EntryId;
 
         _currency = settingsService.GetCurrency();
         PostingDate = BankAccountEntry.PostingDate;
@@ -100,7 +102,7 @@
         {
         }
 
-        BankAccountEntry bankAccountEntry = new(BankAccountEntry.Id, date, -1, BalanceChange.Value)
+        BankAccountEntry bankAccountEntry = new(BankAccountEntry.AccountId, BankAccountEntry.EntryId, date, -1, BalanceChange.Value)
             {
                 Description = this.Description is null ? string.Empty : this.Description,
                 ExpenseType = expenseType
