@@ -9,6 +9,7 @@ namespace FinanceManager.Components
         public static IServiceCollection AddUIComponents(this IServiceCollection services)
         {
             services.AddScoped<ILoginService, LoginService>()
+                    .AddScoped<AccountDataSynchronizationService>()
                     .AddScoped<IUserService, UserService>();
 
             return services;

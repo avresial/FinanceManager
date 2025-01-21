@@ -1,4 +1,4 @@
-﻿using FinanceManager.Application.Services;
+﻿using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
