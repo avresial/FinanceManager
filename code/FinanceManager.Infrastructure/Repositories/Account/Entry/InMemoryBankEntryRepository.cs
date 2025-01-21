@@ -19,26 +19,38 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
 
     public bool Delete(int accountId, int entryId)
     {
-        throw new NotImplementedException();
+        if (!_entries.Any(x => x.AccountId == accountId && x.EntryId == entryId)) return false;
+
+        _entries.RemoveAll(x => x.AccountId == accountId && x.EntryId == entryId);
+
+        return true;
     }
 
-    public BankAccountEntry? Get(int accountId, DateTime startDate, DateTime endDate)
-    {
-        throw new NotImplementedException();
-    }
+    public IEnumerable<BankAccountEntry> Get(int accountId, DateTime startDate, DateTime endDate) =>
+        _entries.Where(x => x.AccountId == accountId && x.PostingDate > startDate && x.PostingDate < endDate);
 
     public BankAccountEntry? GetOldest(int accountId)
     {
-        throw new NotImplementedException();
+        if (!_entries.Any()) return null;
+        var maxDate = _entries.Max(x => x.PostingDate);
+
+        return _entries.First(x => x.PostingDate == maxDate);
     }
 
     public BankAccountEntry? GetYoungest(int accountId)
     {
-        throw new NotImplementedException();
+        if (!_entries.Any()) return null;
+        var minDate = _entries.Min(x => x.PostingDate);
+
+        return _entries.First(x => x.PostingDate == minDate);
     }
 
     public bool Update(BankAccountEntry entry)
     {
-        throw new NotImplementedException();
+        var entryToUpdate = _entries.FirstOrDefault(x => x.AccountId == entry.AccountId && x.EntryId == entry.EntryId);
+        if (entryToUpdate is null) return false;
+
+        entryToUpdate.Update(entry);
+        return true;
     }
 }

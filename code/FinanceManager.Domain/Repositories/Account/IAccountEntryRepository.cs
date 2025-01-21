@@ -2,7 +2,7 @@
 {
     public interface IAccountEntryRepository<T>
     {
-        T? Get(int accountId, DateTime startDate, DateTime endDate);
+        IEnumerable<T> Get(int accountId, DateTime startDate, DateTime endDate);
         T? GetYoungest(int accountId);
         T? GetOldest(int accountId);
 
