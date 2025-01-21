@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.ValueObjects;
 
 namespace FinanceManager.Infrastructure.Repositories.Account
 {
@@ -23,7 +24,8 @@ namespace FinanceManager.Infrastructure.Repositories.Account
             return true;
         }
 
-        public IList<(int, string)> GetAvailableAccounts(int accountId) => _bankAccounts.Where(x => x.UserId == accountId).Select(x => (x.AccountId, x.Name)).ToList();
+        public IEnumerable<AvailableAccount> GetAvailableAccounts(int accountId) =>
+            _bankAccounts.Where(x => x.UserId == accountId).Select(x => new AvailableAccount(x.AccountId, x.Name));
 
         public StockAccount? Get(int accountId) => _bankAccounts.FirstOrDefault(x => x.AccountId == accountId);
 
