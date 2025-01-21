@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,9 +9,11 @@ namespace FinanceManager.Api.Controllers.Accounts
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class StockAccountController(IAccountRepository<StockAccount> bankAccountRepository) : ControllerBase
+    public class StockAccountController(IAccountRepository<StockAccount> bankAccountRepository,
+        IAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository) : ControllerBase
     {
-        private readonly IAccountRepository<StockAccount> bankAccountRepository = bankAccountRepository;
+        private readonly IAccountRepository<StockAccount> stockAccountRepository = bankAccountRepository;
+        private readonly IAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository = stockAccountEntryRepository;
 
         [HttpGet]
         public async Task<IActionResult> Get()
@@ -18,7 +21,7 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (userId is null) return BadRequest();
 
-            var account = bankAccountRepository.GetAvailableAccounts(userId.Value);
+            var account = stockAccountRepository.GetAvailableAccounts(userId.Value);
 
             if (account == null) return NoContent();
 
@@ -31,11 +34,27 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (userId is null) return BadRequest();
 
-            var account = bankAccountRepository.Get(accountId);
+            var account = stockAccountRepository.Get(accountId);
 
             if (account == null) return NoContent();
             if (account.UserId != userId) return BadRequest();
 
+            return Ok(account);
+        }
+        [HttpGet("{accountId:int}&{startDate:DateTime}&{endDate:DateTime}")]
+        public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate)
+        {
+            var userId = ApiAuthenticationHelper.GetUserId(User);
+            if (userId is null) return BadRequest();
+
+            var account = stockAccountRepository.Get(accountId);
+
+            if (account == null) return NoContent();
+            if (account.UserId != userId) return BadRequest();
+
+            var entries = stockAccountEntryRepository.Get(accountId, startDate, endDate);
+
+            account.Add(entries, false);
             return Ok(account);
         }
 
@@ -46,7 +65,7 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (!userId.HasValue) return BadRequest();
 
-            return Ok(bankAccountRepository.Add(userId.Value, addAccount.accountName));
+            return Ok(stockAccountRepository.Add(userId.Value, addAccount.accountName));
         }
 
         [HttpPut]
@@ -56,10 +75,10 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (userId is null) return BadRequest();
 
-            var account = bankAccountRepository.Get(updateAccount.accountId);
+            var account = stockAccountRepository.Get(updateAccount.accountId);
 
             if (account == null || account.UserId != userId) return BadRequest();
-            return Ok(bankAccountRepository.Update(updateAccount.accountId, updateAccount.accountName));
+            return Ok(stockAccountRepository.Update(updateAccount.accountId, updateAccount.accountName));
         }
 
 
@@ -70,10 +89,10 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (userId is null) return BadRequest();
 
-            var account = bankAccountRepository.Get(deleteAccount.accountId);
+            var account = stockAccountRepository.Get(deleteAccount.accountId);
 
             if (account == null || account.UserId != userId) return BadRequest();
-            return Ok(bankAccountRepository.Delete(deleteAccount.accountId));
+            return Ok(stockAccountRepository.Delete(deleteAccount.accountId));
         }
     }
 }
