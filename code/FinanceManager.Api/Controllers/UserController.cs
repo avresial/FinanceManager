@@ -4,6 +4,7 @@ using FinanceManager.Application.Providers;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace FinanceManager.Api.Controllers
 {
@@ -42,7 +43,7 @@ namespace FinanceManager.Api.Controllers
         [Route("Delete")]
         public async Task<IActionResult> Delete(DeleteUser deleteUserCommand)
         {
-            var idValue = User?.Claims.FirstOrDefault(c => c.Type == "userId")?.Value;
+            var idValue = User?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             if (idValue is null) return BadRequest();
 
             int id = int.Parse(idValue);

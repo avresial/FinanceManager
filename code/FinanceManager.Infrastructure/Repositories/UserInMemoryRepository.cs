@@ -6,7 +6,14 @@ namespace FinanceManager.Infrastructure.Repositories
 {
     internal class UserInMemoryRepository : IUserRepository
     {
-        private readonly Dictionary<string, UserDto> _users = new Dictionary<string, UserDto>();
+        private readonly Dictionary<string, UserDto> _users = new()
+        {
+            ["guest"] = new UserDto()
+            {
+                Login = "guest",
+                Password = "???OL??O?\\\"7???\\vsO??8??c{?DEEq?C?"
+            }
+        };
 
         public async Task<bool> AddUser(string login, string password)
         {

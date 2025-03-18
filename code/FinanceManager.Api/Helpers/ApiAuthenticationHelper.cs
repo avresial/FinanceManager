@@ -1,11 +1,13 @@
-﻿namespace FinanceManager.Api.Helpers
+﻿using System.Security.Claims;
+
+namespace FinanceManager.Api.Helpers
 {
     public static class ApiAuthenticationHelper
     {
-        public static int? GetUserId(System.Security.Claims.ClaimsPrincipal? user)
+        public static int? GetUserId(ClaimsPrincipal? user)
         {
             if (user is null) return null;
-            var userIdValue = user.Claims.FirstOrDefault(c => c.Type == "userId")?.Value;
+            var userIdValue = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
 
             if (userIdValue is null) return null;
 

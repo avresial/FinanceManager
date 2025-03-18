@@ -27,7 +27,7 @@ public class BankAccountController(IAccountRepository<BankAccount> bankAccountRe
 
         if (account == null) return NoContent();
 
-        return Ok(account);
+        return await Task.FromResult(Ok(account));
     }
 
 
@@ -41,7 +41,7 @@ public class BankAccountController(IAccountRepository<BankAccount> bankAccountRe
         if (account == null) return NoContent();
         if (account.UserId != userId) return BadRequest();
 
-        return Ok(account);
+        return await Task.FromResult(Ok(account));
     }
 
     [HttpGet("{accountId:int}&{startDate:DateTime}&{endDate:DateTime}")]
@@ -58,10 +58,8 @@ public class BankAccountController(IAccountRepository<BankAccount> bankAccountRe
         var entries = bankAccountEntryRepository.Get(accountId, startDate, endDate);
 
         account.Add(entries, false);
-        return Ok(account);
+        return await Task.FromResult(Ok(account));
     }
-
-
 
     [HttpPost]
     [Route("Add")]
@@ -70,17 +68,17 @@ public class BankAccountController(IAccountRepository<BankAccount> bankAccountRe
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (!userId.HasValue) return BadRequest();
 
-        return Ok(bankAccountRepository.Add(userId.Value, addAccount.accountName));
+        return await Task.FromResult(Ok(bankAccountRepository.Add(userId.Value, addAccount.accountName)));
     }
 
     [HttpPost]
     [Route("AddEntry")]
-    public async Task<IActionResult> AddEntry(AddEntry addAccount)
+    public async Task<IActionResult> AddEntry(AddBankAccountEntry addEntry)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (!userId.HasValue) return BadRequest();
 
-        return Ok(bankAccountEntryRepository.Add(addAccount.entry));
+        return await Task.FromResult(Ok(bankAccountEntryRepository.Add(addEntry.entry)));
     }
 
     [HttpPut]
@@ -93,9 +91,8 @@ public class BankAccountController(IAccountRepository<BankAccount> bankAccountRe
         var account = bankAccountRepository.Get(updateAccount.accountId);
 
         if (account == null || account.UserId != userId) return BadRequest();
-        return Ok(bankAccountRepository.Update(updateAccount.accountId, updateAccount.accountName));
+        return await Task.FromResult(Ok(bankAccountRepository.Update(updateAccount.accountId, updateAccount.accountName)));
     }
-
 
     [HttpDelete]
     [Route("Delete")]
@@ -107,6 +104,30 @@ public class BankAccountController(IAccountRepository<BankAccount> bankAccountRe
         var account = bankAccountRepository.Get(deleteAccount.accountId);
 
         if (account == null || account.UserId != userId) return BadRequest();
-        return Ok(bankAccountRepository.Delete(deleteAccount.accountId));
+        return await Task.FromResult(Ok(bankAccountRepository.Delete(deleteAccount.accountId)));
+    }
+
+    [HttpDelete("DeleteEntry/{accountId:int}/{entryId:int}")]
+    public async Task<IActionResult> DeleteEntry(int accountId, int entryId)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (userId is null) return BadRequest();
+
+        var account = bankAccountRepository.Get(accountId);
+        if (account == null || account.UserId != userId) return BadRequest();
+
+        return await Task.FromResult(Ok(bankAccountEntryRepository.Delete(accountId, entryId)));
+    }
+
+    [HttpPut("UpdateEntry")]
+    public async Task<IActionResult> UpdateEntry(BankAccountEntry entry)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (userId is null) return BadRequest();
+
+        var account = bankAccountRepository.Get(entry.AccountId);
+        if (account == null || account.UserId != userId) return BadRequest();
+
+        return await Task.FromResult(Ok(bankAccountEntryRepository.Update(entry)));
     }
 }
