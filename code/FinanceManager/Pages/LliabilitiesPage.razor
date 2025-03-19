@@ -1,4 +1,5 @@
 ﻿@page "/Lliabilities"
+@using FinanceManager.Components.Services
 @using FinanceManager.Domain.Repositories.Account
 @using FinanceManager.Domain.Entities.Accounts
 @using FinanceManager.Domain.Repositories
@@ -6,7 +7,7 @@
 @using FinanceManager.Components.Components.Dashboard.Cards
 
 @inject ISettingsService settingsService;
-@inject IFinancalAccountRepository bankAccountRepository;
+@inject IFinancalAccountService FinancalAccountService;
 @inject ILoginService loginService;
 
 <PageTitle>Lliabilities</PageTitle>
@@ -68,7 +69,7 @@
     {
         var user = await loginService.GetLoggedUser();
         if (user is null) return;
-        var bankAccounts = bankAccountRepository.GetAccounts<BankAccount>(user.UserId, DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
+        var bankAccounts = FinancalAccountService.GetAccounts<BankAccount>(user.UserId, DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
         if (bankAccounts is null) return;
 
         bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value <= 0).ToList();

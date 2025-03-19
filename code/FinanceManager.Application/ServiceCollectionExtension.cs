@@ -11,7 +11,6 @@ namespace FinanceManager.Application
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
             services.AddScoped<ISettingsService, SettingsService>()
-                    .AddScoped<IMoneyFlowService, MoneyFlowService>()
                     .AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
             return services;
         }
@@ -19,11 +18,9 @@ namespace FinanceManager.Application
         public static IServiceCollection AddApplicationApi(this IServiceCollection services)
         {
             services.AddScoped<ISettingsService, SettingsService>()
-                    //  .AddScoped<ILoginService, LoginService>()
                     .AddScoped<IMoneyFlowService, MoneyFlowService>()
-                    //.AddScoped<AccountDataSynchronizationService, AccountDataSynchronizationService>()
-                    // .AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>()
                     ;
+
             return services;
         }
     }

@@ -7,7 +7,6 @@ using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -44,7 +43,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         [Inject]
         public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
         [Inject]
-        public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+        public required IFinancalAccountService FinancalAccountService { get; set; }
 
         [Inject]
         public required IStockRepository StockRepository { get; set; }
@@ -108,7 +107,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             try
             {
                 dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-                var accounts = FinancalAccountRepository.GetAvailableAccounts();
+                var accounts = FinancalAccountService.GetAvailableAccounts();
                 if (accounts.ContainsKey(AccountId))
                 {
                     accountType = accounts[AccountId];
@@ -120,7 +119,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
                         prices.Clear();
                         LoadedAllData = true;
                         if (user is not null)
-                            Account = FinancalAccountRepository.GetAccount<StockAccount>(user.UserId, AccountId, dateStart, DateTime.UtcNow);
+                            Account = FinancalAccountService.GetAccount<StockAccount>(user.UserId, AccountId, dateStart, DateTime.UtcNow);
 
                         if (Account is not null && Account.Entries is not null)
                             await UpdateInfo();
@@ -178,7 +177,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             if (Account is null || Account.Start is null) return;
 
             dateStart = dateStart.AddMonths(-1);
-            var newData = FinancalAccountRepository.GetAccount<StockAccount>(Account.UserId, AccountId, dateStart, Account.Start.Value);
+            var newData = FinancalAccountService.GetAccount<StockAccount>(Account.UserId, AccountId, dateStart, Account.Start.Value);
 
             if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
                 return;
@@ -194,8 +193,8 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
         private void UpdateDates()
         {
-            oldestEntryDate = FinancalAccountRepository.GetStartDate(AccountId);
-            youngestEntryDate = FinancalAccountRepository.GetEndDate(AccountId);
+            oldestEntryDate = FinancalAccountService.GetStartDate(AccountId);
+            youngestEntryDate = FinancalAccountService.GetEndDate(AccountId);
 
             if (youngestEntryDate is not null && dateStart > youngestEntryDate)
                 dateStart = new DateTime(youngestEntryDate.Value.Date.Year, youngestEntryDate.Value.Date.Month, 1);

@@ -72,7 +72,7 @@
     public required StockAccountEntry InvestmentEntry { get; set; }
 
     [Inject]
-    public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+    public required IFinancalAccountService FinancalAccountService { get; set; }
 
     protected async Task OnFieldChanged(FormFieldChangedEventArgs args)
     {
@@ -144,7 +144,7 @@
         try
         {
             InvestmentAccount.UpdateEntry(bankAccountEntry);
-            FinancalAccountRepository.UpdateEntry(bankAccountEntry, InvestmentAccount.AccountId);
+            FinancalAccountService.UpdateEntry(bankAccountEntry, InvestmentAccount.AccountId);
         }
         catch (Exception ex)
         {

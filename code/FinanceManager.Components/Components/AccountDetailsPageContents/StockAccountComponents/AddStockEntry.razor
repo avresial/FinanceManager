@@ -77,7 +77,7 @@
     public required StockAccount InvestmentAccount { get; set; }
 
     [Inject]
-    public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+    public required IFinancalAccountService FinancalAccountService { get; set; }
 
     [Inject]
     public required ISettingsService SettingsService { get; set; }
@@ -145,7 +145,7 @@
         try
         {
             InvestmentAccount.Add(new AddInvestmentEntryDto(entry.PostingDate, entry.ValueChange, entry.Ticker, entry.InvestmentType));
-            FinancalAccountRepository.AddEntry(entry, InvestmentAccount.AccountId);
+            FinancalAccountService.AddEntry(entry, InvestmentAccount.AccountId);
         }
         catch (Exception ex)
         {

@@ -5,7 +5,6 @@ using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Providers;
-using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -36,7 +35,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
         public required int AccountId { get; set; }
 
         [Inject]
-        public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+        public required IFinancalAccountService FinancalAccountService { get; set; }
         [Inject]
         public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
@@ -89,7 +88,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
             dateStart = dateStart.AddMonths(-1);
             if (user is null) return;
 
-            var newData = FinancalAccountRepository.GetAccount<BankAccount>(user.UserId, AccountId, dateStart, Account.Start.Value);
+            var newData = FinancalAccountService.GetAccount<BankAccount>(user.UserId, AccountId, dateStart, Account.Start.Value);
 
             if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
                 return;
@@ -147,7 +146,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
             try
             {
                 dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-                var accounts = FinancalAccountRepository.GetAvailableAccounts();
+                var accounts = FinancalAccountService.GetAvailableAccounts();
                 if (accounts.ContainsKey(AccountId))
                 {
                     var accountType = accounts[AccountId];
@@ -156,7 +155,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
                         UpdateDates();
                         if (user is not null)
                         {
-                            Account = FinancalAccountRepository.GetAccount<BankAccount>(user.UserId, AccountId, dateStart, DateTime.UtcNow);
+                            Account = FinancalAccountService.GetAccount<BankAccount>(user.UserId, AccountId, dateStart, DateTime.UtcNow);
                             if (Account is not null && Account.Entries is not null)
                                 UpdateInfo();
                         }
@@ -173,8 +172,8 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
         }
         private void UpdateDates()
         {
-            oldestEntryDate = FinancalAccountRepository.GetStartDate(AccountId);
-            youngestEntryDate = FinancalAccountRepository.GetEndDate(AccountId);
+            oldestEntryDate = FinancalAccountService.GetStartDate(AccountId);
+            youngestEntryDate = FinancalAccountService.GetEndDate(AccountId);
 
             if (youngestEntryDate is not null && dateStart > youngestEntryDate)
                 dateStart = new DateTime(youngestEntryDate.Value.Date.Year, youngestEntryDate.Value.Date.Month, 1);

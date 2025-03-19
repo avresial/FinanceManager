@@ -1,7 +1,7 @@
 using CsvHelper;
 using CsvHelper.Configuration;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts.Entries;
-using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Readers;
 using Microsoft.AspNetCore.Components;
@@ -51,7 +51,7 @@ namespace FinanceManager.Components.Components.ImportData
         public required int AccountId { get; set; }
 
         [Inject]
-        public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+        public required IFinancalAccountService FinancalAccountService { get; set; }
 
         public async Task UploadFiles(InputFileChangeEventArgs e)
         {
@@ -122,7 +122,7 @@ namespace FinanceManager.Components.Components.ImportData
                 {
                     try
                     {
-                        FinancalAccountRepository.AddEntry(new StockAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange, _exportTicker, Domain.Enums.InvestmentType.Unknown), AccountId);
+                        FinancalAccountService.AddEntry(new StockAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange, _exportTicker, Domain.Enums.InvestmentType.Unknown), AccountId);
                         importedEntriesCount++;
                     }
                     catch (Exception ex)
@@ -138,7 +138,7 @@ namespace FinanceManager.Components.Components.ImportData
                 {
                     try
                     {
-                        FinancalAccountRepository.AddEntry(new StockAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange, result.Ticker, result.InvestmentType), AccountId);
+                        FinancalAccountService.AddEntry(new StockAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange, result.Ticker, result.InvestmentType), AccountId);
                         importedEntriesCount++;
                     }
                     catch (Exception ex)

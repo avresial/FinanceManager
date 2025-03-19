@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Repositories.Account;
+﻿using FinanceManager.Components.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.WebUi.Pages.Account
@@ -13,7 +13,7 @@ namespace FinanceManager.WebUi.Pages.Account
         public required int AccountId { get; set; }
 
         [Inject]
-        public required IFinancalAccountRepository BankAccountRepository { get; set; }
+        public required IFinancalAccountService FinancalAccountService { get; set; }
 
         public string ErrorMessage { get; set; } = string.Empty;
 
@@ -33,7 +33,7 @@ namespace FinanceManager.WebUi.Pages.Account
         {
             try
             {
-                var accounts = BankAccountRepository.GetAvailableAccounts();
+                var accounts = FinancalAccountService.GetAvailableAccounts();
 
                 if (accounts.ContainsKey(AccountId))
                     accountType = accounts[AccountId];

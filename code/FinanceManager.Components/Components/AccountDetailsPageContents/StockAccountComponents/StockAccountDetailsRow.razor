@@ -150,7 +150,7 @@
     public required StockAccountEntry InvestmentEntry { get; set; }
 
     [Inject]
-    public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+    public required IFinancalAccountService FinancalAccountService { get; set; }
 
     [Inject]
     public required ISettingsService SettingsService { get; set; }
@@ -186,7 +186,7 @@
         await InvokeAsync(StateHasChanged);
 
         InvestmentAccount.Remove(InvestmentEntry.EntryId);
-        FinancalAccountRepository.RemoveEntry(InvestmentEntry.EntryId, InvestmentAccount.AccountId);
+        FinancalAccountService.RemoveEntry(InvestmentEntry.EntryId, InvestmentAccount.AccountId);
     }
 
     public async Task Cancel()

@@ -7,10 +7,8 @@
 @using FinanceManager.Domain.Services
 @using FinanceManager.Components.Helpers
 @using FinanceManager.Components.ViewModels
+@using Microsoft.Extensions.Logging
 
-
-@inject ISettingsService settingsService;
-@inject ILoginService loginService;
 
 <div class="card">
     <div class="card-body">
@@ -29,82 +27,3 @@
     </div>
 </div>
 
-@code {
-
-    private ApexChart<TimeSeriesModel>? chart;
-    List<TimeSeriesModel> priceTimeseries = new List<TimeSeriesModel>();
-
-    [Parameter]
-    public DateTime StartDateTime { get; set; }
-
-    [Inject]
-    public required IFinancalAccountRepository BankAccountRepository { get; set; }
-
-    [Inject]
-    public required IStockRepository StockRepository { get; set; }
-
-    [Inject]
-    public required IMoneyFlowService MoneyFlowService { get; set; }
-
-
-    protected override async Task OnInitializedAsync()
-    {
-        options.Tooltip = new ApexCharts.Tooltip
-            {
-                Y = new TooltipY
-                {
-                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
-                }
-            };
-
-        var user = await loginService.GetLoggedUser();
-        if (user is null) return;
-        priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow);
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        var user = await loginService.GetLoggedUser();
-        if (user is null) return;
-        priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow);
-    }
-
-    private ApexChartOptions<TimeSeriesModel> options { get; set; } = new()
-        {
-            Chart = new Chart
-            {
-                Sparkline = new ChartSparkline()
-                {
-                    Enabled = true,
-                },
-                Toolbar = new ApexCharts.Toolbar
-                {
-                    Show = false
-                },
-            },
-            Xaxis = new XAxis()
-            {
-                AxisTicks = new AxisTicks()
-                {
-                    Show = false,
-                },
-                AxisBorder = new AxisBorder()
-                {
-                    Show = false
-                },
-            },
-            Yaxis = new List<YAxis>()
-            {
-                new YAxis
-                {
-                    Show = false,
-                    SeriesName = "Vaue",
-                    DecimalsInFloat = 0,
-                }
-            },
-            Colors = new List<string>
-            {
-               ColorsProvider.GetColors().First()
-            }
-        };
-}

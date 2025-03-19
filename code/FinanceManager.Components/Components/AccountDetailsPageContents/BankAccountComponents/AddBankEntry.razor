@@ -69,7 +69,7 @@
     public required BankAccount BankAccount { get; set; }
 
     [Inject]
-    public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+    public required IFinancalAccountService FinancalAccountService { get; set; }
 
     [Inject]
     public required ISettingsService settingsService { get; set; }
@@ -112,7 +112,7 @@
         try
         {
             BankAccount.Add(bankAccountEntry);
-            FinancalAccountRepository.AddEntry(bankAccountEntry, BankAccount.AccountId);
+            FinancalAccountService.AddEntry(bankAccountEntry, BankAccount.AccountId);
         }
         catch (Exception ex)
         {

@@ -1,5 +1,4 @@
 ﻿using FinanceManager.Components.Services;
-using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 
@@ -7,6 +6,10 @@ namespace FinanceManager.WebUi.Pages
 {
     public partial class Home : ComponentBase
     {
+
+        [Inject]
+        public required ILogger<Home> Logger { get; set; }
+
         [Inject]
         public required ILoginService LoginService { get; set; }
 
@@ -14,7 +17,8 @@ namespace FinanceManager.WebUi.Pages
         public required NavigationManager Navigation { get; set; }
 
         [Inject]
-        public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+        public required IFinancalAccountService FinancalAccountService { get; set; }
+
         [Inject]
         public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
@@ -27,12 +31,27 @@ namespace FinanceManager.WebUi.Pages
                 Navigation.NavigateTo("login");
                 return;
             }
+            Dictionary<int, Type>? availableAccounts = null;
+            try
+            {
+                availableAccounts = FinancalAccountService.GetAvailableAccounts();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex.ToString());
+            }
 
-            var availableAccounts = FinancalAccountRepository.GetAvailableAccounts();
             if ((availableAccounts is null || availableAccounts.Count == 0) && loggedUser.UserName.ToLower() == "guest")
             {
-                FinancalAccountRepository.InitializeMock();
-                availableAccounts = FinancalAccountRepository.GetAvailableAccounts();
+                try
+                {
+                    FinancalAccountService.InitializeMock();
+                    availableAccounts = FinancalAccountService.GetAvailableAccounts();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
                 await AccountDataSynchronizationService.AccountChanged();
             }
 

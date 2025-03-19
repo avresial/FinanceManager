@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Components.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Components.Components.Dashboard
@@ -8,7 +8,7 @@ namespace FinanceManager.Components.Components.Dashboard
         private const int UnitHeight = 130;
 
         [Inject]
-        public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+        public required IFinancalAccountService FinancalAccountService { get; set; }
 
         public DateTime StartDateTime { get; set; }
 

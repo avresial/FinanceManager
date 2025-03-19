@@ -30,7 +30,6 @@ public class BankAccountController(IAccountRepository<BankAccount> bankAccountRe
         return await Task.FromResult(Ok(account));
     }
 
-
     [HttpGet("{accountId:int}")]
     public async Task<IActionResult> Get(int accountId)
     {

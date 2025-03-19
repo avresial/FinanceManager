@@ -1,6 +1,5 @@
 ﻿using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 
@@ -9,7 +8,7 @@ namespace FinanceManager.WebUi.Layout
     public partial class NavMenu : ComponentBase
     {
         [Inject]
-        public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+        public required IFinancalAccountService FinancalAccountService { get; set; }
 
         [Inject]
         public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
@@ -45,19 +44,19 @@ namespace FinanceManager.WebUi.Layout
                 var user = await loginService.GetLoggedUser();
                 if (user is null) return;
                 Accounts.Clear();
-                foreach (var account in FinancalAccountRepository.GetAvailableAccounts())
+                foreach (var account in FinancalAccountService.GetAvailableAccounts())
                 {
 
                     var name = string.Empty;
                     if (account.Value == typeof(BankAccount))
                     {
-                        var existinhAccount = FinancalAccountRepository.GetAccount<BankAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
+                        var existinhAccount = FinancalAccountService.GetAccount<BankAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
                         if (existinhAccount is not null)
                             name = existinhAccount.Name;
                     }
                     else if (account.Value == typeof(StockAccount))
                     {
-                        var existinhAccount = FinancalAccountRepository.GetAccount<StockAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
+                        var existinhAccount = FinancalAccountService.GetAccount<StockAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
                         if (existinhAccount is not null)
                             name = existinhAccount.Name;
                     }
