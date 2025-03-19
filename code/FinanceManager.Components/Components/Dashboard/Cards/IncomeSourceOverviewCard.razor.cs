@@ -108,12 +108,12 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
             Data.Clear();
             if (chart is not null) await chart.UpdateSeriesAsync(true);
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 IEnumerable<BankAccount> bankAccounts = [];
                 try
                 {
-                    bankAccounts = FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now)
+                    bankAccounts = (await FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now))
                    .Where(x => x.Entries is not null && x.Entries.Any());
                 }
                 catch (Exception ex)

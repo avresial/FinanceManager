@@ -110,7 +110,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
                 try
                 {
-                    bankAccounts = FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now);
+                    bankAccounts = await FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now);
                 }
                 catch (Exception ex)
                 {

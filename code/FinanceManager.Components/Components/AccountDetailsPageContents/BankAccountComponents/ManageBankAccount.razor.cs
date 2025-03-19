@@ -41,7 +41,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
             var user = await loginService.GetLoggedUser();
             if (user is null) return;
 
-            BankAccount = FinancalAccountService.GetAccount<BankAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            BankAccount = await FinancalAccountService.GetAccount<BankAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
             if (BankAccount is null) return;
 

@@ -88,7 +88,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
             dateStart = dateStart.AddMonths(-1);
             if (user is null) return;
 
-            var newData = FinancalAccountService.GetAccount<BankAccount>(user.UserId, AccountId, dateStart, Account.Start.Value);
+            var newData = await FinancalAccountService.GetAccount<BankAccount>(user.UserId, AccountId, dateStart, Account.Start.Value);
 
             if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
                 return;
@@ -146,7 +146,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
             try
             {
                 dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-                var accounts = FinancalAccountService.GetAvailableAccounts();
+                var accounts = await FinancalAccountService.GetAvailableAccounts();
                 if (accounts.ContainsKey(AccountId))
                 {
                     var accountType = accounts[AccountId];
@@ -155,7 +155,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
                         UpdateDates();
                         if (user is not null)
                         {
-                            Account = FinancalAccountService.GetAccount<BankAccount>(user.UserId, AccountId, dateStart, DateTime.UtcNow);
+                            Account = await FinancalAccountService.GetAccount<BankAccount>(user.UserId, AccountId, dateStart, DateTime.UtcNow);
                             if (Account is not null && Account.Entries is not null)
                                 UpdateInfo();
                         }

@@ -118,14 +118,14 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         private async Task<List<IncomeVsSpendingEntry>> GetData()
         {
             List<IncomeVsSpendingEntry> result = new List<IncomeVsSpendingEntry>();
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 IEnumerable<BankAccount> bankAccounts = [];
                 if (user is not null)
                 {
                     try
                     {
-                        bankAccounts = FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now);
+                        bankAccounts = await FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now);
                     }
                     catch (Exception)
                     {

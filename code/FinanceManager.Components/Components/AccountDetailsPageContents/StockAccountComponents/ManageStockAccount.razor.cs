@@ -39,7 +39,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             var user = await loginService.GetLoggedUser();
             if (user is null) return;
 
-            InvestmentAccount = FinancalAccountService.GetAccount<StockAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            InvestmentAccount = await FinancalAccountService.GetAccount<StockAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
             if (InvestmentAccount is null) return;
 

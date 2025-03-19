@@ -44,19 +44,19 @@ namespace FinanceManager.WebUi.Layout
                 var user = await loginService.GetLoggedUser();
                 if (user is null) return;
                 Accounts.Clear();
-                foreach (var account in FinancalAccountService.GetAvailableAccounts())
+                foreach (var account in await FinancalAccountService.GetAvailableAccounts())
                 {
 
                     var name = string.Empty;
                     if (account.Value == typeof(BankAccount))
                     {
-                        var existinhAccount = FinancalAccountService.GetAccount<BankAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
+                        var existinhAccount = await FinancalAccountService.GetAccount<BankAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
                         if (existinhAccount is not null)
                             name = existinhAccount.Name;
                     }
                     else if (account.Value == typeof(StockAccount))
                     {
-                        var existinhAccount = FinancalAccountService.GetAccount<StockAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
+                        var existinhAccount = await FinancalAccountService.GetAccount<StockAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
                         if (existinhAccount is not null)
                             name = existinhAccount.Name;
                     }

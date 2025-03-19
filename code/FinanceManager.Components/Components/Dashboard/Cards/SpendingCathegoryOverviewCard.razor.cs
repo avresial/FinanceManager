@@ -41,12 +41,12 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             Data.Clear();
             var user = await loginService.GetLoggedUser();
             if (user is null) return;
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 IEnumerable<BankAccount> bankAccounts = [];
                 try
                 {
-                    bankAccounts = FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now);
+                    bankAccounts = await FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now);
                 }
                 catch (Exception ex)
                 {

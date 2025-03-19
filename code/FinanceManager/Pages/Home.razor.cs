@@ -34,7 +34,7 @@ namespace FinanceManager.WebUi.Pages
             Dictionary<int, Type>? availableAccounts = null;
             try
             {
-                availableAccounts = FinancalAccountService.GetAvailableAccounts();
+                availableAccounts = await FinancalAccountService.GetAvailableAccounts();
             }
             catch (Exception ex)
             {
@@ -46,7 +46,7 @@ namespace FinanceManager.WebUi.Pages
                 try
                 {
                     FinancalAccountService.InitializeMock();
-                    availableAccounts = FinancalAccountService.GetAvailableAccounts();
+                    availableAccounts = await FinancalAccountService.GetAvailableAccounts();
                 }
                 catch (Exception ex)
                 {

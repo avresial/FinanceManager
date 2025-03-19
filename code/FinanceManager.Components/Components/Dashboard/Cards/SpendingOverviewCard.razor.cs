@@ -52,9 +52,8 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                 IEnumerable<BankAccount> bankAccounts = [];
                 try
                 {
-                    bankAccounts = FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now)
+                    bankAccounts = (await FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now))
                     .Where(x => x.Entries is not null && x.Entries.Count != 0);
-
                 }
                 catch (Exception ex)
                 {

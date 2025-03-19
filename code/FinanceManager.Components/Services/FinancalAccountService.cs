@@ -18,6 +18,7 @@ public class FinancalAccountService : IFinancalAccountService
     public async Task<bool> AccountExists(int id)
     {
         var accounts = await _bankAccountService.GetAvailableAccountsAsync();
+
         return accounts.Any(x => x.AccountId == id);
     }
 
@@ -39,19 +40,32 @@ public class FinancalAccountService : IFinancalAccountService
         throw new NotImplementedException();
     }
 
-    public T? GetAccount<T>(int userId, int id, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
+    public async Task<T?> GetAccount<T>(int userId, int id, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
     {
-        throw new NotImplementedException();
+        if (typeof(T) == typeof(BankAccount))
+            return await _bankAccountService.GetAccountWithEntriesAsync(id, dateStart, dateEnd) as T;
+
+        return null;
     }
 
-    public IEnumerable<T> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
+    public async Task<IEnumerable<T>> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
     {
-        throw new NotImplementedException();
+        List<T> result = [];
+        var accounts = await _bankAccountService.GetAvailableAccountsAsync();
+        foreach (var account in accounts)
+        {
+            T? nextAccount = await GetAccount<T>(userId, account.AccountId, dateStart, dateEnd);
+            if (nextAccount is null) continue;
+            result.Add(nextAccount);
+        }
+
+        return result;
     }
 
-    public Dictionary<int, Type> GetAvailableAccounts()
+    public async Task<Dictionary<int, Type>> GetAvailableAccounts()
     {
-        throw new NotImplementedException();
+        var accounts = await _bankAccountService.GetAvailableAccountsAsync();
+        return accounts.ToDictionary(x => x.AccountId, x => typeof(BankAccount));
     }
 
     public DateTime? GetEndDate(int id)
@@ -62,6 +76,9 @@ public class FinancalAccountService : IFinancalAccountService
     public async Task<int?> GetLastAccountId()
     {
         var bankAccounts = await _bankAccountService.GetAvailableAccountsAsync();
+
+        if (!bankAccounts.Any()) return 0;
+
         return bankAccounts.Max(x => x.AccountId);
     }
 

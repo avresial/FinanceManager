@@ -24,7 +24,10 @@ namespace FinanceManager.Domain.Entities.Accounts
             AccountType = accountType;
             Entries = [];
         }
+        public BankAccount() : base(-1, -1, string.Empty)
+        {
 
+        }
         public virtual void GetEntry(DateTime start)
         {
             throw new NotImplementedException();
