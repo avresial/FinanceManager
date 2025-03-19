@@ -36,11 +36,11 @@ namespace FinanceManager.WebUi.Pages.Account
             int? lastAccountIdResult = null;
             try
             {
-                lastAccountIdResult = FinancalAccountService.GetLastAccountId();
+                lastAccountIdResult = await FinancalAccountService.GetLastAccountId();
             }
             catch (Exception ex)
             {
-                _errors = new[] { ex.Message };
+                _errors = [ex.Message];
                 lastAccountIdResult = null;
                 Logger.LogError(ex, "Error while adding bank account");
             }
@@ -54,10 +54,11 @@ namespace FinanceManager.WebUi.Pages.Account
                 case "Bank account":
                     try
                     {
-                        FinancalAccountService.AddAccount(new BankAccount(user.UserId, ++lastAccountId, _accountName, Domain.Enums.AccountType.Other));
+                        await FinancalAccountService.AddAccount(new BankAccount(user.UserId, ++lastAccountId, _accountName, Domain.Enums.AccountType.Other));
                     }
                     catch (Exception ex)
                     {
+                        _errors = [ex.Message];
                         Logger.LogError(ex, "Error while adding bank account");
                     }
                     _addedAccountId = lastAccountId;
@@ -66,10 +67,11 @@ namespace FinanceManager.WebUi.Pages.Account
                 case "Stock":
                     try
                     {
-                        FinancalAccountService.AddAccount(new StockAccount(user.UserId, ++lastAccountId, _accountName));
+                        await FinancalAccountService.AddAccount(new StockAccount(user.UserId, ++lastAccountId, _accountName));
                     }
                     catch (Exception ex)
                     {
+                        _errors = [ex.Message];
                         Logger.LogError(ex, "Error while adding bank account");
                     }
                     _addedAccountId = lastAccountId;

@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Accounts;
+﻿using FinanceManager.Application.Commands.Account;
+using FinanceManager.Domain.Entities.Accounts;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Services;
@@ -20,9 +21,10 @@ public class FinancalAccountService : IFinancalAccountService
         return accounts.Any(x => x.AccountId == id);
     }
 
-    public void AddAccount<T>(T account) where T : BasicAccountInformation
+    public async Task AddAccount<T>(T account) where T : BasicAccountInformation
     {
-        throw new NotImplementedException();
+        if (typeof(T) == typeof(BankAccount))
+            await _bankAccountService.AddAccountAsync(new AddAccount(account.Name));
     }
 
     public void AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
@@ -57,9 +59,10 @@ public class FinancalAccountService : IFinancalAccountService
         throw new NotImplementedException();
     }
 
-    public int? GetLastAccountId()
+    public async Task<int?> GetLastAccountId()
     {
-        throw new NotImplementedException();
+        var bankAccounts = await _bankAccountService.GetAvailableAccountsAsync();
+        return bankAccounts.Max(x => x.AccountId);
     }
 
     public DateTime? GetStartDate(int id)

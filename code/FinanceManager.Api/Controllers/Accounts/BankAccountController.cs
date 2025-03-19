@@ -12,7 +12,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Route("api/[controller]")]
 [ApiController]
 public class BankAccountController(IAccountRepository<BankAccount> bankAccountRepository,
-    IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : ControllerBase
+IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : ControllerBase
 {
     private readonly IAccountRepository<BankAccount> bankAccountRepository = bankAccountRepository;
     private readonly IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository = bankAccountEntryRepository;
