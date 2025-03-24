@@ -54,18 +54,18 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
         public async Task HideOverlay()
         {
             AddEntryVisibility = false;
-            UpdateInfo();
+            await UpdateInfo();
 
             if (chart is not null)
                 await chart.RenderAsync();
 
             StateHasChanged();
         }
-        public void UpdateInfo()
+        public async Task UpdateInfo()
         {
             if (Account is null || Account.Entries is null) return;
 
-            UpdateDates();
+            await UpdateDates();
 
             if (Account.Entries is not null && Account.Entries.Any() && oldestEntryDate is not null)
                 LoadedAllData = (oldestEntryDate >= Account.Entries.Last().PostingDate);
@@ -99,7 +99,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
             if (chart is not null)
                 await chart.RenderAsync();
 
-            UpdateInfo();
+            await UpdateInfo();
         }
 
         protected override async Task OnInitializedAsync()
@@ -152,12 +152,12 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
                     var accountType = accounts[AccountId];
                     if (accountType == typeof(BankAccount))
                     {
-                        UpdateDates();
+                        await UpdateDates();
                         if (user is not null)
                         {
                             Account = await FinancalAccountService.GetAccount<BankAccount>(user.UserId, AccountId, dateStart, DateTime.UtcNow);
                             if (Account is not null && Account.Entries is not null)
-                                UpdateInfo();
+                                await UpdateInfo();
                         }
                     }
                 }

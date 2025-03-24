@@ -39,7 +39,7 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
         var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
         if (bankAccount is null) return null;
         if (bankAccount.Entries is null || !bankAccount.Entries.Any()) return null;
-        var maxDate = bankAccount.Entries.Max(x => x.PostingDate);
+        var maxDate = bankAccount.Entries.Min(x => x.PostingDate);
 
         return bankAccount.Entries.First(x => x.PostingDate == maxDate);
     }
@@ -49,7 +49,7 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
         var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
         if (bankAccount is null) return null;
         if (bankAccount.Entries is null || !bankAccount.Entries.Any()) return null;
-        var minDate = bankAccount.Entries.Min(x => x.PostingDate);
+        var minDate = bankAccount.Entries.Max(x => x.PostingDate);
 
         return bankAccount.Entries.First(x => x.PostingDate == minDate);
     }

@@ -76,7 +76,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : Controll
         return await Task.FromResult(Ok(bankAccountDto));
     }
 
-    [HttpGet("GetYoungestEntryDate")]
+    [HttpGet("GetYoungestEntryDate/{accountId:int}")]
     public async Task<IActionResult> GetYoungestEntryDate(int accountId)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
@@ -94,7 +94,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : Controll
         return await Task.FromResult(NoContent());
     }
 
-    [HttpGet("GetOldestEntryDate")]
+    [HttpGet("GetOldestEntryDate/{accountId:int}")]
     public async Task<IActionResult> GetOldestEntryDate(int accountId)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
