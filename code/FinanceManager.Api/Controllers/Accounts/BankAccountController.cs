@@ -3,6 +3,7 @@ using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Infrastructure.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -54,14 +55,64 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : Controll
         if (account == null) return NoContent();
         if (account.UserId != userId) return BadRequest();
 
-        var entries = bankAccountEntryRepository.Get(accountId, startDate, endDate);
-
-        account.Add(entries, false);
-        return await Task.FromResult(Ok(account));
+        IEnumerable<BankAccountEntry> entries = bankAccountEntryRepository.Get(accountId, startDate, endDate);
+        BankAccountDto bankAccountDto = new()
+        {
+            AccountId = account.AccountId,
+            UserId = account.UserId,
+            Name = account.Name,
+            AccountType = account.AccountType,
+            OlderThenLoadedEntry = account.OlderThenLoadedEntry,
+            YoungerThenLoadedEntry = account.YoungerThenLoadedEntry,
+            Entries = entries.Select(x => new BankAccountEntryDto
+            {
+                AccountId = x.AccountId,
+                EntryId = x.EntryId,
+                PostingDate = x.PostingDate,
+                Value = x.Value,
+                ValueChange = x.ValueChange,
+            })
+        };
+        return await Task.FromResult(Ok(bankAccountDto));
     }
 
-    [HttpPost]
-    [Route("Add")]
+    [HttpGet("GetYoungestEntryDate")]
+    public async Task<IActionResult> GetYoungestEntryDate(int accountId)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (userId is null) return BadRequest();
+
+        var account = bankAccountRepository.Get(accountId);
+
+        if (account == null) return NoContent();
+        if (account.UserId != userId) return BadRequest();
+
+        var entry = bankAccountEntryRepository.GetYoungest(accountId);
+        if (entry is not null)
+            return await Task.FromResult(Ok(entry.PostingDate));
+
+        return await Task.FromResult(NoContent());
+    }
+
+    [HttpGet("GetOldestEntryDate")]
+    public async Task<IActionResult> GetOldestEntryDate(int accountId)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (userId is null) return BadRequest();
+
+        var account = bankAccountRepository.Get(accountId);
+
+        if (account == null) return NoContent();
+        if (account.UserId != userId) return BadRequest();
+
+        var entry = bankAccountEntryRepository.GetOldest(accountId);
+        if (entry is not null)
+            return await Task.FromResult(Ok(entry.PostingDate));
+
+        return await Task.FromResult(NoContent());
+    }
+
+    [HttpPost("Add")]
     public async Task<IActionResult> Add(AddAccount addAccount)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
@@ -70,8 +121,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : Controll
         return await Task.FromResult(Ok(bankAccountRepository.Add(userId.Value, addAccount.accountName)));
     }
 
-    [HttpPost]
-    [Route("AddEntry")]
+    [HttpPost("AddEntry")]
     public async Task<IActionResult> AddEntry(AddBankAccountEntry addEntry)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
@@ -80,8 +130,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : Controll
         return await Task.FromResult(Ok(bankAccountEntryRepository.Add(addEntry.entry)));
     }
 
-    [HttpPut]
-    [Route("Update")]
+    [HttpPut("Update")]
     public async Task<IActionResult> Update(UpdateAccount updateAccount)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
@@ -93,8 +142,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : Controll
         return await Task.FromResult(Ok(bankAccountRepository.Update(updateAccount.accountId, updateAccount.accountName)));
     }
 
-    [HttpDelete]
-    [Route("Delete")]
+    [HttpDelete("Delete")]
     public async Task<IActionResult> Delete(DeleteAccount deleteAccount)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);

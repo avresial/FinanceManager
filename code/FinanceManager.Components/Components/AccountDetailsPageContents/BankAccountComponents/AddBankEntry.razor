@@ -112,7 +112,7 @@
         try
         {
             BankAccount.Add(bankAccountEntry);
-            FinancalAccountService.AddEntry(bankAccountEntry, BankAccount.AccountId);
+          await  FinancalAccountService.AddEntry(bankAccountEntry, BankAccount.AccountId);
         }
         catch (Exception ex)
         {

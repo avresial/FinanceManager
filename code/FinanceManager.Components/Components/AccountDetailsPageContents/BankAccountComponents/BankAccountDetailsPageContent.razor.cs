@@ -170,10 +170,10 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
 
             await Task.CompletedTask;
         }
-        private void UpdateDates()
+        private async Task UpdateDates()
         {
-            oldestEntryDate = FinancalAccountService.GetStartDate(AccountId);
-            youngestEntryDate = FinancalAccountService.GetEndDate(AccountId);
+            oldestEntryDate = await FinancalAccountService.GetStartDate(AccountId);
+            youngestEntryDate = await FinancalAccountService.GetEndDate(AccountId);
 
             if (youngestEntryDate is not null && dateStart > youngestEntryDate)
                 dateStart = new DateTime(youngestEntryDate.Value.Date.Year, youngestEntryDate.Value.Date.Month, 1);

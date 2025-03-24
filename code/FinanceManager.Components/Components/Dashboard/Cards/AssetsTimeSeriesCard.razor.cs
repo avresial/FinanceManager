@@ -52,6 +52,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             if (user is null) return;
 
             priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow);
+            StateHasChanged();
         }
 
         private ApexChartOptions<TimeSeriesModel> options { get; set; } = new()

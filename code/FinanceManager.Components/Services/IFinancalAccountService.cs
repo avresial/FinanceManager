@@ -6,10 +6,10 @@ public interface IFinancalAccountService
 {
     public Task<Dictionary<int, Type>> GetAvailableAccounts();
     public Task<int?> GetLastAccountId();
-    public DateTime? GetStartDate(int id);
-    public DateTime? GetEndDate(int id);
+    public Task<DateTime?> GetStartDate(int accountId);
+    public Task<DateTime?> GetEndDate(int accountId);
 
-    public Task<bool> AccountExists(int id);
+    public Task<bool> AccountExists(int accountId);
     public Task<T?> GetAccount<T>(int userId, int id, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation;
     public Task<IEnumerable<T>> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation;
 
@@ -18,7 +18,7 @@ public interface IFinancalAccountService
     public void UpdateAccount<T>(T account) where T : BasicAccountInformation;
     public void RemoveAccount(int id);
 
-    public void AddEntry<T>(T accountEntry, int id) where T : FinancialEntryBase;
+    public Task AddEntry<T>(T accountEntry, int id) where T : FinancialEntryBase;
     public void UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase;
     public void RemoveEntry(int accountEntryId, int id);
     public void InitializeMock();

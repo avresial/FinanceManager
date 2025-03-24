@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Services;
@@ -35,9 +36,10 @@ public class FinancalAccountService : IFinancalAccountService
         throw new NotImplementedException();
     }
 
-    public void AddEntry<T>(T accountEntry, int id) where T : FinancialEntryBase
+    public async Task AddEntry<T>(T accountEntry, int id) where T : FinancialEntryBase
     {
-        throw new NotImplementedException();
+        if (accountEntry is BankAccountEntry bankAccountEntry)
+            await _bankAccountService.AddEntryAsync(new AddBankAccountEntry(bankAccountEntry));
     }
 
     public async Task<T?> GetAccount<T>(int userId, int id, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
@@ -68,9 +70,13 @@ public class FinancalAccountService : IFinancalAccountService
         return accounts.ToDictionary(x => x.AccountId, x => typeof(BankAccount));
     }
 
-    public DateTime? GetEndDate(int id)
+    public async Task<DateTime?> GetEndDate(int accountId)
     {
-        throw new NotImplementedException();
+        return await _bankAccountService.GetYoungestEntryDate(accountId);
+    }
+    public async Task<DateTime?> GetStartDate(int accountId)
+    {
+        return await _bankAccountService.GetOldestEntryDate(accountId);
     }
 
     public async Task<int?> GetLastAccountId()
@@ -82,10 +88,7 @@ public class FinancalAccountService : IFinancalAccountService
         return bankAccounts.Max(x => x.AccountId);
     }
 
-    public DateTime? GetStartDate(int id)
-    {
-        throw new NotImplementedException();
-    }
+
 
     public void InitializeMock()
     {

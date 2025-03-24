@@ -11,7 +11,6 @@ namespace FinanceManager.Components.Components.Dashboard
         public required IFinancalAccountService FinancalAccountService { get; set; }
 
         public DateTime StartDateTime { get; set; }
-
         protected override async Task OnInitializedAsync()
         {
             await GetThisMonth();

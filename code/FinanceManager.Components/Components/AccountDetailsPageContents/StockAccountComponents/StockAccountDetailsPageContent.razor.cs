@@ -112,7 +112,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
                 {
                     accountType = accounts[AccountId];
 
-                    UpdateDates();
+                    await UpdateDates();
 
                     if (accountType == typeof(StockAccount))
                     {
@@ -136,7 +136,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         public async Task UpdateInfo()
         {
             if (Account is null || Account.Entries is null) return;
-            UpdateDates();
+            await UpdateDates();
             stocks = Account.GetStoredTickers();
             foreach (var entry in Account.Entries)
             {
@@ -191,10 +191,10 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             await UpdateInfo();
         }
 
-        private void UpdateDates()
+        private async Task UpdateDates()
         {
-            oldestEntryDate = FinancalAccountService.GetStartDate(AccountId);
-            youngestEntryDate = FinancalAccountService.GetEndDate(AccountId);
+            oldestEntryDate = await FinancalAccountService.GetStartDate(AccountId);
+            youngestEntryDate = await FinancalAccountService.GetEndDate(AccountId);
 
             if (youngestEntryDate is not null && dateStart > youngestEntryDate)
                 dateStart = new DateTime(youngestEntryDate.Value.Date.Year, youngestEntryDate.Value.Date.Month, 1);

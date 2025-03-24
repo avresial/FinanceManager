@@ -2,6 +2,7 @@
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.ValueObjects;
+using FinanceManager.Infrastructure.Dtos;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.Services;
@@ -32,9 +33,20 @@ public class BankAccountService
 
     public async Task<BankAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate)
     {
-        return await _httpClient.GetFromJsonAsync<BankAccount>($"{_httpClient.BaseAddress}api/BankAccount/{accountId}&{startDate:O}&{endDate:O}");
-    }
+        var result = await _httpClient.GetFromJsonAsync<BankAccountDto>($"{_httpClient.BaseAddress}api/BankAccount/{accountId}&{startDate:O}&{endDate:O}");
 
+        if (result is null) return null;
+        return new BankAccount(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new BankAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange))
+            , result.AccountType, result.OlderThenLoadedEntry, result.YoungerThenLoadedEntry);
+    }
+    public async Task<DateTime?> GetOldestEntryDate(int accountId)
+    {
+        return await _httpClient.GetFromJsonAsync<DateTime>($"{_httpClient.BaseAddress}api/BankAccount/GetOldestEntryDate/{accountId}");
+    }
+    public async Task<DateTime?> GetYoungestEntryDate(int accountId)
+    {
+        return await _httpClient.GetFromJsonAsync<DateTime>($"{_httpClient.BaseAddress}api/BankAccount/GetYoungestEntryDate/{accountId}");
+    }
     public async Task<bool> AddAccountAsync(AddAccount addAccount)
     {
         var response = await _httpClient.PostAsJsonAsync($"{_httpClient.BaseAddress}api/BankAccount/Add", addAccount);

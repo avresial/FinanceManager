@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
+using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.Entities.Accounts
 {
@@ -10,8 +11,9 @@ namespace FinanceManager.Domain.Entities.Accounts
         public readonly DateTime? YoungerThenLoadedEntry;
         public AccountType AccountType { get; set; }
 
-        public BankAccount(int userId, int id, string name, IEnumerable<BankAccountEntry>? entries = null, AccountType accountType = AccountType.Other, DateTime? olderThenLoadedEntry = null,
-            DateTime? youngerThenLoadedEntry = null) : base(userId, id, name)
+        [JsonConstructorAttribute]
+        public BankAccount(int userId, int accountId, string name, IEnumerable<BankAccountEntry>? entries = null, AccountType accountType = AccountType.Other, DateTime? olderThenLoadedEntry = null,
+            DateTime? youngerThenLoadedEntry = null) : base(userId, accountId, name)
         {
             this.UserId = userId;
             Entries = entries is null ? ([]) : entries.ToList();
@@ -24,10 +26,7 @@ namespace FinanceManager.Domain.Entities.Accounts
             AccountType = accountType;
             Entries = [];
         }
-        public BankAccount() : base(-1, -1, string.Empty)
-        {
 
-        }
         public virtual void GetEntry(DateTime start)
         {
             throw new NotImplementedException();
