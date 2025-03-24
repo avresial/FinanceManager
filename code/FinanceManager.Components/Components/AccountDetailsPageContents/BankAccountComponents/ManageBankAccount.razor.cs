@@ -65,7 +65,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
             if (BankAccount is null) return;
 
             BankAccount updatedAccount = new BankAccount(BankAccount.UserId, BankAccount.AccountId, AccountName, AccountType);
-            FinancalAccountService.UpdateAccount(updatedAccount);
+            await FinancalAccountService.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");
         }
@@ -78,7 +78,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
 
             if (result is not null && !result.Canceled)
             {
-                FinancalAccountService.RemoveAccount(AccountId);
+                await FinancalAccountService.RemoveAccount(AccountId);
                 Navigation.NavigateTo($"");
                 await AccountDataSynchronizationService.AccountChanged();
             }

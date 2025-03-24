@@ -110,7 +110,7 @@ namespace FinanceManager.Components.Components.ImportData
             }
             _isImportingData = false;
         }
-        public void BeginImport()
+        public async Task BeginImport()
         {
             _isImportingData = true;
 
@@ -122,7 +122,7 @@ namespace FinanceManager.Components.Components.ImportData
                 {
                     try
                     {
-                        FinancalAccountService.AddEntry(new StockAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange, _exportTicker, Domain.Enums.InvestmentType.Unknown), AccountId);
+                        await FinancalAccountService.AddEntry(new StockAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange, _exportTicker, Domain.Enums.InvestmentType.Unknown), AccountId);
                         importedEntriesCount++;
                     }
                     catch (Exception ex)
@@ -138,7 +138,7 @@ namespace FinanceManager.Components.Components.ImportData
                 {
                     try
                     {
-                        FinancalAccountService.AddEntry(new StockAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange, result.Ticker, result.InvestmentType), AccountId);
+                        await FinancalAccountService.AddEntry(new StockAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange, result.Ticker, result.InvestmentType), AccountId);
                         importedEntriesCount++;
                     }
                     catch (Exception ex)

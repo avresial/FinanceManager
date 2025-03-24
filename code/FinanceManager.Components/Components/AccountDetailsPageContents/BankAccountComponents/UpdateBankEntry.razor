@@ -110,7 +110,7 @@
         try
         {
             BankAccount.UpdateEntry(bankAccountEntry);
-            FinancalAccountService.UpdateEntry(bankAccountEntry, BankAccount.AccountId);
+            await FinancalAccountService.UpdateEntry(bankAccountEntry, BankAccount.AccountId);
         }
         catch (Exception ex)
         {

@@ -19,9 +19,7 @@ public class BankAccountService
     public async Task<IEnumerable<AvailableAccount>> GetAvailableAccountsAsync()
     {
         var response = await _httpClient.GetAsync($"{_httpClient.BaseAddress}api/BankAccount");
-        var resultsty = await response.Content.ReadAsStringAsync();
         var result = await response.Content.ReadFromJsonAsync<IEnumerable<AvailableAccount>>();
-        //var result = await _httpClient.GetFromJsonAsync<IEnumerable<AvailableAccount>>($"{_httpClient.BaseAddress}api/BankAccount");
         if (result is null) return [];
         return result;
     }
@@ -41,11 +39,19 @@ public class BankAccountService
     }
     public async Task<DateTime?> GetOldestEntryDate(int accountId)
     {
-        return await _httpClient.GetFromJsonAsync<DateTime>($"{_httpClient.BaseAddress}api/BankAccount/GetOldestEntryDate/{accountId}");
+        var response = await _httpClient.GetAsync($"{_httpClient.BaseAddress}api/BankAccount/GetOldestEntryDate/{accountId}");
+        if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+        var result = await response.Content.ReadFromJsonAsync<DateTime?>();
+        if (result is null) return null;
+        return result;
     }
     public async Task<DateTime?> GetYoungestEntryDate(int accountId)
     {
-        return await _httpClient.GetFromJsonAsync<DateTime>($"{_httpClient.BaseAddress}api/BankAccount/GetYoungestEntryDate/{accountId}");
+        var response = await _httpClient.GetAsync($"{_httpClient.BaseAddress}api/BankAccount/GetYoungestEntryDate/{accountId}");
+        if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+        var result = await response.Content.ReadFromJsonAsync<DateTime?>();
+        if (result is null) return null;
+        return result;
     }
     public async Task<bool> AddAccountAsync(AddAccount addAccount)
     {

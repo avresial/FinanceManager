@@ -91,7 +91,7 @@ namespace FinanceManager.Components.Components.ImportData
             }
             _isImportingData = false;
         }
-        public void BeginImport()
+        public async Task BeginImport()
         {
             _isImportingData = true;
 
@@ -102,7 +102,7 @@ namespace FinanceManager.Components.Components.ImportData
                 {
                     try
                     {
-                        FinancalAccountService.AddEntry(new BankAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange), AccountId);
+                        await FinancalAccountService.AddEntry(new BankAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange), AccountId);
                         importedEntriesCount++;
                     }
                     catch (Exception ex)

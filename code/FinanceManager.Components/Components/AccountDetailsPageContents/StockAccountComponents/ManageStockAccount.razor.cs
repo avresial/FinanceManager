@@ -62,7 +62,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             if (InvestmentAccount is null) return;
 
             StockAccount updatedAccount = new StockAccount(InvestmentAccount.UserId, InvestmentAccount.AccountId, AccountName);
-            FinancalAccountService.UpdateAccount(updatedAccount);
+            await FinancalAccountService.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");
         }
@@ -75,7 +75,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
             if (result is not null && !result.Canceled)
             {
-                FinancalAccountService.RemoveAccount(AccountId);
+                await FinancalAccountService.RemoveAccount(AccountId);
                 Navigation.NavigateTo($"");
                 await AccountDataSynchronizationService.AccountChanged();
             }

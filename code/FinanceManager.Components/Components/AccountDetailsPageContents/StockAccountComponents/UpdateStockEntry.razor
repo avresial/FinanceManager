@@ -144,7 +144,7 @@
         try
         {
             InvestmentAccount.UpdateEntry(bankAccountEntry);
-            FinancalAccountService.UpdateEntry(bankAccountEntry, InvestmentAccount.AccountId);
+            await FinancalAccountService.UpdateEntry(bankAccountEntry, InvestmentAccount.AccountId);
         }
         catch (Exception ex)
         {

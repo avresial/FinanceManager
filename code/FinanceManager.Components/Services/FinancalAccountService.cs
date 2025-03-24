@@ -29,7 +29,7 @@ public class FinancalAccountService : IFinancalAccountService
             await _bankAccountService.AddAccountAsync(new AddAccount(account.Name));
     }
 
-    public void AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
+    public async Task AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
         where AccountType : BasicAccountInformation
         where EntryType : FinancialEntryBase
     {
@@ -95,23 +95,24 @@ public class FinancalAccountService : IFinancalAccountService
         logger.LogInformation("InitializeMock is called.");
     }
 
-    public void RemoveAccount(int id)
+    public async Task RemoveAccount(int id)
     {
-        throw new NotImplementedException();
+        await _bankAccountService.DeleteAccountAsync(new DeleteAccount(id));
     }
 
-    public void RemoveEntry(int accountEntryId, int id)
+    public async Task RemoveEntry(int accountEntryId, int entryId)
     {
-        throw new NotImplementedException();
+        await _bankAccountService.DeleteEntryAsync(accountEntryId, entryId);
     }
 
-    public void UpdateAccount<T>(T account) where T : BasicAccountInformation
+    public async Task UpdateAccount<T>(T account) where T : BasicAccountInformation
     {
-        throw new NotImplementedException();
+        await _bankAccountService.UpdateAccountAsync(new UpdateAccount(account.AccountId, account.Name));
     }
 
-    public void UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase
+    public async Task UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase
     {
-        throw new NotImplementedException();
+        if (accountEntry is BankAccountEntry bankAccountEntry)
+            await _bankAccountService.UpdateEntryAsync(bankAccountEntry);
     }
 }
