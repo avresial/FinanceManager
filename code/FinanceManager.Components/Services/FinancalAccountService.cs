@@ -33,10 +33,20 @@ public class FinancalAccountService : IFinancalAccountService
         where AccountType : BasicAccountInformation
         where EntryType : FinancialEntryBase
     {
-        throw new NotImplementedException();
+        if (typeof(AccountType) == typeof(BankAccount))
+        {
+            var bankAccountId = await _bankAccountService.AddAccountAsync(new AddAccount(accountName));
+            foreach (var item in data)
+            {
+                if (item is BankAccountEntry bankEntry)
+                {
+                    await _bankAccountService.AddEntryAsync(new AddBankAccountEntry(bankEntry));
+                }
+            }
+        }
     }
 
-    public async Task AddEntry<T>(T accountEntry, int id) where T : FinancialEntryBase
+    public async Task AddEntry<T>(T accountEntry) where T : FinancialEntryBase
     {
         if (accountEntry is BankAccountEntry bankAccountEntry)
             await _bankAccountService.AddEntryAsync(new AddBankAccountEntry(bankAccountEntry));
@@ -110,7 +120,7 @@ public class FinancalAccountService : IFinancalAccountService
         await _bankAccountService.UpdateAccountAsync(new UpdateAccount(account.AccountId, account.Name));
     }
 
-    public async Task UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase
+    public async Task UpdateEntry<T>(T accountEntry) where T : FinancialEntryBase
     {
         if (accountEntry is BankAccountEntry bankAccountEntry)
             await _bankAccountService.UpdateEntryAsync(bankAccountEntry);

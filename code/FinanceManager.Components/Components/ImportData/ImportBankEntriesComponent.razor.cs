@@ -102,7 +102,7 @@ namespace FinanceManager.Components.Components.ImportData
                 {
                     try
                     {
-                        await FinancalAccountService.AddEntry(new BankAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange), AccountId);
+                        await FinancalAccountService.AddEntry(new BankAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange));
                         importedEntriesCount++;
                     }
                     catch (Exception ex)

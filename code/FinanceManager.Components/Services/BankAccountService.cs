@@ -53,10 +53,10 @@ public class BankAccountService
         if (result is null) return null;
         return result;
     }
-    public async Task<bool> AddAccountAsync(AddAccount addAccount)
+    public async Task<int?> AddAccountAsync(AddAccount addAccount)
     {
         var response = await _httpClient.PostAsJsonAsync($"{_httpClient.BaseAddress}api/BankAccount/Add", addAccount);
-        return response.IsSuccessStatusCode;
+        return await response.Content.ReadFromJsonAsync<int?>();
     }
 
     public async Task<bool> AddEntryAsync(AddBankAccountEntry addEntry)

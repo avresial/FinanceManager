@@ -75,7 +75,7 @@ public class StockAccountControllerTests
         // Arrange
         var userId = 1;
         var addAccount = new AddAccount("New Account");
-        _mockStockAccountRepository.Setup(repo => repo.Add(userId, addAccount.accountName)).Returns(true);
+        _mockStockAccountRepository.Setup(repo => repo.Add(userId, addAccount.accountName)).Returns(1);
 
         // Act
         var result = await _controller.AddAccount(addAccount);

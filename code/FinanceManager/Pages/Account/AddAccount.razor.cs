@@ -80,7 +80,7 @@ namespace FinanceManager.WebUi.Pages.Account
 
             _accountName = string.Empty;
             _selectedAccountType = string.Empty;
-            _ = AccountDataSynchronizationService.AccountChanged();
+            await AccountDataSynchronizationService.AccountChanged();
 
             StateHasChanged();
         }

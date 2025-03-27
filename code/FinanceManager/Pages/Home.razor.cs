@@ -6,7 +6,7 @@ namespace FinanceManager.WebUi.Pages
 {
     public partial class Home : ComponentBase
     {
-
+        private bool _isLoading;
         [Inject]
         public required ILogger<Home> Logger { get; set; }
 
@@ -24,6 +24,7 @@ namespace FinanceManager.WebUi.Pages
 
         protected override async Task OnInitializedAsync()
         {
+            _isLoading = true;
             var loggedUser = await LoginService.GetLoggedUser();
 
             if (loggedUser is null)
@@ -31,6 +32,7 @@ namespace FinanceManager.WebUi.Pages
                 Navigation.NavigateTo("login");
                 return;
             }
+
             Dictionary<int, Type>? availableAccounts = null;
             try
             {
@@ -52,11 +54,14 @@ namespace FinanceManager.WebUi.Pages
                 {
                     Logger.LogError(ex.ToString());
                 }
+
                 await AccountDataSynchronizationService.AccountChanged();
             }
 
             if (availableAccounts is null || availableAccounts.Count == 0)
                 Navigation.NavigateTo("AddAccount");
+
+            _isLoading = false;
         }
     }
 }

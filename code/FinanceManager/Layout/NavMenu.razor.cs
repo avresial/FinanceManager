@@ -12,6 +12,7 @@ namespace FinanceManager.WebUi.Layout
 
         [Inject]
         public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
+
         [Inject]
         public required ILoginService loginService { get; set; }
 
@@ -34,7 +35,6 @@ namespace FinanceManager.WebUi.Layout
         private void AccountDataSynchronizationService_AccountsChanged()
         {
             _ = UpdateAccounts();
-            _ = InvokeAsync(StateHasChanged);
         }
 
         private async Task UpdateAccounts()
@@ -68,6 +68,7 @@ namespace FinanceManager.WebUi.Layout
 
                     Accounts.Add(account.Key, name);
                 }
+                await InvokeAsync(StateHasChanged);
             }
             catch (Exception ex)
             {
