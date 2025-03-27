@@ -12,6 +12,7 @@ namespace FinanceManager.Components
                     .AddScoped<AccountDataSynchronizationService>()
                     .AddScoped<IUserService, UserService>()
                     .AddScoped<BankAccountService>()
+                    .AddScoped<StockAccountService>()
                     .AddScoped<IFinancalAccountService, FinancalAccountService>()
                     .AddScoped<IMoneyFlowService, MoneyFlowService>()
                     ;

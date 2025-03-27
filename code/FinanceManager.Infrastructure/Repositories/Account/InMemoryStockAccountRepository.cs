@@ -8,9 +8,8 @@ namespace FinanceManager.Infrastructure.Repositories.Account
     {
         private List<StockAccount> _bankAccounts = new List<StockAccount>();
 
-        public int? Add(int userId, string accountName)
+        public int? Add(int accountId, int userId, string accountName)
         {
-            var accountId = _bankAccounts.Count + 1;
             _bankAccounts.Add(new StockAccount(userId, accountId, accountName));
             return accountId;
         }

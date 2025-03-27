@@ -55,26 +55,26 @@ namespace FinanceManager.WebUi.Pages.Account
                     try
                     {
                         await FinancalAccountService.AddAccount(new BankAccount(user.UserId, ++lastAccountId, _accountName, Domain.Enums.AccountType.Other));
+                        _addedAccountId = lastAccountId;
                     }
                     catch (Exception ex)
                     {
                         _errors = [ex.Message];
                         Logger.LogError(ex, "Error while adding bank account");
                     }
-                    _addedAccountId = lastAccountId;
                     break;
 
                 case "Stock":
                     try
                     {
                         await FinancalAccountService.AddAccount(new StockAccount(user.UserId, ++lastAccountId, _accountName));
+                        _addedAccountId = lastAccountId;
                     }
                     catch (Exception ex)
                     {
                         _errors = [ex.Message];
                         Logger.LogError(ex, "Error while adding bank account");
                     }
-                    _addedAccountId = lastAccountId;
                     break;
             }
 

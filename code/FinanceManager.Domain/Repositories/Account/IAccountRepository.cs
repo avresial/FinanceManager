@@ -6,7 +6,7 @@ namespace FinanceManager.Domain.Repositories.Account
     {
         IEnumerable<AvailableAccount> GetAvailableAccounts(int userId);
         T? Get(int accountId);
-        int? Add(int userId, string accountName);
+        int? Add(int accountId, int userId, string accountName);
         bool Update(int accountId, string accountName);
         bool Delete(int accountId);
     }

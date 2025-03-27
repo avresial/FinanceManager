@@ -5,7 +5,6 @@ using FinanceManager.Domain.Repositories.Account;
 namespace FinanceManager.Infrastructure.Repositories.Account.Entry;
 public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEntry>
 {
-    //private List<BankAccountEntry> _entries = [];
     private List<BankAccount> BankAccounts = [];
     public bool Add(BankAccountEntry entry)
     {

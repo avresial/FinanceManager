@@ -44,7 +44,9 @@ namespace FinanceManager.WebUi.Layout
                 var user = await loginService.GetLoggedUser();
                 if (user is null) return;
                 Accounts.Clear();
-                foreach (var account in await FinancalAccountService.GetAvailableAccounts())
+
+                var test = await FinancalAccountService.GetAvailableAccounts();
+                foreach (var account in test)
                 {
 
                     var name = string.Empty;

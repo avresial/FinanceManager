@@ -2,6 +2,7 @@
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.AspNetCore.Authorization;
@@ -12,9 +13,10 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
-public class BankAccountController(IAccountRepository<BankAccount> bankAccountRepository,
+public class BankAccountController(IAccountRepository<BankAccount> bankAccountRepository, AccountIdProvider accountIdProvider,
 IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : ControllerBase
 {
+    private readonly AccountIdProvider accountIdProvider = accountIdProvider;
     private readonly IAccountRepository<BankAccount> bankAccountRepository = bankAccountRepository;
     private readonly IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository = bankAccountEntryRepository;
 
@@ -118,7 +120,9 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : Controll
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (!userId.HasValue) return BadRequest();
 
-        return await Task.FromResult(Ok(bankAccountRepository.Add(userId.Value, addAccount.accountName)));
+        var id = accountIdProvider.GetMaxId(userId.Value);
+        int newId = id is null ? 1 : id.Value + 1;
+        return await Task.FromResult(Ok(bankAccountRepository.Add(newId, userId.Value, addAccount.accountName)));
     }
 
     [HttpPost("AddEntry")]
