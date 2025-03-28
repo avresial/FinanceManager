@@ -1,24 +1,33 @@
 # FinanceManager
 
-Finance manager is an online budgeting tool. This software lets you keep track of your
+![GitHub stars](https://img.shields.io/github/stars/avresial/FinanceManager)
+![GitHub issues](https://img.shields.io/github/issues/avresial/FinanceManager)
 
- - income,
- - spending,
- - investments
+## Description
+FinanceManager is an online budgeting tool that allows you to keep track of your income, spending, and investments. This project leverages Blazor WASM, .NET Core, and MudBlazor to provide an efficient and user-friendly financial tracking tool.
 
- Check out the [DEMO](https://avresial.github.io/FinanceManager/landingpage)!
+## Features
+- Intuitive dashboard design
+- Asset management
+- Account tracking for cash, shares, ETF, real estate, and more
+- Real-time data updates
+- Responsive design
 
-## Intuitive dashboard design
-### Keep it simple and gather your important data in one place.
+## Demo
+Check out the [DEMO](https://avresial.github.io/FinanceManager/landingpage)!
+
+## Contact
+- **Author:** [avresial](https://github.com/avresial)
+
+## Screenshots
+### Intuitive Dashboard Design
+Keep it simple and gather your important data in one place.
 ![dashboard](imgs/Dashboard.jpg)
 
-## Assets
-### Manage your assets like a real pro
+### Assets
+Manage your assets like a real pro.
 ![dashboard](imgs/Assets.jpg)
 
-## Accounts
-### Track cash, shares, ETF, real estate value and more...
-
+### Accounts
+Track cash, shares, ETF, real estate value, and more.
 ![dashboard](imgs/SharesAccount.jpg)
-
-
