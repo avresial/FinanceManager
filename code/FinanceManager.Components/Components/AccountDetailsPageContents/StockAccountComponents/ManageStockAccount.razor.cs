@@ -1,6 +1,5 @@
-using FinanceManager.Application.Services;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -21,7 +20,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         public required int AccountId { get; set; }
 
         [Inject]
-        public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+        public required IFinancialAccountService FinancalAccountService { get; set; }
 
         [Inject]
         public required NavigationManager Navigation { get; set; }
@@ -40,7 +39,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             var user = await loginService.GetLoggedUser();
             if (user is null) return;
 
-            InvestmentAccount = FinancalAccountRepository.GetAccount<StockAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            InvestmentAccount = await FinancalAccountService.GetAccount<StockAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
             if (InvestmentAccount is null) return;
 
@@ -63,7 +62,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             if (InvestmentAccount is null) return;
 
             StockAccount updatedAccount = new StockAccount(InvestmentAccount.UserId, InvestmentAccount.AccountId, AccountName);
-            FinancalAccountRepository.UpdateAccount(updatedAccount);
+            await FinancalAccountService.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");
         }
@@ -76,7 +75,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
             if (result is not null && !result.Canceled)
             {
-                FinancalAccountRepository.RemoveAccount(AccountId);
+                await FinancalAccountService.RemoveAccount(AccountId);
                 Navigation.NavigateTo($"");
                 await AccountDataSynchronizationService.AccountChanged();
             }

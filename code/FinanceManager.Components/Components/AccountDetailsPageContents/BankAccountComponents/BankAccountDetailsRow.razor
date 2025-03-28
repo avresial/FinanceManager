@@ -1,4 +1,5 @@
 ﻿@using FinanceManager.Domain.Entities.Accounts
+@using FinanceManager.Domain.Entities.Accounts.Entries
 @using FinanceManager.Domain.Repositories;
 @using FinanceManager.Domain.Repositories.Account
 
@@ -115,64 +116,3 @@
         <RemoveBankEntry BankAccountName=@BankAccount.Name BankAccountEntry="BankAccountEntry" Cancel="HideOverlay" Confirm="Confirm" />
     </MudPaper>
 </MudOverlay>
-
-@code {
-    private bool _expanded = false;
-    private bool RemoveEntryVisibility;
-    private bool UpdateEntryVisibility;
-    internal string currency = "PLN";
-
-    [Parameter]
-    public required BankAccount BankAccount { get; set; }
-
-    [Parameter]
-    public required BankAccountEntry BankAccountEntry { get; set; }
-
-    [Inject]
-    public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
-
-    [Inject]
-    public required ISettingsService SettingsService { get; set; }
-
-    protected override void OnParametersSet()
-    {
-        currency = SettingsService.GetCurrency();
-    }
-
-    public async Task Confirm()
-    {
-        UpdateEntryVisibility = false;
-        RemoveEntryVisibility = false;
-        _expanded = false;
-        await InvokeAsync(StateHasChanged);
-
-        BankAccount.Remove(BankAccountEntry.Id);
-        FinancalAccountRepository.RemoveEntry(BankAccountEntry.Id, BankAccount.AccountId);
-    }
-
-    public async Task Cancel()
-    {
-        UpdateEntryVisibility = false;
-        RemoveEntryVisibility = false;
-        await InvokeAsync(StateHasChanged);
-    }
-
-    public async Task HideOverlay()
-    {
-        UpdateEntryVisibility = false;
-        RemoveEntryVisibility = false;
-        await InvokeAsync(StateHasChanged);
-    }
-
-    public async Task ShowEditOverlay()
-    {
-        UpdateEntryVisibility = true;
-        await Task.CompletedTask;
-    }
-    public async Task ShowRemoveOverlay()
-    {
-        RemoveEntryVisibility = true;
-        await Task.CompletedTask;
-    }
-
-}

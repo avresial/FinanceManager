@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories.Account;
 using System.ComponentModel.Design;
@@ -202,14 +203,14 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             if (bankAccountEntry is BankAccountEntry bankEntry)
                 AddBankAccountEntry(id, bankEntry.ValueChange, bankEntry.Description, bankEntry.ExpenseType, bankEntry.PostingDate);
-            if (bankAccountEntry is StockEntry investmentEntry)
+            if (bankAccountEntry is StockAccountEntry investmentEntry)
                 AddStockAccountEntry(id, investmentEntry.Ticker, investmentEntry.InvestmentType, investmentEntry.ValueChange, investmentEntry.PostingDate);
         }
         public void UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase
         {
             if (accountEntry is BankAccountEntry bankEntry)
                 UpdateBankAccountEntry(id, bankEntry);
-            if (accountEntry is StockEntry investmentEntry)
+            if (accountEntry is StockAccountEntry investmentEntry)
                 UpdateStockAccountEntry(id, investmentEntry);
         }
         public void RemoveEntry(int accountEntryId, int id)
@@ -382,17 +383,17 @@ namespace FinanceManager.Infrastructure.Repositories
             var bankAccount = FindAccount<BankAccount>(id);
             if (bankAccount is null || bankAccount.Entries is null) return;
 
-            var entryToUpdate = bankAccount.Entries.FirstOrDefault(x => x.Id == bankAccountEntry.Id);
+            var entryToUpdate = bankAccount.Entries.FirstOrDefault(x => x.EntryId == bankAccountEntry.EntryId);
             if (entryToUpdate is null) return;
 
             entryToUpdate.Update(bankAccountEntry);
         }
-        private void UpdateStockAccountEntry(int id, StockEntry investmentEntry)
+        private void UpdateStockAccountEntry(int id, StockAccountEntry investmentEntry)
         {
             var investmentAccount = FindAccount<StockAccount>(id);
             if (investmentAccount is null || investmentAccount.Entries is null) return;
 
-            var entryToUpdate = investmentAccount.Entries.FirstOrDefault(x => x.Id == investmentEntry.Id);
+            var entryToUpdate = investmentAccount.Entries.FirstOrDefault(x => x.EntryId == investmentEntry.EntryId);
             if (entryToUpdate is null) return;
 
             entryToUpdate.Update(investmentEntry);

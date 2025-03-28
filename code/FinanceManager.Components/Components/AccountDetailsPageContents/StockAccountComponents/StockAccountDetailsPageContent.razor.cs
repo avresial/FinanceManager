@@ -1,12 +1,12 @@
 using ApexCharts;
-using FinanceManager.Application.Services;
 using FinanceManager.Components.Helpers;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -18,7 +18,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
         private decimal? balanceChange = null;
         private ApexChart<ChartEntryModel>? chart;
-        private Dictionary<StockEntry, StockPrice> prices = new();
+        private Dictionary<StockAccountEntry, StockPrice> prices = new();
         private List<string> stocks = new List<string>();
         private bool LoadedAllData = false;
         private DateTime dateStart;
@@ -29,8 +29,8 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         private List<ChartEntryModel> pricesDaily = new();
         private bool visible;
 
-        internal List<(StockEntry, decimal)>? Top5;
-        internal List<(StockEntry, decimal)>? Bottom5;
+        internal List<(StockAccountEntry, decimal)>? Top5;
+        internal List<(StockAccountEntry, decimal)>? Bottom5;
         internal string currency = string.Empty;
 
         public bool IsLoading = false;
@@ -43,7 +43,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         [Inject]
         public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
         [Inject]
-        public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+        public required IFinancialAccountService FinancalAccountService { get; set; }
 
         [Inject]
         public required IStockRepository StockRepository { get; set; }
@@ -107,19 +107,19 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             try
             {
                 dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-                var accounts = FinancalAccountRepository.GetAvailableAccounts();
+                var accounts = await FinancalAccountService.GetAvailableAccounts();
                 if (accounts.ContainsKey(AccountId))
                 {
                     accountType = accounts[AccountId];
 
-                    UpdateDates();
+                    await UpdateDates();
 
                     if (accountType == typeof(StockAccount))
                     {
                         prices.Clear();
                         LoadedAllData = true;
                         if (user is not null)
-                            Account = FinancalAccountRepository.GetAccount<StockAccount>(user.UserId, AccountId, dateStart, DateTime.UtcNow);
+                            Account = await FinancalAccountService.GetAccount<StockAccount>(user.UserId, AccountId, dateStart, DateTime.UtcNow);
 
                         if (Account is not null && Account.Entries is not null)
                             await UpdateInfo();
@@ -136,7 +136,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         public async Task UpdateInfo()
         {
             if (Account is null || Account.Entries is null) return;
-            UpdateDates();
+            await UpdateDates();
             stocks = Account.GetStoredTickers();
             foreach (var entry in Account.Entries)
             {
@@ -160,7 +160,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
             if (Account.Entries is null) return;
 
-            List<(StockEntry, decimal)> orderedByPrice = new List<(StockEntry, decimal)>();
+            List<(StockAccountEntry, decimal)> orderedByPrice = new List<(StockAccountEntry, decimal)>();
             foreach (var entry in Account.Entries)
             {
                 var price = await StockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
@@ -177,7 +177,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             if (Account is null || Account.Start is null) return;
 
             dateStart = dateStart.AddMonths(-1);
-            var newData = FinancalAccountRepository.GetAccount<StockAccount>(Account.UserId, AccountId, dateStart, Account.Start.Value);
+            var newData = await FinancalAccountService.GetAccount<StockAccount>(Account.UserId, AccountId, dateStart, Account.Start.Value);
 
             if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
                 return;
@@ -191,10 +191,10 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             await UpdateInfo();
         }
 
-        private void UpdateDates()
+        private async Task UpdateDates()
         {
-            oldestEntryDate = FinancalAccountRepository.GetStartDate(AccountId);
-            youngestEntryDate = FinancalAccountRepository.GetEndDate(AccountId);
+            oldestEntryDate = await FinancalAccountService.GetStartDate(AccountId);
+            youngestEntryDate = await FinancalAccountService.GetEndDate(AccountId);
 
             if (youngestEntryDate is not null && dateStart > youngestEntryDate)
                 dateStart = new DateTime(youngestEntryDate.Value.Date.Year, youngestEntryDate.Value.Date.Month, 1);

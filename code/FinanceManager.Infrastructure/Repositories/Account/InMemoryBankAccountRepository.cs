@@ -1,16 +1,17 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.ValueObjects;
 
-namespace FinanceManager.Infrastructure.Repositories
+namespace FinanceManager.Infrastructure.Repositories.Account
 {
     internal class InMemoryBankAccountRepository : IAccountRepository<BankAccount>
     {
         private List<BankAccount> _bankAccounts = new List<BankAccount>();
 
-        public bool Add(int userId, string accountName)
+        public int? Add(int accountId, int userId, string accountName)
         {
-            _bankAccounts.Add(new BankAccount(userId, _bankAccounts.Count + 1, accountName));
-            return true;
+            _bankAccounts.Add(new BankAccount(userId, accountId, accountName));
+            return accountId;
         }
 
         public bool Delete(int accountId)
@@ -23,7 +24,7 @@ namespace FinanceManager.Infrastructure.Repositories
             return true;
         }
 
-        public IList<(int, string)> GetAvailableAccounts(int userId) => _bankAccounts.Where(x => x.UserId == userId).Select(x => (x.AccountId, x.Name)).ToList();
+        public IEnumerable<AvailableAccount> GetAvailableAccounts(int userId) => _bankAccounts.Where(x => x.UserId == userId).Select(x => new AvailableAccount(x.AccountId, x.Name));
 
         public BankAccount? Get(int accountId) => _bankAccounts.FirstOrDefault(x => x.AccountId == accountId);
 

@@ -1,5 +1,6 @@
 ﻿@using FinanceManager.Domain.Entities.Accounts
 @using System.ComponentModel.DataAnnotations
+@using FinanceManager.Domain.Entities.Accounts.Entries
 @using FinanceManager.Domain.Enums
 @using FinanceManager.Domain.Repositories
 @using FinanceManager.Components.CustomValidationAttributes
@@ -76,7 +77,7 @@
     public required StockAccount InvestmentAccount { get; set; }
 
     [Inject]
-    public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+    public required IFinancialAccountService FinancalAccountService { get; set; }
 
     [Inject]
     public required ISettingsService SettingsService { get; set; }
@@ -114,7 +115,7 @@
 
     public async Task Add()
     {
-        if (form is null)  return;
+        if (form is null) return;
         await form.Validate();
 
         if (!form.IsValid) return;
@@ -139,12 +140,12 @@
         if (currentMaxId is not null)
             id += currentMaxId.Value + 1;
 
-        StockEntry entry = new(id, date.ToUniversalTime(), -1, BalanceChange.Value, Ticker, investmentType);
+        StockAccountEntry entry = new(InvestmentAccount.AccountId, id, date.ToUniversalTime(), -1, BalanceChange.Value, Ticker, investmentType);
 
         try
         {
             InvestmentAccount.Add(new AddInvestmentEntryDto(entry.PostingDate, entry.ValueChange, entry.Ticker, entry.InvestmentType));
-            FinancalAccountRepository.AddEntry(entry, InvestmentAccount.AccountId);
+            await FinancalAccountService.AddEntry(entry);
         }
         catch (Exception ex)
         {

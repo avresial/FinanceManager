@@ -1,4 +1,5 @@
 ﻿@using FinanceManager.Domain.Entities.Accounts
+@using FinanceManager.Domain.Entities.Accounts.Entries
 @using FinanceManager.Domain.Repositories;
 @using FinanceManager.Domain.Repositories.Account
 
@@ -146,10 +147,10 @@
     public required StockAccount InvestmentAccount { get; set; }
 
     [Parameter]
-    public required StockEntry InvestmentEntry { get; set; }
+    public required StockAccountEntry InvestmentEntry { get; set; }
 
     [Inject]
-    public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+    public required IFinancialAccountService FinancalAccountService { get; set; }
 
     [Inject]
     public required ISettingsService SettingsService { get; set; }
@@ -184,8 +185,8 @@
         _expanded = false;
         await InvokeAsync(StateHasChanged);
 
-        InvestmentAccount.Remove(InvestmentEntry.Id);
-        FinancalAccountRepository.RemoveEntry(InvestmentEntry.Id, InvestmentAccount.AccountId);
+        InvestmentAccount.Remove(InvestmentEntry.EntryId);
+        await FinancalAccountService.RemoveEntry(InvestmentEntry.EntryId, InvestmentAccount.AccountId);
     }
 
     public async Task Cancel()

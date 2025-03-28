@@ -5,4 +5,8 @@
 @using FinanceManager.Components.Components.Dashboard
 
 <PageTitle>Finance manager</PageTitle>
-<Dashboard/>
+
+@if (!_isLoading)
+{
+    <Dashboard />
+}

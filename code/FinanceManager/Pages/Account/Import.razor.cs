@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Repositories.Account;
+﻿using FinanceManager.Components.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.WebUi.Pages.Account
@@ -13,27 +13,26 @@ namespace FinanceManager.WebUi.Pages.Account
         public required int AccountId { get; set; }
 
         [Inject]
-        public required IFinancalAccountRepository BankAccountRepository { get; set; }
+        public required IFinancialAccountService FinancalAccountService { get; set; }
 
         public string ErrorMessage { get; set; } = string.Empty;
 
-
-        protected override void OnInitialized()
+        protected override async Task OnInitializedAsync()
         {
-            UpdateEntries();
+            await UpdateEntries();
         }
-
-        protected override void OnParametersSet()
+        protected override async Task OnParametersSetAsync()
         {
             MyElementReference = default;
             accountType = null;
-            UpdateEntries();
+            await UpdateEntries();
         }
-        private void UpdateEntries()
+
+        private async Task UpdateEntries()
         {
             try
             {
-                var accounts = BankAccountRepository.GetAvailableAccounts();
+                var accounts = await FinancalAccountService.GetAvailableAccounts();
                 if (accounts.ContainsKey(AccountId))
                     accountType = accounts[AccountId];
 

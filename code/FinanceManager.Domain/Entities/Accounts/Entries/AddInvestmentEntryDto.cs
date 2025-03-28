@@ -1,8 +1,7 @@
 ﻿using FinanceManager.Domain.Enums;
 
-namespace FinanceManager.Infrastructure.Dtos
+namespace FinanceManager.Domain.Entities.Accounts.Entries
 {
-    public record AddFinancialEntryBaseDto(DateTime PostingDate, decimal ValueChange);
     public record AddInvestmentEntryDto : AddFinancialEntryBaseDto
     {
         public string Ticker { get; }

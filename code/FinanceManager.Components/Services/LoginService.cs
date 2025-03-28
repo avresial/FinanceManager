@@ -75,14 +75,7 @@ namespace FinanceManager.Components.Services
             }
             if (result is null) return false;
 
-
-            //var userFromDatabase = await _loginRepository.GetUser(userSession.UserName, userSession.Password);
-            //if (userFromDatabase is null)
-            //{
-            //    Console.WriteLine($"INFO - {userSession.UserName} user was not found.");
-            //    await Logout();
-            //    return false;
-            //}
+            _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.AccessToken);
             userSession.Token = result.AccessToken;
             LoggedUser = userSession;
 

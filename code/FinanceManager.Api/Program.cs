@@ -13,6 +13,17 @@ builder.Services.AddApplicationApi().AddInfrastructureApi();
 builder.Services.AddControllers();
 //builder.Services.AddOpenApi();
 builder.Services.AddOpenApi("v1", options => { options.AddDocumentTransformer<BearerSecuritySchemeTransformer>(); });
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ApiCorsPolicy",
+        builder =>
+        {
+            builder.AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+                .SetIsOriginAllowedToAllowWildcardSubdomains();
+        });
+});
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -35,15 +46,7 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenGenerator, JwtTokenGenerator>();
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("aaa",
-        builder =>
-        {
-            builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()
-                .SetIsOriginAllowedToAllowWildcardSubdomains();
-        });
-});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -62,11 +65,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors("ApiCorsPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
-app.UseCors("aaa");
 
 app.Run();

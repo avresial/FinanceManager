@@ -6,11 +6,6 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 
-@inject NavigationManager Navigation
-@inject ILoginService LoginService
-@inject ILocalStorageService LocalStorageService;
-@inject IFinancalAccountRepository FinancalAccountRepository;
-
 <section>
     <div class="container d-flex align-center" style="height:100vh;">
         <div class="row justify-content-center d-flex flex-grow-1">
@@ -48,8 +43,6 @@
                                 <MudText Typo="Typo.subtitle1">Check out demo</MudText>
                             </MudLink>
                         </MudForm>
-
-
                     </div>
                 </div>
             </div>
@@ -57,73 +50,3 @@
     </div>
 </section>
 
-@code
-{
-    private const string guestLogin = "Guest";
-    private bool success;
-    private string[] errors = { };
-    private MudForm? form;
-    private LoginModel loginModel = new();
-
-    protected override async Task OnInitializedAsync()
-    {
-        bool firstVisit = !(await LocalStorageService.ContainKeyAsync("isThisFirstVisit"));
-        if (firstVisit)
-        {
-            await LocalStorageService.SetItemAsync("isThisFirstVisit", false);
-            Navigation.NavigateTo("landingpage");
-            return;
-        }
-
-        var loggedUser = await LoginService.GetLoggedUser();
-        if (loggedUser is not null)
-            Navigation.NavigateTo("");
-
-        var getKeepMeLoggedinSession = await LoginService.GetKeepMeLoggedinSession();
-        if (getKeepMeLoggedinSession is not null)
-        {
-            var result = await LoginService.Login(getKeepMeLoggedinSession);
-            if (result)
-                Navigation.NavigateTo("");
-        }
-    }
-
-    private async Task ValidFormSubmitted(EditContext editContext)
-    {
-        if (loginModel.Login is null || loginModel.Password is null) return;
-        if (loginModel.Login == guestLogin)
-        {
-            await LogGuest();
-        }
-        else
-        {
-            await LoginService.Login(loginModel.Login, loginModel.Password);
-            Navigation.NavigateTo("");
-        }
-    }
-
-    private async Task Login()
-    {
-        if (loginModel.Login is null || loginModel.Password is null) return;
-        if (form is null) return;
-        await form.Validate();
-
-        var loginResult = await LoginService.Login(loginModel.Login, loginModel.Password);
-
-        if (loginResult) Navigation.NavigateTo("");
-
-        errors = ["Incorrect username or password."];
-        loginModel.Password = string.Empty;
-    }
-
-    private void InvalidFormSubmitted(EditContext editContext)
-    {
-    }
-
-    private async Task LogGuest()
-    {
-        FinancalAccountRepository.InitializeMock();
-        await LoginService.Login(guestLogin, "GuestPassword");
-        Navigation.NavigateTo("");
-    }
-}

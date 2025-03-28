@@ -9,8 +9,13 @@ namespace FinanceManager.Components
         public static IServiceCollection AddUIComponents(this IServiceCollection services)
         {
             services.AddScoped<ILoginService, LoginService>()
-                    .AddScoped<IUserService, UserService>();
-
+                    .AddScoped<AccountDataSynchronizationService>()
+                    .AddScoped<IUserService, UserService>()
+                    .AddScoped<BankAccountService>()
+                    .AddScoped<StockAccountService>()
+                    .AddScoped<IFinancialAccountService, FinancialAccountService>()
+                    .AddScoped<IMoneyFlowService, MoneyFlowService>()
+                    ;
             return services;
         }
     }

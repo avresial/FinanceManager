@@ -25,5 +25,11 @@
                 <MudLink Color="Color.Success" Href="@($"AccountDetails/{_addedAccountId}")" Class="ml-2"><b>Go!</b></MudLink>
             </MudAlert>
         }
+        <MudStack>
+            @foreach (var error in _errors)
+            {
+                <MudAlert Severity="Severity.Warning">@error</MudAlert>
+            }
+        </MudStack>
     </MudForm>
 </MudContainer>

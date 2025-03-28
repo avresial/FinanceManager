@@ -1,10 +1,12 @@
-﻿namespace FinanceManager.Domain.Repositories.Account
+﻿using FinanceManager.Domain.ValueObjects;
+
+namespace FinanceManager.Domain.Repositories.Account
 {
     public interface IAccountRepository<T>
     {
-        IList<(int, string)> GetAvailableAccounts(int userId);
+        IEnumerable<AvailableAccount> GetAvailableAccounts(int userId);
         T? Get(int accountId);
-        bool Add(int userId, string accountName);
+        int? Add(int accountId, int userId, string accountName);
         bool Update(int accountId, string accountName);
         bool Delete(int accountId);
     }

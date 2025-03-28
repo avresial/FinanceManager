@@ -1,5 +1,6 @@
 ﻿@using FinanceManager.Domain.Entities.Accounts
 @using System.ComponentModel.DataAnnotations
+@using FinanceManager.Domain.Entities.Accounts.Entries
 @using FinanceManager.Domain.Enums
 @using FinanceManager.Domain.Repositories
 @using FinanceManager.Components.CustomValidationAttributes
@@ -68,10 +69,10 @@
     public required StockAccount InvestmentAccount { get; set; }
 
     [Parameter]
-    public required StockEntry InvestmentEntry { get; set; }
+    public required StockAccountEntry InvestmentEntry { get; set; }
 
     [Inject]
-    public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+    public required IFinancialAccountService FinancalAccountService { get; set; }
 
     protected async Task OnFieldChanged(FormFieldChangedEventArgs args)
     {
@@ -96,8 +97,8 @@
     }
     protected override void OnParametersSet()
     {
-        if (loadedEntryId.HasValue && loadedEntryId.Value == InvestmentEntry.Id) return;
-        loadedEntryId = InvestmentEntry.Id;
+        if (loadedEntryId.HasValue && loadedEntryId.Value == InvestmentEntry.EntryId) return;
+        loadedEntryId = InvestmentEntry.EntryId;
 
         _currency = settingsService.GetCurrency();
         Time = new TimeSpan(InvestmentEntry.PostingDate.Hour, InvestmentEntry.PostingDate.Minute, InvestmentEntry.PostingDate.Second);
@@ -138,12 +139,12 @@
             Console.WriteLine(ex);
         }
 
-        StockEntry bankAccountEntry = new(InvestmentEntry.Id, date, -1, BalanceChange.Value, Ticker, investmentType);
+        StockAccountEntry bankAccountEntry = new(InvestmentEntry.AccountId, InvestmentEntry.EntryId, date, -1, BalanceChange.Value, Ticker, investmentType);
 
         try
         {
             InvestmentAccount.UpdateEntry(bankAccountEntry);
-            FinancalAccountRepository.UpdateEntry(bankAccountEntry, InvestmentAccount.AccountId);
+            await FinancalAccountService.UpdateEntry(bankAccountEntry);
         }
         catch (Exception ex)
         {

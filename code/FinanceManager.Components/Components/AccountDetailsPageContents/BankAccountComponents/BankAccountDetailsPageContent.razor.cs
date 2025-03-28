@@ -1,10 +1,10 @@
 using ApexCharts;
-using FinanceManager.Application.Services;
 using FinanceManager.Components.Helpers;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Providers;
-using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -35,7 +35,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
         public required int AccountId { get; set; }
 
         [Inject]
-        public required IFinancalAccountRepository FinancalAccountRepository { get; set; }
+        public required IFinancialAccountService FinancalAccountService { get; set; }
         [Inject]
         public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
@@ -54,18 +54,18 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
         public async Task HideOverlay()
         {
             AddEntryVisibility = false;
-            UpdateInfo();
+            await UpdateInfo();
 
             if (chart is not null)
                 await chart.RenderAsync();
 
             StateHasChanged();
         }
-        public void UpdateInfo()
+        public async Task UpdateInfo()
         {
             if (Account is null || Account.Entries is null) return;
 
-            UpdateDates();
+            await UpdateDates();
 
             if (Account.Entries is not null && Account.Entries.Any() && oldestEntryDate is not null)
                 LoadedAllData = (oldestEntryDate >= Account.Entries.Last().PostingDate);
@@ -88,7 +88,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
             dateStart = dateStart.AddMonths(-1);
             if (user is null) return;
 
-            var newData = FinancalAccountRepository.GetAccount<BankAccount>(user.UserId, AccountId, dateStart, Account.Start.Value);
+            var newData = await FinancalAccountService.GetAccount<BankAccount>(user.UserId, AccountId, dateStart, Account.Start.Value);
 
             if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
                 return;
@@ -99,7 +99,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
             if (chart is not null)
                 await chart.RenderAsync();
 
-            UpdateInfo();
+            await UpdateInfo();
         }
 
         protected override async Task OnInitializedAsync()
@@ -146,18 +146,18 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
             try
             {
                 dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-                var accounts = FinancalAccountRepository.GetAvailableAccounts();
+                var accounts = await FinancalAccountService.GetAvailableAccounts();
                 if (accounts.ContainsKey(AccountId))
                 {
                     var accountType = accounts[AccountId];
                     if (accountType == typeof(BankAccount))
                     {
-                        UpdateDates();
+                        await UpdateDates();
                         if (user is not null)
                         {
-                            Account = FinancalAccountRepository.GetAccount<BankAccount>(user.UserId, AccountId, dateStart, DateTime.UtcNow);
+                            Account = await FinancalAccountService.GetAccount<BankAccount>(user.UserId, AccountId, dateStart, DateTime.UtcNow);
                             if (Account is not null && Account.Entries is not null)
-                                UpdateInfo();
+                                await UpdateInfo();
                         }
                     }
                 }
@@ -170,10 +170,10 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
 
             await Task.CompletedTask;
         }
-        private void UpdateDates()
+        private async Task UpdateDates()
         {
-            oldestEntryDate = FinancalAccountRepository.GetStartDate(AccountId);
-            youngestEntryDate = FinancalAccountRepository.GetEndDate(AccountId);
+            oldestEntryDate = await FinancalAccountService.GetStartDate(AccountId);
+            youngestEntryDate = await FinancalAccountService.GetEndDate(AccountId);
 
             if (youngestEntryDate is not null && dateStart > youngestEntryDate)
                 dateStart = new DateTime(youngestEntryDate.Value.Date.Year, youngestEntryDate.Value.Date.Month, 1);

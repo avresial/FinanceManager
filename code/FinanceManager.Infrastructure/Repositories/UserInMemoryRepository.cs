@@ -1,13 +1,32 @@
 ﻿using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Dtos;
+using Microsoft.Extensions.Configuration;
 
 namespace FinanceManager.Infrastructure.Repositories
 {
     internal class UserInMemoryRepository : IUserRepository
     {
-        private readonly Dictionary<string, UserDto> _users = new Dictionary<string, UserDto>();
 
+        private readonly Dictionary<string, UserDto> _users = new();
+
+        // Add in constructor or a dedicated initialization method
+        public UserInMemoryRepository(IConfiguration configuration)
+        {
+            // Initialize with secure configuration
+            var defaultUserLogin = configuration["DefaultUser:Login"];
+            var defaultUserPassword = configuration["DefaultUser:Password"];
+
+            if (!string.IsNullOrEmpty(defaultUserLogin) && !string.IsNullOrEmpty(defaultUserPassword))
+            {
+                _users[defaultUserLogin] = new UserDto
+                {
+                    Login = defaultUserLogin,
+                    Password = defaultUserPassword,
+                    Id = 1
+                };
+            }
+        }
         public async Task<bool> AddUser(string login, string password)
         {
             if (_users.ContainsKey(login)) return await Task.FromResult(false);
@@ -16,7 +35,7 @@ namespace FinanceManager.Infrastructure.Repositories
             {
                 Login = login,
                 Password = password,
-                Id = _users.Count + 1
+                Id = _users.Values.Any() ? _users.Values.Max(u => u.Id) + 1 : 1
             });
 
             return await Task.FromResult(true);

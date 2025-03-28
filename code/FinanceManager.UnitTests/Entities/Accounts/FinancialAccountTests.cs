@@ -14,9 +14,9 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         public void AddData_AddsNotOrderedData()
         {
             // Arrange
-            FinancialAccount.Add(new FinancialEntryBase(1, new DateTime(2000, 1, 29), 20, 10));
-            FinancialAccount.Add(new FinancialEntryBase(2, new DateTime(2000, 1, 30), 30, 10));
-            FinancialAccount.Add(new FinancialEntryBase(3, new DateTime(2000, 1, 28), 10, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 1, new DateTime(2000, 1, 29), 20, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 2, new DateTime(2000, 1, 30), 30, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 3, new DateTime(2000, 1, 28), 10, 10));
 
             // Act
 
@@ -29,9 +29,9 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         public async Task AddEntries_FromYoungersToOldest_SingleTickers()
         {
             // Arrange
-            FinancialAccount.Add(new FinancialEntryBase(1, new DateTime(2000, 1, 30), 10, 10));
-            FinancialAccount.Add(new FinancialEntryBase(2, new DateTime(2000, 1, 29), 10, 10));
-            FinancialAccount.Add(new FinancialEntryBase(3, new DateTime(2000, 1, 28), 10, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 1, new DateTime(2000, 1, 30), 10, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 2, new DateTime(2000, 1, 29), 10, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 3, new DateTime(2000, 1, 28), 10, 10));
 
             // Act
 
@@ -45,14 +45,14 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         public void UpdateData_ChangeDate()
         {
             // Arrange
-            FinancialAccount.Add(new FinancialEntryBase(1, new DateTime(2000, 1, 29), 30, 10));
-            FinancialAccount.Add(new FinancialEntryBase(2, new DateTime(2000, 1, 30), 40, 10));
-            FinancialAccount.Add(new FinancialEntryBase(3, new DateTime(2000, 1, 28), 20, 10));
-            FinancialAccount.Add(new FinancialEntryBase(4, new DateTime(2000, 1, 26), 10, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 1, new DateTime(2000, 1, 29), 30, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 2, new DateTime(2000, 1, 30), 40, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 3, new DateTime(2000, 1, 28), 20, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 4, new DateTime(2000, 1, 26), 10, 10));
 
             // Act
             var entryToChange = FinancialAccount.Get(new DateTime(2000, 1, 30)).First();
-            FinancialEntryBase change = new FinancialEntryBase(entryToChange.Id, new DateTime(2000, 1, 27), entryToChange.Value, entryToChange.ValueChange);
+            FinancialEntryBase change = new FinancialEntryBase(entryToChange.AccountId, entryToChange.EntryId, new DateTime(2000, 1, 27), entryToChange.Value, entryToChange.ValueChange);
             FinancialAccount.UpdateEntry(change, true);
 
             // Assert
@@ -66,11 +66,11 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         public void RemoveData_RecalculatesValues()
         {
             // Arrange
-            FinancialAccount.Add(new FinancialEntryBase(1, new DateTime(2000, 1, 29), 40, 10));
-            FinancialAccount.Add(new FinancialEntryBase(2, new DateTime(2000, 1, 30), 50, 10));
-            FinancialAccount.Add(new FinancialEntryBase(3, new DateTime(2000, 1, 28), 30, 10));
-            FinancialAccount.Add(new FinancialEntryBase(4, new DateTime(2000, 1, 27), 20, 10));
-            FinancialAccount.Add(new FinancialEntryBase(5, new DateTime(2000, 1, 26), 10, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 1, new DateTime(2000, 1, 29), 40, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 2, new DateTime(2000, 1, 30), 50, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 3, new DateTime(2000, 1, 28), 30, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 4, new DateTime(2000, 1, 27), 20, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 5, new DateTime(2000, 1, 26), 10, 10));
 
             // Act
             FinancialAccount.Remove(3);
@@ -84,8 +84,8 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         public void RemoveData_RemovesOldestElement_RecalculatesValues()
         {
             // Arrange
-            FinancialAccount.Add(new FinancialEntryBase(1, new DateTime(2000, 1, 1), 10, 10));
-            FinancialAccount.Add(new FinancialEntryBase(2, new DateTime(2000, 1, 2), 20, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 1, new DateTime(2000, 1, 1), 10, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 2, new DateTime(2000, 1, 2), 20, 10));
 
             // Act
             FinancialAccount.Remove(1);
@@ -100,7 +100,7 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         public void RemoveData_OnlyOneElement_RecalculatesValues()
         {
             // Arrange
-            FinancialAccount.Add(new FinancialEntryBase(1, new DateTime(2000, 1, 28), 30, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 1, new DateTime(2000, 1, 28), 30, 10));
 
             // Act
             FinancialAccount.Remove(1);
@@ -113,7 +113,7 @@ namespace FinanceManager.UnitTests.Entities.Accounts
         public void RemoveData_SingleElementGetsDeleted_NoEntriesAreLEft()
         {
             // Arrange
-            FinancialAccount.Add(new FinancialEntryBase(1, new DateTime(2000, 1, 29), 40, 10));
+            FinancialAccount.Add(new FinancialEntryBase(1, 1, new DateTime(2000, 1, 29), 40, 10));
 
             // Act
             FinancialAccount.Remove(1);

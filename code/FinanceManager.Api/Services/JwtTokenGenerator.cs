@@ -31,7 +31,7 @@ namespace FinanceManager.Api.Services
                 Subject = new ClaimsIdentity(new[]
                 {
                     new Claim(JwtRegisteredClaimNames.Name, userName),
-                    new Claim("userId", userId.ToString())
+                    new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
                 }),
 
                 Expires = tokenExpiryTimeStamp,

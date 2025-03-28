@@ -9,10 +9,10 @@ namespace FinanceManager.Domain.Entities.Accounts
 
         public List<T>? Entries { get; protected set; }
 
-        public FinancialAccountBase(int userId, int id, string name)
+        public FinancialAccountBase(int userId, int accountId, string name)
         {
             UserId = userId;
-            AccountId = id;
+            AccountId = accountId;
             Name = name;
         }
         public virtual IEnumerable<T> Get()
@@ -39,7 +39,7 @@ namespace FinanceManager.Domain.Entities.Accounts
             var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
             if (alredyExistingEntry is not null)
             {
-                Console.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.Id}, Posting date{alredyExistingEntry.PostingDate}, Value change {alredyExistingEntry.ValueChange}");
+                Console.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.EntryId}, Posting date{alredyExistingEntry.PostingDate}, Value change {alredyExistingEntry.ValueChange}");
                 return;
             }
             var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();
@@ -74,7 +74,7 @@ namespace FinanceManager.Domain.Entities.Accounts
         {
             Entries ??= [];
 
-            var entryToUpdate = Entries.FirstOrDefault(x => x.Id == entry.Id);
+            var entryToUpdate = Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
             if (entryToUpdate is null) return;
 
             entryToUpdate.Update(entry);
@@ -100,7 +100,7 @@ namespace FinanceManager.Domain.Entities.Accounts
         {
             if (Entries is null) return;
 
-            var entry = Entries.FirstOrDefault(x => x.Id == id);
+            var entry = Entries.FirstOrDefault(x => x.EntryId == id);
             if (entry is null) return;
             var indexToRemove = Entries.IndexOf(entry);
             Entries.RemoveAt(indexToRemove);
@@ -115,7 +115,7 @@ namespace FinanceManager.Domain.Entities.Accounts
             if (Entries is null || Entries.Count == 0)
                 return null;
 
-            return Entries.Max(x => x.Id);
+            return Entries.Max(x => x.EntryId);
         }
         public IEnumerable<T> GetDaily()
         {

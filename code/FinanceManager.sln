@@ -5,7 +5,7 @@ VisualStudioVersion = 17.9.34728.123
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionElements", "SolutionElements", "{A9C3628F-FD81-46A5-8C40-2CC6924E00DD}"
 	ProjectSection(SolutionItems) = preProject
-		README.md = README.md
+		..\README.md = ..\README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{F805C968-2ACD-4CC6-A675-DFE1C1A554D8}"
