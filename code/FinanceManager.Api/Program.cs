@@ -15,7 +15,7 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi("v1", options => { options.AddDocumentTransformer<BearerSecuritySchemeTransformer>(); });
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("aaa",
+    options.AddPolicy("ApiCorsPolicy",
         builder =>
         {
             builder.AllowAnyOrigin()
@@ -65,7 +65,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseCors("aaa");
+app.UseCors("ApiCorsPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 

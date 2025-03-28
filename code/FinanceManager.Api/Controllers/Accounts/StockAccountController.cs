@@ -47,8 +47,7 @@ namespace FinanceManager.Api.Controllers.Accounts
 
             var account = await Task.FromResult(stockAccountRepository.Get(accountId));
             if (account == null) return NoContent();
-            if (account.UserId != userId) return BadRequest("User ID does not match the account owner.");
-
+            if (account.UserId != userId) return StatusCode(StatusCodes.Status403Forbidden, "Forbidden: User does not own this account.");
             return Ok(account);
         }
 
