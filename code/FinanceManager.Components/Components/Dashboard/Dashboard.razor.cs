@@ -8,7 +8,7 @@ namespace FinanceManager.Components.Components.Dashboard
         private const int UnitHeight = 130;
 
         [Inject]
-        public required IFinancalAccountService FinancalAccountService { get; set; }
+        public required IFinancialAccountService FinancalAccountService { get; set; }
 
         public DateTime StartDateTime { get; set; }
         protected override async Task OnInitializedAsync()

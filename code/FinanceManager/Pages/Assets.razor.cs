@@ -9,7 +9,7 @@ namespace FinanceManager.WebUi.Pages
         private const int UnitHeight = 190;
 
         [Inject]
-        public required IFinancalAccountService FinancalAccountService { get; set; }
+        public required IFinancialAccountService FinancalAccountService { get; set; }
 
         [Inject]
         public required ISettingsService SettingsService { get; set; }

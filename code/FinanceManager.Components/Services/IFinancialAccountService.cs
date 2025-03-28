@@ -2,7 +2,7 @@
 
 namespace FinanceManager.Components.Services;
 
-public interface IFinancalAccountService
+public interface IFinancialAccountService
 {
     public Task<Dictionary<int, Type>> GetAvailableAccounts();
     public Task<int?> GetLastAccountId();

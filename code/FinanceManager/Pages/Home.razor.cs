@@ -17,7 +17,7 @@ namespace FinanceManager.WebUi.Pages
         public required NavigationManager Navigation { get; set; }
 
         [Inject]
-        public required IFinancalAccountService FinancalAccountService { get; set; }
+        public required IFinancialAccountService FinancalAccountService { get; set; }
 
         [Inject]
         public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }

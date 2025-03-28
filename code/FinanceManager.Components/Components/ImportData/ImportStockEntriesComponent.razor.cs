@@ -51,7 +51,7 @@ namespace FinanceManager.Components.Components.ImportData
         public required int AccountId { get; set; }
 
         [Inject]
-        public required IFinancalAccountService FinancalAccountService { get; set; }
+        public required IFinancialAccountService FinancalAccountService { get; set; }
 
         public async Task UploadFiles(InputFileChangeEventArgs e)
         {

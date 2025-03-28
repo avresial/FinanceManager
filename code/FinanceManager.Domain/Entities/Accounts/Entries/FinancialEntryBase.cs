@@ -19,15 +19,15 @@
 
         public virtual void Update(FinancialEntryBase financialEntryBase)
         {
-            AccountId = financialEntryBase.AccountId;
             if (EntryId != financialEntryBase.EntryId) throw new Exception("Entry id can not be changed.");
 
             PostingDate = financialEntryBase.PostingDate;
-
             var valueChangeChange = financialEntryBase.ValueChange - ValueChange;
             Value += valueChangeChange;
 
             ValueChange = financialEntryBase.ValueChange;
+            AccountId = financialEntryBase.AccountId;
+
         }
     }
 }

@@ -1,4 +1,5 @@
 using ApexCharts;
+using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
@@ -37,11 +38,11 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
             priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow);
 
-            options.Tooltip = new ApexCharts.Tooltip
+            options.Tooltip = new Tooltip
             {
                 Y = new TooltipY
                 {
-                    Formatter = GetFormatter()
+                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
                 }
             };
         }
@@ -93,12 +94,5 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                 ColorsProvider.GetColors().First()
             }
         };
-
-        string GetFormatter()
-        {
-            return @"function(value, opts) {
-                    if (value === undefined) {return '';}
-                    return Number(value).toLocaleString() + " + $" ' {settingsService.GetCurrency()}' " + ";}";
-        }
     }
 }

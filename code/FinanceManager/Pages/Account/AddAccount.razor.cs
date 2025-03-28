@@ -23,7 +23,7 @@ namespace FinanceManager.WebUi.Pages.Account
         public required ILogger<AddAccount> Logger { get; set; }
 
         [Inject]
-        public required IFinancalAccountService FinancalAccountService { get; set; }
+        public required IFinancialAccountService FinancalAccountService { get; set; }
 
         [Inject]
         public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }

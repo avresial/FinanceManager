@@ -13,11 +13,9 @@ namespace FinanceManager.Components
                     .AddScoped<IUserService, UserService>()
                     .AddScoped<BankAccountService>()
                     .AddScoped<StockAccountService>()
-                    .AddScoped<IFinancalAccountService, FinancalAccountService>()
+                    .AddScoped<IFinancialAccountService, FinancialAccountService>()
                     .AddScoped<IMoneyFlowService, MoneyFlowService>()
                     ;
-
-
             return services;
         }
     }

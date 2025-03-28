@@ -13,7 +13,7 @@ namespace FinanceManager.WebUi.Pages.Account
         public required int AccountId { get; set; }
 
         [Inject]
-        public required IFinancalAccountService FinancalAccountService { get; set; }
+        public required IFinancialAccountService FinancalAccountService { get; set; }
 
         public string ErrorMessage { get; set; } = string.Empty;
 

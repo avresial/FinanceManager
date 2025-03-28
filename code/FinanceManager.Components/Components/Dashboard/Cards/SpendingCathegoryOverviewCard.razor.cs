@@ -23,7 +23,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         public required ILogger<SpendingCathegoryOverviewCard> Logger { get; set; }
 
         [Inject]
-        public required IFinancalAccountService FinancalAccountService { get; set; }
+        public required IFinancialAccountService FinancalAccountService { get; set; }
 
         [Inject]
         public required ISettingsService settingsService { get; set; }
@@ -41,39 +41,36 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             Data.Clear();
             var user = await loginService.GetLoggedUser();
             if (user is null) return;
-            await Task.Run(async () =>
+            IEnumerable<BankAccount> bankAccounts = [];
+            try
             {
-                IEnumerable<BankAccount> bankAccounts = [];
-                try
-                {
-                    bankAccounts = await FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Error while getting bank accounts");
-                }
+                bankAccounts = await FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error while getting bank accounts");
+            }
 
-                foreach (var account in bankAccounts)
+            foreach (var account in bankAccounts)
+            {
+                if (account.Entries is null || !account.Entries.Any()) continue;
+                foreach (var entry in account.Entries.Where(x => x.ValueChange < 0))
                 {
-                    if (account.Entries is null || !account.Entries.Any()) continue;
-                    foreach (var entry in account.Entries.Where(x => x.ValueChange < 0))
+                    var key = entry.ExpenseType.ToString();
+                    var entryElement = Data.FirstOrDefault(x => x.ExpenseType == entry.ExpenseType);
+
+                    if (entryElement is not null)
                     {
-                        var key = entry.ExpenseType.ToString();
-                        var entryElement = Data.FirstOrDefault(x => x.ExpenseType == entry.ExpenseType);
-
-                        if (entryElement is not null)
-                        {
-                            entryElement.Value += -entry.ValueChange;
-                        }
-                        else
-                        {
-                            Data.Add(new SpendingCathegoryOverviewEntry() { ExpenseType = entry.ExpenseType, Value = -entry.ValueChange });
-                        }
+                        entryElement.Value += -entry.ValueChange;
+                    }
+                    else
+                    {
+                        Data.Add(new SpendingCathegoryOverviewEntry() { ExpenseType = entry.ExpenseType, Value = -entry.ValueChange });
                     }
                 }
+            }
 
-                Data = Data.OrderByDescending(x => x.Value).ToList();
-            });
+            Data = Data.OrderByDescending(x => x.Value).ToList();
         }
 
         private class SpendingCathegoryOverviewEntry

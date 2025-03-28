@@ -20,7 +20,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         public required int AccountId { get; set; }
 
         [Inject]
-        public required IFinancalAccountService FinancalAccountService { get; set; }
+        public required IFinancialAccountService FinancalAccountService { get; set; }
 
         [Inject]
         public required NavigationManager Navigation { get; set; }

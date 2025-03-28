@@ -131,7 +131,7 @@ public class MoneyFlowServiceTests
     }
 
     [Fact]
-    public async Task GetNetWorthTimeSeries_ReturnsTimeSeries()
+    public async Task GetNetWorth_ReturnsTimeSeries()
     {
         // Arrange
         var userId = 1;

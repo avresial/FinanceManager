@@ -8,7 +8,7 @@ namespace FinanceManager.WebUi.Layout
     public partial class NavMenu : ComponentBase
     {
         [Inject]
-        public required IFinancalAccountService FinancalAccountService { get; set; }
+        public required IFinancialAccountService FinancalAccountService { get; set; }
 
         [Inject]
         public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }

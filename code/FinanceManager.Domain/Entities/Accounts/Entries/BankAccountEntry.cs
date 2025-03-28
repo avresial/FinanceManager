@@ -10,18 +10,16 @@ namespace FinanceManager.Domain.Entities.Accounts.Entries
 
         public void Update(BankAccountEntry entry)
         {
-            PostingDate = entry.PostingDate;
-            var valueChangeChange = entry.ValueChange - ValueChange;
-            Value += valueChangeChange;
+            base.Update(entry);
 
-            ValueChange = entry.ValueChange;
             Description = entry.Description;
             ExpenseType = entry.ExpenseType;
         }
 
-        public BankAccountEntry GetCopy()
+        public BankAccountEntry GetCopy() => new(AccountId, EntryId, PostingDate, Value, ValueChange)
         {
-            return new BankAccountEntry(AccountId, EntryId, PostingDate, Value, ValueChange);
-        }
+            Description = this.Description,
+            ExpenseType = this.ExpenseType
+        };
     }
 }

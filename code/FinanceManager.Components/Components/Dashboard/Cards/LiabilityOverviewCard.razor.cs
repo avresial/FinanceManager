@@ -13,7 +13,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
     public partial class LiabilityOverviewCard
     {
         private string currency = "";
-        private decimal TotalAssets = 0;
+        private decimal TotalLiabilities = 0;
         private UserSession? user;
 
 
@@ -75,7 +75,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         public required ILogger<LiabilityOverviewCard> Logger { get; set; }
 
         [Inject]
-        public required IFinancalAccountService FinancalAccountService { get; set; }
+        public required IFinancialAccountService FinancalAccountService { get; set; }
 
         [Inject]
         public required ISettingsService settingsService { get; set; }
@@ -126,7 +126,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                 }
 
                 bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value <= 0).ToList();
-                TotalAssets = bankAccounts.Sum(x => x.Entries!.OrderByDescending(x => x.PostingDate).First().Value);
+                TotalLiabilities = bankAccounts.Sum(x => x.Entries!.OrderByDescending(x => x.PostingDate).First().Value);
 
                 foreach (var account in bankAccounts)
                 {
@@ -134,7 +134,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
                     if (dataEntry is not null)
                     {
-                        dataEntry.Value -= account.Entries!.First().Value;
+                        dataEntry.Value += Math.Abs(account.Entries!.First().Value);
                     }
                     else
                     {

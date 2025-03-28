@@ -1,6 +1,8 @@
+using Blazored.LocalStorage;
+using FinanceManager.Components.Services;
 using FinanceManager.Components.ViewModels;
+using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 
@@ -10,12 +12,24 @@ namespace FinanceManager.Components.Components
     {
         private const string guestLogin = "Guest";
         private bool success;
-        private string[] errors = { };
+        private string[] errors = [];
         private MudForm? form;
         private LoginModel loginModel = new();
 
         [Inject]
         public required ILogger<LoginComponent> Logger { get; set; }
+
+        [Inject]
+        public required NavigationManager Navigation { get; set; }
+
+        [Inject]
+        public required ILoginService LoginService { get; set; }
+
+        [Inject]
+        public required ILocalStorageService LocalStorageService { get; set; }
+
+        [Inject]
+        public required IFinancialAccountService FinancalAccountService { get; set; }
 
         protected override async Task OnInitializedAsync()
         {
@@ -40,20 +54,6 @@ namespace FinanceManager.Components.Components
             }
         }
 
-        private async Task ValidFormSubmitted(EditContext editContext)
-        {
-            if (loginModel.Login is null || loginModel.Password is null) return;
-            if (loginModel.Login == guestLogin)
-            {
-                await LogGuest();
-            }
-            else
-            {
-                await LoginService.Login(loginModel.Login, loginModel.Password);
-                Navigation.NavigateTo("");
-            }
-        }
-
         private async Task Login()
         {
             if (loginModel.Login is null || loginModel.Password is null) return;
@@ -62,14 +62,14 @@ namespace FinanceManager.Components.Components
 
             var loginResult = await LoginService.Login(loginModel.Login, loginModel.Password);
 
-            if (loginResult) Navigation.NavigateTo("");
+            if (loginResult)
+            {
+                Navigation.NavigateTo("");
+                return;
+            }
 
             errors = ["Incorrect username or password."];
             loginModel.Password = string.Empty;
-        }
-
-        private void InvalidFormSubmitted(EditContext editContext)
-        {
         }
 
         private async Task LogGuest()

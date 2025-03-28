@@ -34,7 +34,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         public required ILogger<IncomeSourceOverviewCard> Logger { get; set; }
 
         [Inject]
-        public required IFinancalAccountService FinancalAccountService { get; set; }
+        public required IFinancialAccountService FinancalAccountService { get; set; }
 
         [Inject]
         public required ISettingsService settingsService { get; set; }

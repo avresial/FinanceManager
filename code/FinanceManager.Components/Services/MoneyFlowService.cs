@@ -7,9 +7,9 @@ using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Components.Services;
 
-public class MoneyFlowService(IFinancalAccountService financalAccountService, IStockRepository stockRepository) : IMoneyFlowService
+public class MoneyFlowService(IFinancialAccountService financalAccountService, IStockRepository stockRepository) : IMoneyFlowService
 {
-    private readonly IFinancalAccountService _financalAccountService = financalAccountService;
+    private readonly IFinancialAccountService _financalAccountService = financalAccountService;
     private readonly IStockRepository _stockRepository = stockRepository;
 
     public async Task<List<AssetEntry>> GetEndAssetsPerAcount(int userId, DateTime start, DateTime end)
@@ -35,8 +35,8 @@ public class MoneyFlowService(IFinancalAccountService financalAccountService, IS
             foreach (var ticker in account.GetStoredTickers())
             {
                 var stockPrice = await _stockRepository.GetStockPrice(ticker, end);
-                var latestEntry = account.Get(end).First(x => x.Ticker == ticker);
-
+                var latestEntry = account.Get(end).FirstOrDefault(x => x.Ticker == ticker);
+                if (latestEntry is null) continue;
                 var existingResult = result.FirstOrDefault(x => x.Name == account.Name);
                 if (existingResult is null)
                 {

@@ -6,13 +6,13 @@ using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Services;
 
-public class FinancalAccountService : IFinancalAccountService
+public class FinancialAccountService : IFinancialAccountService
 {
     private readonly BankAccountService _bankAccountService;
     private readonly StockAccountService _stockAccountService;
-    private readonly ILogger<FinancalAccountService> logger;
+    private readonly ILogger<FinancialAccountService> logger;
 
-    public FinancalAccountService(BankAccountService bankAccountService, StockAccountService stockAccountService, ILogger<FinancalAccountService> logger)
+    public FinancialAccountService(BankAccountService bankAccountService, StockAccountService stockAccountService, ILogger<FinancialAccountService> logger)
     {
         _bankAccountService = bankAccountService;
         _stockAccountService = stockAccountService;
