@@ -110,11 +110,11 @@ public class MoneyFlowService(IFinancialAccountService financalAccountService, I
         if (start == new DateTime()) return [];
 
         Dictionary<DateTime, decimal> prices = [];
+        TimeSpan step = new TimeSpan(1, 0, 0, 0);
 
-        List<DateTime> allDates = [];
         try
         {
-            for (DateTime i = end; i >= start; i = i.AddDays(-1)) allDates.Add(i);
+            for (DateTime i = end; i >= start; i = i.Add(-step)) prices.Add(i, 0);
         }
         catch (Exception ex)
         {
@@ -125,19 +125,12 @@ public class MoneyFlowService(IFinancialAccountService financalAccountService, I
         {
             if (account is null || account.Entries is null) continue;
 
-            foreach (var date in allDates)
+            foreach (var date in prices.Keys)
             {
                 var newestEntry = account.Get(date).OrderByDescending(x => x.PostingDate).FirstOrDefault();
                 if (newestEntry is null) continue;
 
-                if (!prices.ContainsKey(date))
-                {
-                    prices.Add(date, newestEntry.Value);
-                }
-                else
-                {
-                    prices[date] += newestEntry.Value;
-                }
+                prices[date] += newestEntry.Value;
             }
         }
 
@@ -146,7 +139,7 @@ public class MoneyFlowService(IFinancialAccountService financalAccountService, I
         {
             if (account is null || account.Entries is null) continue;
 
-            foreach (var date in allDates)
+            foreach (var date in prices.Keys)
             {
                 var tickerEntries = account.Get(date).GroupBy(x => x.Ticker);
 
@@ -155,19 +148,10 @@ public class MoneyFlowService(IFinancialAccountService financalAccountService, I
                     var newestEntry = group.OrderByDescending(x => x.PostingDate).FirstOrDefault();
                     if (newestEntry is null) continue;
                     var price = await _stockRepository.GetStockPrice(newestEntry.Ticker, date);
-                    if (!prices.ContainsKey(date))
-                    {
-                        prices.Add(date, newestEntry.Value * price.PricePerUnit);
-                    }
-                    else
-                    {
-                        prices[date] += newestEntry.Value * price.PricePerUnit;
-                    }
+                    prices[date] += newestEntry.Value * price.PricePerUnit;
                 }
             }
         }
-
-
 
         return prices.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value })
                     .OrderByDescending(x => x.DateTime)
@@ -274,6 +258,72 @@ public class MoneyFlowService(IFinancialAccountService financalAccountService, I
             if (netWorth is null) continue;
             result.Add(date, netWorth.Value);
         }
+
         return result;
+    }
+    public async Task<List<TimeSeriesModel>> GetIncome(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+    {
+        TimeSpan timeSeriesStep = step ?? new TimeSpan(1, 0, 0, 0);
+        IEnumerable<BankAccount> bankAccounts = [];
+
+        try
+        {
+            bankAccounts = await _financalAccountService.GetAccounts<BankAccount>(userId, start, end);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
+
+        Dictionary<DateTime, decimal> result = [];
+
+        for (var date = end; date >= start; date = date.Add(-timeSeriesStep))
+        {
+            result.Add(date, 0);
+
+            foreach (var account in bankAccounts)
+            {
+                if (account.Entries is null) continue;
+                var entries = account.Get(date);
+
+                foreach (var entry in entries.Where(x => x.ValueChange > 0).Select(x => x as FinancialEntryBase))
+                    result[date] += entry.ValueChange;
+            }
+        }
+
+        return result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList();
+    }
+
+    public async Task<List<TimeSeriesModel>> GetSpending(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+    {
+        TimeSpan timeSeriesStep = step ?? new TimeSpan(1, 0, 0, 0);
+        IEnumerable<BankAccount> bankAccounts = [];
+
+        try
+        {
+            bankAccounts = await _financalAccountService.GetAccounts<BankAccount>(userId, start, end);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
+
+        Dictionary<DateTime, decimal> result = [];
+
+        for (var date = end; date >= start; date = date.Add(-timeSeriesStep))
+        {
+            result.Add(date, 0);
+
+            foreach (var account in bankAccounts)
+            {
+                if (account.Entries is null) continue;
+                var entries = account.Get(date);
+
+                foreach (var entry in entries.Where(x => x.ValueChange < 0).Select(x => x as FinancialEntryBase))
+                    result[date] += entry.ValueChange;
+            }
+        }
+
+        return result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList();
     }
 }

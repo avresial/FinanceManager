@@ -11,7 +11,6 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.TimeSeries;
 public partial class AssetsTimeSeriesCard
 {
     private ApexChart<TimeSeriesModel>? _chart;
-    private List<TimeSeriesModel> _priceTimeseries = [];
     private ApexChartOptions<TimeSeriesModel> _options { get; set; } = new()
     {
         Chart = new Chart
@@ -51,6 +50,8 @@ public partial class AssetsTimeSeriesCard
         }
     };
 
+    public List<TimeSeriesModel> ChartData { get; set; } = [];
+
     [Parameter] public DateTime StartDateTime { get; set; }
 
     [Inject] public required ILogger<AssetsTimeSeriesCard> Logger { get; set; }
@@ -63,7 +64,8 @@ public partial class AssetsTimeSeriesCard
         var user = await LoginService.GetLoggedUser();
         if (user is null) return;
 
-        _priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow);
+        ChartData.Clear();
+        ChartData.AddRange(await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow));
 
         _options.Tooltip = new Tooltip
         {
@@ -78,7 +80,9 @@ public partial class AssetsTimeSeriesCard
         var user = await LoginService.GetLoggedUser();
         if (user is null) return;
 
-        _priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow);
-        StateHasChanged();
+        ChartData.Clear();
+        ChartData.AddRange(await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow));
+
+        if (_chart is not null) await _chart.UpdateSeriesAsync(true);
     }
 }

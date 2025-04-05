@@ -277,5 +277,71 @@ namespace FinanceManager.Application.Services
             }
             return result;
         }
+
+        public async Task<List<TimeSeriesModel>> GetIncome(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+        {
+            TimeSpan timeSeriesStep = step ?? new TimeSpan(1, 0, 0, 0);
+            IEnumerable<BankAccount> bankAccounts = [];
+
+            try
+            {
+                bankAccounts = _bankAccountRepository.GetAccounts<BankAccount>(userId, start, end);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+
+            Dictionary<DateTime, decimal> result = [];
+
+            for (var date = end; date >= start; date = date.Add(-timeSeriesStep))
+            {
+                result.Add(date, 0);
+
+                foreach (var account in bankAccounts)
+                {
+                    if (account.Entries is null) continue;
+                    var entries = account.Get(date);
+
+                    foreach (var entry in entries.Where(x => x.ValueChange > 0).Select(x => x as FinancialEntryBase))
+                        result[date] += entry.ValueChange;
+                }
+            }
+
+            return result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList();
+        }
+
+        public async Task<List<TimeSeriesModel>> GetSpending(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+        {
+            TimeSpan timeSeriesStep = step ?? new TimeSpan(1, 0, 0, 0);
+            IEnumerable<BankAccount> bankAccounts = [];
+
+            try
+            {
+                bankAccounts = _bankAccountRepository.GetAccounts<BankAccount>(userId, start, end);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+
+            Dictionary<DateTime, decimal> result = [];
+
+            for (var date = end; date >= start; date = date.Add(-timeSeriesStep))
+            {
+                result.Add(date, 0);
+
+                foreach (var account in bankAccounts)
+                {
+                    if (account.Entries is null) continue;
+                    var entries = account.Get(date);
+
+                    foreach (var entry in entries.Where(x => x.ValueChange < 0).Select(x => x as FinancialEntryBase))
+                        result[date] += entry.ValueChange;
+                }
+            }
+
+            return result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList();
+        }
     }
 }

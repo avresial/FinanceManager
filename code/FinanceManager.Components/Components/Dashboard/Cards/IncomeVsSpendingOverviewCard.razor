@@ -26,17 +26,17 @@
 
     <div class="row flex-fill" style="height:1px;">
         <div class="h-100" style="position:relative; bottom:-2px">
-            <ApexChart @ref="chart" Height="@("100%")" TItem="IncomeVsSpendingEntry" Options="options" XAxisType="XAxisType.Datetime">
+            <ApexChart @ref="_chart" Height="@("100%")" TItem="IncomeVsSpendingEntry" Options="_options" XAxisType="XAxisType.Datetime">
                 <ChildContent>
                     <ApexPointSeries TItem="IncomeVsSpendingEntry"
-                                     Items="Data"
+                                     Items="ChartData"
                                      Name="Income"
                                      XValue="@(e => e.Date.ToLocalTime())"
                                      YValue="e=> e.Income"
                                      SeriesType="SeriesType.Area" />
 
                     <ApexPointSeries TItem="IncomeVsSpendingEntry"
-                                     Items="Data"
+                                     Items="ChartData"
                                      Name="Spending"
                                      XValue="@(e => e.Date.ToLocalTime())"
                                      YValue="e=> e.Spending"
