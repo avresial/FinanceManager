@@ -284,7 +284,7 @@ public class MoneyFlowService(IFinancialAccountService financalAccountService, I
             foreach (var account in bankAccounts)
             {
                 if (account.Entries is null) continue;
-                var entries = account.Get(date);
+                var entries = account.Get(date).Where(x => x.PostingDate.Date == date.Date);
 
                 foreach (var entry in entries.Where(x => x.ValueChange > 0).Select(x => x as FinancialEntryBase))
                     result[date] += entry.ValueChange;
@@ -293,7 +293,6 @@ public class MoneyFlowService(IFinancialAccountService financalAccountService, I
 
         return result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList();
     }
-
     public async Task<List<TimeSeriesModel>> GetSpending(int userId, DateTime start, DateTime end, TimeSpan? step = null)
     {
         TimeSpan timeSeriesStep = step ?? new TimeSpan(1, 0, 0, 0);
@@ -317,7 +316,7 @@ public class MoneyFlowService(IFinancialAccountService financalAccountService, I
             foreach (var account in bankAccounts)
             {
                 if (account.Entries is null) continue;
-                var entries = account.Get(date);
+                var entries = account.Get(date).Where(x => x.PostingDate.Date == date.Date);
 
                 foreach (var entry in entries.Where(x => x.ValueChange < 0).Select(x => x as FinancialEntryBase))
                     result[date] += entry.ValueChange;

@@ -1,11 +1,5 @@
 ﻿@using ApexCharts
-@using FinanceManager.Domain.Entities
-@using FinanceManager.Domain.Entities.Accounts
-@using FinanceManager.Domain.Entities.Login
-@using FinanceManager.Domain.Providers
-@using FinanceManager.Domain.Repositories
-@using FinanceManager.Domain.Repositories.Account
-@using FinanceManager.Domain.Services
+@using FinanceManager.Domain.Entities.MoneyFlowModels;
 
 <div class="card" style="height:@Height;">
     <div class="row m-0">
@@ -13,7 +7,7 @@
             <div class="container-fluid d-flex flex-column h-100 px-1">
                 <div class="col px-0">
                     <h5 class="card-title">Liabilities</h5>
-                    <h6 class="card-subtitle mb-2 text-muted">@TotalLiabilities @currency</h6>
+                    <h6 class="card-subtitle mb-2 text-muted">@_totalLiabilities @_currency</h6>
                 </div>
             </div>
         </div>
@@ -21,32 +15,30 @@
 
     <div class="row flex-fill pb-2" style="height:1px;">
         <div class="h-100">
-
-            <ApexChart @ref="chart" Height="@("100%")" TItem="LiabilityOverviewEntry" Options="options">
-                <ApexPointTooltip>
+            <ApexChart @ref="_chart" Height="@("100%")" TItem="TimeSeriesModel" Options="_options">
+             @*    <ApexPointTooltip>
                     <div class="m-2">
                         @{
                             var point = context.DataPoint.Items.FirstOrDefault();
                             if (point is not null)
                             {
-                                <span class="me-1">@context.DataPoint.X: -@point.Value @currency</span>
+                                <span class="me-1">@context.DataPoint.X: -@point.Value @_currency</span>
                             }
                         }
                     </div>
                 </ApexPointTooltip>
 
-                <ChildContent>
-                    <ApexPointSeries TItem="LiabilityOverviewEntry"
-                                     Items="Data"
+                <ChildContent> *@
+                    <ApexPointSeries TItem="TimeSeriesModel"
+                                     Items="ChartData"
                                      Name="Assets"
-                                     XValue="e => e.Cathegory.ToString()"
-                                     YAggregate="@(e => e.Sum(e => e.Value))"
                                      SeriesType="SeriesType.Pie"
+                                     XValue="@(e => e.Name)"
+                                     YAggregate="@(e => e.Sum(e => e.Value))"
                                      OrderByDescending="@(e=>e.Y)" />
-                </ChildContent>
+                @* </ChildContent> *@
 
             </ApexChart>
-
         </div>
     </div>
 </div>
