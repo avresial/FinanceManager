@@ -15,49 +15,49 @@ namespace FinanceManager.Api.Controllers
         [HttpGet("GetEndAssetsPerAcount/{userId:int}/{start:DateTime}/{end:DateTime}")]
         public async Task<IActionResult> GetEndAssetsPerAcount(int userId, DateTime start, DateTime end)
         {
-            return await Task.FromResult(NoContent());
+            return Ok(await _moneyFlowService.GetEndAssetsPerAcount(userId, start, end));
         }
 
         [HttpGet("GetEndAssetsPerType/{userId:int}/{start:DateTime}/{end:DateTime}")]
         public async Task<IActionResult> GetEndAssetsPerType(int userId, DateTime start, DateTime end)
         {
-            return await Task.FromResult(NoContent());
+            return Ok(await _moneyFlowService.GetEndAssetsPerType(userId, start, end));
         }
 
         [HttpGet("GetAssetsTimeSeries/{userId:int}/{start:DateTime}/{end:DateTime}")]
         public async Task<IActionResult> GetAssetsTimeSeries(int userId, DateTime start, DateTime end)
         {
-            return await Task.FromResult(NoContent());
+            return Ok(await _moneyFlowService.GetAssetsTimeSeries(userId, start, end));
         }
 
         [HttpGet("GetAssetsTimeSeries/{userId:int}/{start:DateTime}/{end:DateTime}/{investmentType}")]
         public async Task<IActionResult> GetAssetsTimeSeries(int userId, DateTime start, DateTime end, InvestmentType investmentType)
         {
-            return await Task.FromResult(NoContent());
+            return Ok(await _moneyFlowService.GetAssetsTimeSeries(userId, start, end, investmentType));
         }
 
         [HttpGet("GetNetWorth/{userId:int}/{start:DateTime}")]
         public async Task<IActionResult> GetNetWorth(int userId, DateTime date)
         {
-            return await Task.FromResult(NoContent());
+            return Ok(await _moneyFlowService.GetNetWorth(userId, date));
         }
 
         [HttpGet("GetNetWorth/{userId:int}/{start:DateTime}/{end:DateTime}")]
         public async Task<IActionResult> GetNetWorth(int userId, DateTime start, DateTime end)
         {
-            return await Task.FromResult(NoContent());
+            return Ok(await _moneyFlowService.GetNetWorth(userId, start, end));
         }
 
         [HttpGet("GetIncome/{userId:int}/{start:DateTime}/{end:DateTime}/{step}")]
         public async Task<IActionResult> GetIncome(int userId, DateTime start, DateTime end, TimeSpan? step = null)
         {
-            return await Task.FromResult(NoContent());
+            return Ok(await _moneyFlowService.GetIncome(userId, start, end, step));
         }
 
         [HttpGet("GetSpending/{userId:int}/{start:DateTime}/{end:DateTime}/{step}")]
         public async Task<IActionResult> GetSpending(int userId, DateTime start, DateTime end, TimeSpan? step = null)
         {
-            return await Task.FromResult(NoContent());
+            return Ok(await _moneyFlowService.GetSpending(userId, start, end, step));
         }
     }
 }

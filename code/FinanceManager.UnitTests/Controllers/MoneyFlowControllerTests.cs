@@ -90,7 +90,7 @@ public class MoneyFlowControllerTests
         _mockmoneyFlowService.Setup(repo => repo.GetAssetsTimeSeries(testUserId, startDate, endDate, type)).ReturnsAsync([new()]);
 
         // Act
-        IActionResult result = await _controller.GetAssetsTimeSeries(testUserId, startDate, endDate);
+        IActionResult result = await _controller.GetAssetsTimeSeries(testUserId, startDate, endDate, type);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -103,15 +103,14 @@ public class MoneyFlowControllerTests
     {
         // Arrange
         var date = new DateTime(2000, 1, 1);
-        _mockmoneyFlowService.Setup(repo => repo.GetNetWorth(testUserId, date)).ReturnsAsync(1);
+        _mockmoneyFlowService.Setup(repo => repo.GetNetWorth(testUserId, date)).ReturnsAsync((decimal)1);
 
         // Act
         IActionResult result = await _controller.GetNetWorth(testUserId, date);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<decimal?>(okResult.Value);
-        Assert.NotNull(returnValue);
+        var returnValue = Assert.IsType<decimal>(okResult.Value);
     }
 
     [Fact]
@@ -148,7 +147,7 @@ public class MoneyFlowControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<Dictionary<DateTime, decimal>>(okResult.Value);
+        var returnValue = Assert.IsType<List<TimeSeriesModel>>(okResult.Value);
         Assert.Single(returnValue);
     }
 
@@ -165,7 +164,7 @@ public class MoneyFlowControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<Dictionary<DateTime, decimal>>(okResult.Value);
+        var returnValue = Assert.IsType<List<TimeSeriesModel>>(okResult.Value);
         Assert.Single(returnValue);
     }
 }

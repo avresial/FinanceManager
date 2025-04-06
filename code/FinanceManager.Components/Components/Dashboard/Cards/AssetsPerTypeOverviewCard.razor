@@ -27,24 +27,26 @@
         </div>
     </div>
 
-    <div class="row" style="min-height: 150px; position:relative; bottom:-2px">
-        @if (ChartData.Any())
-        {
-            <ApexChart @ref="_chart" Height="@("100%")" TItem="AssetEntry" Options="options">
-                <ApexPointSeries TItem="AssetEntry"
-                                 Items="ChartData"
-                                 Name="Assets"
-                                 XValue="e => e.Name"
-                                 YAggregate="@(e =>Math.Round( e.Sum(e => e.Value),2))"
-                                 SeriesType="SeriesType.Pie"
-                                 OrderByDescending="@(e=>e.Y)" />
-            </ApexChart>
-        }
-        else
-        {
-            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
-                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
-            </div>
-        }
+    <div class="row flex-fill pb-2" style="height:1px;">
+        <div class="h-100">
+            @if (ChartData.Any())
+            {
+                <ApexChart @ref="_chart" Height="@("100%")" TItem="AssetEntry" Options="options">
+                    <ApexPointSeries TItem="AssetEntry"
+                                     Items="ChartData"
+                                     Name="Assets"
+                                     XValue="e => e.Name"
+                                     YAggregate="@(e =>Math.Round( e.Sum(e => e.Value),2))"
+                                     SeriesType="SeriesType.Pie"
+                                     OrderByDescending="@(e=>e.Y)" />
+                </ApexChart>
+            }
+            else
+            {
+                <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                    <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
+                </div>
+            }
+        </div>
     </div>
 </div>
