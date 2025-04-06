@@ -35,7 +35,17 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             var user = await loginService.GetLoggedUser();
             if (user is null) return;
 
-            var spending = await MoneyFlowService.GetSpending(user.UserId, StartDateTime, EndDateTime);
+            List<TimeSeriesModel> spending = [];
+
+            try
+            {
+                spending = await MoneyFlowService.GetSpending(user.UserId, StartDateTime, EndDateTime);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error getting spending time series data");
+            }
+
             Data.AddRange(spending);
             TotalSpending = Data.Sum(x => x.Value);
 
@@ -103,5 +113,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             };
 
         }
+
+
     }
 }

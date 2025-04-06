@@ -5,6 +5,7 @@ using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
@@ -16,46 +17,39 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
     public partial class StockAccountDetailsPageContent : ComponentBase
     {
 
-        private decimal? balanceChange = null;
-        private ApexChart<ChartEntryModel>? chart;
-        private Dictionary<StockAccountEntry, StockPrice> prices = new();
-        private List<string> stocks = new List<string>();
-        private bool LoadedAllData = false;
-        private DateTime dateStart;
-        private DateTime? oldestEntryDate;
-        private DateTime? youngestEntryDate;
-        private UserSession? user;
+        private decimal? _balanceChange = null;
+        private ApexChart<TimeSeriesModel>? _chart;
+        private Dictionary<StockAccountEntry, StockPrice> _prices = new();
+        private List<string> _stocks = [];
+        private bool _loadedAllData;
+        private DateTime _dateStart;
+        private DateTime _dateEnd = DateTime.UtcNow;
+        private DateTime? _oldestEntryDate;
+        private DateTime? _youngestEntryDate;
+        private UserSession? _user;
+        private List<TimeSeriesModel> _pricesDaily = [];
+        private bool _visible;
+        private List<(StockAccountEntry, decimal)>? _top5;
+        private List<(StockAccountEntry, decimal)>? _bottom5;
+        private string _currency = string.Empty;
 
-        private List<ChartEntryModel> pricesDaily = new();
-        private bool visible;
-
-        internal List<(StockAccountEntry, decimal)>? Top5;
-        internal List<(StockAccountEntry, decimal)>? Bottom5;
-        internal string currency = string.Empty;
-
-        public bool IsLoading = false;
+        public bool IsLoading;
         public StockAccount? Account { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
         public Type? accountType;
+        public List<TimeSeriesModel> ChartData { get; set; } = [];
 
-        [Parameter]
-        public required int AccountId { get; set; }
-        [Inject]
-        public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
-        [Inject]
-        public required IFinancialAccountService FinancalAccountService { get; set; }
+        [Parameter] public required int AccountId { get; set; }
 
-        [Inject]
-        public required IStockRepository StockRepository { get; set; }
-
-        [Inject]
-        public required ISettingsService settingsService { get; set; }
-        [Inject]
-        public required ILoginService loginService { get; set; }
+        [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
+        [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+        [Inject] public required IStockRepository StockRepository { get; set; }
+        [Inject] public required ISettingsService settingsService { get; set; }
+        [Inject] public required ILoginService loginService { get; set; }
 
         public async Task ShowOverlay()
         {
-            visible = true;
+            _visible = true;
             StateHasChanged();
 
             await Task.CompletedTask;
@@ -63,16 +57,17 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
         public async Task HideOverlay()
         {
-            visible = false;
+            _visible = false;
             await UpdateInfo();
-            if (chart is not null)
-                await chart.RenderAsync();
+
+            if (_chart is not null) await _chart.RenderAsync();
+
             StateHasChanged();
         }
 
         protected override async Task OnInitializedAsync()
         {
-            options.Tooltip = new ApexCharts.Tooltip
+            options.Tooltip = new Tooltip
             {
                 Y = new TooltipY
                 {
@@ -87,18 +82,18 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         protected override async Task OnParametersSetAsync()
         {
             IsLoading = true;
-            currency = settingsService.GetCurrency();
-            user = await loginService.GetLoggedUser();
-            if (user is null) return;
-            if (chart is not null)
+            _currency = settingsService.GetCurrency();
+            _user = await loginService.GetLoggedUser();
+            if (_user is null) return;
+            if (_chart is not null)
             {
                 if (Account is not null && Account.Entries is not null)
                     Account.Entries.Clear();
 
-                await chart.RenderAsync();
+                await _chart.RenderAsync();
             }
 
-            LoadedAllData = true;
+            _loadedAllData = true;
             await UpdateEntries();
             IsLoading = false;
         }
@@ -106,7 +101,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         {
             try
             {
-                dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+                _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
                 var accounts = await FinancalAccountService.GetAvailableAccounts();
                 if (accounts.ContainsKey(AccountId))
                 {
@@ -116,10 +111,10 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
                     if (accountType == typeof(StockAccount))
                     {
-                        prices.Clear();
-                        LoadedAllData = true;
-                        if (user is not null)
-                            Account = await FinancalAccountService.GetAccount<StockAccount>(user.UserId, AccountId, dateStart, DateTime.UtcNow);
+                        _prices.Clear();
+                        _loadedAllData = true;
+                        if (_user is not null)
+                            Account = await FinancalAccountService.GetAccount<StockAccount>(_user.UserId, AccountId, _dateStart, DateTime.UtcNow);
 
                         if (Account is not null && Account.Entries is not null)
                             await UpdateInfo();
@@ -137,26 +132,24 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         {
             if (Account is null || Account.Entries is null) return;
             await UpdateDates();
-            stocks = Account.GetStoredTickers();
+            _stocks = Account.GetStoredTickers();
             foreach (var entry in Account.Entries)
             {
-                if (prices.ContainsKey(entry)) continue;
+                if (_prices.ContainsKey(entry)) continue;
 
                 var price = await StockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
-                prices.Add(entry, price);
+                _prices.Add(entry, price);
             }
 
-            if (Account.Entries is not null && Account.Entries.Any() && oldestEntryDate is not null)
-                LoadedAllData = (oldestEntryDate >= Account.Entries.Last().PostingDate);
+            if (Account.Entries is not null && Account.Entries.Any() && _oldestEntryDate is not null)
+                _loadedAllData = (_oldestEntryDate >= Account.Entries.Last().PostingDate);
 
-            pricesDaily = (await Account.GetDailyPrice(StockRepository.GetStockPrice))
-                                        .Select(x => new ChartEntryModel() { Date = x.Key.ToDateTime(new TimeOnly()), Value = x.Value })
-                                        .ToList();
+            await UpdateChartData();
 
-            if (pricesDaily is not null && pricesDaily.Count >= 2)
-                balanceChange = pricesDaily.Last().Value - pricesDaily.First().Value;
+            if (_pricesDaily is not null && _pricesDaily.Count >= 2)
+                _balanceChange = _pricesDaily.Last().Value - _pricesDaily.First().Value;
 
-            if (chart is not null) await chart.RenderAsync();
+            if (_chart is not null) await _chart.RenderAsync();
 
             if (Account.Entries is null) return;
 
@@ -168,16 +161,16 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             }
 
             orderedByPrice = orderedByPrice.OrderByDescending(x => x.Item2).ToList();
-            Top5 = orderedByPrice.Take(5).ToList();
-            Bottom5 = orderedByPrice.Skip(Account.Entries.Count - 5).Take(5).OrderBy(x => x.Item2).ToList();
+            _top5 = orderedByPrice.Take(5).ToList();
+            _bottom5 = orderedByPrice.Skip(Account.Entries.Count - 5).Take(5).OrderBy(x => x.Item2).ToList();
         }
 
         public async Task LoadMore()
         {
             if (Account is null || Account.Start is null) return;
 
-            dateStart = dateStart.AddMonths(-1);
-            var newData = await FinancalAccountService.GetAccount<StockAccount>(Account.UserId, AccountId, dateStart, Account.Start.Value);
+            _dateStart = _dateStart.AddMonths(-1);
+            var newData = await FinancalAccountService.GetAccount<StockAccount>(Account.UserId, AccountId, _dateStart, Account.Start.Value);
 
             if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
                 return;
@@ -185,66 +178,88 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             var newEntriesWithoutOldest = newData.Entries.Skip(1);
 
             Account.Add(newEntriesWithoutOldest, false);
-            if (oldestEntryDate is not null)
-                LoadedAllData = (oldestEntryDate >= Account.Entries.Last().PostingDate);
+            if (_oldestEntryDate is not null)
+                _loadedAllData = (_oldestEntryDate >= Account.Entries.Last().PostingDate);
 
             await UpdateInfo();
         }
+        private async Task UpdateChartData()
+        {
+            _pricesDaily.Clear();
 
+            if (Account is null || Account.Entries is null) return;
+            Dictionary<DateOnly, decimal> pricesDaily = await Account.GetDailyPrice(StockRepository.GetStockPrice);
+            decimal previousValue = 0;
+
+            for (DateTime date = _dateStart; date <= _dateEnd; date = date.AddDays(1))
+            {
+                decimal? value = null;
+                var dateOnly = DateOnly.FromDateTime(date.Date);
+
+                if (pricesDaily.ContainsKey(dateOnly))
+                    value = pricesDaily[DateOnly.FromDateTime(date.Date)];
+
+                TimeSeriesModel timeSeriesModel = new()
+                {
+                    DateTime = date,
+                    Value = value ?? previousValue,
+                };
+
+                if (value is not null) previousValue = value.Value;
+
+                _pricesDaily.Add(timeSeriesModel);
+            }
+        }
         private async Task UpdateDates()
         {
-            oldestEntryDate = await FinancalAccountService.GetStartDate(AccountId);
-            youngestEntryDate = await FinancalAccountService.GetEndDate(AccountId);
+            _oldestEntryDate = await FinancalAccountService.GetStartDate(AccountId);
+            _youngestEntryDate = await FinancalAccountService.GetEndDate(AccountId);
 
-            if (youngestEntryDate is not null && dateStart > youngestEntryDate)
-                dateStart = new DateTime(youngestEntryDate.Value.Date.Year, youngestEntryDate.Value.Date.Month, 1);
+            if (_youngestEntryDate is not null && _dateStart > _youngestEntryDate)
+                _dateStart = new DateTime(_youngestEntryDate.Value.Date.Year, _youngestEntryDate.Value.Date.Month, 1);
         }
-        private ApexChartOptions<ChartEntryModel> options { get; set; } = new()
+        private ApexChartOptions<TimeSeriesModel> options { get; set; } = new()
         {
             Chart = new Chart
             {
-                Sparkline = new ChartSparkline()
+                Sparkline = new()
                 {
                     Enabled = true,
                 },
-                Toolbar = new ApexCharts.Toolbar
+                Toolbar = new()
                 {
                     Show = false
                 },
             },
-            Xaxis = new XAxis()
+            Xaxis = new()
             {
-                AxisTicks = new AxisTicks()
+                AxisTicks = new()
                 {
                     Show = false,
                 },
-                AxisBorder = new AxisBorder()
+                AxisBorder = new()
                 {
                     Show = false
                 },
             },
-            Yaxis = new List<YAxis>()
-            {
-                new YAxis
+            Yaxis =
+            [
+                new()
                 {
                     Show = false,
                     SeriesName = "Vaue",
                     DecimalsInFloat = 0,
                 }
-            },
-            Colors = new List<string>
-            {
-               ColorsProvider.GetColors().First()
-            }
+            ],
+            Colors = [ColorsProvider.GetColors().First()]
         };
 
         private void AccountsService_AccountsChanged()
         {
-            if (chart is not null)
+            if (_chart is not null)
                 _ = UpdateInfo();
 
             StateHasChanged();
         }
-
     }
 }

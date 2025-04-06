@@ -19,8 +19,8 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
         [Inject] public required ILogger<IncomeOverviewCard> Logger { get; set; }
         [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
-        [Inject] public required ISettingsService settingsService { get; set; }
-        [Inject] public required ILoginService loginService { get; set; }
+        [Inject] public required ISettingsService SettingsService { get; set; }
+        [Inject] public required ILoginService LoginService { get; set; }
 
         [Parameter] public string Height { get; set; } = "300px";
         [Parameter] public DateTime StartDateTime { get; set; }
@@ -29,7 +29,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
         protected override void OnInitialized()
         {
-            _currency = settingsService.GetCurrency();
+            _currency = SettingsService.GetCurrency();
             _options.Chart = new Chart
             {
                 Toolbar = new ApexCharts.Toolbar
@@ -79,7 +79,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             {
                 Y = new TooltipY
                 {
-                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
+                    Formatter = ChartHelper.GetCurrencyFormatter(SettingsService.GetCurrency())
                 }
             };
             _options.Colors = new List<string>
@@ -90,12 +90,21 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         }
         private async Task<List<TimeSeriesModel>> GetData()
         {
-            var user = await loginService.GetLoggedUser();
+            var user = await LoginService.GetLoggedUser();
             if (user is null) return [];
+            List<TimeSeriesModel> result = [];
 
-            var result = await MoneyFlowService.GetIncome(user.UserId, StartDateTime, DateTime.UtcNow);
+            try
+            {
+                result = await MoneyFlowService.GetIncome(user.UserId, StartDateTime, DateTime.UtcNow);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error getting income data");
+            }
 
-            TotalIncome = result.Sum(x => x.Value);
+            if (result.Count != 0) TotalIncome = result.Sum(x => x.Value);
+            else TotalIncome = 0;
 
             return result.OrderBy(x => x.DateTime).ToList();
         }

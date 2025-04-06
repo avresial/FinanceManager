@@ -43,7 +43,7 @@ public class BankAccountControllerTests
     {
         // Arrange
         var userId = 1;
-        var accounts = new List<AvailableAccount> { new AvailableAccount(1, "Test Account") };
+        List<AvailableAccount> accounts = [new(1, "Test Account")];
         _mockBankAccountRepository.Setup(repo => repo.GetAvailableAccounts(userId)).Returns(accounts);
 
         // Act

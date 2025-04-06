@@ -53,6 +53,7 @@ public partial class InvestmentTypeTimeSeriesCard
     };
 
     [Parameter] public DateTime StartDateTime { get; set; }
+    [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -73,13 +74,32 @@ public partial class InvestmentTypeTimeSeriesCard
 
         var user = await LoginService.GetLoggedUser();
         if (user is null) return;
-        _priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow);
+        _priceTimeseries.Clear();
+
+        _priceTimeseries.AddRange(await GetData());
     }
 
     protected override async Task OnParametersSetAsync()
     {
         var user = await LoginService.GetLoggedUser();
         if (user is null) return;
-        _priceTimeseries = await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow);
+        _priceTimeseries.Clear();
+        _priceTimeseries.AddRange(await GetData());
+    }
+
+    private async Task<List<TimeSeriesModel>> GetData()
+    {
+        var user = await LoginService.GetLoggedUser();
+        if (user is null) return [];
+        List<TimeSeriesModel> result = [];
+        try
+        {
+            result = await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, EndDateTime);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error getting income data");
+        }
+        return result;
     }
 }

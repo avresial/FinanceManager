@@ -84,12 +84,12 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             foreach (var dataEntry in ChartData)
                 dataEntry.Value = 0;
 
-            if (_chart is not null) await _chart.UpdateSeriesAsync(true);
+            if (_chart is not null) await _chart.UpdateSeriesAsync();
 
             await GetData();
             StateHasChanged();
 
-            if (_chart is not null) await _chart.UpdateSeriesAsync(true);
+            if (_chart is not null) await _chart.UpdateSeriesAsync();
         }
 
         private async Task GetData()
@@ -129,6 +129,8 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                         });
                     }
                 }
+
+                if (_chart is not null) await _chart.UpdateSeriesAsync();
             });
         }
 

@@ -79,7 +79,6 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                 try
                 {
                     Data = await moneyFlowService.GetEndAssetsPerType(user.UserId, StartDateTime, DateTime.Now);
-
                 }
                 catch (Exception ex)
                 {

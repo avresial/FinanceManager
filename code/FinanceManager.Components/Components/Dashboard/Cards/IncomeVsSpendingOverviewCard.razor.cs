@@ -1,6 +1,7 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -115,9 +116,26 @@ public partial class IncomeVsSpendingOverviewCard
         List<IncomeVsSpendingEntry> result = [];
         TimeSpan timeSeriesStep = new TimeSpan(1, 0, 0, 0);
         DateTime end = DateTime.UtcNow;
+        if (_user is null) return [];
+        List<TimeSeriesModel> income = [];
+        List<TimeSeriesModel> spending = [];
+        try
+        {
+            income = await MoneyFlowService.GetIncome(_user.UserId, StartDateTime, end, timeSeriesStep);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error getting income data");
+        }
 
-        var income = await MoneyFlowService.GetIncome(_user.UserId, StartDateTime, end, timeSeriesStep);
-        var spending = await MoneyFlowService.GetSpending(_user.UserId, StartDateTime, end, timeSeriesStep);
+        try
+        {
+            spending = await MoneyFlowService.GetSpending(_user.UserId, StartDateTime, end, timeSeriesStep);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error getting income data");
+        }
 
         for (var date = end; date >= StartDateTime; date = date.Add(-timeSeriesStep))
         {

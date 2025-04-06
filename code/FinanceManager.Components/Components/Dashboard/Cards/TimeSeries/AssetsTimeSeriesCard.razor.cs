@@ -65,7 +65,7 @@ public partial class AssetsTimeSeriesCard
         if (user is null) return;
 
         ChartData.Clear();
-        ChartData.AddRange(await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow));
+        ChartData.AddRange(await GetData());
 
         _options.Tooltip = new Tooltip
         {
@@ -77,12 +77,26 @@ public partial class AssetsTimeSeriesCard
     }
     protected override async Task OnParametersSetAsync()
     {
-        var user = await LoginService.GetLoggedUser();
-        if (user is null) return;
-
         ChartData.Clear();
-        ChartData.AddRange(await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow));
+        ChartData.AddRange(await GetData());
 
         if (_chart is not null) await _chart.UpdateSeriesAsync(true);
+    }
+
+    private async Task<List<TimeSeriesModel>> GetData()
+    {
+        var user = await LoginService.GetLoggedUser();
+        if (user is null) return [];
+
+        try
+        {
+            return await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error getting assets time series data");
+        }
+
+        return [];
     }
 }

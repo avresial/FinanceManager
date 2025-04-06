@@ -16,7 +16,7 @@
     <div class="row flex-fill pb-2" style="height:1px;">
         <div class="h-100">
             <ApexChart @ref="_chart" Height="@("100%")" TItem="TimeSeriesModel" Options="_options">
-             @*    <ApexPointTooltip>
+                @*    <ApexPointTooltip>
                     <div class="m-2">
                         @{
                             var point = context.DataPoint.Items.FirstOrDefault();
@@ -29,13 +29,13 @@
                 </ApexPointTooltip>
 
                 <ChildContent> *@
-                    <ApexPointSeries TItem="TimeSeriesModel"
-                                     Items="ChartData"
-                                     Name="Assets"
-                                     SeriesType="SeriesType.Pie"
-                                     XValue="@(e => e.Name)"
-                                     YAggregate="@(e => e.Sum(e => e.Value))"
-                                     OrderByDescending="@(e=>e.Y)" />
+                <ApexPointSeries TItem="TimeSeriesModel"
+                                 Items="ChartData"
+                                 Name="Liabilities"
+                                 SeriesType="SeriesType.Pie"
+                                 XValue="@(e => e.Name)"
+                                 YAggregate="@(e => e.Sum(e => e.Value))"
+                                 OrderByDescending="@(e=>e.Y)" />
                 @* </ChildContent> *@
 
             </ApexChart>

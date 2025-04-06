@@ -58,14 +58,27 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : Controll
         if (account.UserId != userId) return BadRequest();
 
         IEnumerable<BankAccountEntry> entries = bankAccountEntryRepository.Get(accountId, startDate, endDate);
+
+        DateTime? olderThenLoadedEntryDate = null;
+        DateTime? youngerThenLoadedEntryDate = null;
+
+        if (entries.Any())
+        {
+            var olderEntry = bankAccountEntryRepository.GetNextOlder(accountId, entries.Last().EntryId);
+            if (olderEntry is not null) olderThenLoadedEntryDate = olderEntry.PostingDate;
+
+            var youngerEntry = bankAccountEntryRepository.GetNextOlder(accountId, entries.Last().EntryId);
+            if (youngerEntry is not null) youngerThenLoadedEntryDate = youngerEntry.PostingDate;
+        }
+
         BankAccountDto bankAccountDto = new()
         {
             AccountId = account.AccountId,
             UserId = account.UserId,
             Name = account.Name,
             AccountType = account.AccountType,
-            OlderThenLoadedEntry = account.OlderThenLoadedEntry,
-            YoungerThenLoadedEntry = account.YoungerThenLoadedEntry,
+            OlderThenLoadedEntry = olderThenLoadedEntryDate,
+            YoungerThenLoadedEntry = youngerThenLoadedEntryDate,
             Entries = entries.Select(x => new BankAccountEntryDto
             {
                 AccountId = x.AccountId,

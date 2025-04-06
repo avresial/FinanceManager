@@ -4,6 +4,8 @@
     {
         IEnumerable<T> Get(int accountId, DateTime startDate, DateTime endDate);
         T? GetYoungest(int accountId);
+        T? GetNextYounger(int accountId, int entryId);
+        T? GetNextOlder(int accountId, int entryId);
         T? GetOldest(int accountId);
 
         bool Add(T entry);

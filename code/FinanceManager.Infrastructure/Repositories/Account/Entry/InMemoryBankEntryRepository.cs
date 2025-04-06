@@ -33,6 +33,36 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
         return bankAccount.Get(startDate, endDate);
     }
 
+    public BankAccountEntry? GetNextOlder(int accountId, int entryId)
+    {
+        var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
+        if (bankAccount is null || bankAccount.Entries is null) return null;
+
+        var entry = bankAccount.Entries.FirstOrDefault(x => x.EntryId == entryId);
+        if (entry is null) return null;
+
+        var entryindex = bankAccount.Entries.IndexOf(entry);
+        if (bankAccount.Entries.Count - 1 >= entryindex + 1)
+            return bankAccount.Entries[entryindex + 1];
+
+        return null;
+    }
+
+    public BankAccountEntry? GetNextYounger(int accountId, int entryId)
+    {
+        var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
+        if (bankAccount is null || bankAccount.Entries is null) return null;
+
+        var entry = bankAccount.Entries.FirstOrDefault(x => x.EntryId == entryId);
+        if (entry is null) return null;
+
+        var entryindex = bankAccount.Entries.IndexOf(entry);
+        if (bankAccount.Entries.Count - 1 >= entryindex - 1)
+            return bankAccount.Entries[entryindex - 1];
+
+        return null;
+    }
+
     public BankAccountEntry? GetOldest(int accountId)
     {
         var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);

@@ -7,14 +7,9 @@ using System.Net.Http.Json;
 
 namespace FinanceManager.Components.Services;
 
-public class BankAccountService
+public class BankAccountService(HttpClient httpClient)
 {
-    private readonly HttpClient _httpClient;
-
-    public BankAccountService(HttpClient httpClient)
-    {
-        _httpClient = httpClient;
-    }
+    private readonly HttpClient _httpClient = httpClient;
 
     public async Task<IEnumerable<AvailableAccount>> GetAvailableAccountsAsync()
     {
