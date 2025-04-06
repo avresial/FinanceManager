@@ -137,6 +137,8 @@ public partial class IncomeVsSpendingOverviewCard
             Logger.LogError(ex, "Error getting income data");
         }
 
+        if (income.Count == 0 && spending.Count == 0) return [];
+
         for (var date = end; date >= StartDateTime; date = date.Add(-timeSeriesStep))
         {
             result.Add(new IncomeVsSpendingEntry

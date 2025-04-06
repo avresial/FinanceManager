@@ -9,13 +9,23 @@
 <div class="card" style="height:@Height;">
     <div class="card-body">
         <h5 class="card-title">Spending</h5>
-        <ul class="list-group list-group-flush">
-            @foreach (var entry in Data)
-            {
-                <li class="list-group-item">
-                    @entry.ExpenseType - @entry.Value @currency
-                </li>
-            }
-        </ul>
+        @if (Data.Any())
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var entry in Data)
+                {
+                    <li class="list-group-item">
+                        @entry.ExpenseType - @entry.Value @currency
+                    </li>
+                }
+
+            </ul>
+        }
+        else
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
+            </div>
+        }
     </div>
 </div>

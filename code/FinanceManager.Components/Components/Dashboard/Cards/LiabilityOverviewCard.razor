@@ -7,7 +7,10 @@
             <div class="container-fluid d-flex flex-column h-100 px-1">
                 <div class="col px-0">
                     <h5 class="card-title">Liabilities</h5>
-                    <h6 class="card-subtitle mb-2 text-muted">@_totalLiabilities @_currency</h6>
+                    @if (ChartData.Any())
+                    {
+                        <h6 class="card-subtitle mb-2 text-muted">@_totalLiabilities @_currency</h6>
+                    }
                 </div>
             </div>
         </div>
@@ -15,8 +18,10 @@
 
     <div class="row flex-fill pb-2" style="height:1px;">
         <div class="h-100">
-            <ApexChart @ref="_chart" Height="@("100%")" TItem="TimeSeriesModel" Options="_options">
-                @*    <ApexPointTooltip>
+            @if (ChartData.Any())
+            {
+                <ApexChart @ref="_chart" Height="@("100%")" TItem="TimeSeriesModel" Options="_options">
+                    @*    <ApexPointTooltip>
                     <div class="m-2">
                         @{
                             var point = context.DataPoint.Items.FirstOrDefault();
@@ -29,16 +34,24 @@
                 </ApexPointTooltip>
 
                 <ChildContent> *@
-                <ApexPointSeries TItem="TimeSeriesModel"
-                                 Items="ChartData"
-                                 Name="Liabilities"
-                                 SeriesType="SeriesType.Pie"
-                                 XValue="@(e => e.Name)"
-                                 YAggregate="@(e => e.Sum(e => e.Value))"
-                                 OrderByDescending="@(e=>e.Y)" />
-                @* </ChildContent> *@
+                    <ApexPointSeries TItem="TimeSeriesModel"
+                                     Items="ChartData"
+                                     Name="Liabilities"
+                                     SeriesType="SeriesType.Pie"
+                                     XValue="@(e => e.Name)"
+                                     YAggregate="@(e => e.Sum(e => e.Value))"
+                                     OrderByDescending="@(e=>e.Y)" />
+                    @* </ChildContent> *@
 
-            </ApexChart>
+                </ApexChart>
+
+            }
+            else
+            {
+                <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                    <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
+                </div>
+            }
         </div>
     </div>
 </div>

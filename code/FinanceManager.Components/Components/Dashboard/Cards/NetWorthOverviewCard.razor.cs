@@ -7,30 +7,20 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
     public partial class NetWorthOverviewCard
     {
         private string _currency = string.Empty;
-        private decimal _totalNetWorth = 0;
+        private decimal? _totalNetWorth = null;
 
-        [Parameter]
-        public string Height { get; set; } = "300px";
+        [Parameter] public string Height { get; set; } = "300px";
+        [Parameter] public DateTime StartDateTime { get; set; }
 
-        [Parameter]
-        public DateTime StartDateTime { get; set; }
-
-        [Inject]
-        public required ILogger<NetWorthOverviewCard> Logger { get; set; }
-
-        [Inject]
-        public required IMoneyFlowService MoneyFlowService { get; set; }
-
-        [Inject]
-        public required ISettingsService SettingsService { get; set; }
-
-        [Inject]
-        public required ILoginService LoginService { get; set; }
+        [Inject] public required ILogger<NetWorthOverviewCard> Logger { get; set; }
+        [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
+        [Inject] public required ISettingsService SettingsService { get; set; }
+        [Inject] public required ILoginService LoginService { get; set; }
 
         protected override async Task OnParametersSetAsync()
         {
             _currency = SettingsService.GetCurrency();
-            _totalNetWorth = 0;
+            _totalNetWorth = null;
             var user = await LoginService.GetLoggedUser();
             if (user is null) return;
             decimal? result = null;

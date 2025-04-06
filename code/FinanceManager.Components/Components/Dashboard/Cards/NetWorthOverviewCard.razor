@@ -1,12 +1,13 @@
-﻿@using ApexCharts
-@using FinanceManager.Domain.Entities
-@using FinanceManager.Domain.Entities.Accounts
-@using FinanceManager.Domain.Repositories
-@using FinanceManager.Domain.Services
-
-<div class="card" style="height:@Height;">
+﻿<div class="card" style="height:@Height;">
     <div class="card-body">
         <h5 class="card-title">Total net worth</h5>
-        <h1 class="card-subtitle mb-2 text-muted">@_totalNetWorth @_currency</h1>
+        @if (_totalNetWorth is not null)
+        {
+            <h1 class="card-subtitle mb-2 text-muted">@_totalNetWorth @_currency</h1>
+        }
+        else
+        {
+            <h1 class="card-subtitle mb-2 text-muted">No data</h1>
+        }
     </div>
 </div>

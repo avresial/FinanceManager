@@ -12,13 +12,12 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 {
     public partial class IncomeSourceOverviewCard
     {
+        private string _currency = string.Empty;
+        private ApexChart<IncomeSourceOverviewEntry>? _chart;
 
-        private string currency = string.Empty;
-        private ApexChart<IncomeSourceOverviewEntry>? chart;
+        private ApexChartOptions<IncomeSourceOverviewEntry> options = new();
 
-        private ApexChartOptions<IncomeSourceOverviewEntry> options { get; set; } = new();
-
-        public List<IncomeSourceOverviewEntry> Data { get; set; } = new List<IncomeSourceOverviewEntry>()
+        public List<IncomeSourceOverviewEntry> ChartData { get; set; } = new List<IncomeSourceOverviewEntry>()
         {
             new IncomeSourceOverviewEntry()
             {
@@ -30,27 +29,17 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         public decimal Total;
 
 
-        [Inject]
-        public required ILogger<IncomeSourceOverviewCard> Logger { get; set; }
+        [Inject] public required ILogger<IncomeSourceOverviewCard> Logger { get; set; }
+        [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+        [Inject] public required ISettingsService settingsService { get; set; }
+        [Inject] public required ILoginService loginService { get; set; }
 
-        [Inject]
-        public required IFinancialAccountService FinancalAccountService { get; set; }
-
-        [Inject]
-        public required ISettingsService settingsService { get; set; }
-
-        [Inject]
-        public required ILoginService loginService { get; set; }
-
-        [Parameter]
-        public string Height { get; set; } = "300px";
-
-        [Parameter]
-        public DateTime StartDateTime { get; set; }
+        [Parameter] public string Height { get; set; } = "300px";
+        [Parameter] public DateTime StartDateTime { get; set; }
 
         protected override void OnInitialized()
         {
-            currency = settingsService.GetCurrency();
+            _currency = settingsService.GetCurrency();
             options.Chart = new Chart
             {
                 Toolbar = new ApexCharts.Toolbar
@@ -99,15 +88,13 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             };
 
         }
-
-
         protected override async Task OnParametersSetAsync()
         {
             var user = await loginService.GetLoggedUser();
             if (user is null) return;
 
-            Data.Clear();
-            if (chart is not null) await chart.UpdateSeriesAsync(true);
+            ChartData.Clear();
+            if (_chart is not null) await _chart.UpdateSeriesAsync(true);
             await Task.Run(async () =>
             {
                 IEnumerable<BankAccount> bankAccounts = [];
@@ -138,10 +125,10 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
                     foreach (var entry in entries.Where(x => x.ValueChange > 0))
                     {
-                        var dataEntry = Data.FirstOrDefault();
+                        var dataEntry = ChartData.FirstOrDefault();
                         if (dataEntry is null)
                         {
-                            Data.Add(new IncomeSourceOverviewEntry()
+                            ChartData.Add(new IncomeSourceOverviewEntry()
                             {
                                 Source = "Sallary",
                                 Value = entry.ValueChange
@@ -154,10 +141,10 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
                     }
                 }
-                Total = Data.Sum(x => x.Value);
+                Total = ChartData.Sum(x => x.Value);
 
             });
-            if (chart is not null) await chart.UpdateSeriesAsync(true);
+            if (_chart is not null) await _chart.UpdateSeriesAsync(true);
         }
         public class IncomeSourceOverviewEntry
         {
