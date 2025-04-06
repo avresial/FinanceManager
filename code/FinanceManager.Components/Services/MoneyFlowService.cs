@@ -13,8 +13,7 @@ public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
     {
         if (_httpClient is null) return [];
 
-        var endpoint = $"{_httpClient.BaseAddress}api/MoneyFlow/GetEndAssetsPerAcount/{userId}/{start.ToRfc3339()}/{end.ToRfc3339()}";
-        var result = await _httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
+        var result = await _httpClient.GetFromJsonAsync<List<TimeSeriesModel>>($"{_httpClient.BaseAddress}api/MoneyFlow/GetEndAssetsPerAcount/{userId}/{start.ToRfc3339()}/{end.ToRfc3339()}");
 
         if (result is not null) return result;
         return [];
