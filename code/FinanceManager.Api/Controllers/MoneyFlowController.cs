@@ -48,16 +48,16 @@ namespace FinanceManager.Api.Controllers
             return Ok(await _moneyFlowService.GetNetWorth(userId, start, end));
         }
 
-        [HttpGet("GetIncome/{userId:int}/{start:DateTime}/{end:DateTime}/{step}")]
-        public async Task<IActionResult> GetIncome(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+        [HttpGet("GetIncome/{userId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]
+        public async Task<IActionResult> GetIncome(int userId, DateTime start, DateTime end, long? step = null)
         {
-            return Ok(await _moneyFlowService.GetIncome(userId, start, end, step));
+            return Ok(await _moneyFlowService.GetIncome(userId, start, end, step is null ? null : new(step.Value)));
         }
 
-        [HttpGet("GetSpending/{userId:int}/{start:DateTime}/{end:DateTime}/{step}")]
-        public async Task<IActionResult> GetSpending(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+        [HttpGet("GetSpending/{userId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]
+        public async Task<IActionResult> GetSpending(int userId, DateTime start, DateTime end, long? step = null)
         {
-            return Ok(await _moneyFlowService.GetSpending(userId, start, end, step));
+            return Ok(await _moneyFlowService.GetSpending(userId, start, end, step is null ? null : new(step.Value)));
         }
     }
 }

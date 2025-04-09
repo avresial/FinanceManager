@@ -13,7 +13,7 @@ public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
     {
         if (_httpClient is null) return [];
 
-        var result = await _httpClient.GetFromJsonAsync<List<TimeSeriesModel>>($"{_httpClient.BaseAddress}api/MoneyFlow/GetEndAssetsPerAcount/{userId}/{start.ToRfc3339()}/{end.ToRfc3339()}");
+        var result = await _httpClient.GetFromJsonAsync<List<TimeSeriesModel>>($"{_httpClient.BaseAddress}api/MoneyFlow/GetAssetsTimeSeries/{userId}/{start.ToRfc3339()}/{end.ToRfc3339()}");
 
         if (result is not null) return result;
         return [];
@@ -49,7 +49,11 @@ public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
     public async Task<List<TimeSeriesModel>> GetIncome(int userId, DateTime start, DateTime end, TimeSpan? step = null)
     {
         if (_httpClient is null) return [];
-        var result = await _httpClient.GetFromJsonAsync<List<TimeSeriesModel>>($"{_httpClient.BaseAddress}api/MoneyFlow/GetIncome/{userId}/{start.ToRfc3339()}/{end.ToRfc3339()}/{step}");
+
+        string endpoint = $"{_httpClient.BaseAddress}api/MoneyFlow/GetIncome/{userId}/{start.ToRfc3339()}/{end.ToRfc3339()}";
+        if (step is not null) endpoint += $"/{step.Value.Ticks}";
+
+        var result = await _httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
 
         if (result is not null) return result;
         return [];
@@ -76,7 +80,11 @@ public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
     public async Task<List<TimeSeriesModel>> GetSpending(int userId, DateTime start, DateTime end, TimeSpan? step = null)
     {
         if (_httpClient is null) return [];
-        var result = await _httpClient.GetFromJsonAsync<List<TimeSeriesModel>>($"{_httpClient.BaseAddress}api/MoneyFlow/GetSpending/{userId}/{start.ToRfc3339()}/{end.ToRfc3339()}/{step}");
+
+        string endpoint = $"{_httpClient.BaseAddress}api/MoneyFlow/GetSpending/{userId}/{start.ToRfc3339()}/{end.ToRfc3339()}";
+        if (step is not null) endpoint += $"/{step.Value.Ticks}";
+
+        var result = await _httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
 
         if (result is not null) return result;
         return [];

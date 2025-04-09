@@ -59,10 +59,10 @@ namespace FinanceManager.Components.Services
 
         public async Task<bool> Login(UserSession userSession)
         {
-
             LoginRequestModel loginRequestModel = new LoginRequestModel(userSession.UserName, userSession.Password);
             LoginResponseModel? result = null;
             HttpResponseMessage? response = null;
+
             try
             {
                 response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/Login",
@@ -73,10 +73,12 @@ namespace FinanceManager.Components.Services
             {
                 Console.WriteLine(ex);
             }
+
             if (result is null) return false;
 
             _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.AccessToken);
             userSession.Token = result.AccessToken;
+            userSession.UserId = result.UserId;
             LoggedUser = userSession;
 
             await _sessionStorageService.SetItemAsync(sessionString, LoggedUser);
