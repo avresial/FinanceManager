@@ -6,15 +6,15 @@
         <div class="col-md-12 col-lg-8">
             <div class="row justify-content-center g-2">
                 <div class="col-xs-12 col-md-12">
-                    <NetWorthOverviewCard Height="@($"{UnitHeight}px")" StartDateTime="@StartDateTime" />
+                    <NetWorthOverviewCard Height="@($"{_unitHeight}px")" StartDateTime="@StartDateTime" />
                 </div>
 
                 <div class="col-xs-12 col-md-6">
-                    <SpendingOverviewCard Height="@($"{UnitHeight*2}px")" StartDateTime="@StartDateTime" />
+                    <SpendingOverviewCard Height="@($"{_unitHeight*2}px")" StartDateTime="@StartDateTime" />
                 </div>
 
                 <div class="col-xs-12 col-md-6">
-                    <IncomeOverviewCard Height="@($"{UnitHeight*2}px")" StartDateTime="@StartDateTime" />
+                    <IncomeOverviewCard Height="@($"{_unitHeight*2}px")" StartDateTime="@StartDateTime" />
                 </div>
             </div>
 
@@ -22,13 +22,13 @@
         </div>
 
         <div class="col-xs-12 col-md-6 col-lg-4">
-            <SpendingCathegoryOverviewCard Height="@($"{UnitHeight * 3 + 8}px")" StartDateTime="@StartDateTime" />
+            <SpendingCathegoryOverviewCard Height="@($"{_unitHeight * 3 + 8}px")" StartDateTime="@StartDateTime" />
         </div>
 
         <div class="col-xs-12 col-md-6 col-lg-4">
             <div class="row g-1">
                 <div class="col-xs-12 col-md-12">
-                    <LiabilityOverviewCard Height="@($"{UnitHeight * 3}px")" StartDateTime="@StartDateTime" />
+                    <LiabilityOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDateTime" />
                 </div>
             </div>
         </div>
@@ -37,10 +37,10 @@
 
             <div class="row justify-content-center g-2">
                 <div class="col-xs-12 col-md-6">
-                    <AssetsPerTypeOverviewCard Height="@($"{UnitHeight*3}px")" StartDateTime="@StartDateTime" />
+                    <AssetsPerTypeOverviewCard Height="@($"{_unitHeight*3}px")" StartDateTime="@StartDateTime" />
                 </div>
                 <div class="col-xs-12 col-md-6">
-                    <IncomeVsSpendingOverviewCard Height="@($"{UnitHeight * 3}px")" StartDateTime="@StartDateTime" />
+                    <IncomeVsSpendingOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDateTime" />
                 </div>
             </div>
 

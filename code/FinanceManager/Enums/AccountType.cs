@@ -1,10 +1,9 @@
-﻿namespace FinanceManager.WebUi.Enums
+﻿namespace FinanceManager.WebUi.Enums;
+
+public enum AccountType
 {
-    public enum AccountType
-    {
-        Cash,
-        Investment,
-        Asset,
-        Other
-    }
+    Cash,
+    Investment,
+    Asset,
+    Other
 }
