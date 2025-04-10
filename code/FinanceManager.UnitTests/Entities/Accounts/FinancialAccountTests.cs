@@ -40,7 +40,18 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             Assert.Equal(30, FinancialAccount.Entries.First().Value);
             Assert.Equal(10, FinancialAccount.Entries.Last().Value);
         }
+        [Fact]
+        public void AddSingleEntryWithWrongValue_ValueIsRecalculatedProprely()
+        {
+            // Arrange
+            // Act
+            FinancialAccount.Add(new FinancialEntryBase(1, 1, new DateTime(2000, 1, 1), 0, 10));
 
+            // Assert
+            Assert.NotNull(FinancialAccount.Entries);
+            Assert.Equal(10, FinancialAccount.Get(new DateTime(2000, 1, 1)).First().Value);
+            Assert.Equal(10, FinancialAccount.Get(new DateTime(2000, 1, 1)).First().ValueChange);
+        }
         [Fact]
         public void UpdateData_ChangeDate()
         {
