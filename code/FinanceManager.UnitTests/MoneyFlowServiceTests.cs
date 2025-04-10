@@ -11,9 +11,9 @@ namespace FinanceManager.UnitTests;
 
 public class MoneyFlowServiceTests
 {
-    private readonly DateTime startDate = new(2020, 1, 1);
-    private readonly DateTime endDate = new(2020, 1, 31);
-    private readonly decimal totalAssetsValue = 0;
+    private readonly DateTime _startDate = new(2020, 1, 1);
+    private readonly DateTime _endDate = new(2020, 1, 31);
+    private readonly decimal _totalAssetsValue = 0;
 
     private readonly MoneyFlowService _moneyFlowService;
     private readonly Mock<IFinancalAccountRepository> _financalAccountRepositoryMock = new();
@@ -24,25 +24,26 @@ public class MoneyFlowServiceTests
     public MoneyFlowServiceTests()
     {
         BankAccount bankAccount1 = new(1, 1, "testBank1", AccountType.Cash);
-        bankAccount1.Add(new BankAccountEntry(1, 1, startDate, 10, 10));
-        bankAccount1.Add(new BankAccountEntry(1, 2, startDate.AddDays(1), 20, 10));
+        bankAccount1.Add(new BankAccountEntry(1, 1, _startDate.AddYears(-1), 10, 10));
+        bankAccount1.Add(new BankAccountEntry(1, 1, _startDate, 20, 10));
+        bankAccount1.Add(new BankAccountEntry(1, 2, _startDate.AddDays(1), 30, 10));
 
         BankAccount bankAccount2 = new(1, 2, "testBank2", AccountType.Cash);
-        bankAccount2.Add(new BankAccountEntry(1, 1, endDate, 10, 10));
+        bankAccount2.Add(new BankAccountEntry(1, 1, _endDate, 10, 10));
 
         _bankAccounts = new List<BankAccount> { bankAccount1, bankAccount2 };
-        _financalAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(1, startDate, endDate))
+        _financalAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(1, _startDate, _endDate))
                                       .Returns(_bankAccounts);
 
         StockAccount investmentAccount1 = new(1, 3, "testInvestmentAccount1");
-        investmentAccount1.Add(new StockAccountEntry(1, 1, startDate, 10, 10, "testStock1", InvestmentType.Stock));
-        investmentAccount1.Add(new StockAccountEntry(1, 2, endDate, 10, 10, "testStock2", InvestmentType.Stock));
+        investmentAccount1.Add(new StockAccountEntry(1, 1, _startDate, 10, 10, "testStock1", InvestmentType.Stock));
+        investmentAccount1.Add(new StockAccountEntry(1, 2, _endDate, 10, 10, "testStock2", InvestmentType.Stock));
 
         _investmentAccountAccounts = new List<StockAccount> { investmentAccount1 };
-        _financalAccountRepositoryMock.Setup(x => x.GetAccounts<StockAccount>(1, startDate, endDate))
+        _financalAccountRepositoryMock.Setup(x => x.GetAccounts<StockAccount>(1, _startDate, _endDate))
                                       .Returns(_investmentAccountAccounts);
 
-        totalAssetsValue = 90;
+        _totalAssetsValue = 100;
 
         _stockRepository.Setup(x => x.GetStockPrice("testStock1", It.IsAny<DateTime>()))
                         .ReturnsAsync(new StockPrice() { Currency = "PLN", Ticker = "AnyTicker", PricePerUnit = 2 });
@@ -58,11 +59,11 @@ public class MoneyFlowServiceTests
         // Arrange
 
         // Act
-        var result = await _moneyFlowService.GetEndAssetsPerAcount(1, startDate, endDate);
+        var result = await _moneyFlowService.GetEndAssetsPerAcount(1, _startDate, _endDate);
 
         // Assert
         Assert.Equal(_bankAccounts.Count + _investmentAccountAccounts.Count, result.Count);
-        Assert.Equal(totalAssetsValue, result.Sum(x => x.Value));
+        Assert.Equal(_totalAssetsValue, result.Sum(x => x.Value));
     }
 
     [Fact]
@@ -71,11 +72,11 @@ public class MoneyFlowServiceTests
         // Arrange
 
         // Act
-        var result = await _moneyFlowService.GetEndAssetsPerType(1, startDate, endDate);
+        var result = await _moneyFlowService.GetEndAssetsPerType(1, _startDate, _endDate);
 
         // Assert
         Assert.Equal(2, result.Count);
-        Assert.Equal(totalAssetsValue, result.Sum(x => x.Value));
+        Assert.Equal(_totalAssetsValue, result.Sum(x => x.Value));
     }
 
     [Fact]
@@ -84,34 +85,27 @@ public class MoneyFlowServiceTests
         // Arrange
 
         // Act
-        var result = await _moneyFlowService.GetAssetsTimeSeries(1, startDate, endDate);
+        var result = await _moneyFlowService.GetAssetsTimeSeries(1, _startDate, _endDate);
 
         // Assert
         Assert.NotEmpty(result);
-        Assert.Equal(totalAssetsValue, result.First(x => x.DateTime == endDate).Value);
+        Assert.Equal(_totalAssetsValue, result.First(x => x.DateTime == _endDate).Value);
     }
 
     [Theory]
     [InlineData(InvestmentType.Bond, 0)]
     [InlineData(InvestmentType.Stock, 60)]
-    [InlineData(InvestmentType.Cash, 30)]
+    [InlineData(InvestmentType.Cash, 40)]
     [InlineData(InvestmentType.Property, 0)]
     public async Task GetAssetsPerTypeTimeseries_TypeAsParameter(InvestmentType investmentType, decimal finalValue)
     {
         // Arrange
         // Act
-        var result = await _moneyFlowService.GetAssetsTimeSeries(1, startDate, endDate, investmentType);
+        var result = await _moneyFlowService.GetAssetsTimeSeries(1, _startDate, _endDate, investmentType);
 
         // Assert
-        if (finalValue == 0)
-        {
-            Assert.Empty(result);
-        }
-        else
-        {
-            Assert.Equal(result.First().Value, finalValue);
-            Assert.Equal(result.First(x => x.DateTime == endDate).Value, finalValue);
-        }
+        Assert.Equal(result.First().Value, finalValue);
+        Assert.Equal(result.First(x => x.DateTime == _endDate).Value, finalValue);
     }
 
     [Fact]
