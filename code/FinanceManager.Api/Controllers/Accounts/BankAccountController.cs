@@ -62,14 +62,11 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : Controll
         DateTime? olderThenLoadedEntryDate = null;
         DateTime? youngerThenLoadedEntryDate = null;
 
-        if (entries.Any())
-        {
-            var olderEntry = bankAccountEntryRepository.GetNextOlder(accountId, entries.Last().EntryId);
-            if (olderEntry is not null) olderThenLoadedEntryDate = olderEntry.PostingDate;
+        var olderEntry = bankAccountEntryRepository.GetNextOlder(accountId, startDate);
+        if (olderEntry is not null) olderThenLoadedEntryDate = olderEntry.PostingDate;
 
-            var youngerEntry = bankAccountEntryRepository.GetNextOlder(accountId, entries.Last().EntryId);
-            if (youngerEntry is not null) youngerThenLoadedEntryDate = youngerEntry.PostingDate;
-        }
+        var youngerEntry = bankAccountEntryRepository.GetNextYounger(accountId, endDate);
+        if (youngerEntry is not null) youngerThenLoadedEntryDate = youngerEntry.PostingDate;
 
         BankAccountDto bankAccountDto = new()
         {

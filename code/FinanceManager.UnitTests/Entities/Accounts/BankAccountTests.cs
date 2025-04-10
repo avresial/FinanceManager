@@ -46,4 +46,5 @@ public class BankAccountTests
         Assert.Equal(10, _bankAccount.Get(new DateTime(2000, 1, 1)).First().Value);
         Assert.Equal(10, _bankAccount.Get(new DateTime(2000, 1, 1)).First().ValueChange);
     }
+
 }

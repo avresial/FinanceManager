@@ -5,6 +5,7 @@ using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
+using FinanceManager.Infrastructure.Dtos;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -71,6 +72,39 @@ public class BankAccountControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         var returnValue = Assert.IsType<BankAccount>(okResult.Value);
         Assert.Equal(accountId, returnValue.AccountId);
+    }
+
+    [Fact]
+    public async Task Get_NoEntriesWithinDates_ReturnsOkResult_WithOlderThenLoaded()
+    {
+        // Arrange
+        DateTime startDate = new(2000, 1, 1);
+        DateTime endDate = new(2000, 2, 1);
+        DateTime olderThenLoadedDate = startDate.AddYears(-1);
+        DateTime youngerThenLoadedDate = endDate.AddYears(1);
+
+        var userId = 1;
+        var accountId = 1;
+        var account = new BankAccount(userId, accountId, "Test Account");
+        BankAccountEntry bankAccountEntry = new(accountId, 1, olderThenLoadedDate, 1, 0);
+
+        _mockBankAccountRepository.Setup(repo => repo.Get(accountId)).Returns(account);
+        _mockBankAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns([]);
+        _mockBankAccountEntryRepository.Setup(repo => repo.GetNextOlder(accountId, startDate))
+            .Returns(new BankAccountEntry(accountId, 1, olderThenLoadedDate, 1, 0));
+
+        _mockBankAccountEntryRepository.Setup(repo => repo.GetNextYounger(accountId, endDate))
+            .Returns(new BankAccountEntry(accountId, 1, youngerThenLoadedDate, 1, 0));
+
+        // Act
+        var result = await _controller.Get(accountId, startDate, endDate);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnValue = Assert.IsType<BankAccountDto>(okResult.Value);
+        Assert.Equal(accountId, returnValue.AccountId);
+        Assert.Equal(olderThenLoadedDate, returnValue.OlderThenLoadedEntry);
+        Assert.Equal(youngerThenLoadedDate, returnValue.YoungerThenLoadedEntry);
     }
 
     [Fact]
