@@ -36,13 +36,13 @@ namespace FinanceManager.Domain.Entities.Accounts
         public virtual void Add(T entry, bool recalculateValues = true)
         {
             Entries ??= [];
-            var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
-            if (alredyExistingEntry is not null)
+            var alreadyExistingEntry = Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
+            if (alreadyExistingEntry is not null)
             {
-                Console.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.EntryId}, Posting date{alredyExistingEntry.PostingDate}, Value change {alredyExistingEntry.ValueChange}");
+                Console.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alreadyExistingEntry.EntryId}, Posting date{alreadyExistingEntry.PostingDate}, Value change {alreadyExistingEntry.ValueChange}");
                 return;
             }
-            var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();
+            var previousEntry = Entries.GetNextYounger(entry.PostingDate).FirstOrDefault();
 
             if (Entries is null) return;
 
@@ -79,7 +79,7 @@ namespace FinanceManager.Domain.Entities.Accounts
 
             entryToUpdate.Update(entry);
             Entries.Remove(entryToUpdate);
-            var previousEntry = Entries.GetPrevious(entryToUpdate.PostingDate).FirstOrDefault();
+            var previousEntry = Entries.GetNextYounger(entryToUpdate.PostingDate).FirstOrDefault();
 
             if (previousEntry is null)
             {

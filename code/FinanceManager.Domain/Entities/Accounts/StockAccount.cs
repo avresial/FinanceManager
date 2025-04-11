@@ -55,7 +55,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
                 $"Ticker {alredyExistingEntry.Ticker}, Value change {alredyExistingEntry.ValueChange}");
         }
 
-        var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();
+        var previousEntry = Entries.GetNextYounger(entry.PostingDate).FirstOrDefault();
         var index = -1;
 
         if (previousEntry is not null)
@@ -84,7 +84,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
                 $"Ticker {alredyExistingEntry.Ticker}, Value change {alredyExistingEntry.ValueChange}");
         }
 
-        var previousEntry = Entries.GetPrevious(entry.PostingDate).FirstOrDefault();
+        var previousEntry = Entries.GetNextYounger(entry.PostingDate).FirstOrDefault();
         var index = -1;
 
         if (previousEntry is not null)
@@ -113,7 +113,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
 
         entryToUpdate.Update(entry);
         Entries.Remove(entryToUpdate);
-        var previousEntry = Entries.GetPrevious(entryToUpdate.PostingDate).FirstOrDefault();
+        var previousEntry = Entries.GetNextYounger(entryToUpdate.PostingDate).FirstOrDefault();
 
         if (previousEntry is null)
         {

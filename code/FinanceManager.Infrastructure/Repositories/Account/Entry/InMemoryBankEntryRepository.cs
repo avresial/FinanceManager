@@ -38,12 +38,14 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
         var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
         if (bankAccount is null || bankAccount.Entries is null) return null;
 
-        var entry = bankAccount.Entries.FirstOrDefault(x => x.EntryId == entryId);
+        var entriesDescending = bankAccount.Entries.OrderByDescending(x => x.PostingDate).ToList();
+
+        var entry = entriesDescending.FirstOrDefault(x => x.EntryId == entryId);
         if (entry is null) return null;
 
-        var entryIndex = bankAccount.Entries.IndexOf(entry);
-        if (bankAccount.Entries.Count - 1 >= entryIndex + 1)
-            return bankAccount.Entries[entryIndex + 1];
+        var entryIndex = entriesDescending.IndexOf(entry);
+        if (entriesDescending.Count - 1 >= entryIndex + 1)
+            return entriesDescending[entryIndex + 1];
 
         return null;
     }
@@ -53,16 +55,8 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
         var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
         if (bankAccount is null || bankAccount.Entries is null) return null;
 
-        var entry = bankAccount.Entries.LastOrDefault(x => x.PostingDate > date);
-        if (entry is null) return null;
+        return bankAccount.Entries.FirstOrDefault(x => x.PostingDate > date);
 
-        var entryIndex = bankAccount.Entries.IndexOf(entry);
-        if (bankAccount.Entries.Count - 1 >= entryIndex - 1)
-            return bankAccount.Entries[entryIndex - 1];
-
-        if (entry is null) return null;
-
-        return null;
     }
 
     public BankAccountEntry? GetNextYounger(int accountId, int entryId)
@@ -73,9 +67,12 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
         var entry = bankAccount.Entries.FirstOrDefault(x => x.EntryId == entryId);
         if (entry is null) return null;
 
-        var entryIndex = bankAccount.Entries.IndexOf(entry);
-        if (bankAccount.Entries.Count - 1 >= entryIndex - 1)
-            return bankAccount.Entries[entryIndex - 1];
+        var entriesDescending = bankAccount.Entries.OrderByDescending(x => x.PostingDate).ToList();
+
+        var entryIndex = entriesDescending.IndexOf(entry);
+        if (entryIndex == 0) return null;
+        if (entriesDescending.Count - 1 >= entryIndex - 1)
+            return entriesDescending[entryIndex - 1];
 
         return null;
     }
@@ -85,14 +82,7 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
         var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
         if (bankAccount is null || bankAccount.Entries is null) return null;
 
-        var entry = bankAccount.Entries.FirstOrDefault(x => x.PostingDate < date);
-        if (entry is null) return null;
-
-        var entryIndex = bankAccount.Entries.IndexOf(entry);
-        if (bankAccount.Entries.Count - 1 >= entryIndex - 1)
-            return bankAccount.Entries[entryIndex - 1];
-
-        return null;
+        return bankAccount.Entries.LastOrDefault(x => x.PostingDate < date);
     }
 
     public BankAccountEntry? GetOldest(int accountId)

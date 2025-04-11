@@ -10,10 +10,10 @@ namespace FinanceManager.Domain.Extensions
             var result = entries.Where(x => x.PostingDate.Year == date.Year && x.PostingDate.Month == date.Month && x.PostingDate.Day == date.Day);
             if (result.Any()) return result;
 
-            return entries.GetPrevious(date);
+            return entries.GetNextYounger(date);
         }
 
-        public static IEnumerable<T> GetPrevious<T>(this IEnumerable<T> entries, DateTime date) where T : FinancialEntryBase
+        public static IEnumerable<T> GetNextYounger<T>(this IEnumerable<T> entries, DateTime date) where T : FinancialEntryBase
         {
             var lastEntry = entries.Where(x => x.PostingDate <= date).FirstOrDefault();
             if (lastEntry is null) return [];

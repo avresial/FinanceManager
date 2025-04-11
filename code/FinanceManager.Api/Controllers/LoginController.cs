@@ -1,6 +1,5 @@
 ﻿using FinanceManager.Api.Services;
 using FinanceManager.Application.Commands.Login;
-using FinanceManager.Application.Providers;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,8 +22,7 @@ namespace FinanceManager.Api.Controllers
         [HttpPost(Name = "Login")]
         public async Task<IActionResult> Login(LoginRequestModel requestModel)
         {
-            var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(requestModel.password);
-            var user = await _userRepository.GetUser(requestModel.userName, encryptedPassword);
+            var user = await _userRepository.GetUser(requestModel.userName, requestModel.password);
 
             if (user is null) return BadRequest();
 
