@@ -110,12 +110,13 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
         var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == entry.AccountId);
         if (bankAccount is null) return false;
         if (bankAccount.Entries is null || !bankAccount.Entries.Any()) return false;
-
         var entryToUpdate = bankAccount.Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
 
         if (entryToUpdate is null) return false;
 
-        entryToUpdate.Update(entry);
+        //entryToUpdate.Update(entry);
+        bankAccount.UpdateEntry(entry);
+
         return true;
     }
 }

@@ -184,8 +184,8 @@ public class FinancialAccountService : IFinancialAccountService
 
     public async Task UpdateAccount<T>(T account) where T : BasicAccountInformation
     {
-        if (account is BankAccount)
-            await _bankAccountService.UpdateAccountAsync(new UpdateAccount(account.AccountId, account.Name));
+        if (account is BankAccount bankAccount)
+            await _bankAccountService.UpdateAccountAsync(new UpdateAccount(bankAccount.AccountId, bankAccount.Name, bankAccount.AccountType));
 
         if (account is StockAccount)
             await _stockAccountService.UpdateAccountAsync(new UpdateAccount(account.AccountId, account.Name));

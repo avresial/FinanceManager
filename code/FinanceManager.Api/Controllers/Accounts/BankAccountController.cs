@@ -13,11 +13,11 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
-public class BankAccountController(IAccountRepository<BankAccount> bankAccountRepository, AccountIdProvider accountIdProvider,
+public class BankAccountController(IBankAccountRepository<BankAccount> bankAccountRepository, AccountIdProvider accountIdProvider,
 IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : ControllerBase
 {
     private readonly AccountIdProvider accountIdProvider = accountIdProvider;
-    private readonly IAccountRepository<BankAccount> bankAccountRepository = bankAccountRepository;
+    private readonly IBankAccountRepository<BankAccount> bankAccountRepository = bankAccountRepository;
     private readonly IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository = bankAccountEntryRepository;
 
     [HttpGet]
@@ -83,6 +83,8 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : Controll
                 PostingDate = x.PostingDate,
                 Value = x.Value,
                 ValueChange = x.ValueChange,
+                ExpenseType = x.ExpenseType,
+                Description = x.Description
             })
         };
         return await Task.FromResult(Ok(bankAccountDto));
@@ -153,19 +155,23 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : Controll
         var account = bankAccountRepository.Get(updateAccount.accountId);
 
         if (account == null || account.UserId != userId) return BadRequest();
-        return await Task.FromResult(Ok(bankAccountRepository.Update(updateAccount.accountId, updateAccount.accountName)));
+
+        if (updateAccount.accountType is null)
+            return await Task.FromResult(Ok(bankAccountRepository.Update(updateAccount.accountId, updateAccount.accountName)));
+        else
+            return await Task.FromResult(Ok(bankAccountRepository.Update(updateAccount.accountId, updateAccount.accountName, updateAccount.accountType.Value)));
     }
 
-    [HttpDelete("Delete")]
-    public async Task<IActionResult> Delete(DeleteAccount deleteAccount)
+    [HttpDelete("Delete/{accountId:int}")]
+    public async Task<IActionResult> Delete(int accountId)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
 
-        var account = bankAccountRepository.Get(deleteAccount.accountId);
+        var account = bankAccountRepository.Get(accountId);
 
         if (account == null || account.UserId != userId) return BadRequest();
-        return await Task.FromResult(Ok(bankAccountRepository.Delete(deleteAccount.accountId)));
+        return await Task.FromResult(Ok(bankAccountRepository.Delete(accountId)));
     }
 
     [HttpDelete("DeleteEntry/{accountId:int}/{entryId:int}")]

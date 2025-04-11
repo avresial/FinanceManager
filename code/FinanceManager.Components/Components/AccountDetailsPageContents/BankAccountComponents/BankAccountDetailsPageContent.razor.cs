@@ -74,7 +74,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
 
     [Parameter] public required int AccountId { get; set; }
 
-    [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ISettingsService settingsService { get; set; }
     [Inject] public required ILoginService loginService { get; set; }
@@ -88,7 +88,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
     public async Task HideOverlay()
     {
         _addEntryVisibility = false;
-        await UpdateInfo();
+        await UpdateEntries();
 
         if (_chart is not null)
             await _chart.RenderAsync();
@@ -125,7 +125,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
         _dateStart = _dateStart.AddMonths(-1);
         if (_user is null) return;
 
-        var newData = await FinancalAccountService.GetAccount<BankAccount>(_user.UserId, AccountId, _dateStart, Account.Start.Value);
+        var newData = await FinancialAccountService.GetAccount<BankAccount>(_user.UserId, AccountId, _dateStart, Account.Start.Value);
 
         if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
             return;
@@ -148,7 +148,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
                 Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
             }
         };
-
+        _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
         await UpdateEntries();
 
         AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
@@ -182,8 +182,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
     {
         try
         {
-            _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-            var accounts = await FinancalAccountService.GetAvailableAccounts();
+            var accounts = await FinancialAccountService.GetAvailableAccounts();
             if (accounts.ContainsKey(AccountId))
             {
                 var accountType = accounts[AccountId];
@@ -192,7 +191,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
                     await UpdateDates();
                     if (_user is not null)
                     {
-                        Account = await FinancalAccountService.GetAccount<BankAccount>(_user.UserId, AccountId, _dateStart, DateTime.UtcNow);
+                        Account = await FinancialAccountService.GetAccount<BankAccount>(_user.UserId, AccountId, _dateStart, DateTime.UtcNow);
                         if (Account is not null && Account.Entries is not null)
                             await UpdateInfo();
                     }
@@ -231,14 +230,16 @@ public partial class BankAccountDetailsPageContent : ComponentBase
     }
     private async Task UpdateDates()
     {
-        _oldestEntryDate = await FinancalAccountService.GetStartDate(AccountId);
-        _youngestEntryDate = await FinancalAccountService.GetEndDate(AccountId);
+        _oldestEntryDate = await FinancialAccountService.GetStartDate(AccountId);
+        _youngestEntryDate = await FinancialAccountService.GetEndDate(AccountId);
 
         if (_youngestEntryDate is not null && _dateStart > _youngestEntryDate)
             _dateStart = new DateTime(_youngestEntryDate.Value.Date.Year, _youngestEntryDate.Value.Date.Month, 1);
     }
-    private void AccountDataSynchronizationService_AccountsChanged()
+    private async void AccountDataSynchronizationService_AccountsChanged()
     {
-        StateHasChanged();
+        await UpdateEntries();
+        if (_chart is not null) await _chart.RenderAsync();
+        await InvokeAsync(StateHasChanged);
     }
 }

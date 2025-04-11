@@ -36,7 +36,7 @@ namespace FinanceManager.Api.Controllers
             return Ok(await _moneyFlowService.GetAssetsTimeSeries(userId, start, end, investmentType));
         }
 
-        [HttpGet("GetNetWorth/{userId:int}/{start:DateTime}")]
+        [HttpGet("GetNetWorth/{userId:int}/{date:DateTime}")]
         public async Task<IActionResult> GetNetWorth(int userId, DateTime date)
         {
             return Ok(await _moneyFlowService.GetNetWorth(userId, date));

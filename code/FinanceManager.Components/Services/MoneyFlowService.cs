@@ -49,7 +49,7 @@ public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
     public async Task<List<TimeSeriesModel>> GetIncome(int userId, DateTime start, DateTime end, TimeSpan? step = null)
     {
         if (_httpClient is null) return [];
-
+        var test = end.ToRfc3339();
         string endpoint = $"{_httpClient.BaseAddress}api/MoneyFlow/GetIncome/{userId}/{start.ToRfc3339()}/{end.ToRfc3339()}";
         if (step is not null) endpoint += $"/{step.Value.Ticks}";
 
@@ -62,6 +62,9 @@ public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
     public async Task<decimal?> GetNetWorth(int userId, DateTime date)
     {
         if (_httpClient is null) return default;
+
+        var test = date.ToRfc3339();
+
         var result = await _httpClient.GetFromJsonAsync<decimal?>($"{_httpClient.BaseAddress}api/MoneyFlow/GetNetWorth/{userId}/{date.ToRfc3339()}");
 
         if (result is not null) return result;

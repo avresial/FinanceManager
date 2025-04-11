@@ -20,7 +20,7 @@ internal class UserInMemoryRepository : IUserRepository
             {
                 Login = defaultUserLogin,
                 Password = defaultUserPassword,
-                Id = 1
+                Id = 0
             };
         }
     }

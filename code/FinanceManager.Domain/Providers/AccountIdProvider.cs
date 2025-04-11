@@ -6,9 +6,9 @@ namespace FinanceManager.Domain.Providers
     public class AccountIdProvider
     {
         private readonly IAccountRepository<StockAccount> stockAccountRepository;
-        private readonly IAccountRepository<BankAccount> bankAccountRepository;
+        private readonly IBankAccountRepository<BankAccount> bankAccountRepository;
 
-        public AccountIdProvider(IAccountRepository<StockAccount> stockAccountRepository, IAccountRepository<BankAccount> bankAccountRepository)
+        public AccountIdProvider(IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository)
         {
             this.stockAccountRepository = stockAccountRepository;
             this.bankAccountRepository = bankAccountRepository;

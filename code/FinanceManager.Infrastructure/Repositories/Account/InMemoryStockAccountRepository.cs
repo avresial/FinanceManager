@@ -27,7 +27,12 @@ namespace FinanceManager.Infrastructure.Repositories.Account
         public IEnumerable<AvailableAccount> GetAvailableAccounts(int userId) =>
             _bankAccounts.Where(x => x.UserId == userId).Select(x => new AvailableAccount(x.AccountId, x.Name));
 
-        public StockAccount? Get(int accountId) => _bankAccounts.FirstOrDefault(x => x.AccountId == accountId);
+        public StockAccount? Get(int accountId)
+        {
+            var accountToReturn = _bankAccounts.FirstOrDefault(x => x.AccountId == accountId);
+            if (accountToReturn is null) return null;
+            return new StockAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name);
+        }
 
         public bool Update(int accountId, string accountName)
         {

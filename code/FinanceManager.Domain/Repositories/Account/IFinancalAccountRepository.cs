@@ -4,7 +4,7 @@ namespace FinanceManager.Domain.Repositories.Account
 {
     public interface IFinancalAccountRepository
     {
-        public Dictionary<int, Type> GetAvailableAccounts();
+        public Dictionary<int, Type> GetAvailableAccounts(int userId);
         public int GetLastAccountId();
         public DateTime? GetStartDate(int id);
         public DateTime? GetEndDate(int id);
@@ -21,6 +21,5 @@ namespace FinanceManager.Domain.Repositories.Account
         public void AddEntry<T>(T accountEntry, int id) where T : FinancialEntryBase;
         public void UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase;
         public void RemoveEntry(int accountEntryId, int id);
-        public void InitializeMock();
     }
 }
