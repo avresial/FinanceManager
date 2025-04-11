@@ -125,13 +125,14 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                         ChartData.Add(new TimeSeriesModel()
                         {
                             Name = account.AccountType.ToString(),
-                            Value = -account.Entries!.First().Value
+                            Value = -account.Entries!.First().Value,
+                            DateTime = account.Entries!.First().PostingDate
                         });
                     }
                 }
-
-                if (_chart is not null) await _chart.UpdateSeriesAsync();
             });
+
+            if (_chart is not null) await _chart.UpdateSeriesAsync();
         }
 
     }

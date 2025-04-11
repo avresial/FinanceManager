@@ -43,7 +43,7 @@ public class InMemoryStockEntryRepository : IAccountEntryRepository<StockAccount
         var entry = account.Entries.FirstOrDefault(x => x.EntryId == entryId);
         if (entry is null) return null;
 
-        return account.Entries.Where(x => x.PostingDate < entry.PostingDate).FirstOrDefault();
+        return account.Entries.Where(x => x.PostingDate < entry.PostingDate).OrderByDescending(x => x.PostingDate).FirstOrDefault();
     }
 
     public StockAccountEntry? GetNextOlder(int accountId, DateTime date)

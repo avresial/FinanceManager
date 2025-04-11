@@ -27,7 +27,7 @@ namespace FinanceManager.Components.Components.Dashboard
 
         public async Task GetThisMonth()
         {
-            StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, DateTime.Now.Month, 1), new(), DateTimeKind.Utc);
+            StartDateTime = new(new(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1), new(), DateTimeKind.Utc);
             await Task.CompletedTask;
         }
 

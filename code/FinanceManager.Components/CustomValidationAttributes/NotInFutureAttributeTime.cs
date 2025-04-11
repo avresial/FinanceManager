@@ -14,15 +14,11 @@ internal class NotInFutureAttributeTime : ValidationAttribute
     protected override ValidationResult IsValid(object? value, ValidationContext validationContext)
     {
         if (value is null) return new ValidationResult("Value is null, validation can not be proceeded!");
+        if (value is not TimeSpan timespan) return new ValidationResult("Value is not a valid TimeSpan!");
 
-        TimeSpan timespan = (TimeSpan)value;
         DateTime dt = _date.Add(timespan);
-        DateTime dtUtc = dt.ToUniversalTime();
-        TimeSpan tsUtc = dtUtc.TimeOfDay;
 
-        var compareReusult = DateTime.UtcNow.CompareTo(dtUtc);
-
-        if (compareReusult >= 0) return ValidationResult.Success!;
+        if (DateTime.UtcNow.CompareTo(dt.ToUniversalTime()) >= 0) return ValidationResult.Success!;
 
         return new ValidationResult("Date must not be in the future!");
     }

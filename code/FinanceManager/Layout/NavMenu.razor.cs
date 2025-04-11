@@ -7,9 +7,10 @@ namespace FinanceManager.WebUi.Layout;
 
 public partial class NavMenu : ComponentBase
 {
-    [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
-    [Inject] public required ILoginService loginService { get; set; }
+    [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public ILogger<NavMenu> Logger { get; set; }
 
     public Dictionary<int, string> Accounts = [];
     public string ErrorMessage { get; set; } = string.Empty;
@@ -36,30 +37,30 @@ public partial class NavMenu : ComponentBase
     {
         try
         {
-            var user = await loginService.GetLoggedUser();
+            var user = await LoginService.GetLoggedUser();
             if (user is null) return;
             Accounts.Clear();
 
-            var test = await FinancalAccountService.GetAvailableAccounts();
+            var test = await FinancialAccountService.GetAvailableAccounts();
             foreach (var account in test)
             {
 
                 var name = string.Empty;
                 if (account.Value == typeof(BankAccount))
                 {
-                    var existinhAccount = await FinancalAccountService.GetAccount<BankAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
-                    if (existinhAccount is not null)
-                        name = existinhAccount.Name;
+                    var existingAccount = await FinancialAccountService.GetAccount<BankAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
+                    if (existingAccount is not null)
+                        name = existingAccount.Name;
                 }
                 else if (account.Value == typeof(StockAccount))
                 {
-                    var existinhAccount = await FinancalAccountService.GetAccount<StockAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
-                    if (existinhAccount is not null)
-                        name = existinhAccount.Name;
+                    var existingAccount = await FinancialAccountService.GetAccount<StockAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
+                    if (existingAccount is not null)
+                        name = existingAccount.Name;
                 }
                 else
                 {
-                    Console.WriteLine($"Error - type can not be handled, Account id {account.Key}");
+                    Logger.LogError($"account type {account.Value.Name} can not be handled, Account id {account.Key}");
                     continue;
                 }
 

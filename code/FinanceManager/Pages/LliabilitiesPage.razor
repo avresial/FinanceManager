@@ -1,4 +1,5 @@
 ﻿@page "/Lliabilities"
+
 @using FinanceManager.Components.Services
 @using FinanceManager.Domain.Repositories.Account
 @using FinanceManager.Domain.Entities.Accounts
@@ -6,11 +7,7 @@
 @using FinanceManager.Domain.Services
 @using FinanceManager.Components.Components.Dashboard.Cards
 
-@inject ISettingsService settingsService;
-@inject IFinancialAccountService FinancalAccountService;
-@inject ILoginService loginService;
-
-<PageTitle>Lliabilities</PageTitle>
+<PageTitle>Liabilities</PageTitle>
 
 <div class="container mt-2">
     <MudGrid Spacing="2">
@@ -58,31 +55,3 @@
     </MudGrid>
 </div>
 
-@code
-{
-    private const int UnitHeight = 190;
-
-    public decimal TotalLiabilities;
-    public DateTime StartDateTime { get; set; }
-
-    protected override async Task OnInitializedAsync()
-    {
-        var user = await loginService.GetLoggedUser();
-        if (user is null) return;
-
-        IEnumerable<BankAccount> bankAccounts = [];
-
-        try
-        {
-            bankAccounts = await FinancalAccountService.GetAccounts<BankAccount>(user.UserId, DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
-        }
-        catch
-        {
-        }
-
-        if (bankAccounts is null) return;
-
-        bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value <= 0).ToList();
-        TotalLiabilities = bankAccounts.Sum(x => x.Entries!.OrderByDescending(x => x.PostingDate).First().Value);
-    }
-}

@@ -37,7 +37,6 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         public StockAccount? Account { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
         public Type? accountType;
-        public List<TimeSeriesModel> ChartData { get; set; } = [];
 
         [Parameter] public required int AccountId { get; set; }
 

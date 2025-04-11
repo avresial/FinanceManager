@@ -84,7 +84,8 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financalAccountServi
             foreach (var ticker in account.GetStoredTickers())
             {
                 var stockPrice = await _stockRepository.GetStockPrice(ticker, end);
-                var latestEntry = account.Entries.First(x => x.Ticker == ticker);
+                var latestEntry = account.Entries.FirstOrDefault(x => x.Ticker == ticker);
+                if (latestEntry is null) continue;
 
                 var existingResult = result.FirstOrDefault(x => x.Name == latestEntry.InvestmentType.ToString());
                 if (existingResult is null)

@@ -7,7 +7,7 @@ namespace FinanceManager.Infrastructure.Repositories;
 
 internal class UserInMemoryRepository : IUserRepository
 {
-    private readonly Dictionary<string, UserDto> _users = new();
+    private readonly Dictionary<string, UserDto> _users = [];
 
     public UserInMemoryRepository(IConfiguration configuration)
     {
@@ -32,7 +32,7 @@ internal class UserInMemoryRepository : IUserRepository
         {
             Login = login,
             Password = password,
-            Id = _users.Values.Any() ? _users.Values.Max(u => u.Id) + 1 : 1
+            Id = GenerateNewId()
         });
 
         return await Task.FromResult(true);
@@ -41,6 +41,7 @@ internal class UserInMemoryRepository : IUserRepository
     public async Task<User?> GetUser(string login, string password)
     {
         if (!_users.ContainsKey(login)) return null;
+        if (password != _users[login].Password) return null;
 
         var result = new User() { Login = _users[login].Login, Id = _users[login].Id };
         return await Task.FromResult(result);
@@ -53,5 +54,10 @@ internal class UserInMemoryRepository : IUserRepository
 
         _users.Remove(userToRemove.Login);
         return await Task.FromResult(true);
+    }
+
+    private int GenerateNewId()
+    {
+        return _users.Values.Count != 0 ? _users.Values.Max(u => u.Id) + 1 : 1;
     }
 }
