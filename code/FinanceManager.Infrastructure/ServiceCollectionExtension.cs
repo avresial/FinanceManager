@@ -21,13 +21,13 @@ namespace FinanceManager.Infrastructure
 
         public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
         {
-            services.AddScoped<IFinancalAccountRepository, InMemoryMockAccountRepository>()
+            services.AddScoped<IFinancalAccountRepository, AccountRepository>()
                     .AddScoped<IStockRepository, StockRepositoryMock>()
                     .AddSingleton<IUserRepository, UserInMemoryRepository>()
                     .AddSingleton<IAccountEntryRepository<BankAccountEntry>, InMemoryBankEntryRepository>()
                     .AddSingleton<IAccountEntryRepository<StockAccountEntry>, InMemoryStockEntryRepository>()
                     .AddSingleton<IAccountRepository<StockAccount>, InMemoryStockAccountRepository>()
-                    .AddSingleton<IAccountRepository<BankAccount>, InMemoryBankAccountRepository>()
+                    .AddSingleton<IBankAccountRepository<BankAccount>, InMemoryBankAccountRepository>()
                     ;
 
             return services;

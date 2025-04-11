@@ -103,7 +103,6 @@
             };
         try
         {
-            BankAccount.Add(bankAccountEntry);
             await FinancalAccountService.AddEntry(bankAccountEntry);
         }
         catch (Exception ex)

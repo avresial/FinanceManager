@@ -14,7 +14,7 @@
                 </div>
                 <div class="row">
                     <div>
-                        @BankAccountEntry.Value @currency
+                        @BankAccountEntry.Value @_currency
                     </div>
                 </div>
             </div>
@@ -28,13 +28,13 @@
                     @if (BankAccountEntry.ValueChange > 0)
                     {
                         <div class="text-success">
-                            @BankAccountEntry.ValueChange @currency
+                            @BankAccountEntry.ValueChange @_currency
                         </div>
                     }
                     else
                     {
                         <div class="text-danger">
-                            @BankAccountEntry.ValueChange @currency
+                            @BankAccountEntry.ValueChange @_currency
                         </div>
                     }
 
@@ -105,13 +105,13 @@
     </ChildContent>
 </MudExpansionPanel>
 
-<MudOverlay @bind-Visible=UpdateEntryVisibility DarkBackground="true">
+<MudOverlay @bind-Visible=_updateEntryVisibility DarkBackground="true">
     <MudPaper Class="p-5">
         <UpdateBankEntry BankAccount=BankAccount BankAccountEntry="BankAccountEntry" ActionCompleted="HideOverlay" />
     </MudPaper>
 </MudOverlay>
 
-<MudOverlay @bind-Visible=RemoveEntryVisibility DarkBackground="true">
+<MudOverlay @bind-Visible=_removeEntryVisibility DarkBackground="true">
     <MudPaper Class="p-5">
         <RemoveBankEntry BankAccountName=@BankAccount.Name BankAccountEntry="BankAccountEntry" Cancel="HideOverlay" Confirm="Confirm" />
     </MudPaper>

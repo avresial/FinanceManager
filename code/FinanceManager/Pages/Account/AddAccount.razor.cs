@@ -8,7 +8,7 @@ namespace FinanceManager.WebUi.Pages.Account;
 public partial class AddAccount : ComponentBase
 {
     private string _accountName { get; set; } = string.Empty;
-    private string _selectedAccountType = string.Empty;
+    private string _selectedAccountType = "Bank account";
 
     private int? _addedAccountId = null;
     private bool _success;

@@ -56,17 +56,13 @@
     private string? Description { get; set; } = string.Empty;
     private decimal? BalanceChange { get; set; } = 0;
 
-    [Parameter]
-    public Func<Task>? ActionCompleted { get; set; }
+    [Parameter] public Func<Task>? ActionCompleted { get; set; }
 
-    [Parameter]
-    public required BankAccount BankAccount { get; set; }
+    [Parameter] public required BankAccount BankAccount { get; set; }
 
-    [Parameter]
-    public required BankAccountEntry BankAccountEntry { get; set; }
+    [Parameter] public required BankAccountEntry BankAccountEntry { get; set; }
 
-    [Inject]
-    public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -109,8 +105,7 @@
             };
         try
         {
-            BankAccount.UpdateEntry(bankAccountEntry);
-            await FinancalAccountService.UpdateEntry(bankAccountEntry);
+            await FinancialAccountService.UpdateEntry(bankAccountEntry);
         }
         catch (Exception ex)
         {

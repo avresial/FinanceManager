@@ -7,8 +7,8 @@ namespace FinanceManager.Domain.Entities.Accounts
 {
     public class BankAccount : FinancialAccountBase<BankAccountEntry>
     {
-        public readonly DateTime? OlderThenLoadedEntry = new();
-        public readonly DateTime? YoungerThenLoadedEntry;
+        public readonly DateTime? OlderThenLoadedEntry = default;
+        public readonly DateTime? YoungerThenLoadedEntry = default;
         public AccountType AccountType { get; set; }
 
         [JsonConstructorAttribute]
@@ -47,15 +47,21 @@ namespace FinanceManager.Domain.Entities.Accounts
             if (previousEntry is not null)
                 index = Entries.IndexOf(previousEntry);
 
+
+            var newEntry = new BankAccountEntry(AccountId, GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange)
+            {
+                Description = entry.Description,
+                ExpenseType = entry.ExpenseType
+            };
             if (index == -1)
             {
                 index = Entries.Count;
-                Entries.Add(new BankAccountEntry(AccountId, GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange) { Description = entry.Description });
+                Entries.Add(newEntry);
                 index -= 1;
             }
             else
             {
-                Entries.Insert(index, new BankAccountEntry(AccountId, GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange));
+                Entries.Insert(index, newEntry);
             }
 
             RecalculateEntryValues(index);

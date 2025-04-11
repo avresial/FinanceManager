@@ -1,41 +1,57 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
 
-namespace FinanceManager.Infrastructure.Repositories.Account
+namespace FinanceManager.Infrastructure.Repositories.Account;
+
+internal class InMemoryBankAccountRepository : IBankAccountRepository<BankAccount>
 {
-    internal class InMemoryBankAccountRepository : IAccountRepository<BankAccount>
+    private List<BankAccount> _bankAccounts = [];
+
+    public int? Add(int accountId, int userId, string accountName) => Add(accountId, userId, accountName, AccountType.Other);
+    public int? Add(int accountId, int userId, string accountName, AccountType accountType)
     {
-        private List<BankAccount> _bankAccounts = new List<BankAccount>();
+        _bankAccounts.Add(new BankAccount(userId, accountId, accountName, accountType));
+        return accountId;
+    }
+    public bool Delete(int accountId)
+    {
+        if (!_bankAccounts.Any(x => x.AccountId == accountId))
+            return false;
 
-        public int? Add(int accountId, int userId, string accountName)
-        {
-            _bankAccounts.Add(new BankAccount(userId, accountId, accountName));
-            return accountId;
-        }
+        _bankAccounts.RemoveAll(x => x.AccountId == accountId);
 
-        public bool Delete(int accountId)
-        {
-            if (!_bankAccounts.Any(x => x.AccountId == accountId))
-                return false;
+        return true;
+    }
+    public IEnumerable<AvailableAccount> GetAvailableAccounts(int userId) => _bankAccounts.Where(x => x.UserId == userId).Select(x => new AvailableAccount(x.AccountId, x.Name));
 
-            _bankAccounts.RemoveAll(x => x.AccountId == accountId);
 
-            return true;
-        }
+    public BankAccount? Get(int accountId)
+    {
+        var accountToReturn = _bankAccounts.FirstOrDefault(x => x.AccountId == accountId);
+        if (accountToReturn is null) return null;
+        return new BankAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name, accountToReturn.AccountType);
+    }
 
-        public IEnumerable<AvailableAccount> GetAvailableAccounts(int userId) => _bankAccounts.Where(x => x.UserId == userId).Select(x => new AvailableAccount(x.AccountId, x.Name));
+    public bool Update(int accountId, string accountName)
+    {
+        var bankAccount = _bankAccounts.FirstOrDefault(x => x.AccountId == accountId);
+        if (bankAccount == null) return false;
 
-        public BankAccount? Get(int accountId) => _bankAccounts.FirstOrDefault(x => x.AccountId == accountId);
+        bankAccount.Name = accountName;
 
-        public bool Update(int accountId, string accountName)
-        {
-            var bankAccount = _bankAccounts.FirstOrDefault(x => x.AccountId == accountId);
-            if (bankAccount == null) return false;
+        return true;
+    }
 
-            bankAccount.Name = accountName;
+    public bool Update(int accountId, string accountName, AccountType accountType)
+    {
+        var bankAccount = _bankAccounts.FirstOrDefault(x => x.AccountId == accountId);
+        if (bankAccount == null) return false;
 
-            return true;
-        }
+        bankAccount.Name = accountName;
+        bankAccount.AccountType = accountType;
+
+        return true;
     }
 }

@@ -204,7 +204,7 @@ namespace FinanceManager.Application.Services
         {
             decimal result = 0;
 
-            var BankAccounts = _financalAccountService.GetAccounts<BankAccount>(userId, date.Date, date);
+            var BankAccounts = _financalAccountService.GetAccounts<BankAccount>(userId, date.Date, date).ToList();
             foreach (var bankAccount in BankAccounts)
             {
                 if (bankAccount.OlderThenLoadedEntry is null) continue;

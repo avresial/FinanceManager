@@ -29,7 +29,7 @@ public class BankAccountService(HttpClient httpClient)
         var result = await _httpClient.GetFromJsonAsync<BankAccountDto>($"{_httpClient.BaseAddress}api/BankAccount/{accountId}&{startDate:O}&{endDate:O}");
 
         if (result is null) return null;
-        return new BankAccount(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new BankAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange))
+        return new BankAccount(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new BankAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange) { ExpenseType = x.ExpenseType, Description = x.Description })
             , result.AccountType, result.OlderThenLoadedEntry, result.YoungerThenLoadedEntry);
     }
     public async Task<DateTime?> GetOldestEntryDate(int accountId)
@@ -68,8 +68,7 @@ public class BankAccountService(HttpClient httpClient)
 
     public async Task<bool> DeleteAccountAsync(DeleteAccount deleteAccount)
     {
-        var response = await _httpClient.PostAsJsonAsync($"{_httpClient.BaseAddress}api/BankAccount/Delete", deleteAccount);
-        return response.IsSuccessStatusCode;
+        return await _httpClient.DeleteFromJsonAsync<bool>($"{_httpClient.BaseAddress}api/BankAccount/Delete/{deleteAccount.accountId}"); ;
     }
 
     public async Task<bool> DeleteEntryAsync(int accountId, int entryId)
