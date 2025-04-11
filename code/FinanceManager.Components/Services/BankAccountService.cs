@@ -68,7 +68,7 @@ public class BankAccountService(HttpClient httpClient)
 
     public async Task<bool> DeleteAccountAsync(DeleteAccount deleteAccount)
     {
-        return await _httpClient.DeleteFromJsonAsync<bool>($"{_httpClient.BaseAddress}api/BankAccount/Delete/{deleteAccount.accountId}"); ;
+        return await _httpClient.DeleteFromJsonAsync<bool>($"{_httpClient.BaseAddress}api/BankAccount/Delete/{deleteAccount.accountId}");
     }
 
     public async Task<bool> DeleteEntryAsync(int accountId, int entryId)
