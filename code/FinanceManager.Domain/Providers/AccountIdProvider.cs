@@ -14,13 +14,17 @@ namespace FinanceManager.Domain.Providers
             this.bankAccountRepository = bankAccountRepository;
         }
 
-        public int? GetMaxId(int userId)
+        public int? GetMaxId()
         {
             List<int> ids = [];
-            var stockAccounts = stockAccountRepository.GetAvailableAccounts(userId);
-            if (stockAccounts.Any()) ids.Add(stockAccounts.Max(x => x.AccountId));
-            var bankAccounts = bankAccountRepository.GetAvailableAccounts(userId);
-            if (bankAccounts.Any()) ids.Add(bankAccounts.Max(x => x.AccountId));
+            var stockAccountsLastId = stockAccountRepository.GetLastAccountId();
+            if (stockAccountsLastId is not null)
+                ids.Add(stockAccountsLastId.Value);
+
+            var bankAccountsLastId = bankAccountRepository.GetLastAccountId();
+            if (bankAccountsLastId is not null)
+                ids.Add(bankAccountsLastId.Value);
+
             return ids.Any() ? ids.Max() : null;
         }
     }

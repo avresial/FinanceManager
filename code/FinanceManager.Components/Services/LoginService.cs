@@ -83,7 +83,7 @@ public class LoginService : ILoginService
 
         await _sessionStorageService.SetItemAsync(_sessionString, _loggedUser);
         await _localStorageService.SetItemAsync(_sessionString, _loggedUser);
-        var authState = await ((CustomAuthenticationStateProvider)_authState).ChangeUser(userSession.UserName, userSession.UserName, "Associate");
+        var authState = await ((CustomAuthenticationStateProvider)_authState).ChangeUser(userSession.UserName, userSession.UserId.ToString(), "Associate");
         LogginStateChanged?.Invoke(true);
         return true;
     }

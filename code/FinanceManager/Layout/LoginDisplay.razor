@@ -2,44 +2,15 @@
 @using FinanceManager.Domain.Services
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 
-@inject NavigationManager Navigation
-@inject ILoginService LoginService
-
-@if (userSession is not null)
+@if (_userSession is not null)
 {
-    <MudMenu Label="@userSession.UserName" TransformOrigin="Origin.TopCenter" AnchorOrigin="Origin.BottomCenter" Dense="true" >
-        <MudMenuItem OnClick="BeginLogOut">Log Out</MudMenuItem>
+    <MudMenu Label="@_label" TransformOrigin="Origin.TopCenter" AnchorOrigin="Origin.BottomCenter">
+        <MudPaper Class="d-flex justify-center flex-grow-1 gap-1 flex-column" Elevation="0">
+            <MudButton OnClick=BeginLogOut Color="Color.Primary">
+                Log Out
+            </MudButton>
+        </MudPaper>
     </MudMenu>
-}
 
-@code {
-    private UserSession? userSession = null;
-    private MudTheme MyCustomTheme = new MudTheme()
-        {
-            PaletteLight = new PaletteLight()
-            {
-                Primary = Colors.Amber.Accent4,
-                Secondary = Colors.Green.Accent4,
-                AppbarBackground = Colors.Red.Default,
-            },
-            PaletteDark = new PaletteDark()
-            {
-                Primary = Colors.Amber.Accent4,
-                Secondary = Colors.Green.Accent4,
-                AppbarBackground = Colors.Red.Default,
-                Background = Colors.Gray.Default,
-            },
-
-        };
-
-    protected override async Task OnInitializedAsync()
-    {
-        userSession = await LoginService.GetLoggedUser();
-    }
-
-    public async Task BeginLogOut()
-    {
-        await LoginService.Logout();
-        Navigation.NavigateToLogout("login");
-    }
+    <MudText Typo="Typo.button" Color="Color.Primary">@_pricingLabel</MudText>
 }

@@ -100,7 +100,7 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             if (account is BankAccount bankAccount)
             {
-                _bankAccountAccountRepository.Add(bankAccount.AccountId, bankAccount.UserId, bankAccount.Name, bankAccount.AccountType);
+                _bankAccountAccountRepository.Add(bankAccount.UserId, bankAccount.AccountId, bankAccount.Name, bankAccount.AccountType);
 
                 if (bankAccount is not null && bankAccount.Entries is not null)
                     foreach (var entry in bankAccount.Entries)

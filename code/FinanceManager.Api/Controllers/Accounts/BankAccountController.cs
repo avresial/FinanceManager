@@ -134,9 +134,9 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (!userId.HasValue) return BadRequest();
 
-        var id = accountIdProvider.GetMaxId(userId.Value);
+        var id = accountIdProvider.GetMaxId();
         int newId = id is null ? 1 : id.Value + 1;
-        return await Task.FromResult(Ok(bankAccountRepository.Add(newId, userId.Value, addAccount.accountName)));
+        return await Task.FromResult(Ok(bankAccountRepository.Add(userId.Value, newId, addAccount.accountName)));
     }
 
     [HttpPost("AddEntry")]
@@ -145,7 +145,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (!userId.HasValue) return BadRequest();
 
-        if (!_userPlanVerifier.CanAddMoreEntries(userId.Value))
+        if (!await _userPlanVerifier.CanAddMoreEntries(userId.Value))
             return BadRequest("Too many entries. In order to add this entry delete existing one.");
 
         return await Task.FromResult(Ok(bankAccountEntryRepository.Add(addEntry.entry)));

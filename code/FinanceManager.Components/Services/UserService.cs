@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Application.Commands.User;
 using FinanceManager.Components.Helpers;
+using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
@@ -19,7 +20,7 @@ public class UserService : IUserService
 
     public async Task<bool> AddUser(string login, string password)
     {
-        AddUser addUserCommand = new AddUser(login, password);
+        AddUser addUserCommand = new AddUser(login, password, Domain.Enums.PricingLevel.Free);
 
         try
         {
@@ -33,5 +34,19 @@ public class UserService : IUserService
             _logger.LogError(ex, $"Error adding user {login}", login);
         }
         return false;
+    }
+
+    public async Task<User?> GetUser(int id)
+    {
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<User>($"{_httpClient.BaseAddress}api/User/Get/{id}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting user {id}", id);
+        }
+
+        return null;
     }
 }

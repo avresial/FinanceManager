@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.Extensions.Configuration;
@@ -20,7 +21,8 @@ internal class UserInMemoryRepository : IUserRepository
             {
                 Login = defaultUserLogin,
                 Password = defaultUserPassword,
-                Id = 0
+                Id = 0,
+                PricingLevel = PricingLevel.Basic
             };
         }
     }
@@ -43,8 +45,16 @@ internal class UserInMemoryRepository : IUserRepository
         if (!_users.ContainsKey(login)) return null;
         if (password != _users[login].Password) return null;
 
-        var result = new User() { Login = _users[login].Login, Id = _users[login].Id };
+        var result = new User() { Login = _users[login].Login, Id = _users[login].Id, PricingLevel = _users[login].PricingLevel };
         return await Task.FromResult(result);
+    }
+
+    public async Task<User?> GetUser(int id)
+    {
+        var user = _users.Values.FirstOrDefault(x => x.Id == id);
+        if (user is null) return null;
+
+        return await Task.FromResult(new User() { Login = user.Login, Id = user.Id, PricingLevel = user.PricingLevel });
     }
 
     public async Task<bool> RemoveUser(int userId)

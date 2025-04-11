@@ -1,17 +1,23 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 
 namespace FinanceManager.Application.Services;
-public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRepository, IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository)
+
+public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRepository, IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
+    IUserRepository userRepository)
 {
     private readonly IBankAccountRepository<BankAccount> _bankAccountRepository = bankAccountRepository;
     private readonly IAccountEntryRepository<BankAccountEntry> _bankAccountEntryRepository = bankAccountEntryRepository;
+    private readonly IUserRepository _userRepository = userRepository;
 
-    private readonly int _maxAllowedEntries = 10;
-
-    public bool CanAddMoreEntries(int userId)
+    public async Task<bool> CanAddMoreEntries(int userId)
     {
+        var user = await _userRepository.GetUser(userId);
+        if (user is null) return false;
+
         var accounts = _bankAccountRepository.GetAvailableAccounts(userId);
         int totalEntries = 0;
         foreach (var account in accounts)
@@ -21,6 +27,15 @@ public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRep
             totalEntries += count.Value;
         }
 
-        return totalEntries < _maxAllowedEntries;
+        return totalEntries < GetMaxAllowedEntries(user.PricingLevel);
     }
+
+    static int GetMaxAllowedEntries(PricingLevel pricingLevel) => pricingLevel switch
+    {
+        PricingLevel.Free => 1000,
+        PricingLevel.Basic => 10000,
+        PricingLevel.Premium => 100000,
+        _ => 1000,
+    };
+
 }

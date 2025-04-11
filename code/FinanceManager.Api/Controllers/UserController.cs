@@ -16,11 +16,10 @@ namespace FinanceManager.Api.Controllers
 
         [AllowAnonymous]
         [HttpGet]
-        [Route("Get")]
-        public async Task<IActionResult> Get(GetUser getUserCommand)
+        [Route("Get/{userId:int}")]
+        public async Task<IActionResult> Get(int userId)
         {
-            var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(getUserCommand.password);
-            var result = await _loginRepository.GetUser(getUserCommand.userName, encryptedPassword);
+            var result = await _loginRepository.GetUser(userId);
 
             if (result is not null) return Ok(result);
             return BadRequest();

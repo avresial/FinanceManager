@@ -125,7 +125,7 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (!userId.HasValue) return BadRequest("User ID is null.");
 
-            var id = accountIdProvider.GetMaxId(userId.Value);
+            var id = accountIdProvider.GetMaxId();
             int newId = id is null ? 1 : id.Value + 1;
             var result = await Task.FromResult(stockAccountRepository.Add(newId, userId.Value, addAccount.accountName));
             return Ok(result);
