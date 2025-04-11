@@ -134,7 +134,7 @@ public partial class IncomeVsSpendingOverviewCard
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error getting income data");
+            Logger.LogError(ex, "Error getting spending data");
         }
 
         if (income.Count == 0 && spending.Count == 0) return [];

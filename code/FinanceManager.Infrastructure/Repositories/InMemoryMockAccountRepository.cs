@@ -128,10 +128,10 @@ namespace FinanceManager.Infrastructure.Repositories
 
                     if (entries.Any())
                     {
-                        var olderEntry = _bankAccountEntryRepository.GetNextOlder(userId, entries.Last().EntryId);
+                        var olderEntry = _bankAccountEntryRepository.GetNextOlder(item.AccountId, entries.Last().EntryId);
                         if (olderEntry is not null) olderThenLoadedEntryDate = olderEntry.PostingDate;
 
-                        var youngerEntry = _bankAccountEntryRepository.GetNextOlder(userId, entries.Last().EntryId);
+                        var youngerEntry = _bankAccountEntryRepository.GetNextOlder(item.AccountId, entries.Last().EntryId);
                         if (youngerEntry is not null) youngerThenLoadedEntryDate = youngerEntry.PostingDate;
                     }
 

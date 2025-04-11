@@ -60,6 +60,8 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
         if (bankAccount.Entries.Count - 1 >= entryIndex - 1)
             return bankAccount.Entries[entryIndex - 1];
 
+        if (entry is null) return null;
+
         return null;
     }
 
