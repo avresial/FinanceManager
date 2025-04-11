@@ -10,31 +10,21 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
 {
     public partial class ManageBankAccount
     {
-        private MudForm? form;
-        private bool success;
-        private string[] errors = { };
-        private BankAccount? BankAccount { get; set; } = null;
+        private MudForm? _form;
+        private bool _success;
+        private string[] _errors = [];
+        private BankAccount? BankAccount = null;
 
         public string AccountName { get; set; } = string.Empty;
         public AccountType AccountType { get; set; }
 
-        [Parameter]
-        public required int AccountId { get; set; }
+        [Parameter] public required int AccountId { get; set; }
 
-        [Inject]
-        public required IFinancialAccountService FinancalAccountService { get; set; }
-
-        [Inject]
-        public required NavigationManager Navigation { get; set; }
-
-        [Inject]
-        public required IDialogService DialogService { get; set; }
-
-        [Inject]
-        public required ILoginService loginService { get; set; }
-
-        [Inject]
-        public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
+        [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+        [Inject] public required NavigationManager Navigation { get; set; }
+        [Inject] public required IDialogService DialogService { get; set; }
+        [Inject] public required ILoginService loginService { get; set; }
+        [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
         protected override async Task OnParametersSetAsync()
         {
@@ -51,14 +41,14 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
 
         public async Task Update()
         {
-            if (form is null) return;
-            await form.Validate();
+            if (_form is null) return;
+            await _form.Validate();
 
-            if (!form.IsValid) return;
+            if (!_form.IsValid) return;
             if (BankAccount is null) return;
             if (string.IsNullOrEmpty(AccountName))
             {
-                errors = [$"AccountName can not be empty"];
+                _errors = [$"AccountName can not be empty"];
                 return;
             }
 

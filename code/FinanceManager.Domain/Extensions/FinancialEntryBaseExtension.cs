@@ -21,8 +21,6 @@ namespace FinanceManager.Domain.Extensions
             return [lastEntry];
         }
 
-
-
         public static List<FinancialEntryBase> GetEntriesMonthlyValue(this IEnumerable<FinancialEntryBase> entries)
         {
 

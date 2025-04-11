@@ -15,23 +15,33 @@
             <div class="row">
                 <div class="col px-0">
                     <h5 class="card-title">Income source</h5>
-                    <h6 class="card-subtitle mb-2 text-muted">@Total @currency</h6>
+                    @if (ChartData.Any())
+                    {
+                        <h6 class="card-subtitle mb-2 text-muted">@Total @_currency</h6>
+                    }
                 </div>
             </div>
 
             <div class="row flex-fill" style="height:1px;">
                 <div class="h-100">
-                    <ApexChart @ref="chart" TItem="IncomeSourceOverviewEntry" Height="@("100%")" Options="options">
+                    @if (ChartData.Any())
+                    {
+                        <ApexChart @ref="_chart" TItem="IncomeSourceOverviewEntry" Height="@("100%")" Options="options">
+                            <ApexPointSeries TItem="IncomeSourceOverviewEntry"
+                                             Items="ChartData"
+                                             Name="Income"
+                                             XValue="@(e => e.Source)"
+                                             YValue="e=> e.Value"
+                                             SeriesType="SeriesType.Bar" />
 
-
-                        <ApexPointSeries TItem="IncomeSourceOverviewEntry"
-                                         Items="Data"
-                                         Name="Income"
-                                         XValue="@(e => e.Source)"
-                                         YValue="e=> e.Value"
-                                         SeriesType="SeriesType.Bar" />
-
-                    </ApexChart>
+                        </ApexChart>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                            <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
+                        </div>
+                    }
                 </div>
             </div>
         </div>

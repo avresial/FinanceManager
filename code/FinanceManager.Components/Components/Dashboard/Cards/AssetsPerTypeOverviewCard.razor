@@ -18,23 +18,35 @@
             <div class="container-fluid d-flex flex-column h-100 px-1">
                 <div class="col px-0">
                     <h5 class="card-title">Assets per type</h5>
-                    <h6 class="card-subtitle mb-2 text-muted">@Math.Round(TotalAssets, 2) @currency</h6>
+                    @if (ChartData.Any())
+                    {
+                        <h6 class="card-subtitle mb-2 text-muted">@Math.Round(_totalAssets, 2) @_currency</h6>
+                    }
                 </div>
             </div>
         </div>
     </div>
 
     <div class="row flex-fill pb-2" style="height:1px;">
-        <div class="h-100" style="position:relative; bottom:-2px">
-            <ApexChart @ref="chart" Height="@("100%")" TItem="AssetEntry" Options="options">
-                <ApexPointSeries TItem="AssetEntry"
-                                 Items="Data"
-                                 Name="Assets"
-                                 XValue="e => e.Name"
-                                 YAggregate="@(e =>Math.Round( e.Sum(e => e.Value),2))"
-                                 SeriesType="SeriesType.Pie"
-                                 OrderByDescending="@(e=>e.Y)" />
-            </ApexChart>
+        <div class="h-100">
+            @if (ChartData.Any())
+            {
+                <ApexChart @ref="_chart" Height="@("100%")" TItem="AssetEntry" Options="options">
+                    <ApexPointSeries TItem="AssetEntry"
+                                     Items="ChartData"
+                                     Name="Assets"
+                                     XValue="e => e.Name"
+                                     YAggregate="@(e =>Math.Round( e.Sum(e => e.Value),2))"
+                                     SeriesType="SeriesType.Pie"
+                                     OrderByDescending="@(e=>e.Y)" />
+                </ApexChart>
+            }
+            else
+            {
+                <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                    <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
+                </div>
+            }
         </div>
     </div>
 </div>

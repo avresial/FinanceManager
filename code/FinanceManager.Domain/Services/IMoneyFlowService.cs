@@ -11,5 +11,7 @@ namespace FinanceManager.Domain.Services
         Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, DateTime start, DateTime end, InvestmentType investmentType);
         Task<decimal?> GetNetWorth(int userId, DateTime date);
         Task<Dictionary<DateTime, decimal>> GetNetWorth(int userId, DateTime start, DateTime end);
+        Task<List<TimeSeriesModel>> GetIncome(int userId, DateTime start, DateTime end, TimeSpan? step = null);
+        Task<List<TimeSeriesModel>> GetSpending(int userId, DateTime start, DateTime end, TimeSpan? step = null);
     }
 }

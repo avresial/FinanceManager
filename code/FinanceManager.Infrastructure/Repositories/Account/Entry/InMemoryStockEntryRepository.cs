@@ -34,6 +34,39 @@ public class InMemoryStockEntryRepository : IAccountEntryRepository<StockAccount
         if (stockAccount is null) return [];
         return stockAccount.Get(startDate, endDate);
     }
+
+    public StockAccountEntry? GetNextOlder(int accountId, int entryId)
+    {
+        var account = accounts.FirstOrDefault(x => x.AccountId == accountId);
+        if (account is null || account.Entries is null) return null;
+
+        var entry = account.Entries.FirstOrDefault(x => x.EntryId == entryId);
+        if (entry is null) return null;
+
+        return account.Entries.Where(x => x.PostingDate < entry.PostingDate).OrderByDescending(x => x.PostingDate).FirstOrDefault();
+    }
+
+    public StockAccountEntry? GetNextOlder(int accountId, DateTime date)
+    {
+        throw new NotImplementedException();
+    }
+
+    public StockAccountEntry? GetNextYounger(int accountId, int entryId)
+    {
+        var account = accounts.FirstOrDefault(x => x.AccountId == accountId);
+        if (account is null || account.Entries is null) return null;
+
+        var entry = account.Entries.FirstOrDefault(x => x.EntryId == entryId);
+        if (entry is null) return null;
+
+        return account.Entries.Where(x => x.PostingDate > entry.PostingDate).LastOrDefault();
+    }
+
+    public StockAccountEntry? GetNextYounger(int accountId, DateTime date)
+    {
+        throw new NotImplementedException();
+    }
+
     public StockAccountEntry? GetOldest(int accountId)
     {
         var stockAccount = accounts.FirstOrDefault(x => x.AccountId == accountId);

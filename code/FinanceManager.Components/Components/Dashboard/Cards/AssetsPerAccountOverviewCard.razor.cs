@@ -119,16 +119,26 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
         async Task GetData()
         {
+            Data.Clear();
+            TotalAssets = 0;
+
             if (StartDateTime == new DateTime())
-            {
-                Data.Clear();
-                TotalAssets = 0;
                 return;
-            }
 
             if (user is not null)
-                Data = await moneyFlowService.GetEndAssetsPerAcount(user.UserId, StartDateTime, DateTime.UtcNow);
-            TotalAssets = Data.Sum(x => x.Value);
+            {
+                try
+                {
+                    Data.AddRange(await moneyFlowService.GetEndAssetsPerAcount(user.UserId, StartDateTime, DateTime.UtcNow));
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
+            }
+
+            if (Data.Count != 0)
+                TotalAssets = Data.Sum(x => x.Value);
         }
     }
 }

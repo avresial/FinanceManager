@@ -150,7 +150,10 @@ namespace FinanceManager.Domain.Entities.Accounts
             for (int i = startIndex; i >= 0; i--)
             {
                 if (Entries.Count - 1 <= i)
+                {
+                    Entries[i].Value = Entries[i].ValueChange;
                     continue;
+                }
 
                 var newValue = Entries[i + 1].Value + Entries[i].ValueChange;
                 Entries[i].Value = newValue;

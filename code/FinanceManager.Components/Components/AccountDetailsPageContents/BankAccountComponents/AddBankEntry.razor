@@ -59,20 +59,12 @@
     public string Description { get; set; } = string.Empty;
     public decimal? BalanceChange { get; set; } = null;
 
-    [Parameter]
-    public RenderFragment? CustomButton { get; set; }
+    [Parameter] public RenderFragment? CustomButton { get; set; }
+    [Parameter] public Func<Task>? ActionCompleted { get; set; }
+    [Parameter] public required BankAccount BankAccount { get; set; }
 
-    [Parameter]
-    public Func<Task>? ActionCompleted { get; set; }
-
-    [Parameter]
-    public required BankAccount BankAccount { get; set; }
-
-    [Inject]
-    public required IFinancialAccountService FinancalAccountService { get; set; }
-
-    [Inject]
-    public required ISettingsService settingsService { get; set; }
+    [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required ISettingsService settingsService { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -112,7 +104,7 @@
         try
         {
             BankAccount.Add(bankAccountEntry);
-          await  FinancalAccountService.AddEntry(bankAccountEntry);
+            await FinancalAccountService.AddEntry(bankAccountEntry);
         }
         catch (Exception ex)
         {

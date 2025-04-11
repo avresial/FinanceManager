@@ -2,40 +2,44 @@
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 
-namespace FinanceManager.WebUi.Pages
+namespace FinanceManager.WebUi.Pages;
+
+public partial class Home : ComponentBase
 {
-    public partial class Home : ComponentBase
+    private bool _isLoading;
+
+    [Inject] public required ILogger<Home> Logger { get; set; }
+    [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required NavigationManager Navigation { get; set; }
+    [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
+
+    protected override async Task OnInitializedAsync()
     {
-        private bool _isLoading;
-        [Inject]
-        public required ILogger<Home> Logger { get; set; }
+        _isLoading = true;
+        var loggedUser = await LoginService.GetLoggedUser();
 
-        [Inject]
-        public required ILoginService LoginService { get; set; }
-
-        [Inject]
-        public required NavigationManager Navigation { get; set; }
-
-        [Inject]
-        public required IFinancialAccountService FinancalAccountService { get; set; }
-
-        [Inject]
-        public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
-
-        protected override async Task OnInitializedAsync()
+        if (loggedUser is null)
         {
-            _isLoading = true;
-            var loggedUser = await LoginService.GetLoggedUser();
+            Navigation.NavigateTo("login");
+            return;
+        }
 
-            if (loggedUser is null)
-            {
-                Navigation.NavigateTo("login");
-                return;
-            }
+        Dictionary<int, Type>? availableAccounts = null;
+        try
+        {
+            availableAccounts = await FinancalAccountService.GetAvailableAccounts();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex.ToString());
+        }
 
-            Dictionary<int, Type>? availableAccounts = null;
+        if ((availableAccounts is null || availableAccounts.Count == 0) && loggedUser.UserName.ToLower() == "guest")
+        {
             try
             {
+                FinancalAccountService.InitializeMock();
                 availableAccounts = await FinancalAccountService.GetAvailableAccounts();
             }
             catch (Exception ex)
@@ -43,26 +47,13 @@ namespace FinanceManager.WebUi.Pages
                 Logger.LogError(ex.ToString());
             }
 
-            if ((availableAccounts is null || availableAccounts.Count == 0) && loggedUser.UserName.ToLower() == "guest")
-            {
-                try
-                {
-                    FinancalAccountService.InitializeMock();
-                    availableAccounts = await FinancalAccountService.GetAvailableAccounts();
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex.ToString());
-                }
-
-                await AccountDataSynchronizationService.AccountChanged();
-            }
-
-            if (availableAccounts is null || availableAccounts.Count == 0)
-                Navigation.NavigateTo("AddAccount");
-
-            _isLoading = false;
+            await AccountDataSynchronizationService.AccountChanged();
         }
+
+        if (availableAccounts is null || availableAccounts.Count == 0)
+            Navigation.NavigateTo("AddAccount");
+
+        _isLoading = false;
     }
 }
 

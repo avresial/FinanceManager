@@ -10,105 +10,106 @@ using Microsoft.AspNetCore.Components.Authorization;
 using System.Net.Http.Json;
 using System.Text.Json;
 
-namespace FinanceManager.Components.Services
+namespace FinanceManager.Components.Services;
+
+public class LoginService : ILoginService
 {
-    public class LoginService : ILoginService
+    private const string _sessionString = "userSession";
+    private UserSession? _loggedUser = null;
+    private ISessionStorageService _sessionStorageService;
+    private ILocalStorageService _localStorageService;
+    private readonly IUserRepository _loginRepository;
+    private readonly HttpClient _httpClient;
+
+    public event Action<bool>? LogginStateChanged;
+
+    private AuthenticationStateProvider _authState { get; set; }
+    public LoginService(ISessionStorageService sessionStorageService, ILocalStorageService localStorageService,
+        AuthenticationStateProvider AuthState, IUserRepository loginRepository, HttpClient httpClient)
     {
-        private const string sessionString = "userSession";
-        private UserSession? LoggedUser = null;
-        private ISessionStorageService _sessionStorageService;
-        private ILocalStorageService _localStorageService;
-        private readonly IUserRepository _loginRepository;
-        private readonly HttpClient _httpClient;
+        _sessionStorageService = sessionStorageService;
+        _localStorageService = localStorageService;
+        _authState = AuthState;
 
-        public event Action<bool>? LogginStateChanged;
+        _loginRepository = loginRepository;
+        _httpClient = httpClient;
+        _ = _loginRepository.AddUser("Guest", PasswordEncryptionProvider.EncryptPassword("GuestPassword"));
+    }
 
-        private AuthenticationStateProvider _authState { get; set; }
-        public LoginService(ISessionStorageService sessionStorageService, ILocalStorageService localStorageService,
-            AuthenticationStateProvider AuthState, IUserRepository loginRepository, HttpClient httpClient)
+    public async Task<UserSession?> GetLoggedUser()
+    {
+        if (await _localStorageService.ContainKeyAsync(_sessionString))
+            _loggedUser = await GetKeepMeLoggedinSession();
+
+        return _loggedUser;
+    }
+    public async Task<UserSession?> GetKeepMeLoggedinSession()
+    {
+        try
         {
-            _sessionStorageService = sessionStorageService;
-            _localStorageService = localStorageService;
-            _authState = AuthState;
+            return await _localStorageService.GetItemAsync<UserSession>(_sessionString);
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine(ex);
+            await _localStorageService.RemoveItemAsync(_sessionString);
+            return null;
+        }
+    }
 
-            _loginRepository = loginRepository;
-            _httpClient = httpClient;
-            _ = _loginRepository.AddUser("Guest", PasswordEncryptionProvider.EncryptPassword("GuestPassword"));
+    public async Task<bool> Login(UserSession userSession)
+    {
+        LoginRequestModel loginRequestModel = new LoginRequestModel(userSession.UserName, userSession.Password);
+        LoginResponseModel? result = null;
+        HttpResponseMessage? response = null;
+
+        try
+        {
+            response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/Login",
+                JsonHelper.GenerateStringContent(JsonHelper.SerializeObj(loginRequestModel)));
+            result = await response.Content.ReadFromJsonAsync<LoginResponseModel>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
         }
 
-        public async Task<UserSession?> GetLoggedUser()
+        if (result is null) return false;
+
+        _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.AccessToken);
+        userSession.Token = result.AccessToken;
+        userSession.UserId = result.UserId;
+        _loggedUser = userSession;
+
+        await _sessionStorageService.SetItemAsync(_sessionString, _loggedUser);
+        await _localStorageService.SetItemAsync(_sessionString, _loggedUser);
+        var authState = await ((CustomAuthenticationStateProvider)_authState).ChangeUser(userSession.UserName, userSession.UserName, "Associate");
+        LogginStateChanged?.Invoke(true);
+        return true;
+    }
+    public async Task<bool> Login(string username, string password)
+    {
+        username = username.ToLower();
+
+        var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(password);
+        var loginResult = await Login(new UserSession()
         {
-            if (await _localStorageService.ContainKeyAsync(sessionString))
-                LoggedUser = await GetKeepMeLoggedinSession();
+            UserId = 0,
+            UserName = username,
+            Password = encryptedPassword
+        });
 
-            return LoggedUser;
-        }
-        public async Task<UserSession?> GetKeepMeLoggedinSession()
-        {
-            try
-            {
-                return await _localStorageService.GetItemAsync<UserSession>(sessionString);
-            }
-            catch (JsonException ex)
-            {
-                Console.WriteLine(ex);
-                await _localStorageService.RemoveItemAsync(sessionString);
-                return null;
-            }
-        }
+        LogginStateChanged?.Invoke(loginResult);
 
-        public async Task<bool> Login(UserSession userSession)
-        {
+        return loginResult;
+    }
 
-            LoginRequestModel loginRequestModel = new LoginRequestModel(userSession.UserName, userSession.Password);
-            LoginResponseModel? result = null;
-            HttpResponseMessage? response = null;
-            try
-            {
-                response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/Login",
-                    JsonHelper.GenerateStringContent(JsonHelper.SerializeObj(loginRequestModel)));
-                result = await response.Content.ReadFromJsonAsync<LoginResponseModel>();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-            }
-            if (result is null) return false;
-
-            _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.AccessToken);
-            userSession.Token = result.AccessToken;
-            LoggedUser = userSession;
-
-            await _sessionStorageService.SetItemAsync(sessionString, LoggedUser);
-            await _localStorageService.SetItemAsync(sessionString, LoggedUser);
-            var authState = await ((CustomAuthenticationStateProvider)_authState).ChangeUser(userSession.UserName, userSession.UserName, "Associate");
-            LogginStateChanged?.Invoke(true);
-            return true;
-        }
-        public async Task<bool> Login(string username, string password)
-        {
-            username = username.ToLower();
-
-            var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(password);
-            var loginResult = await Login(new UserSession()
-            {
-                UserId = 0,
-                UserName = username,
-                Password = encryptedPassword
-            });
-
-            LogginStateChanged?.Invoke(loginResult);
-
-            return loginResult;
-        }
-
-        public async Task Logout()
-        {
-            await _sessionStorageService.RemoveItemAsync(sessionString);
-            await _localStorageService.RemoveItemAsync(sessionString);
-            await ((CustomAuthenticationStateProvider)_authState).Logout();
-            LogginStateChanged?.Invoke(false);
-            LoggedUser = null;
-        }
+    public async Task Logout()
+    {
+        await _sessionStorageService.RemoveItemAsync(_sessionString);
+        await _localStorageService.RemoveItemAsync(_sessionString);
+        await ((CustomAuthenticationStateProvider)_authState).Logout();
+        LogginStateChanged?.Invoke(false);
+        _loggedUser = null;
     }
 }

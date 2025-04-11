@@ -7,7 +7,7 @@
 
 @if (userSession is not null)
 {
-    <MudMenu Label="@userSession.UserName" TransformOrigin="Origin.TopCenter" AnchorOrigin="Origin.BottomCenter" Dense="true">
+    <MudMenu Label="@userSession.UserName" TransformOrigin="Origin.TopCenter" AnchorOrigin="Origin.BottomCenter" Dense="true" >
         <MudMenuItem OnClick="BeginLogOut">Log Out</MudMenuItem>
     </MudMenu>
 }

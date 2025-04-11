@@ -1,8 +1,6 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
-using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Extensions;
+using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -13,34 +11,26 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 {
     public partial class IncomeOverviewCard
     {
-        private string currency = string.Empty;
-        private ApexChart<SpendingOverviewEntry>? chart;
+        private string _currency = string.Empty;
+        private ApexChart<TimeSeriesModel>? _chart;
+        private ApexChartOptions<TimeSeriesModel> _options = new();
 
-        private ApexChartOptions<SpendingOverviewEntry> options { get; set; } = new();
+        public List<TimeSeriesModel> ChartData { get; set; } = [];
 
-        public List<SpendingOverviewEntry> Data { get; set; } = [];
+        [Inject] public required ILogger<IncomeOverviewCard> Logger { get; set; }
+        [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
+        [Inject] public required ISettingsService SettingsService { get; set; }
+        [Inject] public required ILoginService LoginService { get; set; }
 
-        [Inject]
-        public required ILogger<IncomeOverviewCard> Logger { get; set; }
-        [Inject]
-        public required IFinancialAccountService FinancalAccountService { get; set; }
-        [Inject]
-        public required ISettingsService settingsService { get; set; }
-        [Inject]
-        public required ILoginService loginService { get; set; }
-
-        [Parameter]
-        public string Height { get; set; } = "300px";
-
-        [Parameter]
-        public DateTime StartDateTime { get; set; }
+        [Parameter] public string Height { get; set; } = "300px";
+        [Parameter] public DateTime StartDateTime { get; set; }
 
         public decimal TotalIncome = 0;
 
         protected override void OnInitialized()
         {
-            currency = settingsService.GetCurrency();
-            options.Chart = new Chart
+            _currency = SettingsService.GetCurrency();
+            _options.Chart = new Chart
             {
                 Toolbar = new ApexCharts.Toolbar
                 {
@@ -56,7 +46,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                 }
             };
 
-            options.Xaxis = new XAxis()
+            _options.Xaxis = new XAxis()
             {
                 AxisTicks = new AxisTicks()
                 {
@@ -71,9 +61,9 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
             };
 
-            options.Yaxis = new List<YAxis>();
+            _options.Yaxis = new List<YAxis>();
 
-            options.Yaxis.Add(new YAxis
+            _options.Yaxis.Add(new YAxis
             {
                 TickAmount = 2,
                 AxisTicks = new AxisTicks()
@@ -85,87 +75,46 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                 DecimalsInFloat = 0,
 
             });
-            options.Tooltip = new ApexCharts.Tooltip
+            _options.Tooltip = new ApexCharts.Tooltip
             {
                 Y = new TooltipY
                 {
-                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
+                    Formatter = ChartHelper.GetCurrencyFormatter(SettingsService.GetCurrency())
                 }
             };
-            options.Colors = new List<string>
+            _options.Colors = new List<string>
             {
                 ColorsProvider.GetColors().First()
             };
 
         }
-        private async Task<List<SpendingOverviewEntry>> GetData()
+        private async Task<List<TimeSeriesModel>> GetData()
         {
-            var result = new List<SpendingOverviewEntry>();
-            await Task.Run(async () =>
+            var user = await LoginService.GetLoggedUser();
+            if (user is null) return [];
+            List<TimeSeriesModel> result = [];
+
+            try
             {
-                var user = await loginService.GetLoggedUser();
-                if (user is null) return;
+                result = await MoneyFlowService.GetIncome(user.UserId, StartDateTime, DateTime.UtcNow);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error getting income data");
+            }
 
-                IEnumerable<BankAccount> bankAccounts = [];
+            if (result.Count != 0) TotalIncome = result.Sum(x => x.Value);
+            else TotalIncome = 0;
 
-                try
-                {
-                    bankAccounts = await FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex.ToString());
-                }
-
-                foreach (var account in bankAccounts)
-                {
-                    if (account.Entries is null) continue;
-                    var entries = account.Entries.Where(x => x.ValueChange >= 0).Select(x => x as FinancialEntryBase).ToList();
-                    if ((DateTime.Now - StartDateTime).TotalDays > 6 * 31)
-                    {
-                        entries = entries.GetEntriesMonthlyValue();
-                    }
-                    else if ((DateTime.Now - StartDateTime).TotalDays > 31)
-                    {
-                        entries = entries.GetEntriesWeekly();
-                    }
-
-                    foreach (var entry in entries.Where(x => x.ValueChange > 0))
-                    {
-                        var dataEntry = result.FirstOrDefault(x => x.Date == entry.PostingDate.Date);
-                        if (dataEntry is null)
-                        {
-                            result.Add(new SpendingOverviewEntry()
-                            {
-                                Date = entry.PostingDate.Date,
-                                Value = entry.ValueChange
-                            });
-                        }
-                        else
-                        {
-                            dataEntry.Value += entry.ValueChange;
-                        }
-
-                    }
-                }
-                TotalIncome = result.Sum(x => x.Value);
-            });
-            return result.OrderBy(x => x.Date).ToList();
+            return result.OrderBy(x => x.DateTime).ToList();
         }
 
         protected override async Task OnParametersSetAsync()
         {
-            Data.Clear();
-            if (chart is not null) await chart.UpdateSeriesAsync(true);
+            ChartData.Clear();
+            ChartData.AddRange(await GetData());
 
-            Data.AddRange(await GetData());
-
-            if (chart is not null) await chart.UpdateSeriesAsync(true);
-        }
-        public class SpendingOverviewEntry
-        {
-            public DateTime Date;
-            public decimal Value;
+            if (_chart is not null) await _chart.UpdateSeriesAsync(true);
         }
     }
 }

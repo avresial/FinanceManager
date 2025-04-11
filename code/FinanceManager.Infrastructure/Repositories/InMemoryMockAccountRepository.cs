@@ -8,19 +8,26 @@ namespace FinanceManager.Infrastructure.Repositories
 {
     public class InMemoryMockAccountRepository : IFinancalAccountRepository
     {
-        private readonly Random random = new();
+        private readonly Random _random = new();
         private ServiceContainer _bankAccounts = new();
-        private readonly Dictionary<int, Type> nameTypeDictionary = [];
+        private readonly Dictionary<int, Type> _nameTypeDictionary = [];
+        private readonly IAccountRepository<BankAccount> _bankAccountAccountRepository;
+        private readonly IAccountEntryRepository<BankAccountEntry> _bankAccountEntryRepository;
 
+        public InMemoryMockAccountRepository(IAccountRepository<BankAccount> bankAccountAccountRepository, IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository)
+        {
+            _bankAccountAccountRepository = bankAccountAccountRepository;
+            _bankAccountEntryRepository = bankAccountEntryRepository;
+        }
 
         public Dictionary<int, Type> GetAvailableAccounts()
         {
-            return nameTypeDictionary;
+            return _nameTypeDictionary;
         }
         public int GetLastAccountId()
         {
-            if (nameTypeDictionary.Keys is null || nameTypeDictionary.Keys.Count == 0) return 0;
-            return nameTypeDictionary.Keys.Max();
+            if (_nameTypeDictionary.Keys is null || _nameTypeDictionary.Keys.Count == 0) return 0;
+            return _nameTypeDictionary.Keys.Max();
         }
         public DateTime? GetStartDate(int id)
         {
@@ -49,7 +56,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
         public bool AccountExists(int id)
         {
-            return nameTypeDictionary.ContainsKey(id);
+            return _nameTypeDictionary.ContainsKey(id);
         }
         public T? GetAccount<T>(int userId, int accountId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
         {
@@ -105,20 +112,35 @@ namespace FinanceManager.Infrastructure.Repositories
         }
         public IEnumerable<T> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
         {
-            if (_bankAccounts.GetService(typeof(List<T>)) is not List<T> accountsOfType)
-                return [];
-
-            List<T> result = [];
-            foreach (var account in accountsOfType)
+            if (typeof(T) == typeof(BankAccount))
             {
-                if (account is null) continue;
+                var availableAccounts = _bankAccountAccountRepository.GetAvailableAccounts(userId);
 
-                var newAccount = GetAccount<T>(userId, account.AccountId, dateStart, dateEnd);
-                if (newAccount is null) continue;
+                foreach (var item in availableAccounts)
+                {
+                    var resultAccount = _bankAccountAccountRepository.Get(item.AccountId);
+                    if (resultAccount is null) continue;
 
-                result.Add(newAccount);
+                    IEnumerable<BankAccountEntry> entries = _bankAccountEntryRepository.Get(item.AccountId, dateStart, dateEnd);
+
+                    DateTime? olderThenLoadedEntryDate = null;
+                    DateTime? youngerThenLoadedEntryDate = null;
+
+                    if (entries.Any())
+                    {
+                        var olderEntry = _bankAccountEntryRepository.GetNextOlder(item.AccountId, entries.Last().EntryId);
+                        if (olderEntry is not null) olderThenLoadedEntryDate = olderEntry.PostingDate;
+
+                        var youngerEntry = _bankAccountEntryRepository.GetNextOlder(item.AccountId, entries.Last().EntryId);
+                        if (youngerEntry is not null) youngerThenLoadedEntryDate = youngerEntry.PostingDate;
+                    }
+
+                    resultAccount.Add(entries, false);
+
+                    yield return resultAccount as T;
+                }
             }
-            return result;
+
         }
 
         public void AddAccount<T>(T bankAccount) where T : BasicAccountInformation
@@ -131,7 +153,7 @@ namespace FinanceManager.Infrastructure.Repositories
             else
                 accountsOfType.Add(bankAccount);
 
-            nameTypeDictionary.Add(bankAccount.AccountId, typeof(T));
+            _nameTypeDictionary.Add(bankAccount.AccountId, typeof(T));
         }
         public void AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
             where AccountType : BasicAccountInformation
@@ -196,7 +218,7 @@ namespace FinanceManager.Infrastructure.Repositories
                 throw new Exception($"Unexpected type: {accountType} - account id:{id}"); // make new exception
             }
 
-            nameTypeDictionary.Remove(id);
+            _nameTypeDictionary.Remove(id);
         }
 
         public void AddEntry<T>(T bankAccountEntry, int id) where T : FinancialEntryBase
@@ -232,12 +254,12 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             _bankAccounts.Dispose();
             _bankAccounts = new();
-            nameTypeDictionary.Clear();
+            _nameTypeDictionary.Clear();
         }
         private object? FindAccount(int id)
         {
             if (_bankAccounts is null) return null;
-            if (!nameTypeDictionary.TryGetValue(id, out Type? accountType)) return null;
+            if (!_nameTypeDictionary.TryGetValue(id, out Type? accountType)) return null;
             if (accountType == typeof(BankAccount))
             {
                 if (_bankAccounts.GetService(typeof(List<BankAccount>)) is not List<BankAccount> bankAccounts) return null;
@@ -302,13 +324,13 @@ namespace FinanceManager.Infrastructure.Repositories
             int accountId = GetLastAccountId() + 1;
             AddAccount(new StockAccount(userId, accountId, accountName));
             if (tickers is null || tickers.Count == 0) return;
-            int tickerIndex = random.Next(tickers.Count);
+            int tickerIndex = _random.Next(tickers.Count);
             AddStockAccountEntry(accountId, tickers[tickerIndex].Item1, tickers[tickerIndex].Item2, startingBalance, startDay);
 
             while (startDay.Date <= DateTime.UtcNow.Date)
             {
-                tickerIndex = random.Next(tickers.Count);
-                decimal balanceChange = (decimal)(random.Next(-150, 200) + Math.Round(random.NextDouble(), 2));
+                tickerIndex = _random.Next(tickers.Count);
+                decimal balanceChange = (decimal)(_random.Next(-150, 200) + Math.Round(_random.NextDouble(), 2));
 
                 AddStockAccountEntry(accountId, tickers[tickerIndex].Item1, tickers[tickerIndex].Item2, balanceChange, startDay);
                 startDay = startDay.AddDays(1);
@@ -336,7 +358,7 @@ namespace FinanceManager.Infrastructure.Repositories
             int index = 0;
             while (startDay.Date <= DateTime.UtcNow.Date)
             {
-                decimal balanceChange = (decimal)(random.Next(-150, 200) + Math.Round(random.NextDouble(), 2));
+                decimal balanceChange = (decimal)(_random.Next(-150, 200) + Math.Round(_random.NextDouble(), 2));
 
                 expenseType = GetRandomType();
                 if (accountType == AccountType.Stock)
@@ -359,7 +381,7 @@ namespace FinanceManager.Infrastructure.Repositories
             int index = 0;
             while (repaidAmount < -startingBalance && startDay.Date <= DateTime.Now.Date)
             {
-                decimal balanceChange = (decimal)(random.Next(0, 300) + Math.Round(random.NextDouble(), 2));
+                decimal balanceChange = (decimal)(_random.Next(0, 300) + Math.Round(_random.NextDouble(), 2));
                 repaidAmount += balanceChange;
                 if (repaidAmount >= -startingBalance)
                     balanceChange = repaidAmount + startingBalance;
@@ -401,7 +423,7 @@ namespace FinanceManager.Infrastructure.Repositories
         private ExpenseType GetRandomType()
         {
             Array values = Enum.GetValues<ExpenseType>();
-            var result = values.GetValue(random.Next(values.Length));
+            var result = values.GetValue(_random.Next(values.Length));
             if (result is null)
                 return ExpenseType.Other;
             return (ExpenseType)result;

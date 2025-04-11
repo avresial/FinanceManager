@@ -1,0 +1,29 @@
+﻿@using ApexCharts
+@using FinanceManager.Domain.Entities.MoneyFlowModels;
+
+<div class="card">
+    <div class="row m-0">
+        <div class="card-body">
+            <h5 class="card-title">Assets value over time</h5>
+        </div>
+    </div>
+    <div class="row" style="min-height: 150px; position:relative; bottom:-2px">
+        @if (ChartData.Any())
+        {
+            <ApexChart @ref="_chart" TItem="TimeSeriesModel" Height="150" Options=@_options XAxisType="XAxisType.Datetime">
+                <ApexPointSeries TItem="TimeSeriesModel"
+                                 Items="ChartData"
+                                 Name="Assets value"
+                                 XValue="e => e.DateTime.ToLocalTime()"
+                                 YValue="e=> e.Value"
+                                 SeriesType="SeriesType.Area" />
+            </ApexChart>
+        }
+        else
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
+            </div>
+        }
+    </div>
+</div>

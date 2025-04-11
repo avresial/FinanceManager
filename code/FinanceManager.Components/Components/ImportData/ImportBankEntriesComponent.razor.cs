@@ -13,24 +13,24 @@ namespace FinanceManager.Components.Components.ImportData
 {
     public partial class ImportBankEntriesComponent : ComponentBase
     {
-        private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
-        private string _dragClass = DefaultDragClass;
+        private const string _defaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
+        private string _dragClass = _defaultDragClass;
 
-        private CsvConfiguration config = new CsvConfiguration(new CultureInfo("de-DE"))
+        private CsvConfiguration _config = new(new CultureInfo("de-DE"))
         {
             Delimiter = ";",
             HasHeaderRecord = true,
         };
 
-        private List<ImportBankModel> importModels = new();
+        private List<ImportBankModel> _importModels = [];
 
-        public List<IBrowserFile> LoadedFiles = new();
-        private List<string> _erorrs = new();
-        private List<string> _warnings = new();
-        private List<string> _summaryInfos = new();
+        public List<IBrowserFile> LoadedFiles = [];
+        private List<string> _erorrs = [];
+        private List<string> _warnings = [];
+        private List<string> _summaryInfos = [];
 
         private int _stepIndex;
-        private bool _isImportingData = false;
+        private bool _isImportingData;
 
         private bool _step1Complete;
         private bool _step2Complete;
@@ -44,17 +44,15 @@ namespace FinanceManager.Components.Components.ImportData
         private string _tickerHeader = "Ticker";
         private string _investmentTypeHeader = "InvestmentType";
 
-        [Parameter]
-        public required int AccountId { get; set; }
+        [Parameter] public required int AccountId { get; set; }
 
-        [Inject]
-        public required IFinancialAccountService FinancalAccountService { get; set; }
+        [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
 
         public async Task UploadFiles(InputFileChangeEventArgs e)
         {
             _isImportingData = true;
 
-            importModels.Clear();
+            _importModels.Clear();
 
             _erorrs.Clear();
             if (Path.GetExtension(e.File.Name) != ".csv")
@@ -71,7 +69,7 @@ namespace FinanceManager.Components.Components.ImportData
 
             try
             {
-                importModels = await ImportBankModelReader.Read(config, file, _postingDateHeader, _valueChangeHeader);
+                _importModels = await ImportBankModelReader.Read(_config, file, _postingDateHeader, _valueChangeHeader);
             }
             catch (HeaderValidationException ex)
             {
@@ -79,7 +77,7 @@ namespace FinanceManager.Components.Components.ImportData
                 _erorrs.Add($"Invalid headers. Required headers:{_postingDateHeader}, {_valueChangeHeader},{_tickerHeader}, {_investmentTypeHeader}.");
             }
 
-            _step1Complete = importModels.Any();
+            _step1Complete = _importModels.Any();
 
             if (_step1Complete)
             {
@@ -96,9 +94,9 @@ namespace FinanceManager.Components.Components.ImportData
             _isImportingData = true;
 
             int importedEntriesCount = 0;
-            if (importModels.Any())
+            if (_importModels.Any())
             {
-                foreach (var result in importModels)
+                foreach (var result in _importModels)
                 {
                     try
                     {
@@ -137,8 +135,8 @@ namespace FinanceManager.Components.Components.ImportData
             await Task.CompletedTask;
         }
 
-        private void SetDragClass() => _dragClass = $"{DefaultDragClass} mud-border-primary";
-        private void ClearDragClass() => _dragClass = DefaultDragClass;
+        private void SetDragClass() => _dragClass = $"{_defaultDragClass} mud-border-primary";
+        private void ClearDragClass() => _dragClass = _defaultDragClass;
 
         private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
         {

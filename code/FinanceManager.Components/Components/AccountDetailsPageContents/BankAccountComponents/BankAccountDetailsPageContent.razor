@@ -1,12 +1,5 @@
 ﻿@using ApexCharts
-@using FinanceManager.Domain.Entities
-@using FinanceManager.Domain.Entities.Accounts
-@using FinanceManager.Domain.Entities.Accounts.Entries
-@using FinanceManager.Domain.Providers
-@using FinanceManager.Domain.Repositories
-@using FinanceManager.Domain.Services
-@using FinanceManager.Components.Components.ImportData
-@using FinanceManager.Components.Helpers
+@using FinanceManager.Domain.Entities.MoneyFlowModels;
 
 @if (Account is not null && Account.Entries is not null && (IsLoading || Account.Entries.Any()))
 {
@@ -15,15 +8,14 @@
     </h3>
 
     <div class="col-12 mb-4" style="min-height:150px;">
-        <ApexChart @ref="chart" TItem="BankAccountEntry" Height="150" Options=@options XAxisType="XAxisType.Datetime">
-            <ApexPointSeries TItem="BankAccountEntry"
-            Items="Account.Entries"
-            Name="@Account.Name"
-            XValue="e => e.PostingDate.ToLocalTime()"
-            YValue="e=> e.Value"
-            SeriesType="SeriesType.Area"
-            OrderByDescending="@(e=>e.X)" />
-
+        <ApexChart @ref="_chart" TItem="TimeSeriesModel" Height="150" Options=@_options XAxisType="XAxisType.Datetime">
+            <ApexPointSeries TItem="TimeSeriesModel"
+                             Items="ChartData"
+                             Name="@Account.Name"
+                             XValue="e => e.DateTime.ToLocalTime()"
+                             YValue="e=> e.Value"
+                             SeriesType="SeriesType.Area"
+                             OrderByDescending="@(e=>e.X)" />
         </ApexChart>
     </div>
 
@@ -38,9 +30,9 @@
                 </div>
                 <div class="row">
                     <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick=ShowOverlay
-                    Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:2;" />
+                            Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:2;" />
 
-                    <MudOverlay Visible="@AddEntryVisibility" DarkBackground="true">
+                    <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
                         <MudPaper Class="p-5">
                             <AddBankEntry BankAccount=Account ActionCompleted="HideOverlay" />
                         </MudPaper>
@@ -57,7 +49,7 @@
                     </MudExpansionPanels>
                 </div>
                 <div class="row" style="min-height:40px">
-                    @if (!LoadedAllData && !IsLoading)
+                    @if (!_loadedAllData && !IsLoading)
                     {
                         <button class="btn text-center" title="Load more" @onclick="LoadMore">
                             <div>
@@ -72,7 +64,7 @@
 
                 <div class="container">
                     <div class="row">
-                        @if (balanceChange > 0)
+                        @if (_balanceChange > 0)
                         {
                             <div class="row mb-3 mx-0 px-0">
                                 <div class="col-6">
@@ -84,7 +76,7 @@
                                 </div>
                                 <div class="col-6 text-end">
                                     <div class="row mb-1 text-success">
-                                        <div class="test-end">@balanceChange @currency <i class="fs-5 bi bi-arrow-up-right"></i></div>
+                                        <div class="test-end">@_balanceChange @_currency <i class="fs-5 bi bi-arrow-up-right"></i></div>
                                     </div>
                                 </div>
                             </div>
@@ -101,17 +93,17 @@
                                 </div>
                                 <div class="col-6 text-end">
                                     <div class="row mb-1 text-danger">
-                                        <div class="test-end">@balanceChange @currency <i class="fs-5 bi bi-arrow-down-right"></i></div>
+                                        <div class="test-end">@_balanceChange @_currency <i class="fs-5 bi bi-arrow-down-right"></i></div>
                                     </div>
                                 </div>
                             </div>
                         }
                     </div>
                     <div class="row">
-                        @if (Top5 is not null)
+                        @if (_top5 is not null)
                         {
                             <h6 class="text-center mt-2">Top 5</h6>
-                            @foreach (var entry in Top5)
+                            @foreach (var entry in _top5)
                             {
                                 <div class="row mb-3 mx-0 px-0">
                                     <div class="col-6">
@@ -128,7 +120,7 @@
                                     </div>
                                     <div class="col-6 text-end">
                                         <div class="row mb-1">
-                                            <div class="text-success">@entry.ValueChange @currency</div>
+                                            <div class="text-success">@entry.ValueChange @_currency</div>
                                         </div>
                                         <div class="row text-muted">
                                             <div style="font-size:0.8rem !important">
@@ -139,10 +131,10 @@
                                 </div>
                             }
                         }
-                        @if (Bottom5 is not null)
+                        @if (_bottom5 is not null)
                         {
                             <h6 class="text-center mt-2">Bottom 5</h6>
-                            @foreach (var entry in Bottom5)
+                            @foreach (var entry in _bottom5)
                             {
                                 <div class="row mb-3 mx-0 px-0">
                                     <div class="col-6">
@@ -159,7 +151,7 @@
                                     </div>
                                     <div class="col-6 text-end">
                                         <div class="row mb-1">
-                                            <div class="text-danger">@entry.ValueChange @currency</div>
+                                            <div class="text-danger">@entry.ValueChange @_currency</div>
                                         </div>
                                         <div class="row fs-6 text-muted">
                                             <div style="font-size:0.8rem !important">
@@ -180,7 +172,7 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
 {
     <AddBankEntry BankAccount=Account ActionCompleted="HideOverlay">
         <CustomButton>
-            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.Name}")" > Import</MudButton>
+            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.Name}")"> Import</MudButton>
         </CustomButton>
     </AddBankEntry>
 }

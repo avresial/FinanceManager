@@ -15,46 +15,55 @@
     <div class="row m-0">
         <div class="card-body">
             <h5 class="card-title">Assets per wallet</h5>
-            @if (DisplayAsChart)
+            @if (DisplayAsChart && Data.Any())
             {
                 <h6 class="card-subtitle mb-2 text-muted">@Math.Round(TotalAssets, 2) @currency</h6>
             }
             <div class="row flex-fill overflow-auto">
                 @if (!DisplayAsChart)
                 {
-                    <div class="h-100">
-                        @foreach (var wealthCategory in Data)
-                        {
+                    @if (Data.Any())
+                    {
+                        <div class="h-100">
+                            @foreach (var wealthCategory in Data)
+                            {
+                                <div class="row mb-2">
+                                    <div class="col">
+                                        @wealthCategory.Name
+                                    </div>
+
+                                    <div class="col-auto">
+                                        @wealthCategory.Value.ToString("0.00") @currency
+                                    </div>
+                                </div>
+                            }
+
+                            <hr class="mt-1 mb-1" />
                             <div class="row mb-2">
                                 <div class="col">
-                                    @wealthCategory.Name
+                                    Sum
                                 </div>
-
-                                <div class="col-auto">
-                                    @wealthCategory.Value.ToString("0.00") @currency
-                                </div>
+                                @if (@TotalAssets < 0)
+                                {
+                                    <div class="col-auto" style="color:red">
+                                        @TotalAssets.ToString("0.00") @currency
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="col-auto" style="color:green">
+                                        @TotalAssets.ToString("0.00") @currency
+                                    </div>
+                                }
                             </div>
-                        }
-
-                        <hr class="mt-1 mb-1" />
-                        <div class="row mb-2">
-                            <div class="col">
-                                Sum
-                            </div>
-                            @if (@TotalAssets < 0)
-                            {
-                                <div class="col-auto" style="color:red">
-                                    @TotalAssets.ToString("0.00") @currency
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="col-auto" style="color:green">
-                                    @TotalAssets.ToString("0.00") @currency
-                                </div>
-                            }
                         </div>
-                    </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                            <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
+                        </div>
+                    }
                 }
             </div>
         </div>
@@ -63,18 +72,26 @@
     {
         <div class="row flex-fill pb-2" style="height:1px;">
             <div class="h-100">
+                @if (Data.Any())
+                {
+                    <ApexChart @ref="chart" Height="@("100%")" TItem="AssetEntry" Options="options">
 
-                <ApexChart @ref="chart" Height="@("100%")" TItem="AssetEntry" Options="options">
+                        <ApexPointSeries TItem="AssetEntry"
+                                         Items="Data"
+                                         Name="Assets"
+                                         XValue="e => e.Name.ToString()"
+                                         YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"
+                                         SeriesType="SeriesType.Pie"
+                                         OrderByDescending="@(e=>e.Y)" />
 
-                    <ApexPointSeries TItem="AssetEntry"
-                                     Items="Data"
-                                     Name="Assets"
-                                     XValue="e => e.Name.ToString()"
-                                     YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"
-                                     SeriesType="SeriesType.Pie"
-                                     OrderByDescending="@(e=>e.Y)" />
-
-                </ApexChart>
+                    </ApexChart>
+                }
+                else
+                {
+                    <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                        <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
+                    </div>
+                }
             </div>
         </div>
     }

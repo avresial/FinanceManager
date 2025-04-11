@@ -49,6 +49,7 @@ namespace FinanceManager.Api.Services
             {
                 AccessToken = accessToken,
                 UserName = userName,
+                UserId = userId,
                 ExpiresIn = tokenValidityInMins
             };
         }

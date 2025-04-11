@@ -11,31 +11,23 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 {
     public partial class AssetsPerTypeOverviewCard
     {
-        private string currency = "";
-        private decimal TotalAssets = 0;
-        private UserSession? user;
-        private ApexChart<AssetEntry>? chart;
+        private string _currency = "";
+        private decimal _totalAssets = 0;
+        private UserSession? _user;
+        private ApexChart<AssetEntry>? _chart;
 
-        [Parameter]
-        public string Height { get; set; } = "300px";
+        [Parameter] public string Height { get; set; } = "300px";
 
-        [Parameter]
-        public DateTime StartDateTime { get; set; }
+        [Parameter] public DateTime StartDateTime { get; set; }
+        [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
-        [Inject]
-        public required ILogger<AssetsPerTypeOverviewCard> Logger { get; set; }
-
-        [Inject]
-        public required IMoneyFlowService moneyFlowService { get; set; }
-
-        [Inject]
-        public required ISettingsService settingsService { get; set; }
-
-        [Inject]
-        public required ILoginService loginService { get; set; }
+        [Inject] public required ILogger<AssetsPerTypeOverviewCard> Logger { get; set; }
+        [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
+        [Inject] public required ISettingsService SettingsService { get; set; }
+        [Inject] public required ILoginService LoginService { get; set; }
 
 
-        public List<AssetEntry> Data { get; set; } = new List<AssetEntry>();
+        public List<AssetEntry> ChartData { get; set; } = [];
 
         protected override async Task OnInitializedAsync()
         {
@@ -43,43 +35,42 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             {
                 Y = new TooltipY
                 {
-                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
+                    Formatter = ChartHelper.GetCurrencyFormatter(SettingsService.GetCurrency())
                 }
             };
 
-            currency = settingsService.GetCurrency();
+            _currency = SettingsService.GetCurrency();
 
             await Task.CompletedTask;
         }
         protected override async Task OnParametersSetAsync()
         {
-            user = await loginService.GetLoggedUser();
-            if (user is null) return;
+            _user = await LoginService.GetLoggedUser();
+            if (_user is null) return;
 
-            foreach (var dataEntry in Data)
+            foreach (var dataEntry in ChartData)
                 dataEntry.Value = 0;
 
             await GetData();
             StateHasChanged();
 
-            if (chart is not null) await chart.UpdateSeriesAsync(true);
+            if (_chart is not null) await _chart.UpdateSeriesAsync(true);
         }
 
         private async Task GetData()
         {
             if (StartDateTime == new DateTime())
             {
-                Data.Clear();
-                TotalAssets = 0;
+                ChartData.Clear();
+                _totalAssets = 0;
                 return;
             }
 
-            if (user is not null)
+            if (_user is not null)
             {
                 try
                 {
-                    Data = await moneyFlowService.GetEndAssetsPerType(user.UserId, StartDateTime, DateTime.Now);
-
+                    ChartData = await MoneyFlowService.GetEndAssetsPerType(_user.UserId, StartDateTime, EndDateTime);
                 }
                 catch (Exception ex)
                 {
@@ -87,7 +78,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                 }
             }
 
-            TotalAssets = Data.Sum(x => x.Value);
+            _totalAssets = ChartData.Sum(x => x.Value);
         }
 
         private ApexChartOptions<AssetEntry> options { get; set; } = new()

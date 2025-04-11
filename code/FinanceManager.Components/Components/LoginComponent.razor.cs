@@ -10,26 +10,17 @@ namespace FinanceManager.Components.Components
 {
     public partial class LoginComponent
     {
-        private const string guestLogin = "Guest";
-        private bool success;
-        private string[] errors = [];
-        private MudForm? form;
-        private LoginModel loginModel = new();
+        private const string _guestLogin = "Guest";
+        private bool _success;
+        private string[] _errors = [];
+        private MudForm? _form;
+        private LoginModel _loginModel = new();
 
-        [Inject]
-        public required ILogger<LoginComponent> Logger { get; set; }
-
-        [Inject]
-        public required NavigationManager Navigation { get; set; }
-
-        [Inject]
-        public required ILoginService LoginService { get; set; }
-
-        [Inject]
-        public required ILocalStorageService LocalStorageService { get; set; }
-
-        [Inject]
-        public required IFinancialAccountService FinancalAccountService { get; set; }
+        [Inject] public required ILogger<LoginComponent> Logger { get; set; }
+        [Inject] public required NavigationManager Navigation { get; set; }
+        [Inject] public required ILoginService LoginService { get; set; }
+        [Inject] public required ILocalStorageService LocalStorageService { get; set; }
+        [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
 
         protected override async Task OnInitializedAsync()
         {
@@ -56,11 +47,11 @@ namespace FinanceManager.Components.Components
 
         private async Task Login()
         {
-            if (loginModel.Login is null || loginModel.Password is null) return;
-            if (form is null) return;
-            await form.Validate();
+            if (_loginModel.Login is null || _loginModel.Password is null) return;
+            if (_form is null) return;
+            await _form.Validate();
 
-            var loginResult = await LoginService.Login(loginModel.Login, loginModel.Password);
+            var loginResult = await LoginService.Login(_loginModel.Login, _loginModel.Password);
 
             if (loginResult)
             {
@@ -68,8 +59,8 @@ namespace FinanceManager.Components.Components
                 return;
             }
 
-            errors = ["Incorrect username or password."];
-            loginModel.Password = string.Empty;
+            _errors = ["Incorrect username or password."];
+            _loginModel.Password = string.Empty;
         }
 
         private async Task LogGuest()
@@ -83,7 +74,7 @@ namespace FinanceManager.Components.Components
                 Logger.LogError(ex.ToString());
             }
 
-            await LoginService.Login(guestLogin, "GuestPassword");
+            await LoginService.Login(_guestLogin, "GuestPassword");
             Navigation.NavigateTo("");
         }
     }

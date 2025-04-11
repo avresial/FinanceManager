@@ -1,17 +1,18 @@
 ﻿@using FinanceManager.Domain.Enums
+
 @if (BankAccount is not null)
 {
-    <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+    <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
         <MudContainer MaxWidth="MaxWidth.Medium">
             <MudGrid Justify="Justify.Center">
                 <MudItem xs="12" sm="12" md="12">
                     <MudText Typo="Typo.h4">Update</MudText>
                     <MudText Typo="Typo.subtitle1">@BankAccount.Name</MudText>
                 </MudItem>
-                @if (errors.Any())
+                @if (_errors.Any())
                 {
                     <MudItem xs="12">
-                        @foreach (var errorInfo in errors)
+                        @foreach (var errorInfo in _errors)
                         {
                             <MudAlert Severity="Severity.Error" Variant="Variant.Text"> @errorInfo</MudAlert>
                         }

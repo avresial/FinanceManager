@@ -2,6 +2,7 @@ using ApexCharts;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -12,51 +13,47 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 {
     public partial class LiabilityOverviewCard
     {
-        private string currency = "";
-        private decimal TotalLiabilities = 0;
-        private UserSession? user;
-
-
-
-        private ApexChart<LiabilityOverviewEntry>? chart;
-
-        private ApexChartOptions<LiabilityOverviewEntry> options { get; set; } = new()
+        private string _currency = "";
+        private decimal _totalLiabilities = 0;
+        private UserSession? _user;
+        private ApexChart<TimeSeriesModel>? _chart;
+        private ApexChartOptions<TimeSeriesModel> _options { get; set; } = new()
         {
             Chart = new Chart
             {
-                Toolbar = new ApexCharts.Toolbar
+                Toolbar = new()
                 {
                     Show = false
                 },
             },
-            Xaxis = new XAxis()
-            {
-                AxisTicks = new AxisTicks()
-                {
-                    Show = false,
-                },
-                AxisBorder = new AxisBorder()
-                {
-                    Show = false
-                },
-                Position = XAxisPosition.Bottom,
-                Type = XAxisType.Category
+            //Xaxis = new XAxis()
+            //{
+            //    AxisTicks = new AxisTicks()
+            //    {
+            //        Show = false,
+            //    },
+            //    AxisBorder = new AxisBorder()
+            //    {
+            //        Show = false
+            //    },
+            //    Position = XAxisPosition.Bottom,
+            //    Type = XAxisType.Category
 
-            },
-            Yaxis = new List<YAxis>()
-            {
+            //},
+            //Yaxis = new List<YAxis>()
+            //{
 
-                new YAxis
-                {
-                    AxisTicks = new AxisTicks()
-                    {
-                        Show = false
-                    },
-                    Show = false,
-                    SeriesName = "NetValue",
-                    DecimalsInFloat = 0,
-                }
-            },
+            //    new YAxis
+            //    {
+            //        AxisTicks = new AxisTicks()
+            //        {
+            //            Show = false
+            //        },
+            //        Show = false,
+            //        SeriesName = "NetValue",
+            //        DecimalsInFloat = 0,
+            //    }
+            //},
             Legend = new Legend()
             {
                 Position = LegendPosition.Bottom,
@@ -64,60 +61,47 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             Colors = ColorsProvider.GetColors()
         };
 
-        [Parameter]
-        public string Height { get; set; } = "300px";
-
-        [Parameter]
-        public DateTime StartDateTime { get; set; }
+        [Parameter] public string Height { get; set; } = "300px";
+        [Parameter] public DateTime StartDateTime { get; set; }
 
 
-        [Inject]
-        public required ILogger<LiabilityOverviewCard> Logger { get; set; }
+        [Inject] public required ILogger<LiabilityOverviewCard> Logger { get; set; }
+        [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+        [Inject] public required ISettingsService SettingsService { get; set; }
+        [Inject] public required ILoginService LoginService { get; set; }
 
-        [Inject]
-        public required IFinancialAccountService FinancalAccountService { get; set; }
-
-        [Inject]
-        public required ISettingsService settingsService { get; set; }
-
-        [Inject]
-        public required ILoginService loginService { get; set; }
-
-        public List<LiabilityOverviewEntry> Data { get; set; } = [];
-
+        public List<TimeSeriesModel> ChartData { get; set; } = [];
 
         protected override void OnInitialized()
         {
-            currency = settingsService.GetCurrency();
+            _currency = SettingsService.GetCurrency();
         }
-
-
         protected override async Task OnParametersSetAsync()
         {
-            user = await loginService.GetLoggedUser();
-            if (user is null) return;
+            _user = await LoginService.GetLoggedUser();
+            if (_user is null) return;
 
-            foreach (var dataEntry in Data)
+            foreach (var dataEntry in ChartData)
                 dataEntry.Value = 0;
 
-            if (chart is not null) await chart.UpdateSeriesAsync(true);
+            if (_chart is not null) await _chart.UpdateSeriesAsync();
 
             await GetData();
             StateHasChanged();
 
-            if (chart is not null) await chart.UpdateSeriesAsync(true);
+            if (_chart is not null) await _chart.UpdateSeriesAsync();
         }
 
-        async Task GetData()
+        private async Task GetData()
         {
             await Task.Run(async () =>
             {
                 IEnumerable<BankAccount> bankAccounts = [];
-                if (user is not null)
+                if (_user is not null)
                 {
                     try
                     {
-                        bankAccounts = await FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now);
+                        bankAccounts = await FinancalAccountService.GetAccounts<BankAccount>(_user.UserId, StartDateTime, DateTime.Now);
                     }
                     catch (Exception e)
                     {
@@ -126,11 +110,11 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                 }
 
                 bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value <= 0).ToList();
-                TotalLiabilities = bankAccounts.Sum(x => x.Entries!.OrderByDescending(x => x.PostingDate).First().Value);
+                _totalLiabilities = bankAccounts.Sum(x => x.Entries!.OrderByDescending(x => x.PostingDate).First().Value);
 
                 foreach (var account in bankAccounts)
                 {
-                    var dataEntry = Data.FirstOrDefault(x => x.Cathegory == account.AccountType.ToString());
+                    var dataEntry = ChartData.FirstOrDefault(x => x.Name == account.AccountType.ToString());
 
                     if (dataEntry is not null)
                     {
@@ -138,20 +122,18 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                     }
                     else
                     {
-                        Data.Add(new LiabilityOverviewEntry()
+                        ChartData.Add(new TimeSeriesModel()
                         {
-                            Cathegory = account.AccountType.ToString(),
-                            Value = -account.Entries!.First().Value
+                            Name = account.AccountType.ToString(),
+                            Value = -account.Entries!.First().Value,
+                            DateTime = account.Entries!.First().PostingDate
                         });
                     }
                 }
             });
+
+            if (_chart is not null) await _chart.UpdateSeriesAsync();
         }
 
-        public class LiabilityOverviewEntry
-        {
-            public string Cathegory = string.Empty;
-            public decimal Value;
-        }
     }
 }

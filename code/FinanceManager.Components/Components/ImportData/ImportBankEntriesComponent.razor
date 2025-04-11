@@ -77,9 +77,9 @@
                             }
                         </MudItem>
                         <MudItem xs="12">
-                            @if (importModels is not null && importModels.Any())
+                            @if (_importModels is not null && _importModels.Any())
                             {
-                                <MudTable Items="@importModels" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_isImportingData" RowsPerPage="8">
+                                <MudTable Items="@_importModels" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_isImportingData" RowsPerPage="8">
                                     <HeaderContent>
                                         <MudTh>Posting date</MudTh>
                                         <MudTh>Value change</MudTh>

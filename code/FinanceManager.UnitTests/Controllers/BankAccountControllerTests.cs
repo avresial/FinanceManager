@@ -2,8 +2,10 @@
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
+using FinanceManager.Infrastructure.Dtos;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -15,18 +17,20 @@ public class BankAccountControllerTests
 {
     private readonly Mock<IAccountRepository<BankAccount>> _mockBankAccountRepository;
     private readonly Mock<IAccountEntryRepository<BankAccountEntry>> _mockBankAccountEntryRepository;
+    private readonly Mock<AccountIdProvider> _mockAccountIdProvider;
     private readonly BankAccountController _controller;
 
     public BankAccountControllerTests()
     {
         _mockBankAccountRepository = new Mock<IAccountRepository<BankAccount>>();
         _mockBankAccountEntryRepository = new Mock<IAccountEntryRepository<BankAccountEntry>>();
-        _controller = new BankAccountController(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object);
+        _mockAccountIdProvider = new Mock<AccountIdProvider>(new Mock<IAccountRepository<StockAccount>>().Object, _mockBankAccountRepository.Object);
+        _controller = new BankAccountController(_mockBankAccountRepository.Object, _mockAccountIdProvider.Object, _mockBankAccountEntryRepository.Object);
 
         // Mock user identity
         var user = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
         {
-                new Claim(ClaimTypes.NameIdentifier, "1")
+            new Claim(ClaimTypes.NameIdentifier, "1")
         }, "mock"));
 
         _controller.ControllerContext = new ControllerContext
@@ -71,19 +75,53 @@ public class BankAccountControllerTests
     }
 
     [Fact]
+    public async Task Get_NoEntriesWithinDates_ReturnsOkResult_WithOlderThenLoaded()
+    {
+        // Arrange
+        DateTime startDate = new(2000, 1, 1);
+        DateTime endDate = new(2000, 2, 1);
+        DateTime olderThenLoadedDate = startDate.AddYears(-1);
+        DateTime youngerThenLoadedDate = endDate.AddYears(1);
+
+        var userId = 1;
+        var accountId = 1;
+        var account = new BankAccount(userId, accountId, "Test Account");
+        BankAccountEntry bankAccountEntry = new(accountId, 1, olderThenLoadedDate, 1, 0);
+
+        _mockBankAccountRepository.Setup(repo => repo.Get(accountId)).Returns(account);
+        _mockBankAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns([]);
+        _mockBankAccountEntryRepository.Setup(repo => repo.GetNextOlder(accountId, startDate))
+            .Returns(new BankAccountEntry(accountId, 1, olderThenLoadedDate, 1, 0));
+
+        _mockBankAccountEntryRepository.Setup(repo => repo.GetNextYounger(accountId, endDate))
+            .Returns(new BankAccountEntry(accountId, 1, youngerThenLoadedDate, 1, 0));
+
+        // Act
+        var result = await _controller.Get(accountId, startDate, endDate);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnValue = Assert.IsType<BankAccountDto>(okResult.Value);
+        Assert.Equal(accountId, returnValue.AccountId);
+        Assert.Equal(olderThenLoadedDate, returnValue.OlderThenLoadedEntry);
+        Assert.Equal(youngerThenLoadedDate, returnValue.YoungerThenLoadedEntry);
+    }
+
+    [Fact]
     public async Task Add_ReturnsOkResult_WithNewAccount()
     {
         // Arrange
         var userId = 1;
         var addAccount = new AddAccount("New Account");
-        _mockBankAccountRepository.Setup(repo => repo.Add(userId, addAccount.accountName)).Returns(1);
+        var newAccountId = 1;
+        _mockBankAccountRepository.Setup(repo => repo.Add(newAccountId, userId, addAccount.accountName)).Returns(newAccountId);
 
         // Act
         var result = await _controller.Add(addAccount);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.True((bool)okResult.Value);
+        Assert.Equal(newAccountId, okResult.Value);
     }
 
     [Fact]

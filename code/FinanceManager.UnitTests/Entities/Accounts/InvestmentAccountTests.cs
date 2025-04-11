@@ -33,7 +33,18 @@ namespace FinanceManager.UnitTests.Entities.Accounts
             Assert.NotNull(investmentAccount.Entries);
             Assert.Equal(400, investmentAccount.Entries.First().Value);
         }
+        [Fact]
+        public void AddSingleEntryWithWrongValue_ValueIsRecalculatedProprely()
+        {
+            // Arrange
+            // Act
+            investmentAccount.Add(new StockAccountEntry(1, 1, new DateTime(2000, 1, 1), 0, 10, "Ticker1", InvestmentType.Stock));
 
+            // Assert
+            Assert.NotNull(investmentAccount.Entries);
+            Assert.Equal(10, investmentAccount.Get(new DateTime(2000, 1, 1)).First().Value);
+            Assert.Equal(10, investmentAccount.Get(new DateTime(2000, 1, 1)).First().ValueChange);
+        }
         [Fact]
         public void AddEntries_MultipleTickers()
         {
