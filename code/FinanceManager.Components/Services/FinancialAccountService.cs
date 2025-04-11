@@ -78,7 +78,8 @@ public class FinancialAccountService : IFinancialAccountService
                 break;
 
             case StockAccountEntry stockAccountEntry:
-                await _stockAccountService.AddEntryAsync(new AddStockAccountEntry(stockAccountEntry));
+                if (!await _stockAccountService.AddEntryAsync(new AddStockAccountEntry(stockAccountEntry)))
+                    throw new Exception("Adding entry failed");
                 break;
 
         }

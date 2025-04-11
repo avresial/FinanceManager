@@ -9,6 +9,7 @@ public interface IAccountEntryRepository<T>
     T? GetNextOlder(int accountId, int entryId);
     T? GetNextOlder(int accountId, DateTime date);
     T? GetOldest(int accountId);
+    int? GetCount(int accountId);
 
     bool Add(T entry);
     bool Update(T entry);

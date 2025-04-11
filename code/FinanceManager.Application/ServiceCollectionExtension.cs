@@ -22,6 +22,7 @@ namespace FinanceManager.Application
                     .AddScoped<IMoneyFlowService, MoneyFlowService>()
                     .AddScoped<AccountIdProvider>()
                     .AddScoped<GuestAccountSeeder>()
+                    .AddScoped<UserPlanVerifier>()
                 ;
 
             return services;

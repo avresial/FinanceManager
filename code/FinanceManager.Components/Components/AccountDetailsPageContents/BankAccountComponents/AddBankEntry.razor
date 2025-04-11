@@ -6,7 +6,7 @@
 @using FinanceManager.Components.CustomValidationAttributes
 @using FinanceManager.Domain.Repositories.Account
 
-<MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+<MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
     <MudContainer MaxWidth="MaxWidth.Medium">
 
         <MudGrid Justify="Justify.Center">
@@ -15,10 +15,10 @@
                 <MudText Typo="Typo.subtitle1">@BankAccount.Name</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudDatePicker Label="Posting date" @bind-Date="PostingDate" Validation="@(new NotInFutureAttribute())" />
+                <MudDatePicker Label="Posting date" @bind-Date="_postingDate" Validation="@(new NotInFutureAttribute())" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTimePicker Label="Time" @bind-Time="Time" Validation="@(new NotInFutureAttributeTime(PostingDate))" />
+                <MudTimePicker Label="Time" @bind-Time="_time" Validation="@(new NotInFutureAttributeTime(_postingDate))" />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
@@ -39,92 +39,17 @@
                     @CustomButton
                 }
             </MudItem>
+            
+            @if (_errors.Any())
+            {
+                <MudItem xs="12">
+                    @foreach (var error in _errors)
+                    {
+                        <MudAlert Severity="Severity.Error">@error</MudAlert>
+
+                    }
+                </MudItem>
+            }
         </MudGrid>
     </MudContainer>
 </MudForm>
-
-@code {
-
-    private string _currency = string.Empty;
-    private bool success;
-    private string[] errors = { };
-    private MudForm? form;
-
-    List<string> ExpenseTypes = Enum.GetValues(typeof(ExpenseType)).Cast<ExpenseType>().Select(x => x.ToString()).ToList();
-
-    private DateTime? PostingDate = DateTime.Today;
-    private TimeSpan? Time = new TimeSpan(01, 00, 00);
-
-    public string ExpenseType { get; set; } = FinanceManager.Domain.Enums.ExpenseType.Other.ToString();
-    public string Description { get; set; } = string.Empty;
-    public decimal? BalanceChange { get; set; } = null;
-
-    [Parameter] public RenderFragment? CustomButton { get; set; }
-    [Parameter] public Func<Task>? ActionCompleted { get; set; }
-    [Parameter] public required BankAccount BankAccount { get; set; }
-
-    [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
-    [Inject] public required ISettingsService settingsService { get; set; }
-
-    protected override void OnParametersSet()
-    {
-        _currency = settingsService.GetCurrency();
-    }
-
-    public async Task Add()
-    {
-        if (form is null) return;
-        await form.Validate();
-
-        if (!form.IsValid) return;
-        if (!BalanceChange.HasValue) return;
-        if (!PostingDate.HasValue) return;
-        if (!Time.HasValue) return;
-
-        DateTime date = new DateTime(PostingDate.Value.Year, PostingDate.Value.Month, PostingDate.Value.Day, Time.Value.Hours, Time.Value.Minutes, Time.Value.Seconds);
-        ExpenseType expenseType = FinanceManager.Domain.Enums.ExpenseType.Other;
-        try
-        {
-            expenseType = (ExpenseType)Enum.Parse(typeof(ExpenseType), ExpenseType);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex);
-        }
-        var id = 0;
-        var currentMaxId = BankAccount.GetMaxId();
-        if (currentMaxId is not null)
-            id += currentMaxId.Value + 1;
-
-        BankAccountEntry bankAccountEntry = new(BankAccount.AccountId, id, date, -1, BalanceChange.Value)
-            {
-                Description = Description,
-                ExpenseType = expenseType
-            };
-        try
-        {
-            await FinancalAccountService.AddEntry(bankAccountEntry);
-        }
-        catch (Exception ex)
-        {
-            errors = [ex.ToString()];
-        }
-
-        if (ActionCompleted is not null)
-            await ActionCompleted();
-    }
-
-    public async Task Cancel()
-    {
-        if (ActionCompleted is not null)
-            await ActionCompleted();
-    }
-    private async Task<IEnumerable<string>> Search(string value, CancellationToken token)
-    {
-        if (string.IsNullOrEmpty(value))
-            return ExpenseTypes;
-
-        var result = ExpenseTypes.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
-        return await Task.FromResult(result);
-    }
-}

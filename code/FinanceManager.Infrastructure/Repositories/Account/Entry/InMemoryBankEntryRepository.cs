@@ -33,6 +33,14 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
         return bankAccount.Get(startDate, endDate);
     }
 
+    public int? GetCount(int accountId)
+    {
+        var account = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
+        if (account is null || account.Entries is null) return null;
+
+        return account.Entries.Count;
+    }
+
     public BankAccountEntry? GetNextOlder(int accountId, int entryId)
     {
         var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
