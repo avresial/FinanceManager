@@ -69,7 +69,17 @@
     {
         var user = await loginService.GetLoggedUser();
         if (user is null) return;
-        var bankAccounts = await FinancalAccountService.GetAccounts<BankAccount>(user.UserId, DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
+
+        IEnumerable<BankAccount> bankAccounts = [];
+
+        try
+        {
+            bankAccounts = await FinancalAccountService.GetAccounts<BankAccount>(user.UserId, DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
+        }
+        catch
+        {
+        }
+
         if (bankAccounts is null) return;
 
         bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value <= 0).ToList();
