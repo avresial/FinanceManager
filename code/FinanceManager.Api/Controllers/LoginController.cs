@@ -14,12 +14,14 @@ namespace FinanceManager.Api.Controllers
         private readonly JwtTokenGenerator _jwtTokenGenerator;
         private readonly IUserRepository _userRepository;
         private readonly GuestAccountSeeder _guestAccountSeeder;
+        private readonly ILogger<LoginController> _logger;
 
-        public LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepository userRepository, GuestAccountSeeder guestAccountSeeder)
+        public LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepository userRepository, GuestAccountSeeder guestAccountSeeder, ILogger<LoginController> logger)
         {
             _jwtTokenGenerator = jwtTokenGenerator;
             _userRepository = userRepository;
             _guestAccountSeeder = guestAccountSeeder;
+            _logger = logger;
         }
 
         [AllowAnonymous]
@@ -33,7 +35,7 @@ namespace FinanceManager.Api.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                _logger.LogError(ex, "Error occurred while seeding guest account data");
             }
 
             var user = await _userRepository.GetUser(requestModel.userName, requestModel.password);

@@ -51,13 +51,19 @@ public class BankAccountService(HttpClient httpClient)
     public async Task<int?> AddAccountAsync(AddAccount addAccount)
     {
         var response = await _httpClient.PostAsJsonAsync($"{_httpClient.BaseAddress}api/BankAccount/Add", addAccount);
-        return await response.Content.ReadFromJsonAsync<int?>();
+
+        if (response.IsSuccessStatusCode) return await response.Content.ReadFromJsonAsync<int?>();
+
+        throw new Exception(await response.Content.ReadAsStringAsync()); // TODO make custom exception
     }
 
     public async Task<bool> AddEntryAsync(AddBankAccountEntry addEntry)
     {
         var response = await _httpClient.PostAsJsonAsync($"{_httpClient.BaseAddress}api/BankAccount/AddEntry", addEntry);
-        return response.IsSuccessStatusCode;
+
+        if (response.IsSuccessStatusCode) return true;
+
+        throw new Exception(await response.Content.ReadAsStringAsync()); // TODO make custom exception
     }
 
     public async Task<bool> UpdateAccountAsync(UpdateAccount updateAccount)
@@ -68,7 +74,7 @@ public class BankAccountService(HttpClient httpClient)
 
     public async Task<bool> DeleteAccountAsync(DeleteAccount deleteAccount)
     {
-        return await _httpClient.DeleteFromJsonAsync<bool>($"{_httpClient.BaseAddress}api/BankAccount/Delete/{deleteAccount.accountId}"); ;
+        return await _httpClient.DeleteFromJsonAsync<bool>($"{_httpClient.BaseAddress}api/BankAccount/Delete/{deleteAccount.accountId}");
     }
 
     public async Task<bool> DeleteEntryAsync(int accountId, int entryId)

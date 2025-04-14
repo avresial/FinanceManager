@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.Extensions.Configuration;
@@ -20,11 +21,12 @@ internal class UserInMemoryRepository : IUserRepository
             {
                 Login = defaultUserLogin,
                 Password = defaultUserPassword,
-                Id = 0
+                Id = 0,
+                PricingLevel = PricingLevel.Basic
             };
         }
     }
-    public async Task<bool> AddUser(string login, string password)
+    public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel)
     {
         if (_users.ContainsKey(login)) return await Task.FromResult(false);
 
@@ -32,7 +34,8 @@ internal class UserInMemoryRepository : IUserRepository
         {
             Login = login,
             Password = password,
-            Id = GenerateNewId()
+            Id = GenerateNewId(),
+            PricingLevel = pricingLevel
         });
 
         return await Task.FromResult(true);
@@ -43,8 +46,16 @@ internal class UserInMemoryRepository : IUserRepository
         if (!_users.ContainsKey(login)) return null;
         if (password != _users[login].Password) return null;
 
-        var result = new User() { Login = _users[login].Login, Id = _users[login].Id };
+        var result = new User() { Login = _users[login].Login, Id = _users[login].Id, PricingLevel = _users[login].PricingLevel };
         return await Task.FromResult(result);
+    }
+
+    public async Task<User?> GetUser(int id)
+    {
+        var user = _users.Values.FirstOrDefault(x => x.Id == id);
+        if (user is null) return null;
+
+        return await Task.FromResult(new User() { Login = user.Login, Id = user.Id, PricingLevel = user.PricingLevel });
     }
 
     public async Task<bool> RemoveUser(int userId)

@@ -6,11 +6,6 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 
-@inject NavigationManager Navigation
-@inject IUserService UserService
-@inject ILoginService LoginService
-@inject ILocalStorageService LocalStorageService
-
 
 <section>
     <div class="container d-flex align-center" style="height:100vh;">
@@ -23,9 +18,9 @@
                         </div>
                         <h2 class="fs-6 fw-normal text-center text-secondary mb-4">Create your account</h2>
 
-                        <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
-                            <MudTextField @bind-Value="loginModel.Login" T="string" Label="Login" Variant="Variant.Outlined" Immediate Required />
-                            <MudTextField @bind-Value="loginModel.Password" T="string" Label="Password" Variant="Variant.Outlined" Immediate Required InputType="InputType.Password" />
+                        <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
+                            <MudTextField @bind-Value="_loginModel.Login" T="string" Label="Login" Variant="Variant.Outlined" Immediate Required />
+                            <MudTextField @bind-Value="_loginModel.Password" T="string" Label="Password" Variant="Variant.Outlined" Immediate Required InputType="InputType.Password" />
                             <MudTextField @bind-Value="ConfirmPassword" T="string" Label="ConfirmPassword" Validation="@(new Func<string, string?>(PasswordMatch))" Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
 
                             <MudButton Href="login" Class="my-2 mt-5" Variant="Variant.Filled" Color="Color.Primary" type="submit" @onclick=Register>
@@ -38,50 +33,3 @@
         </div>
     </div>
 </section>
-
-@code
-{
-    private bool success;
-    private string[] errors = [];
-    private MudForm? form;
-    private LoginModel loginModel = new();
-
-    public string? ConfirmPassword { get; set; }
-
-
-    private async Task Register()
-    {
-        if (form is not null)
-        {
-            await form.Validate();
-            if (!form.IsValid || loginModel is null || string.IsNullOrEmpty(loginModel.Login) || string.IsNullOrEmpty(loginModel.Password))
-            {
-                errors = ["Incorrect username or password"];
-                return;
-            }
-        }
-        List<string> newErrors = [];
-        if (loginModel.Login is not null && loginModel.Password is not null)
-        {
-            var addingUserResult = await UserService.AddUser(loginModel.Login, loginModel.Password);
-
-            if (!addingUserResult)
-                newErrors.Add("Incorrect username or password.");
-
-            var loginResult = await LoginService.Login(loginModel.Login, loginModel.Password);
-
-            if (loginResult)
-                Navigation.NavigateTo("");
-        }
-
-        errors = newErrors.ToArray();
-        loginModel.Password = string.Empty;
-    }
-    private string? PasswordMatch(string arg)
-    {
-        if (loginModel.Password != arg)
-            return "Passwords don't match";
-
-        return null;
-    }
-}

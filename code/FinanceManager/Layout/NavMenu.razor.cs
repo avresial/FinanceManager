@@ -41,8 +41,8 @@ public partial class NavMenu : ComponentBase
             if (user is null) return;
             Accounts.Clear();
 
-            var test = await FinancialAccountService.GetAvailableAccounts();
-            foreach (var account in test)
+            var availableAccounts = await FinancialAccountService.GetAvailableAccounts();
+            foreach (var account in availableAccounts)
             {
 
                 var name = string.Empty;

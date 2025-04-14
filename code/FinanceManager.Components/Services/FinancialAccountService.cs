@@ -40,7 +40,6 @@ public class FinancialAccountService : IFinancialAccountService
         if (account is BankAccount) await _bankAccountService.AddAccountAsync(new AddAccount(account.Name));
         if (account is StockAccount) await _stockAccountService.AddAccountAsync(new AddAccount(account.Name));
     }
-
     public async Task AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
         where AccountType : BasicAccountInformation
         where EntryType : FinancialEntryBase
@@ -68,7 +67,6 @@ public class FinancialAccountService : IFinancialAccountService
             }
         }
     }
-
     public async Task AddEntry<T>(T accountEntry) where T : FinancialEntryBase
     {
         switch (accountEntry)
@@ -78,12 +76,12 @@ public class FinancialAccountService : IFinancialAccountService
                 break;
 
             case StockAccountEntry stockAccountEntry:
-                await _stockAccountService.AddEntryAsync(new AddStockAccountEntry(stockAccountEntry));
+                if (!await _stockAccountService.AddEntryAsync(new AddStockAccountEntry(stockAccountEntry)))
+                    throw new Exception("Adding entry failed");
                 break;
 
         }
     }
-
     public async Task<T?> GetAccount<T>(int userId, int id, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
     {
         if (typeof(T) == typeof(BankAccount))
@@ -93,7 +91,6 @@ public class FinancialAccountService : IFinancialAccountService
 
         return null;
     }
-
     public async Task<IEnumerable<T>> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
     {
         List<T> result = [];
@@ -113,7 +110,6 @@ public class FinancialAccountService : IFinancialAccountService
 
         return result;
     }
-
     public async Task<Dictionary<int, Type>> GetAvailableAccounts()
     {
         Dictionary<int, Type> result = [];
@@ -126,7 +122,6 @@ public class FinancialAccountService : IFinancialAccountService
 
         return result;
     }
-
     public async Task<DateTime?> GetEndDate(int accountId)
     {
         if ((await _bankAccountService.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
@@ -146,7 +141,6 @@ public class FinancialAccountService : IFinancialAccountService
             return await _stockAccountService.GetOldestEntryDate(accountId);
         return null;
     }
-
     public async Task<int?> GetLastAccountId()
     {
         List<AvailableAccount> accounts = (await _bankAccountService.GetAvailableAccountsAsync()).ToList();
@@ -157,13 +151,10 @@ public class FinancialAccountService : IFinancialAccountService
         return accounts.Max(x => x.AccountId);
     }
 
-
-
     public void InitializeMock()
     {
         logger.LogInformation("InitializeMock is called.");
     }
-
     public async Task RemoveAccount(int id)
     {
         if (await AccountExists<BankAccount>(id))
@@ -172,7 +163,6 @@ public class FinancialAccountService : IFinancialAccountService
         if (await AccountExists<StockAccount>(id))
             await _stockAccountService.DeleteAccountAsync(new DeleteAccount(id));
     }
-
     public async Task RemoveEntry(int entryId, int accountId)
     {
         if (await AccountExists<BankAccount>(accountId))
@@ -181,7 +171,6 @@ public class FinancialAccountService : IFinancialAccountService
         if (await AccountExists<StockAccount>(accountId))
             await _stockAccountService.DeleteEntryAsync(accountId, entryId);
     }
-
     public async Task UpdateAccount<T>(T account) where T : BasicAccountInformation
     {
         if (account is BankAccount bankAccount)
@@ -190,7 +179,6 @@ public class FinancialAccountService : IFinancialAccountService
         if (account is StockAccount)
             await _stockAccountService.UpdateAccountAsync(new UpdateAccount(account.AccountId, account.Name));
     }
-
     public async Task UpdateEntry<T>(T accountEntry) where T : FinancialEntryBase
     {
         if (accountEntry is BankAccountEntry bankAccountEntry)

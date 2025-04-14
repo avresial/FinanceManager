@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
+using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Providers;
@@ -14,11 +15,12 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Route("api/[controller]")]
 [ApiController]
 public class BankAccountController(IBankAccountRepository<BankAccount> bankAccountRepository, AccountIdProvider accountIdProvider,
-IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : ControllerBase
+IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVerifier userPlanVerifier) : ControllerBase
 {
     private readonly AccountIdProvider accountIdProvider = accountIdProvider;
     private readonly IBankAccountRepository<BankAccount> bankAccountRepository = bankAccountRepository;
     private readonly IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository = bankAccountEntryRepository;
+    private readonly UserPlanVerifier _userPlanVerifier = userPlanVerifier;
 
     [HttpGet]
     public async Task<IActionResult> Get()
@@ -131,10 +133,12 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : Controll
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (!userId.HasValue) return BadRequest();
+        if (!await userPlanVerifier.CanAddMoreAccounts(userId.Value))
+            return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
-        var id = accountIdProvider.GetMaxId(userId.Value);
+        var id = accountIdProvider.GetMaxId();
         int newId = id is null ? 1 : id.Value + 1;
-        return await Task.FromResult(Ok(bankAccountRepository.Add(newId, userId.Value, addAccount.accountName)));
+        return await Task.FromResult(Ok(bankAccountRepository.Add(userId.Value, newId, addAccount.accountName)));
     }
 
     [HttpPost("AddEntry")]
@@ -143,7 +147,17 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository) : Controll
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (!userId.HasValue) return BadRequest();
 
-        return await Task.FromResult(Ok(bankAccountEntryRepository.Add(addEntry.entry)));
+        if (!await _userPlanVerifier.CanAddMoreEntries(userId.Value))
+            return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
+
+        try
+        {
+            return await Task.FromResult(Ok(bankAccountEntryRepository.Add(addEntry.entry)));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPut("Update")]

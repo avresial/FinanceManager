@@ -8,19 +8,19 @@ namespace FinanceManager.Components.Components.Dashboard
         private const int _unitHeight = 130;
         public DateTime StartDateTime { get; set; }
 
-        [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+        [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
 
         protected override async Task OnInitializedAsync()
         {
             await GetThisMonth();
         }
-        public async Task GetQuater()
+        public async Task GetQuarter()
         {
             DateTime currentUtcDateTime = DateTime.UtcNow;
-            if (currentUtcDateTime.Month <= 3) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 1, 1), TimeOnly.FromDateTime(DateTime.UtcNow), DateTimeKind.Utc);
-            else if (currentUtcDateTime.Month <= 6) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 4, 1), TimeOnly.FromDateTime(DateTime.UtcNow), DateTimeKind.Utc);
-            else if (currentUtcDateTime.Month <= 9) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 7, 1), TimeOnly.FromDateTime(DateTime.UtcNow), DateTimeKind.Utc);
-            else if (currentUtcDateTime.Month <= 12) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 10, 1), TimeOnly.FromDateTime(DateTime.UtcNow), DateTimeKind.Utc);
+            if (currentUtcDateTime.Month <= 3) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 1, 1), new(), DateTimeKind.Utc);
+            else if (currentUtcDateTime.Month <= 6) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 4, 1), new(), DateTimeKind.Utc);
+            else if (currentUtcDateTime.Month <= 9) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 7, 1), new(), DateTimeKind.Utc);
+            else if (currentUtcDateTime.Month <= 12) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 10, 1), new(), DateTimeKind.Utc);
 
             await Task.CompletedTask;
         }

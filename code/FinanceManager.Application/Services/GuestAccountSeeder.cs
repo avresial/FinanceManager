@@ -60,7 +60,7 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
     }
     public StockAccount GetNewStockAccount(string accountName, AccountType accountType)
     {
-        var accountId = _accountIdProvider.GetMaxId(_guestUserId) + 1;
+        var accountId = _accountIdProvider.GetMaxId() + 1;
         StockAccount bankAccount = new(_guestUserId, accountId is null ? 0 : accountId.Value, accountName);
         return bankAccount;
     }
@@ -70,7 +70,7 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
     }
     public BankAccount GetNewBankAccount(string accountName, AccountType accountType)
     {
-        var accountId = _accountIdProvider.GetMaxId(_guestUserId) + 1;
+        var accountId = _accountIdProvider.GetMaxId() + 1;
         BankAccount bankAccount = new BankAccount(_guestUserId, accountId is null ? 0 : accountId.Value, accountName, accountType);
         return bankAccount;
     }

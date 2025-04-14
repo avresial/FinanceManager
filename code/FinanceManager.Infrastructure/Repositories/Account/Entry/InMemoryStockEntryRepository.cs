@@ -35,6 +35,14 @@ public class InMemoryStockEntryRepository : IAccountEntryRepository<StockAccount
         return stockAccount.Get(startDate, endDate);
     }
 
+    public int? GetCount(int accountId)
+    {
+        var account = accounts.FirstOrDefault(x => x.AccountId == accountId);
+        if (account is null || account.Entries is null) return null;
+
+        return account.Entries.Count;
+    }
+
     public StockAccountEntry? GetNextOlder(int accountId, int entryId)
     {
         var account = accounts.FirstOrDefault(x => x.AccountId == accountId);

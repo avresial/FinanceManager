@@ -1,4 +1,5 @@
 ﻿@page "/landingpage"
+@using FinanceManager.Domain.Enums
 @using FinanceManager.Domain.Services
 @layout NoNavbarLayout
 
@@ -128,16 +129,102 @@
                     <MudImage Fluid="true" Src="imgs/LoanAccount.jpg" Alt="LoanAccount" Class="flex-grow-1 rounded-lg p-4" Elevation="25" />
                 </div>
             </MudItem>
+
         </MudGrid>
+    </MudItem>
+
+    <MudItem xs="12">
+        <MudContainer MaxWidth="MaxWidth.Large" style="min-height: 100vh;" Class="d-flex flex-grow-1 gap-4 align-center">
+
+            <MudGrid Class="py-5">
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="25" Class="rounded-lg pb-4">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h5" Align="Align.Center">Beginner</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <div class="d-flex justify-center">
+                                <MudText Typo="Typo.h3">Free</MudText>
+                            </div>
+                            <MudList T="string" Class="mx-auto mt-4" Style="width:300px;">
+                                <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
+                                    No bank synchronization
+                                </MudListItem>
+                                <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
+                                    @PricingProvider.GetMaxAllowedEntries(Domain.Enums.PricingLevel.Free) transactions
+                                </MudListItem>
+                                <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
+                                    Up to @PricingProvider.GetMaxAccountCount(Domain.Enums.PricingLevel.Free) accounts
+                                </MudListItem>
+                            </MudList>
+                        </MudCardContent>
+                        <MudCardActions Class="d-flex justify-center">
+                            <MudButton Href="register" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Style="width:50%;">Start Now</MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="25" Class="rounded-lg pb-4">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h5" Align="Align.Center">Starter</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <div class="d-flex justify-center">
+                                <MudText Typo="Typo.h3">$10</MudText>
+                                <MudText Typo="Typo.h5" Class="ml-1 mt-5" Color="Color.Secondary">/Monthly</MudText>
+                            </div>
+                            <MudList T="string" Class="mx-auto mt-4" Style="width:300px;">
+                                <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
+                                    No bank synchronization
+                                </MudListItem>
+                                <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
+                                    @PricingProvider.GetMaxAllowedEntries(Domain.Enums.PricingLevel.Basic) transactions
+                                </MudListItem>
+                                <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
+                                    Up to @PricingProvider.GetMaxAccountCount(Domain.Enums.PricingLevel.Basic) accounts
+                                </MudListItem>
+                            </MudList>
+                        </MudCardContent>
+                        <MudCardActions Class="d-flex justify-center">
+                            <MudButton Href="@($"register/{PricingLevel.Basic}")" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Style="width:50%;">Start Now</MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" sm="12" md="4">
+                    <MudCard Elevation="25" Class="rounded-lg pb-4">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h5" Align="Align.Center">Professional</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <div class="d-flex justify-center">
+                                <MudText Typo="Typo.h3">$15</MudText>
+                                <MudText Typo="Typo.h5" Class="ml-1 mt-5" Color="Color.Secondary">/Monthly</MudText>
+                            </div>
+                            <MudList T="string" Class="mx-auto mt-4" Style="width:300px;">
+                                <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
+                                    Bank synchronization
+                                </MudListItem>
+                                <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
+                                    @PricingProvider.GetMaxAllowedEntries(Domain.Enums.PricingLevel.Premium) transactions
+                                </MudListItem>
+                                <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
+                                    Unlimited accounts
+                                </MudListItem>
+                            </MudList>
+                        </MudCardContent>
+                        <MudCardActions Class="d-flex justify-center">
+                            <MudButton Href="@($"register/{PricingLevel.Premium}")" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Style="width:50%;" >Start Now</MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+        </MudContainer>
     </MudItem>
 </MudGrid>
 
-@code {
-    private MudTheme Theme = new MudTheme();
-
-    async Task LogGuest()
-    {
-        await LoginService.Login("Guest", "GuestPassword");
-        Navigation.NavigateTo("");
-    }
-}

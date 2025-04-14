@@ -8,9 +8,14 @@ namespace FinanceManager.Infrastructure.Repositories.Account;
 internal class InMemoryBankAccountRepository : IBankAccountRepository<BankAccount>
 {
     private List<BankAccount> _bankAccounts = [];
-
-    public int? Add(int accountId, int userId, string accountName) => Add(accountId, userId, accountName, AccountType.Other);
-    public int? Add(int accountId, int userId, string accountName, AccountType accountType)
+    public int? GetLastAccountId()
+    {
+        if (_bankAccounts.Count != 0)
+            return _bankAccounts.Max(x => x.AccountId);
+        return null;
+    }
+    public int? Add(int userId, int accountId, string accountName) => Add(userId, accountId, accountName, AccountType.Other);
+    public int? Add(int userId, int accountId, string accountName, AccountType accountType)
     {
         _bankAccounts.Add(new BankAccount(userId, accountId, accountName, accountType));
         return accountId;
@@ -25,7 +30,6 @@ internal class InMemoryBankAccountRepository : IBankAccountRepository<BankAccoun
         return true;
     }
     public IEnumerable<AvailableAccount> GetAvailableAccounts(int userId) => _bankAccounts.Where(x => x.UserId == userId).Select(x => new AvailableAccount(x.AccountId, x.Name));
-
 
     public BankAccount? Get(int accountId)
     {
@@ -43,7 +47,6 @@ internal class InMemoryBankAccountRepository : IBankAccountRepository<BankAccoun
 
         return true;
     }
-
     public bool Update(int accountId, string accountName, AccountType accountType)
     {
         var bankAccount = _bankAccounts.FirstOrDefault(x => x.AccountId == accountId);
@@ -54,4 +57,6 @@ internal class InMemoryBankAccountRepository : IBankAccountRepository<BankAccoun
 
         return true;
     }
+
+
 }

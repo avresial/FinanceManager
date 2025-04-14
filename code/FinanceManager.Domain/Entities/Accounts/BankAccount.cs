@@ -34,11 +34,11 @@ namespace FinanceManager.Domain.Entities.Accounts
         public void AddEntry(AddBankEntryDto entry)
         {
             Entries ??= [];
-            var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
-            if (alredyExistingEntry is not null)
+            var alreadyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
+            if (alreadyExistingEntry is not null)
             {
-                throw new Exception($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.EntryId}, Posting date{alredyExistingEntry.PostingDate}, " +
-                    $"Value change {alredyExistingEntry.ValueChange}");
+                throw new Exception($"Entry already exist, can not be added - Posting date: {alreadyExistingEntry.PostingDate}, " +
+                    $"Value change: {alreadyExistingEntry.ValueChange}");
             }
 
             var previousEntry = Entries.GetNextYounger(entry.PostingDate).FirstOrDefault();
@@ -53,6 +53,7 @@ namespace FinanceManager.Domain.Entities.Accounts
                 Description = entry.Description,
                 ExpenseType = entry.ExpenseType
             };
+
             if (index == -1)
             {
                 index = Entries.Count;

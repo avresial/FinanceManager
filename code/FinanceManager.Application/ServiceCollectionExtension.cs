@@ -12,6 +12,7 @@ namespace FinanceManager.Application
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
             services.AddScoped<ISettingsService, SettingsService>()
+                    .AddScoped<PricingProvider>()
                     .AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
             return services;
         }
@@ -21,7 +22,9 @@ namespace FinanceManager.Application
             services.AddScoped<ISettingsService, SettingsService>()
                     .AddScoped<IMoneyFlowService, MoneyFlowService>()
                     .AddScoped<AccountIdProvider>()
+                    .AddScoped<PricingProvider>()
                     .AddScoped<GuestAccountSeeder>()
+                    .AddScoped<UserPlanVerifier>()
                 ;
 
             return services;

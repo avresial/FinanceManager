@@ -1,27 +1,37 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Repositories.Account;
 
-namespace FinanceManager.Domain.Providers
+namespace FinanceManager.Domain.Providers;
+
+public class AccountIdProvider
 {
-    public class AccountIdProvider
+    private object _lockObject = new object();
+    private readonly IAccountRepository<StockAccount> stockAccountRepository;
+    private readonly IBankAccountRepository<BankAccount> bankAccountRepository;
+
+    public AccountIdProvider(IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository)
     {
-        private readonly IAccountRepository<StockAccount> stockAccountRepository;
-        private readonly IBankAccountRepository<BankAccount> bankAccountRepository;
+        this.stockAccountRepository = stockAccountRepository;
+        this.bankAccountRepository = bankAccountRepository;
+    }
 
-        public AccountIdProvider(IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository)
+    public int? GetMaxId()
+    {
+        List<int> ids = [];
+        int? stockAccountsLastId = null;
+        int? bankAccountsLastId = null;
+        lock (_lockObject)
         {
-            this.stockAccountRepository = stockAccountRepository;
-            this.bankAccountRepository = bankAccountRepository;
+            stockAccountsLastId = stockAccountRepository.GetLastAccountId();
+            bankAccountsLastId = bankAccountRepository.GetLastAccountId();
         }
 
-        public int? GetMaxId(int userId)
-        {
-            List<int> ids = [];
-            var stockAccounts = stockAccountRepository.GetAvailableAccounts(userId);
-            if (stockAccounts.Any()) ids.Add(stockAccounts.Max(x => x.AccountId));
-            var bankAccounts = bankAccountRepository.GetAvailableAccounts(userId);
-            if (bankAccounts.Any()) ids.Add(bankAccounts.Max(x => x.AccountId));
-            return ids.Any() ? ids.Max() : null;
-        }
+        if (stockAccountsLastId is not null)
+            ids.Add(stockAccountsLastId.Value);
+
+        if (bankAccountsLastId is not null)
+            ids.Add(bankAccountsLastId.Value);
+
+        return ids.Count != 0 ? ids.Max() : null;
     }
 }
