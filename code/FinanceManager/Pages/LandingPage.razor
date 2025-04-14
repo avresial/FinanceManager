@@ -1,4 +1,5 @@
 ﻿@page "/landingpage"
+@using FinanceManager.Domain.Enums
 @using FinanceManager.Domain.Services
 @layout NoNavbarLayout
 
@@ -155,7 +156,7 @@
                                     @PricingProvider.GetMaxAllowedEntries(Domain.Enums.PricingLevel.Free) transactions
                                 </MudListItem>
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
-                                    Up to 5 accounts
+                                    Up to @PricingProvider.GetMaxAccountCount(Domain.Enums.PricingLevel.Free) accounts
                                 </MudListItem>
                             </MudList>
                         </MudCardContent>
@@ -184,12 +185,12 @@
                                     @PricingProvider.GetMaxAllowedEntries(Domain.Enums.PricingLevel.Basic) transactions
                                 </MudListItem>
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
-                                    Up to 20 accounts
+                                    Up to @PricingProvider.GetMaxAccountCount(Domain.Enums.PricingLevel.Basic) accounts
                                 </MudListItem>
                             </MudList>
                         </MudCardContent>
                         <MudCardActions Class="d-flex justify-center">
-                            <MudButton Href="register" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Style="width:50%;" Disabled>Start Now</MudButton>
+                            <MudButton Href="@($"register/{PricingLevel.Basic}")" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Style="width:50%;">Start Now</MudButton>
                         </MudCardActions>
                     </MudCard>
                 </MudItem>
@@ -218,7 +219,7 @@
                             </MudList>
                         </MudCardContent>
                         <MudCardActions Class="d-flex justify-center">
-                            <MudButton Href="register" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Style="width:50%;" Disabled>Start Now</MudButton>
+                            <MudButton Href="@($"register/{PricingLevel.Premium}")" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Style="width:50%;" >Start Now</MudButton>
                         </MudCardActions>
                     </MudCard>
                 </MudItem>

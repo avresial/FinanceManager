@@ -133,6 +133,8 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (!userId.HasValue) return BadRequest();
+        if (!await userPlanVerifier.CanAddMoreAccounts(userId.Value))
+            return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
         var id = accountIdProvider.GetMaxId();
         int newId = id is null ? 1 : id.Value + 1;
@@ -146,7 +148,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         if (!userId.HasValue) return BadRequest();
 
         if (!await _userPlanVerifier.CanAddMoreEntries(userId.Value))
-            return BadRequest("Too many entries. In order to add this entry delete existing one.");
+            return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
         try
         {

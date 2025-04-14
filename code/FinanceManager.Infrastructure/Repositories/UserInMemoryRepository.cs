@@ -26,7 +26,7 @@ internal class UserInMemoryRepository : IUserRepository
             };
         }
     }
-    public async Task<bool> AddUser(string login, string password)
+    public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel)
     {
         if (_users.ContainsKey(login)) return await Task.FromResult(false);
 
@@ -34,7 +34,8 @@ internal class UserInMemoryRepository : IUserRepository
         {
             Login = login,
             Password = password,
-            Id = GenerateNewId()
+            Id = GenerateNewId(),
+            PricingLevel = pricingLevel
         });
 
         return await Task.FromResult(true);

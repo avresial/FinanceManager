@@ -11,4 +11,13 @@ public class PricingProvider
         _ => 1000,
     };
 
+    public int GetMaxAccountCount(PricingLevel pricingLevel) => pricingLevel switch
+    {
+        PricingLevel.Free => 10,
+        PricingLevel.Basic => 30,
+        PricingLevel.Premium => 100,
+        _ => 1000,
+    };
+
+
 }

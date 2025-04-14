@@ -4,6 +4,7 @@ using FinanceManager.Application.Commands.Login;
 using FinanceManager.Application.Providers;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -33,7 +34,7 @@ public class LoginService : ILoginService
 
         _loginRepository = loginRepository;
         _httpClient = httpClient;
-        _ = _loginRepository.AddUser("Guest", PasswordEncryptionProvider.EncryptPassword("GuestPassword"));
+        _ = _loginRepository.AddUser("Guest", PasswordEncryptionProvider.EncryptPassword("GuestPassword"), PricingLevel.Basic);
     }
 
     public async Task<UserSession?> GetLoggedUser()

@@ -31,7 +31,7 @@ namespace FinanceManager.Api.Controllers
         public async Task<IActionResult> Add(AddUser addUserCommand)
         {
             var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(addUserCommand.password);
-            var result = await _loginRepository.AddUser(addUserCommand.userName, encryptedPassword);
+            var result = await _loginRepository.AddUser(addUserCommand.userName, encryptedPassword, addUserCommand.pricingLevel);
 
             if (result) return Ok(result);
             return BadRequest();

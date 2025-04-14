@@ -1,5 +1,6 @@
 using Blazored.LocalStorage;
 using FinanceManager.Components.ViewModels;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -21,6 +22,8 @@ public partial class RegisterComponent
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILocalStorageService LocalStorageService { get; set; }
 
+    [Parameter] public PricingLevel PricingLevel { get; set; }
+
     private async Task Register()
     {
         if (_form is not null)
@@ -35,7 +38,7 @@ public partial class RegisterComponent
         List<string> newErrors = [];
         if (_loginModel.Login is not null && _loginModel.Password is not null)
         {
-            var addingUserResult = await UserService.AddUser(_loginModel.Login, _loginModel.Password);
+            var addingUserResult = await UserService.AddUser(_loginModel.Login, _loginModel.Password, PricingLevel);
 
             if (!addingUserResult)
                 newErrors.Add("Incorrect username or password.");

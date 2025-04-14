@@ -1,5 +1,6 @@
 ﻿using Blazored.LocalStorage;
 using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Dtos;
 
@@ -56,7 +57,7 @@ public class UserLocalStorageRepository : IUserRepository
             PricingLevel = foundUser.PricingLevel
         };
     }
-    async Task<bool> IUserRepository.AddUser(string login, string password)
+    async Task<bool> IUserRepository.AddUser(string login, string password, PricingLevel pricingLevel)
     {
         login = login.ToLower();
         List<UserDto>? databaseUserDtos = await _localStorageService.GetItemAsync<List<UserDto>>("Users");
@@ -72,7 +73,8 @@ public class UserLocalStorageRepository : IUserRepository
         {
             Login = login,
             Password = password,
-            Id = userDtos.Count
+            Id = userDtos.Count,
+            PricingLevel = pricingLevel
         });
 
         try

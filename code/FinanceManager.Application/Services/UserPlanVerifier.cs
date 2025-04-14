@@ -28,6 +28,16 @@ public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRep
             totalEntries += count.Value;
         }
 
-        return totalEntries < pricingProvider.GetMaxAllowedEntries(user.PricingLevel);
+        return totalEntries < _pricingProvider.GetMaxAllowedEntries(user.PricingLevel);
+    }
+
+    public async Task<bool> CanAddMoreAccounts(int userId)
+    {
+        var user = await _userRepository.GetUser(userId);
+        if (user is null) return false;
+
+        var accounts = _bankAccountRepository.GetAvailableAccounts(userId);
+
+        return accounts.Count() < _pricingProvider.GetMaxAllowedEntries(user.PricingLevel);
     }
 }
