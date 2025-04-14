@@ -3,6 +3,7 @@ using CsvHelper.Configuration;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Readers;
 using Microsoft.AspNetCore.Components;
@@ -44,13 +45,16 @@ public partial class ImportBankEntriesComponent : ComponentBase
     private string _valueChangeHeader = "ValueChange";
 
     public required string AccountName { get; set; }
+
     [Parameter] public required int AccountId { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required ILoginService loginService { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        var existingAccount = await FinancialAccountService.GetAccount<BankAccount>(1, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+        var user = await loginService.GetLoggedUser();
+        var existingAccount = await FinancialAccountService.GetAccount<BankAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
         if (existingAccount is not null)
             AccountName = existingAccount.Name;
     }
@@ -100,8 +104,10 @@ public partial class ImportBankEntriesComponent : ComponentBase
     {
         _isImportingData = true;
 
+        int totalEntries = _importModels.Count;
         int importedEntriesCount = 0;
-        if (_importModels.Any())
+
+        if (_importModels.Count != 0)
         {
             foreach (var result in _importModels)
             {
@@ -119,7 +125,20 @@ public partial class ImportBankEntriesComponent : ComponentBase
         }
 
         if (importedEntriesCount > 0)
+        {
             _summaryInfos.Add($"Imported {importedEntriesCount} rows.");
+
+            if (importedEntriesCount < totalEntries)
+                _warnings.Add($"Failed to import {totalEntries - importedEntriesCount} rows. Check warnings for details.");
+        }
+        else if (totalEntries > 0)
+        {
+            _warnings.Add("Failed to import any entries. Check warnings for details.");
+        }
+        else
+        {
+            _warnings.Add("No entries to import.");
+        }
 
         StateHasChanged();
 

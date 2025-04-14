@@ -16,8 +16,6 @@ public class PricingProvider
         PricingLevel.Free => 5,
         PricingLevel.Basic => 30,
         PricingLevel.Premium => 100,
-        _ => 1000,
+        _ => 5,
     };
-
-
 }

@@ -38,14 +38,9 @@ public partial class RegisterComponent
         List<string> newErrors = [];
         if (_loginModel.Login is not null && _loginModel.Password is not null)
         {
-            var addingUserResult = await UserService.AddUser(_loginModel.Login, _loginModel.Password, PricingLevel);
-
-            if (!addingUserResult)
+            if (!await UserService.AddUser(_loginModel.Login, _loginModel.Password, PricingLevel))
                 newErrors.Add("Incorrect username or password.");
-
-            var loginResult = await LoginService.Login(_loginModel.Login, _loginModel.Password);
-
-            if (loginResult)
+            else if (await LoginService.Login(_loginModel.Login, _loginModel.Password))
                 Navigation.NavigateTo("");
         }
 

@@ -61,7 +61,7 @@ public class UserLocalStorageRepository : IUserRepository
     {
         login = login.ToLower();
         List<UserDto>? databaseUserDtos = await _localStorageService.GetItemAsync<List<UserDto>>("Users");
-        List<UserDto> userDtos = new List<UserDto>();
+        List<UserDto> userDtos = [];
 
         if (databaseUserDtos is not null)
             userDtos = databaseUserDtos;
@@ -73,7 +73,7 @@ public class UserLocalStorageRepository : IUserRepository
         {
             Login = login,
             Password = password,
-            Id = userDtos.Count,
+            Id = userDtos.Any() ? userDtos.Max(x => x.Id) + 1 : 0,
             PricingLevel = pricingLevel
         });
 
@@ -95,7 +95,7 @@ public class UserLocalStorageRepository : IUserRepository
         List<UserDto>? databaseUserDtos = await _localStorageService.GetItemAsync<List<UserDto>>("Users");
         if (databaseUserDtos is null) return false;
 
-        List<UserDto> userDtos = new List<UserDto>();
+        List<UserDto> userDtos = [];
 
         if (databaseUserDtos is not null)
             userDtos = databaseUserDtos;

@@ -40,13 +40,29 @@ public partial class AddBankEntry : ComponentBase
 
     public async Task Add()
     {
-        if (_form is null) return;
+        if (_form is null)
+        {
+            _errors = ["Form initialization error. Please try again."];
+            return;
+        }
+
         await _form.Validate();
 
-        if (!_form.IsValid) return;
-        if (!BalanceChange.HasValue) return;
-        if (!_postingDate.HasValue) return;
-        if (!_time.HasValue) return;
+        if (!_form.IsValid)
+        {
+            _errors = ["Please correct the validation errors before submitting."];
+            return;
+        }
+        if (!BalanceChange.HasValue)
+        {
+            _errors = ["Balance change is required."];
+            return;
+        }
+        if (!_postingDate.HasValue || !_time.HasValue)
+        {
+            _errors = ["Date and time are required."];
+            return;
+        }
 
         DateTime date = new DateTime(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes, _time.Value.Seconds);
         ExpenseType expenseType = FinanceManager.Domain.Enums.ExpenseType.Other;
@@ -56,8 +72,9 @@ public partial class AddBankEntry : ComponentBase
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex);
+            Logger.LogError(ex, "Error parsing expense type");
         }
+
         var id = 0;
         var currentMaxId = BankAccount.GetMaxId();
         if (currentMaxId is not null)

@@ -1,31 +1,37 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Repositories.Account;
 
-namespace FinanceManager.Domain.Providers
+namespace FinanceManager.Domain.Providers;
+
+public class AccountIdProvider
 {
-    public class AccountIdProvider
+    private object _lockObject = new object();
+    private readonly IAccountRepository<StockAccount> stockAccountRepository;
+    private readonly IBankAccountRepository<BankAccount> bankAccountRepository;
+
+    public AccountIdProvider(IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository)
     {
-        private readonly IAccountRepository<StockAccount> stockAccountRepository;
-        private readonly IBankAccountRepository<BankAccount> bankAccountRepository;
+        this.stockAccountRepository = stockAccountRepository;
+        this.bankAccountRepository = bankAccountRepository;
+    }
 
-        public AccountIdProvider(IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository)
+    public int? GetMaxId()
+    {
+        List<int> ids = [];
+        int? stockAccountsLastId = null;
+        int? bankAccountsLastId = null;
+        lock (_lockObject)
         {
-            this.stockAccountRepository = stockAccountRepository;
-            this.bankAccountRepository = bankAccountRepository;
+            stockAccountsLastId = stockAccountRepository.GetLastAccountId();
+            bankAccountsLastId = bankAccountRepository.GetLastAccountId();
         }
 
-        public int? GetMaxId()
-        {
-            List<int> ids = [];
-            var stockAccountsLastId = stockAccountRepository.GetLastAccountId();
-            if (stockAccountsLastId is not null)
-                ids.Add(stockAccountsLastId.Value);
+        if (stockAccountsLastId is not null)
+            ids.Add(stockAccountsLastId.Value);
 
-            var bankAccountsLastId = bankAccountRepository.GetLastAccountId();
-            if (bankAccountsLastId is not null)
-                ids.Add(bankAccountsLastId.Value);
+        if (bankAccountsLastId is not null)
+            ids.Add(bankAccountsLastId.Value);
 
-            return ids.Any() ? ids.Max() : null;
-        }
+        return ids.Count != 0 ? ids.Max() : null;
     }
 }
