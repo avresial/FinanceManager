@@ -14,7 +14,7 @@ internal class InMemoryBankAccountRepository : IBankAccountRepository<BankAccoun
             return _bankAccounts.Max(x => x.AccountId);
         return null;
     }
-    public int? Add(int userId, int accountId, string accountName) => Add(accountId, userId, accountName, AccountType.Other);
+    public int? Add(int userId, int accountId, string accountName) => Add(userId, accountId, accountName, AccountType.Other);
     public int? Add(int userId, int accountId, string accountName, AccountType accountType)
     {
         _bankAccounts.Add(new BankAccount(userId, accountId, accountName, accountType));

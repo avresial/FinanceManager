@@ -38,6 +38,6 @@ public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRep
 
         var accounts = _bankAccountRepository.GetAvailableAccounts(userId);
 
-        return accounts.Count() < _pricingProvider.GetMaxAllowedEntries(user.PricingLevel);
+        return accounts.Count() < _pricingProvider.GetMaxAccountCount(user.PricingLevel);
     }
 }

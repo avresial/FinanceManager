@@ -1,5 +1,4 @@
 ﻿using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 
@@ -21,59 +20,40 @@ public partial class AddAccount : ComponentBase
 
     [Inject] public required ILogger<AddAccount> Logger { get; set; }
     [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required BankAccountService BankAccountService { get; set; }
+
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
     public async Task Add()
     {
-        int? lastAccountIdResult = null;
         try
         {
-            lastAccountIdResult = await FinancalAccountService.GetLastAccountId();
+            switch (_selectedAccountType)
+            {
+                case "Bank account":
+                    _addedAccountId = await BankAccountService.AddAccountAsync(new Application.Commands.Account.AddAccount(_accountName));
+                    break;
+
+                case "Stock":
+                    // TODO add implementation
+                    break;
+            }
         }
         catch (Exception ex)
         {
             _errors = [ex.Message];
-            lastAccountIdResult = null;
             Logger.LogError(ex, "Error while adding bank account");
         }
-        if (lastAccountIdResult is null) return;
-        int lastAccountId = lastAccountIdResult.Value;
-        var user = await LoginService.GetLoggedUser();
-        if (user is null) return;
 
-        switch (_selectedAccountType)
+        _addedAccountId = null;
+
+        if (_errors.Length == 0)
         {
-            case "Bank account":
-                try
-                {
-                    await FinancalAccountService.AddAccount(new BankAccount(user.UserId, ++lastAccountId, _accountName, Domain.Enums.AccountType.Other));
-                    _addedAccountId = lastAccountId;
-                }
-                catch (Exception ex)
-                {
-                    _errors = [ex.Message];
-                    Logger.LogError(ex, "Error while adding bank account");
-                }
-                break;
-
-            case "Stock":
-                try
-                {
-                    await FinancalAccountService.AddAccount(new StockAccount(user.UserId, ++lastAccountId, _accountName));
-                    _addedAccountId = lastAccountId;
-                }
-                catch (Exception ex)
-                {
-                    _errors = [ex.Message];
-                    Logger.LogError(ex, "Error while adding bank account");
-                }
-                break;
+            _accountName = string.Empty;
+            //_selectedAccountType = string.Empty;
+            await AccountDataSynchronizationService.AccountChanged();
         }
-
-        _accountName = string.Empty;
-        _selectedAccountType = string.Empty;
-        await AccountDataSynchronizationService.AccountChanged();
 
         StateHasChanged();
     }

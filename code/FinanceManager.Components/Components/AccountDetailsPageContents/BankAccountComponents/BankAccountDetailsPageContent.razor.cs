@@ -132,10 +132,9 @@ public partial class BankAccountDetailsPageContent : ComponentBase
 
         var newEntriesWithoutOldest = newData.Entries.Skip(1);
         Account.Add(newEntriesWithoutOldest, false);
+        UpdateChartData();
 
-        if (_chart is not null)
-            await _chart.RenderAsync();
-
+        if (_chart is not null) await _chart.RenderAsync();
         await UpdateInfo();
     }
 

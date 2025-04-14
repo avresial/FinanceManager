@@ -51,7 +51,10 @@ public class BankAccountService(HttpClient httpClient)
     public async Task<int?> AddAccountAsync(AddAccount addAccount)
     {
         var response = await _httpClient.PostAsJsonAsync($"{_httpClient.BaseAddress}api/BankAccount/Add", addAccount);
-        return await response.Content.ReadFromJsonAsync<int?>();
+
+        if (response.IsSuccessStatusCode) return await response.Content.ReadFromJsonAsync<int?>();
+
+        throw new Exception(await response.Content.ReadAsStringAsync()); // TODO make custom exception
     }
 
     public async Task<bool> AddEntryAsync(AddBankAccountEntry addEntry)

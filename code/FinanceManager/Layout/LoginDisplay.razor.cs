@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
@@ -10,7 +11,7 @@ public partial class LoginDisplay
     private UserSession? _userSession = null;
     private bool _open;
     private string _label = "";
-    private string _pricingLabel = "";
+    private PricingLevel _pricingLabel;
 
     [Inject] public required NavigationManager Navigation { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -24,7 +25,7 @@ public partial class LoginDisplay
 
         var user = await UserService.GetUser(_userSession?.UserId ?? 0);
         if (user is not null)
-            _pricingLabel = $" {user.PricingLevel}";
+            _pricingLabel = user.PricingLevel;
     }
 
     public async Task BeginLogOut()
