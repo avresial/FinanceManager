@@ -42,11 +42,11 @@ public partial class AddAccount : ComponentBase
         }
         catch (Exception ex)
         {
+            _addedAccountId = null;
             _errors = [ex.Message];
             Logger.LogError(ex, "Error while adding bank account");
         }
 
-        _addedAccountId = null;
 
         if (_errors.Length == 0)
         {
