@@ -74,7 +74,7 @@ namespace FinanceManager.Components.Components.ImportData
             catch (HeaderValidationException ex)
             {
                 Console.WriteLine(ex);
-                _erorrs.Add($"Invalid headers. Required headers:{_postingDateHeader}, {_valueChangeHeader},{_tickerHeader}, {_investmentTypeHeader}.");
+                _erorrs.Add($"Invalid headers. Required headers:{_postingDateHeader}, {_valueChangeHeader}.");
             }
 
             _step1Complete = _importModels.Any();

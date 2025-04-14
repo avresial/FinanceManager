@@ -37,7 +37,7 @@ namespace FinanceManager.Domain.Entities.Accounts
             var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
             if (alredyExistingEntry is not null)
             {
-                throw new Exception($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.EntryId}, Posting date{alredyExistingEntry.PostingDate}, " +
+                throw new Exception($"Entry already exist, can not be added - Posting date{alredyExistingEntry.PostingDate}, " +
                     $"Value change {alredyExistingEntry.ValueChange}");
             }
 
