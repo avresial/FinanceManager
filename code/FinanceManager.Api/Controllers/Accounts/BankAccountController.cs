@@ -147,10 +147,10 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
 
         if (!await _userPlanVerifier.CanAddMoreEntries(userId.Value))
             return BadRequest("Too many entries. In order to add this entry delete existing one.");
+
         try
         {
             return await Task.FromResult(Ok(bankAccountEntryRepository.Add(addEntry.entry)));
-
         }
         catch (Exception ex)
         {
