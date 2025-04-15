@@ -326,4 +326,14 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financalAccountServi
 
         return result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList();
     }
+
+    public Task<bool> IsAnyAccountWithAssets(int userId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<bool> IsAnyAccountWithLiabilities(int userId)
+    {
+        throw new NotImplementedException();
+    }
 }

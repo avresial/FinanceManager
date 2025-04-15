@@ -32,6 +32,7 @@ public partial class AddBankEntry : ComponentBase
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILogger<AddBankEntry> Logger { get; set; }
+    [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -94,9 +95,12 @@ public partial class AddBankEntry : ComponentBase
             Logger.LogError(ex, "Error adding entry");
             _errors = [ex.Message];
         }
-
-        if (_errors.Length == 0 && ActionCompleted is not null)
-            await ActionCompleted();
+        if (_errors.Length == 0)
+        {
+            await AccountDataSynchronizationService.AccountChanged();
+            if (ActionCompleted is not null)
+                await ActionCompleted();
+        }
     }
 
     public async Task Cancel()

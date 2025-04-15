@@ -63,8 +63,6 @@ public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
     {
         if (_httpClient is null) return default;
 
-        var test = date.ToRfc3339();
-
         var result = await _httpClient.GetFromJsonAsync<decimal?>($"{_httpClient.BaseAddress}api/MoneyFlow/GetNetWorth/{userId}/{date.ToRfc3339()}");
 
         if (result is not null) return result;
@@ -91,5 +89,19 @@ public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
 
         if (result is not null) return result;
         return [];
+    }
+
+    public async Task<bool> IsAnyAccountWithAssets(int userId)
+    {
+        if (_httpClient is null) return default;
+
+        return await _httpClient.GetFromJsonAsync<bool>($"{_httpClient.BaseAddress}api/MoneyFlow/IsAnyAccountWithAssets/{userId}");
+    }
+
+    public async Task<bool> IsAnyAccountWithLiabilities(int userId)
+    {
+        if (_httpClient is null) return default;
+
+        return await _httpClient.GetFromJsonAsync<bool>($"{_httpClient.BaseAddress}api/MoneyFlow/IsAnyAccountWithLiabilities/{userId}");
     }
 }
