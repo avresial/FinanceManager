@@ -1,8 +1,12 @@
 ﻿using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.Commands.Account;
+using FinanceManager.Application.Providers;
+using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Providers;
+using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
 using FinanceManager.Infrastructure.Dtos;
@@ -15,27 +19,36 @@ namespace FinanceManager.UnitTests.Controllers;
 
 public class BankAccountControllerTests
 {
-    private readonly Mock<IAccountRepository<BankAccount>> _mockBankAccountRepository;
+    private readonly Mock<IBankAccountRepository<BankAccount>> _mockBankAccountRepository;
     private readonly Mock<IAccountEntryRepository<BankAccountEntry>> _mockBankAccountEntryRepository;
     private readonly Mock<AccountIdProvider> _mockAccountIdProvider;
+
+    private readonly Mock<IUserRepository> _userRepository;
+    private readonly Mock<UserPlanVerifier> _userPlanVerifier;
+
     private readonly BankAccountController _controller;
 
     public BankAccountControllerTests()
     {
-        _mockBankAccountRepository = new Mock<IAccountRepository<BankAccount>>();
+        _mockBankAccountRepository = new Mock<IBankAccountRepository<BankAccount>>();
         _mockBankAccountEntryRepository = new Mock<IAccountEntryRepository<BankAccountEntry>>();
         _mockAccountIdProvider = new Mock<AccountIdProvider>(new Mock<IAccountRepository<StockAccount>>().Object, _mockBankAccountRepository.Object);
-        _controller = new BankAccountController(_mockBankAccountRepository.Object, _mockAccountIdProvider.Object, _mockBankAccountEntryRepository.Object);
+
+        _userRepository = new Mock<IUserRepository>();
+        var user = new User() { Login = "TestUser", Id = 1, PricingLevel = Domain.Enums.PricingLevel.Premium };
+        _userRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
+        _userPlanVerifier = new Mock<UserPlanVerifier>(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userRepository.Object, new PricingProvider());
+        _controller = new BankAccountController(_mockBankAccountRepository.Object, _mockAccountIdProvider.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object);
 
         // Mock user identity
-        var user = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
+        var userClaims = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
         {
-            new Claim(ClaimTypes.NameIdentifier, "1")
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
         }, "mock"));
 
         _controller.ControllerContext = new ControllerContext
         {
-            HttpContext = new DefaultHttpContext { User = user }
+            HttpContext = new DefaultHttpContext { User = userClaims }
         };
     }
 
@@ -169,7 +182,7 @@ public class BankAccountControllerTests
         _mockBankAccountRepository.Setup(repo => repo.Delete(deleteAccount.accountId)).Returns(true);
 
         // Act
-        var result = await _controller.Delete(deleteAccount);
+        var result = await _controller.Delete(deleteAccount.accountId);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);

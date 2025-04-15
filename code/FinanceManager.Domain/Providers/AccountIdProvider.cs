@@ -5,14 +5,14 @@ namespace FinanceManager.Domain.Providers;
 
 public class AccountIdProvider
 {
-    private object _lockObject = new object();
-    private readonly IAccountRepository<StockAccount> stockAccountRepository;
-    private readonly IBankAccountRepository<BankAccount> bankAccountRepository;
+    private readonly object _lockObject = new();
+    private readonly IAccountRepository<StockAccount> _stockAccountRepository;
+    private readonly IBankAccountRepository<BankAccount> _bankAccountRepository;
 
     public AccountIdProvider(IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository)
     {
-        this.stockAccountRepository = stockAccountRepository;
-        this.bankAccountRepository = bankAccountRepository;
+        this._stockAccountRepository = stockAccountRepository;
+        this._bankAccountRepository = bankAccountRepository;
     }
 
     public int? GetMaxId()
@@ -22,8 +22,8 @@ public class AccountIdProvider
         int? bankAccountsLastId = null;
         lock (_lockObject)
         {
-            stockAccountsLastId = stockAccountRepository.GetLastAccountId();
-            bankAccountsLastId = bankAccountRepository.GetLastAccountId();
+            stockAccountsLastId = _stockAccountRepository.GetLastAccountId();
+            bankAccountsLastId = _bankAccountRepository.GetLastAccountId();
         }
 
         if (stockAccountsLastId is not null)

@@ -22,7 +22,7 @@ public class StockAccountControllerTests
     {
         _mockStockAccountRepository = new Mock<IAccountRepository<StockAccount>>();
         _mockStockAccountEntryRepository = new Mock<IAccountEntryRepository<StockAccountEntry>>();
-        _mockAccountIdProvider = new Mock<AccountIdProvider>(_mockStockAccountRepository.Object, new Mock<IAccountRepository<BankAccount>>().Object);
+        _mockAccountIdProvider = new Mock<AccountIdProvider>(_mockStockAccountRepository.Object, new Mock<IBankAccountRepository<BankAccount>>().Object);
         _controller = new StockAccountController(_mockStockAccountRepository.Object, _mockAccountIdProvider.Object, _mockStockAccountEntryRepository.Object);
 
         // Mock user identity

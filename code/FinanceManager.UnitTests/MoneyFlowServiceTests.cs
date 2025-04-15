@@ -16,7 +16,7 @@ public class MoneyFlowServiceTests
     private readonly decimal _totalAssetsValue = 0;
 
     private readonly MoneyFlowService _moneyFlowService;
-    private readonly Mock<IFinancalAccountRepository> _financalAccountRepositoryMock = new();
+    private readonly Mock<IFinancalAccountRepository> _financialAccountRepositoryMock = new();
     private readonly Mock<IStockRepository> _stockRepository = new();
     private readonly List<BankAccount> _bankAccounts;
     private readonly List<StockAccount> _investmentAccountAccounts;
@@ -25,14 +25,14 @@ public class MoneyFlowServiceTests
     {
         BankAccount bankAccount1 = new(1, 1, "testBank1", AccountType.Cash);
         bankAccount1.Add(new BankAccountEntry(1, 1, _startDate.AddYears(-1), 10, 10));
-        bankAccount1.Add(new BankAccountEntry(1, 1, _startDate, 20, 10));
-        bankAccount1.Add(new BankAccountEntry(1, 2, _startDate.AddDays(1), 30, 10));
+        bankAccount1.Add(new BankAccountEntry(1, 2, _startDate, 20, 10));
+        bankAccount1.Add(new BankAccountEntry(1, 3, _startDate.AddDays(1), 30, 10));
 
         BankAccount bankAccount2 = new(1, 2, "testBank2", AccountType.Cash);
         bankAccount2.Add(new BankAccountEntry(1, 1, _endDate, 10, 10));
 
         _bankAccounts = new List<BankAccount> { bankAccount1, bankAccount2 };
-        _financalAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(1, _startDate, _endDate))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(1, _startDate, _endDate))
                                       .Returns(_bankAccounts);
 
         StockAccount investmentAccount1 = new(1, 3, "testInvestmentAccount1");
@@ -40,7 +40,7 @@ public class MoneyFlowServiceTests
         investmentAccount1.Add(new StockAccountEntry(1, 2, _endDate, 10, 10, "testStock2", InvestmentType.Stock));
 
         _investmentAccountAccounts = new List<StockAccount> { investmentAccount1 };
-        _financalAccountRepositoryMock.Setup(x => x.GetAccounts<StockAccount>(1, _startDate, _endDate))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<StockAccount>(1, _startDate, _endDate))
                                       .Returns(_investmentAccountAccounts);
 
         _totalAssetsValue = 100;
@@ -50,7 +50,7 @@ public class MoneyFlowServiceTests
         _stockRepository.Setup(x => x.GetStockPrice("testStock2", It.IsAny<DateTime>()))
                         .ReturnsAsync(new StockPrice() { Currency = "PLN", Ticker = "AnyTicker", PricePerUnit = 4 });
 
-        _moneyFlowService = new MoneyFlowService(_financalAccountRepositoryMock.Object, _stockRepository.Object);
+        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _stockRepository.Object);
     }
 
     [Fact]
@@ -108,6 +108,7 @@ public class MoneyFlowServiceTests
         Assert.Equal(result.First(x => x.DateTime == _endDate).Value, finalValue);
     }
 
+
     [Fact]
     public async Task GetNetWorth_ReturnsNetWorth()
     {
@@ -115,7 +116,7 @@ public class MoneyFlowServiceTests
         var userId = 1;
         var date = new DateTime(2023, 12, 31);
         List<BankAccount> bankAccounts = [new(userId, 1, "Bank Account 1", [new(1, 1, date, 1000, 0)])];
-        _financalAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, date.Date, date)).Returns(bankAccounts);
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, date.Date, date)).Returns(bankAccounts);
 
         // Act
         var result = await _moneyFlowService.GetNetWorth(userId, date);
@@ -138,7 +139,7 @@ public class MoneyFlowServiceTests
                     new BankAccountEntry(1, 1, end, 1000, 0)
                 ])
             ];
-        _financalAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, end, end)).Returns(bankAccounts);
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, end, end)).Returns(bankAccounts);
 
         // Act
         var result = await _moneyFlowService.GetNetWorth(userId, start, end);

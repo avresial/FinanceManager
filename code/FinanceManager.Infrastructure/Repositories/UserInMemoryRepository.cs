@@ -6,12 +6,14 @@ using Microsoft.Extensions.Configuration;
 
 namespace FinanceManager.Infrastructure.Repositories;
 
-internal class UserInMemoryRepository : IUserRepository
+public class UserInMemoryRepository : IUserRepository
 {
     private readonly Dictionary<string, UserDto> _users = [];
 
+    public UserInMemoryRepository() { }
     public UserInMemoryRepository(IConfiguration configuration)
     {
+        if (configuration is null) return;
         var defaultUserLogin = configuration["DefaultUser:Login"];
         var defaultUserPassword = configuration["DefaultUser:Password"];
 
@@ -25,6 +27,7 @@ internal class UserInMemoryRepository : IUserRepository
                 PricingLevel = PricingLevel.Basic
             };
         }
+
     }
     public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel)
     {
