@@ -56,6 +56,7 @@ public partial class NavMenu : ComponentBase
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
+            return;
         }
 
         try
@@ -84,7 +85,8 @@ public partial class NavMenu : ComponentBase
                     continue;
                 }
 
-                Accounts.Add(account.Key, name);
+                if (!Accounts.ContainsKey(account.Key))
+                    Accounts.Add(account.Key, name);
             }
 
 
@@ -94,10 +96,12 @@ public partial class NavMenu : ComponentBase
             ErrorMessage = ex.Message;
             Logger.LogError(ex, "Error while getting available accounts");
         }
-
         try
         {
             displayAssetsLink = await MoneyFlowService.IsAnyAccountWithAssets(user.UserId);
+        }
+        catch (HttpRequestException)
+        {
         }
         catch (Exception ex)
         {
@@ -107,6 +111,9 @@ public partial class NavMenu : ComponentBase
         try
         {
             displayLiabilitiesLink = await MoneyFlowService.IsAnyAccountWithLiabilities(user.UserId);
+        }
+        catch (HttpRequestException)
+        {
         }
         catch (Exception ex)
         {

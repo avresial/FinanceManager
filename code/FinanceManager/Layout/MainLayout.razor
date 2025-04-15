@@ -1,24 +1,24 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar mud-elevation-25">
-        <NavMenu />
-    </div>
+<AuthorizeView>
+    <NotAuthorized>
+        <RedirectToLogin />
+    </NotAuthorized>
+    <Authorized>
+        <div class="page">
+            <div class="sidebar mud-elevation-25">
+                <NavMenu />
+            </div>
 
-    <main>
-        <div class="top-row px-4 auth">
-            <LoginDisplay />
-        </div>
+            <main>
+                <div class="top-row px-4 auth">
+                    <LoginDisplay />
+                </div>
 
-        <article class="px-0" style="padding: 0px !important;">
-            <AuthorizeView>
-                <NotAuthorized>
-                    <RedirectToLogin />
-                </NotAuthorized>
-                <Authorized>
+                <article class="px-0" style="padding: 0px !important;">
                     @Body
-                </Authorized>
-            </AuthorizeView>
-        </article>
-    </main>
-</div>
+                </article>
+            </main>
+        </div>
+    </Authorized>
+</AuthorizeView>

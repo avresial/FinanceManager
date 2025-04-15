@@ -36,7 +36,7 @@ namespace FinanceManager.Components.Components
             if (loggedUser is not null)
                 Navigation.NavigateTo("");
 
-            var getKeepMeLoggedinSession = await LoginService.GetKeepMeLoggedinSession();
+            var getKeepMeLoggedinSession = await LoginService.GetKeepMeLoggedInSession();
             if (getKeepMeLoggedinSession is not null)
             {
                 var result = await LoginService.Login(getKeepMeLoggedinSession);

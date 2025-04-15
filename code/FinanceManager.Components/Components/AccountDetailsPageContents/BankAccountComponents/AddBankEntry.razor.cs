@@ -97,7 +97,7 @@ public partial class AddBankEntry : ComponentBase
         }
         if (_errors.Length == 0)
         {
-            await AccountDataSynchronizationService.AccountChanged();
+            _ = AccountDataSynchronizationService.AccountChanged();
             if (ActionCompleted is not null)
                 await ActionCompleted();
         }
