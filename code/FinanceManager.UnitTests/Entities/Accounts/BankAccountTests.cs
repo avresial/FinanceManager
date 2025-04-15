@@ -12,7 +12,7 @@ public class BankAccountTests
     }
 
     [Fact]
-    public void UpdateData_ChangeDate()
+    public void UpdateEntry_ChangesPostingDateAndDescription()
     {
         // Arrange
         _bankAccount.Add(new BankAccountEntry(1, 1, new DateTime(2000, 1, 29), 30, 10));
@@ -35,7 +35,7 @@ public class BankAccountTests
     }
 
     [Fact]
-    public void AddSingleEntryWithWrongValue_ValueIsRecalculatedProprely()
+    public void AddEntry_WithZeroValue_RecalculatesValueCorrectly()
     {
         // Arrange
         // Act
@@ -47,4 +47,16 @@ public class BankAccountTests
         Assert.Equal(10, _bankAccount.Get(new DateTime(2000, 1, 1)).First().ValueChange);
     }
 
+    [Fact]
+    public void AddSingleEntry_WithNonExistentDate_ReturnsDefaultValues()
+    {
+        // Arrange
+        // Act
+        _bankAccount.Add(new BankAccountEntry(1, 1, new DateTime(2000, 1, 1), 0, 10));
+
+        // Assert
+        Assert.NotNull(_bankAccount.Entries);
+        Assert.Equal(10, _bankAccount.Get(new DateTime(2001, 1, 1)).First().Value);
+        Assert.Equal(10, _bankAccount.Get(new DateTime(2001, 1, 1)).First().ValueChange);
+    }
 }
