@@ -60,7 +60,7 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             if (typeof(T) == typeof(BankAccount))
             {
-                var availableAccounts = _bankAccountAccountRepository.GetAvailableAccounts(userId);
+                var availableAccounts = _bankAccountAccountRepository.GetAvailableAccounts(userId).Where(x => x.AccountId == accountId);
 
                 foreach (var item in availableAccounts)
                 {

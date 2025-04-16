@@ -378,7 +378,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
 
             if (bankAccount.OlderThenLoadedEntry is not null)
             {
-                var newBankAccount = _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThenLoadedEntry.Value, bankAccount.YoungerThenLoadedEntry.Value.AddSeconds(1));
+                var newBankAccount = _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThenLoadedEntry.Value, bankAccount.OlderThenLoadedEntry.Value.AddSeconds(1));
                 if (newBankAccount is null || newBankAccount.Entries is null) continue;
                 var youngestEntry = newBankAccount.Entries.FirstOrDefault();
                 if (youngestEntry is not null && youngestEntry.Value < 0)
