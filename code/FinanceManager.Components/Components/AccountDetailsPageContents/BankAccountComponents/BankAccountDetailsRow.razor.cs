@@ -57,7 +57,7 @@ public partial class BankAccountDetailsRow
     {
         _updateEntryVisibility = false;
         _removeEntryVisibility = false;
-        await AccountDataSynchronizationService.AccountChanged();
+        //await AccountDataSynchronizationService.AccountChanged();
         await InvokeAsync(StateHasChanged);
     }
 

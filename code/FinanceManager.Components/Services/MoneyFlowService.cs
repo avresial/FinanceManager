@@ -94,8 +94,14 @@ public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
     public async Task<bool> IsAnyAccountWithAssets(int userId)
     {
         if (_httpClient is null) return default;
-
-        return await _httpClient.GetFromJsonAsync<bool>($"{_httpClient.BaseAddress}api/MoneyFlow/IsAnyAccountWithAssets/{userId}");
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<bool>($"{_httpClient.BaseAddress}api/MoneyFlow/IsAnyAccountWithAssets/{userId}");
+        }
+        catch (Exception ex)
+        {
+            return false;
+        }
     }
 
     public async Task<bool> IsAnyAccountWithLiabilities(int userId)

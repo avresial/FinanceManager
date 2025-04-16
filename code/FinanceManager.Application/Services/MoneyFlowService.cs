@@ -338,14 +338,27 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
 
     public async Task<bool> IsAnyAccountWithAssets(int userId)
     {
-        var BankAccounts = _financialAccountService.GetAccounts<BankAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow).ToList();
-        foreach (var bankAccount in BankAccounts)
-        {
-            if (bankAccount.Entries is null) continue;
+        var start = DateTime.UtcNow.AddDays(-1);
+        var end = start.AddDays(1);
 
-            var youngestEntry = bankAccount.Entries.FirstOrDefault();
-            if (youngestEntry is not null && youngestEntry.Value > 0)
-                return true;
+        var bankAccounts = _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
+        foreach (var bankAccount in bankAccounts)
+        {
+            if (bankAccount.Entries is not null && bankAccount.Entries.Count > 0)
+            {
+                var youngestEntry = bankAccount.Entries.FirstOrDefault();
+                if (youngestEntry is not null && youngestEntry.Value > 0)
+                    return true;
+            }
+
+            if (bankAccount.OlderThenLoadedEntry is not null)
+            {
+                var newBankAccount = _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThenLoadedEntry.Value, bankAccount.OlderThenLoadedEntry.Value.AddSeconds(1));
+                if (newBankAccount is null || newBankAccount.Entries is null) continue;
+                var youngestEntry = newBankAccount.Entries.FirstOrDefault();
+                if (youngestEntry is not null && youngestEntry.Value > 0)
+                    return true;
+            }
         }
 
         return await Task.FromResult(false);
@@ -356,11 +369,21 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         var BankAccounts = _financialAccountService.GetAccounts<BankAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow).ToList();
         foreach (var bankAccount in BankAccounts)
         {
-            if (bankAccount.Entries is null) continue;
+            if (bankAccount.Entries is not null && bankAccount.Entries.Count > 0)
+            {
+                var youngestEntry = bankAccount.Entries.FirstOrDefault();
+                if (youngestEntry is not null && youngestEntry.Value < 0)
+                    return true;
+            }
 
-            var youngestEntry = bankAccount.Entries.FirstOrDefault();
-            if (youngestEntry is not null && youngestEntry.Value < 0)
-                return true;
+            if (bankAccount.OlderThenLoadedEntry is not null)
+            {
+                var newBankAccount = _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThenLoadedEntry.Value, bankAccount.YoungerThenLoadedEntry.Value.AddSeconds(1));
+                if (newBankAccount is null || newBankAccount.Entries is null) continue;
+                var youngestEntry = newBankAccount.Entries.FirstOrDefault();
+                if (youngestEntry is not null && youngestEntry.Value < 0)
+                    return true;
+            }
         }
 
         return await Task.FromResult(false);

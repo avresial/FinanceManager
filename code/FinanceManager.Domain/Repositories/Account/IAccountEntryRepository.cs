@@ -14,4 +14,5 @@ public interface IAccountEntryRepository<T>
     bool Add(T entry);
     bool Update(T entry);
     bool Delete(int accountId, int entryId);
+    bool Delete(int accountId);
 }

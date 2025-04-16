@@ -28,6 +28,11 @@ public class InMemoryStockEntryRepository : IAccountEntryRepository<StockAccount
         stockAccount.Remove(entryId);
         return true;
     }
+    public bool Delete(int accountId)
+    {
+        accounts.RemoveAll(x => x.AccountId == accountId);
+        return true;
+    }
     public IEnumerable<StockAccountEntry> Get(int accountId, DateTime startDate, DateTime endDate)
     {
         var stockAccount = accounts.FirstOrDefault(x => x.AccountId == accountId);

@@ -100,7 +100,7 @@ public partial class NavMenu : ComponentBase
         {
             displayAssetsLink = await MoneyFlowService.IsAnyAccountWithAssets(user.UserId);
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
         }
         catch (Exception ex)
