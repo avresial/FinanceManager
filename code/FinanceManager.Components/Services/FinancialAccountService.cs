@@ -146,7 +146,7 @@ public class FinancialAccountService : IFinancialAccountService
         List<AvailableAccount> accounts = (await _bankAccountService.GetAvailableAccountsAsync()).ToList();
         accounts.AddRange((await _stockAccountService.GetAvailableAccountsAsync()).ToList());
 
-        if (!accounts.Any()) return 0;
+        if (accounts.Count == 0) return 0;
 
         return accounts.Max(x => x.AccountId);
     }

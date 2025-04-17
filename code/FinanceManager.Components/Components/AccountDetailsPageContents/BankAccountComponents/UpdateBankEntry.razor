@@ -45,7 +45,7 @@
     private int? loadedEntryId = null;
     private string _currency = string.Empty;
     private bool success;
-    private string[] errors = { };
+    private string[] errors = [];
     private MudForm? form;
 
     private List<string> ExpenseTypes = Enum.GetValues(typeof(ExpenseType)).Cast<ExpenseType>().Select(x => x.ToString()).ToList();
@@ -63,6 +63,8 @@
     [Parameter] public required BankAccountEntry BankAccountEntry { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+
+    [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -103,6 +105,7 @@
                 Description = this.Description is null ? string.Empty : this.Description,
                 ExpenseType = expenseType
             };
+
         try
         {
             await FinancialAccountService.UpdateEntry(bankAccountEntry);
@@ -112,8 +115,13 @@
             errors = [ex.ToString()];
         }
 
-        if (ActionCompleted is not null)
-            await ActionCompleted();
+        if (errors.Length == 0)
+        {
+            await AccountDataSynchronizationService.AccountChanged();
+
+            if (ActionCompleted is not null)
+                await ActionCompleted();
+        }
     }
 
     public async Task Cancel()

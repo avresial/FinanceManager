@@ -19,9 +19,8 @@ public partial class AddAccount : ComponentBase
     };
 
     [Inject] public required ILogger<AddAccount> Logger { get; set; }
-    [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required BankAccountService BankAccountService { get; set; }
-
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 

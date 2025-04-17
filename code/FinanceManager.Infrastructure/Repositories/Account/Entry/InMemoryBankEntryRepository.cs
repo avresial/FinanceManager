@@ -26,6 +26,12 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
         return true;
     }
 
+    public bool Delete(int accountId)
+    {
+        BankAccounts.RemoveAll(x => x.AccountId == accountId);
+        return true;
+    }
+
     public IEnumerable<BankAccountEntry> Get(int accountId, DateTime startDate, DateTime endDate)
     {
         var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
@@ -63,8 +69,8 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
         var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
         if (bankAccount is null || bankAccount.Entries is null) return null;
 
-        return bankAccount.Entries.FirstOrDefault(x => x.PostingDate > date);
-
+        var results = bankAccount.Entries.Where(x => x.PostingDate < date).ToList();
+        return results.FirstOrDefault();
     }
 
     public BankAccountEntry? GetNextYounger(int accountId, int entryId)

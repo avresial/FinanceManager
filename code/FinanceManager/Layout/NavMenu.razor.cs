@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 
@@ -7,10 +8,17 @@ namespace FinanceManager.WebUi.Layout;
 
 public partial class NavMenu : ComponentBase
 {
+    private bool collapseNavMenu = true;
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private bool displayAssetsLink = false;
+    private bool displayLiabilitiesLink = false;
+
+    [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
-    [Inject] public ILogger<NavMenu> Logger { get; set; }
+    [Inject] public required ILogger<NavMenu> Logger { get; set; }
+
 
     public Dictionary<int, string> Accounts = [];
     public string ErrorMessage { get; set; } = string.Empty;
@@ -28,23 +36,36 @@ public partial class NavMenu : ComponentBase
         }
     }
 
-    private void AccountDataSynchronizationService_AccountsChanged()
+    private void ToggleNavMenu()
     {
-        _ = UpdateAccounts();
+        collapseNavMenu = !collapseNavMenu;
     }
-
+    private async void AccountDataSynchronizationService_AccountsChanged()
+    {
+        await UpdateAccounts();
+    }
     private async Task UpdateAccounts()
     {
+        UserSession? user = null;
+
         try
         {
-            var user = await LoginService.GetLoggedUser();
+            user = await LoginService.GetLoggedUser();
             if (user is null) return;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            return;
+        }
+
+        try
+        {
             Accounts.Clear();
 
             var availableAccounts = await FinancialAccountService.GetAvailableAccounts();
             foreach (var account in availableAccounts)
             {
-
                 var name = string.Empty;
                 if (account.Value == typeof(BankAccount))
                 {
@@ -64,13 +85,42 @@ public partial class NavMenu : ComponentBase
                     continue;
                 }
 
-                Accounts.Add(account.Key, name);
+                if (!Accounts.ContainsKey(account.Key))
+                    Accounts.Add(account.Key, name);
             }
-            await InvokeAsync(StateHasChanged);
+
+
         }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
+            Logger.LogError(ex, "Error while getting available accounts");
         }
+        try
+        {
+            displayAssetsLink = await MoneyFlowService.IsAnyAccountWithAssets(user.UserId);
+        }
+        catch (HttpRequestException ex)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while checking if any account with assets");
+            ErrorMessage = ex.Message;
+        }
+        try
+        {
+            displayLiabilitiesLink = await MoneyFlowService.IsAnyAccountWithLiabilities(user.UserId);
+        }
+        catch (HttpRequestException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while checking if any account with liabilities");
+            ErrorMessage = ex.Message;
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 }

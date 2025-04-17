@@ -9,5 +9,5 @@ public interface ILoginService
     Task<bool> Login(UserSession userSession);
     Task Logout();
     Task<UserSession?> GetLoggedUser();
-    Task<UserSession?> GetKeepMeLoggedinSession();
+    Task<UserSession?> GetKeepMeLoggedInSession();
 }

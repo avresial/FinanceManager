@@ -24,6 +24,18 @@ namespace FinanceManager.Api.Controllers
             return Ok(await _moneyFlowService.GetEndAssetsPerType(userId, start, end));
         }
 
+        [HttpGet("IsAnyAccountWithAssets/{userId:int}")]
+        public async Task<IActionResult> IsAnyAccountWithAssets(int userId)
+        {
+            return Ok(await _moneyFlowService.IsAnyAccountWithAssets(userId));
+        }
+
+        [HttpGet("IsAnyAccountWithLiabilities/{userId:int}")]
+        public async Task<IActionResult> IsAnyAccountWithLiabilities(int userId)
+        {
+            return Ok(await _moneyFlowService.IsAnyAccountWithLiabilities(userId));
+        }
+
         [HttpGet("GetAssetsTimeSeries/{userId:int}/{start:DateTime}/{end:DateTime}")]
         public async Task<IActionResult> GetAssetsTimeSeries(int userId, DateTime start, DateTime end)
         {

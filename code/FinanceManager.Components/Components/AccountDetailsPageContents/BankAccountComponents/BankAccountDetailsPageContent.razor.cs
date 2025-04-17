@@ -88,12 +88,8 @@ public partial class BankAccountDetailsPageContent : ComponentBase
     public async Task HideOverlay()
     {
         _addEntryVisibility = false;
-        await UpdateEntries();
-
-        if (_chart is not null)
-            await _chart.RenderAsync();
-
         StateHasChanged();
+        await Task.CompletedTask;
     }
     public async Task UpdateInfo()
     {
@@ -235,10 +231,16 @@ public partial class BankAccountDetailsPageContent : ComponentBase
         if (_youngestEntryDate is not null && _dateStart > _youngestEntryDate)
             _dateStart = new DateTime(_youngestEntryDate.Value.Date.Year, _youngestEntryDate.Value.Date.Month, 1);
     }
-    private async void AccountDataSynchronizationService_AccountsChanged()
+    private void AccountDataSynchronizationService_AccountsChanged()
     {
-        await UpdateEntries();
-        if (_chart is not null) await _chart.RenderAsync();
-        await InvokeAsync(StateHasChanged);
+        _ = Task.Run(async () =>
+          {
+              await InvokeAsync(async () =>
+              {
+                  await UpdateEntries();
+                  if (_chart is not null) await _chart.RenderAsync();
+                  StateHasChanged();
+              });
+          });
     }
 }

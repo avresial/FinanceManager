@@ -55,9 +55,38 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             throw new NotImplementedException();
         }
+
         public T? GetAccount<T>(int userId, int accountId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
         {
-            throw new NotImplementedException();
+            if (typeof(T) == typeof(BankAccount))
+            {
+                var availableAccounts = _bankAccountAccountRepository.GetAvailableAccounts(userId).Where(x => x.AccountId == accountId);
+
+                foreach (var item in availableAccounts)
+                {
+                    var resultAccount = _bankAccountAccountRepository.Get(item.AccountId);
+                    if (resultAccount is null) continue;
+
+                    IEnumerable<BankAccountEntry> entries = _bankAccountEntryRepository.Get(item.AccountId, dateStart, dateEnd).ToList();
+
+                    DateTime? olderThenLoadedEntryDate = null;
+                    var olderEntry = _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
+                    if (olderEntry is not null) olderThenLoadedEntryDate = olderEntry.PostingDate;
+
+                    DateTime? youngerThenLoadedEntryDate = null;
+                    var youngerEntry = _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
+                    if (youngerEntry is not null) youngerThenLoadedEntryDate = youngerEntry.PostingDate;
+
+                    var newResultAccount = new BankAccount(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries,
+                        resultAccount.AccountType, olderThenLoadedEntryDate, youngerThenLoadedEntryDate);
+
+                    resultAccount.Add(entries, false);
+                    if (newResultAccount is T resultElement)
+                        return resultElement;
+                }
+            }
+
+            return null;
         }
         public T? GetAccount<T>(int userId, int id) where T : BasicAccountInformation
         {
@@ -65,6 +94,7 @@ namespace FinanceManager.Infrastructure.Repositories
         }
         public IEnumerable<T> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
         {
+            List<T> result = new();
             if (typeof(T) == typeof(BankAccount))
             {
                 var availableAccounts = _bankAccountAccountRepository.GetAvailableAccounts(userId);
@@ -77,23 +107,23 @@ namespace FinanceManager.Infrastructure.Repositories
                     IEnumerable<BankAccountEntry> entries = _bankAccountEntryRepository.Get(item.AccountId, dateStart, dateEnd).ToList();
 
                     DateTime? olderThenLoadedEntryDate = null;
+                    var olderEntry = _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
+                    if (olderEntry is not null) olderThenLoadedEntryDate = olderEntry.PostingDate;
+
                     DateTime? youngerThenLoadedEntryDate = null;
+                    var youngerEntry = _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
+                    if (youngerEntry is not null) youngerThenLoadedEntryDate = youngerEntry.PostingDate;
 
-                    if (entries.Any())
-                    {
-                        var olderEntry = _bankAccountEntryRepository.GetNextOlder(item.AccountId, entries.Last().EntryId);
-                        if (olderEntry is not null) olderThenLoadedEntryDate = olderEntry.PostingDate;
-
-                        var youngerEntry = _bankAccountEntryRepository.GetNextOlder(item.AccountId, entries.Last().EntryId);
-                        if (youngerEntry is not null) youngerThenLoadedEntryDate = youngerEntry.PostingDate;
-                    }
+                    var newResultAccount = new BankAccount(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries,
+                        resultAccount.AccountType, olderThenLoadedEntryDate, youngerThenLoadedEntryDate);
 
                     resultAccount.Add(entries, false);
-
-                    yield return resultAccount as T;
+                    if (newResultAccount is T resultElement)
+                        result.Add(resultElement);
                 }
             }
 
+            return result;
         }
 
         public void AddAccount<T>(T account) where T : BasicAccountInformation

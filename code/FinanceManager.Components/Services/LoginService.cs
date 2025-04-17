@@ -40,11 +40,11 @@ public class LoginService : ILoginService
     public async Task<UserSession?> GetLoggedUser()
     {
         if (await _localStorageService.ContainKeyAsync(_sessionString))
-            _loggedUser = await GetKeepMeLoggedinSession();
+            _loggedUser = await GetKeepMeLoggedInSession();
 
         return _loggedUser;
     }
-    public async Task<UserSession?> GetKeepMeLoggedinSession()
+    public async Task<UserSession?> GetKeepMeLoggedInSession()
     {
         try
         {
