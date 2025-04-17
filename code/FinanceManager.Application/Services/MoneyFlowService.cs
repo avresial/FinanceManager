@@ -183,19 +183,10 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         for (DateTime i = end; i >= start; i = i.AddDays(-1))
         {
             var assetsToSum = assets.Where(x => x.Item1 == i);
-            if (!assetsToSum.Any())
-            {
-                result.Add(new TimeSeriesModel()
-                {
-                    DateTime = i,
-                    Value = 0,
-                });
-            }
-
-            result.Add(new TimeSeriesModel()
+            result.Add(new TimeSeriesModel
             {
                 DateTime = i,
-                Value = assetsToSum.Sum(x => x.Item2),
+                Value = assetsToSum.Any() ? assetsToSum.Sum(x => x.Item2) : 0,
             });
         }
         return result;
