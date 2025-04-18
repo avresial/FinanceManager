@@ -1,90 +1,76 @@
 using ApexCharts;
-using FinanceManager.Components.Helpers;
-using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Components.Components.Dashboard.Cards
+namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 {
-    public partial class AssetsPerTypeOverviewCard
+    public partial class LiabilityPerTypeOverviewCard
     {
         private string _currency = "";
-        private decimal _totalAssets = 0;
-        private UserSession? _user;
+        private decimal _totalLiabilities = 0;
         private ApexChart<PieChartModel>? _chart;
 
         [Parameter] public string Height { get; set; } = "300px";
         [Parameter] public DateTime StartDateTime { get; set; }
-        [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
-        [Inject] public required ILogger<AssetsPerTypeOverviewCard> Logger { get; set; }
-        [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
+        [Inject] public required ILogger<LiabilityPerTypeOverviewCard> Logger { get; set; }
+        [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+        [Inject] public required ILiabilitiesService LiabilitiesService { get; set; }
         [Inject] public required ISettingsService SettingsService { get; set; }
         [Inject] public required ILoginService LoginService { get; set; }
 
-
         public List<PieChartModel> ChartData { get; set; } = [];
 
-        protected override async Task OnInitializedAsync()
+        protected override void OnInitialized()
         {
-            options.Tooltip = new Tooltip
-            {
-                Y = new TooltipY
-                {
-                    Formatter = ChartHelper.GetCurrencyFormatter(SettingsService.GetCurrency())
-                }
-            };
-
             _currency = SettingsService.GetCurrency();
-
-            await Task.CompletedTask;
         }
+
         protected override async Task OnParametersSetAsync()
         {
-            _user = await LoginService.GetLoggedUser();
-            if (_user is null) return;
+            ChartData.Clear();
+            ChartData.AddRange(await GetData());
 
-            foreach (var dataEntry in ChartData)
-                dataEntry.Value = 0;
-
-            await GetData();
             StateHasChanged();
-
             if (_chart is not null) await _chart.UpdateSeriesAsync(true);
         }
 
-        private async Task GetData()
+        private async Task<List<PieChartModel>> GetData()
         {
             if (StartDateTime == new DateTime())
+                return [];
+
+            var user = await LoginService.GetLoggedUser();
+            if (user is null) return [];
+            List<PieChartModel> result = [];
+            try
             {
-                ChartData.Clear();
-                _totalAssets = 0;
-                return;
+                result = await LiabilitiesService.GetEndLiabilitiesPerType(user.UserId, StartDateTime, DateTime.UtcNow);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error getting assets time series data");
             }
 
-            if (_user is not null)
-            {
-                try
-                {
-                    ChartData = await MoneyFlowService.GetEndAssetsPerType(_user.UserId, StartDateTime, EndDateTime);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex.ToString());
-                }
-            }
+            if (result.Count != 0)
+                _totalLiabilities = result.Sum(x => x.Value);
 
-            _totalAssets = ChartData.Sum(x => x.Value);
+            foreach (var data in result)
+                data.Value *= -1;
+
+            return result;
         }
 
-        private ApexChartOptions<PieChartModel> options { get; set; } = new()
+
+        private ApexChartOptions<PieChartModel> _options { get; set; } = new()
         {
             Chart = new Chart
             {
-                Toolbar = new ApexCharts.Toolbar
+                Toolbar = new Toolbar
                 {
                     Show = false
                 },

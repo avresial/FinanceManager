@@ -2,13 +2,11 @@
 using FinanceManager.Domain.Enums;
 
 namespace FinanceManager.Domain.Services;
-
 public interface IMoneyFlowService
 {
     Task<bool> IsAnyAccountWithAssets(int userId);
-    Task<bool> IsAnyAccountWithLiabilities(int userId);
-    Task<List<AssetEntry>> GetEndAssetsPerAcount(int userId, DateTime start, DateTime end);
-    Task<List<AssetEntry>> GetEndAssetsPerType(int userId, DateTime start, DateTime end);
+    Task<List<PieChartModel>> GetEndAssetsPerAccount(int userId, DateTime start, DateTime end);
+    Task<List<PieChartModel>> GetEndAssetsPerType(int userId, DateTime start, DateTime end);
     Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, DateTime start, DateTime end);
     Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, DateTime start, DateTime end, InvestmentType investmentType);
     Task<decimal?> GetNetWorth(int userId, DateTime date);

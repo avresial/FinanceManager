@@ -12,10 +12,10 @@ namespace FinanceManager.Api.Controllers
     {
         private readonly IMoneyFlowService _moneyFlowService = moneyFlowService;
 
-        [HttpGet("GetEndAssetsPerAcount/{userId:int}/{start:DateTime}/{end:DateTime}")]
-        public async Task<IActionResult> GetEndAssetsPerAcount(int userId, DateTime start, DateTime end)
+        [HttpGet("GetEndAssetsPerAccount/{userId:int}/{start:DateTime}/{end:DateTime}")]
+        public async Task<IActionResult> GetEndAssetsPerAccount(int userId, DateTime start, DateTime end)
         {
-            return Ok(await _moneyFlowService.GetEndAssetsPerAcount(userId, start, end));
+            return Ok(await _moneyFlowService.GetEndAssetsPerAccount(userId, start, end));
         }
 
         [HttpGet("GetEndAssetsPerType/{userId:int}/{start:DateTime}/{end:DateTime}")]
@@ -30,11 +30,6 @@ namespace FinanceManager.Api.Controllers
             return Ok(await _moneyFlowService.IsAnyAccountWithAssets(userId));
         }
 
-        [HttpGet("IsAnyAccountWithLiabilities/{userId:int}")]
-        public async Task<IActionResult> IsAnyAccountWithLiabilities(int userId)
-        {
-            return Ok(await _moneyFlowService.IsAnyAccountWithLiabilities(userId));
-        }
 
         [HttpGet("GetAssetsTimeSeries/{userId:int}/{start:DateTime}/{end:DateTime}")]
         public async Task<IActionResult> GetAssetsTimeSeries(int userId, DateTime start, DateTime end)
