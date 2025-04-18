@@ -14,7 +14,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         private string currency = "";
         private decimal TotalAssets = 0;
         private UserSession? user;
-        private ApexChart<AssetEntry>? chart;
+        private ApexChart<PieChartModel>? chart;
 
         [Parameter]
         public bool DisplayAsChart { get; set; } = true;
@@ -37,7 +37,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         [Inject]
         public required ILoginService loginService { get; set; }
 
-        private ApexChartOptions<AssetEntry> options { get; set; } = new()
+        private ApexChartOptions<PieChartModel> options { get; set; } = new()
         {
             Chart = new Chart
             {
@@ -81,7 +81,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             Colors = ColorsProvider.GetColors()
         };
 
-        public List<AssetEntry> Data { get; set; } = new List<AssetEntry>();
+        public List<PieChartModel> Data { get; set; } = new List<PieChartModel>();
 
 
         protected override async Task OnInitializedAsync()
@@ -129,7 +129,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             {
                 try
                 {
-                    Data.AddRange(await moneyFlowService.GetEndAssetsPerAcount(user.UserId, StartDateTime, DateTime.UtcNow));
+                    Data.AddRange(await moneyFlowService.GetEndAssetsPerAccount(user.UserId, StartDateTime, DateTime.UtcNow));
                 }
                 catch (Exception ex)
                 {

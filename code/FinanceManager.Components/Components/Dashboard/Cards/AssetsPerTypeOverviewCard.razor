@@ -31,8 +31,8 @@
         <div class="h-100">
             @if (ChartData.Any())
             {
-                <ApexChart @ref="_chart" Height="@("100%")" TItem="AssetEntry" Options="options">
-                    <ApexPointSeries TItem="AssetEntry"
+                <ApexChart @ref="_chart" Height="@("100%")" TItem="PieChartModel" Options="options">
+                    <ApexPointSeries TItem="PieChartModel"
                                      Items="ChartData"
                                      Name="Assets"
                                      XValue="e => e.Name"

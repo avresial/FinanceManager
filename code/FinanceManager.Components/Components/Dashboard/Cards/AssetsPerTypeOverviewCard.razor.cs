@@ -14,7 +14,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         private string _currency = "";
         private decimal _totalAssets = 0;
         private UserSession? _user;
-        private ApexChart<AssetEntry>? _chart;
+        private ApexChart<PieChartModel>? _chart;
 
         [Parameter] public string Height { get; set; } = "300px";
 
@@ -27,7 +27,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         [Inject] public required ILoginService LoginService { get; set; }
 
 
-        public List<AssetEntry> ChartData { get; set; } = [];
+        public List<PieChartModel> ChartData { get; set; } = [];
 
         protected override async Task OnInitializedAsync()
         {
@@ -81,7 +81,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             _totalAssets = ChartData.Sum(x => x.Value);
         }
 
-        private ApexChartOptions<AssetEntry> options { get; set; } = new()
+        private ApexChartOptions<PieChartModel> options { get; set; } = new()
         {
             Chart = new Chart
             {

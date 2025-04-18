@@ -35,14 +35,14 @@ public class MoneyFlowControllerTests
         // Arrange
         var startDate = new DateTime(2000, 1, 1);
         var endDate = new DateTime(2000, 2, 1);
-        _mockmoneyFlowService.Setup(repo => repo.GetEndAssetsPerAcount(testUserId, startDate, endDate)).ReturnsAsync([new()]);
+        _mockmoneyFlowService.Setup(repo => repo.GetEndAssetsPerAccount(testUserId, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
-        IActionResult result = await _controller.GetEndAssetsPerAcount(testUserId, startDate, endDate);
+        IActionResult result = await _controller.GetEndAssetsPerAccount(testUserId, startDate, endDate);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<List<AssetEntry>>(okResult.Value);
+        var returnValue = Assert.IsType<List<PieChartModel>>(okResult.Value);
         Assert.Single(returnValue);
     }
 
@@ -59,7 +59,7 @@ public class MoneyFlowControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<List<AssetEntry>>(okResult.Value);
+        var returnValue = Assert.IsType<List<PieChartModel>>(okResult.Value);
         Assert.Single(returnValue);
     }
 

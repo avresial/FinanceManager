@@ -13,15 +13,15 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
     private readonly IFinancalAccountRepository _financialAccountService = bankAccountRepository;
     private readonly IStockRepository _stockRepository = stockRepository;
 
-    public async Task<List<AssetEntry>> GetEndAssetsPerAcount(int userId, DateTime start, DateTime end)
+    public async Task<List<PieChartModel>> GetEndAssetsPerAccount(int userId, DateTime start, DateTime end)
     {
-        List<AssetEntry> result = [];
+        List<PieChartModel> result = [];
         var BankAccounts = _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
         foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
             if (account is null || account.Entries is null) return result;
 
-            result.Add(new AssetEntry()
+            result.Add(new PieChartModel()
             {
                 Name = account.Name,
                 Value = account.Entries.First().Value
@@ -41,7 +41,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
                 var existingResult = result.FirstOrDefault(x => x.Name == account.Name);
                 if (existingResult is null)
                 {
-                    result.Add(new AssetEntry()
+                    result.Add(new PieChartModel()
                     {
                         Name = account.Name,
                         Value = latestEntry.Value * stockPrice.PricePerUnit
@@ -56,9 +56,9 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
 
         return result;
     }
-    public async Task<List<AssetEntry>> GetEndAssetsPerType(int userId, DateTime start, DateTime end)
+    public async Task<List<PieChartModel>> GetEndAssetsPerType(int userId, DateTime start, DateTime end)
     {
-        List<AssetEntry> result = [];
+        List<PieChartModel> result = [];
         var BankAccounts = _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
         foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
@@ -66,7 +66,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
             var existingResult = result.FirstOrDefault(x => x.Name == account.AccountType.ToString());
             if (existingResult is null)
             {
-                result.Add(new AssetEntry()
+                result.Add(new PieChartModel()
                 {
                     Name = account.AccountType.ToString(),
                     Value = account.Entries.First().Value
@@ -91,7 +91,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
                 var existingResult = result.FirstOrDefault(x => x.Name == latestEntry.InvestmentType.ToString());
                 if (existingResult is null)
                 {
-                    result.Add(new AssetEntry()
+                    result.Add(new PieChartModel()
                     {
                         Name = latestEntry.InvestmentType.ToString(),
                         Value = latestEntry.Value * stockPrice.PricePerUnit
@@ -341,8 +341,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
                 if (youngestEntry is not null && youngestEntry.Value > 0)
                     return true;
             }
-
-            if (bankAccount.OlderThenLoadedEntry is not null)
+            else if (bankAccount.OlderThenLoadedEntry is not null)
             {
                 var newBankAccount = _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThenLoadedEntry.Value, bankAccount.OlderThenLoadedEntry.Value.AddSeconds(1));
                 if (newBankAccount is null || newBankAccount.Entries is null) continue;
@@ -355,28 +354,4 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         return await Task.FromResult(false);
     }
 
-    public async Task<bool> IsAnyAccountWithLiabilities(int userId)
-    {
-        var BankAccounts = _financialAccountService.GetAccounts<BankAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow).ToList();
-        foreach (var bankAccount in BankAccounts)
-        {
-            if (bankAccount.Entries is not null && bankAccount.Entries.Count > 0)
-            {
-                var youngestEntry = bankAccount.Entries.FirstOrDefault();
-                if (youngestEntry is not null && youngestEntry.Value < 0)
-                    return true;
-            }
-
-            if (bankAccount.OlderThenLoadedEntry is not null)
-            {
-                var newBankAccount = _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThenLoadedEntry.Value, bankAccount.OlderThenLoadedEntry.Value.AddSeconds(1));
-                if (newBankAccount is null || newBankAccount.Entries is null) continue;
-                var youngestEntry = newBankAccount.Entries.FirstOrDefault();
-                if (youngestEntry is not null && youngestEntry.Value < 0)
-                    return true;
-            }
-        }
-
-        return await Task.FromResult(false);
-    }
 }

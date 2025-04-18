@@ -14,6 +14,7 @@ public partial class NavMenu : ComponentBase
     private bool displayLiabilitiesLink = false;
 
     [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
+    [Inject] public required ILiabilitiesService LiabilitiesService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -110,7 +111,7 @@ public partial class NavMenu : ComponentBase
         }
         try
         {
-            displayLiabilitiesLink = await MoneyFlowService.IsAnyAccountWithLiabilities(user.UserId);
+            displayLiabilitiesLink = await LiabilitiesService.IsAnyAccountWithLiabilities(user.UserId);
         }
         catch (HttpRequestException)
         {

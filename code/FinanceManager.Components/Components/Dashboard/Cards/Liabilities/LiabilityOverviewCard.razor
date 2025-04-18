@@ -20,7 +20,7 @@
         <div class="h-100">
             @if (ChartData.Any())
             {
-                <ApexChart @ref="_chart" Height="@("100%")" TItem="TimeSeriesModel" Options="_options">
+                <ApexChart @ref="_chart" Height="@("100%")" TItem="PieChartModel" Options="_options">
                     @*    <ApexPointTooltip>
                     <div class="m-2">
                         @{
@@ -34,7 +34,7 @@
                 </ApexPointTooltip>
 
                 <ChildContent> *@
-                    <ApexPointSeries TItem="TimeSeriesModel"
+                    <ApexPointSeries TItem="PieChartModel"
                                      Items="ChartData"
                                      Name="Liabilities"
                                      SeriesType="SeriesType.Pie"

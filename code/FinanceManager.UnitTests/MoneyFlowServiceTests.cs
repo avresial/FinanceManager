@@ -59,7 +59,7 @@ public class MoneyFlowServiceTests
         // Arrange
 
         // Act
-        var result = await _moneyFlowService.GetEndAssetsPerAcount(1, _startDate, _endDate);
+        var result = await _moneyFlowService.GetEndAssetsPerAccount(1, _startDate, _endDate);
 
         // Assert
         Assert.Equal(_bankAccounts.Count + _investmentAccountAccounts.Count, result.Count);

@@ -9,15 +9,15 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.Dashboard.Cards
+namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 {
     public partial class LiabilityOverviewCard
     {
         private string _currency = "";
         private decimal _totalLiabilities = 0;
         private UserSession? _user;
-        private ApexChart<TimeSeriesModel>? _chart;
-        private ApexChartOptions<TimeSeriesModel> _options { get; set; } = new()
+        private ApexChart<PieChartModel>? _chart;
+        private ApexChartOptions<PieChartModel> _options { get; set; } = new()
         {
             Chart = new Chart
             {
@@ -26,34 +26,6 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                     Show = false
                 },
             },
-            //Xaxis = new XAxis()
-            //{
-            //    AxisTicks = new AxisTicks()
-            //    {
-            //        Show = false,
-            //    },
-            //    AxisBorder = new AxisBorder()
-            //    {
-            //        Show = false
-            //    },
-            //    Position = XAxisPosition.Bottom,
-            //    Type = XAxisType.Category
-
-            //},
-            //Yaxis = new List<YAxis>()
-            //{
-
-            //    new YAxis
-            //    {
-            //        AxisTicks = new AxisTicks()
-            //        {
-            //            Show = false
-            //        },
-            //        Show = false,
-            //        SeriesName = "NetValue",
-            //        DecimalsInFloat = 0,
-            //    }
-            //},
             Legend = new Legend()
             {
                 Position = LegendPosition.Bottom,
@@ -70,7 +42,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         [Inject] public required ISettingsService SettingsService { get; set; }
         [Inject] public required ILoginService LoginService { get; set; }
 
-        public List<TimeSeriesModel> ChartData { get; set; } = [];
+        public List<PieChartModel> ChartData { get; set; } = [];
 
         protected override void OnInitialized()
         {
@@ -122,11 +94,10 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                     }
                     else
                     {
-                        ChartData.Add(new TimeSeriesModel()
+                        ChartData.Add(new PieChartModel()
                         {
                             Name = account.AccountType.ToString(),
                             Value = -account.Entries!.First().Value,
-                            DateTime = account.Entries!.First().PostingDate
                         });
                     }
                 }
