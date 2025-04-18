@@ -5,23 +5,86 @@ using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Services;
+
 public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository) : ILiabilitiesService
 {
     private readonly IFinancalAccountRepository _financialAccountService = bankAccountRepository;
 
-    public Task<List<PieChartModel>> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end)
+    public async Task<List<PieChartModel>> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end)
     {
-        throw new NotImplementedException();
+        List<PieChartModel> result = [];
+        var BankAccounts = _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
+        foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value <= 0))
+        {
+            if (account is null || account.Entries is null) return result;
+
+            result.Add(new PieChartModel()
+            {
+                Name = account.Name,
+                Value = account.Entries.First().Value
+            });
+        }
+
+
+        return await Task.FromResult(result);
     }
 
-    public Task<List<PieChartModel>> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
+    public async Task<List<PieChartModel>> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
     {
-        throw new NotImplementedException();
+        List<PieChartModel> result = [];
+        var BankAccounts = _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
+        foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value <= 0))
+        {
+            if (account is null || account.Entries is null) return result;
+            var existingResult = result.FirstOrDefault(x => x.Name == account.AccountType.ToString());
+            if (existingResult is null)
+            {
+                result.Add(new PieChartModel()
+                {
+                    Name = account.AccountType.ToString(),
+                    Value = account.Entries.First().Value
+                });
+            }
+            else
+            {
+                existingResult.Value += account.Entries.First().Value;
+            }
+        }
+        return await Task.FromResult(result);
     }
 
-    public Task<List<TimeSeriesModel>> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end)
+    public async Task<List<TimeSeriesModel>> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end)
     {
-        throw new NotImplementedException();
+        if (start == new DateTime()) return [];
+
+        Dictionary<DateTime, decimal> prices = [];
+        TimeSpan step = new TimeSpan(1, 0, 0, 0);
+
+        var BankAccounts = _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
+        foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value <= 0))
+        {
+            if (account is null || account.Entries is null) continue;
+            decimal previousValue = account.Entries.Last().Value - account.Entries.Last().ValueChange;
+
+            for (DateTime date = start; date <= end; date = date.Add(step))
+            {
+                if (!prices.ContainsKey(date)) prices.Add(date, 0);
+
+                var newestEntry = account.Get(date).OrderByDescending(x => x.PostingDate).FirstOrDefault();
+                if (newestEntry is null)
+                {
+                    prices[date] += previousValue;
+                    continue;
+                }
+
+                prices[date] += newestEntry.Value;
+                previousValue = prices[date];
+            }
+        }
+
+        return await Task.FromResult(prices.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value })
+                    .OrderByDescending(x => x.DateTime)
+                    .ToList());
     }
 
     public Task<List<TimeSeriesModel>> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end, InvestmentType investmentType)

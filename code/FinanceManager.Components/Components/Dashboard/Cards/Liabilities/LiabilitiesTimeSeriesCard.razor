@@ -14,7 +14,7 @@
             <ApexChart @ref="_chart" TItem="TimeSeriesModel" Height="150" Options=@_options XAxisType="XAxisType.Datetime">
                 <ApexPointSeries TItem="TimeSeriesModel"
                                  Items="ChartData"
-                                 Name="Assets value"
+                                 Name="Liabilities value"
                                  XValue="e => e.DateTime.ToLocalTime()"
                                  YValue="e=> e.Value"
                                  SeriesType="SeriesType.Area" />

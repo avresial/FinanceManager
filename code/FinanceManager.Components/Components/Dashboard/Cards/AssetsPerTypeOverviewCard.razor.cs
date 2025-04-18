@@ -17,7 +17,6 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         private ApexChart<PieChartModel>? _chart;
 
         [Parameter] public string Height { get; set; } = "300px";
-
         [Parameter] public DateTime StartDateTime { get; set; }
         [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
@@ -31,7 +30,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
         protected override async Task OnInitializedAsync()
         {
-            options.Tooltip = new ApexCharts.Tooltip
+            options.Tooltip = new Tooltip
             {
                 Y = new TooltipY
                 {

@@ -6,7 +6,7 @@
         <div class="card-body">
             <div class="container-fluid d-flex flex-column h-100 px-1">
                 <div class="col px-0">
-                    <h5 class="card-title">Liabilities</h5>
+                    <h5 class="card-title">Liabilities per type</h5>
                     @if (ChartData.Any())
                     {
                         <h6 class="card-subtitle mb-2 text-muted">@_totalLiabilities @_currency</h6>
@@ -20,29 +20,15 @@
         <div class="h-100">
             @if (ChartData.Any())
             {
-                <ApexChart @ref="_chart" Height="@("100%")" TItem="PieChartModel" Options="_options">
-                    @*    <ApexPointTooltip>
-                    <div class="m-2">
-                        @{
-                            var point = context.DataPoint.Items.FirstOrDefault();
-                            if (point is not null)
-                            {
-                                <span class="me-1">@context.DataPoint.X: -@point.Value @_currency</span>
-                            }
-                        }
-                    </div>
-                </ApexPointTooltip>
 
-                <ChildContent> *@
+                <ApexChart @ref="_chart" Height="@("100%")" TItem="PieChartModel" Options="_options">
                     <ApexPointSeries TItem="PieChartModel"
                                      Items="ChartData"
-                                     Name="Liabilities"
+                                     Name="Assets"
+                                     XValue="e => e.Name"
+                                     YAggregate="@(e =>Math.Round( e.Sum(e => e.Value),2))"
                                      SeriesType="SeriesType.Pie"
-                                     XValue="@(e => e.Name)"
-                                     YAggregate="@(e => e.Sum(e => e.Value))"
                                      OrderByDescending="@(e=>e.Y)" />
-                    @* </ChildContent> *@
-
                 </ApexChart>
 
             }

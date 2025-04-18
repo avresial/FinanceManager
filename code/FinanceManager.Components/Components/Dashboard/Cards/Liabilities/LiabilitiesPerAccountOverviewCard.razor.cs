@@ -11,7 +11,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities;
 public partial class LiabilitiesPerAccountOverviewCard
 {
     private string _currency = "";
-    private decimal _totalAssets = 0;
+    private decimal _totalLiabilities = 0;
     private UserSession? _user;
     private ApexChart<PieChartModel>? _chart;
 
@@ -107,7 +107,7 @@ public partial class LiabilitiesPerAccountOverviewCard
     async Task GetData()
     {
         Data.Clear();
-        _totalAssets = 0;
+        _totalLiabilities = 0;
 
         if (StartDateTime == new DateTime())
             return;
@@ -125,7 +125,10 @@ public partial class LiabilitiesPerAccountOverviewCard
         }
 
         if (Data.Count != 0)
-            _totalAssets = Data.Sum(x => x.Value);
+            _totalLiabilities = Data.Sum(x => x.Value);
+
+        foreach (var data in Data)
+            data.Value *= -1;
     }
 
 }

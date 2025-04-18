@@ -15,21 +15,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
         private decimal _totalLiabilities = 0;
         private UserSession? _user;
         private ApexChart<PieChartModel>? _chart;
-        private ApexChartOptions<PieChartModel> _options { get; set; } = new()
-        {
-            Chart = new Chart
-            {
-                Toolbar = new()
-                {
-                    Show = false
-                },
-            },
-            Legend = new Legend()
-            {
-                Position = LegendPosition.Bottom,
-            },
-            Colors = ColorsProvider.GetColors()
-        };
+
 
         [Parameter] public string Height { get; set; } = "300px";
         [Parameter] public DateTime StartDateTime { get; set; }
@@ -43,20 +29,17 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 
         public List<PieChartModel> ChartData { get; set; } = [];
 
-        protected override async Task OnInitializedAsync()
+        protected override void OnInitialized()
         {
             _currency = SettingsService.GetCurrency();
-            var user = await LoginService.GetLoggedUser();
-            if (user is null) return;
-
-            ChartData.Clear();
-            ChartData.AddRange(await GetData());
         }
+
         protected override async Task OnParametersSetAsync()
         {
             ChartData.Clear();
             ChartData.AddRange(await GetData());
 
+            StateHasChanged();
             if (_chart is not null) await _chart.UpdateSeriesAsync(true);
         }
 
@@ -64,20 +47,23 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
         {
             var user = await LoginService.GetLoggedUser();
             if (user is null) return [];
-
+            List<PieChartModel> result = [];
             try
             {
-                return await LiabilitiesService.GetEndLiabilitiesPerType(user.UserId, StartDateTime, DateTime.UtcNow);
+                result = await LiabilitiesService.GetEndLiabilitiesPerType(user.UserId, StartDateTime, DateTime.UtcNow);
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error getting assets time series data");
             }
 
-            foreach (var dataEntry in ChartData)
-                dataEntry.Value = 0;
+            if (result.Count != 0)
+                _totalLiabilities = result.Sum(x => x.Value);
 
-            return [];
+            foreach (var data in result)
+                data.Value *= -1;
+
+            return result;
         }
 
         //private async Task GetData()
@@ -121,6 +107,48 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 
         //    if (_chart is not null) await _chart.UpdateSeriesAsync();
         //}
+        private ApexChartOptions<PieChartModel> _options { get; set; } = new()
+        {
+            Chart = new Chart
+            {
+                Toolbar = new ApexCharts.Toolbar
+                {
+                    Show = false
+                },
+            },
+            Xaxis = new XAxis()
+            {
+                AxisTicks = new AxisTicks()
+                {
+                    Show = false,
+                },
+                AxisBorder = new AxisBorder()
+                {
+                    Show = false
+                },
+                Position = XAxisPosition.Bottom,
+                Type = XAxisType.Category
 
+            },
+            Yaxis = new List<YAxis>()
+            {
+
+                new YAxis
+                {
+                    AxisTicks = new AxisTicks()
+                    {
+                        Show = false
+                    },
+                    Show = false,
+                    SeriesName = "NetValue",
+                    DecimalsInFloat = 0,
+                }
+            },
+            Legend = new Legend()
+            {
+                Position = LegendPosition.Bottom,
+            },
+            Colors = ColorsProvider.GetColors()
+        };
     }
 }
