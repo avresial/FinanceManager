@@ -141,7 +141,6 @@ public class BankAccountControllerTests
     public async Task AddEntry_ReturnsOkResult_WithNewEntry()
     {
         // Arrange
-        var userId = 1;
         var addEntry = new AddBankAccountEntry(new BankAccountEntry(1, 1, DateTime.Now, 100, 0));
         _mockBankAccountEntryRepository.Setup(repo => repo.Add(addEntry.entry)).Returns(true);
 
