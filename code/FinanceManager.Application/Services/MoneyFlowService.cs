@@ -291,7 +291,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
             }
         }
 
-        return result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList();
+        return await Task.FromResult(result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList());
     }
 
     public async Task<List<TimeSeriesModel>> GetSpending(int userId, DateTime start, DateTime end, TimeSpan? step = null)
@@ -324,7 +324,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
             }
         }
 
-        return result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList();
+        return await Task.FromResult(result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList());
     }
 
     public async Task<bool> IsAnyAccountWithAssets(int userId)

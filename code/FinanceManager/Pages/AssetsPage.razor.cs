@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.WebUi.Pages;
 
-public partial class Assets
+public partial class AssetsPage
 {
     private const int _unitHeight = 190;
 

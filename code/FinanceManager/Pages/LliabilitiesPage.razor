@@ -10,49 +10,24 @@
 
 <PageTitle>Liabilities</PageTitle>
 
-<div class="container mt-2">
+<MudContainer>
     <MudGrid Spacing="2">
         <MudItem xs="12">
-            <MudItem xs="12">
-                <MudCard style="@($"height:{UnitHeight}px;")" Elevation="0" Outlined>
-                    <MudCardHeader class="pb-1 pt-2">
-                        <CardHeaderContent>
-                            <MudText Typo="Typo.h6">Total liabilities over time</MudText>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent Class="py-0">
-                        <MudSkeleton Width="100%" Height="100%" />
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
+            <LiabilitiesTimeSeriesCard StartDateTime="DateTime.UtcNow.AddMonths(-1)" />
         </MudItem>
 
-        <MudItem xs="12" md="12" lg="8">
-            <MudCard style="@($"height:{1.5 * UnitHeight}px;")" Elevation="0" Outlined>
-                <MudCardContent>
-                    <MudSkeleton Width="30%" Height="42px;" />
-                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="160px" />
-                    <MudSkeleton Width="80%" />
-                </MudCardContent>
-            </MudCard>
+        <MudItem xs="12" lg="4">
+            <LiabilityPerTypeOverviewCard StartDateTime="@DateTime.Now.AddMonths(-1)" Height="@($"{1.5 * _unitHeight}px")" />
         </MudItem>
 
-        <MudItem xs="12" md="6" lg="4">
-            <LiabilityOverviewCard StartDateTime="@DateTime.Now.AddMonths(-1)" Height="@($"{1.5 * UnitHeight}px")" />
+        <MudItem xs="12" lg="4">
+            <LiabilitiesPerAccountOverviewCard Height="@($"{1.5 * _unitHeight}px")" StartDateTime="DateTime.UtcNow.AddMonths(-1)" />
         </MudItem>
 
-        @for (int i = 0; i < 3; i++)
-        {
-            <MudItem xs="12" md="6" lg="4">
-                <MudCard style="@($"height:{1.5 * UnitHeight}px;")" Elevation="0" Outlined>
-                    <MudCardContent>
-                        <MudSkeleton Width="30%" Height="42px;" />
-                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="160px" />
-                        <MudSkeleton Width="80%" />
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-        }
+        <MudItem xs="12" lg="4">
+            <LiabilitiesPerAccountOverviewCard DisplayAsChart="false" Height="@($"{1.5 * _unitHeight}px")" StartDateTime="DateTime.UtcNow.AddMonths(-1)" />
+        </MudItem>
+
     </MudGrid>
-</div>
+</MudContainer>
 

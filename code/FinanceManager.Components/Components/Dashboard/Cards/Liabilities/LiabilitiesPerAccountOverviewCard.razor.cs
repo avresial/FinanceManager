@@ -7,9 +7,8 @@ using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Components.Components.Dashboard.Cards;
-
-public partial class AssetsPerAccountOverviewCard
+namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities;
+public partial class LiabilitiesPerAccountOverviewCard
 {
     private string _currency = "";
     private decimal _totalAssets = 0;
@@ -20,12 +19,12 @@ public partial class AssetsPerAccountOverviewCard
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
 
-    [Inject] public required ILogger<AssetsPerAccountOverviewCard> Logger { get; set; }
-    [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
+    [Inject] public required ILogger<LiabilitiesPerAccountOverviewCard> Logger { get; set; }
+    [Inject] public required ILiabilitiesService LiabilitiesService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    private ApexChartOptions<PieChartModel> Options { get; set; } = new()
+    private ApexChartOptions<PieChartModel> _options { get; set; } = new()
     {
         Chart = new Chart
         {
@@ -74,7 +73,7 @@ public partial class AssetsPerAccountOverviewCard
 
     protected override async Task OnInitializedAsync()
     {
-        Options.Tooltip = new Tooltip
+        _options.Tooltip = new Tooltip
         {
             Y = new TooltipY
             {
@@ -117,7 +116,7 @@ public partial class AssetsPerAccountOverviewCard
         {
             try
             {
-                Data.AddRange(await MoneyFlowService.GetEndAssetsPerAccount(_user.UserId, StartDateTime, DateTime.UtcNow));
+                Data.AddRange(await LiabilitiesService.GetEndLiabilitiesPerAccount(_user.UserId, StartDateTime, DateTime.UtcNow));
             }
             catch (Exception ex)
             {
@@ -128,4 +127,5 @@ public partial class AssetsPerAccountOverviewCard
         if (Data.Count != 0)
             _totalAssets = Data.Sum(x => x.Value);
     }
+
 }

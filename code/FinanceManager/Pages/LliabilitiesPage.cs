@@ -7,7 +7,7 @@ using MudBlazor;
 namespace FinanceManager.WebUi.Pages;
 public partial class LliabilitiesPage
 {
-    private const int UnitHeight = 190;
+    private const int _unitHeight = 190;
 
     public decimal TotalLiabilities;
     public DateTime StartDateTime { get; set; }
