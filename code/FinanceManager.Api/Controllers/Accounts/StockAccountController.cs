@@ -67,8 +67,8 @@ namespace FinanceManager.Api.Controllers.Accounts
                 AccountId = account.AccountId,
                 UserId = account.UserId,
                 Name = account.Name,
-                OlderThenLoadedEntry = account.OlderThenLoadedEntry,
-                YoungerThenLoadedEntry = account.YoungerThenLoadedEntry,
+                OlderThenLoadedEntry = account.OlderThanLoadedEntry,
+                YoungerThenLoadedEntry = account.YoungerThanLoadedEntry,
                 Entries = entries.Select(x => new StockAccountEntryDto
                 {
                     Ticker = x.Ticker,

@@ -1,6 +1,5 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
@@ -28,7 +27,6 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
 
         return await Task.FromResult(result);
     }
-
     public async Task<List<PieChartModel>> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
     {
         List<PieChartModel> result = [];
@@ -52,7 +50,6 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
         }
         return await Task.FromResult(result);
     }
-
     public async Task<List<TimeSeriesModel>> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end)
     {
         if (start == new DateTime()) return [];
@@ -86,13 +83,6 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
                     .OrderByDescending(x => x.DateTime)
                     .ToList());
     }
-
-    public Task<List<TimeSeriesModel>> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end, InvestmentType investmentType)
-    {
-        throw new NotImplementedException();
-    }
-
-
     public async Task<bool> IsAnyAccountWithLiabilities(int userId)
     {
         var BankAccounts = _financialAccountService.GetAccounts<BankAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow).ToList();
@@ -104,9 +94,9 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
                 if (youngestEntry is not null && youngestEntry.Value < 0)
                     return true;
             }
-            else if (bankAccount.OlderThenLoadedEntry is not null)
+            else if (bankAccount.OlderThanLoadedEntry is not null)
             {
-                var newBankAccount = _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThenLoadedEntry.Value, bankAccount.OlderThenLoadedEntry.Value.AddSeconds(1));
+                var newBankAccount = _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThanLoadedEntry.Value, bankAccount.OlderThanLoadedEntry.Value.AddSeconds(1));
                 if (newBankAccount is null || newBankAccount.Entries is null) continue;
                 var youngestEntry = newBankAccount.Entries.FirstOrDefault();
                 if (youngestEntry is not null && youngestEntry.Value < 0)

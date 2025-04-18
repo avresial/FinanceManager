@@ -198,10 +198,10 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         var BankAccounts = _financialAccountService.GetAccounts<BankAccount>(userId, date.Date, date).ToList();
         foreach (var bankAccount in BankAccounts)
         {
-            if (bankAccount.OlderThenLoadedEntry is null) continue;
+            if (bankAccount.OlderThanLoadedEntry is null) continue;
             if (bankAccount.Entries is null) continue;
 
-            var newBankAccount = _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThenLoadedEntry.Value, bankAccount.OlderThenLoadedEntry.Value.AddSeconds(1));
+            var newBankAccount = _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThanLoadedEntry.Value, bankAccount.OlderThanLoadedEntry.Value.AddSeconds(1));
             if (newBankAccount is not null && newBankAccount.Entries is not null)
                 bankAccount.Add(newBankAccount.Entries, false);
         }
@@ -209,7 +209,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         var InvestmentAccounts = _financialAccountService.GetAccounts<StockAccount>(userId, date.Date, date);
         foreach (var investmentAccount in InvestmentAccounts)
         {
-            foreach (var item in investmentAccount.OlderThenLoadedEntry)
+            foreach (var item in investmentAccount.OlderThanLoadedEntry)
             {
                 if (investmentAccount.Entries is null) continue;
                 if (investmentAccount.Entries.Any(x => x.Ticker == item.Key)) continue;
@@ -341,9 +341,9 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
                 if (youngestEntry is not null && youngestEntry.Value > 0)
                     return true;
             }
-            else if (bankAccount.OlderThenLoadedEntry is not null)
+            else if (bankAccount.OlderThanLoadedEntry is not null)
             {
-                var newBankAccount = _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThenLoadedEntry.Value, bankAccount.OlderThenLoadedEntry.Value.AddSeconds(1));
+                var newBankAccount = _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThanLoadedEntry.Value, bankAccount.OlderThanLoadedEntry.Value.AddSeconds(1));
                 if (newBankAccount is null || newBankAccount.Entries is null) continue;
                 var youngestEntry = newBankAccount.Entries.FirstOrDefault();
                 if (youngestEntry is not null && youngestEntry.Value > 0)

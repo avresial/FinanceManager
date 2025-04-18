@@ -61,14 +61,14 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
 
         IEnumerable<BankAccountEntry> entries = _bankAccountEntryRepository.Get(accountId, startDate, endDate);
 
-        DateTime? olderThenLoadedEntryDate = null;
-        DateTime? youngerThenLoadedEntryDate = null;
+        DateTime? olderThanLoadedEntryDate = null;
+        DateTime? youngerThanLoadedEntryDate = null;
 
         var olderEntry = _bankAccountEntryRepository.GetNextOlder(accountId, startDate);
-        if (olderEntry is not null) olderThenLoadedEntryDate = olderEntry.PostingDate;
+        if (olderEntry is not null) olderThanLoadedEntryDate = olderEntry.PostingDate;
 
         var youngerEntry = _bankAccountEntryRepository.GetNextYounger(accountId, endDate);
-        if (youngerEntry is not null) youngerThenLoadedEntryDate = youngerEntry.PostingDate;
+        if (youngerEntry is not null) youngerThanLoadedEntryDate = youngerEntry.PostingDate;
 
         BankAccountDto bankAccountDto = new()
         {
@@ -76,8 +76,8 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
             UserId = account.UserId,
             Name = account.Name,
             AccountType = account.AccountType,
-            OlderThenLoadedEntry = olderThenLoadedEntryDate,
-            YoungerThenLoadedEntry = youngerThenLoadedEntryDate,
+            OlderThanLoadedEntry = olderThanLoadedEntryDate,
+            YoungerThanLoadedEntry = youngerThanLoadedEntryDate,
             Entries = entries.Select(x => new BankAccountEntryDto
             {
                 AccountId = x.AccountId,

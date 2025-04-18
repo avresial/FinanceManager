@@ -24,7 +24,7 @@
                 <ApexChart @ref="_chart" Height="@("100%")" TItem="PieChartModel" Options="_options">
                     <ApexPointSeries TItem="PieChartModel"
                                      Items="ChartData"
-                                     Name="Assets"
+                                     Name="Liabilities"
                                      XValue="e => e.Name"
                                      YAggregate="@(e =>Math.Round( e.Sum(e => e.Value),2))"
                                      SeriesType="SeriesType.Pie"

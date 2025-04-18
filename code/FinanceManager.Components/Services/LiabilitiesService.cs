@@ -1,6 +1,5 @@
 ﻿using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using System.Net.Http.Json;
 
@@ -17,7 +16,6 @@ public class LiabilitiesService(HttpClient httpClient) : ILiabilitiesService
         if (result is not null) return result;
         return [];
     }
-
     public async Task<List<PieChartModel>> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
     {
         if (_httpClient is null) return [];
@@ -26,7 +24,6 @@ public class LiabilitiesService(HttpClient httpClient) : ILiabilitiesService
         if (result is not null) return result;
         return [];
     }
-
     public async Task<List<TimeSeriesModel>> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end)
     {
         if (_httpClient is null) return [];
@@ -34,12 +31,6 @@ public class LiabilitiesService(HttpClient httpClient) : ILiabilitiesService
         if (result is not null) return result;
         return [];
     }
-
-    public Task<List<TimeSeriesModel>> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end, InvestmentType investmentType)
-    {
-        throw new NotImplementedException();
-    }
-
     public async Task<bool> IsAnyAccountWithLiabilities(int userId)
     {
         if (_httpClient is null) return default;

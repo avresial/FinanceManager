@@ -1,6 +1,5 @@
 using ApexCharts;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
@@ -13,13 +12,10 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
     {
         private string _currency = "";
         private decimal _totalLiabilities = 0;
-        private UserSession? _user;
         private ApexChart<PieChartModel>? _chart;
-
 
         [Parameter] public string Height { get; set; } = "300px";
         [Parameter] public DateTime StartDateTime { get; set; }
-
 
         [Inject] public required ILogger<LiabilityPerTypeOverviewCard> Logger { get; set; }
         [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
@@ -45,6 +41,9 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 
         private async Task<List<PieChartModel>> GetData()
         {
+            if (StartDateTime == new DateTime())
+                return [];
+
             var user = await LoginService.GetLoggedUser();
             if (user is null) return [];
             List<PieChartModel> result = [];
@@ -66,52 +65,12 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
             return result;
         }
 
-        //private async Task GetData()
-        //{
-        //    await Task.Run(async () =>
-        //    {
-        //        IEnumerable<BankAccount> bankAccounts = [];
-        //        if (_user is not null)
-        //        {
-        //            try
-        //            {
-        //                bankAccounts = await FinancialAccountService.GetAccounts<BankAccount>(_user.UserId, StartDateTime, DateTime.Now);
-        //            }
-        //            catch (Exception e)
-        //            {
-        //                Logger.LogError(e, "Error while getting bank accounts");
-        //            }
-        //        }
 
-        //        bankAccounts = bankAccounts.Where(x => x.Entries is not null && x.Entries.Any() && x.Entries.First().Value <= 0).ToList();
-        //        _totalLiabilities = bankAccounts.Sum(x => x.Entries!.OrderByDescending(x => x.PostingDate).First().Value);
-
-        //        foreach (var account in bankAccounts)
-        //        {
-        //            var dataEntry = ChartData.FirstOrDefault(x => x.Name == account.AccountType.ToString());
-
-        //            if (dataEntry is not null)
-        //            {
-        //                dataEntry.Value += Math.Abs(account.Entries!.First().Value);
-        //            }
-        //            else
-        //            {
-        //                ChartData.Add(new PieChartModel()
-        //                {
-        //                    Name = account.AccountType.ToString(),
-        //                    Value = -account.Entries!.First().Value,
-        //                });
-        //            }
-        //        }
-        //    });
-
-        //    if (_chart is not null) await _chart.UpdateSeriesAsync();
-        //}
         private ApexChartOptions<PieChartModel> _options { get; set; } = new()
         {
             Chart = new Chart
             {
-                Toolbar = new ApexCharts.Toolbar
+                Toolbar = new Toolbar
                 {
                     Show = false
                 },

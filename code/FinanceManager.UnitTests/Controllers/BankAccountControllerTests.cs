@@ -88,26 +88,26 @@ public class BankAccountControllerTests
     }
 
     [Fact]
-    public async Task Get_NoEntriesWithinDates_ReturnsOkResult_WithOlderThenLoaded()
+    public async Task Get_NoEntriesWithinDates_ReturnsOkResult_WithOlderThanLoaded()
     {
         // Arrange
         DateTime startDate = new(2000, 1, 1);
         DateTime endDate = new(2000, 2, 1);
-        DateTime olderThenLoadedDate = startDate.AddYears(-1);
-        DateTime youngerThenLoadedDate = endDate.AddYears(1);
+        DateTime olderThanLoadedDate = startDate.AddYears(-1);
+        DateTime youngerThanLoadedDate = endDate.AddYears(1);
 
         var userId = 1;
         var accountId = 1;
         var account = new BankAccount(userId, accountId, "Test Account");
-        BankAccountEntry bankAccountEntry = new(accountId, 1, olderThenLoadedDate, 1, 0);
+        BankAccountEntry bankAccountEntry = new(accountId, 1, olderThanLoadedDate, 1, 0);
 
         _mockBankAccountRepository.Setup(repo => repo.Get(accountId)).Returns(account);
         _mockBankAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns([]);
         _mockBankAccountEntryRepository.Setup(repo => repo.GetNextOlder(accountId, startDate))
-            .Returns(new BankAccountEntry(accountId, 1, olderThenLoadedDate, 1, 0));
+            .Returns(new BankAccountEntry(accountId, 1, olderThanLoadedDate, 1, 0));
 
         _mockBankAccountEntryRepository.Setup(repo => repo.GetNextYounger(accountId, endDate))
-            .Returns(new BankAccountEntry(accountId, 1, youngerThenLoadedDate, 1, 0));
+            .Returns(new BankAccountEntry(accountId, 1, youngerThanLoadedDate, 1, 0));
 
         // Act
         var result = await _controller.Get(accountId, startDate, endDate);
@@ -116,8 +116,8 @@ public class BankAccountControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         var returnValue = Assert.IsType<BankAccountDto>(okResult.Value);
         Assert.Equal(accountId, returnValue.AccountId);
-        Assert.Equal(olderThenLoadedDate, returnValue.OlderThenLoadedEntry);
-        Assert.Equal(youngerThenLoadedDate, returnValue.YoungerThenLoadedEntry);
+        Assert.Equal(olderThanLoadedDate, returnValue.OlderThanLoadedEntry);
+        Assert.Equal(youngerThanLoadedDate, returnValue.YoungerThanLoadedEntry);
     }
 
     [Fact]
