@@ -1,136 +1,158 @@
-﻿using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Repositories.Account;
 
 namespace FinanceManager.Infrastructure.Repositories.Account.Entry;
+
 public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEntry>
 {
-    private List<BankAccount> BankAccounts = [];
+    private readonly List<BankAccountEntry> _entries = [];
+
     public bool Add(BankAccountEntry entry)
     {
-        BankAccount? bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == entry.AccountId);
-        if (bankAccount is null)
+        BankAccountEntry newBankAccountEntry = new(entry.AccountId, GetHighestEntry() + 1, entry.PostingDate, entry.Value, entry.ValueChange)
         {
-            bankAccount = new BankAccount(1, entry.AccountId, "", Domain.Enums.AccountType.Other);
-            BankAccounts.Add(bankAccount);
-        }
-        bankAccount.AddEntry(new AddBankEntryDto(entry.PostingDate, entry.ValueChange, entry.ExpenseType, entry.Description));
+            Description = entry.Description,
+            ExpenseType = entry.ExpenseType
+        };
+
+        _entries.Add(newBankAccountEntry);
+
+        RecalculateValues(newBankAccountEntry.AccountId, newBankAccountEntry.EntryId);
         return true;
     }
 
     public bool Delete(int accountId, int entryId)
     {
-        var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
-        if (bankAccount is null) return false;
-        bankAccount.Remove(entryId);
+        var entryToDelete = _entries.FirstOrDefault(x => x.AccountId == accountId && x.EntryId == entryId);
+        if (entryToDelete == null) return false;
+
+        _entries.Remove(entryToDelete);
+        RecalculateValues(entryToDelete.AccountId, entryToDelete.PostingDate);
         return true;
     }
 
     public bool Delete(int accountId)
     {
-        BankAccounts.RemoveAll(x => x.AccountId == accountId);
+        _entries.RemoveAll(x => x.AccountId == accountId);
         return true;
     }
 
     public IEnumerable<BankAccountEntry> Get(int accountId, DateTime startDate, DateTime endDate)
     {
-        var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
-        if (bankAccount is null) return [];
-        return bankAccount.Get(startDate, endDate);
+        return _entries
+            .Where(x => x.AccountId == accountId && x.PostingDate >= startDate && x.PostingDate <= endDate)
+            .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId);
     }
 
     public int? GetCount(int accountId)
     {
-        var account = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
-        if (account is null || account.Entries is null) return null;
-
-        return account.Entries.Count;
+        return _entries.Count(x => x.AccountId == accountId);
     }
 
     public BankAccountEntry? GetNextOlder(int accountId, int entryId)
     {
-        var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
-        if (bankAccount is null || bankAccount.Entries is null) return null;
+        var existingEntry = _entries.FirstOrDefault(x => x.AccountId == accountId && x.EntryId == entryId);
+        if (existingEntry == null) return default;
 
-        var entriesDescending = bankAccount.Entries.OrderByDescending(x => x.PostingDate).ToList();
-
-        var entry = entriesDescending.FirstOrDefault(x => x.EntryId == entryId);
-        if (entry is null) return null;
-
-        var entryIndex = entriesDescending.IndexOf(entry);
-        if (entriesDescending.Count - 1 >= entryIndex + 1)
-            return entriesDescending[entryIndex + 1];
-
-        return null;
+        return _entries
+            .Where(x => x.AccountId == accountId && x.PostingDate < existingEntry.PostingDate)
+            .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
+            .FirstOrDefault();
     }
 
     public BankAccountEntry? GetNextOlder(int accountId, DateTime date)
     {
-        var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
-        if (bankAccount is null || bankAccount.Entries is null) return null;
-
-        var results = bankAccount.Entries.Where(x => x.PostingDate < date).ToList();
-        return results.FirstOrDefault();
+        return _entries
+             .Where(x => x.AccountId == accountId && x.PostingDate < date)
+             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
+             .FirstOrDefault();
     }
 
     public BankAccountEntry? GetNextYounger(int accountId, int entryId)
     {
-        var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
-        if (bankAccount is null || bankAccount.Entries is null) return null;
+        var existingEntry = _entries.FirstOrDefault(x => x.AccountId == accountId && x.EntryId == entryId);
+        if (existingEntry == null) return default;
 
-        var entry = bankAccount.Entries.FirstOrDefault(x => x.EntryId == entryId);
-        if (entry is null) return null;
+        return _entries
+            .Where(x => x.AccountId == accountId && x.PostingDate > existingEntry.PostingDate)
+            .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
+            .LastOrDefault();
 
-        var entriesDescending = bankAccount.Entries.OrderByDescending(x => x.PostingDate).ToList();
-
-        var entryIndex = entriesDescending.IndexOf(entry);
-        if (entryIndex == 0) return null;
-        if (entriesDescending.Count - 1 >= entryIndex - 1)
-            return entriesDescending[entryIndex - 1];
-
-        return null;
     }
 
     public BankAccountEntry? GetNextYounger(int accountId, DateTime date)
     {
-        var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
-        if (bankAccount is null || bankAccount.Entries is null) return null;
-
-        return bankAccount.Entries.LastOrDefault(x => x.PostingDate < date);
+        return _entries
+            .Where(x => x.AccountId == accountId && x.PostingDate > date)
+            .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
+            .LastOrDefault();
     }
 
     public BankAccountEntry? GetOldest(int accountId)
     {
-        var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
-        if (bankAccount is null) return null;
-        if (bankAccount.Entries is null || !bankAccount.Entries.Any()) return null;
-        var maxDate = bankAccount.Entries.Min(x => x.PostingDate);
-
-        return bankAccount.Entries.First(x => x.PostingDate == maxDate);
+        return _entries
+            .Where(x => x.AccountId == accountId)
+            .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
+            .LastOrDefault();
     }
 
     public BankAccountEntry? GetYoungest(int accountId)
     {
-        var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == accountId);
-        if (bankAccount is null) return null;
-        if (bankAccount.Entries is null || !bankAccount.Entries.Any()) return null;
-        var minDate = bankAccount.Entries.Max(x => x.PostingDate);
-
-        return bankAccount.Entries.First(x => x.PostingDate == minDate);
+        return _entries
+            .Where(x => x.AccountId == accountId)
+            .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
+            .FirstOrDefault();
     }
 
     public bool Update(BankAccountEntry entry)
     {
-        var bankAccount = BankAccounts.FirstOrDefault(x => x.AccountId == entry.AccountId);
-        if (bankAccount is null) return false;
-        if (bankAccount.Entries is null || !bankAccount.Entries.Any()) return false;
-        var entryToUpdate = bankAccount.Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
+        var existingEntry = _entries.FirstOrDefault(x => x.AccountId == entry.AccountId && x.EntryId == entry.EntryId);
+        if (existingEntry == null) return false;
 
-        if (entryToUpdate is null) return false;
-
-        //entryToUpdate.Update(entry);
-        bankAccount.UpdateEntry(entry);
-
+        existingEntry.Update(entry);
+        RecalculateValues(entry.AccountId, entry.EntryId);
         return true;
+    }
+
+    private void RecalculateValues(int accountId, int entryId)
+    {
+        var entry = _entries.FirstOrDefault(x => x.AccountId == accountId && x.EntryId == entryId);
+        if (entry == null) return;
+        var entriesToUpdate = Get(accountId, entry.PostingDate, DateTime.UtcNow);
+        BankAccountEntry? previousEntry = GetNextOlder(accountId, entry.PostingDate);
+
+        foreach (var entryToUpdate in entriesToUpdate.OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
+        {
+            if (previousEntry is not null)
+                entryToUpdate.Value = previousEntry.Value + entryToUpdate.ValueChange;
+            else
+                entryToUpdate.Value = entryToUpdate.ValueChange;
+
+            previousEntry = entryToUpdate;
+        }
+    }
+
+    private void RecalculateValues(int accountId, DateTime startDate)
+    {
+        var entriesToUpdate = Get(accountId, startDate, DateTime.UtcNow);
+        BankAccountEntry? previousEntry = GetNextOlder(accountId, startDate);
+
+        foreach (var entryToUpdate in entriesToUpdate.OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
+        {
+            if (previousEntry is not null)
+                entryToUpdate.Value = previousEntry.Value + entryToUpdate.ValueChange;
+            else
+                entryToUpdate.Value = entryToUpdate.ValueChange;
+
+            previousEntry = entryToUpdate;
+        }
+    }
+
+    private int GetHighestEntry()
+    {
+        return _entries
+            .Select(x => x.EntryId)
+            .DefaultIfEmpty(0)
+            .Max();
     }
 }
