@@ -121,13 +121,13 @@ public partial class BankAccountDetailsPageContent : ComponentBase
         _dateStart = _dateStart.AddMonths(-1);
         if (_user is null) return;
 
-        var newData = await FinancialAccountService.GetAccount<BankAccount>(_user.UserId, AccountId, _dateStart, Account.Start.Value);
+        Account = await FinancialAccountService.GetAccount<BankAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
 
-        if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
-            return;
+        //if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
+        //return;
 
-        var newEntriesWithoutOldest = newData.Entries.Skip(1);
-        Account.Add(newEntriesWithoutOldest, false);
+        //var newEntriesWithoutOldest = newData.Entries.Skip(1);
+        //Account.Add(newEntriesWithoutOldest, false);
         UpdateChartData();
 
         if (_chart is not null) await _chart.RenderAsync();
@@ -210,15 +210,17 @@ public partial class BankAccountDetailsPageContent : ComponentBase
         decimal previousValue = 0;
         for (DateTime date = _dateStart; date <= _dateEnd; date = date.AddDays(1))
         {
-            var entries = Account.Entries.Where(x => x.PostingDate.Date == date.Date);
-            var value = entries.Sum(x => x.Value);
+            var entries = Account.Entries.Where(x => x.PostingDate.Date == date.Date).ToList();
+
+            decimal value = 0;
+            if (entries.Count != 0) value = entries.Max(x => x.Value);
 
             TimeSeriesModel timeSeriesModel = new()
             {
                 DateTime = date,
-                Value = entries.Any() ? value : previousValue,
+                Value = entries.Count != 0 ? value : previousValue,
             };
-            if (entries.Any()) previousValue = value;
+            if (entries.Count != 0) previousValue = value;
 
             ChartData.Add(timeSeriesModel);
         }

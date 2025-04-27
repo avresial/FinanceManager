@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.Entities.Accounts
@@ -37,8 +38,9 @@ namespace FinanceManager.Domain.Entities.Accounts
             var alreadyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
             if (alreadyExistingEntry is not null)
             {
-                throw new Exception($"Entry already exist, can not be added - Posting date: {alreadyExistingEntry.PostingDate}, " +
-                    $"Value change: {alreadyExistingEntry.ValueChange}");
+                Debug.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alreadyExistingEntry.EntryId}, Posting date{alreadyExistingEntry.PostingDate}, Value change {alreadyExistingEntry.ValueChange}");
+                //throw new Exception($"Entry already exist, can not be added - Posting date: {alreadyExistingEntry.PostingDate}, " +
+                //    $"Value change: {alreadyExistingEntry.ValueChange}");
             }
 
             var previousEntry = Entries.GetNextYounger(entry.PostingDate).FirstOrDefault();
