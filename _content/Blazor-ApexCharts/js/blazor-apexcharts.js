@@ -1,4 +1,4 @@
-﻿import ApexCharts from './apexcharts.esm.js?ver=4.0.0'
+﻿import ApexCharts from './apexcharts.esm.js?ver=4.4.0.0'
 
 // export function for Blazor to point to the window.blazor_apexchart. To be compatible with the most JS Interop calls the window will be return.
 export function get_apexcharts() {
@@ -275,6 +275,20 @@ window.blazor_apexchart = {
         }
     },
 
+    copyTooltipContent(chartId) {
+
+        var sourceId = "tooltip_source_" + chartId;
+        var targetId = "tooltip_target_" + chartId;
+
+        var sourceElement = document.getElementById(sourceId);
+        var targetElement = document.getElementById(targetId);
+
+        if (sourceElement && targetElement) {
+            targetElement.innerHTML = sourceElement.innerHTML;
+        }
+
+    },
+
     dotNetRefs: new Map(),
 
     renderChart(dotNetObject, container, options, events) {
@@ -288,12 +302,25 @@ window.blazor_apexchart = {
 
         if (options.tooltip != undefined && options.tooltip.customTooltip == true) {
             options.tooltip.custom = function ({ series, seriesIndex, dataPointIndex, w }) {
-                var sourceId = 'apex-tooltip-' + w.globals.chartID;
-                var source = document.getElementById(sourceId);
-                if (source) {
-                    return source.innerHTML;
+
+                var selection = {
+                    dataPointIndex: dataPointIndex,
+                    seriesIndex: seriesIndex
+                };
+
+                var targetId = "tooltip_target_" + w.globals.chartID;
+                var el = document.getElementById(targetId);
+
+                if (el === null) {
+                    el = document.createElement("DIV");
+                    el.id = targetId;
                 }
-                return '...'
+               
+                dotNetObject.invokeMethodAsync('RazorTooltip', selection);
+
+                return el;
+
+               
             };
         }
 
