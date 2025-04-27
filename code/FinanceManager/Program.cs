@@ -17,9 +17,18 @@ builder.Services.AddAuthorizationCore();
 builder.Services.AddMudServices();
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddBlazoredSessionStorage();
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://financemanagerapi-fchjdaheebf7gkhf.polandcentral-01.azurewebsites.net/") });
+
+#if (DEBUG)
+{
+    builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:5001/") });
+}
+#else
+{ 
+    builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://financemanagerapi-fchjdaheebf7gkhf.polandcentral-01.azurewebsites.net/") });
+}
+#endif
+
 //builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:7060/") });
-//builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:5001/") });
 builder.Services.AddApplication().AddInfrastructureFrontend().AddUIComponents();
 
 await builder.Build().RunAsync();
