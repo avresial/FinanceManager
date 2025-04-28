@@ -1,0 +1,62 @@
+﻿@page "/usersettingspage"
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6">
+    <MudGrid>
+        <MudItem xs="12">
+            <MudStack Row>
+                <MudAvatar Color="Color.Primary">G</MudAvatar>
+                <MudText Typo="Typo.h6">Guest</MudText>
+            </MudStack>
+        </MudItem>
+        <MudItem xs="12">
+            <MudTabs ApplyEffectsToContainer="true" PanelClass="pa-6" Position=Position.Left>
+                <MudTabPanel Text="User">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.h6">Change Password</MudText>
+                            <MudForm @ref="_passwordForm">
+                                <MudTextField @bind-Value="_currentPassword" Label="Current Password" InputType="InputType.Password" Required="true" />
+                                <MudTextField @bind-Value="_newPassword" Label="New Password" InputType="InputType.Password" Required="true" />
+                                <MudTextField @bind-Value="_confirmPassword" Label="Confirm New Password" InputType="InputType.Password" Required="true" />
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="ChangePasswordAsync">Update Password</MudButton>
+                            </MudForm>
+
+                            <MudDivider Class="my-3" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.h6">Delete Account</MudText>
+                            <MudButton Variant="Variant.Text" Color="Color.Error">
+                                Delete
+                            </MudButton>
+                            <MudDivider Class="my-3" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Plan">
+                    <MudGrid Spacing="10">
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.h6">Storage Usage</MudText>
+                            <MudProgressLinear Color="Color.Info" Value="50" Class="mt-2 mb-1" />
+                            <MudText Typo="Typo.subtitle2">@($"50 GB of 100 GB used")</MudText>
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.h6">Change Plan</MudText>
+                            <MudSelect T="string" Label="Select Plan" @bind-Value="_selectedPlan">
+                                @foreach (var plan in _plans)
+                                {
+                                    <MudSelectItem Value="@plan">@plan</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4">Update Plan</MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+            </MudTabs>
+        </MudItem>
+    </MudGrid>
+
+</MudContainer>
+
