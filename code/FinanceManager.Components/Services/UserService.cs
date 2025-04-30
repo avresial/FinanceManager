@@ -8,16 +8,10 @@ using System.Net.Http.Json;
 
 namespace FinanceManager.Components.Services;
 
-public class UserService : IUserService
+public class UserService(HttpClient httpClient, ILogger<UserService> logger) : IUserService
 {
-    private readonly HttpClient _httpClient;
-    private readonly ILogger<UserService> _logger;
-
-    public UserService(HttpClient httpClient, ILogger<UserService> logger)
-    {
-        _httpClient = httpClient;
-        _logger = logger;
-    }
+    private readonly HttpClient _httpClient = httpClient;
+    private readonly ILogger<UserService> _logger = logger;
 
     public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel)
     {
@@ -50,4 +44,63 @@ public class UserService : IUserService
 
         return null;
     }
+    public async Task<RecordCapacity?> GetRecordCapacity(int userId)
+    {
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<RecordCapacity>($"{_httpClient.BaseAddress}api/User/GetRecordCapacity/{userId}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting user record capacity {userId}", userId);
+        }
+
+        return null;
+    }
+
+    public async Task<bool> RemoveUser(int userId)
+    {
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<bool>($"{_httpClient.BaseAddress}api/User/RemoveUser/{userId}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error removing user {userId}", userId);
+        }
+
+        return false;
+    }
+
+    public async Task<bool> UpdatePassword(int userId, string newPassword)
+    {
+        try
+        {
+            UpdatePassword updatePasswordCommand = new UpdatePassword(userId, newPassword);
+            var response = await _httpClient.PutAsJsonAsync($"{_httpClient.BaseAddress}api/User/UpdatePassword/", updatePasswordCommand);
+            if (response.StatusCode == System.Net.HttpStatusCode.OK) return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error removing user {userId}", userId);
+        }
+        return false;
+    }
+    public async Task<bool> UpdatePricingPlan(int userId, PricingLevel newPricingLevel)
+    {
+        try
+        {
+            UpdatePricingPlan updatePricingPlan = new UpdatePricingPlan(userId, newPricingLevel);
+            var response = await _httpClient.PutAsJsonAsync($"{_httpClient.BaseAddress}api/User/UpdatePricingPlan/", updatePricingPlan);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.OK) return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error removing user {userId}", userId);
+        }
+
+        return false;
+    }
+
 }
