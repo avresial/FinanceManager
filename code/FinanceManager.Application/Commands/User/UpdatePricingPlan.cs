@@ -2,4 +2,4 @@
 
 namespace FinanceManager.Application.Commands.User;
 
-public record UpdatePricingPlan(int userId, PricingLevel pricingLevel);
+public record UpdatePricingPlan(int UserId, PricingLevel PricingLevel);

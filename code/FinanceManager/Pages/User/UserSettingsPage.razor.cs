@@ -11,13 +11,15 @@ public partial class UserSettingsPage
 {
     private const string _requiredDeleteConfirmation = "delete my account";
 
-    private UserSession? _loggedUser;
-    private Domain.Entities.Login.User? _userData;
 
     private readonly List<string> _errors = [];
     private readonly List<string> _warnings = [];
-    private readonly List<string> _infos = [];
+    private readonly List<string> _info = [];
 
+    private UserSession? _loggedUser;
+    private Domain.Entities.Login.User? _userData;
+
+    private bool _isLoadingPage;
     private bool _success;
     private string _selectedPlan = $"{PricingLevel.Free}";
     private string? _confirmPassword { get; set; }
@@ -25,9 +27,23 @@ public partial class UserSettingsPage
     private MudForm? _passwordForm;
     private MudTextField<string>? _passwordField;
     private List<string> _plans = new() { $"{PricingLevel.Free}", $"{PricingLevel.Basic}", $"{PricingLevel.Premium}" };
-
     private RecordCapacity? _recordCapacity;
 
+
+    private int _ActiveIndex;
+    public int ActiveIndex
+    {
+        get { return _ActiveIndex; }
+        set
+        {
+            if (_ActiveIndex == value)
+                return;
+            _errors.Clear();
+            _warnings.Clear();
+            _info.Clear();
+            _ActiveIndex = value;
+        }
+    }
 
     [Inject] public required IUserService UserService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -38,11 +54,20 @@ public partial class UserSettingsPage
 
     protected override async Task OnInitializedAsync()
     {
+        _isLoadingPage = true;
         _loggedUser = await LoginService.GetLoggedUser();
-        if (_loggedUser is null) return;
+        if (_loggedUser is null)
+        {
+            _isLoadingPage = false;
+            return;
+        }
 
         _userData = await UserService.GetUser(_loggedUser.UserId);
-        if (_userData is null) return;
+        if (_userData is null)
+        {
+            _isLoadingPage = false;
+            return;
+        }
 
         if (_plans.Contains(_userData.PricingLevel.ToString()))
             _selectedPlan = _userData.PricingLevel.ToString();
@@ -53,8 +78,9 @@ public partial class UserSettingsPage
         }
         catch (Exception ex)
         {
-            _errors.Add(ex.Message);
+            _errors.Insert(0, ex.Message);
         }
+        _isLoadingPage = false;
     }
 
 
@@ -89,7 +115,26 @@ public partial class UserSettingsPage
 
         var result = await UserService.UpdatePricingPlan(_loggedUser.UserId, (PricingLevel)Enum.Parse(typeof(PricingLevel), _selectedPlan));
         _errors.Clear();
-        if (!result) _errors.Add("Failed to change plan.");
+        if (!result)
+        {
+            _errors.Insert(0, "Failed to change plan.");
+        }
+        else
+        {
+            _info.Insert(0, $"Successfully upgraded plan to {_selectedPlan}");
+
+            _userData = await UserService.GetUser(_loggedUser.UserId);
+            if (_userData is null) return;
+
+            try
+            {
+                _recordCapacity = await UserService.GetRecordCapacity(_loggedUser.UserId);
+            }
+            catch (Exception ex)
+            {
+                _errors.Insert(0, ex.Message);
+            }
+        }
 
     }
 
@@ -99,7 +144,7 @@ public partial class UserSettingsPage
         var result = await UserService.Delete(_loggedUser.UserId);
         if (!result)
         {
-            _errors.Add("Failed to remove user.");
+            _errors.Insert(0, "Failed to remove user.");
             return;
         }
         else
@@ -120,7 +165,7 @@ public partial class UserSettingsPage
         {
             if (_passwordField.Value != _confirmPassword)
             {
-                _warnings.Add("New passwords do not match.");
+                _warnings.Insert(0, "New passwords do not match.");
                 return;
             }
             else
@@ -128,16 +173,17 @@ public partial class UserSettingsPage
                 var result = await UserService.UpdatePassword(_loggedUser.UserId, _confirmPassword);
                 if (!result)
                 {
-                    _errors.Add("Failed to change password.");
+                    _errors.Insert(0, "Failed to change password.");
                     return;
                 }
                 else
                 {
                     _errors.Clear();
-                    _infos.Add("Password changed successfully.");
+                    _info.Insert(0, "Password changed successfully.");
                 }
             }
         }
+        _confirmPassword = "";
     }
     private Color GetStorageIndicatorColor()
     {

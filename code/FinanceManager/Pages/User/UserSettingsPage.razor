@@ -6,12 +6,43 @@
         <MudGrid>
             <MudItem xs="12">
                 <MudStack Row>
-                    <MudAvatar Color="Color.Primary">G</MudAvatar>
-                    <MudText Typo="Typo.h6">Guest</MudText>
+                    <MudAvatar Color="Color.Primary">@_userData.Login.ToUpper()[0]</MudAvatar>
+                    <MudText Typo="Typo.h6">@_userData.Login</MudText>
                 </MudStack>
             </MudItem>
             <MudItem xs="12">
-                <MudTabs ApplyEffectsToContainer="true" PanelClass="px-6" Position=Position.Left Border>
+                <MudTabs ApplyEffectsToContainer="true" PanelClass="px-6" Position=Position.Left Border @bind-ActivePanelIndex="ActiveIndex">
+
+                    <MudTabPanel Text="Plan">
+                        <MudGrid Spacing="6">
+                            <MudItem xs="12">
+                                @if (_recordCapacity is not null)
+                                {
+                                    <MudText Typo="Typo.h6">Storage Usage</MudText>
+                                    <MudProgressLinear Color=GetStorageIndicatorColor() Size="Size.Medium" Value=GetStorageUsedPercentage() Class="mt-2 mb-1" />
+                                    <MudText Typo="Typo.subtitle2">@($"{_recordCapacity.UsedCapacity} of {_recordCapacity.TotalCapacity} records")</MudText>
+                                }
+                            </MudItem>
+
+                            <MudItem xs="12">
+                                <MudText Typo="Typo.h6">Change Plan</MudText>
+                                <MudGrid>
+                                    <MudItem xs="8">
+                                        <MudSelect T="string" Label="Select Plan" @bind-Value="_selectedPlan">
+                                            @foreach (var plan in _plans)
+                                            {
+                                                <MudSelectItem Value="@plan">@plan</MudSelectItem>
+                                            }
+                                        </MudSelect>
+                                    </MudItem>
+                                    <MudItem xs="4">
+                                        <MudButton @onclick=UpgradePricingPlan Variant="Variant.Text" Color="Color.Primary" Class="mt-4" FullWidth Disabled=@(_userData?.PricingLevel.ToString() == _selectedPlan )>Upgrade Plan</MudButton>
+                                    </MudItem>
+                                </MudGrid>
+                            </MudItem>
+                        </MudGrid>
+                    </MudTabPanel>
+
                     <MudTabPanel Text="User">
                         <MudGrid Spacing="6">
                             <MudItem xs="12">
@@ -52,37 +83,6 @@
                             </MudItem>
                         </MudGrid>
                     </MudTabPanel>
-
-                    <MudTabPanel Text="Plan">
-                        <MudGrid Spacing="6">
-                            <MudItem xs="12">
-                                @if (_recordCapacity is not null)
-                                {
-                                    <MudText Typo="Typo.h6">Storage Usage</MudText>
-                                    <MudProgressLinear Color=GetStorageIndicatorColor() Size="Size.Medium" Value=GetStorageUsedPercentage() Class="mt-2 mb-1" />
-                                    <MudText Typo="Typo.subtitle2">@($"{_recordCapacity.UsedCapacity} of {_recordCapacity.TotalCapacity} records")</MudText>
-                                }
-                            </MudItem>
-
-                            <MudItem xs="12">
-                                <MudText Typo="Typo.h6">Change Plan</MudText>
-                                <MudGrid>
-                                    <MudItem xs="8">
-                                        <MudSelect T="string" Label="Select Plan" @bind-Value="_selectedPlan">
-                                            @foreach (var plan in _plans)
-                                            {
-                                                <MudSelectItem Value="@plan">@plan</MudSelectItem>
-                                            }
-                                        </MudSelect>
-                                    </MudItem>
-                                    <MudItem xs="4">
-                                        <MudButton @onclick=UpgradePricingPlan Variant="Variant.Text" Color="Color.Primary" Class="mt-4" FullWidth Disabled=@(_userData?.PricingLevel.ToString() == _selectedPlan )>Upgrade Plan</MudButton>
-                                    </MudItem>
-                                </MudGrid>
-                            </MudItem>
-                        </MudGrid>
-                    </MudTabPanel>
-
                 </MudTabs>
             </MudItem>
             <MudItem xs="12">
@@ -98,15 +98,16 @@
                         <MudAlert Severity="Severity.Warning">@message</MudAlert>
                     }
 
-                    @foreach (var message in _infos)
+                    @foreach (var message in _info)
                     {
                         <MudAlert Severity="Severity.Info">@message</MudAlert>
                     }
                 </MudStack>
             </MudItem>
         </MudGrid>
-
-
+    }
+    else if (_isLoadingPage)
+    {
     }
     else
     {

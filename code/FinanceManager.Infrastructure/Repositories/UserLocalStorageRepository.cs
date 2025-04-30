@@ -115,5 +115,13 @@ public class UserLocalStorageRepository : IUserRepository
         return true;
     }
 
+    public Task<bool> UpdatePassword(int userId, string password)
+    {
+        throw new NotImplementedException();
+    }
 
+    public Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel)
+    {
+        throw new NotImplementedException();
+    }
 }

@@ -70,6 +70,26 @@ public class UserInMemoryRepository : IUserRepository
         return await Task.FromResult(true);
     }
 
+    public async Task<bool> UpdatePassword(int userId, string password)
+    {
+        var user = _users.Values.FirstOrDefault(x => x.Id == userId);
+        if (user is null) return false;
+
+        user.Password = password;
+
+        return await Task.FromResult(true);
+    }
+
+    public async Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel)
+    {
+        var user = _users.Values.FirstOrDefault(x => x.Id == userId);
+        if (user is null) return false;
+
+        user.PricingLevel = pricingLevel;
+
+        return await Task.FromResult(true);
+    }
+
     private int GenerateNewId()
     {
         return _users.Values.Count != 0 ? _users.Values.Max(u => u.Id) + 1 : 1;
