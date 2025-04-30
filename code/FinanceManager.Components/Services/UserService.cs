@@ -44,6 +44,7 @@ public class UserService(HttpClient httpClient, ILogger<UserService> logger) : I
 
         return null;
     }
+
     public async Task<RecordCapacity?> GetRecordCapacity(int userId)
     {
         try
@@ -58,11 +59,12 @@ public class UserService(HttpClient httpClient, ILogger<UserService> logger) : I
         return null;
     }
 
-    public async Task<bool> RemoveUser(int userId)
+    public async Task<bool> Delete(int userId)
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<bool>($"{_httpClient.BaseAddress}api/User/RemoveUser/{userId}");
+            var response = await _httpClient.DeleteAsync($"{_httpClient.BaseAddress}api/User/Delete/{userId}");
+            if (response.StatusCode == System.Net.HttpStatusCode.OK) return true;
         }
         catch (Exception ex)
         {

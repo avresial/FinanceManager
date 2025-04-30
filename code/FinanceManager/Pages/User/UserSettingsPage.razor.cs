@@ -96,7 +96,7 @@ public partial class UserSettingsPage
     private async Task DeleteMyAccount()
     {
         if (_loggedUser is null) return;
-        var result = await UserService.RemoveUser(_loggedUser.UserId);
+        var result = await UserService.Delete(_loggedUser.UserId);
         if (!result)
         {
             _errors.Add("Failed to remove user.");
@@ -113,6 +113,7 @@ public partial class UserSettingsPage
     {
         if (_loggedUser is null) return;
         if (_passwordField is null) return;
+        if (string.IsNullOrEmpty(_confirmPassword)) return;
 
         await _passwordForm.Validate();
         if (_passwordForm.IsValid)
@@ -124,7 +125,7 @@ public partial class UserSettingsPage
             }
             else
             {
-                var result = await UserService.UpdatePricingPlan(_loggedUser.UserId, (PricingLevel)Enum.Parse(typeof(PricingLevel), _selectedPlan));
+                var result = await UserService.UpdatePassword(_loggedUser.UserId, _confirmPassword);
                 if (!result)
                 {
                     _errors.Add("Failed to change password.");
