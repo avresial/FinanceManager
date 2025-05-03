@@ -24,13 +24,13 @@ public class LoginService : ILoginService
 
     public event Action<bool>? LogginStateChanged;
 
-    private AuthenticationStateProvider _authState { get; set; }
+    private AuthenticationStateProvider _authStateProvider { get; set; }
     public LoginService(ISessionStorageService sessionStorageService, ILocalStorageService localStorageService,
         AuthenticationStateProvider AuthState, IUserRepository loginRepository, HttpClient httpClient)
     {
         _sessionStorageService = sessionStorageService;
         _localStorageService = localStorageService;
-        _authState = AuthState;
+        _authStateProvider = AuthState;
 
         _loginRepository = loginRepository;
         _httpClient = httpClient;
@@ -80,11 +80,13 @@ public class LoginService : ILoginService
         _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.AccessToken);
         userSession.Token = result.AccessToken;
         userSession.UserId = result.UserId;
+        userSession.UserRole = result.UserRole;
         _loggedUser = userSession;
 
         await _sessionStorageService.SetItemAsync(_sessionString, _loggedUser);
         await _localStorageService.SetItemAsync(_sessionString, _loggedUser);
-        var authState = await ((CustomAuthenticationStateProvider)_authState).ChangeUser(userSession.UserName, userSession.UserId.ToString(), "Associate");
+
+        var authState = await ((CustomAuthenticationStateProvider)_authStateProvider).ChangeUser(userSession.UserName, userSession.UserId.ToString(), userSession.UserRole.ToString());
         LogginStateChanged?.Invoke(true);
         return true;
     }
@@ -113,7 +115,7 @@ public class LoginService : ILoginService
     {
         await _sessionStorageService.RemoveItemAsync(_sessionString);
         await _localStorageService.RemoveItemAsync(_sessionString);
-        await ((CustomAuthenticationStateProvider)_authState).Logout();
+        await ((CustomAuthenticationStateProvider)_authStateProvider).Logout();
         LogginStateChanged?.Invoke(false);
         _loggedUser = null;
     }

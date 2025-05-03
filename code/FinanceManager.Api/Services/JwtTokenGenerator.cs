@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Application.Commands.Login;
+using FinanceManager.Domain.Enums;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -16,7 +17,7 @@ namespace FinanceManager.Api.Services
         }
 
 
-        public LoginResponseModel? GenerateToken(string userName, int userId)
+        public LoginResponseModel? GenerateToken(string userName, int userId, UserRole userRole)
         {
             if (string.IsNullOrEmpty(userName)) return null;
 
@@ -50,6 +51,7 @@ namespace FinanceManager.Api.Services
                 AccessToken = accessToken,
                 UserName = userName,
                 UserId = userId,
+                UserRole = userRole,
                 ExpiresIn = tokenValidityInMins
             };
         }
