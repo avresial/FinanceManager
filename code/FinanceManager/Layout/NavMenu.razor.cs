@@ -8,16 +8,17 @@ namespace FinanceManager.WebUi.Layout;
 
 public partial class NavMenu : ComponentBase
 {
-    private bool collapseNavMenu = true;
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-    private bool displayAssetsLink = false;
-    private bool displayLiabilitiesLink = false;
+    private bool _collapseNavMenu = true;
+    private string? NavMenuCssClass => _collapseNavMenu ? "collapse" : null;
+    private bool _displayAssetsLink = false;
+    private bool _displayLiabilitiesLink = false;
 
     [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
     [Inject] public required ILiabilitiesService LiabilitiesService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required IUserService UserService { get; set; }
     [Inject] public required ILogger<NavMenu> Logger { get; set; }
 
 
@@ -39,7 +40,7 @@ public partial class NavMenu : ComponentBase
 
     private void ToggleNavMenu()
     {
-        collapseNavMenu = !collapseNavMenu;
+        _collapseNavMenu = !_collapseNavMenu;
     }
     private async void AccountDataSynchronizationService_AccountsChanged()
     {
@@ -99,7 +100,7 @@ public partial class NavMenu : ComponentBase
         }
         try
         {
-            displayAssetsLink = await MoneyFlowService.IsAnyAccountWithAssets(user.UserId);
+            _displayAssetsLink = await MoneyFlowService.IsAnyAccountWithAssets(user.UserId);
         }
         catch (HttpRequestException ex)
         {
@@ -111,7 +112,7 @@ public partial class NavMenu : ComponentBase
         }
         try
         {
-            displayLiabilitiesLink = await LiabilitiesService.IsAnyAccountWithLiabilities(user.UserId);
+            _displayLiabilitiesLink = await LiabilitiesService.IsAnyAccountWithLiabilities(user.UserId);
         }
         catch (HttpRequestException)
         {

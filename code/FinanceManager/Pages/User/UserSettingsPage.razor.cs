@@ -50,8 +50,6 @@ public partial class UserSettingsPage
     [Inject] public required NavigationManager NavigationManager { get; set; }
 
 
-
-
     protected override async Task OnInitializedAsync()
     {
         _isLoadingPage = true;
@@ -82,7 +80,6 @@ public partial class UserSettingsPage
         }
         _isLoadingPage = false;
     }
-
 
     private string PasswordMatch(string arg)
     {

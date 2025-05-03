@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 
 namespace FinanceManager.WebUi.Layout;
 
-public partial class LoginDisplay
+public partial class LoginDisplay : IDisposable
 {
     private UserSession? _userSession = null;
     private bool _open;
@@ -16,6 +16,19 @@ public partial class LoginDisplay
     [Inject] public required NavigationManager Navigation { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required IUserService UserService { get; set; }
+
+    protected override void OnInitialized()
+    {
+        UserService.OnUserChangeEvent += UserService_OnUserChangeEvent;
+    }
+
+    private void UserService_OnUserChangeEvent(User obj)
+    {
+        if (_pricingLabel == obj.PricingLevel) return;
+
+        _pricingLabel = obj.PricingLevel;
+        StateHasChanged();
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -32,5 +45,10 @@ public partial class LoginDisplay
     {
         await LoginService.Logout();
         Navigation.NavigateToLogout("login");
+    }
+
+    public void Dispose()
+    {
+        UserService.OnUserChangeEvent -= UserService_OnUserChangeEvent;
     }
 }
