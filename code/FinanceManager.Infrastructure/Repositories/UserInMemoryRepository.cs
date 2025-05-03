@@ -29,7 +29,7 @@ public class UserInMemoryRepository : IUserRepository
         }
 
     }
-    public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel)
+    public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole)
     {
         if (_users.ContainsKey(login)) return await Task.FromResult(false);
 
@@ -38,7 +38,8 @@ public class UserInMemoryRepository : IUserRepository
             Login = login,
             Password = password,
             Id = GenerateNewId(),
-            PricingLevel = pricingLevel
+            PricingLevel = pricingLevel,
+            UserRole = userRole
         });
 
         return await Task.FromResult(true);
@@ -49,14 +50,14 @@ public class UserInMemoryRepository : IUserRepository
         if (!_users.ContainsKey(login)) return null;
         if (password != _users[login].Password) return null;
 
-        var result = new User() { Login = _users[login].Login, Id = _users[login].Id, PricingLevel = _users[login].PricingLevel };
+        var result = new User() { Login = _users[login].Login, Id = _users[login].Id, PricingLevel = _users[login].PricingLevel, UserRole = _users[login].UserRole };
         return await Task.FromResult(result);
     }
     public async Task<User?> GetUser(string login)
     {
         if (!_users.ContainsKey(login)) return null;
 
-        var result = new User() { Login = _users[login].Login, Id = _users[login].Id, PricingLevel = _users[login].PricingLevel };
+        var result = new User() { Login = _users[login].Login, Id = _users[login].Id, PricingLevel = _users[login].PricingLevel, UserRole = _users[login].UserRole };
         return await Task.FromResult(result);
     }
 
@@ -65,7 +66,7 @@ public class UserInMemoryRepository : IUserRepository
         var user = _users.Values.FirstOrDefault(x => x.Id == id);
         if (user is null) return null;
 
-        return await Task.FromResult(new User() { Login = user.Login, Id = user.Id, PricingLevel = user.PricingLevel });
+        return await Task.FromResult(new User() { Login = user.Login, Id = user.Id, PricingLevel = user.PricingLevel, UserRole = user.UserRole });
     }
 
 

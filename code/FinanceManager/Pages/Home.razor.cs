@@ -14,6 +14,7 @@ public partial class Home : ComponentBase
     [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
+
     protected override async Task OnInitializedAsync()
     {
         _isLoading = true;

@@ -1,0 +1,14 @@
+﻿@page "/AdminPage"
+@using FinanceManager.Domain.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@layout NoNavbarLayout
+
+<MudContainer>
+
+    <h3>AdminPage</h3>
+    <h5>This page is under development.</h5>
+
+    <LoginDisplay />
+
+</MudContainer>

@@ -2,6 +2,7 @@
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,7 +28,7 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
         if (existingUser is not null) return BadRequest();
 
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(addUserCommand.password);
-        var result = await _loginRepository.AddUser(addUserCommand.userName, encryptedPassword, addUserCommand.pricingLevel);
+        var result = await _loginRepository.AddUser(addUserCommand.userName, encryptedPassword, addUserCommand.pricingLevel, UserRole.User);
 
         if (result) return Ok(result);
         return BadRequest();
@@ -49,11 +50,7 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     [Route("GetRecordCapacity/{userId:int}")]
     public async Task<IActionResult> GetRecordCapacity(int userId)
     {
-        var idValue = User?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-        if (idValue is null) return BadRequest();
-
-        int id = int.Parse(idValue);
-        if (id != userId) return BadRequest();
+        if (!IsValidUserOrAdmin(userId)) return BadRequest();
 
         var user = await _loginRepository.GetUser(userId);
         if (user is null) return BadRequest();
@@ -82,11 +79,7 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     [Route("Delete/{userId:int}")]
     public async Task<IActionResult> Delete(int userId)
     {
-        var idValue = User?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-        if (idValue is null) return BadRequest();
-
-        int id = int.Parse(idValue);
-        if (id != userId) return BadRequest();
+        if (!IsValidUserOrAdmin(userId)) return BadRequest();
 
         var result = await _loginRepository.RemoveUser(userId);
 
@@ -98,11 +91,7 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     [Route("UpdatePassword")]
     public async Task<IActionResult> UpdatePassword(UpdatePassword updatePassword)
     {
-        var idValue = User?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-        if (idValue is null) return BadRequest();
-
-        int id = int.Parse(idValue);
-        if (id != updatePassword.UserId) return BadRequest();
+        if (!IsValidUserOrAdmin(updatePassword.UserId)) return BadRequest();
 
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(updatePassword.Password);
         var result = await _loginRepository.UpdatePassword(updatePassword.UserId, encryptedPassword);
@@ -115,14 +104,24 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     [Route("UpdatePricingPlan")]
     public async Task<IActionResult> UpdatePricingPlan(UpdatePricingPlan updatePricingPlan)
     {
-        var idValue = User?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-        if (idValue is null) return BadRequest();
-
-        int id = int.Parse(idValue);
-        if (id != updatePricingPlan.UserId) return BadRequest();
+        if (!IsValidUserOrAdmin(updatePricingPlan.UserId)) return BadRequest();
 
         var result = await _loginRepository.UpdatePricingPlan(updatePricingPlan.UserId, updatePricingPlan.PricingLevel);
         if (result) return Ok(result);
         return BadRequest();
+    }
+
+    private bool IsValidUserOrAdmin(int userId)
+    {
+        string? role = User?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+
+        if (!string.IsNullOrEmpty(role) && role == UserRole.Admin.ToString()) return true;
+
+        var idValue = User?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+        if (idValue is null) return false;
+
+        int id = int.Parse(idValue);
+        if (id != userId) return false;
+        return true;
     }
 }

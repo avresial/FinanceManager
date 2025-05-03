@@ -8,6 +8,7 @@ namespace FinanceManager.Infrastructure.Dtos
         public required string Login { get; set; }
         public required string Password { get; set; }
         public PricingLevel PricingLevel { get; set; } = PricingLevel.Free;
+        public UserRole UserRole { get; set; } = UserRole.User;
 
     }
 }

@@ -25,6 +25,7 @@ namespace FinanceManager.Application
                     .AddScoped<AccountIdProvider>()
                     .AddScoped<PricingProvider>()
                     .AddScoped<GuestAccountSeeder>()
+                    .AddScoped<AdminAccountSeeder>()
                     .AddScoped<UserPlanVerifier>()
                 ;
 

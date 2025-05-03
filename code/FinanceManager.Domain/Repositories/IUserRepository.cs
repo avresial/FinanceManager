@@ -10,6 +10,6 @@ public interface IUserRepository
     Task<User?> GetUser(int id);
     Task<bool> UpdatePassword(int userId, string password);
     Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel);
-    Task<bool> AddUser(string login, string password, PricingLevel pricingLevel);
+    Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole);
     Task<bool> RemoveUser(int userId);
 }

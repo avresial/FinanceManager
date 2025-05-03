@@ -20,7 +20,7 @@ namespace FinanceManager.Components.Components
         [Inject] public required NavigationManager Navigation { get; set; }
         [Inject] public required ILoginService LoginService { get; set; }
         [Inject] public required ILocalStorageService LocalStorageService { get; set; }
-        [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+        [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
 
         protected override async Task OnInitializedAsync()
         {
@@ -55,7 +55,22 @@ namespace FinanceManager.Components.Components
 
             if (loginResult)
             {
-                Navigation.NavigateTo("");
+                var loggedUser = await LoginService.GetLoggedUser();
+                if (loggedUser is null) return;
+
+                switch (loggedUser.UserRole)
+                {
+                    case Domain.Enums.UserRole.User:
+                        Navigation.NavigateTo("");
+                        break;
+                    case Domain.Enums.UserRole.Admin:
+                        Navigation.NavigateTo("AdminPage");
+                        break;
+                    default:
+                        Navigation.NavigateTo("");
+                        break;
+                }
+
                 return;
             }
 
@@ -67,7 +82,7 @@ namespace FinanceManager.Components.Components
         {
             try
             {
-                FinancalAccountService.InitializeMock();
+                FinancialAccountService.InitializeMock();
             }
             catch (Exception ex)
             {
