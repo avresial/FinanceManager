@@ -11,6 +11,9 @@ public class AdminAccountSeeder(IUserRepository loginRepository)
 
     public async Task Seed()
     {
+        var existingAdmin = await _userRepository.GetUser(defaultAdminUserName);
+        if (existingAdmin is not null) return;
+
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(defaultAdminPassword);
         var result = await _userRepository.AddUser(defaultAdminUserName, encryptedPassword, Domain.Enums.PricingLevel.Free, UserRole.Admin);
     }

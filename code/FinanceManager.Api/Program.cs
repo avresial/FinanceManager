@@ -77,7 +77,16 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var seeder = scope.ServiceProvider.GetRequiredService<AdminAccountSeeder>();
-    await seeder.Seed();
+
+    try
+    {
+        await seeder.Seed();
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the admin account.");
+    }
 }
 
 app.Run();
