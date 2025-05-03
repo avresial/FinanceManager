@@ -5,6 +5,7 @@
 @if (_userSession is not null)
 {
     <MudMenu TransformOrigin="Origin.BottomCenter" AnchorOrigin="Origin.TopCenter" Open=_open>
+        
         <ActivatorContent>
             <MudText Typo="Typo.button" Class="px-1">@_label</MudText>
             @if (_pricingLabel != Domain.Enums.PricingLevel.Free)
@@ -12,9 +13,11 @@
                 <MudText Typo="Typo.button" Color="Color.Primary">@_pricingLabel</MudText>
             }
         </ActivatorContent>
+
         <ChildContent>
             <MudMenuItem Label="Log Out" OnClick=BeginLogOut />
-            <MudMenuItem Label="Settings" Disabled/>
+            <MudMenuItem Label="Settings" Href="UserSettings" />
         </ChildContent>
+
     </MudMenu>
 }

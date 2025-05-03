@@ -52,6 +52,13 @@ public class UserInMemoryRepository : IUserRepository
         var result = new User() { Login = _users[login].Login, Id = _users[login].Id, PricingLevel = _users[login].PricingLevel };
         return await Task.FromResult(result);
     }
+    public async Task<User?> GetUser(string login)
+    {
+        if (!_users.ContainsKey(login)) return null;
+
+        var result = new User() { Login = _users[login].Login, Id = _users[login].Id, PricingLevel = _users[login].PricingLevel };
+        return await Task.FromResult(result);
+    }
 
     public async Task<User?> GetUser(int id)
     {
@@ -61,12 +68,33 @@ public class UserInMemoryRepository : IUserRepository
         return await Task.FromResult(new User() { Login = user.Login, Id = user.Id, PricingLevel = user.PricingLevel });
     }
 
+
     public async Task<bool> RemoveUser(int userId)
     {
         var userToRemove = _users.Values.FirstOrDefault(x => x.Id == userId);
         if (userToRemove is null) return await Task.FromResult(false);
 
         _users.Remove(userToRemove.Login);
+        return await Task.FromResult(true);
+    }
+
+    public async Task<bool> UpdatePassword(int userId, string password)
+    {
+        var user = _users.Values.FirstOrDefault(x => x.Id == userId);
+        if (user is null) return false;
+
+        lock (_users) user.Password = password;
+
+        return await Task.FromResult(true);
+    }
+
+    public async Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel)
+    {
+        var user = _users.Values.FirstOrDefault(x => x.Id == userId);
+        if (user is null) return false;
+
+        lock (_users) user.PricingLevel = pricingLevel;
+
         return await Task.FromResult(true);
     }
 
