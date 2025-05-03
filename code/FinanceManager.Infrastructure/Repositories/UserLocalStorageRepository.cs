@@ -124,4 +124,9 @@ public class UserLocalStorageRepository : IUserRepository
     {
         throw new NotImplementedException();
     }
+
+    public Task<User?> GetUser(string login)
+    {
+        throw new NotImplementedException();
+    }
 }

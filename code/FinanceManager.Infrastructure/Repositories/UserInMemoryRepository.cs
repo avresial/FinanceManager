@@ -52,6 +52,13 @@ public class UserInMemoryRepository : IUserRepository
         var result = new User() { Login = _users[login].Login, Id = _users[login].Id, PricingLevel = _users[login].PricingLevel };
         return await Task.FromResult(result);
     }
+    public async Task<User?> GetUser(string login)
+    {
+        if (!_users.ContainsKey(login)) return null;
+
+        var result = new User() { Login = _users[login].Login, Id = _users[login].Id, PricingLevel = _users[login].PricingLevel };
+        return await Task.FromResult(result);
+    }
 
     public async Task<User?> GetUser(int id)
     {
@@ -60,6 +67,7 @@ public class UserInMemoryRepository : IUserRepository
 
         return await Task.FromResult(new User() { Login = user.Login, Id = user.Id, PricingLevel = user.PricingLevel });
     }
+
 
     public async Task<bool> RemoveUser(int userId)
     {
@@ -75,7 +83,7 @@ public class UserInMemoryRepository : IUserRepository
         var user = _users.Values.FirstOrDefault(x => x.Id == userId);
         if (user is null) return false;
 
-        user.Password = password;
+        lock (_users) user.Password = password;
 
         return await Task.FromResult(true);
     }
@@ -85,7 +93,7 @@ public class UserInMemoryRepository : IUserRepository
         var user = _users.Values.FirstOrDefault(x => x.Id == userId);
         if (user is null) return false;
 
-        user.PricingLevel = pricingLevel;
+        lock (_users) user.PricingLevel = pricingLevel;
 
         return await Task.FromResult(true);
     }

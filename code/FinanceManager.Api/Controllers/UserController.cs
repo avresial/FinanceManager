@@ -5,24 +5,27 @@ using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
 using System.Security.Claims;
 
 namespace FinanceManager.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class UserController(IUserRepository loginRepository, UserPlanVerifier userPlanVerifier, PricingProvider pricingProvider) : ControllerBase
+public class UserController(IUserRepository loginRepository, UserPlanVerifier userPlanVerifier, PricingProvider pricingProvider, ILogger<UserController> logger) : ControllerBase
 {
     private readonly IUserRepository _loginRepository = loginRepository;
     private readonly UserPlanVerifier _userPlanVerifier = userPlanVerifier;
     private readonly PricingProvider _pricingProvider = pricingProvider;
+    private readonly ILogger<UserController> _logger = logger;
 
     [AllowAnonymous]
     [HttpPost]
     [Route("Add")]
     public async Task<IActionResult> Add(AddUser addUserCommand)
     {
+        var existingUser = await _loginRepository.GetUser(addUserCommand.userName);
+        if (existingUser is not null) return BadRequest();
+
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(addUserCommand.password);
         var result = await _loginRepository.AddUser(addUserCommand.userName, encryptedPassword, addUserCommand.pricingLevel);
 
@@ -30,7 +33,7 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
         return BadRequest();
     }
 
-    [AllowAnonymous]
+    [Authorize]
     [HttpGet]
     [Route("Get/{userId:int}")]
     public async Task<IActionResult> Get(int userId)
@@ -46,6 +49,12 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     [Route("GetRecordCapacity/{userId:int}")]
     public async Task<IActionResult> GetRecordCapacity(int userId)
     {
+        var idValue = User?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+        if (idValue is null) return BadRequest();
+
+        int id = int.Parse(idValue);
+        if (id != userId) return BadRequest();
+
         var user = await _loginRepository.GetUser(userId);
         if (user is null) return BadRequest();
 
@@ -60,7 +69,8 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
         }
         catch (Exception ex)
         {
-            Debug.WriteLine(ex.ToString());
+            _logger.LogError(ex, "Error while getting record capacity for user {UserId}", userId);
+            return StatusCode(500, "Unable to retrieve record capacity.");
         }
 
         return BadRequest();
@@ -88,8 +98,14 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     [Route("UpdatePassword")]
     public async Task<IActionResult> UpdatePassword(UpdatePassword updatePassword)
     {
-        var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(updatePassword.password);
-        var result = await _loginRepository.UpdatePassword(updatePassword.userId, encryptedPassword);
+        var idValue = User?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+        if (idValue is null) return BadRequest();
+
+        int id = int.Parse(idValue);
+        if (id != updatePassword.UserId) return BadRequest();
+
+        var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(updatePassword.Password);
+        var result = await _loginRepository.UpdatePassword(updatePassword.UserId, encryptedPassword);
         if (result) return Ok(result);
         return BadRequest();
     }
@@ -99,6 +115,12 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     [Route("UpdatePricingPlan")]
     public async Task<IActionResult> UpdatePricingPlan(UpdatePricingPlan updatePricingPlan)
     {
+        var idValue = User?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+        if (idValue is null) return BadRequest();
+
+        int id = int.Parse(idValue);
+        if (id != updatePricingPlan.UserId) return BadRequest();
+
         var result = await _loginRepository.UpdatePricingPlan(updatePricingPlan.UserId, updatePricingPlan.PricingLevel);
         if (result) return Ok(result);
         return BadRequest();

@@ -96,7 +96,12 @@ public partial class UserSettingsPage
             yield return "Password is required!";
             yield break;
         }
+
+#if DEBUG
+
         yield break;
+#endif
+
         if (pw.Length < 8)
             yield return "Password must be at least of length 8";
         if (!Regex.IsMatch(pw, @"[A-Z]"))

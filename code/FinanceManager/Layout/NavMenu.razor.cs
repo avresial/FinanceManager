@@ -18,7 +18,6 @@ public partial class NavMenu : ComponentBase
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
-    [Inject] public required IUserService UserService { get; set; }
     [Inject] public required ILogger<NavMenu> Logger { get; set; }
 
 
