@@ -34,7 +34,7 @@ public class LoginService : ILoginService
 
         _loginRepository = loginRepository;
         _httpClient = httpClient;
-        _ = _loginRepository.AddUser("Guest", PasswordEncryptionProvider.EncryptPassword("GuestPassword"), PricingLevel.Basic);
+        _ = _loginRepository.AddUser("Guest", PasswordEncryptionProvider.EncryptPassword("GuestPassword"), PricingLevel.Basic, UserRole.User);
     }
 
     public async Task<UserSession?> GetLoggedUser()
@@ -87,6 +87,9 @@ public class LoginService : ILoginService
         await _localStorageService.SetItemAsync(_sessionString, _loggedUser);
 
         var authState = await ((CustomAuthenticationStateProvider)_authStateProvider).ChangeUser(userSession.UserName, userSession.UserId.ToString(), userSession.UserRole.ToString());
+
+        var test = await _authStateProvider.GetAuthenticationStateAsync();
+
         LogginStateChanged?.Invoke(true);
         return true;
     }

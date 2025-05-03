@@ -1,5 +1,6 @@
 using FinanceManager.Api.Services;
 using FinanceManager.Application;
+using FinanceManager.Application.Services;
 using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -11,8 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplicationApi().AddInfrastructureApi();
 
 builder.Services.AddControllers();
-//builder.Services.AddOpenApi();
-builder.Services.AddOpenApi("v1", options => { options.AddDocumentTransformer<BearerSecuritySchemeTransformer>(); });
+
+//builder.Services.AddOpenApi("v1", options => { options.AddDocumentTransformer<BearerSecuritySchemeTransformer>(); });
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ApiCorsPolicy",
@@ -71,5 +73,11 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+
+using (var scope = app.Services.CreateScope())
+{
+    var seeder = scope.ServiceProvider.GetRequiredService<AdminAccountSeeder>();
+    await seeder.Seed();
+}
 
 app.Run();

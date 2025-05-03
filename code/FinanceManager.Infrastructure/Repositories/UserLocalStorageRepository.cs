@@ -57,7 +57,7 @@ public class UserLocalStorageRepository : IUserRepository
             PricingLevel = foundUser.PricingLevel
         };
     }
-    async Task<bool> IUserRepository.AddUser(string login, string password, PricingLevel pricingLevel)
+    async Task<bool> IUserRepository.AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole)
     {
         login = login.ToLower();
         List<UserDto>? databaseUserDtos = await _localStorageService.GetItemAsync<List<UserDto>>("Users");
@@ -74,7 +74,8 @@ public class UserLocalStorageRepository : IUserRepository
             Login = login,
             Password = password,
             Id = userDtos.Any() ? userDtos.Max(x => x.Id) + 1 : 0,
-            PricingLevel = pricingLevel
+            PricingLevel = pricingLevel,
+            UserRole = userRole
         });
 
         try

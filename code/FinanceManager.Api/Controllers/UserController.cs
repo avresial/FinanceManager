@@ -2,6 +2,7 @@
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,7 +28,7 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
         if (existingUser is not null) return BadRequest();
 
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(addUserCommand.password);
-        var result = await _loginRepository.AddUser(addUserCommand.userName, encryptedPassword, addUserCommand.pricingLevel);
+        var result = await _loginRepository.AddUser(addUserCommand.userName, encryptedPassword, addUserCommand.pricingLevel, UserRole.User);
 
         if (result) return Ok(result);
         return BadRequest();
