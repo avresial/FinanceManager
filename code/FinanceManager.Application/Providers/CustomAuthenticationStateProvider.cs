@@ -19,7 +19,7 @@ namespace FinanceManager.Application.Providers
                 new Claim(ClaimTypes. Sid, id),
                 new Claim(ClaimTypes.Name, userName),
                 new Claim(ClaimTypes.Role, role)
-            }, "Authentication type");
+            }, "Bearer");
             return new ClaimsPrincipal(identity);
         }
 

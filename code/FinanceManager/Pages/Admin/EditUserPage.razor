@@ -140,6 +140,7 @@ else
         {
             _userData = await UserService.GetUser(UserId);
             _selectedUserRole = _userData?.UserRole.ToString() ?? $"{UserRole.User}";
+            _selectedPlan = _userData?.PricingLevel.ToString() ?? $"{PricingLevel.Free}";
         }
         catch (Exception ex)
         {

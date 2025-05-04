@@ -14,7 +14,7 @@ namespace FinanceManager.Api.Controllers;
 [ApiController]
 public class UserController(IUserRepository loginRepository, UserPlanVerifier userPlanVerifier, PricingProvider pricingProvider, ILogger<UserController> logger) : ControllerBase
 {
-    private readonly IUserRepository _loginRepository = loginRepository;
+    private readonly IUserRepository _userRepository = loginRepository;
     private readonly UserPlanVerifier _userPlanVerifier = userPlanVerifier;
     private readonly PricingProvider _pricingProvider = pricingProvider;
     private readonly ILogger<UserController> _logger = logger;
@@ -24,11 +24,11 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     [Route("Add")]
     public async Task<IActionResult> Add(AddUser addUserCommand)
     {
-        var existingUser = await _loginRepository.GetUser(addUserCommand.userName);
+        var existingUser = await _userRepository.GetUser(addUserCommand.userName);
         if (existingUser is not null) return BadRequest();
 
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(addUserCommand.password);
-        var result = await _loginRepository.AddUser(addUserCommand.userName, encryptedPassword, addUserCommand.pricingLevel, UserRole.User);
+        var result = await _userRepository.AddUser(addUserCommand.userName, encryptedPassword, addUserCommand.pricingLevel, UserRole.User);
 
         if (result) return Ok(result);
         return BadRequest();
@@ -39,7 +39,7 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     [Route("Get/{userId:int}")]
     public async Task<IActionResult> Get(int userId)
     {
-        var result = await _loginRepository.GetUser(userId);
+        var result = await _userRepository.GetUser(userId);
 
         if (result is not null) return Ok(result);
         return BadRequest();
@@ -52,7 +52,7 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     {
         if (!IsValidUserOrAdmin(userId)) return BadRequest();
 
-        var user = await _loginRepository.GetUser(userId);
+        var user = await _userRepository.GetUser(userId);
         if (user is null) return BadRequest();
 
         try
@@ -81,7 +81,7 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     {
         if (!IsValidUserOrAdmin(userId)) return BadRequest();
 
-        var result = await _loginRepository.RemoveUser(userId);
+        var result = await _userRepository.RemoveUser(userId);
 
         return Ok(result);
     }
@@ -94,7 +94,7 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
         if (!IsValidUserOrAdmin(updatePassword.UserId)) return BadRequest();
 
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(updatePassword.Password);
-        var result = await _loginRepository.UpdatePassword(updatePassword.UserId, encryptedPassword);
+        var result = await _userRepository.UpdatePassword(updatePassword.UserId, encryptedPassword);
         if (result) return Ok(result);
         return BadRequest();
     }
@@ -106,7 +106,7 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     {
         if (!IsValidUserOrAdmin(updatePricingPlan.UserId)) return BadRequest();
 
-        var result = await _loginRepository.UpdatePricingPlan(updatePricingPlan.UserId, updatePricingPlan.PricingLevel);
+        var result = await _userRepository.UpdatePricingPlan(updatePricingPlan.UserId, updatePricingPlan.PricingLevel);
         if (result) return Ok(result);
         return BadRequest();
     }

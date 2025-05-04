@@ -69,6 +69,24 @@ public class UserInMemoryRepository : IUserRepository
         return await Task.FromResult(new User() { Login = user.Login, UserId = user.Id, PricingLevel = user.PricingLevel, UserRole = user.UserRole });
     }
 
+    public async Task<IEnumerable<User>> GetUsers(int recordIndex, int recordsCount)
+    {
+        List<User> result = [];
+        lock (_users)
+        {
+            result = _users.Values.Skip(recordIndex).Take(recordsCount)
+                .Select(x => new User() { Login = x.Login, UserId = x.Id, PricingLevel = x.PricingLevel, UserRole = x.UserRole })
+                .ToList();
+        }
+
+        return await Task.FromResult(result);
+
+    }
+
+    public async Task<int> GetUsersCount()
+    {
+        return await Task.FromResult(_users.Count);
+    }
 
     public async Task<bool> RemoveUser(int userId)
     {

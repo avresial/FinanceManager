@@ -8,6 +8,7 @@ namespace FinanceManager.WebUi.Pages.Admin;
 
 public partial class AdminUsers
 {
+    private int _selectedPage;
     private int _usersCount = 0;
     private int _recordsPerPage = 20;
     private int _pagesCount;
@@ -23,14 +24,16 @@ public partial class AdminUsers
 
     protected override async Task OnInitializedAsync()
     {
-        _usersCount = await AdministrationUsersService.GetUsersCount();
-        _elements = await AdministrationUsersService.GetUsers();
+        var usersCount = await AdministrationUsersService.GetUsersCount();
+        _usersCount = usersCount is null ? 0 : usersCount.Value;
+
+        _elements = await AdministrationUsersService.GetUsers(0, _recordsPerPage);
         _pagesCount = (int)Math.Ceiling((double)_usersCount / _recordsPerPage);
     }
 
-    private void PageChanged(int i)
+    private async Task PageChanged(int i)
     {
-        _table?.NavigateTo(i - 1);
+        _elements = await AdministrationUsersService.GetUsers((i - 1) * _recordsPerPage, _recordsPerPage);
     }
 
     private async Task RemoveUser(int userId)
@@ -42,8 +45,10 @@ public partial class AdminUsers
             return;
         }
 
-        _usersCount = await AdministrationUsersService.GetUsersCount();
-        _elements = await AdministrationUsersService.GetUsers();
+        var usersCount = await AdministrationUsersService.GetUsersCount();
+        _usersCount = usersCount is null ? 0 : usersCount.Value;
+
+        _elements = await AdministrationUsersService.GetUsers((_selectedPage - 1) * _recordsPerPage, _recordsPerPage);
     }
 
 }

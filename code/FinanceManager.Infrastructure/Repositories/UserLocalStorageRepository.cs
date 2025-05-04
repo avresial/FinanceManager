@@ -130,4 +130,14 @@ public class UserLocalStorageRepository : IUserRepository
     {
         throw new NotImplementedException();
     }
+
+    public Task<int> GetUsersCount()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<IEnumerable<User>> GetUsers(int recordIndex, int recordsCount)
+    {
+        throw new NotImplementedException();
+    }
 }

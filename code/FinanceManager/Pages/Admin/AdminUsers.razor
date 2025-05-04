@@ -36,7 +36,7 @@
     <PagerContent>
         @if (_table is not null && _pagesCount > 1)
         {
-            <MudPagination SelectedChanged="PageChanged" Count="@_pagesCount" Class="pa-4" />
+            <MudPagination SelectedChanged="PageChanged" Count="@_pagesCount" Selected="@_selectedPage" Class="pa-4" />
         }
     </PagerContent>
 </MudTable>
