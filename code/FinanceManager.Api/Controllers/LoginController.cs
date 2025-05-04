@@ -42,7 +42,7 @@ namespace FinanceManager.Api.Controllers
 
             if (user is null) return BadRequest();
 
-            LoginResponseModel? token = _jwtTokenGenerator.GenerateToken(requestModel.userName, user.Id, user.UserRole);
+            LoginResponseModel? token = _jwtTokenGenerator.GenerateToken(requestModel.userName, user.UserId, user.UserRole);
 
             return Ok(token);
         }

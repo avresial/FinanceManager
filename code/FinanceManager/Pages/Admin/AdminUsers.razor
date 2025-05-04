@@ -5,25 +5,38 @@
 
 <h3>Existing users</h3>
 
-<MudTable @ref="@_table" Items="@_elements" RowsPerPage="20" Dense Breakpoint="Breakpoint.Sm" LoadingProgressColor="Color.Info" Elevation="0" Class="my-3">
+<MudStack Spacing="2">
+
+    @foreach (var message in _errors)
+    {
+        <MudAlert Severity="Severity.Error">@message</MudAlert>
+    }
+</MudStack>
+
+<MudTable @ref="@_table" Items="@_elements" RowsPerPage="@_recordsPerPage" Dense Breakpoint="Breakpoint.Sm" LoadingProgressColor="Color.Info" Elevation="0" Class="my-3">
     <HeaderContent>
         <MudTh>User id</MudTh>
         <MudTh>User name</MudTh>
+        <MudTh>Pricing Level</MudTh>
         <MudTh>Capacity</MudTh>
         <MudTh>Action</MudTh>
     </HeaderContent>
     <RowTemplate>
-        <MudTd DataLabel="User id">@context.Item1</MudTd>
-        <MudTd DataLabel="User name">@context.Item2</MudTd>
-        <MudTd DataLabel="Capacity"><MudProgressLinear Color="Color.Primary" Value="@context.Item3" /> </MudTd>
+        <MudTd DataLabel="User id">@context.Id</MudTd>
+        <MudTd DataLabel="User name">@context.Login</MudTd>
+        <MudTd DataLabel="User name">@context.PricingLevel</MudTd>
+        <MudTd DataLabel="Capacity"><MudProgressLinear Color="Color.Primary" Value="@context.RecordCapacity.GetStorageUsedPercentage()" /> </MudTd>
         <MudTd DataLabel="Action">
             <MudMenu Label="Action" Variant="Variant.Text">
-                <MudMenuItem Label="Edit" />
-                <MudMenuItem Label="Remove" />
+                <MudMenuItem Label="Edit" Href=@($"Admin/EditUser/{context.Id}") />
+                <MudMenuItem Label="Remove" OnClick="@(()=>RemoveUser(context.Id))" />
             </MudMenu>
         </MudTd>
     </RowTemplate>
     <PagerContent>
-        <MudPagination SelectedChanged="PageChanged" Count="@((_table.GetFilteredItemsCount() + _table.RowsPerPage - 1) / _table.RowsPerPage)" Class="pa-4" />
+        @if (_table is not null && _pagesCount > 1)
+        {
+            <MudPagination SelectedChanged="PageChanged" Count="@_pagesCount" Class="pa-4" />
+        }
     </PagerContent>
 </MudTable>

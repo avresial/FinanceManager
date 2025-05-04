@@ -35,7 +35,7 @@ public class BankAccountControllerTests
         _mockAccountIdProvider = new Mock<AccountIdProvider>(new Mock<IAccountRepository<StockAccount>>().Object, _mockBankAccountRepository.Object);
 
         _userRepository = new Mock<IUserRepository>();
-        var user = new User() { Login = "TestUser", Id = 1, PricingLevel = Domain.Enums.PricingLevel.Premium };
+        var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = Domain.Enums.PricingLevel.Premium };
         _userRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
         _userPlanVerifier = new Mock<UserPlanVerifier>(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userRepository.Object, new PricingProvider());
         _controller = new BankAccountController(_mockBankAccountRepository.Object, _mockAccountIdProvider.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object);
@@ -43,7 +43,7 @@ public class BankAccountControllerTests
         // Mock user identity
         var userClaims = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
+            new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString())
         }, "mock"));
 
         _controller.ControllerContext = new ControllerContext

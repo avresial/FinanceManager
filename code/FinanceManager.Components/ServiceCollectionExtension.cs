@@ -12,6 +12,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<AccountDataSynchronizationService>()
                 .AddScoped<IUserService, UserService>()
                 .AddScoped<BankAccountService>()
+                .AddScoped<AdministrationUsersService>()
                 .AddScoped<StockAccountService>()
                 .AddScoped<IFinancialAccountService, FinancialAccountService>()
                 .AddScoped<IMoneyFlowService, MoneyFlowService>()

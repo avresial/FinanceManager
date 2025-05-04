@@ -33,7 +33,7 @@ public class UserLocalStorageRepository : IUserRepository
         return new User()
         {
             Login = foundUser.Login,
-            Id = foundUser.Id,
+            UserId = foundUser.Id,
             PricingLevel = foundUser.PricingLevel
         };
     }
@@ -53,7 +53,7 @@ public class UserLocalStorageRepository : IUserRepository
         return new User()
         {
             Login = foundUser.Login,
-            Id = foundUser.Id,
+            UserId = foundUser.Id,
             PricingLevel = foundUser.PricingLevel
         };
     }

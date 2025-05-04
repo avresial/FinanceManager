@@ -4,7 +4,7 @@ namespace FinanceManager.Domain.Entities.Login;
 
 public class User
 {
-    public int Id { get; set; }
+    public int UserId { get; set; }
     public required string Login { get; set; }
     public PricingLevel PricingLevel { get; set; } = PricingLevel.Free;
     public UserRole UserRole { get; set; } = UserRole.User;
