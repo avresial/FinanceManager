@@ -64,7 +64,7 @@ namespace FinanceManager.Components.Components
                         Navigation.NavigateTo("");
                         break;
                     case Domain.Enums.UserRole.Admin:
-                        Navigation.NavigateTo("AdminPage");
+                        Navigation.NavigateTo("Admin/Dashboard");
                         break;
                     default:
                         Navigation.NavigateTo("");

@@ -1,0 +1,51 @@
+﻿@page "/Admin/Dashboard"
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+
+@using FinanceManager.Domain.Enums
+@using Microsoft.AspNetCore.Authorization
+
+<MudGrid>
+    <MudItem xs="4">
+        <MudCard Style="height:100px">
+            <MudCardContent>
+                <MudText>Total users count</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+     <MudItem xs="4">
+        <MudCard Style="height:100px">
+            <MudCardContent>
+                <MudText>Accounts count</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    
+    <MudItem xs="4">
+        <MudCard Style="height:100px">
+            <MudCardContent>
+                <MudText>Total tracked money</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="6">
+        <MudCard>
+            <MudCardContent>
+                <MudText>Daily active users</MudText>
+                <ChartSpinner />
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="6">
+        <MudCard>
+            <MudCardContent>
+                <MudText>New users</MudText>
+                <ChartSpinner />
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
