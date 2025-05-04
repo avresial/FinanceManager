@@ -97,6 +97,15 @@
         </MudItem>
     </MudGrid>
 }
+else if (_isLoadingPage)
+{
+
+}
+else
+{
+
+    <MudAlert Severity="Severity.Error">User of id @UserId could not be found.</MudAlert>
+}
 
 @code
 {
@@ -109,7 +118,7 @@
     private bool _isLoadingPage;
     private bool _success;
     private string _selectedPlan = $"{PricingLevel.Free}";
-    private string _selectedUserRole = $"{UserRole.User}";
+    private string _selectedUserRole;
     private string? _confirmPassword { get; set; }
     private string? _deleteConfirmation;
     private MudForm? _passwordForm;
@@ -125,7 +134,18 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        _userData = await UserService.GetUser(UserId);
+        _isLoadingPage = true;
+
+        try
+        {
+            _userData = await UserService.GetUser(UserId);
+            _selectedUserRole = _userData?.UserRole.ToString() ?? $"{UserRole.User}";
+        }
+        catch (Exception ex)
+        {
+        }
+
+        _isLoadingPage = false;
     }
 
     private string PasswordMatch(string arg)

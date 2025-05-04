@@ -15,7 +15,7 @@ public class AdministrationUsersService
         {
             new UserDetails()
             {
-                Id = 1,
+                Id = 0,
                 Login = "Krishna",
                 PricingLevel = Domain.Enums.PricingLevel.Basic,
                 RecordCapacity = new Domain.Entities.Login.RecordCapacity()
@@ -26,7 +26,7 @@ public class AdministrationUsersService
             },
             new UserDetails()
             {
-                Id = 2,
+                Id = 1,
                 Login = "Webb",
                 PricingLevel = Domain.Enums.PricingLevel.Basic,
                 RecordCapacity = new Domain.Entities.Login.RecordCapacity()

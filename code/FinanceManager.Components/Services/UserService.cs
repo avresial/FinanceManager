@@ -117,4 +117,28 @@ public class UserService(HttpClient httpClient, ILogger<UserService> logger) : I
 
         return false;
     }
+
+    public async Task<bool> UpdateRole(int userId, UserRole userRole)
+    {
+        try
+        {
+            var existingUser = await GetUser(userId);
+            if (existingUser is null) return false;
+
+            UpdateUserRole updateUserRole = new UpdateUserRole(userId, userRole);
+            var response = await _httpClient.PutAsJsonAsync($"{_httpClient.BaseAddress}api/User/UpdateUserRole/", updateUserRole);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                OnUserChangeEvent?.Invoke(existingUser);
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error removing user {userId}", userId);
+        }
+
+        return false;
+    }
 }
