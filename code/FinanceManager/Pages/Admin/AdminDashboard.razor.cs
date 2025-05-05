@@ -12,9 +12,15 @@ public partial class AdminDashboard
         ShowLegend = false,
     };
 
-    private List<ChartSeries> _series = new()
+    private List<ChartSeries>? _dailyAcriveUsersSeries = null;
+    //new()
+    //{
+    //    new ChartSeries() { Name = "Users count", Data = new double[] {0,1,2,3,4,5,10,20,30 } },
+    //};
+
+    private List<ChartSeries>? _newUsersSeries = new()
     {
-        new ChartSeries() { Name = "Users count", Data = new double[] {1,2,3,4,5,10,20,30 } },
+        new ChartSeries() { Name = "Users count", Data = new double[] {30,20,10,5,4,3,2,1,0 } },
     };
 
     [Inject] required public AdministrationUsersService AdministrationUsersService { get; set; }

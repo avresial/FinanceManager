@@ -70,7 +70,15 @@
         <MudCard Outlined>
             <MudCardContent>
                 <MudText>Daily active users</MudText>
-                <MudChart ChartType="ChartType.Bar" ChartSeries="@_series" Width="100%" Height="300px" ChartOptions="_axisChartOptions" />
+                @if (_dailyAcriveUsersSeries is not null)
+                {
+
+                    <MudChart ChartType="ChartType.Bar" ChartSeries="@_dailyAcriveUsersSeries" Width="100%" Height="300px" ChartOptions="_axisChartOptions" />
+                }
+                else
+                {
+                    <ChartSpinner />
+                }
             </MudCardContent>
         </MudCard>
     </MudItem>
@@ -79,7 +87,14 @@
         <MudCard Outlined>
             <MudCardContent>
                 <MudText>New users</MudText>
-                <MudChart ChartType="ChartType.Bar" ChartSeries="@_series" Width="100%" Height="300px" ChartOptions="_axisChartOptions" />
+                @if (_newUsersSeries is not null)
+                {
+                    <MudChart ChartType="ChartType.Bar" ChartSeries="@_newUsersSeries" Width="100%" Height="300px" ChartOptions="_axisChartOptions" />
+                }
+                else
+                {
+                    <ChartSpinner />
+                }
             </MudCardContent>
         </MudCard>
     </MudItem>
