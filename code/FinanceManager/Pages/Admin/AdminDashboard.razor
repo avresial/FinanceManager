@@ -5,45 +5,81 @@
 @using FinanceManager.Domain.Enums
 @using Microsoft.AspNetCore.Authorization
 
-<MudGrid>
-    <MudItem xs="4">
-        <MudCard Style="height:100px">
+<MudGrid Spacing="3">
+    <MudItem xs="3">
+        <MudCard Outlined>
             <MudCardContent>
-                <MudText>Total users count</MudText>
+                <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
+                    <MudText>Total users count</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Primary"><b>@_userCount</b></MudText>
+                    <MudStack Row>
+                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Title="TrendingUp" />
+                        <MudText Typo="Typo.subtitle2">?%</MudText>
+                    </MudStack>
+                </MudPaper>
             </MudCardContent>
         </MudCard>
     </MudItem>
 
-     <MudItem xs="4">
-        <MudCard Style="height:100px">
+    <MudItem xs="3">
+        <MudCard Outlined>
             <MudCardContent>
-                <MudText>Accounts count</MudText>
+                <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
+                    <MudText>Accounts count</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Primary"><b>?</b></MudText>
+                    <MudStack Row>
+                        <MudIcon Icon="@Icons.Material.Filled.TrendingFlat" Title="TrendingFlat" />
+                        <MudText Typo="Typo.subtitle2">?%</MudText>
+                    </MudStack>
+                </MudPaper>
             </MudCardContent>
         </MudCard>
     </MudItem>
-    
-    <MudItem xs="4">
-        <MudCard Style="height:100px">
+
+    <MudItem xs="3">
+        <MudCard Outlined>
             <MudCardContent>
-                <MudText>Total tracked money</MudText>
+                <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
+                    <MudText>Total tracked money</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Primary"><b>?</b></MudText>
+                    <MudStack Row>
+                        <MudIcon Icon="@Icons.Material.Filled.TrendingDown" Title="TrendingDown" />
+                        <MudText Typo="Typo.subtitle2">?%</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="3">
+        <MudCard Outlined>
+            <MudCardContent>
+                <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
+                    <MudText>Other metric</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Primary"><b>?</b></MudText>
+                    <MudStack Row>
+                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Title="TrendingUp" />
+                        <MudText Typo="Typo.subtitle2">?%</MudText>
+                    </MudStack>
+                </MudPaper>
             </MudCardContent>
         </MudCard>
     </MudItem>
 
     <MudItem xs="6">
-        <MudCard>
+        <MudCard Outlined>
             <MudCardContent>
                 <MudText>Daily active users</MudText>
-                <ChartSpinner />
+                <MudChart ChartType="ChartType.Bar" ChartSeries="@_series" Width="100%" Height="300px" ChartOptions="_axisChartOptions" />
             </MudCardContent>
         </MudCard>
     </MudItem>
 
     <MudItem xs="6">
-        <MudCard>
+        <MudCard Outlined>
             <MudCardContent>
                 <MudText>New users</MudText>
-                <ChartSpinner />
+                <MudChart ChartType="ChartType.Bar" ChartSeries="@_series" Width="100%" Height="300px" ChartOptions="_axisChartOptions" />
             </MudCardContent>
         </MudCard>
     </MudItem>
