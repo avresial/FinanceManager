@@ -9,7 +9,7 @@ public partial class AdminDashboard
     private ChartOptions _axisChartOptions = new ChartOptions()
     {
         ChartPalette = ["#ffab00", "#34C759", "#007AFF"],
-        ShowLabels = false,
+        ShowLegend = false,
     };
 
     private List<ChartSeries> _series = new()
