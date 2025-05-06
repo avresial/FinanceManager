@@ -9,14 +9,14 @@
         <MudSpacer />
         <MudIconButton OnClick=LoginService.Logout Icon="@Icons.Material.Filled.Logout" Edge="Edge.End" />
     </MudAppBar>
-     
-    <MudDrawer @bind-Open="_drawerOpen" Elevation="1" >
+
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
         <MudNavMenu>
             <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary">FinanceManager</MudText>
             <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Admin panel</MudText>
-            <MudDivider Class="my-2" />
-            <MudNavLink Href="/Admin/Dashboard">Dashboard</MudNavLink>
-            <MudNavLink Href="/Admin/Users">Users</MudNavLink>
+            <MudDivider Class="mb-1" />
+            <MudNavLink Icon="@Icons.Material.Filled.Dashboard" Href="/Admin/Dashboard">Dashboard</MudNavLink>
+            <MudNavLink Icon="@Icons.Material.Filled.People" Href="/Admin/Users">Users</MudNavLink>
         </MudNavMenu>
 
     </MudDrawer>
@@ -28,7 +28,7 @@
 </MudLayout>
 
 @code {
-    [Inject] required public ILoginService LoginService { get; set; } 
+    [Inject] required public ILoginService LoginService { get; set; }
 
     bool _drawerOpen = true;
 
