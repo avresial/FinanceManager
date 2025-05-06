@@ -8,6 +8,17 @@ public class AdministrationUsersService(HttpClient httpClient, ILogger<Administr
     private readonly HttpClient _httpClient = httpClient;
     private readonly ILogger<AdministrationUsersService> _logger = logger;
 
+    public async Task<int?> GetAccountsCount()
+    {
+        int? result = null;
+        return await Task.FromResult(result);
+    }
+
+    public async Task<int?> GetTotalTrackedMoney()
+    {
+        int? result = null;
+        return await Task.FromResult(result);
+    }
     public async Task<int?> GetUsersCount()
     {
         try

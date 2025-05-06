@@ -6,97 +6,136 @@
 @using Microsoft.AspNetCore.Authorization
 
 <MudGrid Spacing="3">
-    <MudItem xs="3">
+    <MudItem xs="6" md="3">
         <MudCard Outlined>
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
                     <MudText>Total users count</MudText>
-                    <MudText Typo="Typo.h3" Color="Color.Primary"><b>@_userCount</b></MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Primary">
+                        <b>
+                            @if (_userCount.HasValue)
+                            {
+                                @_userCount
+                            }
+                            else
+                            {
+                                <StringSpinner CharactersCount="3" />
+                            }
+                        </b>
+                    </MudText>
                     <MudStack Row>
                         <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Title="TrendingUp" />
-                        <MudText Typo="Typo.subtitle2">?%</MudText>
+                        <MudText Typo="Typo.subtitle2"><StringSpinner Characters="!#$^&*" />%</MudText>
                     </MudStack>
                 </MudPaper>
             </MudCardContent>
         </MudCard>
     </MudItem>
 
-    <MudItem xs="3">
+    <MudItem xs="6" md="3">
         <MudCard Outlined>
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
                     <MudText>Accounts count</MudText>
-                    <MudText Typo="Typo.h3" Color="Color.Primary"><b>?</b></MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Primary">
+                        <b>
+                            @if (_accountsCount.HasValue)
+                            {
+                                @_accountsCount
+                            }
+                            else
+                            {
+                                <StringSpinner CharactersCount="3" />
+                            }
+                        </b>
+                    </MudText>
                     <MudStack Row>
                         <MudIcon Icon="@Icons.Material.Filled.TrendingFlat" Title="TrendingFlat" />
-                        <MudText Typo="Typo.subtitle2">?%</MudText>
+                        <MudText Typo="Typo.subtitle2"><StringSpinner Characters="!#$^&*" />%</MudText>
                     </MudStack>
                 </MudPaper>
             </MudCardContent>
         </MudCard>
     </MudItem>
 
-    <MudItem xs="3">
+    <MudItem xs="6" md="3">
         <MudCard Outlined>
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
                     <MudText>Total tracked money</MudText>
-                    <MudText Typo="Typo.h3" Color="Color.Primary"><b>?</b></MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Primary">
+                        <b>
+                            @if (_totalTrackedMoney.HasValue)
+                            {
+                                @_totalTrackedMoney
+                            }
+                            else
+                            {
+                                <StringSpinner CharactersCount="3" />
+                            }
+                        </b>
+                    </MudText>
                     <MudStack Row>
                         <MudIcon Icon="@Icons.Material.Filled.TrendingDown" Title="TrendingDown" />
-                        <MudText Typo="Typo.subtitle2">?%</MudText>
+                        <MudText Typo="Typo.subtitle2"><StringSpinner Characters="!#$^&*" />%</MudText>
                     </MudStack>
                 </MudPaper>
             </MudCardContent>
         </MudCard>
     </MudItem>
 
-    <MudItem xs="3">
+    <MudItem xs="6" md="3">
         <MudCard Outlined>
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
                     <MudText>Other metric</MudText>
-                    <MudText Typo="Typo.h3" Color="Color.Primary"><b>?</b></MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Primary">
+                        <b>
+                            <StringSpinner CharactersCount="3" />
+                        </b>
+                    </MudText>
                     <MudStack Row>
                         <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Title="TrendingUp" />
-                        <MudText Typo="Typo.subtitle2">?%</MudText>
+                        <MudText Typo="Typo.subtitle2"><StringSpinner Characters="!#$^&*" />%</MudText>
                     </MudStack>
                 </MudPaper>
             </MudCardContent>
         </MudCard>
     </MudItem>
 
-    <MudItem xs="6">
+    <MudItem xs="12" md="6">
         <MudCard Outlined>
             <MudCardContent>
-                <MudText>Daily active users</MudText>
-                @if (_dailyAcriveUsersSeries is not null)
+                <MudText>Daily active users - Mock</MudText>
+                @if (_dailyActiveUsersSeries is not null)
                 {
-
-                    <MudChart ChartType="ChartType.Bar" ChartSeries="@_dailyAcriveUsersSeries" Width="100%" Height="300px" ChartOptions="_axisChartOptions" />
+                    <MudChart ChartType="ChartType.Bar" ChartSeries="@_dailyActiveUsersSeries" Width="100%" Height="300px" ChartOptions=_chartOptions AxisChartOptions=_axisChartOptions />
                 }
                 else
                 {
-                    <ChartSpinner />
+                    <div style="height:300px">
+                        <ChartSpinner MaxHeight="400px" />
+                    </div>
                 }
             </MudCardContent>
         </MudCard>
     </MudItem>
 
-    <MudItem xs="6">
+    <MudItem xs="12" md="6">
         <MudCard Outlined>
             <MudCardContent>
-                <MudText>New users</MudText>
+                <MudText>New users - Mock</MudText>
                 @if (_newUsersSeries is not null)
                 {
-                    <MudChart ChartType="ChartType.Bar" ChartSeries="@_newUsersSeries" Width="100%" Height="300px" ChartOptions="_axisChartOptions" />
+                    <MudChart ChartType="ChartType.Bar" ChartSeries="@_newUsersSeries" Width="100%" Height="300px" ChartOptions="@_chartOptions" AxisChartOptions=@_axisChartOptions />
                 }
                 else
                 {
-                    <ChartSpinner />
+                    <div style="height:300px">
+                        <ChartSpinner MaxHeight="400px" />
+                    </div>
                 }
             </MudCardContent>
         </MudCard>
     </MudItem>
 </MudGrid>
-

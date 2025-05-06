@@ -7,10 +7,9 @@
     <MudAppBar Elevation="0" style="background-color:transparent;">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
         <MudSpacer />
-        @* <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Edge="Edge.End" /> *@
-        <MudButton OnClick=LoginService.Logout Variant="Variant.Text"> Logout </MudButton>
-     
+        <MudIconButton OnClick=LoginService.Logout Icon="@Icons.Material.Filled.Logout" Edge="Edge.End" />
     </MudAppBar>
+     
     <MudDrawer @bind-Open="_drawerOpen" Elevation="1" >
         <MudNavMenu>
             <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary">FinanceManager</MudText>
