@@ -8,6 +8,10 @@ namespace FinanceManager.Infrastructure.Repositories.Account;
 internal class InMemoryBankAccountRepository : IBankAccountRepository<BankAccount>
 {
     private List<BankAccount> _bankAccounts = [];
+    public int GetAccountsCount()
+    {
+        return _bankAccounts.Count();
+    }
     public int? GetLastAccountId()
     {
         if (_bankAccounts.Count != 0)
@@ -57,6 +61,5 @@ internal class InMemoryBankAccountRepository : IBankAccountRepository<BankAccoun
 
         return true;
     }
-
 
 }

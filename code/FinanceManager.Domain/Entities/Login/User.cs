@@ -8,4 +8,5 @@ public class User
     public required string Login { get; set; }
     public PricingLevel PricingLevel { get; set; } = PricingLevel.Free;
     public UserRole UserRole { get; set; } = UserRole.User;
+    public required DateTime CreationDate { get; set; }
 }

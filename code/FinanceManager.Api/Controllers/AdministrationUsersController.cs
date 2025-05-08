@@ -1,8 +1,4 @@
-﻿using FinanceManager.Application.Providers;
-using FinanceManager.Application.Services;
-using FinanceManager.Domain.Entities;
-using FinanceManager.Domain.Entities.User;
-using FinanceManager.Domain.Repositories;
+﻿using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,11 +6,9 @@ namespace FinanceManager.Api.Controllers;
 [Route("api/[controller]")]
 [Authorize]
 [ApiController]
-public class AdministrationUsersController(IUserRepository userRepository, UserPlanVerifier userPlanVerifier, PricingProvider pricingProvider, ILogger<UserController> logger) : ControllerBase
+public class AdministrationUsersController(IAdministrationUsersService administrationUsersService, ILogger<UserController> logger) : ControllerBase
 {
-    private readonly IUserRepository _userRepository = userRepository;
-    private readonly UserPlanVerifier _userPlanVerifier = userPlanVerifier;
-    private readonly PricingProvider _pricingProvider = pricingProvider;
+    private readonly IAdministrationUsersService _administrationUsersService = administrationUsersService;
     private readonly ILogger<UserController> _logger = logger;
 
 
@@ -22,23 +16,15 @@ public class AdministrationUsersController(IUserRepository userRepository, UserP
     [Route("GetNewUsersDaily")]
     public async Task<IActionResult> GetNewUsersDaily()
     {
-        return BadRequest();
-
-        DateTime start = DateTime.Now.AddDays(32);
         try
         {
-            var results = Enumerable.Range(1, 32).Select(x => new ChartEntryModel()
-            {
-                Date = start.AddDays(x),
-                Value = Random.Shared.Next(1, 200)
-            });
-
-            return Ok(results);
+            return Ok(await _administrationUsersService.GetNewUsersDaily());
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error getting accounts count");
         }
+
         return BadRequest();
     }
 
@@ -47,21 +33,15 @@ public class AdministrationUsersController(IUserRepository userRepository, UserP
     [Route("GetDailyActiveUsers")]
     public async Task<IActionResult> GetDailyActiveUsers()
     {
-        DateTime start = DateTime.Now.AddDays(32);
         try
         {
-            var results = Enumerable.Range(1, 32).Select(x => new ChartEntryModel()
-            {
-                Date = start.AddDays(x),
-                Value = Random.Shared.Next(1, 200)
-            });
-
-            return Ok(results);
+            return Ok(await _administrationUsersService.GetDailyActiveUsers());
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error getting accounts count");
         }
+
         return BadRequest();
     }
 
@@ -72,11 +52,12 @@ public class AdministrationUsersController(IUserRepository userRepository, UserP
     {
         try
         {
+            var result = await _administrationUsersService.GetAccountsCount();
+            return Ok(result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error getting accounts count");
-            return BadRequest();
         }
         return BadRequest();
     }
@@ -87,11 +68,12 @@ public class AdministrationUsersController(IUserRepository userRepository, UserP
     {
         try
         {
+            var result = await _administrationUsersService.GetTotalTrackedMoney();
+            return Ok(result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error getting total tracked money");
-            return BadRequest();
         }
 
         return BadRequest();
@@ -103,7 +85,7 @@ public class AdministrationUsersController(IUserRepository userRepository, UserP
     {
         try
         {
-            return Ok(await _userRepository.GetUsersCount());
+            return Ok(await _administrationUsersService.GetUsersCount());
         }
         catch (Exception ex)
         {
@@ -118,26 +100,13 @@ public class AdministrationUsersController(IUserRepository userRepository, UserP
     {
         try
         {
-            var users = await _userRepository.GetUsers(recordIndex, recordsCount);
-            List<UserDetails> results = users.Select(users => new UserDetails()
-            {
-                Id = users.UserId,
-                Login = users.Login,
-                PricingLevel = users.PricingLevel,
-                RecordCapacity = new Domain.Entities.Login.RecordCapacity()
-                {
-                    UsedCapacity = _userPlanVerifier.GetUsedRecordsCapacity(users.UserId).Result,
-                    TotalCapacity = _pricingProvider.GetMaxAllowedEntries(users.PricingLevel)
-                }
-            }).ToList();
-
-            return Ok(results);
+            return Ok(await _administrationUsersService.GetUsers(recordIndex, recordsCount));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error getting user count");
-            return BadRequest();
         }
 
+        return BadRequest();
     }
 }

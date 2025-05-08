@@ -9,6 +9,7 @@ public interface IUserRepository
     Task<User?> GetUser(string login, string password);
     Task<User?> GetUser(string login);
     Task<User?> GetUser(int id);
+    Task<IEnumerable<User>> GetUsers(DateTime startDate, DateTime endDate);
     Task<IEnumerable<User>> GetUsers(int recordIndex, int recordsCount);
     Task<bool> UpdatePassword(int userId, string password);
     Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel);

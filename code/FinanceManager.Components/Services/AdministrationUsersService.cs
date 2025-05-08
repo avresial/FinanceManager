@@ -1,10 +1,11 @@
 ﻿using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.User;
+using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.Services;
-public class AdministrationUsersService(HttpClient httpClient, ILogger<AdministrationUsersService> logger)
+public class AdministrationUsersService(HttpClient httpClient, ILogger<AdministrationUsersService> logger) : IAdministrationUsersService
 {
     private readonly HttpClient _httpClient = httpClient;
     private readonly ILogger<AdministrationUsersService> _logger = logger;
@@ -19,11 +20,10 @@ public class AdministrationUsersService(HttpClient httpClient, ILogger<Administr
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting user count");
+            _logger.LogError(ex, $"Error getting New Users Daily");
             return [];
         }
     }
-
     public async Task<IEnumerable<ChartEntryModel>> GetDailyActiveUsers()
     {
         try
@@ -34,19 +34,20 @@ public class AdministrationUsersService(HttpClient httpClient, ILogger<Administr
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting user count");
+            _logger.LogError(ex, $"Error Daily Active Users");
             return [];
         }
     }
+
     public async Task<int?> GetAccountsCount()
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<int>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetAccountsCount");
+            return await _httpClient.GetFromJsonAsync<int?>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetAccountsCount");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting user count");
+            _logger.LogError(ex, $"Error getting accounts count");
             return null;
         }
     }
@@ -54,11 +55,11 @@ public class AdministrationUsersService(HttpClient httpClient, ILogger<Administr
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<int>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetTotalTrackedMoney");
+            return await _httpClient.GetFromJsonAsync<int?>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetTotalTrackedMoney");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting user count");
+            _logger.LogError(ex, $"Error getting Total Tracked Money");
             return null;
         }
     }
@@ -66,7 +67,7 @@ public class AdministrationUsersService(HttpClient httpClient, ILogger<Administr
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<int>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetUsersCount");
+            return await _httpClient.GetFromJsonAsync<int?>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetUsersCount");
         }
         catch (Exception ex)
         {
@@ -92,6 +93,3 @@ public class AdministrationUsersService(HttpClient httpClient, ILogger<Administr
         return null;
     }
 }
-
-
-

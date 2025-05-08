@@ -34,7 +34,8 @@ public class UserLocalStorageRepository : IUserRepository
         {
             Login = foundUser.Login,
             UserId = foundUser.Id,
-            PricingLevel = foundUser.PricingLevel
+            PricingLevel = foundUser.PricingLevel,
+            CreationDate = foundUser.CreationDate,
         };
     }
     public async Task<User?> GetUser(int id)
@@ -54,7 +55,8 @@ public class UserLocalStorageRepository : IUserRepository
         {
             Login = foundUser.Login,
             UserId = foundUser.Id,
-            PricingLevel = foundUser.PricingLevel
+            PricingLevel = foundUser.PricingLevel,
+            CreationDate = foundUser.CreationDate,
         };
     }
     async Task<bool> IUserRepository.AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole)
@@ -75,7 +77,8 @@ public class UserLocalStorageRepository : IUserRepository
             Password = password,
             Id = userDtos.Any() ? userDtos.Max(x => x.Id) + 1 : 0,
             PricingLevel = pricingLevel,
-            UserRole = userRole
+            UserRole = userRole,
+            CreationDate = DateTime.Now,
         });
 
         try
@@ -137,6 +140,11 @@ public class UserLocalStorageRepository : IUserRepository
     }
 
     public Task<IEnumerable<User>> GetUsers(int recordIndex, int recordsCount)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<IEnumerable<User>> GetUsers(DateTime startDate, DateTime endDate)
     {
         throw new NotImplementedException();
     }

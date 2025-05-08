@@ -6,6 +6,7 @@ namespace FinanceManager.Domain.Repositories.Account
     {
         public Dictionary<int, Type> GetAvailableAccounts(int userId);
         public int GetLastAccountId();
+        public int GetAccountsCount();
         public DateTime? GetStartDate(int id);
         public DateTime? GetEndDate(int id);
 

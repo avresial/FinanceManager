@@ -29,9 +29,9 @@
         if (firstRender)
         {
             if (_useSystemPreferences && _mudThemeProvider is not null)
-              _isDarkMode = await _mudThemeProvider.GetSystemPreference();
-            
-              StateHasChanged();
+                _isDarkMode = await _mudThemeProvider.GetSystemPreference();
+
+            StateHasChanged();
         }
     }
 
@@ -41,13 +41,13 @@
             {
                 Primary = Colors.Amber.Accent4,
                 Secondary = Colors.Amber.Accent2,
-                AppbarBackground = Colors.Red.Default,
+                AppbarBackground = Colors.Shades.White,
             },
             PaletteDark = new PaletteDark()
             {
                 Primary = Colors.Amber.Accent4,
                 Secondary = Colors.Green.Accent4,
-                AppbarBackground = Colors.Red.Default,
+                AppbarBackground = Colors.Gray.Lighten2,
             },
         };
 }

@@ -26,6 +26,10 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             throw new NotImplementedException();
         }
+        public int GetAccountsCount()
+        {
+            return _bankAccountAccountRepository.GetAccountsCount();
+        }
         public DateTime? GetStartDate(int id)
         {
             var account = FindAccount(id);
@@ -290,5 +294,6 @@ namespace FinanceManager.Infrastructure.Repositories
                 return ExpenseType.Other;
             return (ExpenseType)result;
         }
+
     }
 }
