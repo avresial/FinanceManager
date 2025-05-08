@@ -22,7 +22,7 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
     }
     public async Task<IEnumerable<ChartEntryModel>> GetDailyActiveUsers()
     {
-        DateTime end = DateTime.Now;
+        DateTime end = DateTime.Now.Date;
         DateTime start = end.AddDays(-31);
 
         List<ChartEntryModel> result = [];
@@ -53,13 +53,7 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
                 }
             }
 
-            var results = Enumerable.Range(1, 32).Select(x => new ChartEntryModel()
-            {
-                Date = start.AddDays(x),
-                Value = Random.Shared.Next(1, 200)
-            });
-
-            return results;
+            return result;
         }
         catch (Exception ex)
         {
