@@ -24,6 +24,7 @@ namespace FinanceManager.Infrastructure
             services.AddScoped<IFinancalAccountRepository, AccountRepository>()
                     .AddScoped<IStockRepository, StockRepositoryMock>()
                     .AddSingleton<IUserRepository, UserInMemoryRepository>()
+                    .AddSingleton<IActiveUsersRepository, ActiveUsersRepository>()
                     .AddSingleton<IAccountEntryRepository<BankAccountEntry>, InMemoryBankEntryRepository>()
                     .AddSingleton<IAccountEntryRepository<StockAccountEntry>, InMemoryStockEntryRepository>()
                     .AddSingleton<IAccountRepository<StockAccount>, InMemoryStockAccountRepository>()

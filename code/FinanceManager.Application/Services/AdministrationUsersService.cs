@@ -7,10 +7,11 @@ using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Services;
-public class AdministrationUsersService(IFinancalAccountRepository financalAccountRepository, IUserRepository userRepository, UserPlanVerifier userPlanVerifier, PricingProvider pricingProvider, ILogger<AdministrationUsersService> logger) : IAdministrationUsersService
+public class AdministrationUsersService(IFinancalAccountRepository financalAccountRepository, IUserRepository userRepository, IActiveUsersRepository activeUsersRepository, UserPlanVerifier userPlanVerifier, PricingProvider pricingProvider, ILogger<AdministrationUsersService> logger) : IAdministrationUsersService
 {
     private readonly IFinancalAccountRepository _financalAccountRepository = financalAccountRepository;
     private readonly IUserRepository _userRepository = userRepository;
+    private readonly IActiveUsersRepository _activeUsersRepository = activeUsersRepository;
     private readonly UserPlanVerifier _userPlanVerifier = userPlanVerifier;
     private readonly PricingProvider _pricingProvider = pricingProvider;
     private readonly ILogger<AdministrationUsersService> _logger = logger;
@@ -21,9 +22,37 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
     }
     public async Task<IEnumerable<ChartEntryModel>> GetDailyActiveUsers()
     {
-        DateTime start = DateTime.Now.AddDays(32);
+        DateTime end = DateTime.Now;
+        DateTime start = end.AddDays(-31);
+
+        List<ChartEntryModel> result = [];
+
         try
         {
+            var activeUsers = await _activeUsersRepository.GetActiveUsersCount(DateOnly.FromDateTime(start), DateOnly.FromDateTime(DateTime.Now));
+
+            for (DateTime i = start; i <= end; i = i.AddDays(1))
+            {
+                var usersCreatedAtDate = activeUsers.Where(x => x.Item1 == DateOnly.FromDateTime(i));
+
+                if (usersCreatedAtDate is null || usersCreatedAtDate.Any())
+                {
+                    result.Add(new ChartEntryModel()
+                    {
+                        Date = i,
+                        Value = 0
+                    });
+                }
+                else
+                {
+                    result.Add(new ChartEntryModel()
+                    {
+                        Date = i,
+                        Value = usersCreatedAtDate.First().Item2
+                    });
+                }
+            }
+
             var results = Enumerable.Range(1, 32).Select(x => new ChartEntryModel()
             {
                 Date = start.AddDays(x),
