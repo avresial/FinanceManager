@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.User;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
@@ -15,6 +16,86 @@ public class AdministrationUsersController(IUserRepository userRepository, UserP
     private readonly UserPlanVerifier _userPlanVerifier = userPlanVerifier;
     private readonly PricingProvider _pricingProvider = pricingProvider;
     private readonly ILogger<UserController> _logger = logger;
+
+
+    [HttpGet]
+    [Route("GetNewUsersDaily")]
+    public async Task<IActionResult> GetNewUsersDaily()
+    {
+        return BadRequest();
+
+        DateTime start = DateTime.Now.AddDays(32);
+        try
+        {
+            var results = Enumerable.Range(1, 32).Select(x => new ChartEntryModel()
+            {
+                Date = start.AddDays(x),
+                Value = Random.Shared.Next(1, 200)
+            });
+
+            return Ok(results);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting accounts count");
+        }
+        return BadRequest();
+    }
+
+
+    [HttpGet]
+    [Route("GetDailyActiveUsers")]
+    public async Task<IActionResult> GetDailyActiveUsers()
+    {
+        DateTime start = DateTime.Now.AddDays(32);
+        try
+        {
+            var results = Enumerable.Range(1, 32).Select(x => new ChartEntryModel()
+            {
+                Date = start.AddDays(x),
+                Value = Random.Shared.Next(1, 200)
+            });
+
+            return Ok(results);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting accounts count");
+        }
+        return BadRequest();
+    }
+
+
+    [HttpGet]
+    [Route("GetAccountsCount")]
+    public async Task<IActionResult> GetAccountsCount()
+    {
+        try
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting accounts count");
+            return BadRequest();
+        }
+        return BadRequest();
+    }
+
+    [HttpGet]
+    [Route("GetTotalTrackedMoney")]
+    public async Task<IActionResult> GetTotalTrackedMoney()
+    {
+        try
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting total tracked money");
+            return BadRequest();
+        }
+
+        return BadRequest();
+    }
 
     [HttpGet]
     [Route("GetUsersCount")]

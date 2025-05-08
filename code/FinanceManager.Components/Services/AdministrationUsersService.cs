@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities.User;
+﻿using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Entities.User;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
@@ -8,16 +9,58 @@ public class AdministrationUsersService(HttpClient httpClient, ILogger<Administr
     private readonly HttpClient _httpClient = httpClient;
     private readonly ILogger<AdministrationUsersService> _logger = logger;
 
-    public async Task<int?> GetAccountsCount()
+    public async Task<IEnumerable<ChartEntryModel>> GetNewUsersDaily()
     {
-        int? result = null;
-        return await Task.FromResult(result);
+        try
+        {
+            var result = await _httpClient.GetFromJsonAsync<IEnumerable<ChartEntryModel>>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetNewUsersDaily");
+            if (result is null) return [];
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting user count");
+            return [];
+        }
     }
 
+    public async Task<IEnumerable<ChartEntryModel>> GetDailyActiveUsers()
+    {
+        try
+        {
+            var result = await _httpClient.GetFromJsonAsync<IEnumerable<ChartEntryModel>>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetDailyActiveUsers");
+            if (result is null) return [];
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting user count");
+            return [];
+        }
+    }
+    public async Task<int?> GetAccountsCount()
+    {
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<int>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetAccountsCount");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting user count");
+            return null;
+        }
+    }
     public async Task<int?> GetTotalTrackedMoney()
     {
-        int? result = null;
-        return await Task.FromResult(result);
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<int>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetTotalTrackedMoney");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting user count");
+            return null;
+        }
     }
     public async Task<int?> GetUsersCount()
     {

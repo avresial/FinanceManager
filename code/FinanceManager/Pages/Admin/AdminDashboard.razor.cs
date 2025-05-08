@@ -35,18 +35,25 @@ public partial class AdminDashboard
         _totalTrackedMoney = await AdministrationUsersService.GetTotalTrackedMoney();
         StateHasChanged();
 
-        await Task.Delay(1000);
+        var dailyActiveUsers = await AdministrationUsersService.GetDailyActiveUsers();
         _dailyActiveUsersSeries =
         [
-            new ChartSeries() { Name = "Users count", Data = Enumerable.Range(1, 32).Select(x =>  (double)Random.Shared.Next(1, 200)).ToArray() },
+            new ChartSeries()
+            {
+                Name = "Users count",
+                Data = dailyActiveUsers.Select(x =>  (double)x.Value).ToArray()
+            },
         ];
         StateHasChanged();
 
-
-        await Task.Delay(1000);
+        var newUsers = await AdministrationUsersService.GetNewUsersDaily();
         _newUsersSeries =
         [
-            new ChartSeries() { Name = "Users count", Data = Enumerable.Range(1, 32).Select(x =>  (double)x*Random.Shared.Next(5, 30)).ToArray() },
+            new ChartSeries()
+            {
+                Name = "Users count",
+                Data = newUsers.Select(x =>  (double)x.Value).ToArray()
+            },
         ];
         StateHasChanged();
     }
