@@ -106,7 +106,8 @@ public class LoginService : ILoginService
         {
             UserId = 0,
             UserName = username,
-            Password = encryptedPassword
+            Password = encryptedPassword,
+            UserRole = UserRole.User,
         });
 
         LogginStateChanged?.Invoke(loginResult);

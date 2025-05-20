@@ -11,6 +11,7 @@ namespace FinanceManager.Domain.Repositories.Account
 
     public interface IAccountRepository<T>
     {
+        int GetAccountsCount();
         int? GetLastAccountId();
         IEnumerable<AvailableAccount> GetAvailableAccounts(int userId);
         T? Get(int accountId);

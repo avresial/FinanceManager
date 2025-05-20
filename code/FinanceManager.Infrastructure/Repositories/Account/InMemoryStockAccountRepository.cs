@@ -8,6 +8,10 @@ namespace FinanceManager.Infrastructure.Repositories.Account
     {
         private List<StockAccount> accounts = [];
 
+        public int GetAccountsCount()
+        {
+            return accounts.Count();
+        }
         public int? Add(int userId, int accountId, string accountName)
         {
             accounts.Add(new StockAccount(userId, accountId, accountName));
@@ -48,7 +52,6 @@ namespace FinanceManager.Infrastructure.Repositories.Account
 
             return true;
         }
-
 
     }
 }

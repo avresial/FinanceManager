@@ -19,7 +19,7 @@
                                 @if (_recordCapacity is not null)
                                 {
                                     <MudText Typo="Typo.h6">Storage Usage</MudText>
-                                    <MudProgressLinear Color=GetStorageIndicatorColor() Size="Size.Medium" Value=GetStorageUsedPercentage() Class="mt-2 mb-1" />
+                                    <MudProgressLinear Color=GetStorageIndicatorColor() Size="Size.Medium" Value=_recordCapacity.GetStorageUsedPercentage() Class="mt-2 mb-1" />
                                     <MudText Typo="Typo.subtitle2">@($"{_recordCapacity.UsedCapacity} of {_recordCapacity.TotalCapacity} records")</MudText>
                                 }
                             </MudItem>

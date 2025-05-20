@@ -12,4 +12,8 @@
     <None Remove="Records\**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="9.0.3" />
+  </ItemGroup>
+
 </Project>

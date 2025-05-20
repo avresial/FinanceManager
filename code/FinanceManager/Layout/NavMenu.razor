@@ -5,7 +5,7 @@
             <Authorized>
                 @if (@context.User.IsInRole(UserRole.Admin.ToString()))
                 {
-                    <MudLink Class="px-4" href="AdminPage" Underline="Underline.None">
+                    <MudLink Class="px-4" href="Admin/Dashboard" Underline="Underline.None">
                         <MudText Typo="Typo.h6">Finance Manager</MudText>
                     </MudLink>
                 }
@@ -77,7 +77,7 @@
                     @if (@context.User.IsInRole(UserRole.Admin.ToString()))
                     {
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link py-0" href="AdminPage" Match="NavLinkMatch.All">
+                            <NavLink class="nav-link py-0" href="Admin/Dashboard" Match="NavLinkMatch.All">
                                 <span class="bi bi-gear-wide navbarIcon" aria-hidden="true"></span>Admin page
                             </NavLink>
                         </div>

@@ -189,13 +189,8 @@ public partial class UserSettingsPage
     }
     private Color GetStorageIndicatorColor()
     {
-        if (GetStorageUsedPercentage() >= 80)
+        if (_recordCapacity is not null && _recordCapacity.GetStorageUsedPercentage() >= 80)
             return Color.Error;
         return Color.Primary;
-    }
-    private double GetStorageUsedPercentage()
-    {
-        if (_recordCapacity is null) return -1;
-        return (double)_recordCapacity.UsedCapacity / _recordCapacity.TotalCapacity * 100;
     }
 }

@@ -27,6 +27,7 @@ namespace FinanceManager.Application
                     .AddScoped<GuestAccountSeeder>()
                     .AddScoped<AdminAccountSeeder>()
                     .AddScoped<UserPlanVerifier>()
+                    .AddScoped<IAdministrationUsersService, AdministrationUsersService>()
                 ;
 
             return services;

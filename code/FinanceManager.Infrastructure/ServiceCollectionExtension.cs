@@ -2,6 +2,7 @@
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
@@ -21,9 +22,11 @@ namespace FinanceManager.Infrastructure
 
         public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
         {
-            services.AddScoped<IFinancalAccountRepository, AccountRepository>()
+            services.AddSingleton<ActiveUsersContext>()
+                    .AddScoped<IFinancalAccountRepository, AccountRepository>()
                     .AddScoped<IStockRepository, StockRepositoryMock>()
                     .AddSingleton<IUserRepository, UserInMemoryRepository>()
+                    .AddSingleton<IActiveUsersRepository, ActiveUsersRepository>()
                     .AddSingleton<IAccountEntryRepository<BankAccountEntry>, InMemoryBankEntryRepository>()
                     .AddSingleton<IAccountEntryRepository<StockAccountEntry>, InMemoryStockEntryRepository>()
                     .AddSingleton<IAccountRepository<StockAccount>, InMemoryStockAccountRepository>()

@@ -13,13 +13,15 @@ namespace FinanceManager.Api.Controllers
     {
         private readonly JwtTokenGenerator _jwtTokenGenerator;
         private readonly IUserRepository _userRepository;
+        private readonly IActiveUsersRepository _activeUsersRepository;
         private readonly GuestAccountSeeder _guestAccountSeeder;
         private readonly ILogger<LoginController> _logger;
 
-        public LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepository userRepository, GuestAccountSeeder guestAccountSeeder, ILogger<LoginController> logger)
+        public LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepository userRepository, IActiveUsersRepository activeUsersRepository, GuestAccountSeeder guestAccountSeeder, ILogger<LoginController> logger)
         {
             _jwtTokenGenerator = jwtTokenGenerator;
             _userRepository = userRepository;
+            _activeUsersRepository = activeUsersRepository;
             _guestAccountSeeder = guestAccountSeeder;
             _logger = logger;
         }
@@ -42,7 +44,16 @@ namespace FinanceManager.Api.Controllers
 
             if (user is null) return BadRequest();
 
-            LoginResponseModel? token = _jwtTokenGenerator.GenerateToken(requestModel.userName, user.Id, user.UserRole);
+            LoginResponseModel? token = _jwtTokenGenerator.GenerateToken(requestModel.userName, user.UserId, user.UserRole);
+
+            try
+            {
+                if (token is not null) await _activeUsersRepository.Add(token.UserId, DateOnly.FromDateTime(DateTime.UtcNow));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while adding user to active users repository");
+            }
 
             return Ok(token);
         }

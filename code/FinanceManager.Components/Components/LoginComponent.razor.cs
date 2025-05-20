@@ -24,6 +24,12 @@ namespace FinanceManager.Components.Components
 
         protected override async Task OnInitializedAsync()
         {
+#if DEBUG
+            //await LoginService.Login("admin", "admin");
+            //Navigation.NavigateTo("Admin/Dashboard");
+            //return;
+#endif
+
             bool firstVisit = !(await LocalStorageService.ContainKeyAsync("isThisFirstVisit"));
             if (firstVisit)
             {
@@ -64,7 +70,7 @@ namespace FinanceManager.Components.Components
                         Navigation.NavigateTo("");
                         break;
                     case Domain.Enums.UserRole.Admin:
-                        Navigation.NavigateTo("AdminPage");
+                        Navigation.NavigateTo("Admin/Dashboard");
                         break;
                     default:
                         Navigation.NavigateTo("");

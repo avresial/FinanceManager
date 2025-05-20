@@ -33,6 +33,7 @@ namespace FinanceManager.Api.Services
                 {
                     new Claim(JwtRegisteredClaimNames.Name, userName),
                     new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                    new Claim(ClaimTypes.Role, userRole.ToString()),
                 }),
 
                 Expires = tokenExpiryTimeStamp,
