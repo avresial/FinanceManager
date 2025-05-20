@@ -35,7 +35,7 @@ public class BankAccountControllerTests
         _mockAccountIdProvider = new Mock<AccountIdProvider>(new Mock<IAccountRepository<StockAccount>>().Object, _mockBankAccountRepository.Object);
 
         _userRepository = new Mock<IUserRepository>();
-        var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = Domain.Enums.PricingLevel.Premium };
+        var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = Domain.Enums.PricingLevel.Premium, CreationDate = DateTime.UtcNow };
         _userRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
         _userPlanVerifier = new Mock<UserPlanVerifier>(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userRepository.Object, new PricingProvider());
         _controller = new BankAccountController(_mockBankAccountRepository.Object, _mockAccountIdProvider.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object);

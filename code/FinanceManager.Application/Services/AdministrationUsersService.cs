@@ -33,9 +33,9 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
 
             for (DateTime i = start; i <= end; i = i.AddDays(1))
             {
-                var usersCreatedAtDate = activeUsers.Where(x => x.Item1 == DateOnly.FromDateTime(i));
+                IEnumerable<(DateOnly, int)>? usersCreatedAtDate = activeUsers.Where(x => x.Item1 == DateOnly.FromDateTime(i));
 
-                if (usersCreatedAtDate is null || usersCreatedAtDate.Any())
+                if (usersCreatedAtDate is null || !usersCreatedAtDate.Any())
                 {
                     result.Add(new ChartEntryModel()
                     {

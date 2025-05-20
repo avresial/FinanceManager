@@ -10,11 +10,11 @@
         <MudIconButton OnClick=LoginService.Logout Icon="@Icons.Material.Filled.Logout" Edge="Edge.End" />
     </MudAppBar>
 
-    <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="0">
         <MudNavMenu>
             <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary">FinanceManager</MudText>
             <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Admin panel</MudText>
-            <MudDivider Class="mb-1" />
+            <MudDivider Class="my-2" />
             <MudNavLink Icon="@Icons.Material.Filled.Dashboard" Href="/Admin/Dashboard">Dashboard</MudNavLink>
             <MudNavLink Icon="@Icons.Material.Filled.People" Href="/Admin/Users">Users</MudNavLink>
         </MudNavMenu>
