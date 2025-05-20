@@ -1,4 +1,4 @@
-﻿using FinanceManager.Infrastructure.Repositories;
+﻿using FinanceManager.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Contexts;

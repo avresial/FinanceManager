@@ -52,7 +52,7 @@ namespace FinanceManager.Api.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while seeding guest account data");
+                _logger.LogError(ex, "Error occurred while adding user to active users repository");
             }
 
             return Ok(token);

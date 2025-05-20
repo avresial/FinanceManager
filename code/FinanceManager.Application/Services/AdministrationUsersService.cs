@@ -33,8 +33,7 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
 
             for (DateTime i = start; i <= end; i = i.AddDays(1))
             {
-                IEnumerable<(DateOnly, int)>? usersCreatedAtDate = activeUsers.Where(x => x.Item1 == DateOnly.FromDateTime(i));
-
+                var usersCreatedAtDate = activeUsers.Where(x => x.Item1 == DateOnly.FromDateTime(i));
                 if (usersCreatedAtDate is null || !usersCreatedAtDate.Any())
                 {
                     result.Add(new ChartEntryModel()
@@ -57,7 +56,7 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting accounts count");
+            _logger.LogError(ex, $"Error getting daily active users");
         }
 
         return [];
@@ -74,7 +73,7 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
         {
             for (DateTime i = start; i <= end; i = i.AddDays(1))
             {
-                var usersCreatedAtDate = users.Where(x => x.CreationDate.Date == i.Date).Count();
+                var usersCreatedAtDate = users.Count(x => x.CreationDate.Date == i.Date);
                 result.Add(new ChartEntryModel()
                 {
                     Date = i,
@@ -85,7 +84,7 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting accounts count");
+            _logger.LogError(ex, $"Error getting new users daily");
         }
 
         return [];
@@ -98,9 +97,10 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
     public async Task<IEnumerable<UserDetails>> GetUsers(int recordIndex, int recordsCount)
     {
         var users = await _userRepository.GetUsers(recordIndex, recordsCount);
+
         return users.Select(users => new UserDetails()
         {
-            Id = users.UserId,
+            UserId = users.UserId,
             Login = users.Login,
             PricingLevel = users.PricingLevel,
             RecordCapacity = new Domain.Entities.Login.RecordCapacity()

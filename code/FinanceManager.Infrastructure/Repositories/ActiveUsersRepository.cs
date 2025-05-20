@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Repositories;
+﻿using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 

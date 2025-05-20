@@ -22,14 +22,14 @@
         <MudTh>Action</MudTh>
     </HeaderContent>
     <RowTemplate>
-        <MudTd DataLabel="User id">@context.Id</MudTd>
+        <MudTd DataLabel="User id">@context.UserId</MudTd>
         <MudTd DataLabel="User name">@context.Login</MudTd>
         <MudTd DataLabel="User name">@context.PricingLevel</MudTd>
         <MudTd DataLabel="Capacity"><MudProgressLinear Color="Color.Primary" Value="@context.RecordCapacity.GetStorageUsedPercentage()" /> </MudTd>
         <MudTd DataLabel="Action">
             <MudMenu Label="Action" Variant="Variant.Text">
-                <MudMenuItem Label="Edit" Href=@($"Admin/EditUser/{context.Id}") />
-                <MudMenuItem Label="Remove" OnClick="@(()=>RemoveUser(context.Id))" />
+                <MudMenuItem Label="Edit" Href=@($"Admin/EditUser/{context.UserId}") />
+                <MudMenuItem Label="Remove" OnClick="@(()=>RemoveUser(context.UserId))" />
             </MudMenu>
         </MudTd>
     </RowTemplate>

@@ -1,4 +1,4 @@
-﻿using FinanceManager.Infrastructure.Repositories;
+﻿using FinanceManager.Domain.Entities;
 
 namespace FinanceManager.Domain.Repositories;
 

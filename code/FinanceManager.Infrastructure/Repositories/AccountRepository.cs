@@ -28,7 +28,9 @@ namespace FinanceManager.Infrastructure.Repositories
         }
         public int GetAccountsCount()
         {
-            return _bankAccountAccountRepository.GetAccountsCount();
+            int bankAccountsCount = _bankAccountAccountRepository.GetAccountsCount();
+            int stockAccountsCount = 0; // Add method to get stock accounts count
+            return bankAccountsCount + stockAccountsCount;
         }
         public DateTime? GetStartDate(int id)
         {

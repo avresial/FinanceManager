@@ -22,10 +22,10 @@ public class AdministrationUsersController(IAdministrationUsersService administr
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting accounts count");
+            _logger.LogError(ex, $"Error getting new users daily");
         }
 
-        return BadRequest();
+        return BadRequest("Failed to retrieve new users daily data");
     }
 
 
@@ -39,7 +39,7 @@ public class AdministrationUsersController(IAdministrationUsersService administr
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting accounts count");
+            _logger.LogError(ex, $"Error getting daily active users");
         }
 
         return BadRequest();
@@ -59,6 +59,7 @@ public class AdministrationUsersController(IAdministrationUsersService administr
         {
             _logger.LogError(ex, $"Error getting accounts count");
         }
+
         return BadRequest();
     }
 
@@ -90,21 +91,24 @@ public class AdministrationUsersController(IAdministrationUsersService administr
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error getting user count");
-            return BadRequest();
         }
+
+        return BadRequest();
     }
 
     [HttpGet]
     [Route("GetUsers/{recordIndex:int}/{recordsCount:int}")]
     public async Task<IActionResult> GetUsers(int recordIndex, int recordsCount)
     {
+        if (recordIndex < 0 || recordsCount <= 0) return BadRequest("Invalid pagination parameters");
+
         try
         {
             return Ok(await _administrationUsersService.GetUsers(recordIndex, recordsCount));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting user count");
+            _logger.LogError(ex, $"Error getting users with pagination");
         }
 
         return BadRequest();

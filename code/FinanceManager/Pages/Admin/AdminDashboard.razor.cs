@@ -30,31 +30,40 @@ public partial class AdminDashboard
 
     protected override async Task OnInitializedAsync()
     {
-        _userCount = await AdministrationUsersService.GetUsersCount();
-        _accountsCount = await AdministrationUsersService.GetAccountsCount();
-        _totalTrackedMoney = await AdministrationUsersService.GetTotalTrackedMoney();
-        StateHasChanged();
+        try
+        {
+            _userCount = await AdministrationUsersService.GetUsersCount();
+            _accountsCount = await AdministrationUsersService.GetAccountsCount();
+            _totalTrackedMoney = await AdministrationUsersService.GetTotalTrackedMoney();
+            StateHasChanged();
 
-        var dailyActiveUsers = await AdministrationUsersService.GetDailyActiveUsers();
-        _dailyActiveUsersSeries =
-        [
-            new ChartSeries()
-            {
-                Name = "Users count",
-                Data = dailyActiveUsers.Select(x =>  (double)x.Value).ToArray()
-            },
-        ];
-        StateHasChanged();
+            var dailyActiveUsers = await AdministrationUsersService.GetDailyActiveUsers();
+            _dailyActiveUsersSeries =
+            [
+                new ChartSeries()
+                {
+                    Name = "Users count",
+                    Data = dailyActiveUsers.Select(x =>  (double)x.Value).ToArray()
+                },
+            ];
+            StateHasChanged();
 
-        var newUsers = await AdministrationUsersService.GetNewUsersDaily();
-        _newUsersSeries =
-        [
-            new ChartSeries()
-            {
-                Name = "Users count",
-                Data = newUsers.Select(x =>  (double)x.Value).ToArray()
-            },
-        ];
+            var newUsers = await AdministrationUsersService.GetNewUsersDaily();
+            _newUsersSeries =
+            [
+                new ChartSeries()
+                {
+                    Name = "Users count",
+                    Data = newUsers.Select(x =>  (double)x.Value).ToArray()
+                },
+            ];
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+            throw;
+        }
+
         StateHasChanged();
     }
 }

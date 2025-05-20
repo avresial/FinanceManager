@@ -136,7 +136,7 @@ public class UserService(HttpClient httpClient, ILogger<UserService> logger) : I
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error removing user {userId}", userId);
+            _logger.LogError(ex, $"Error updating role for user {userId}", userId);
         }
 
         return false;

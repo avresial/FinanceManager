@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Infrastructure.Repositories;
+﻿namespace FinanceManager.Domain.Entities;
 
 public class ActiveUser
 {

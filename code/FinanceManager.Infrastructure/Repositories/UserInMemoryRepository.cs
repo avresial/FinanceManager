@@ -32,17 +32,20 @@ public class UserInMemoryRepository : IUserRepository
     }
     public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole)
     {
-        if (_users.ContainsKey(login)) return await Task.FromResult(false);
-
-        _users.Add(login, new UserDto()
+        lock (_users)
         {
-            Login = login,
-            Password = password,
-            Id = GenerateNewId(),
-            PricingLevel = pricingLevel,
-            UserRole = userRole,
-            CreationDate = DateTime.Now,
-        });
+            if (_users.ContainsKey(login)) return false;
+
+            _users.Add(login, new UserDto()
+            {
+                Login = login,
+                Password = password,
+                Id = GenerateNewId(),
+                PricingLevel = pricingLevel,
+                UserRole = userRole,
+                CreationDate = DateTime.Now,
+            });
+        }
 
         return await Task.FromResult(true);
     }
