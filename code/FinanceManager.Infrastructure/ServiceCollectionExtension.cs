@@ -23,6 +23,7 @@ namespace FinanceManager.Infrastructure
         public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
         {
             services.AddSingleton<ActiveUsersContext>()
+                    .AddSingleton<UsersContext>()
                     .AddScoped<IFinancalAccountRepository, AccountRepository>()
                     .AddScoped<IStockRepository, StockRepositoryMock>()
                     .AddSingleton<IUserRepository, UserInMemoryRepository>()

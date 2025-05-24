@@ -1,142 +1,125 @@
 ﻿using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
+using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
 namespace FinanceManager.Infrastructure.Repositories;
 
 public class UserInMemoryRepository : IUserRepository
 {
-    private readonly Dictionary<string, UserDto> _users = [];
+    private readonly UsersContext _usersContext;
 
-    public UserInMemoryRepository() { }
-    public UserInMemoryRepository(IConfiguration configuration)
+    public UserInMemoryRepository(UsersContext usersContext, IConfiguration configuration)
     {
+        _usersContext = usersContext;
+
         if (configuration is null) return;
         var defaultUserLogin = configuration["DefaultUser:Login"];
         var defaultUserPassword = configuration["DefaultUser:Password"];
 
         if (!string.IsNullOrEmpty(defaultUserLogin) && !string.IsNullOrEmpty(defaultUserPassword))
         {
-            _users[defaultUserLogin] = new UserDto
+            _usersContext.Add(new UserDto
             {
                 Login = defaultUserLogin,
                 Password = defaultUserPassword,
                 Id = 0,
                 PricingLevel = PricingLevel.Basic,
                 CreationDate = DateTime.Now,
-            };
-        }
+            });
 
+            _usersContext.SaveChanges();
+
+
+        }
     }
+
     public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole)
     {
-        lock (_users)
+        _usersContext.Add(new UserDto
         {
-            if (_users.ContainsKey(login)) return false;
+            Login = login,
+            Password = password,
+            PricingLevel = pricingLevel,
+            UserRole = userRole,
+            CreationDate = DateTime.Now,
+        });
 
-            _users.Add(login, new UserDto()
-            {
-                Login = login,
-                Password = password,
-                Id = GenerateNewId(),
-                PricingLevel = pricingLevel,
-                UserRole = userRole,
-                CreationDate = DateTime.Now,
-            });
-        }
+        await _usersContext.SaveChangesAsync();
 
-        return await Task.FromResult(true);
+        return true;
     }
-
     public async Task<User?> GetUser(string login, string password)
     {
-        if (!_users.ContainsKey(login)) return null;
-        if (password != _users[login].Password) return null;
+        var userDto = await _usersContext.ActiveUsers.FirstOrDefaultAsync(x => x.Login == login);
+        if (userDto is null || userDto.Password != password) return null;
 
-        var result = new User() { Login = _users[login].Login, UserId = _users[login].Id, PricingLevel = _users[login].PricingLevel, UserRole = _users[login].UserRole, CreationDate = _users[login].CreationDate };
-        return await Task.FromResult(result);
+        return userDto.ToUser();
     }
     public async Task<User?> GetUser(string login)
     {
-        if (!_users.ContainsKey(login)) return null;
+        UserDto? userDto = await _usersContext.ActiveUsers.FirstOrDefaultAsync(x => x.Login == login);
+        if (userDto is null) return null;
 
-        var result = new User() { Login = _users[login].Login, UserId = _users[login].Id, PricingLevel = _users[login].PricingLevel, UserRole = _users[login].UserRole, CreationDate = _users[login].CreationDate };
-        return await Task.FromResult(result);
+        return userDto.ToUser();
     }
-
     public async Task<User?> GetUser(int id)
     {
-        var user = _users.Values.FirstOrDefault(x => x.Id == id);
-        if (user is null) return null;
+        UserDto? userDto = await _usersContext.ActiveUsers.FirstOrDefaultAsync(x => x.Id == id);
+        if (userDto is null) return null;
 
-        return await Task.FromResult(new User() { Login = user.Login, UserId = user.Id, PricingLevel = user.PricingLevel, UserRole = user.UserRole, CreationDate = user.CreationDate });
+        return userDto.ToUser();
     }
-
     public async Task<IEnumerable<User>> GetUsers(int recordIndex, int recordsCount)
     {
-        List<User> result = [];
-        lock (_users)
-        {
-            result = _users.Values.Skip(recordIndex).Take(recordsCount)
-                .Select(x => new User() { Login = x.Login, UserId = x.Id, PricingLevel = x.PricingLevel, UserRole = x.UserRole, CreationDate = x.CreationDate })
-                .ToList();
-        }
-
-        return await Task.FromResult(result);
-
+        return await _usersContext.ActiveUsers.Skip(recordIndex).Take(recordsCount)
+                .Select(x => x.ToUser())
+                .ToListAsync();
     }
-
     public async Task<IEnumerable<User>> GetUsers(DateTime startDate, DateTime endDate)
     {
-        List<User> result = [];
-        lock (_users)
-        {
-            result = _users.Values
-                .Where(x => x.CreationDate >= startDate && x.CreationDate <= endDate)
-                .Select(x => new User() { Login = x.Login, UserId = x.Id, PricingLevel = x.PricingLevel, UserRole = x.UserRole, CreationDate = x.CreationDate })
-                .ToList();
-        }
-        return await Task.FromResult(result);
+        return await _usersContext.ActiveUsers
+            .Where(x => x.CreationDate >= startDate && x.CreationDate <= endDate)
+            .Select(x => x.ToUser())
+            .ToListAsync();
     }
-
     public async Task<int> GetUsersCount()
     {
-        return await Task.FromResult(_users.Count);
+        return await _usersContext.ActiveUsers.CountAsync();
     }
-
     public async Task<bool> RemoveUser(int userId)
     {
-        var userToRemove = _users.Values.FirstOrDefault(x => x.Id == userId);
+        var userToRemove = await _usersContext.ActiveUsers.FirstOrDefaultAsync(x => x.Id == userId);
         if (userToRemove is null) return await Task.FromResult(false);
 
-        _users.Remove(userToRemove.Login);
+        _usersContext.Remove(userToRemove);
+
+        await _usersContext.SaveChangesAsync();
         return await Task.FromResult(true);
     }
-
     public async Task<bool> UpdatePassword(int userId, string password)
     {
-        var user = _users.Values.FirstOrDefault(x => x.Id == userId);
-        if (user is null) return false;
+        var user = await _usersContext.ActiveUsers.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user is null) return await Task.FromResult(false);
 
-        lock (_users) user.Password = password;
+        user.Password = password;
+        _usersContext.Update(user);
+        await _usersContext.SaveChangesAsync();
 
         return await Task.FromResult(true);
     }
-
     public async Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel)
     {
-        var user = _users.Values.FirstOrDefault(x => x.Id == userId);
-        if (user is null) return false;
+        var user = await _usersContext.ActiveUsers.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user is null) return await Task.FromResult(false);
 
-        lock (_users) user.PricingLevel = pricingLevel;
+        user.PricingLevel = pricingLevel;
+        _usersContext.Update(user);
+        await _usersContext.SaveChangesAsync();
 
         return await Task.FromResult(true);
-    }
-
-    private int GenerateNewId()
-    {
-        return _users.Values.Count != 0 ? _users.Values.Max(u => u.Id) + 1 : 1;
     }
 }
