@@ -1,25 +1,49 @@
 ﻿using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Repositories;
+using FinanceManager.Infrastructure.Contexts;
+using FinanceManager.Infrastructure.Dtos;
+using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories
 {
-    public class StockRepositoryMock : IStockRepository
+    public class StockRepositoryMock(StockPricesContext stockPricesContext) : IStockRepository
     {
-        private string defaultCurrency = "PLN";
-        private readonly Random _random = new Random();
-        private readonly Dictionary<string, Dictionary<DateTime, decimal>> _database = new Dictionary<string, Dictionary<DateTime, decimal>>();
+        private readonly StockPricesContext _stockPricesContext = stockPricesContext;
+        private readonly string _defaultCurrency = "PLN";
 
         public async Task<StockPrice> GetStockPrice(string ticker, DateTime date)
         {
-            if (!_database.ContainsKey(ticker))
-                _database.Add(ticker, new Dictionary<DateTime, decimal>());
+            StockPriceDto? stockPrice = await _stockPricesContext.StockPrices
+                .FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == date.Date);
 
-            var tickerDatabase = _database[ticker];
+            if (stockPrice is null)
+            {
+                stockPrice = GetRandomStockPrice(ticker, date);
 
-            if (!tickerDatabase.ContainsKey(date.Date))
-                tickerDatabase.Add(date.Date, (decimal)Math.Round(_random.Next(1, 100) + _random.NextDouble(), 5));
+                await _stockPricesContext.AddAsync(stockPrice);
+                await _stockPricesContext.SaveChangesAsync();
+            }
 
-            return await Task.FromResult(new StockPrice() { Ticker = ticker, PricePerUnit = tickerDatabase[date.Date], Currency = defaultCurrency, Date = date.Date });
+            return stockPrice.ToStockPrice();
+        }
+
+        private StockPriceDto GetRandomStockPrice(string ticker, DateTime date) =>
+            new(0, ticker, (decimal)Math.Round(Random.Shared.Next(1, 100) + Random.Shared.NextDouble(), 5), _defaultCurrency, date.Date);
+
+        public async Task<StockPrice> AddStockPrice(string ticker, decimal pricePerUnit, string currency, DateTime date)
+        {
+            var stockPriceDto = new StockPriceDto(
+                0, // Id will be set by the database
+                ticker,
+                pricePerUnit,
+                currency,
+                date.Date
+            );
+
+            var entry = await _stockPricesContext.StockPrices.AddAsync(stockPriceDto);
+            await _stockPricesContext.SaveChangesAsync();
+
+            return entry.Entity.ToStockPrice();
         }
     }
 }

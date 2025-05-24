@@ -2,64 +2,74 @@
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
+using FinanceManager.Infrastructure.Contexts;
+using FinanceManager.Infrastructure.Dtos;
+using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories.Account;
 
-internal class InMemoryBankAccountRepository : IBankAccountRepository<BankAccount>
+internal class InMemoryBankAccountRepository(BankAccountContext bankAccountContext) : IBankAccountRepository<BankAccount>
 {
-    private List<BankAccount> _bankAccounts = [];
+    private readonly BankAccountContext _bankAccountContext = bankAccountContext;
+
     public int GetAccountsCount()
     {
-        return _bankAccounts.Count();
+        return _bankAccountContext.BankAccounts.Count();
     }
     public int? GetLastAccountId()
     {
-        if (_bankAccounts.Count != 0)
-            return _bankAccounts.Max(x => x.AccountId);
+        if (_bankAccountContext.BankAccounts.Any())
+            return _bankAccountContext.BankAccounts.Max(x => x.AccountId);
         return null;
     }
-    public int? Add(int userId, int accountId, string accountName) => Add(userId, accountId, accountName, AccountType.Other);
-    public int? Add(int userId, int accountId, string accountName, AccountType accountType)
+    public async Task<int?> Add(int userId, int accountId, string accountName) => await Add(userId, accountId, accountName, AccountType.Other);
+    public async Task<int?> Add(int userId, int accountId, string accountName, AccountType accountType)
     {
-        _bankAccounts.Add(new BankAccount(userId, accountId, accountName, accountType));
+        _bankAccountContext.BankAccounts.Add(new BankAccountInformationsDto
+        {
+            UserId = userId,
+            AccountId = accountId,
+            Name = accountName,
+            AccountType = accountType
+        });
+
+        await _bankAccountContext.SaveChangesAsync();
         return accountId;
     }
-    public bool Delete(int accountId)
+    public async Task<bool> Delete(int accountId)
     {
-        if (!_bankAccounts.Any(x => x.AccountId == accountId))
-            return false;
+        var toRemove = await _bankAccountContext.BankAccounts.Where(x => x.AccountId == accountId).ToListAsync();
+        if (toRemove.Count == 0) return false;
 
-        _bankAccounts.RemoveAll(x => x.AccountId == accountId);
+        _bankAccountContext.BankAccounts.RemoveRange(toRemove);
+        await _bankAccountContext.SaveChangesAsync();
 
         return true;
     }
-    public IEnumerable<AvailableAccount> GetAvailableAccounts(int userId) => _bankAccounts.Where(x => x.UserId == userId).Select(x => new AvailableAccount(x.AccountId, x.Name));
+    public IEnumerable<AvailableAccount> GetAvailableAccounts(int userId) => _bankAccountContext.BankAccounts.Where(x => x.UserId == userId).Select(x => new AvailableAccount(x.AccountId, x.Name));
 
-    public BankAccount? Get(int accountId)
+    public async Task<BankAccount?> Get(int accountId)
     {
-        var accountToReturn = _bankAccounts.FirstOrDefault(x => x.AccountId == accountId);
+        var accountToReturn = await _bankAccountContext.BankAccounts.FirstOrDefaultAsync(x => x.AccountId == accountId);
         if (accountToReturn is null) return null;
         return new BankAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name, accountToReturn.AccountType);
     }
 
-    public bool Update(int accountId, string accountName)
+    public async Task<bool> Update(int accountId, string accountName)
     {
-        var bankAccount = _bankAccounts.FirstOrDefault(x => x.AccountId == accountId);
+        var bankAccount = await _bankAccountContext.BankAccounts.FirstOrDefaultAsync(x => x.AccountId == accountId);
         if (bankAccount == null) return false;
-
         bankAccount.Name = accountName;
-
+        _bankAccountContext.SaveChanges();
         return true;
     }
-    public bool Update(int accountId, string accountName, AccountType accountType)
+    public async Task<bool> Update(int accountId, string accountName, AccountType accountType)
     {
-        var bankAccount = _bankAccounts.FirstOrDefault(x => x.AccountId == accountId);
+        var bankAccount = await _bankAccountContext.BankAccounts.FirstOrDefaultAsync(x => x.AccountId == accountId);
         if (bankAccount == null) return false;
-
         bankAccount.Name = accountName;
         bankAccount.AccountType = accountType;
-
+        _bankAccountContext.SaveChanges();
         return true;
     }
-
 }

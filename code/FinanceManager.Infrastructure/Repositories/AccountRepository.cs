@@ -62,7 +62,7 @@ namespace FinanceManager.Infrastructure.Repositories
             throw new NotImplementedException();
         }
 
-        public T? GetAccount<T>(int userId, int accountId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
+        public async Task<T?> GetAccount<T>(int userId, int accountId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
         {
             if (typeof(T) == typeof(BankAccount))
             {
@@ -70,7 +70,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
                 foreach (var item in availableAccounts)
                 {
-                    var resultAccount = _bankAccountAccountRepository.Get(item.AccountId);
+                    var resultAccount = await _bankAccountAccountRepository.Get(item.AccountId);
                     if (resultAccount is null) continue;
 
                     IEnumerable<BankAccountEntry> entries = _bankAccountEntryRepository.Get(item.AccountId, dateStart, dateEnd).ToList();
@@ -94,11 +94,11 @@ namespace FinanceManager.Infrastructure.Repositories
 
             return null;
         }
-        public T? GetAccount<T>(int userId, int id) where T : BasicAccountInformation
+        public async Task<T?> GetAccount<T>(int userId, int id) where T : BasicAccountInformation
         {
-            return GetAccount<T>(userId, id, DateTime.UtcNow, DateTime.UtcNow);
+            return await GetAccount<T>(userId, id, DateTime.UtcNow, DateTime.UtcNow);
         }
-        public IEnumerable<T> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
+        public async Task<IEnumerable<T>> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
         {
             List<T> result = new();
             if (typeof(T) == typeof(BankAccount))
@@ -107,7 +107,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
                 foreach (var item in availableAccounts)
                 {
-                    var resultAccount = _bankAccountAccountRepository.Get(item.AccountId);
+                    var resultAccount = await _bankAccountAccountRepository.Get(item.AccountId);
                     if (resultAccount is null) continue;
 
                     IEnumerable<BankAccountEntry> entries = _bankAccountEntryRepository.Get(item.AccountId, dateStart, dateEnd).ToList();

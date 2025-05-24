@@ -54,45 +54,45 @@ public class UserInMemoryRepository : IUserRepository
     }
     public async Task<User?> GetUser(string login, string password)
     {
-        var userDto = await _usersContext.ActiveUsers.FirstOrDefaultAsync(x => x.Login == login);
+        var userDto = await _usersContext.Users.FirstOrDefaultAsync(x => x.Login == login);
         if (userDto is null || userDto.Password != password) return null;
 
         return userDto.ToUser();
     }
     public async Task<User?> GetUser(string login)
     {
-        UserDto? userDto = await _usersContext.ActiveUsers.FirstOrDefaultAsync(x => x.Login == login);
+        UserDto? userDto = await _usersContext.Users.FirstOrDefaultAsync(x => x.Login == login);
         if (userDto is null) return null;
 
         return userDto.ToUser();
     }
     public async Task<User?> GetUser(int id)
     {
-        UserDto? userDto = await _usersContext.ActiveUsers.FirstOrDefaultAsync(x => x.Id == id);
+        UserDto? userDto = await _usersContext.Users.FirstOrDefaultAsync(x => x.Id == id);
         if (userDto is null) return null;
 
         return userDto.ToUser();
     }
     public async Task<IEnumerable<User>> GetUsers(int recordIndex, int recordsCount)
     {
-        return await _usersContext.ActiveUsers.Skip(recordIndex).Take(recordsCount)
+        return await _usersContext.Users.Skip(recordIndex).Take(recordsCount)
                 .Select(x => x.ToUser())
                 .ToListAsync();
     }
     public async Task<IEnumerable<User>> GetUsers(DateTime startDate, DateTime endDate)
     {
-        return await _usersContext.ActiveUsers
+        return await _usersContext.Users
             .Where(x => x.CreationDate >= startDate && x.CreationDate <= endDate)
             .Select(x => x.ToUser())
             .ToListAsync();
     }
     public async Task<int> GetUsersCount()
     {
-        return await _usersContext.ActiveUsers.CountAsync();
+        return await _usersContext.Users.CountAsync();
     }
     public async Task<bool> RemoveUser(int userId)
     {
-        var userToRemove = await _usersContext.ActiveUsers.FirstOrDefaultAsync(x => x.Id == userId);
+        var userToRemove = await _usersContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (userToRemove is null) return await Task.FromResult(false);
 
         _usersContext.Remove(userToRemove);
@@ -102,7 +102,7 @@ public class UserInMemoryRepository : IUserRepository
     }
     public async Task<bool> UpdatePassword(int userId, string password)
     {
-        var user = await _usersContext.ActiveUsers.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await _usersContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user is null) return await Task.FromResult(false);
 
         user.Password = password;
@@ -113,7 +113,7 @@ public class UserInMemoryRepository : IUserRepository
     }
     public async Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel)
     {
-        var user = await _usersContext.ActiveUsers.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await _usersContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user is null) return await Task.FromResult(false);
 
         user.PricingLevel = pricingLevel;

@@ -12,13 +12,13 @@ namespace FinanceManager.Infrastructure.Repositories.Account
         {
             return accounts.Count();
         }
-        public int? Add(int userId, int accountId, string accountName)
+        public async Task<int?> Add(int userId, int accountId, string accountName)
         {
             accounts.Add(new StockAccount(userId, accountId, accountName));
             return accountId;
         }
 
-        public bool Delete(int accountId)
+        public async Task<bool> Delete(int accountId)
         {
             if (!accounts.Any(x => x.AccountId == accountId))
                 return false;
@@ -31,7 +31,7 @@ namespace FinanceManager.Infrastructure.Repositories.Account
         public IEnumerable<AvailableAccount> GetAvailableAccounts(int userId) =>
             accounts.Where(x => x.UserId == userId).Select(x => new AvailableAccount(x.AccountId, x.Name));
 
-        public StockAccount? Get(int accountId)
+        public async Task<StockAccount?> Get(int accountId)
         {
             var accountToReturn = accounts.FirstOrDefault(x => x.AccountId == accountId);
             if (accountToReturn is null) return null;
@@ -43,7 +43,7 @@ namespace FinanceManager.Infrastructure.Repositories.Account
                 return accounts.Max(x => x.AccountId);
             return null;
         }
-        public bool Update(int accountId, string accountName)
+        public async Task<bool> Update(int accountId, string accountName)
         {
             var bankAccount = accounts.FirstOrDefault(x => x.AccountId == accountId);
             if (bankAccount == null) return false;

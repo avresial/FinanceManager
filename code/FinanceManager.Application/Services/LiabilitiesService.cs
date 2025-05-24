@@ -12,7 +12,7 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
     public async Task<List<PieChartModel>> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end)
     {
         List<PieChartModel> result = [];
-        var BankAccounts = _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
+        var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
         foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value <= 0))
         {
             if (account is null || account.Entries is null) return result;
@@ -30,7 +30,7 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
     public async Task<List<PieChartModel>> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
     {
         List<PieChartModel> result = [];
-        var BankAccounts = _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
+        var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
         foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value <= 0))
         {
             if (account is null || account.Entries is null) return result;
@@ -57,7 +57,7 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
         Dictionary<DateTime, decimal> prices = [];
         TimeSpan step = new TimeSpan(1, 0, 0, 0);
 
-        var BankAccounts = _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
+        var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
         foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value <= 0))
         {
             if (account is null || account.Entries is null) continue;
@@ -85,7 +85,7 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
     }
     public async Task<bool> IsAnyAccountWithLiabilities(int userId)
     {
-        var BankAccounts = _financialAccountService.GetAccounts<BankAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow).ToList();
+        var BankAccounts = (await _financialAccountService.GetAccounts<BankAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow)).ToList();
         foreach (var bankAccount in BankAccounts)
         {
             if (bankAccount.Entries is not null && bankAccount.Entries.Count > 0)
@@ -96,7 +96,7 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
             }
             else if (bankAccount.OlderThanLoadedEntry is not null)
             {
-                var newBankAccount = _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThanLoadedEntry.Value, bankAccount.OlderThanLoadedEntry.Value.AddSeconds(1));
+                var newBankAccount = await _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThanLoadedEntry.Value, bankAccount.OlderThanLoadedEntry.Value.AddSeconds(1));
                 if (newBankAccount is null || newBankAccount.Entries is null) continue;
                 var youngestEntry = newBankAccount.Entries.FirstOrDefault();
                 if (youngestEntry is not null && youngestEntry.Value < 0)

@@ -1,15 +1,14 @@
-﻿using FinanceManager.Infrastructure.Dtos;
+﻿using FinanceManager.Domain.Entities.Accounts;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Contexts;
 
-public class UsersContext : DbContext
+public class StockAccountContext : DbContext
 {
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-
-        modelBuilder.Entity<UserDto>()
-                    .Property(f => f.Id)
+        modelBuilder.Entity<StockAccount>()
+                    .Property(f => f.AccountId)
                     .ValueGeneratedOnAdd();
 
         base.OnModelCreating(modelBuilder);
@@ -17,8 +16,8 @@ public class UsersContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseInMemoryDatabase(databaseName: "UsersDb");
+        optionsBuilder.UseInMemoryDatabase(databaseName: "StockAccountDb");
     }
 
-    public DbSet<UserDto> Users { get; set; }
+    public DbSet<StockAccount> StockAccounts { get; set; }
 }
