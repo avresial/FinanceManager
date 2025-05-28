@@ -11,9 +11,9 @@ namespace FinanceManager.Domain.Repositories.Account
 
     public interface IAccountRepository<T>
     {
-        int GetAccountsCount();
-        int? GetLastAccountId();
-        IEnumerable<AvailableAccount> GetAvailableAccounts(int userId);
+        Task<int> GetAccountsCount();
+        Task<int?> GetLastAccountId();
+        Task<IEnumerable<AvailableAccount>> GetAvailableAccounts(int userId);
         Task<T?> Get(int accountId);
         Task<int?> Add(int userId, int accountId, string accountName);
         Task<bool> Update(int accountId, string accountName);

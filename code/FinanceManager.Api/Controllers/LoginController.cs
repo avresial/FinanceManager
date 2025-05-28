@@ -33,7 +33,7 @@ namespace FinanceManager.Api.Controllers
             try
             {
                 if (requestModel.userName == "guest")
-                    _guestAccountSeeder.SeedNewData(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
+                    await _guestAccountSeeder.SeedNewData(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
             }
             catch (Exception ex)
             {

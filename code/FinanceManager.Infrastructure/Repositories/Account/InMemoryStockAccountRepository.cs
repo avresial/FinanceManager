@@ -6,51 +6,53 @@ namespace FinanceManager.Infrastructure.Repositories.Account
 {
     internal class InMemoryStockAccountRepository : IAccountRepository<StockAccount>
     {
-        private List<StockAccount> accounts = [];
+        private List<StockAccount> _accounts = [];
 
-        public int GetAccountsCount()
+        public async Task<int> GetAccountsCount()
         {
-            return accounts.Count();
+            return await Task.FromResult(_accounts.Count);
         }
         public async Task<int?> Add(int userId, int accountId, string accountName)
         {
-            accounts.Add(new StockAccount(userId, accountId, accountName));
-            return accountId;
+            _accounts.Add(new StockAccount(userId, accountId, accountName));
+            return await Task.FromResult(accountId);
         }
 
         public async Task<bool> Delete(int accountId)
         {
-            if (!accounts.Any(x => x.AccountId == accountId))
+            if (!_accounts.Any(x => x.AccountId == accountId))
                 return false;
 
-            accounts.RemoveAll(x => x.AccountId == accountId);
+            _accounts.RemoveAll(x => x.AccountId == accountId);
 
-            return true;
+            return await Task.FromResult(true);
         }
 
-        public IEnumerable<AvailableAccount> GetAvailableAccounts(int userId) =>
-            accounts.Where(x => x.UserId == userId).Select(x => new AvailableAccount(x.AccountId, x.Name));
+        public async Task<IEnumerable<AvailableAccount>> GetAvailableAccounts(int userId) =>
+            await Task.FromResult(_accounts
+                                    .Where(x => x.UserId == userId)
+                                    .Select(x => new AvailableAccount(x.AccountId, x.Name)));
 
         public async Task<StockAccount?> Get(int accountId)
         {
-            var accountToReturn = accounts.FirstOrDefault(x => x.AccountId == accountId);
+            var accountToReturn = _accounts.FirstOrDefault(x => x.AccountId == accountId);
             if (accountToReturn is null) return null;
-            return new StockAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name);
+            return await Task.FromResult(new StockAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name));
         }
-        public int? GetLastAccountId()
+        public async Task<int?> GetLastAccountId()
         {
-            if (accounts.Count != 0)
-                return accounts.Max(x => x.AccountId);
+            if (_accounts.Count != 0)
+                return await Task.FromResult(_accounts.Max(x => x.AccountId));
             return null;
         }
         public async Task<bool> Update(int accountId, string accountName)
         {
-            var bankAccount = accounts.FirstOrDefault(x => x.AccountId == accountId);
+            var bankAccount = _accounts.FirstOrDefault(x => x.AccountId == accountId);
             if (bankAccount == null) return false;
 
             bankAccount.Name = accountName;
 
-            return true;
+            return await Task.FromResult(true);
         }
 
     }

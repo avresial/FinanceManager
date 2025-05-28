@@ -5,7 +5,6 @@ namespace FinanceManager.Domain.Providers;
 
 public class AccountIdProvider
 {
-    private readonly object _lockObject = new();
     private readonly IAccountRepository<StockAccount> _stockAccountRepository;
     private readonly IBankAccountRepository<BankAccount> _bankAccountRepository;
 
@@ -15,16 +14,14 @@ public class AccountIdProvider
         this._bankAccountRepository = bankAccountRepository;
     }
 
-    public int? GetMaxId()
+    public async Task<int?> GetMaxId()
     {
         List<int> ids = [];
         int? stockAccountsLastId = null;
         int? bankAccountsLastId = null;
-        lock (_lockObject)
-        {
-            stockAccountsLastId = _stockAccountRepository.GetLastAccountId();
-            bankAccountsLastId = _bankAccountRepository.GetLastAccountId();
-        }
+
+        stockAccountsLastId = await _stockAccountRepository.GetLastAccountId();
+        bankAccountsLastId = await _bankAccountRepository.GetLastAccountId();
 
         if (stockAccountsLastId is not null)
             ids.Add(stockAccountsLastId.Value);

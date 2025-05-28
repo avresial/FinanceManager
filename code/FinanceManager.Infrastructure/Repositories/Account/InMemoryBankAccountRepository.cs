@@ -12,14 +12,13 @@ internal class InMemoryBankAccountRepository(BankAccountContext bankAccountConte
 {
     private readonly BankAccountContext _bankAccountContext = bankAccountContext;
 
-    public int GetAccountsCount()
+    public async Task<int> GetAccountsCount() => await _bankAccountContext.BankAccounts.CountAsync();
+
+    public async Task<int?> GetLastAccountId()
     {
-        return _bankAccountContext.BankAccounts.Count();
-    }
-    public int? GetLastAccountId()
-    {
-        if (_bankAccountContext.BankAccounts.Any())
-            return _bankAccountContext.BankAccounts.Max(x => x.AccountId);
+        if (await _bankAccountContext.BankAccounts.AnyAsync())
+            return await _bankAccountContext.BankAccounts.MaxAsync(x => x.AccountId);
+
         return null;
     }
     public async Task<int?> Add(int userId, int accountId, string accountName) => await Add(userId, accountId, accountName, AccountType.Other);
@@ -46,7 +45,11 @@ internal class InMemoryBankAccountRepository(BankAccountContext bankAccountConte
 
         return true;
     }
-    public IEnumerable<AvailableAccount> GetAvailableAccounts(int userId) => _bankAccountContext.BankAccounts.Where(x => x.UserId == userId).Select(x => new AvailableAccount(x.AccountId, x.Name));
+    public async Task<IEnumerable<AvailableAccount>> GetAvailableAccounts(int userId) =>
+        await _bankAccountContext.BankAccounts
+        .Where(x => x.UserId == userId)
+        .Select(x => new AvailableAccount(x.AccountId, x.Name))
+        .ToListAsync();
 
     public async Task<BankAccount?> Get(int accountId)
     {
@@ -60,7 +63,7 @@ internal class InMemoryBankAccountRepository(BankAccountContext bankAccountConte
         var bankAccount = await _bankAccountContext.BankAccounts.FirstOrDefaultAsync(x => x.AccountId == accountId);
         if (bankAccount == null) return false;
         bankAccount.Name = accountName;
-        _bankAccountContext.SaveChanges();
+        await _bankAccountContext.SaveChangesAsync();
         return true;
     }
     public async Task<bool> Update(int accountId, string accountName, AccountType accountType)
@@ -69,7 +72,7 @@ internal class InMemoryBankAccountRepository(BankAccountContext bankAccountConte
         if (bankAccount == null) return false;
         bankAccount.Name = accountName;
         bankAccount.AccountType = accountType;
-        _bankAccountContext.SaveChanges();
+        await _bankAccountContext.SaveChangesAsync();
         return true;
     }
 }

@@ -28,7 +28,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
 
-        var account = _bankAccountRepository.GetAvailableAccounts(userId.Value);
+        var account = await _bankAccountRepository.GetAvailableAccounts(userId.Value);
 
         if (account == null) return NoContent();
 
@@ -59,15 +59,15 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         if (account == null) return NoContent();
         if (account.UserId != userId) return BadRequest();
 
-        IEnumerable<BankAccountEntry> entries = _bankAccountEntryRepository.Get(accountId, startDate, endDate);
+        IEnumerable<BankAccountEntry> entries = await _bankAccountEntryRepository.Get(accountId, startDate, endDate);
 
         DateTime? olderThanLoadedEntryDate = null;
         DateTime? youngerThanLoadedEntryDate = null;
 
-        var olderEntry = _bankAccountEntryRepository.GetNextOlder(accountId, startDate);
+        var olderEntry = await _bankAccountEntryRepository.GetNextOlder(accountId, startDate);
         if (olderEntry is not null) olderThanLoadedEntryDate = olderEntry.PostingDate;
 
-        var youngerEntry = _bankAccountEntryRepository.GetNextYounger(accountId, endDate);
+        var youngerEntry = await _bankAccountEntryRepository.GetNextYounger(accountId, endDate);
         if (youngerEntry is not null) youngerThanLoadedEntryDate = youngerEntry.PostingDate;
 
         BankAccountDto bankAccountDto = new()
@@ -103,7 +103,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         if (account == null) return NoContent();
         if (account.UserId != userId) return BadRequest();
 
-        var entry = _bankAccountEntryRepository.GetYoungest(accountId);
+        var entry = await _bankAccountEntryRepository.GetYoungest(accountId);
         if (entry is not null)
             return await Task.FromResult(Ok(entry.PostingDate));
 
@@ -121,7 +121,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         if (account == null) return NoContent();
         if (account.UserId != userId) return BadRequest();
 
-        var entry = _bankAccountEntryRepository.GetOldest(accountId);
+        var entry = await _bankAccountEntryRepository.GetOldest(accountId);
         if (entry is not null)
             return await Task.FromResult(Ok(entry.PostingDate));
 
@@ -136,7 +136,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         if (!await userPlanVerifier.CanAddMoreAccounts(userId.Value))
             return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
-        var id = _accountIdProvider.GetMaxId();
+        var id = await _accountIdProvider.GetMaxId();
         int newId = id is null ? 1 : id.Value + 1;
         return await Task.FromResult(Ok(await _bankAccountRepository.Add(userId.Value, newId, addAccount.accountName)));
     }

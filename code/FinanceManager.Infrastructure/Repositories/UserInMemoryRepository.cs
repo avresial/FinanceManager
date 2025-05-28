@@ -20,7 +20,7 @@ public class UserInMemoryRepository : IUserRepository
         var defaultUserLogin = configuration["DefaultUser:Login"];
         var defaultUserPassword = configuration["DefaultUser:Password"];
 
-        if (!string.IsNullOrEmpty(defaultUserLogin) && !string.IsNullOrEmpty(defaultUserPassword))
+        if (!string.IsNullOrEmpty(defaultUserLogin) && !string.IsNullOrEmpty(defaultUserPassword) && !_usersContext.Users.Any(x => x.Login == defaultUserLogin))
         {
             _usersContext.Add(new UserDto
             {
@@ -32,8 +32,6 @@ public class UserInMemoryRepository : IUserRepository
             });
 
             _usersContext.SaveChanges();
-
-
         }
     }
 

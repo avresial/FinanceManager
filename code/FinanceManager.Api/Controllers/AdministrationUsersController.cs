@@ -70,7 +70,10 @@ public class AdministrationUsersController(IAdministrationUsersService administr
         try
         {
             var result = await _administrationUsersService.GetTotalTrackedMoney();
-            return Ok(result);
+            if (result is null)
+                return NoContent();
+            else
+                return Ok(result);
         }
         catch (Exception ex)
         {

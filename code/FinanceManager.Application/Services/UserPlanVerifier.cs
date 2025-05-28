@@ -14,15 +14,13 @@ public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRep
     private readonly IUserRepository _userRepository = userRepository;
     private readonly PricingProvider _pricingProvider = pricingProvider;
 
-
-
     public async Task<int> GetUsedRecordsCapacity(int userId)
     {
-        var accounts = _bankAccountRepository.GetAvailableAccounts(userId);
+        var accounts = await _bankAccountRepository.GetAvailableAccounts(userId);
         int totalEntries = 0;
         foreach (var account in accounts)
         {
-            var count = _bankAccountEntryRepository.GetCount(account.AccountId);
+            var count = await _bankAccountEntryRepository.GetCount(account.AccountId);
             if (count is null) continue;
             totalEntries += count.Value;
         }
@@ -45,7 +43,7 @@ public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRep
         var user = await _userRepository.GetUser(userId);
         if (user is null) return false;
 
-        var accounts = _bankAccountRepository.GetAvailableAccounts(userId);
+        var accounts = await _bankAccountRepository.GetAvailableAccounts(userId);
 
         return accounts.Count() < _pricingProvider.GetMaxAccountCount(user.PricingLevel);
     }
