@@ -19,23 +19,22 @@ public class NewVisitsRepository(NewVisitsContext newVisitsContext)
     public async Task<bool> AddVisitAsync(DateTime visitDate)
     {
         var visit = await _context.NewVisits
-            .FirstOrDefaultAsync(v => v.DateTime.Date == visitDate.Date);
+                            .FirstOrDefaultAsync(v => v.DateTime.Date == visitDate.Date);
 
         if (visit is null)
         {
-            await _context.NewVisits.AddAsync(new NewVisits
+            _context.NewVisits.Add(new NewVisits
             {
                 DateTime = visitDate,
                 VisitsCount = 1
             });
-            await _context.SaveChangesAsync();
         }
         else
         {
             visit.VisitsCount++;
-            _context.NewVisits.Update(visit);
-            await _context.SaveChangesAsync();
         }
+
+        await _context.SaveChangesAsync();
 
         return true;
     }

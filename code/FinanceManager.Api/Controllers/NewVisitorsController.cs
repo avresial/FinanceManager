@@ -14,17 +14,30 @@ public class NewVisitorsController(NewVisitsRepository newVisitsRepository) : Co
     [HttpPut(Name = "AddNewVisitor")]
     public async Task<IActionResult> AddNewVisitor()
     {
-        if (await _newVisitsRepository.AddVisitAsync(DateTime.UtcNow)) return Ok();
+        try
+        {
+            if (await _newVisitsRepository.AddVisitAsync(DateTime.UtcNow))
+                return Ok(new { message = "Visit recorded successfully" });
 
-        return BadRequest();
+            return BadRequest(new { error = "Failed to record visit" });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { error = "An error occurred while recording the visit" });
+        }
     }
 
-    //[Authorize]
-    [AllowAnonymous]
+    [Authorize]
     [HttpGet("GetNewVisitor/{dateTime:DateTime}")]
     public async Task<IActionResult> GetNewVisitor(DateTime dateTime)
     {
-        return Ok(await _newVisitsRepository.GetVisitAsync(dateTime));
+        try
+        {
+            return Ok(await _newVisitsRepository.GetVisitAsync(dateTime));
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { error = "An error occurred while retrieving visit data." });
+        }
     }
-
 }

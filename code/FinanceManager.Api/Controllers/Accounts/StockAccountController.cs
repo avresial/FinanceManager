@@ -67,8 +67,8 @@ namespace FinanceManager.Api.Controllers.Accounts
                 AccountId = account.AccountId,
                 UserId = account.UserId,
                 Name = account.Name,
-                OlderThenLoadedEntry = account.OlderThanLoadedEntry,
-                YoungerThenLoadedEntry = account.YoungerThanLoadedEntry,
+                OlderThanLoadedEntry = account.OlderThanLoadedEntry,
+                YoungerThanLoadedEntry = account.YoungerThanLoadedEntry,
                 Entries = entries.Select(x => new StockAccountEntryDto
                 {
                     Ticker = x.Ticker,
@@ -137,7 +137,7 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (!userId.HasValue) return BadRequest("User ID is null.");
 
-            var result = await Task.FromResult(stockAccountEntryRepository.Add(addEntry.entry));
+            var result = await stockAccountEntryRepository.Add(addEntry.entry);
             return Ok(result);
         }
 
@@ -150,7 +150,7 @@ namespace FinanceManager.Api.Controllers.Accounts
             var account = await stockAccountRepository.Get(updateAccount.accountId);
             if (account == null || account.UserId != userId) return BadRequest("User ID does not match the account owner.");
 
-            var result = await Task.FromResult(await stockAccountRepository.Update(updateAccount.accountId, updateAccount.accountName));
+            var result = await stockAccountRepository.Update(updateAccount.accountId, updateAccount.accountName);
             return Ok(result);
         }
 
@@ -163,7 +163,7 @@ namespace FinanceManager.Api.Controllers.Accounts
             var account = await stockAccountRepository.Get(deleteAccount.accountId);
             if (account == null || account.UserId != userId) return BadRequest("User ID does not match the account owner.");
 
-            var result = await Task.FromResult(await stockAccountRepository.Delete(deleteAccount.accountId));
+            var result = await stockAccountRepository.Delete(deleteAccount.accountId);
             return Ok(result);
         }
 
@@ -176,7 +176,7 @@ namespace FinanceManager.Api.Controllers.Accounts
             var account = await stockAccountRepository.Get(accountId);
             if (account == null || account.UserId != userId) return BadRequest("User ID does not match the account owner.");
 
-            var result = await Task.FromResult(stockAccountEntryRepository.Delete(accountId, entryId));
+            var result = await stockAccountEntryRepository.Delete(accountId, entryId);
             return Ok(result);
         }
 
@@ -189,7 +189,7 @@ namespace FinanceManager.Api.Controllers.Accounts
             var account = await stockAccountRepository.Get(entry.AccountId);
             if (account == null || account.UserId != userId) return BadRequest("User ID does not match the account owner.");
 
-            var result = await Task.FromResult(stockAccountEntryRepository.Update(entry));
+            var result = await stockAccountEntryRepository.Update(entry);
             return Ok(result);
         }
     }

@@ -138,7 +138,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
 
         var id = await _accountIdProvider.GetMaxId();
         int newId = id is null ? 1 : id.Value + 1;
-        return await Task.FromResult(Ok(await _bankAccountRepository.Add(userId.Value, newId, addAccount.accountName)));
+        return Ok(await _bankAccountRepository.Add(userId.Value, newId, addAccount.accountName));
     }
 
     [HttpPost("AddEntry")]
@@ -152,7 +152,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
 
         try
         {
-            return await Task.FromResult(Ok(_bankAccountEntryRepository.Add(addEntry.entry)));
+            return Ok(await _bankAccountEntryRepository.Add(addEntry.entry));
         }
         catch (Exception ex)
         {
@@ -171,9 +171,9 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         if (account == null || account.UserId != userId) return BadRequest();
 
         if (updateAccount.accountType is null)
-            return await Task.FromResult(Ok(await _bankAccountRepository.Update(updateAccount.accountId, updateAccount.accountName)));
+            return Ok(await _bankAccountRepository.Update(updateAccount.accountId, updateAccount.accountName));
         else
-            return await Task.FromResult(Ok(await _bankAccountRepository.Update(updateAccount.accountId, updateAccount.accountName, updateAccount.accountType.Value)));
+            return Ok(await _bankAccountRepository.Update(updateAccount.accountId, updateAccount.accountName, updateAccount.accountType.Value));
     }
 
     [HttpDelete("Delete/{accountId:int}")]
@@ -185,8 +185,8 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var account = await _bankAccountRepository.Get(accountId);
         if (account == null || account.UserId != userId) return BadRequest();
 
-        _bankAccountEntryRepository.Delete(accountId);
-        return await Task.FromResult(Ok(await _bankAccountRepository.Delete(accountId)));
+        await _bankAccountEntryRepository.Delete(accountId);
+        return Ok(await _bankAccountRepository.Delete(accountId));
     }
 
     [HttpDelete("DeleteEntry/{accountId:int}/{entryId:int}")]
@@ -198,7 +198,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var account = await _bankAccountRepository.Get(accountId);
         if (account == null || account.UserId != userId) return BadRequest();
 
-        return await Task.FromResult(Ok(_bankAccountEntryRepository.Delete(accountId, entryId)));
+        return Ok(_bankAccountEntryRepository.Delete(accountId, entryId));
     }
 
     [HttpPut("UpdateEntry")]
@@ -210,6 +210,6 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var account = await _bankAccountRepository.Get(entry.AccountId);
         if (account == null || account.UserId != userId) return BadRequest();
 
-        return await Task.FromResult(Ok(_bankAccountEntryRepository.Update(entry)));
+        return Ok(await _bankAccountEntryRepository.Update(entry));
     }
 }
