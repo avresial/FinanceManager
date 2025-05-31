@@ -35,7 +35,7 @@ public class StockAccountService
 
         if (result is null) return null;
         return new StockAccount(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new StockAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.Ticker, x.InvestmentType))
-            , result.OlderThenLoadedEntry, result.YoungerThenLoadedEntry);
+            , result.OlderThanLoadedEntry, result.YoungerThanLoadedEntry);
     }
     public async Task<DateTime?> GetOldestEntryDate(int accountId)
     {

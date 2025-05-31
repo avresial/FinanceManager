@@ -7,9 +7,12 @@ public class StockAccountEntryContext : DbContext
 {
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<StockAccountEntry>()
-                    .Property(f => f.EntryId)
-                    .ValueGeneratedOnAdd();
+        modelBuilder.Entity<StockAccountEntry>(f =>
+        {
+            f.HasKey(e => e.EntryId);
+            f.Property(e => e.EntryId)
+                .ValueGeneratedOnAdd();
+        });
 
         base.OnModelCreating(modelBuilder);
     }

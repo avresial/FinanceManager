@@ -15,15 +15,8 @@ public partial class LandingPage
 
     protected override async Task OnInitializedAsync()
     {
-        if (await LocalStorageService.ContainKeyAsync("isThisFirstVisit"))
-        {
-            if (await LocalStorageService.GetItemAsync<bool>("isThisFirstVisit"))
-            {
-                await LocalStorageService.SetItemAsync("isThisFirstVisit", false);
-                await NewVisitorsService.AddVisit();
-            }
-        }
-        else
+        if (!await LocalStorageService.ContainKeyAsync("isThisFirstVisit") ||
+             await LocalStorageService.GetItemAsync<bool>("isThisFirstVisit"))
         {
             await LocalStorageService.SetItemAsync("isThisFirstVisit", false);
             await NewVisitorsService.AddVisit();

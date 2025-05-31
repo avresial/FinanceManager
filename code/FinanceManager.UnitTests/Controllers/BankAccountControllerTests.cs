@@ -148,9 +148,9 @@ public class BankAccountControllerTests
         var result = await _controller.AddEntry(addEntry);
 
         // Assert
-        OkObjectResult okResult = Assert.IsType<OkObjectResult>(result);
-
-        Assert.True(((Task<bool>)okResult.Value).Result);
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var taskResult = Assert.IsType<bool>(okResult.Value);
+        Assert.True(taskResult);
     }
 
     [Fact]

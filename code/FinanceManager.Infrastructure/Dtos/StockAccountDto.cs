@@ -2,7 +2,7 @@
 
 public class StockAccountDto : FinancialAccountBaseDto
 {
-    public Dictionary<string, DateTime>? OlderThenLoadedEntry { get; set; }
-    public Dictionary<string, DateTime>? YoungerThenLoadedEntry { get; set; }
+    public Dictionary<string, DateTime>? OlderThanLoadedEntry { get; set; }
+    public Dictionary<string, DateTime>? YoungerThanLoadedEntry { get; set; }
     public IEnumerable<StockAccountEntryDto> Entries { get; set; } = [];
 }
