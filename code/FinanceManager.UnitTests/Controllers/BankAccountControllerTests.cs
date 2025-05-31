@@ -57,8 +57,8 @@ public class BankAccountControllerTests
     {
         // Arrange
         var userId = 1;
-        List<AvailableAccount> accounts = [new(1, "Test Account")];
-        _mockBankAccountRepository.Setup(repo => repo.GetAvailableAccounts(userId)).Returns(accounts);
+        var accounts = new List<AvailableAccount> { new(1, "Test Account") };
+        _mockBankAccountRepository.Setup(repo => repo.GetAvailableAccounts(userId)).ReturnsAsync(accounts);
 
         // Act
         var result = await _controller.Get();
@@ -102,12 +102,12 @@ public class BankAccountControllerTests
         BankAccountEntry bankAccountEntry = new(accountId, 1, olderThanLoadedDate, 1, 0);
 
         _mockBankAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
-        _mockBankAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns([]);
+        _mockBankAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).ReturnsAsync(new List<BankAccountEntry>());
         _mockBankAccountEntryRepository.Setup(repo => repo.GetNextOlder(accountId, startDate))
-            .Returns(new BankAccountEntry(accountId, 1, olderThanLoadedDate, 1, 0));
+            .ReturnsAsync(new BankAccountEntry(accountId, 1, olderThanLoadedDate, 1, 0));
 
         _mockBankAccountEntryRepository.Setup(repo => repo.GetNextYounger(accountId, endDate))
-            .Returns(new BankAccountEntry(accountId, 1, youngerThanLoadedDate, 1, 0));
+            .ReturnsAsync(new BankAccountEntry(accountId, 1, youngerThanLoadedDate, 1, 0));
 
         // Act
         var result = await _controller.Get(accountId, startDate, endDate);
@@ -142,14 +142,15 @@ public class BankAccountControllerTests
     {
         // Arrange
         var addEntry = new AddBankAccountEntry(new BankAccountEntry(1, 1, DateTime.Now, 100, 0));
-        _mockBankAccountEntryRepository.Setup(repo => repo.Add(addEntry.entry)).Returns(true);
+        _mockBankAccountEntryRepository.Setup(repo => repo.Add(addEntry.entry)).ReturnsAsync(true);
 
         // Act
         var result = await _controller.AddEntry(addEntry);
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.True((bool)okResult.Value);
+        OkObjectResult okResult = Assert.IsType<OkObjectResult>(result);
+
+        Assert.True(((Task<bool>)okResult.Value).Result);
     }
 
     [Fact]

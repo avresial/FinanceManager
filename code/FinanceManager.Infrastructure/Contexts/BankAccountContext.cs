@@ -7,7 +7,7 @@ public class BankAccountContext : DbContext
 {
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<BankAccountInformationsDto>(f =>
+        modelBuilder.Entity<FinancialAccountBaseDto>(f =>
         {
             f.HasKey(e => e.AccountId);
             f.Property(e => e.AccountId)
@@ -22,5 +22,5 @@ public class BankAccountContext : DbContext
         optionsBuilder.UseInMemoryDatabase(databaseName: "BankAccountDb");
     }
 
-    public DbSet<BankAccountInformationsDto> BankAccounts { get; set; }
+    public DbSet<FinancialAccountBaseDto> BankAccounts { get; set; }
 }

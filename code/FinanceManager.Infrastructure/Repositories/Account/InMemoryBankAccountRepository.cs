@@ -24,7 +24,7 @@ internal class InMemoryBankAccountRepository(BankAccountContext bankAccountConte
     public async Task<int?> Add(int userId, int accountId, string accountName) => await Add(userId, accountId, accountName, AccountType.Other);
     public async Task<int?> Add(int userId, int accountId, string accountName, AccountType accountType)
     {
-        _bankAccountContext.BankAccounts.Add(new BankAccountInformationsDto
+        _bankAccountContext.BankAccounts.Add(new FinancialAccountBaseDto
         {
             UserId = userId,
             AccountId = accountId,

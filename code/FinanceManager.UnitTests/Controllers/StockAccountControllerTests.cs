@@ -43,7 +43,7 @@ public class StockAccountControllerTests
         // Arrange
         var userId = 1;
         var accounts = new List<AvailableAccount> { new AvailableAccount(1, "Test Account") };
-        _mockStockAccountRepository.Setup(repo => repo.GetAvailableAccounts(userId)).Returns(accounts);
+        _mockStockAccountRepository.Setup(repo => repo.GetAvailableAccounts(userId)).ReturnsAsync(accounts);
 
         // Act
         var result = await _controller.Get();
@@ -86,7 +86,6 @@ public class StockAccountControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-
         Assert.Equal(newAccountId, okResult.Value);
     }
 
