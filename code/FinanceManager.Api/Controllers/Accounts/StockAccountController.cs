@@ -33,7 +33,7 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (userId is null) return BadRequest("User ID is null.");
 
-            var accounts = await Task.FromResult(stockAccountRepository.GetAvailableAccounts(userId.Value));
+            var accounts = await stockAccountRepository.GetAvailableAccounts(userId.Value);
             if (accounts == null) return NoContent();
 
             return Ok(accounts);
@@ -45,7 +45,7 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (userId is null) return BadRequest("User ID is null.");
 
-            var account = await Task.FromResult(stockAccountRepository.Get(accountId));
+            var account = await stockAccountRepository.Get(accountId);
             if (account == null) return NoContent();
             if (account.UserId != userId) return StatusCode(StatusCodes.Status403Forbidden, "Forbidden: User does not own this account.");
             return Ok(account);
@@ -57,11 +57,11 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (userId is null) return BadRequest("User ID is null.");
 
-            var account = await Task.FromResult(stockAccountRepository.Get(accountId));
+            var account = await stockAccountRepository.Get(accountId);
             if (account == null) return NoContent();
             if (account.UserId != userId) return BadRequest("User ID does not match the account owner.");
 
-            var entries = await Task.FromResult(stockAccountEntryRepository.Get(accountId, startDate, endDate));
+            var entries = await stockAccountEntryRepository.Get(accountId, startDate, endDate);
             StockAccountDto bankAccountDto = new()
             {
                 AccountId = account.AccountId,
@@ -89,12 +89,12 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (userId is null) return BadRequest();
 
-            var account = stockAccountRepository.Get(accountId);
+            var account = await stockAccountRepository.Get(accountId);
 
             if (account == null) return NoContent();
             if (account.UserId != userId) return BadRequest();
 
-            var entry = stockAccountEntryRepository.GetYoungest(accountId);
+            var entry = await stockAccountEntryRepository.GetYoungest(accountId);
             if (entry is not null)
                 return await Task.FromResult(Ok(entry.PostingDate));
 
@@ -107,14 +107,14 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (userId is null) return BadRequest();
 
-            var account = stockAccountRepository.Get(accountId);
+            var account = await stockAccountRepository.Get(accountId);
 
             if (account == null) return NoContent();
             if (account.UserId != userId) return BadRequest();
 
-            var entry = stockAccountEntryRepository.GetOldest(accountId);
+            var entry = await stockAccountEntryRepository.GetOldest(accountId);
             if (entry is not null)
-                return await Task.FromResult(Ok(entry.PostingDate));
+                return Ok(entry.PostingDate);
 
             return await Task.FromResult(NoContent());
         }
@@ -125,9 +125,9 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (!userId.HasValue) return BadRequest("User ID is null.");
 
-            var id = accountIdProvider.GetMaxId();
+            var id = await accountIdProvider.GetMaxId();
             int newId = id is null ? 1 : id.Value + 1;
-            var result = await Task.FromResult(stockAccountRepository.Add(newId, userId.Value, addAccount.accountName));
+            var result = await stockAccountRepository.Add(newId, userId.Value, addAccount.accountName);
             return Ok(result);
         }
 
@@ -147,10 +147,10 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (userId is null) return BadRequest("User ID is null.");
 
-            var account = await Task.FromResult(stockAccountRepository.Get(updateAccount.accountId));
+            var account = await stockAccountRepository.Get(updateAccount.accountId);
             if (account == null || account.UserId != userId) return BadRequest("User ID does not match the account owner.");
 
-            var result = await Task.FromResult(stockAccountRepository.Update(updateAccount.accountId, updateAccount.accountName));
+            var result = await Task.FromResult(await stockAccountRepository.Update(updateAccount.accountId, updateAccount.accountName));
             return Ok(result);
         }
 
@@ -160,10 +160,10 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (userId is null) return BadRequest("User ID is null.");
 
-            var account = await Task.FromResult(stockAccountRepository.Get(deleteAccount.accountId));
+            var account = await stockAccountRepository.Get(deleteAccount.accountId);
             if (account == null || account.UserId != userId) return BadRequest("User ID does not match the account owner.");
 
-            var result = await Task.FromResult(stockAccountRepository.Delete(deleteAccount.accountId));
+            var result = await Task.FromResult(await stockAccountRepository.Delete(deleteAccount.accountId));
             return Ok(result);
         }
 
@@ -173,7 +173,7 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (userId is null) return BadRequest("User ID is null.");
 
-            var account = await Task.FromResult(stockAccountRepository.Get(accountId));
+            var account = await stockAccountRepository.Get(accountId);
             if (account == null || account.UserId != userId) return BadRequest("User ID does not match the account owner.");
 
             var result = await Task.FromResult(stockAccountEntryRepository.Delete(accountId, entryId));
@@ -186,7 +186,7 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (userId is null) return BadRequest("User ID is null.");
 
-            var account = await Task.FromResult(stockAccountRepository.Get(entry.AccountId));
+            var account = await stockAccountRepository.Get(entry.AccountId);
             if (account == null || account.UserId != userId) return BadRequest("User ID does not match the account owner.");
 
             var result = await Task.FromResult(stockAccountEntryRepository.Update(entry));

@@ -33,7 +33,7 @@ public class MoneyFlowServiceTests
 
         _bankAccounts = new List<BankAccount> { bankAccount1, bankAccount2 };
         _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(1, _startDate, _endDate))
-                                      .Returns(_bankAccounts);
+                                      .ReturnsAsync(_bankAccounts);
 
         StockAccount investmentAccount1 = new(1, 3, "testInvestmentAccount1");
         investmentAccount1.Add(new StockAccountEntry(1, 1, _startDate, 10, 10, "testStock1", InvestmentType.Stock));
@@ -41,7 +41,7 @@ public class MoneyFlowServiceTests
 
         _investmentAccountAccounts = new List<StockAccount> { investmentAccount1 };
         _financialAccountRepositoryMock.Setup(x => x.GetAccounts<StockAccount>(1, _startDate, _endDate))
-                                      .Returns(_investmentAccountAccounts);
+                                      .ReturnsAsync(_investmentAccountAccounts);
 
         _totalAssetsValue = 100;
 
@@ -116,7 +116,7 @@ public class MoneyFlowServiceTests
         var userId = 1;
         var date = new DateTime(2023, 12, 31);
         List<BankAccount> bankAccounts = [new(userId, 1, "Bank Account 1", [new(1, 1, date, 1000, 0)])];
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, date.Date, date)).Returns(bankAccounts);
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, date.Date, date)).ReturnsAsync(bankAccounts);
 
         // Act
         var result = await _moneyFlowService.GetNetWorth(userId, date);
@@ -139,7 +139,7 @@ public class MoneyFlowServiceTests
                     new BankAccountEntry(1, 1, end, 1000, 0)
                 ])
             ];
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, end, end)).Returns(bankAccounts);
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, end, end)).ReturnsAsync(bankAccounts);
 
         // Act
         var result = await _moneyFlowService.GetNetWorth(userId, start, end);

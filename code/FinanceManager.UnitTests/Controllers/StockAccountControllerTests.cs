@@ -43,7 +43,7 @@ public class StockAccountControllerTests
         // Arrange
         var userId = 1;
         var accounts = new List<AvailableAccount> { new AvailableAccount(1, "Test Account") };
-        _mockStockAccountRepository.Setup(repo => repo.GetAvailableAccounts(userId)).Returns(accounts);
+        _mockStockAccountRepository.Setup(repo => repo.GetAvailableAccounts(userId)).ReturnsAsync(accounts);
 
         // Act
         var result = await _controller.Get();
@@ -61,7 +61,7 @@ public class StockAccountControllerTests
         var userId = 1;
         var accountId = 1;
         var account = new StockAccount(userId, accountId, "Test Account");
-        _mockStockAccountRepository.Setup(repo => repo.Get(accountId)).Returns(account);
+        _mockStockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
 
         // Act
         var result = await _controller.Get(accountId);
@@ -79,14 +79,13 @@ public class StockAccountControllerTests
         var userId = 1;
         var newAccountId = 1;
         var addAccount = new AddAccount("New Account");
-        _mockStockAccountRepository.Setup(repo => repo.Add(newAccountId, userId, addAccount.accountName)).Returns(newAccountId);
+        _mockStockAccountRepository.Setup(repo => repo.Add(newAccountId, userId, addAccount.accountName)).ReturnsAsync(newAccountId);
 
         // Act
         var result = await _controller.Add(addAccount);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-
         Assert.Equal(newAccountId, okResult.Value);
     }
 
@@ -98,8 +97,8 @@ public class StockAccountControllerTests
         var accountId = 1;
         var deleteAccount = new DeleteAccount(accountId);
         var account = new StockAccount(userId, accountId, "Test Account");
-        _mockStockAccountRepository.Setup(repo => repo.Get(accountId)).Returns(account);
-        _mockStockAccountRepository.Setup(repo => repo.Delete(accountId)).Returns(true);
+        _mockStockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
+        _mockStockAccountRepository.Setup(repo => repo.Delete(accountId)).ReturnsAsync(true);
 
         // Act
         var result = await _controller.Delete(deleteAccount);

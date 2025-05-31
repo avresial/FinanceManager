@@ -18,7 +18,7 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
 
     public async Task<int?> GetAccountsCount()
     {
-        return await Task.FromResult(_financalAccountRepository.GetAccountsCount());
+        return await _financalAccountRepository.GetAccountsCount();
     }
     public async Task<IEnumerable<ChartEntryModel>> GetDailyActiveUsers()
     {
@@ -64,7 +64,7 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
     }
     public async Task<IEnumerable<ChartEntryModel>> GetNewUsersDaily()
     {
-        DateTime end = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 23, 59, 59);
+        DateTime end = new(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 23, 59, 59);
         DateTime start = end.AddDays(-31);
         var users = await userRepository.GetUsers(start, end);
         List<ChartEntryModel> result = [];

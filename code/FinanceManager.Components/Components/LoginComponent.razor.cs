@@ -33,7 +33,7 @@ namespace FinanceManager.Components.Components
             bool firstVisit = !(await LocalStorageService.ContainKeyAsync("isThisFirstVisit"));
             if (firstVisit)
             {
-                await LocalStorageService.SetItemAsync("isThisFirstVisit", false);
+                await LocalStorageService.SetItemAsync("isThisFirstVisit", true);
                 Navigation.NavigateTo("landingpage");
                 return;
             }

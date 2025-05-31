@@ -1,57 +1,66 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
+using FinanceManager.Infrastructure.Contexts;
+using FinanceManager.Infrastructure.Dtos;
+using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories.Account
 {
-    internal class InMemoryStockAccountRepository : IAccountRepository<StockAccount>
+    internal class InMemoryStockAccountRepository(StockAccountContext stockAccountContext) : IAccountRepository<StockAccount>
     {
-        private List<StockAccount> accounts = [];
+        private readonly StockAccountContext _stockAccountContext = stockAccountContext;
 
-        public int GetAccountsCount()
+        public async Task<int> GetAccountsCount()
         {
-            return accounts.Count();
+            return await _stockAccountContext.StockAccounts.CountAsync();
         }
-        public int? Add(int userId, int accountId, string accountName)
+        public async Task<int?> Add(int userId, int accountId, string accountName)
         {
-            accounts.Add(new StockAccount(userId, accountId, accountName));
+            _stockAccountContext.StockAccounts.Add(new FinancialAccountBaseDto
+            {
+                UserId = userId,
+                AccountId = accountId,
+                Name = accountName
+            });
+            await _stockAccountContext.SaveChangesAsync();
             return accountId;
         }
 
-        public bool Delete(int accountId)
+        public async Task<bool> Delete(int accountId)
         {
-            if (!accounts.Any(x => x.AccountId == accountId))
-                return false;
-
-            accounts.RemoveAll(x => x.AccountId == accountId);
-
+            var toRemove = await _stockAccountContext.StockAccounts.Where(x => x.AccountId == accountId).ToListAsync();
+            if (toRemove.Count == 0) return false;
+            _stockAccountContext.StockAccounts.RemoveRange(toRemove);
+            await _stockAccountContext.SaveChangesAsync();
             return true;
         }
 
-        public IEnumerable<AvailableAccount> GetAvailableAccounts(int userId) =>
-            accounts.Where(x => x.UserId == userId).Select(x => new AvailableAccount(x.AccountId, x.Name));
+        public async Task<IEnumerable<AvailableAccount>> GetAvailableAccounts(int userId) =>
+            await _stockAccountContext.StockAccounts
+                .Where(x => x.UserId == userId)
+                .Select(x => new AvailableAccount(x.AccountId, x.Name))
+                .ToListAsync();
 
-        public StockAccount? Get(int accountId)
+        public async Task<StockAccount?> Get(int accountId)
         {
-            var accountToReturn = accounts.FirstOrDefault(x => x.AccountId == accountId);
+            var accountToReturn = await _stockAccountContext.StockAccounts.FirstOrDefaultAsync(x => x.AccountId == accountId);
             if (accountToReturn is null) return null;
             return new StockAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name);
         }
-        public int? GetLastAccountId()
+        public async Task<int?> GetLastAccountId()
         {
-            if (accounts.Count != 0)
-                return accounts.Max(x => x.AccountId);
+            if (await _stockAccountContext.StockAccounts.AnyAsync())
+                return await _stockAccountContext.StockAccounts.MaxAsync(x => x.AccountId);
             return null;
         }
-        public bool Update(int accountId, string accountName)
+        public async Task<bool> Update(int accountId, string accountName)
         {
-            var bankAccount = accounts.FirstOrDefault(x => x.AccountId == accountId);
-            if (bankAccount == null) return false;
-
-            bankAccount.Name = accountName;
-
+            var stockAccount = await _stockAccountContext.StockAccounts.FirstOrDefaultAsync(x => x.AccountId == accountId);
+            if (stockAccount == null) return false;
+            stockAccount.Name = accountName;
+            await _stockAccountContext.SaveChangesAsync();
             return true;
         }
-
     }
 }

@@ -1,15 +1,14 @@
-﻿using FinanceManager.Domain.Entities;
+﻿using FinanceManager.Domain.Entities.Accounts.Entries;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Contexts;
 
-public class ActiveUsersContext : DbContext
+public class StockAccountEntryContext : DbContext
 {
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-
-        modelBuilder.Entity<ActiveUser>()
-                    .Property(f => f.Id)
+        modelBuilder.Entity<StockAccountEntry>()
+                    .Property(f => f.EntryId)
                     .ValueGeneratedOnAdd();
 
         base.OnModelCreating(modelBuilder);
@@ -17,8 +16,9 @@ public class ActiveUsersContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseInMemoryDatabase(databaseName: "ActiveUsersDb");
+        optionsBuilder.UseInMemoryDatabase(databaseName: "StockAccountEntryDb");
     }
 
-    public DbSet<ActiveUser> ActiveUsers { get; set; }
+    public DbSet<StockAccountEntry> Entries { get; set; }
 }
+

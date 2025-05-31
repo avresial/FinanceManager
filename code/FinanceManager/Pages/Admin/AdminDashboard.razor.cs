@@ -8,6 +8,7 @@ public partial class AdminDashboard
     private int? _userCount = default;
     private int? _accountsCount = default;
     private int? _totalTrackedMoney = default;
+    private int? _newVisitorsToday = default;
 
     private ChartOptions _chartOptions = new ChartOptions()
     {
@@ -26,6 +27,7 @@ public partial class AdminDashboard
     private List<ChartSeries>? _newUsersSeries = null;
 
     [Inject] required public AdministrationUsersService AdministrationUsersService { get; set; }
+    [Inject] required public NewVisitorsService NewVisitorsService { get; set; }
 
 
     protected override async Task OnInitializedAsync()
@@ -35,6 +37,7 @@ public partial class AdminDashboard
             _userCount = await AdministrationUsersService.GetUsersCount();
             _accountsCount = await AdministrationUsersService.GetAccountsCount();
             _totalTrackedMoney = await AdministrationUsersService.GetTotalTrackedMoney();
+            _newVisitorsToday = await NewVisitorsService.GetVisit(DateTime.UtcNow);
             StateHasChanged();
 
             var dailyActiveUsers = await AdministrationUsersService.GetDailyActiveUsers();

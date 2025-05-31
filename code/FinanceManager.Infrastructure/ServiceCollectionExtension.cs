@@ -22,15 +22,25 @@ namespace FinanceManager.Infrastructure
 
         public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
         {
-            services.AddSingleton<ActiveUsersContext>()
-                    .AddScoped<IFinancalAccountRepository, AccountRepository>()
+            services.AddDbContext<ActiveUsersContext>()
+                    .AddDbContext<UsersContext>()
+                    .AddDbContext<StockPricesContext>()
+                    .AddDbContext<BankAccountContext>()
+                    .AddDbContext<BankAccountEntryContext>()
+                    .AddDbContext<StockAccountContext>()
+                    .AddDbContext<StockAccountEntryContext>()
+                    .AddDbContext<NewVisitsContext>()
+
                     .AddScoped<IStockRepository, StockRepositoryMock>()
-                    .AddSingleton<IUserRepository, UserInMemoryRepository>()
-                    .AddSingleton<IActiveUsersRepository, ActiveUsersRepository>()
-                    .AddSingleton<IAccountEntryRepository<BankAccountEntry>, InMemoryBankEntryRepository>()
-                    .AddSingleton<IAccountEntryRepository<StockAccountEntry>, InMemoryStockEntryRepository>()
-                    .AddSingleton<IAccountRepository<StockAccount>, InMemoryStockAccountRepository>()
-                    .AddSingleton<IBankAccountRepository<BankAccount>, InMemoryBankAccountRepository>()
+                    .AddScoped<IFinancalAccountRepository, AccountRepository>()
+                    .AddScoped<IUserRepository, UserInMemoryRepository>()
+                    .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()
+                    .AddScoped<IAccountEntryRepository<BankAccountEntry>, InMemoryBankEntryRepository>()
+                    .AddScoped<IAccountEntryRepository<StockAccountEntry>, InMemoryStockEntryRepository>()
+                    .AddScoped<IAccountRepository<StockAccount>, InMemoryStockAccountRepository>()
+                    .AddScoped<IBankAccountRepository<BankAccount>, InMemoryBankAccountRepository>()
+                    .AddScoped<NewVisitsRepository>()
+
                     ;
 
             return services;

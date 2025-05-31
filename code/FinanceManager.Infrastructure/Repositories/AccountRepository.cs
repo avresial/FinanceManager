@@ -17,24 +17,24 @@ namespace FinanceManager.Infrastructure.Repositories
             _bankAccountEntryRepository = bankAccountEntryRepository;
         }
 
-        public Dictionary<int, Type> GetAvailableAccounts(int userId)
+        public async Task<Dictionary<int, Type>> GetAvailableAccounts(int userId)
         {
-            return _bankAccountAccountRepository.GetAvailableAccounts(userId)
+            return (await _bankAccountAccountRepository.GetAvailableAccounts(userId))
                 .ToDictionary(x => x.AccountId, x => typeof(BankAccount));
         }
-        public int GetLastAccountId()
+        public async Task<int> GetLastAccountId()
         {
             throw new NotImplementedException();
         }
-        public int GetAccountsCount()
+        public async Task<int> GetAccountsCount()
         {
-            int bankAccountsCount = _bankAccountAccountRepository.GetAccountsCount();
+            int bankAccountsCount = await _bankAccountAccountRepository.GetAccountsCount();
             int stockAccountsCount = 0; // Add method to get stock accounts count
             return bankAccountsCount + stockAccountsCount;
         }
-        public DateTime? GetStartDate(int id)
+        public async Task<DateTime?> GetStartDate(int id)
         {
-            var account = FindAccount(id);
+            var account = await FindAccount(id);
             if (account is null) return null;
 
             return account switch
@@ -44,9 +44,9 @@ namespace FinanceManager.Infrastructure.Repositories
                 _ => null,
             };
         }
-        public DateTime? GetEndDate(int id)
+        public async Task<DateTime?> GetEndDate(int id)
         {
-            var account = FindAccount(id);
+            var account = await FindAccount(id);
             if (account is null) return null;
 
             return account switch
@@ -57,30 +57,30 @@ namespace FinanceManager.Infrastructure.Repositories
             };
         }
 
-        public bool AccountExists(int id)
+        public async Task<bool> AccountExists(int id)
         {
             throw new NotImplementedException();
         }
 
-        public T? GetAccount<T>(int userId, int accountId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
+        public async Task<T?> GetAccount<T>(int userId, int accountId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
         {
             if (typeof(T) == typeof(BankAccount))
             {
-                var availableAccounts = _bankAccountAccountRepository.GetAvailableAccounts(userId).Where(x => x.AccountId == accountId);
+                var availableAccounts = (await _bankAccountAccountRepository.GetAvailableAccounts(userId)).Where(x => x.AccountId == accountId);
 
                 foreach (var item in availableAccounts)
                 {
-                    var resultAccount = _bankAccountAccountRepository.Get(item.AccountId);
+                    var resultAccount = await _bankAccountAccountRepository.Get(item.AccountId);
                     if (resultAccount is null) continue;
 
-                    IEnumerable<BankAccountEntry> entries = _bankAccountEntryRepository.Get(item.AccountId, dateStart, dateEnd).ToList();
+                    IEnumerable<BankAccountEntry> entries = (await _bankAccountEntryRepository.Get(item.AccountId, dateStart, dateEnd)).ToList();
 
                     DateTime? olderThanLoadedEntryDate = null;
-                    var olderEntry = _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
+                    var olderEntry = await _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
                     if (olderEntry is not null) olderThanLoadedEntryDate = olderEntry.PostingDate;
 
                     DateTime? youngerThanLoadedEntryDate = null;
-                    var youngerEntry = _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
+                    var youngerEntry = await _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
                     if (youngerEntry is not null) youngerThanLoadedEntryDate = youngerEntry.PostingDate;
 
                     var newResultAccount = new BankAccount(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries,
@@ -94,30 +94,30 @@ namespace FinanceManager.Infrastructure.Repositories
 
             return null;
         }
-        public T? GetAccount<T>(int userId, int id) where T : BasicAccountInformation
+        public async Task<T?> GetAccount<T>(int userId, int id) where T : BasicAccountInformation
         {
-            return GetAccount<T>(userId, id, DateTime.UtcNow, DateTime.UtcNow);
+            return await GetAccount<T>(userId, id, DateTime.UtcNow, DateTime.UtcNow);
         }
-        public IEnumerable<T> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
+        public async Task<IEnumerable<T>> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
         {
             List<T> result = new();
             if (typeof(T) == typeof(BankAccount))
             {
-                var availableAccounts = _bankAccountAccountRepository.GetAvailableAccounts(userId);
+                var availableAccounts = await _bankAccountAccountRepository.GetAvailableAccounts(userId);
 
                 foreach (var item in availableAccounts)
                 {
-                    var resultAccount = _bankAccountAccountRepository.Get(item.AccountId);
+                    var resultAccount = await _bankAccountAccountRepository.Get(item.AccountId);
                     if (resultAccount is null) continue;
 
-                    IEnumerable<BankAccountEntry> entries = _bankAccountEntryRepository.Get(item.AccountId, dateStart, dateEnd).ToList();
+                    IEnumerable<BankAccountEntry> entries = (await _bankAccountEntryRepository.Get(item.AccountId, dateStart, dateEnd)).ToList();
 
                     DateTime? olderThanLoadedEntryDate = null;
-                    var olderEntry = _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
+                    var olderEntry = await _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
                     if (olderEntry is not null) olderThanLoadedEntryDate = olderEntry.PostingDate;
 
                     DateTime? youngerThanLoadedEntryDate = null;
-                    var youngerEntry = _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
+                    var youngerEntry = await _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
                     if (youngerEntry is not null) youngerThanLoadedEntryDate = youngerEntry.PostingDate;
 
                     var newResultAccount = new BankAccount(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries,
@@ -132,52 +132,52 @@ namespace FinanceManager.Infrastructure.Repositories
             return result;
         }
 
-        public void AddAccount<T>(T account) where T : BasicAccountInformation
+        public async Task AddAccount<T>(T account) where T : BasicAccountInformation
         {
             if (account is BankAccount bankAccount)
             {
-                _bankAccountAccountRepository.Add(bankAccount.UserId, bankAccount.AccountId, bankAccount.Name, bankAccount.AccountType);
+                await _bankAccountAccountRepository.Add(bankAccount.UserId, bankAccount.AccountId, bankAccount.Name, bankAccount.AccountType);
 
                 if (bankAccount is not null && bankAccount.Entries is not null)
                     foreach (var entry in bankAccount.Entries)
-                        _bankAccountEntryRepository.Add(entry);
+                        await _bankAccountEntryRepository.Add(entry);
                 return;
             }
 
             throw new NotSupportedException($"Account type {account.GetType()} is not supported.");
         }
-        public void AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
+        public async Task AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
             where AccountType : BasicAccountInformation
             where EntryType : FinancialEntryBase
         {
             throw new NotImplementedException();
         }
-        public void UpdateAccount<T>(T account) where T : BasicAccountInformation
+        public async Task UpdateAccount<T>(T account) where T : BasicAccountInformation
         {
             throw new NotImplementedException();
         }
-        public void RemoveAccount(int id)
+        public async Task RemoveAccount(int id)
         {
             throw new NotImplementedException();
         }
 
-        public void AddEntry<T>(T bankAccountEntry, int id) where T : FinancialEntryBase
+        public async Task AddEntry<T>(T bankAccountEntry, int id) where T : FinancialEntryBase
         {
             if (bankAccountEntry is BankAccountEntry bankEntry)
-                AddBankAccountEntry(id, bankEntry.ValueChange, bankEntry.Description, bankEntry.ExpenseType, bankEntry.PostingDate);
+                await AddBankAccountEntry(id, bankEntry.ValueChange, bankEntry.Description, bankEntry.ExpenseType, bankEntry.PostingDate);
             if (bankAccountEntry is StockAccountEntry investmentEntry)
-                AddStockAccountEntry(id, investmentEntry.Ticker, investmentEntry.InvestmentType, investmentEntry.ValueChange, investmentEntry.PostingDate);
+                await AddStockAccountEntry(id, investmentEntry.Ticker, investmentEntry.InvestmentType, investmentEntry.ValueChange, investmentEntry.PostingDate);
         }
-        public void UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase
+        public async Task UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase
         {
             if (accountEntry is BankAccountEntry bankEntry)
-                UpdateBankAccountEntry(id, bankEntry);
+                await UpdateBankAccountEntry(id, bankEntry);
             if (accountEntry is StockAccountEntry investmentEntry)
-                UpdateStockAccountEntry(id, investmentEntry);
+                await UpdateStockAccountEntry(id, investmentEntry);
         }
-        public void RemoveEntry(int accountEntryId, int id)
+        public async Task RemoveEntry(int accountEntryId, int id)
         {
-            var account = FindAccount(id);
+            var account = await FindAccount(id);
             if (account is null) return;
 
             switch (account)
@@ -190,38 +190,38 @@ namespace FinanceManager.Infrastructure.Repositories
                     break;
             }
         }
-        public void Clear()
+        public async Task Clear()
         {
             throw new NotImplementedException();
         }
-        private object? FindAccount(int id)
+        private async Task<object?> FindAccount(int id)
         {
             throw new NotImplementedException();
         }
-        private T? FindAccount<T>(int id) where T : BasicAccountInformation
+        private async Task<T?> FindAccount<T>(int id) where T : BasicAccountInformation
         {
             throw new NotImplementedException();
         }
 
 
-        private void AddStockAccountEntry(int id, string ticker, InvestmentType investmentType, decimal balanceChange, DateTime? postingDate = null)
+        private async Task AddStockAccountEntry(int id, string ticker, InvestmentType investmentType, decimal balanceChange, DateTime? postingDate = null)
         {
-            var account = FindAccount<StockAccount>(id);
+            var account = await FindAccount<StockAccount>(id);
             if (account is null) return;
 
             var finalPostingDate = postingDate ?? DateTime.UtcNow;
 
             account.Add(new AddInvestmentEntryDto(finalPostingDate, balanceChange, ticker, investmentType));
         }
-        private void AddBankAccount(int userId, DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
+        private async Task AddBankAccount(int userId, DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
         {
-            int accountId = GetLastAccountId() + 1;
+            int accountId = (await GetLastAccountId()) + 1;
             ExpenseType expenseType = GetRandomType();
             if (accountType == AccountType.Stock)
                 expenseType = ExpenseType.Investment;
 
-            AddAccount(new BankAccount(userId, accountId, accountName, accountType));
-            AddBankAccountEntry(accountId, startingBalance, $"Lorem ipsum {0}", expenseType, startDay);
+            await AddAccount(new BankAccount(userId, accountId, accountName, accountType));
+            await AddBankAccountEntry(accountId, startingBalance, $"Lorem ipsum {0}", expenseType, startDay);
             startDay = startDay.AddMinutes(1);
             int index = 0;
             while (startDay.Date <= DateTime.UtcNow.Date)
@@ -232,17 +232,17 @@ namespace FinanceManager.Infrastructure.Repositories
                 if (accountType == AccountType.Stock)
                     expenseType = ExpenseType.Investment;
 
-                AddBankAccountEntry(accountId, balanceChange, $"Lorem ipsum {index++}", expenseType, startDay);
+                await AddBankAccountEntry(accountId, balanceChange, $"Lorem ipsum {index++}", expenseType, startDay);
                 startDay = startDay.AddDays(1);
             }
         }
-        private void AddLoanAccount(int userId, DateTime startDay, decimal startingBalance, string accountName)
+        private async Task AddLoanAccount(int userId, DateTime startDay, decimal startingBalance, string accountName)
         {
-            int accountId = GetLastAccountId() + 1;
+            int accountId = (await GetLastAccountId()) + 1;
 
-            AddAccount(new BankAccount(userId, accountId, accountName, AccountType.Loan));
+            await AddAccount(new BankAccount(userId, accountId, accountName, AccountType.Loan));
 
-            AddBankAccountEntry(accountId, startingBalance, $"Lorem ipsum {0}", ExpenseType.DebtRepayment, startDay);
+            await AddBankAccountEntry(accountId, startingBalance, $"Lorem ipsum {0}", ExpenseType.DebtRepayment, startDay);
             startDay = startDay.AddMinutes(1);
             decimal repaidAmount = 0;
 
@@ -254,23 +254,23 @@ namespace FinanceManager.Infrastructure.Repositories
                 if (repaidAmount >= -startingBalance)
                     balanceChange = repaidAmount + startingBalance;
 
-                AddBankAccountEntry(accountId, balanceChange, $"Lorem ipsum {index++}", ExpenseType.Other, startDay);
+                await AddBankAccountEntry(accountId, balanceChange, $"Lorem ipsum {index++}", ExpenseType.Other, startDay);
 
                 startDay = startDay.AddDays(1);
             }
         }
-        private void AddBankAccountEntry(int id, decimal balanceChange, string description, ExpenseType expenseType, DateTime? postingDate = null)
+        private async Task AddBankAccountEntry(int id, decimal balanceChange, string description, ExpenseType expenseType, DateTime? postingDate = null)
         {
-            var account = FindAccount<BankAccount>(id);
+            var account = await FindAccount<BankAccount>(id);
             if (account is null) return;
 
             var finalPostingDate = postingDate ?? DateTime.UtcNow;
 
             account.AddEntry(new AddBankEntryDto(finalPostingDate, balanceChange, expenseType, description));
         }
-        private void UpdateBankAccountEntry(int id, BankAccountEntry bankAccountEntry)
+        private async Task UpdateBankAccountEntry(int id, BankAccountEntry bankAccountEntry)
         {
-            var bankAccount = FindAccount<BankAccount>(id);
+            var bankAccount = await FindAccount<BankAccount>(id);
             if (bankAccount is null || bankAccount.Entries is null) return;
 
             var entryToUpdate = bankAccount.Entries.FirstOrDefault(x => x.EntryId == bankAccountEntry.EntryId);
@@ -278,9 +278,9 @@ namespace FinanceManager.Infrastructure.Repositories
 
             entryToUpdate.Update(bankAccountEntry);
         }
-        private void UpdateStockAccountEntry(int id, StockAccountEntry investmentEntry)
+        private async Task UpdateStockAccountEntry(int id, StockAccountEntry investmentEntry)
         {
-            var investmentAccount = FindAccount<StockAccount>(id);
+            var investmentAccount = await FindAccount<StockAccount>(id);
             if (investmentAccount is null || investmentAccount.Entries is null) return;
 
             var entryToUpdate = investmentAccount.Entries.FirstOrDefault(x => x.EntryId == investmentEntry.EntryId);
