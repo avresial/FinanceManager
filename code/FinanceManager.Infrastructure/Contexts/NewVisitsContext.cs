@@ -3,12 +3,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Contexts;
 
-public class ActiveUsersContext : DbContext
+public class NewVisitsContext : DbContext
 {
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-
-        modelBuilder.Entity<ActiveUser>()
+        modelBuilder.Entity<NewVisits>()
                     .Property(f => f.Id)
                     .ValueGeneratedOnAdd();
 
@@ -17,8 +16,9 @@ public class ActiveUsersContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseInMemoryDatabase(databaseName: "ActiveUsersDb");
+        optionsBuilder.UseInMemoryDatabase(databaseName: "NewVisitsDb");
     }
 
-    public DbSet<ActiveUser> ActiveUsers { get; set; }
+    public DbSet<NewVisits> NewVisits { get; set; }
 }
+

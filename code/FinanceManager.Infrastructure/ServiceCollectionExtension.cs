@@ -29,6 +29,8 @@ namespace FinanceManager.Infrastructure
                     .AddDbContext<BankAccountEntryContext>()
                     .AddDbContext<StockAccountContext>()
                     .AddDbContext<StockAccountEntryContext>()
+                    .AddDbContext<NewVisitsContext>()
+
                     .AddScoped<IStockRepository, StockRepositoryMock>()
                     .AddScoped<IFinancalAccountRepository, AccountRepository>()
                     .AddScoped<IUserRepository, UserInMemoryRepository>()
@@ -37,6 +39,8 @@ namespace FinanceManager.Infrastructure
                     .AddScoped<IAccountEntryRepository<StockAccountEntry>, InMemoryStockEntryRepository>()
                     .AddScoped<IAccountRepository<StockAccount>, InMemoryStockAccountRepository>()
                     .AddScoped<IBankAccountRepository<BankAccount>, InMemoryBankAccountRepository>()
+                    .AddScoped<NewVisitsRepository>()
+
                     ;
 
             return services;

@@ -88,11 +88,16 @@
         <MudCard Outlined>
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
-                    <MudText>Other metric</MudText>
+                    <MudText>Todays new visitors</MudText>
                     <MudText Typo="Typo.h3" Color="Color.Primary">
-                        <b>
+                        @if (_newVisitorsToday.HasValue)
+                        {
+                            @_newVisitorsToday
+                        }
+                        else
+                        {
                             <StringSpinner CharactersCount="3" />
-                        </b>
+                        }
                     </MudText>
                     <MudStack Row>
                         <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Title="TrendingUp" />
