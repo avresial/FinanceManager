@@ -23,7 +23,7 @@
                 </MudItem>
                 <MudItem xs="4">
                     <MudSelect @bind-Value="AccountType" Label="Type">
-                        @foreach (var type in Enum.GetValues(typeof(AccountType)).Cast<AccountType>())
+                        @foreach (var type in Enum.GetValues(typeof(AccountLabel)).Cast<AccountLabel>())
                         {
                             <MudSelectItem Value="type">@type</MudSelectItem>
                         }

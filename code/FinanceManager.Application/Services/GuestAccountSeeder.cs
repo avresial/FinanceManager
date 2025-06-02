@@ -34,7 +34,7 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
 
     private async Task AddStockAccount(DateTime start, DateTime end)
     {
-        StockAccount stockAccount = await GetNewStockAccount("Cash 1", AccountType.Cash);
+        StockAccount stockAccount = await GetNewStockAccount("Cash 1", AccountLabel.Cash);
         int entryId = 0;
         for (DateTime date = start; date <= end; date = date.AddDays(1))
             stockAccount.Add(GetNewStockAccountEntry(_guestUserId, entryId++, date, -90, 100, "RandomTicker"));
@@ -43,7 +43,7 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
 
     private async Task AddBankAccount(DateTime start, DateTime end)
     {
-        BankAccount bankAccount = await GetNewBankAccount("Cash 1", AccountType.Cash);
+        BankAccount bankAccount = await GetNewBankAccount("Cash 1", AccountLabel.Cash);
         for (DateTime date = start; date <= end; date = date.AddDays(1))
             bankAccount.AddEntry(GetNewBankAccountEntry(date, -90, 100));
         await _accountRepository.AddAccount(bankAccount);
@@ -51,14 +51,14 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
 
     private async Task AddLoanAccount(DateTime start, DateTime end)
     {
-        BankAccount loanAccount = await GetNewBankAccount("Loan 1", AccountType.Loan);
+        BankAccount loanAccount = await GetNewBankAccount("Loan 1", AccountLabel.Loan);
         var days = (int)((end - start).TotalDays);
         loanAccount.AddEntry(GetNewBankAccountEntry(start, days * -100 - 1000, days * -100));
         for (DateTime date = start.AddDays(1); date <= end; date = date.AddDays(1))
             loanAccount.AddEntry(GetNewBankAccountEntry(date, 10, 100, ExpenseType.DebtRepayment));
         await _accountRepository.AddAccount(loanAccount);
     }
-    public async Task<StockAccount> GetNewStockAccount(string accountName, AccountType accountType)
+    public async Task<StockAccount> GetNewStockAccount(string accountName, AccountLabel accountType)
     {
         var accountId = (await _accountIdProvider.GetMaxId()) + 1;
         StockAccount bankAccount = new(_guestUserId, accountId is null ? 0 : accountId.Value, accountName);
@@ -68,7 +68,7 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
     {
         return new StockAccountEntry(accountId, entryId, date, 0, _random.Next(minValue, maxValue), ticker, investmentType);
     }
-    public async Task<BankAccount> GetNewBankAccount(string accountName, AccountType accountType)
+    public async Task<BankAccount> GetNewBankAccount(string accountName, AccountLabel accountType)
     {
         var accountId = (await _accountIdProvider.GetMaxId()) + 1;
         BankAccount bankAccount = new BankAccount(_guestUserId, accountId is null ? 0 : accountId.Value, accountName, accountType);

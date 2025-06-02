@@ -3,13 +3,13 @@ using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories;
-public class NewVisitsRepository(NewVisitsContext newVisitsContext)
+public class NewVisitsRepository(AppDbContext context)
 {
-    private readonly NewVisitsContext _context = newVisitsContext;
+    private readonly AppDbContext _dbContext = context;
 
     public async Task<int> GetVisitAsync(DateTime visitDate)
     {
-        var visit = await _context.NewVisits
+        var visit = await _dbContext.NewVisits
             .FirstOrDefaultAsync(v => v.DateTime.Date == visitDate.Date);
 
         if (visit is null) return 0;
@@ -18,12 +18,12 @@ public class NewVisitsRepository(NewVisitsContext newVisitsContext)
     }
     public async Task<bool> AddVisitAsync(DateTime visitDate)
     {
-        var visit = await _context.NewVisits
+        var visit = await _dbContext.NewVisits
                             .FirstOrDefaultAsync(v => v.DateTime.Date == visitDate.Date);
 
         if (visit is null)
         {
-            _context.NewVisits.Add(new NewVisits
+            _dbContext.NewVisits.Add(new NewVisits
             {
                 DateTime = visitDate,
                 VisitsCount = 1
@@ -34,7 +34,7 @@ public class NewVisitsRepository(NewVisitsContext newVisitsContext)
             visit.VisitsCount++;
         }
 
-        await _context.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync();
 
         return true;
     }

@@ -30,7 +30,7 @@ public class BankAccountService(HttpClient httpClient)
 
         if (result is null) return null;
         return new BankAccount(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new BankAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange) { ExpenseType = x.ExpenseType, Description = x.Description }),
-            result.AccountType, result.OlderThanLoadedEntry, result.YoungerThanLoadedEntry);
+            result.AccountLabel, result.OlderThanLoadedEntry, result.YoungerThanLoadedEntry);
     }
     public async Task<DateTime?> GetOldestEntryDate(int accountId)
     {

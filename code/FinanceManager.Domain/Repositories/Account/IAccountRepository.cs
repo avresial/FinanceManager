@@ -5,8 +5,8 @@ namespace FinanceManager.Domain.Repositories.Account
 {
     public interface IBankAccountRepository<T> : IAccountRepository<T>
     {
-        Task<int?> Add(int userId, int accountId, string accountName, AccountType accountType);
-        Task<bool> Update(int accountId, string accountName, AccountType accountType);
+        Task<int?> Add(int userId, int accountId, string accountName, AccountLabel accountType);
+        Task<bool> Update(int accountId, string accountName, AccountLabel accountType);
     }
 
     public interface IAccountRepository<T>

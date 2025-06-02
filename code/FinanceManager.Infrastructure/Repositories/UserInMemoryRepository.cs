@@ -10,19 +10,19 @@ namespace FinanceManager.Infrastructure.Repositories;
 
 public class UserInMemoryRepository : IUserRepository
 {
-    private readonly UsersContext _usersContext;
+    private readonly AppDbContext _dbContext;
 
-    public UserInMemoryRepository(UsersContext usersContext, IConfiguration configuration)
+    public UserInMemoryRepository(AppDbContext context, IConfiguration configuration)
     {
-        _usersContext = usersContext;
+        _dbContext = context;
 
         if (configuration is null) return;
         var defaultUserLogin = configuration["DefaultUser:Login"];
         var defaultUserPassword = configuration["DefaultUser:Password"];
 
-        if (!string.IsNullOrEmpty(defaultUserLogin) && !string.IsNullOrEmpty(defaultUserPassword) && !_usersContext.Users.Any(x => x.Login == defaultUserLogin))
+        if (!string.IsNullOrEmpty(defaultUserLogin) && !string.IsNullOrEmpty(defaultUserPassword) && !_dbContext.Users.Any(x => x.Login == defaultUserLogin))
         {
-            _usersContext.Add(new UserDto
+            _dbContext.Add(new UserDto
             {
                 Login = defaultUserLogin,
                 Password = defaultUserPassword,
@@ -31,13 +31,13 @@ public class UserInMemoryRepository : IUserRepository
                 CreationDate = DateTime.Now,
             });
 
-            _usersContext.SaveChanges();
+            _dbContext.SaveChanges();
         }
     }
 
     public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole)
     {
-        _usersContext.Add(new UserDto
+        _dbContext.Add(new UserDto
         {
             Login = login,
             Password = password,
@@ -46,77 +46,77 @@ public class UserInMemoryRepository : IUserRepository
             CreationDate = DateTime.Now,
         });
 
-        await _usersContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync();
 
         return true;
     }
     public async Task<User?> GetUser(string login, string password)
     {
-        var userDto = await _usersContext.Users.FirstOrDefaultAsync(x => x.Login == login);
+        var userDto = await _dbContext.Users.FirstOrDefaultAsync(x => x.Login == login);
         if (userDto is null || userDto.Password != password) return null;
 
         return userDto.ToUser();
     }
     public async Task<User?> GetUser(string login)
     {
-        UserDto? userDto = await _usersContext.Users.FirstOrDefaultAsync(x => x.Login == login);
+        UserDto? userDto = await _dbContext.Users.FirstOrDefaultAsync(x => x.Login == login);
         if (userDto is null) return null;
 
         return userDto.ToUser();
     }
     public async Task<User?> GetUser(int id)
     {
-        UserDto? userDto = await _usersContext.Users.FirstOrDefaultAsync(x => x.Id == id);
+        UserDto? userDto = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == id);
         if (userDto is null) return null;
 
         return userDto.ToUser();
     }
     public async Task<IEnumerable<User>> GetUsers(int recordIndex, int recordsCount)
     {
-        return await _usersContext.Users.Skip(recordIndex).Take(recordsCount)
+        return await _dbContext.Users.Skip(recordIndex).Take(recordsCount)
                 .Select(x => x.ToUser())
                 .ToListAsync();
     }
     public async Task<IEnumerable<User>> GetUsers(DateTime startDate, DateTime endDate)
     {
-        return await _usersContext.Users
+        return await _dbContext.Users
             .Where(x => x.CreationDate >= startDate && x.CreationDate <= endDate)
             .Select(x => x.ToUser())
             .ToListAsync();
     }
     public async Task<int> GetUsersCount()
     {
-        return await _usersContext.Users.CountAsync();
+        return await _dbContext.Users.CountAsync();
     }
     public async Task<bool> RemoveUser(int userId)
     {
-        var userToRemove = await _usersContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var userToRemove = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (userToRemove is null) return await Task.FromResult(false);
 
-        _usersContext.Remove(userToRemove);
+        _dbContext.Remove(userToRemove);
 
-        await _usersContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync();
         return await Task.FromResult(true);
     }
     public async Task<bool> UpdatePassword(int userId, string password)
     {
-        var user = await _usersContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user is null) return await Task.FromResult(false);
 
         user.Password = password;
-        _usersContext.Update(user);
-        await _usersContext.SaveChangesAsync();
+        _dbContext.Update(user);
+        await _dbContext.SaveChangesAsync();
 
         return await Task.FromResult(true);
     }
     public async Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel)
     {
-        var user = await _usersContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user is null) return await Task.FromResult(false);
 
         user.PricingLevel = pricingLevel;
-        _usersContext.Update(user);
-        await _usersContext.SaveChangesAsync();
+        _dbContext.Update(user);
+        await _dbContext.SaveChangesAsync();
 
         return await Task.FromResult(true);
     }

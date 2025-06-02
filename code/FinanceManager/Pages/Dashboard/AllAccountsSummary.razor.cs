@@ -19,7 +19,7 @@ public partial class AllAccountsSummary : ComponentBase
         InitializeSpendingByCategory();
     }
 
-    public Dictionary<AccountType, List<BankAccountEntry>> ExpensesTypesAgregate { get; set; } = [];
+    public Dictionary<AccountLabel, List<BankAccountEntry>> ExpensesTypesAgregate { get; set; } = [];
     public Dictionary<ExpenseType, List<BankAccountEntry>> ExpensesCathegoriesAgregate { get; set; } = [];
 
     void InitializeWealthByCategory()

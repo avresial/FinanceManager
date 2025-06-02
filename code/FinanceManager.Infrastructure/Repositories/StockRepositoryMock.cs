@@ -6,22 +6,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories
 {
-    public class StockRepositoryMock(StockPricesContext stockPricesContext) : IStockRepository
+    public class StockRepositoryMock(AppDbContext context) : IStockRepository
     {
-        private readonly StockPricesContext _stockPricesContext = stockPricesContext;
+        private readonly AppDbContext _dbContext = context;
         private readonly string _defaultCurrency = "PLN";
 
         public async Task<StockPrice> GetStockPrice(string ticker, DateTime date)
         {
-            StockPriceDto? stockPrice = await _stockPricesContext.StockPrices
+            StockPriceDto? stockPrice = await _dbContext.StockPrices
                 .FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == date.Date);
 
             if (stockPrice is null)
             {
                 stockPrice = GetRandomStockPrice(ticker, date);
 
-                await _stockPricesContext.AddAsync(stockPrice);
-                await _stockPricesContext.SaveChangesAsync();
+                await _dbContext.AddAsync(stockPrice);
+                await _dbContext.SaveChangesAsync();
             }
 
             return stockPrice.ToStockPrice();
@@ -40,8 +40,8 @@ namespace FinanceManager.Infrastructure.Repositories
                 date.Date
             );
 
-            var entry = await _stockPricesContext.StockPrices.AddAsync(stockPriceDto);
-            await _stockPricesContext.SaveChangesAsync();
+            var entry = await _dbContext.StockPrices.AddAsync(stockPriceDto);
+            await _dbContext.SaveChangesAsync();
 
             return entry.Entity.ToStockPrice();
         }

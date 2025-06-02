@@ -8,7 +8,7 @@ public class BankAccountTests
     private BankAccount _bankAccount;
     public BankAccountTests()
     {
-        _bankAccount = new BankAccount(1, 1, "Test account", Domain.Enums.AccountType.Other);
+        _bankAccount = new BankAccount(1, 1, "Test account", Domain.Enums.AccountLabel.Other);
     }
 
     [Fact]

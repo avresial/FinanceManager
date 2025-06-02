@@ -213,11 +213,11 @@ namespace FinanceManager.Infrastructure.Repositories
 
             account.Add(new AddInvestmentEntryDto(finalPostingDate, balanceChange, ticker, investmentType));
         }
-        private async Task AddBankAccount(int userId, DateTime startDay, decimal startingBalance, string accountName, AccountType accountType)
+        private async Task AddBankAccount(int userId, DateTime startDay, decimal startingBalance, string accountName, AccountLabel accountType)
         {
             int accountId = (await GetLastAccountId()) + 1;
             ExpenseType expenseType = GetRandomType();
-            if (accountType == AccountType.Stock)
+            if (accountType == AccountLabel.Stock)
                 expenseType = ExpenseType.Investment;
 
             await AddAccount(new BankAccount(userId, accountId, accountName, accountType));
@@ -229,7 +229,7 @@ namespace FinanceManager.Infrastructure.Repositories
                 decimal balanceChange = (decimal)(_random.Next(-150, 200) + Math.Round(_random.NextDouble(), 2));
 
                 expenseType = GetRandomType();
-                if (accountType == AccountType.Stock)
+                if (accountType == AccountLabel.Stock)
                     expenseType = ExpenseType.Investment;
 
                 await AddBankAccountEntry(accountId, balanceChange, $"Lorem ipsum {index++}", expenseType, startDay);
@@ -240,7 +240,7 @@ namespace FinanceManager.Infrastructure.Repositories
         {
             int accountId = (await GetLastAccountId()) + 1;
 
-            await AddAccount(new BankAccount(userId, accountId, accountName, AccountType.Loan));
+            await AddAccount(new BankAccount(userId, accountId, accountName, AccountLabel.Loan));
 
             await AddBankAccountEntry(accountId, startingBalance, $"Lorem ipsum {0}", ExpenseType.DebtRepayment, startDay);
             startDay = startDay.AddMinutes(1);

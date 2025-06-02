@@ -22,15 +22,7 @@ namespace FinanceManager.Infrastructure
 
         public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
         {
-            services.AddDbContext<ActiveUsersContext>()
-                    .AddDbContext<UsersContext>()
-                    .AddDbContext<StockPricesContext>()
-                    .AddDbContext<BankAccountContext>()
-                    .AddDbContext<BankAccountEntryContext>()
-                    .AddDbContext<StockAccountContext>()
-                    .AddDbContext<StockAccountEntryContext>()
-                    .AddDbContext<NewVisitsContext>()
-
+            services.AddDbContext<AppDbContext>()
                     .AddScoped<IStockRepository, StockRepositoryMock>()
                     .AddScoped<IFinancalAccountRepository, AccountRepository>()
                     .AddScoped<IUserRepository, UserInMemoryRepository>()

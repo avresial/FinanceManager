@@ -16,7 +16,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
         private BankAccount? BankAccount = null;
 
         public string AccountName { get; set; } = string.Empty;
-        public AccountType AccountType { get; set; }
+        public AccountLabel AccountType { get; set; }
 
         [Parameter] public required int AccountId { get; set; }
 

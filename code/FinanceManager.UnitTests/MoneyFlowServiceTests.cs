@@ -23,12 +23,12 @@ public class MoneyFlowServiceTests
 
     public MoneyFlowServiceTests()
     {
-        BankAccount bankAccount1 = new(1, 1, "testBank1", AccountType.Cash);
+        BankAccount bankAccount1 = new(1, 1, "testBank1", AccountLabel.Cash);
         bankAccount1.Add(new BankAccountEntry(1, 1, _startDate.AddYears(-1), 10, 10));
         bankAccount1.Add(new BankAccountEntry(1, 2, _startDate, 20, 10));
         bankAccount1.Add(new BankAccountEntry(1, 3, _startDate.AddDays(1), 30, 10));
 
-        BankAccount bankAccount2 = new(1, 2, "testBank2", AccountType.Cash);
+        BankAccount bankAccount2 = new(1, 2, "testBank2", AccountLabel.Cash);
         bankAccount2.Add(new BankAccountEntry(1, 1, _endDate, 10, 10));
 
         _bankAccounts = new List<BankAccount> { bankAccount1, bankAccount2 };

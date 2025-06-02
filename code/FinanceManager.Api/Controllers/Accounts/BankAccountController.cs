@@ -75,7 +75,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
             AccountId = account.AccountId,
             UserId = account.UserId,
             Name = account.Name,
-            AccountType = account.AccountType,
+            AccountLabel = account.AccountType,
             OlderThanLoadedEntry = olderThanLoadedEntryDate,
             YoungerThanLoadedEntry = youngerThanLoadedEntryDate,
             Entries = entries.Select(x => new BankAccountEntryDto
