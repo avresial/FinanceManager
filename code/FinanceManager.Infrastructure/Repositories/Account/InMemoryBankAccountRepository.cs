@@ -52,6 +52,8 @@ internal class InMemoryBankAccountRepository(AppDbContext context) : IBankAccoun
         .Select(x => new AvailableAccount(x.AccountId, x.Name))
         .ToListAsync();
 
+    public Task<bool> Exists(int accountId) => _dbContext.BankAccounts.AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bank);
+
     public async Task<BankAccount?> Get(int accountId)
     {
         var accountToReturn = await _dbContext.BankAccounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bank);
@@ -76,4 +78,6 @@ internal class InMemoryBankAccountRepository(AppDbContext context) : IBankAccoun
         await _dbContext.SaveChangesAsync();
         return true;
     }
+
+
 }

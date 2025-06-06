@@ -56,6 +56,11 @@ public class AppDbContext(IConfiguration configuration) : DbContext
                 .ValueGeneratedOnAdd();
         });
 
+        modelBuilder.Entity<DuplicateEntry>(f =>
+        {
+            f.Property(e => e.Id)
+                .ValueGeneratedOnAdd();
+        });
 
 
         base.OnModelCreating(modelBuilder);
@@ -63,10 +68,10 @@ public class AppDbContext(IConfiguration configuration) : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        //optionsBuilder.UseInMemoryDatabase(databaseName: "Db");
+        optionsBuilder.UseInMemoryDatabase(databaseName: "Db");
 
-        var connectionString = _configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-        optionsBuilder.UseSqlServer(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
+        //var connectionString = _configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+        //optionsBuilder.UseSqlServer(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
     }
 
     public DbSet<ActiveUser> ActiveUsers { get; set; }
@@ -78,4 +83,6 @@ public class AppDbContext(IConfiguration configuration) : DbContext
     public DbSet<StockAccountEntry> StockEntries { get; set; }
     public DbSet<StockPriceDto> StockPrices { get; set; }
     public DbSet<NewVisits> NewVisits { get; set; }
+    public DbSet<DuplicateEntry> DuplicateEntries { get; set; }
+
 }

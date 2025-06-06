@@ -32,7 +32,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IAccountRepository<StockAccount>, InMemoryStockAccountRepository>()
                 .AddScoped<IBankAccountRepository<BankAccount>, InMemoryBankAccountRepository>()
                 .AddScoped<NewVisitsRepository>()
-
+                .AddScoped<IDuplicateEntryRepository, DuplicateEntryRepository>()
                 ;
 
         return services;
