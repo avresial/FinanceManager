@@ -27,7 +27,13 @@
                     <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text" SearchFunc="Search" />
+                    <MudSelect @bind-Value="ExpenseType" Label="Expense type">
+                        @foreach (var type in Enum.GetValues(typeof(ExpenseType)).Cast<ExpenseType>())
+                        {
+                            <MudSelectItem Value="type">@type</MudSelectItem>
+                        }
+                    </MudSelect>
+                    @* <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text" SearchFunc="Search" /> *@
                 </MudItem>
                 <MudItem xs="12">
                     <MudTextField @bind-Value="Description" T="string" Label="Description" Variant="Variant.Text" MaxLines="5" AutoGrow="true" />
@@ -52,7 +58,7 @@
 
     private TimeSpan? Time = new TimeSpan(01, 00, 00);
     private DateTime? PostingDate = DateTime.Today;
-    private string? ExpenseType { get; set; } = FinanceManager.Domain.Enums.ExpenseType.Other.ToString();
+    private ExpenseType ExpenseType { get; set; } = FinanceManager.Domain.Enums.ExpenseType.Other;
     private string? Description { get; set; } = string.Empty;
     private decimal? BalanceChange { get; set; } = 0;
 
@@ -74,7 +80,7 @@
         _currency = settingsService.GetCurrency();
         PostingDate = BankAccountEntry.PostingDate;
         Time = new TimeSpan(BankAccountEntry.PostingDate.Hour, BankAccountEntry.PostingDate.Minute, BankAccountEntry.PostingDate.Second);
-        ExpenseType = BankAccountEntry.ExpenseType.ToString();
+        ExpenseType = BankAccountEntry.ExpenseType;
         Description = BankAccountEntry.Description;
         BalanceChange = BankAccountEntry.ValueChange;
     }
@@ -90,21 +96,11 @@
         if (!Time.HasValue) return;
 
         DateTime date = new DateTime(PostingDate.Value.Year, PostingDate.Value.Month, PostingDate.Value.Day, Time.Value.Hours, Time.Value.Minutes, Time.Value.Seconds);
-        ExpenseType expenseType = FinanceManager.Domain.Enums.ExpenseType.Other;
-        try
-        {
-            if (ExpenseType is not null)
-                expenseType = (ExpenseType)Enum.Parse(typeof(ExpenseType), ExpenseType);
-        }
-        catch (Exception)
-        {
-        }
-
         BankAccountEntry bankAccountEntry = new(BankAccountEntry.AccountId, BankAccountEntry.EntryId, date, -1, BalanceChange.Value)
-            {
-                Description = this.Description is null ? string.Empty : this.Description,
-                ExpenseType = expenseType
-            };
+        {
+            Description = this.Description is null ? string.Empty : this.Description,
+            ExpenseType = ExpenseType
+        };
 
         try
         {

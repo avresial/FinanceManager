@@ -16,7 +16,7 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
 
     public async Task<bool> Add(BankAccountEntry entry)
     {
-        BankAccountEntry newBankAccountEntry = new(entry.AccountId, GetHighestEntry() + 1, entry.PostingDate, entry.Value, entry.ValueChange)
+        BankAccountEntry newBankAccountEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange)
         {
             Description = entry.Description,
             ExpenseType = entry.ExpenseType

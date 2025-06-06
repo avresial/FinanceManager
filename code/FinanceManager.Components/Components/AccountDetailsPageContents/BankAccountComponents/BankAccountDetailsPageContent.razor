@@ -48,8 +48,13 @@
                         }
                     </MudExpansionPanels>
                 </div>
+
                 <div class="row" style="min-height:40px">
-                    @if (!_loadedAllData && !IsLoading)
+                    @if (_isLoadingMore)
+                    {
+                        <MudProgressCircular Indeterminate="true" Color="MudBlazor.Color.Primary" Class="mx-auto my-3" Style="width: 40px; height: 40px;" />
+                    }
+                    else if (!_loadedAllData && !IsLoading)
                     {
                         <button class="btn text-center" title="Load more" @onclick="LoadMore">
                             <div>
@@ -58,6 +63,7 @@
                         </button>
                     }
                 </div>
+
             </div>
 
             <div class="col-3 d-none d-lg-block">
@@ -100,7 +106,7 @@
                         }
                     </div>
                     <div class="row">
-                        @if (_top5 is not null)
+                        @if (_top5 is not null && _top5.Any())
                         {
                             <h6 class="text-center mt-2">Top 5</h6>
                             @foreach (var entry in _top5)
@@ -131,7 +137,7 @@
                                 </div>
                             }
                         }
-                        @if (_bottom5 is not null)
+                        @if (_bottom5 is not null && _bottom5.Any())
                         {
                             <h6 class="text-center mt-2">Bottom 5</h6>
                             @foreach (var entry in _bottom5)

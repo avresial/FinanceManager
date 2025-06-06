@@ -2,10 +2,13 @@
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace FinanceManager.Infrastructure.Contexts;
-public class AppDbContext : DbContext
+public class AppDbContext(IConfiguration configuration) : DbContext
 {
+    private readonly IConfiguration _configuration = configuration;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<ActiveUser>(f =>
@@ -60,7 +63,10 @@ public class AppDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseInMemoryDatabase(databaseName: "Db");
+        //optionsBuilder.UseInMemoryDatabase(databaseName: "Db");
+
+        var connectionString = _configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+        optionsBuilder.UseSqlServer(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
     }
 
     public DbSet<ActiveUser> ActiveUsers { get; set; }

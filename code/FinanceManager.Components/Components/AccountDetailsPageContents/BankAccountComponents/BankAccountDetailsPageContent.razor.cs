@@ -14,6 +14,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
 
 public partial class BankAccountDetailsPageContent : ComponentBase
 {
+    private bool _isLoadingMore = false;
     private decimal _balanceChange = 100;
     private bool _loadedAllData = false;
     private DateTime _dateStart;
@@ -103,8 +104,9 @@ public partial class BankAccountDetailsPageContent : ComponentBase
         if (Account.Entries is null || Account.Entries.Count == 0) return;
 
         var EntriesOrdered = Account.Entries.OrderByDescending(x => x.ValueChange);
-        _top5 = EntriesOrdered.Take(5).ToList();
+        _top5 = EntriesOrdered.Where(x => x.ValueChange > 0).Take(5).ToList();
         _bottom5 = EntriesOrdered.Skip(Account.Entries.Count - 5)
+                                .Where(x => x.ValueChange < 0)
                                 .Take(5)
                                 .OrderBy(x => x.ValueChange)
                                 .ToList();
@@ -117,21 +119,17 @@ public partial class BankAccountDetailsPageContent : ComponentBase
     public async Task LoadMore()
     {
         if (Account is null || Account.Start is null) return;
-
-        _dateStart = _dateStart.AddMonths(-1);
         if (_user is null) return;
+        _isLoadingMore = true;
+        _dateStart = _dateStart.AddMonths(-1);
 
         Account = await FinancialAccountService.GetAccount<BankAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
 
-        //if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
-        //return;
-
-        //var newEntriesWithoutOldest = newData.Entries.Skip(1);
-        //Account.Add(newEntriesWithoutOldest, false);
         UpdateChartData();
 
         if (_chart is not null) await _chart.RenderAsync();
         await UpdateInfo();
+        _isLoadingMore = false;
     }
 
     protected override async Task OnInitializedAsync()

@@ -27,7 +27,7 @@ internal class InMemoryBankAccountRepository(AppDbContext context) : IBankAccoun
         _dbContext.BankAccounts.Add(new FinancialAccountBaseDto
         {
             UserId = userId,
-            AccountId = accountId,
+            AccountId = 0,
             Name = accountName,
             AccountLabel = accountLabel,
             AccountType = AccountType.Bank
