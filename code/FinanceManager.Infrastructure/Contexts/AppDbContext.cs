@@ -76,7 +76,6 @@ public class AppDbContext(IConfiguration configuration) : DbContext
 
     public DbSet<ActiveUser> ActiveUsers { get; set; }
     public DbSet<UserDto> Users { get; set; }
-
     public DbSet<FinancialAccountBaseDto> BankAccounts { get; set; }
     public DbSet<FinancialAccountBaseDto> StockAccounts { get; set; }
     public DbSet<BankAccountEntry> BankEntries { get; set; }

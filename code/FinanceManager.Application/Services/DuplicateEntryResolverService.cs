@@ -24,6 +24,8 @@ public class DuplicateEntryResolverService(IBankAccountRepository<BankAccount> b
             await _accountEntryRepository.Delete(accountId, entryId);
         }
 
+        await _duplicateEntryRepository.RemoveDuplicate(existingDuplicate.Id);
+
         return true;
     }
     public async Task Scan(int accountId)
@@ -42,7 +44,7 @@ public class DuplicateEntryResolverService(IBankAccountRepository<BankAccount> b
             var duplicates = groups.Select(x => new DuplicateEntry()
             {
                 AccountId = accountId,
-                EntriesId = x.Select(y => y.EntryId)
+                EntriesId = x.Select(y => y.EntryId).ToList()
             }).ToList();
 
             if (duplicates is null || duplicates.Count == 0) continue;

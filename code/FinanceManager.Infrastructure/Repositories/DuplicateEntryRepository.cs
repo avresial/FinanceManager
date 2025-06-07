@@ -16,6 +16,15 @@ internal class DuplicateEntryRepository(AppDbContext context) : IDuplicateEntryR
 
     public async Task AddDuplicate(IEnumerable<DuplicateEntry> duplicates)
     {
+        foreach (var duplicate in duplicates)
+        {
+            if (duplicate.EntriesId == null || !duplicate.EntriesId.Any())
+            {
+                throw new ArgumentException("DuplicateEntry must have at least one entry ID.", nameof(duplicates));
+            }
+        }
+
+
         await _context.DuplicateEntries.AddRangeAsync(duplicates);
         await _context.SaveChangesAsync();
     }
@@ -63,7 +72,7 @@ internal class DuplicateEntryRepository(AppDbContext context) : IDuplicateEntryR
         await _context.SaveChangesAsync();
     }
 
-    public async Task<DuplicateEntry> UpdateDuplicate(int duplicateId, int accountId, IEnumerable<int> newEntryIds)
+    public async Task<DuplicateEntry> UpdateDuplicate(int duplicateId, int accountId, List<int> newEntryIds)
     {
         var entity = await _context.DuplicateEntries.FirstOrDefaultAsync(x => x.Id == duplicateId && x.AccountId == accountId);
 

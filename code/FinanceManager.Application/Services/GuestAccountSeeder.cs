@@ -8,8 +8,8 @@ namespace FinanceManager.Application.Services;
 
 public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, AccountIdProvider accountIdProvider)
 {
-    private readonly int _guestUserId = 0;
-    private Random _random = new Random();
+    private readonly int _guestUserId = 1;
+    private readonly Random _random = new Random();
     private readonly IFinancalAccountRepository _accountRepository = accountRepository;
     private readonly AccountIdProvider _accountIdProvider = accountIdProvider;
 

@@ -25,7 +25,7 @@ public static class ServiceCollectionExtension
         services.AddDbContext<AppDbContext>()
                 .AddScoped<IStockRepository, StockRepositoryMock>()
                 .AddScoped<IFinancalAccountRepository, AccountRepository>()
-                .AddScoped<IUserRepository, UserInMemoryRepository>()
+                .AddScoped<IUserRepository, UserRepository>()
                 .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()
                 .AddScoped<IAccountEntryRepository<BankAccountEntry>, InMemoryBankEntryRepository>()
                 .AddScoped<IAccountEntryRepository<StockAccountEntry>, InMemoryStockEntryRepository>()

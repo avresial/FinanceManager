@@ -13,5 +13,5 @@ public interface IDuplicateEntryRepository
     Task<DuplicateEntry?> GetDuplicate(int accountId, int duplicateId);
     Task<DuplicateEntry?> GetDuplicateByEntry(int accountId, int entryIndex);
     Task<IEnumerable<DuplicateEntry>> GetDuplicates(int accountId, int index, int count);
-    Task<DuplicateEntry> UpdateDuplicate(int duplicateId, int accountId, IEnumerable<int> newEntryIds);
+    Task<DuplicateEntry> UpdateDuplicate(int duplicateId, int accountId, List<int> newEntryIds);
 }
