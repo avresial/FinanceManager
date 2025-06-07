@@ -25,9 +25,12 @@ namespace FinanceManager.Components.Components
         protected override async Task OnInitializedAsync()
         {
 #if DEBUG
+            await LoginService.Login("guest", "GuestPassword");
+            Navigation.NavigateTo("");
+
             //await LoginService.Login("admin", "admin");
             //Navigation.NavigateTo("Admin/Dashboard");
-            //return;
+            return;
 #endif
 
             bool firstVisit = !(await LocalStorageService.ContainKeyAsync("isThisFirstVisit"));

@@ -132,16 +132,20 @@ namespace FinanceManager.Infrastructure.Repositories
             return result;
         }
 
-        public async Task AddAccount<T>(T account) where T : BasicAccountInformation
+        public async Task<int?> AddAccount<T>(T account) where T : BasicAccountInformation
         {
             if (account is BankAccount bankAccount)
             {
-                await _bankAccountAccountRepository.Add(bankAccount.UserId, bankAccount.AccountId, bankAccount.Name, bankAccount.AccountType);
+                var accountId = await _bankAccountAccountRepository.Add(bankAccount.UserId, 0, bankAccount.Name, bankAccount.AccountType);
 
                 if (bankAccount is not null && bankAccount.Entries is not null)
                     foreach (var entry in bankAccount.Entries)
+                    {
+                        entry.AccountId = accountId ?? 0; // Ensure the entry has the correct account ID
                         await _bankAccountEntryRepository.Add(entry);
-                return;
+                    }
+
+                return accountId;
             }
 
             throw new NotSupportedException($"Account type {account.GetType()} is not supported.");

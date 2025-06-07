@@ -46,6 +46,7 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
         BankAccount bankAccount = await GetNewBankAccount("Cash 1", AccountLabel.Cash);
         for (DateTime date = start; date <= end; date = date.AddDays(1))
             bankAccount.AddEntry(GetNewBankAccountEntry(date, -90, 100));
+
         await _accountRepository.AddAccount(bankAccount);
     }
 
