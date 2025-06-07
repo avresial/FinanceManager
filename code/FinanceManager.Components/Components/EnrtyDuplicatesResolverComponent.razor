@@ -1,0 +1,37 @@
+﻿<MudStack>
+
+    <MudAlert Severity="Severity.Normal">
+        Duplicate component is under developement
+    </MudAlert>
+    <MudButton @onclick=Scan>
+        Scan
+    </MudButton>
+
+    @if (_isScanning)
+    {
+        <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+    }
+
+    @if (_duplicates is not null && _duplicates.Any())
+    {
+        <MudTable Items="_duplicates" Hover="true" Dense="true" Class="mt-4">
+            <HeaderContent>
+                <MudTh>Id</MudTh>
+                <MudTh>Duplicated entries Ids</MudTh>
+                <MudTh>Action</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Record ID">@context.Id</MudTd>
+                <MudTd DataLabel="Record ID">@(string.Join(", ", context.EntriesId.Select(x=>x.ToString())))</MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudButton Color="Color.Primary" Variant="Variant.Text" OnClick="@(() => ResolveDuplicates(context.AccountId, context.Id, context.EntriesId.First()))">Resolve</MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+
+    @if (!string.IsNullOrEmpty(_message))
+    {
+        <p>@_message</p>
+    }
+</MudStack>

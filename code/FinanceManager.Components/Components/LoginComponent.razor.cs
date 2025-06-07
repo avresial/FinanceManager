@@ -26,7 +26,7 @@ namespace FinanceManager.Components.Components
         {
 #if DEBUG
             await LoginService.Login("guest", "GuestPassword");
-            Navigation.NavigateTo("");
+            Navigation.NavigateTo("UserSettings");
 
             //await LoginService.Login("admin", "admin");
             //Navigation.NavigateTo("Admin/Dashboard");
