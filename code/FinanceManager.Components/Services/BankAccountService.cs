@@ -32,6 +32,16 @@ public class BankAccountService(HttpClient httpClient)
         return new BankAccount(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new BankAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange) { ExpenseType = x.ExpenseType, Description = x.Description }),
             result.AccountLabel, result.OlderThanLoadedEntry, result.YoungerThanLoadedEntry);
     }
+
+
+    public async Task<BankAccountEntry?> GetEntry(int accountId, int entryId)
+    {
+        var response = await _httpClient.GetAsync($"{_httpClient.BaseAddress}api/BankAccount/GetEntry?accountId={accountId}&entryId={entryId}");
+        if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+        var result = await response.Content.ReadFromJsonAsync<BankAccountEntry?>();
+        if (result is null) return null;
+        return result;
+    }
     public async Task<DateTime?> GetOldestEntryDate(int accountId)
     {
         var response = await _httpClient.GetAsync($"{_httpClient.BaseAddress}api/BankAccount/GetOldestEntryDate/{accountId}");

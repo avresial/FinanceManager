@@ -1,11 +1,10 @@
 ﻿using FinanceManager.Application.Services;
 using FinanceManager.Domain.Repositories;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceManager.Api.Controllers;
 
-[Authorize]
+//[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class DuplicateEntryResolverController : ControllerBase

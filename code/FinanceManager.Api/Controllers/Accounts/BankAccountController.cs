@@ -92,6 +92,18 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         return await Task.FromResult(Ok(bankAccountDto));
     }
 
+    [HttpGet("GetEntry")]
+    public async Task<IActionResult> GetEntry([FromQuery] int accountId, [FromQuery] int entryId)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (userId is null) return BadRequest();
+
+        var account = await _bankAccountEntryRepository.Get(accountId, entryId);
+        if (account == null) return NoContent();
+
+        return await Task.FromResult(Ok(account));
+    }
+
     [HttpGet("GetYoungestEntryDate/{accountId:int}")]
     public async Task<IActionResult> GetYoungestEntryDate(int accountId)
     {

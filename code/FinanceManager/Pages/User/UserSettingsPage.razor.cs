@@ -7,11 +7,11 @@ using System.Text.RegularExpressions;
 
 namespace FinanceManager.WebUi.Pages.User;
 
-public partial class UserSettingsPage
+public partial class UserSettingsPage : IBrowserViewportObserver, IAsyncDisposable
 {
     private const string _requiredDeleteConfirmation = "delete my account";
 
-
+    private Breakpoint _currentBrakePoint;
     private readonly List<string> _errors = [];
     private readonly List<string> _warnings = [];
     private readonly List<string> _info = [];
@@ -30,6 +30,7 @@ public partial class UserSettingsPage
     private RecordCapacity? _recordCapacity;
 
 
+
     private int _ActiveIndex;
     public int ActiveIndex
     {
@@ -45,9 +46,22 @@ public partial class UserSettingsPage
         }
     }
 
+    [Inject] private IBrowserViewportService BrowserViewportService { get; set; }
     [Inject] public required IUserService UserService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
+
+    Guid IBrowserViewportObserver.Id { get; } = Guid.NewGuid();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BrowserViewportService.SubscribeAsync(this, fireImmediately: true);
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
 
 
     protected override async Task OnInitializedAsync()
@@ -80,7 +94,7 @@ public partial class UserSettingsPage
         }
         _isLoadingPage = false;
     }
-
+    public async ValueTask DisposeAsync() => await BrowserViewportService.UnsubscribeAsync(this);
     private string PasswordMatch(string arg)
     {
         if (_passwordField is not null && _passwordField.Value != arg)
@@ -193,4 +207,15 @@ public partial class UserSettingsPage
             return Color.Error;
         return Color.Primary;
     }
+
+    public async Task NotifyBrowserViewportChangeAsync(BrowserViewportEventArgs browserViewportEventArgs)
+    {
+        if (browserViewportEventArgs.IsImmediate)
+            _currentBrakePoint = browserViewportEventArgs.Breakpoint;
+        else
+            _currentBrakePoint = browserViewportEventArgs.Breakpoint;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
 }

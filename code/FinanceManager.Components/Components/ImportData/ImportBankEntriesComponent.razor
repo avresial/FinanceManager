@@ -98,13 +98,6 @@
                             }
 
                         </MudItem>
-
-                        <MudItem xs="12">
-                            @if (_isImportingData)
-                            {
-                                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-                            }
-                        </MudItem>
                     </MudGrid>
                 </MudStep>
                 <MudStep Title="Summary" SecondaryText="Step3" @bind-Completed="_step3Complete" Disabled="@(_step2Complete == false)">

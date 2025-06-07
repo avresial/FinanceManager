@@ -11,10 +11,10 @@
                 </MudStack>
             </MudItem>
             <MudItem xs="12">
-                <MudTabs ApplyEffectsToContainer="true" PanelClass="px-6" Position=Position.Left Border @bind-ActivePanelIndex="ActiveIndex">
+                <MudTabs ApplyEffectsToContainer="true" PanelClass="px-6" Position=@(_currentBrakePoint == Breakpoint.Xs ? Position.Top : Position.Left) Border @bind-ActivePanelIndex="ActiveIndex">
 
                     <MudTabPanel Text="Plan">
-                        <MudGrid Spacing="6">
+                        <MudGrid Spacing="6" Class="mt-4">
                             <MudItem xs="12">
                                 @if (_recordCapacity is not null)
                                 {
@@ -44,7 +44,7 @@
                     </MudTabPanel>
 
                     <MudTabPanel Text="User">
-                        <MudGrid Spacing="6">
+                        <MudGrid Spacing="6" Class="mt-4">
                             <MudItem xs="12">
                                 <MudText Typo="Typo.h6">Change Password</MudText>
                                 <MudForm @ref="_passwordForm" @bind-IsValid="@_success" Spacing="3">

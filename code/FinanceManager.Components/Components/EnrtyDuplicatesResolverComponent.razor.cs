@@ -1,5 +1,6 @@
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -7,18 +8,80 @@ using Microsoft.Extensions.Logging;
 namespace FinanceManager.Components.Components;
 public partial class EnrtyDuplicatesResolverComponent
 {
+    private string _message = string.Empty;
+    private bool _isScanning = false;
+    private bool _isInitializing = false;
+
+    private int _selectedPageCount = 1;
+    private int _pageCount = 1;
+    private int _elementsPerPage = 10;
+    private List<(DuplicateEntry Duplicate, DateTime PostingDate, decimal ValueChange)> _duplicates { get; set; } = [];
+    private List<(DuplicateEntry Duplicate, DateTime PostingDate, decimal ValueChange)> _displayedDuplicates { get; set; } = [];
+    private Dictionary<int, Type>? financialAccounts = [];
+
     [Inject] public required ILogger<EnrtyDuplicatesResolverComponent> Logger { get; set; }
     [Inject] public required DuplicateEntryResolverService DuplicateEntryResolverService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required BankAccountService BankAccountService { get; set; }
+    private void PageChanged(int i)
+    {
+        _selectedPageCount = i;
+        _displayedDuplicates = _duplicates.Skip((i - 1) * _elementsPerPage).Take(_elementsPerPage).ToList();
+    }
 
-    private string _message = string.Empty;
-    private bool _isScanning = false;
+    protected override async Task OnInitializedAsync()
+    {
+        _isInitializing = true;
+        try
+        {
+            financialAccounts = await FinancialAccountService.GetAvailableAccounts();
+            await GetDuplicates();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex.ToString());
+        }
+        finally
+        {
+            _isInitializing = false;
+        }
+    }
 
-    private List<DuplicateEntry> _duplicates { get; set; } = [];
+    private async Task GetDuplicates()
+    {
+        _message = string.Empty;
+        if (financialAccounts is null) return;
+        int allDuplicatesCount = 0;
+
+        foreach (var financialAccountId in financialAccounts.Keys)
+        {
+            var duplicatesCount = await DuplicateEntryResolverService.GetDuplicatesCount(financialAccountId);
+            if (duplicatesCount == 0) continue;
+            allDuplicatesCount += duplicatesCount;
+        }
+
+        foreach (var financialAccountId in financialAccounts.Keys)
+        {
+            var duplicatesCount = await DuplicateEntryResolverService.GetDuplicatesCount(financialAccountId);
+            var duplicates = await DuplicateEntryResolverService.GetDuplicates(financialAccountId, 0, duplicatesCount);
+            if (duplicates is null) continue;
+            foreach (var duplicate in duplicates)
+            {
+                BankAccountEntry bankEntry = (await BankAccountService.GetEntry(duplicate.AccountId, duplicate.EntriesId.First()))!;
+                _duplicates.Add((duplicate, bankEntry.PostingDate, bankEntry.ValueChange));
+            }
+        }
+
+        _pageCount = (int)Math.Ceiling((double)_duplicates.Count / _elementsPerPage);
+        _displayedDuplicates = _duplicates.Take(_elementsPerPage).ToList();
+
+        if (_duplicates.Count == 0) _message = "No duplicates found";
+    }
     private async Task Scan()
     {
         _isScanning = true;
+        _duplicates.Clear();
 
         try
         {
@@ -28,7 +91,7 @@ public partial class EnrtyDuplicatesResolverComponent
                 Logger.LogWarning("User is not logged in. Cannot scan for duplicate entries.");
                 return;
             }
-            var financialAccounts = await FinancialAccountService.GetAvailableAccounts();
+
             if (financialAccounts is null || financialAccounts.Count == 0)
             {
                 Logger.LogWarning("No financial accounts to check");
@@ -36,20 +99,11 @@ public partial class EnrtyDuplicatesResolverComponent
             }
 
             foreach (var financialAccountId in financialAccounts.Keys) // maybe run this in parallel?
-            {
                 await DuplicateEntryResolverService.Scan(financialAccountId);
-                var duplicatesCount = await DuplicateEntryResolverService.GetDuplicatesCount(financialAccountId);
-                if (duplicatesCount == 0) continue;
 
-                var duplicates = await DuplicateEntryResolverService.GetDuplicates(financialAccountId, 0, duplicatesCount);
-                if (duplicates is null) continue;
+            await GetDuplicates();
 
-                _duplicates.AddRange(duplicates.ToList());
-            }
-            if (_duplicates.Count == 0)
-            {
-                _message = "No duplicates found";
-            }
+
         }
         catch (Exception ex)
         {
@@ -64,5 +118,18 @@ public partial class EnrtyDuplicatesResolverComponent
     private async Task ResolveDuplicates(int accountId, int duplicateId, int entryIdToBeRemained)
     {
         await DuplicateEntryResolverService.Resolve(accountId, duplicateId, entryIdToBeRemained);
+
+        _duplicates.RemoveAll(d => d.Duplicate.Id == duplicateId && d.Duplicate.AccountId == accountId);
+
+        _pageCount = (int)Math.Ceiling((double)_duplicates.Count / _elementsPerPage);
+
+        if (_pageCount >= _selectedPageCount)
+        {
+            _displayedDuplicates = _duplicates.Skip((_selectedPageCount - 1) * _elementsPerPage).Take(_elementsPerPage).ToList();
+        }
+        else
+        {
+            _displayedDuplicates = _duplicates.Skip((_pageCount - 1) * _elementsPerPage).Take(_elementsPerPage).ToList();
+        }
     }
 }

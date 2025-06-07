@@ -3,6 +3,7 @@
 public interface IAccountEntryRepository<T>
 {
     Task<IEnumerable<T>> Get(int accountId, DateTime startDate, DateTime endDate);
+    Task<T?> Get(int accountId, int entryId);
     Task<T?> GetYoungest(int accountId);
     Task<T?> GetNextYounger(int accountId, int entryId);
     Task<T?> GetNextYounger(int accountId, DateTime date);

@@ -13,6 +13,7 @@ public class DuplicateEntryResolverService(IBankAccountRepository<BankAccount> b
     private readonly IAccountEntryRepository<BankAccountEntry> _accountEntryRepository = accountEntryRepository;
     private readonly IDuplicateEntryRepository _duplicateEntryRepository = duplicateEntryRepository;
 
+
     public async Task<bool> Resolve(int accountId, int duplicateId, int entryIdToBeRemained)
     {
         var existingDuplicate = await _duplicateEntryRepository.GetDuplicate(accountId, duplicateId);
@@ -68,6 +69,4 @@ public class DuplicateEntryResolverService(IBankAccountRepository<BankAccount> b
             await _duplicateEntryRepository.AddDuplicate(duplicatesToAdd);
         }
     }
-
-
 }

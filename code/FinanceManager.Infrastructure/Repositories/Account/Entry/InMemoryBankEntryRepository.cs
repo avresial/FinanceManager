@@ -50,7 +50,8 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
     public async Task<IEnumerable<BankAccountEntry>> Get(int accountId, DateTime startDate, DateTime endDate) => await _dbContext.BankEntries
             .Where(x => x.AccountId == accountId && x.PostingDate >= startDate && x.PostingDate <= endDate)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId).ToListAsync();
-
+    public async Task<BankAccountEntry?> Get(int accountId, int entryId) => await _dbContext.BankEntries
+            .FirstOrDefaultAsync(x => x.AccountId == accountId && x.EntryId == entryId);
     public async Task<int?> GetCount(int accountId) => await _dbContext.BankEntries.CountAsync(x => x.AccountId == accountId);
 
     public async Task<BankAccountEntry?> GetNextOlder(int accountId, int entryId)
@@ -148,4 +149,6 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
             .Select(x => x.EntryId)
             .DefaultIfEmpty(0)
             .Max();
+
+
 }

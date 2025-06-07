@@ -15,7 +15,7 @@ public class DuplicateEntryResolverService(HttpClient httpClient)
 
     public async Task Resolve(int accountId, int duplicateId, int entryIdToBeRemained)
     {
-        var response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/DuplicateEntryResolver/Resolve?accountId={accountId}?duplicateId={duplicateId}?entryIdToBeRemained={entryIdToBeRemained}", null);
+        var response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/DuplicateEntryResolver/Resolve?accountId={accountId}&duplicateId={duplicateId}&entryIdToBeRemained={entryIdToBeRemained}", null);
         response.EnsureSuccessStatusCode();
     }
 

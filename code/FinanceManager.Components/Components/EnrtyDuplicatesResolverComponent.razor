@@ -1,37 +1,63 @@
-﻿<MudStack>
+﻿<MudGrid Spacing="6" Class="d-flex flex-grow-1 mt-4">
 
-    <MudAlert Severity="Severity.Normal">
-        Duplicate component is under developement
-    </MudAlert>
-    <MudButton @onclick=Scan>
-        Scan
-    </MudButton>
+    <MudItem xs="12">
+        <MudButton @onclick=Scan Disabled=@(_isScanning) Variant="Variant.Text">
+            @if (_duplicates.Count != 0)
+            {
+                @($"Found {_duplicates.Count} duplicates")
 
-    @if (_isScanning)
-    {
-        <MudProgressCircular Color="Color.Default" Indeterminate="true" />
-    }
+            }
+            else
+            {
+                @("Scan for duplicates")
+            }
+        </MudButton>
+        <MudStack Class="mt-2">
 
-    @if (_duplicates is not null && _duplicates.Any())
-    {
-        <MudTable Items="_duplicates" Hover="true" Dense="true" Class="mt-4">
-            <HeaderContent>
-                <MudTh>Id</MudTh>
-                <MudTh>Duplicated entries Ids</MudTh>
-                <MudTh>Action</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Record ID">@context.Id</MudTd>
-                <MudTd DataLabel="Record ID">@(string.Join(", ", context.EntriesId.Select(x=>x.ToString())))</MudTd>
-                <MudTd DataLabel="Actions">
-                    <MudButton Color="Color.Primary" Variant="Variant.Text" OnClick="@(() => ResolveDuplicates(context.AccountId, context.Id, context.EntriesId.First()))">Resolve</MudButton>
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
-    }
+            @if (_isScanning)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-1" />
+            }
 
-    @if (!string.IsNullOrEmpty(_message))
-    {
-        <p>@_message</p>
-    }
-</MudStack>
+            @if (_isInitializing)
+            {
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Width="100%" Height="300px" />
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Width="100%" Height="50px" />
+            }
+        </MudStack>
+    </MudItem>
+
+    <MudItem xs="12">
+        @if (_duplicates is not null && _duplicates.Any())
+        {
+            <MudTable Items="_displayedDuplicates" Hover="true" Dense="true" Class="mt-4">
+                <HeaderContent>
+                    <MudTh>Duplicates count</MudTh>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Value changed</MudTh>
+                    <MudTh>Action</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Duplicated entries Ids">@context.Duplicate.EntriesId.Count</MudTd>
+                    <MudTd DataLabel="Date">@context.PostingDate</MudTd>
+                    <MudTd DataLabel="Value changed">@context.ValueChange</MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudButton Color="Color.Primary" Variant="Variant.Text" OnClick="@(() => ResolveDuplicates(context.Duplicate.AccountId, context.Duplicate.Id, context.Duplicate.EntriesId.First()))">Remove duplicates</MudButton>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+            <div class="d-flex flex-column align-center mt-4">
+                <MudPagination Color="Color.Primary" Count="@_pageCount" SelectedChanged="PageChanged" />
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(_message))
+        {
+            <MudAlert Severity="Severity.Normal">
+                @_message
+            </MudAlert>
+        }
+    </MudItem>
+
+
+</MudGrid>
