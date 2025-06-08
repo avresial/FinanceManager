@@ -1,5 +1,4 @@
-﻿@using ApexCharts
-@using FinanceManager.Domain.Entities
+﻿@using FinanceManager.Domain.Entities
 @using FinanceManager.Domain.Entities.Login
 @using FinanceManager.Domain.Repositories
 @using FinanceManager.Domain.Extensions
@@ -7,10 +6,8 @@
 @using FinanceManager.Domain.Repositories.Account
 @using FinanceManager.Domain.Services
 @using FinanceManager.Components.Helpers
+@using FinanceManager.Domain.Entities.MoneyFlowModels
 
-@inject IFinancialAccountService FinancalAccountService;
-@inject ISettingsService settingsService;
-@inject ILoginService loginService;
 
 
 <div class="card" style="height:@Height;">
@@ -26,25 +23,9 @@
 
     <div class="row flex-fill" style="height:1px;">
         <div class="h-100" style="position:relative; bottom:-2px">
-            @if (ChartData.Any())
+            @if (series.Any())
             {
-                <ApexChart @ref="_chart" Height="@("100%")" TItem="IncomeVsSpendingEntry" Options="_options" XAxisType="XAxisType.Datetime">
-                    <ChildContent>
-                        <ApexPointSeries TItem="IncomeVsSpendingEntry"
-                                         Items="ChartData"
-                                         Name="Income"
-                                         XValue="@(e => e.Date.ToLocalTime())"
-                                         YValue="e=> e.Income"
-                                         SeriesType="SeriesType.Area" />
-
-                        <ApexPointSeries TItem="IncomeVsSpendingEntry"
-                                         Items="ChartData"
-                                         Name="Spending"
-                                         XValue="@(e => e.Date.ToLocalTime())"
-                                         YValue="e=> e.Spending"
-                                         SeriesType="SeriesType.Area" />
-                    </ChildContent>
-                </ApexChart>
+                <MudChart ChartType="ChartType.Line" ChartSeries="@series" Width="100%" Height="100%" ChartOptions=_options AxisChartOptions=_axisChartOptions />
             }
             else
             {
