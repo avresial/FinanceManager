@@ -68,10 +68,10 @@ public class AppDbContext(IConfiguration configuration) : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseInMemoryDatabase(databaseName: "Db");
+        //optionsBuilder.UseInMemoryDatabase(databaseName: "Db");
 
-        //var connectionString = _configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-        //optionsBuilder.UseSqlServer(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
+        var connectionString = _configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+        optionsBuilder.UseSqlServer(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
     }
 
     public DbSet<ActiveUser> ActiveUsers { get; set; }
