@@ -3,10 +3,10 @@
     public class FinancialEntryBase
     {
         public int EntryId { get; internal set; }
-        public int AccountId { get; internal set; }
-        public DateTime PostingDate { get; internal set; }
+        public int AccountId { get; set; }
+        public DateTime PostingDate { get; set; }
         public decimal Value { get; set; }
-        public decimal ValueChange { get; internal set; }
+        public decimal ValueChange { get; set; }
 
         public FinancialEntryBase(int accountId, int entryId, DateTime postingDate, decimal value, decimal valueChange)
         {

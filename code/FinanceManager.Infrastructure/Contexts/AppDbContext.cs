@@ -56,6 +56,11 @@ public class AppDbContext(IConfiguration configuration) : DbContext
                 .ValueGeneratedOnAdd();
         });
 
+        modelBuilder.Entity<DuplicateEntry>(f =>
+        {
+            f.Property(e => e.Id)
+                .ValueGeneratedOnAdd();
+        });
 
 
         base.OnModelCreating(modelBuilder);
@@ -71,11 +76,12 @@ public class AppDbContext(IConfiguration configuration) : DbContext
 
     public DbSet<ActiveUser> ActiveUsers { get; set; }
     public DbSet<UserDto> Users { get; set; }
-
     public DbSet<FinancialAccountBaseDto> BankAccounts { get; set; }
     public DbSet<FinancialAccountBaseDto> StockAccounts { get; set; }
     public DbSet<BankAccountEntry> BankEntries { get; set; }
     public DbSet<StockAccountEntry> StockEntries { get; set; }
     public DbSet<StockPriceDto> StockPrices { get; set; }
     public DbSet<NewVisits> NewVisits { get; set; }
+    public DbSet<DuplicateEntry> DuplicateEntries { get; set; }
+
 }

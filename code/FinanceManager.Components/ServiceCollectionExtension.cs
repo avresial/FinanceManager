@@ -18,6 +18,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IMoneyFlowService, MoneyFlowService>()
                 .AddScoped<ILiabilitiesService, LiabilitiesService>()
                 .AddScoped<NewVisitorsService>()
+                .AddScoped<DuplicateEntryResolverService>()
 
                 ;
         return services;

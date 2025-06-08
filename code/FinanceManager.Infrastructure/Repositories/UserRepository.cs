@@ -8,11 +8,11 @@ using Microsoft.Extensions.Configuration;
 
 namespace FinanceManager.Infrastructure.Repositories;
 
-public class UserInMemoryRepository : IUserRepository
+public class UserRepository : IUserRepository
 {
     private readonly AppDbContext _dbContext;
 
-    public UserInMemoryRepository(AppDbContext context, IConfiguration configuration)
+    public UserRepository(AppDbContext context, IConfiguration configuration)
     {
         _dbContext = context;
 

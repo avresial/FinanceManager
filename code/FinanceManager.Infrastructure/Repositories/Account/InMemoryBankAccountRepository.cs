@@ -24,7 +24,7 @@ internal class InMemoryBankAccountRepository(AppDbContext context) : IBankAccoun
     public async Task<int?> Add(int userId, int accountId, string accountName) => await Add(userId, accountId, accountName, AccountLabel.Other);
     public async Task<int?> Add(int userId, int accountId, string accountName, AccountLabel accountLabel)
     {
-        _dbContext.BankAccounts.Add(new FinancialAccountBaseDto
+        var result = _dbContext.BankAccounts.Add(new FinancialAccountBaseDto
         {
             UserId = userId,
             AccountId = 0,
@@ -34,7 +34,8 @@ internal class InMemoryBankAccountRepository(AppDbContext context) : IBankAccoun
         });
 
         await _dbContext.SaveChangesAsync();
-        return accountId;
+        if (result is null || result.Entity is null) return null;
+        return result.Entity.AccountId;
     }
     public async Task<bool> Delete(int accountId)
     {
@@ -51,6 +52,8 @@ internal class InMemoryBankAccountRepository(AppDbContext context) : IBankAccoun
         .Where(x => x.UserId == userId && x.AccountType == AccountType.Bank)
         .Select(x => new AvailableAccount(x.AccountId, x.Name))
         .ToListAsync();
+
+    public Task<bool> Exists(int accountId) => _dbContext.BankAccounts.AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bank);
 
     public async Task<BankAccount?> Get(int accountId)
     {

@@ -7,7 +7,7 @@ using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using Moq;
 
-namespace FinanceManager.UnitTests;
+namespace FinanceManager.UnitTests.Services;
 
 public class MoneyFlowServiceTests
 {

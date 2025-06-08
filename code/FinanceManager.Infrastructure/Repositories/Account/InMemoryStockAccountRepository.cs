@@ -43,6 +43,7 @@ namespace FinanceManager.Infrastructure.Repositories.Account
                 .Where(x => x.UserId == userId && x.AccountType == AccountType.Stock)
                 .Select(x => new AvailableAccount(x.AccountId, x.Name))
                 .ToListAsync();
+        public Task<bool> Exists(int accountId) => _dbContext.BankAccounts.AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Stock);
 
         public async Task<StockAccount?> Get(int accountId)
         {

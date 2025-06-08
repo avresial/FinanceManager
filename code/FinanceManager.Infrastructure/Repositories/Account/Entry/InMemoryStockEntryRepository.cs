@@ -38,6 +38,11 @@ public class InMemoryStockEntryRepository(AppDbContext context) : IAccountEntryR
             .ToListAsync();
     }
 
+    public Task<StockAccountEntry?> Get(int accountId, int entryId)
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task<int?> GetCount(int accountId)
     {
         return await _dbContext.StockEntries.CountAsync(e => e.AccountId == accountId);

@@ -15,6 +15,7 @@ namespace FinanceManager.Domain.Repositories.Account
         Task<int?> GetLastAccountId();
         Task<IEnumerable<AvailableAccount>> GetAvailableAccounts(int userId);
         Task<T?> Get(int accountId);
+        Task<bool> Exists(int accountId);
         Task<int?> Add(int userId, int accountId, string accountName);
         Task<bool> Update(int accountId, string accountName);
         Task<bool> Delete(int accountId);

@@ -8,8 +8,8 @@ namespace FinanceManager.Application.Services;
 
 public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, AccountIdProvider accountIdProvider)
 {
-    private readonly int _guestUserId = 0;
-    private Random _random = new Random();
+    private readonly int _guestUserId = 1;
+    private readonly Random _random = new Random();
     private readonly IFinancalAccountRepository _accountRepository = accountRepository;
     private readonly AccountIdProvider _accountIdProvider = accountIdProvider;
 
@@ -46,6 +46,7 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
         BankAccount bankAccount = await GetNewBankAccount("Cash 1", AccountLabel.Cash);
         for (DateTime date = start; date <= end; date = date.AddDays(1))
             bankAccount.AddEntry(GetNewBankAccountEntry(date, -90, 100));
+
         await _accountRepository.AddAccount(bankAccount);
     }
 

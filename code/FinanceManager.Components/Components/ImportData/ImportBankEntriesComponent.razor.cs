@@ -109,17 +109,20 @@ public partial class ImportBankEntriesComponent : ComponentBase
 
         if (_importModels.Count != 0)
         {
-            foreach (var result in _importModels)
+            foreach (var result in _importModels.GroupBy(x => x.PostingDate.Date))
             {
-                try
+                foreach (var (index, entry) in result.Index())
                 {
-                    await FinancialAccountService.AddEntry(new BankAccountEntry(AccountId, -1, result.PostingDate, -1, result.ValueChange));
-                    importedEntriesCount++;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex);
-                    _warnings.Add(ex.Message);
+                    try
+                    {
+                        await FinancialAccountService.AddEntry(new BankAccountEntry(AccountId, -1, entry.PostingDate.AddSeconds(index), -1, entry.ValueChange));
+                        importedEntriesCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex);
+                        _warnings.Add(ex.Message);
+                    }
                 }
             }
         }
