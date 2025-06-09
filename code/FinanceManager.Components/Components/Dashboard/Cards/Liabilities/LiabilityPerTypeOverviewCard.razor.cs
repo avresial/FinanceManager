@@ -1,18 +1,32 @@
-using ApexCharts;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using MudBlazor;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 {
     public partial class LiabilityPerTypeOverviewCard
     {
+        private readonly AxisChartOptions _axisChartOptions = new()
+        {
+            MatchBoundsToSize = true,
+        };
+        private readonly ChartOptions _chartOptions = new()
+        {
+            LineStrokeWidth = 3,
+            ChartPalette = ColorsProvider.GetColors().ToArray(),
+            ShowLegend = false,
+        };
+
+        private bool _isLoading;
+        private double[] _data = [];
+        private string[] _labels = [];
+
         private string _currency = "";
         private decimal _totalLiabilities = 0;
-        private ApexChart<PieChartModel>? _chart;
 
         [Parameter] public string Height { get; set; } = "300px";
         [Parameter] public DateTime StartDateTime { get; set; }
@@ -23,7 +37,6 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
         [Inject] public required ISettingsService SettingsService { get; set; }
         [Inject] public required ILoginService LoginService { get; set; }
 
-        public List<PieChartModel> ChartData { get; set; } = [];
 
         protected override void OnInitialized()
         {
@@ -32,11 +45,12 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 
         protected override async Task OnParametersSetAsync()
         {
-            ChartData.Clear();
-            ChartData.AddRange(await GetData());
+            List<PieChartModel> data = await GetData();
+
+            _data = data.Select(x => (double)x.Value).ToArray();
+            _labels = data.Select(x => x.Name).ToArray();
 
             StateHasChanged();
-            if (_chart is not null) await _chart.UpdateSeriesAsync(true);
         }
 
         private async Task<List<PieChartModel>> GetData()
@@ -64,50 +78,5 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 
             return result;
         }
-
-
-        private ApexChartOptions<PieChartModel> _options { get; set; } = new()
-        {
-            Chart = new Chart
-            {
-                Toolbar = new Toolbar
-                {
-                    Show = false
-                },
-            },
-            Xaxis = new XAxis()
-            {
-                AxisTicks = new AxisTicks()
-                {
-                    Show = false,
-                },
-                AxisBorder = new AxisBorder()
-                {
-                    Show = false
-                },
-                Position = XAxisPosition.Bottom,
-                Type = XAxisType.Category
-
-            },
-            Yaxis = new List<YAxis>()
-            {
-
-                new YAxis
-                {
-                    AxisTicks = new AxisTicks()
-                    {
-                        Show = false
-                    },
-                    Show = false,
-                    SeriesName = "NetValue",
-                    DecimalsInFloat = 0,
-                }
-            },
-            Legend = new Legend()
-            {
-                Position = LegendPosition.Bottom,
-            },
-            Colors = ColorsProvider.GetColors()
-        };
     }
 }

@@ -1,38 +1,30 @@
-﻿@using FinanceManager.Domain.Entities
-@using FinanceManager.Domain.Entities.Login
-@using FinanceManager.Domain.Repositories
-@using FinanceManager.Domain.Extensions
-@using FinanceManager.Domain.Entities.Accounts
-@using FinanceManager.Domain.Repositories.Account
-@using FinanceManager.Domain.Services
-@using FinanceManager.Components.Helpers
-@using FinanceManager.Domain.Entities.MoneyFlowModels
-
-
-
-<div class="card" style="height:@Height;">
-    <div class="row m-0">
-        <div class="card-body">
-            <div class="container-fluid d-flex flex-column h-100 px-1">
-                <div class="col px-0">
-                    <h5 class="card-title">Income & expenses</h5>
-                </div>
+﻿<MudCard Outlined Class="d-flex flex-nowrap " Style="@($"height:{Height};")">
+    <MudPaper Class="flex-grow-1 p-3 pb-1" Elevation="0">
+        <MudText Typo=Typo.h5>Income & expenses</MudText>
+    </MudPaper>
+    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
+        @if (_isLoading && _isInitializing)
+        {
+            <div style="height:100%">
+                <ChartSpinner MaxHeight=@Height />
             </div>
-        </div>
-    </div>
-
-    <div class="row flex-fill" style="height:1px;">
-        <div class="h-100" style="position:relative; bottom:-2px">
-            @if (series.Any())
-            {
-                <MudChart ChartType="ChartType.Line" ChartSeries="@series" Width="100%" Height="100%" ChartOptions=_options AxisChartOptions=_axisChartOptions />
-            }
-            else
-            {
-                <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
-                    <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
-                </div>
-            }
-        </div>
-    </div>
-</div>
+        }
+        else if (_series.Any())
+        {
+            <MudTimeSeriesChart ChartSeries="@_series" Width="100%" Height="100%"
+                                  AxisChartOptions="@_axisChartOptions"
+                                  ChartOptions=_chartOptions
+                                  CanHideSeries="true"
+                                  TimeLabelSpacing="_timeLabelSpacing"
+                                  DataMarkerTooltipTimeLabelFormat="MMM dd"
+                                  TimeLabelFormat="MMM dd"
+                                  Class="px-1 pt-3" />
+        }
+        else
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
+            </div>
+        }
+    </MudPaper>
+</MudCard>

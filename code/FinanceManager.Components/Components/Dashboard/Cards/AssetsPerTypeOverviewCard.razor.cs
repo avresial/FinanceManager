@@ -1,20 +1,31 @@
-using ApexCharts;
-using FinanceManager.Components.Helpers;
-using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using MudBlazor;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards
 {
     public partial class AssetsPerTypeOverviewCard
     {
+        private readonly AxisChartOptions _axisChartOptions = new()
+        {
+            MatchBoundsToSize = true,
+        };
+        private readonly ChartOptions _chartOptions = new()
+        {
+            LineStrokeWidth = 3,
+            ChartPalette = ColorsProvider.GetColors().ToArray(),
+            ShowLegend = false,
+        };
+
+        private bool _isLoading;
+        private double[] _data = [];
+        private string[] _labels = [];
+
         private string _currency = "";
         private decimal _totalAssets = 0;
-        private UserSession? _user;
-        private ApexChart<PieChartModel>? _chart;
 
         [Parameter] public string Height { get; set; } = "300px";
         [Parameter] public DateTime StartDateTime { get; set; }
@@ -25,18 +36,15 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         [Inject] public required ISettingsService SettingsService { get; set; }
         [Inject] public required ILoginService LoginService { get; set; }
 
-
-        public List<PieChartModel> ChartData { get; set; } = [];
-
         protected override async Task OnInitializedAsync()
         {
-            options.Tooltip = new Tooltip
-            {
-                Y = new TooltipY
-                {
-                    Formatter = ChartHelper.GetCurrencyFormatter(SettingsService.GetCurrency())
-                }
-            };
+            //options.Tooltip = new Tooltip
+            //{
+            //    Y = new TooltipY
+            //    {
+            //        Formatter = ChartHelper.GetCurrencyFormatter(SettingsService.GetCurrency())
+            //    }
+            //};
 
             _currency = SettingsService.GetCurrency();
 
@@ -44,84 +52,27 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         }
         protected override async Task OnParametersSetAsync()
         {
-            _user = await LoginService.GetLoggedUser();
-            if (_user is null) return;
+            var data = await GetData();
+            _data = data.Select(x => (double)x.Value).ToArray();
+            _labels = data.Select(x => x.Name).ToArray();
 
-            foreach (var dataEntry in ChartData)
-                dataEntry.Value = 0;
-
-            await GetData();
             StateHasChanged();
-
-            if (_chart is not null) await _chart.UpdateSeriesAsync(true);
         }
 
-        private async Task GetData()
+        private async Task<List<PieChartModel>> GetData()
         {
-            if (StartDateTime == new DateTime())
-            {
-                ChartData.Clear();
-                _totalAssets = 0;
-                return;
-            }
+            _totalAssets = 0;
+            var user = await LoginService.GetLoggedUser();
 
-            if (_user is not null)
-            {
-                try
-                {
-                    ChartData = await MoneyFlowService.GetEndAssetsPerType(_user.UserId, StartDateTime, EndDateTime);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex.ToString());
-                }
-            }
+            if (StartDateTime == new DateTime()) return [];
+            if (user is null) return [];
 
-            _totalAssets = ChartData.Sum(x => x.Value);
+            List<PieChartModel> chartData = [];
+
+            if (user is not null) chartData = await MoneyFlowService.GetEndAssetsPerType(user.UserId, StartDateTime, EndDateTime);
+            if (chartData.Count != 0) _totalAssets = chartData.Sum(x => x.Value);
+
+            return chartData;
         }
-
-        private ApexChartOptions<PieChartModel> options { get; set; } = new()
-        {
-            Chart = new Chart
-            {
-                Toolbar = new ApexCharts.Toolbar
-                {
-                    Show = false
-                },
-            },
-            Xaxis = new XAxis()
-            {
-                AxisTicks = new AxisTicks()
-                {
-                    Show = false,
-                },
-                AxisBorder = new AxisBorder()
-                {
-                    Show = false
-                },
-                Position = XAxisPosition.Bottom,
-                Type = XAxisType.Category
-
-            },
-            Yaxis = new List<YAxis>()
-            {
-
-                new YAxis
-                {
-                    AxisTicks = new AxisTicks()
-                    {
-                        Show = false
-                    },
-                    Show = false,
-                    SeriesName = "NetValue",
-                    DecimalsInFloat = 0,
-                }
-            },
-            Legend = new Legend()
-            {
-                Position = LegendPosition.Bottom,
-            },
-            Colors = ColorsProvider.GetColors()
-        };
     }
 }

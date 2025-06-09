@@ -1,14 +1,8 @@
-﻿@using FinanceManager.Domain.Entities
-@using FinanceManager.Domain.Entities.Accounts
-@using FinanceManager.Domain.Enums
-@using FinanceManager.Domain.Repositories
-@using FinanceManager.Domain.Repositories.Account
-@using FinanceManager.Domain.Services
-
-
-<div class="card" style="height:@Height;">
-    <div class="card-body">
-        <h5 class="card-title">Spending</h5>
+﻿<MudCard Outlined Class="d-flex flex-nowrap " Style="@($"height:{Height};")">
+    <MudPaper Class="flex-grow-0 p-3" Elevation="0">
+        <MudText Typo=Typo.h5>Spending</MudText>
+    </MudPaper>
+    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
         @if (Data.Any())
         {
             <ul class="list-group list-group-flush">
@@ -27,5 +21,5 @@
                 <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
             </div>
         }
-    </div>
-</div>
+    </MudPaper>
+</MudCard>

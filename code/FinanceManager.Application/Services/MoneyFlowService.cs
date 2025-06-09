@@ -309,8 +309,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         }
 
         Dictionary<DateTime, decimal> result = [];
-
-        for (var date = end; date >= start; date = date.Add(-timeSeriesStep))
+        for (var date = end; date >= start; date = date.Add(-timeSeriesStep)) // TODO fix for time series step other than 1 day
         {
             result.Add(date, 0);
 
@@ -354,4 +353,8 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         return await Task.FromResult(false);
     }
 
+    public Task<List<TimeSeriesModel>> GetBalance(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+    {
+        throw new NotImplementedException();
+    }
 }
