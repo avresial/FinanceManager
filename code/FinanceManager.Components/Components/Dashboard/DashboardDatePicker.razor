@@ -1,0 +1,99 @@
+﻿
+<MudPaper Elevation="1" Style="right: 30px; position: fixed; bottom: 3vh; z-index:2;">
+    <MudStack Spacing="0">
+
+        <MudButtonGroup T="string" Variant="Variant.Text">
+
+            <MudButton @onclick=GetThisMonth>This month</MudButton>
+            <MudButton @onclick=GetQuarter>This quarter</MudButton>
+            <MudButton @onclick=GetThisYear>This year</MudButton>
+
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowDropDown" OnClick="@(() => _expanded = !_expanded)" />
+        </MudButtonGroup>
+
+        <MudCollapse Expanded="_expanded">
+            <MudStack Spacing="1" Class="m-2" Style="max-width: 340px">
+                <MudDateRangePicker Label="" @bind-DateRange="_dateRange" RelativeWidth="DropdownWidth.Ignore" />
+                <MudButton @onclick=ApplyDates>Apply</MudButton>
+            </MudStack>
+        </MudCollapse>
+    </MudStack>
+</MudPaper>
+
+
+@code {
+    private bool _expanded;
+
+    private DateRange _dateRange = new DateRange();
+
+    [Parameter] public DateTime StartDateTime { get; set; }
+    [Parameter] public DateTime EndDate { get; set; } = DateTime.UtcNow;
+    [Parameter] public string StartingOption { get; set; } = "ThisMonth";
+    [Parameter] public required Action<(DateTime Start, DateTime End)> DateChanged { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        switch (StartingOption)
+        {
+            case "ThisMonth":
+                await GetThisMonth();
+                break;
+            case "Quarter":
+                await GetQuarter();
+                break;
+            case "ThisYear":
+                await GetThisYear();
+                break;
+            default:
+                await GetThisMonth();
+                break;
+        }
+    }
+
+    public async Task GetQuarter()
+    {
+        DateTime currentUtcDateTime = DateTime.UtcNow;
+        if (currentUtcDateTime.Month <= 3) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 1, 1), new(), DateTimeKind.Utc);
+        else if (currentUtcDateTime.Month <= 6) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 4, 1), new(), DateTimeKind.Utc);
+        else if (currentUtcDateTime.Month <= 9) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 7, 1), new(), DateTimeKind.Utc);
+        else if (currentUtcDateTime.Month <= 12) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 10, 1), new(), DateTimeKind.Utc);
+
+        _dateRange.Start = StartDateTime.Date.ToUniversalTime();
+        _dateRange.End = EndDate.Date.ToUniversalTime();
+
+        DateChanged((StartDateTime, EndDate));
+        await Task.CompletedTask;
+    }
+
+    public async Task GetThisMonth()
+    {
+        StartDateTime = new(new(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1), new(), DateTimeKind.Utc);
+
+        _dateRange.Start = StartDateTime.Date.ToUniversalTime();
+        _dateRange.End = EndDate.Date.ToUniversalTime();
+
+        DateChanged((StartDateTime, EndDate));
+        await Task.CompletedTask;
+    }
+
+    public async Task GetThisYear()
+    {
+        StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 1, 1), new(), DateTimeKind.Utc);
+
+        _dateRange.Start = StartDateTime.Date.ToUniversalTime();
+        _dateRange.End = EndDate.Date.ToUniversalTime();
+
+        DateChanged((StartDateTime, EndDate));
+        await Task.CompletedTask;
+    }
+
+    public async Task ApplyDates()
+    {
+        if (_dateRange.Start is null || _dateRange.End is null) return;
+
+        StartDateTime = _dateRange.Start.Value.ToUniversalTime();
+        EndDate = _dateRange.End.Value.ToUniversalTime();
+
+        DateChanged((StartDateTime, EndDate));
+    }
+}

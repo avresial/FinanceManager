@@ -21,8 +21,6 @@ public partial class IncomeVsSpendingOverviewCard
     private readonly ChartOptions _chartOptions = new()
     {
         MaxNumYAxisTicks = 5,
-
-        YAxisLines = false,
         YAxisRequireZeroPoint = true,
         XAxisLines = false,
         LineStrokeWidth = 3,
@@ -32,6 +30,7 @@ public partial class IncomeVsSpendingOverviewCard
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
+    [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
     [Parameter] public bool DisplayIncome { get; set; }
     [Parameter] public bool DisplaySpending { get; set; }
     [Parameter] public bool DisplayBalance { get; set; }
@@ -54,7 +53,7 @@ public partial class IncomeVsSpendingOverviewCard
             _series.Clear();
             return;
         }
-        var timespanInDays = (DateTime.UtcNow - StartDateTime).TotalDays;
+        var timespanInDays = (EndDateTime - StartDateTime).TotalDays;
 
         if (timespanInDays < 32)
             _timeLabelSpacing = TimeSpan.FromDays(7);
@@ -73,7 +72,7 @@ public partial class IncomeVsSpendingOverviewCard
                 {
                     Index = 0,
                     Name = "Income",
-                    Data = (await MoneyFlowService.GetIncome(user.UserId, StartDateTime.Date, DateTime.UtcNow, chartTimeSpan))
+                    Data = (await MoneyFlowService.GetIncome(user.UserId, StartDateTime.Date, EndDateTime, chartTimeSpan))
                     .Select(x => new TimeSeriesChartSeries.TimeValue(x.DateTime, (double)x.Value)).ToList(),
                     IsVisible = true,
                     LineDisplayType = LineDisplayType.Line,
@@ -95,7 +94,7 @@ public partial class IncomeVsSpendingOverviewCard
                 {
                     Index = 0,
                     Name = "Spending",
-                    Data = (await MoneyFlowService.GetSpending(user.UserId, StartDateTime.Date, DateTime.UtcNow, chartTimeSpan))
+                    Data = (await MoneyFlowService.GetSpending(user.UserId, StartDateTime.Date, EndDateTime, chartTimeSpan))
                     .Select(x => new TimeSeriesChartSeries.TimeValue(x.DateTime, (double)x.Value)).ToList(),
                     IsVisible = true,
                     LineDisplayType = LineDisplayType.Line,
@@ -117,7 +116,7 @@ public partial class IncomeVsSpendingOverviewCard
                 {
                     Index = 0,
                     Name = "Balance",
-                    Data = (await MoneyFlowService.GetBalance(user.UserId, StartDateTime.Date, DateTime.UtcNow, chartTimeSpan))
+                    Data = (await MoneyFlowService.GetBalance(user.UserId, StartDateTime.Date, EndDateTime, chartTimeSpan))
                     .Select(x => new TimeSeriesChartSeries.TimeValue(x.DateTime, (double)x.Value)).ToList(),
                     IsVisible = true,
                     LineDisplayType = LineDisplayType.Line,

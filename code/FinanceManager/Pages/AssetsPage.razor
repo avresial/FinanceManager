@@ -6,20 +6,23 @@
 <div class="container mt-2">
     <div class="row g-2">
         <div class="col-12">
-            <AssetsTimeSeriesCard StartDateTime="DateTime.UtcNow.AddMonths(-1)"/>
+            <AssetsTimeSeriesCard StartDateTime=StartDateTime />
         </div>
 
         <div class="col-md-12 col-lg-4">
-            <AssetsPerTypeOverviewCard Height="@($"{1.5 * _unitHeight}px")" StartDateTime="DateTime.UtcNow.AddMonths(-1)" />
+            <AssetsPerTypeOverviewCard Height="@($"{1.5 * _unitHeight}px")" StartDateTime=StartDateTime />
         </div>
 
         <div class="col-md-12 col-lg-4">
-            <AssetsPerAccountOverviewCard Height="@($"{1.5 * _unitHeight}px")" StartDateTime="DateTime.UtcNow.AddMonths(-1)" />
+            <AssetsPerAccountOverviewCard Height="@($"{1.5 * _unitHeight}px")" StartDateTime=StartDateTime />
         </div>
 
         <div class="col-md-12 col-lg-4">
-            <AssetsPerAccountOverviewCard DisplayAsChart="false" Height="@($"{1.5 * _unitHeight}px")" StartDateTime="DateTime.UtcNow.AddMonths(-1)" />
+            <AssetsPerAccountOverviewCard DisplayAsChart="false" Height="@($"{1.5 * _unitHeight}px")" StartDateTime=StartDateTime />
         </div>
                
     </div>
 </div>
+
+
+<DashboardDatePicker DateChanged=DateChanged StartingOption="ThisMonth" />

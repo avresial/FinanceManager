@@ -1,64 +1,40 @@
 ﻿@using FinanceManager.Components.Components.Dashboard.Cards
 @using FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 
-<div class="container mt-2">
-    <div class="row g-2">
 
-        <div class="col-md-12 col-lg-8">
-            <div class="row justify-content-center g-2">
-                <div class="col-xs-12 col-md-12">
-                    <NetWorthOverviewCard Height="@($"{_unitHeight}px")" StartDateTime="@StartDateTime" />
-                </div>
-
-                <div class="col-xs-12 col-md-6">
-                    <IncomeVsSpendingOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@StartDateTime" DisplaySpending UseOnlyPrimaryColor />
-                </div>
-
-                <div class="col-xs-12 col-md-6">
-                    <IncomeVsSpendingOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@StartDateTime" DisplayIncome UseOnlyPrimaryColor />
-                </div>
-            </div>
+<MudContainer Class="pb-2">
+    <MudGrid Spacing="2">
 
 
-        </div>
+        <MudItem xs="12" md="12">
+            <NetWorthOverviewCard Height="@($"{_unitHeight}px")" StartDateTime="@StartDateTime" />
+        </MudItem>
 
-        <div class="col-xs-12 col-md-6 col-lg-4">
-            <SpendingCathegoryOverviewCard Height="@($"{_unitHeight * 3 + 8}px")" StartDateTime="@StartDateTime" />
-        </div>
+        <MudItem xs="12" md="6">
+            <IncomeVsSpendingOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@StartDateTime" EndDateTime="@EndDate" DisplayIncome DisplaySpending />
+        </MudItem>
 
-        <div class="col-xs-12 col-md-6 col-lg-4">
-            <div class="row g-1">
-                <div class="col-xs-12 col-md-12">
-                    <LiabilityPerTypeOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDateTime" />
-                </div>
-            </div>
-        </div>
+        <MudItem xs="12" md="6">
+            <IncomeVsSpendingOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@StartDateTime" EndDateTime="@EndDate" DisplaySpending UseOnlyPrimaryColor />
+        </MudItem>
 
-        <div class="col-md-12 col-lg-8">
+        <MudItem xs="12" md="6" lg="4">
+            <LiabilityPerTypeOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDateTime" />
+        </MudItem>
 
-            <div class="row justify-content-center g-2">
-                <div class="col-xs-12 col-md-6">
-                    <AssetsPerTypeOverviewCard Height="@($"{_unitHeight*3}px")" StartDateTime="@StartDateTime" />
-                </div>
-                <div class="col-xs-12 col-md-6">
-                    <IncomeVsSpendingOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDateTime" DisplayIncome DisplaySpending />
-                </div>
-            </div>
+        <MudItem xs="12" md="6" lg="4">
+            <SpendingCathegoryOverviewCard Height="@($"{_unitHeight * 3 }px")" StartDateTime="@StartDateTime" />
+        </MudItem>
 
-        </div>
+        <MudItem xs="12" md="6" lg="4">
+            <AssetsPerTypeOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDateTime" />
+        </MudItem>
 
-        <div class="btn-group btn-group-justified col-12 gap-xs-0 gap-md-2 mb-2" role="group" aria-label="Basic radio toggle button group">
-            <input type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" @onclick=GetThisMonth checked>
-            <label class="btn btn-outline-secondary col-4" for="btnradio1">This month</label>
+        @* <MudItem xs="12" md="6">
+            <IncomeVsSpendingOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDateTime" EndDateTime="@EndDate" DisplayIncome UseOnlyPrimaryColor />
+        </MudItem> *@
 
-            <input type="radio" class="btn-check" name="btnradio" id="btnradio3" autocomplete="off" @onclick=GetQuarter>
-            <label class="btn btn-outline-secondary col-4" for="btnradio3">This quarter</label>
+    </MudGrid>
+</MudContainer>
 
-            <input type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off" @onclick=GetThisYear>
-            <label class="btn btn-outline-secondary col-4" for="btnradio2">This year</label>
-        </div>
-    </div>
-</div>
-
-
-
+<DashboardDatePicker DateChanged=DateChanged StartingOption="ThisMonth" />

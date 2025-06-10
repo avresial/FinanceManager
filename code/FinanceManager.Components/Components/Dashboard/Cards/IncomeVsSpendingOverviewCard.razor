@@ -1,6 +1,10 @@
 ﻿<MudCard Outlined Class="d-flex flex-nowrap " Style="@($"height:{Height};")">
     <MudPaper Class="flex-grow-1 p-3 pb-1" Elevation="0">
-        <MudText Typo=Typo.h5>Income & expenses</MudText>
+        <MudText Typo=Typo.h5>
+            @(DisplayIncome ? "Income" : "")
+            @(DisplaySpending ? "Spending" : "")
+            @(DisplayBalance ? "Balance" : "")
+        </MudText>
     </MudPaper>
     <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
         @if (_isLoading && _isInitializing)
@@ -12,13 +16,13 @@
         else if (_series.Any())
         {
             <MudTimeSeriesChart ChartSeries="@_series" Width="100%" Height="100%"
-                                  AxisChartOptions="@_axisChartOptions"
-                                  ChartOptions=_chartOptions
-                                  CanHideSeries="true"
-                                  TimeLabelSpacing="_timeLabelSpacing"
-                                  DataMarkerTooltipTimeLabelFormat="MMM dd"
-                                  TimeLabelFormat="MMM dd"
-                                  Class="px-1 pt-3" />
+                                AxisChartOptions="@_axisChartOptions"
+                                ChartOptions=_chartOptions
+                                CanHideSeries="true"
+                                TimeLabelSpacing="_timeLabelSpacing"
+                                DataMarkerTooltipTimeLabelFormat="MMM dd"
+                                TimeLabelFormat="MMM dd"
+                                Class="px-1 pt-3" />
         }
         else
         {
