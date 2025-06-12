@@ -96,8 +96,11 @@ public partial class AssetsPerAccountOverviewCard
             dataEntry.Value = 0;
 
         if (_chart is not null) await _chart.UpdateSeriesAsync(true);
+        _totalAssets = 0;
 
-        await GetData();
+        Data = await GetData();
+
+        if (Data.Count != 0) _totalAssets = Data.Sum(x => x.Value);
 
         StateHasChanged();
 
@@ -105,19 +108,15 @@ public partial class AssetsPerAccountOverviewCard
 
     }
 
-    async Task GetData()
+    async Task<List<PieChartModel>> GetData()
     {
-        Data.Clear();
-        _totalAssets = 0;
-
-        if (StartDateTime == new DateTime())
-            return;
+        if (StartDateTime == new DateTime()) return [];
 
         if (_user is not null)
         {
             try
             {
-                Data.AddRange(await MoneyFlowService.GetEndAssetsPerAccount(_user.UserId, StartDateTime, DateTime.UtcNow));
+                return await MoneyFlowService.GetEndAssetsPerAccount(_user.UserId, StartDateTime, DateTime.UtcNow);
             }
             catch (Exception ex)
             {
@@ -125,7 +124,6 @@ public partial class AssetsPerAccountOverviewCard
             }
         }
 
-        if (Data.Count != 0)
-            _totalAssets = Data.Sum(x => x.Value);
+        return [];
     }
 }

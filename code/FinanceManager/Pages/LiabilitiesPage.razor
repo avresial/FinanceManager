@@ -7,19 +7,19 @@
 <MudContainer>
     <MudGrid Spacing="2">
         <MudItem xs="12">
-            <LiabilitiesTimeSeriesCard StartDateTime=StartDateTime />
+            <LiabilitiesTimeSeriesCard StartDateTime=StartDate />
         </MudItem>
 
         <MudItem xs="12" lg="4">
-            <LiabilityPerTypeOverviewCard StartDateTime=StartDateTime Height="@($"{1.5 * _unitHeight}px")" />
+            <LiabilityPerTypeOverviewCard StartDateTime=StartDate Height="@($"{1.5 * _unitHeight}px")" />
         </MudItem>
 
         <MudItem xs="12" lg="4">
-            <LiabilitiesPerAccountOverviewCard Height="@($"{1.5 * _unitHeight}px")" StartDateTime=StartDateTime />
+            <LiabilitiesPerAccountOverviewCard Height="@($"{1.5 * _unitHeight}px")" StartDateTime=StartDate />
         </MudItem>
 
         <MudItem xs="12" lg="4">
-            <LiabilitiesPerAccountOverviewCard DisplayAsChart="false" Height="@($"{1.5 * _unitHeight}px")" StartDateTime=StartDateTime />
+            <LiabilitiesPerAccountOverviewCard DisplayAsChart="false" Height="@($"{1.5 * _unitHeight}px")" StartDateTime=StartDate />
         </MudItem>
 
     </MudGrid>
