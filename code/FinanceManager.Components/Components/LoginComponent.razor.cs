@@ -31,7 +31,7 @@ namespace FinanceManager.Components.Components
 
             //await LoginService.Login("admin", "admin");
             //Navigation.NavigateTo("Admin/Dashboard");
-            return;
+            //return;
 #endif
 
             bool firstVisit = !(await LocalStorageService.ContainKeyAsync("isThisFirstVisit"));
@@ -44,7 +44,10 @@ namespace FinanceManager.Components.Components
 
             var loggedUser = await LoginService.GetLoggedUser();
             if (loggedUser is not null)
+            {
                 Navigation.NavigateTo("");
+                return;
+            }
 
             var getKeepMeLoggedinSession = await LoginService.GetKeepMeLoggedInSession();
             if (getKeepMeLoggedinSession is not null)

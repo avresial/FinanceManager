@@ -26,7 +26,7 @@
                                 <MudAlert Severity="Severity.Error" Class="my-3">@error</MudAlert>
                             }
                         }
-                        <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
+                        <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors" >
                             <MudTextField @bind-Value="_loginModel.Login" T="string" Label="Login" Variant="Variant.Outlined" Immediate Required Class="mt-5" />
                             <MudTextField @bind-Value="_loginModel.Password" T="string" Label="Password" Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
 
