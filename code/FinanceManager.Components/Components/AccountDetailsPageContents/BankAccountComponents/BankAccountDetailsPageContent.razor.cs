@@ -152,22 +152,22 @@ public partial class BankAccountDetailsPageContent : ComponentBase
         _user = await loginService.GetLoggedUser();
         if (_user is null) return;
 
-        if (_chart is not null)
-        {
-            if (Account is not null && Account.Entries is not null)
-                Account.Entries.Clear();
+        //if (_chart is not null)
+        //{
+        //    if (Account is not null && Account.Entries is not null)
+        //        Account.Entries.Clear();
 
-            await _chart.RenderAsync();
-        }
+        //    await _chart.RenderAsync();
+        //}
 
         _loadedAllData = false;
         await UpdateEntries();
 
-        if (_chart is not null)
-        {
-            StateHasChanged();
-            await _chart.RenderAsync();
-        }
+        //if (_chart is not null)
+        //{
+        //    StateHasChanged();
+        //    await _chart.RenderAsync();
+        //}
         IsLoading = false;
     }
 
