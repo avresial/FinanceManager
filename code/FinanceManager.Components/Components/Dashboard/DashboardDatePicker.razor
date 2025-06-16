@@ -1,0 +1,74 @@
+﻿@using FinanceManager.Components.Helpers
+
+<MudPaper Elevation="1" Style="right: 30px; position: fixed; bottom: 3vh; z-index:2;">
+    <MudStack Spacing="0">
+
+        <MudButtonGroup T="string" Variant="Variant.Text">
+
+            <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentMonthRange()))>This month</MudButton>
+            <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentQuarterRange()))>This quarter</MudButton>
+            <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentYearRange()))>This year</MudButton>
+
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowDropDown" OnClick="@(() => _expanded = !_expanded)" />
+        </MudButtonGroup>
+
+        <MudCollapse Expanded="_expanded">
+            <MudStack Spacing="1"  Style="max-width: 350px">
+                <MudDateRangePicker Label="" @bind-DateRange="_dateRange" RelativeWidth="DropdownWidth.Ignore" Class="px-1 pt-1" />
+                <MudButton @onclick=ApplyDates>Apply</MudButton>
+            </MudStack>
+        </MudCollapse>
+    </MudStack>
+</MudPaper>
+
+
+@code {
+    private bool _expanded;
+
+    private DateRange _dateRange = new DateRange();
+
+    [Parameter] public string StartingOption { get; set; } = "ThisMonth";
+    [Parameter] public required Action<(DateTime Start, DateTime End)> DateChanged { get; set; }
+
+    protected override void OnInitialized()
+    {
+        (DateTime Start, DateTime End)? range = null;
+
+        switch (StartingOption)
+        {
+            case "ThisMonth":
+                range = DateRangeHelper.GetCurrentMonthRange();
+                break;
+            case "Quarter":
+                range = DateRangeHelper.GetCurrentQuarterRange();
+                break;
+            case "ThisYear":
+                range = DateRangeHelper.GetCurrentYearRange();
+                break;
+            default:
+                range = DateRangeHelper.GetCurrentMonthRange();
+                break;
+        }
+
+        if (range is not null)
+        {
+            _dateRange.Start = range.Value.Start;
+            _dateRange.End = range.Value.End;
+        }
+    }
+    public void SetRange((DateTime Start, DateTime End) range)
+    {
+        _dateRange.Start = range.Start;
+        _dateRange.End = range.End;
+
+        DateChanged((_dateRange.Start.Value, _dateRange.End.Value));
+    }
+
+
+    public void ApplyDates()
+    {
+        if (_dateRange.Start is null || _dateRange.End is null) return;
+
+        DateChanged((_dateRange.Start.Value.ToUniversalTime(), _dateRange.End.Value.ToUniversalTime()));
+    }
+}

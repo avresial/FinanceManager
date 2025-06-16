@@ -95,18 +95,11 @@ public class LoginService : ILoginService
     }
     public async Task<bool> Login(string username, string password)
     {
-        username = username.ToLower();
-        var encryptedPassword = "";
-        //if (username != "guest")
-        encryptedPassword = PasswordEncryptionProvider.EncryptPassword(password);
-        //else
-        //    encryptedPassword = password;
-
         var loginResult = await Login(new UserSession()
         {
             UserId = 0,
-            UserName = username,
-            Password = encryptedPassword,
+            UserName = username.ToLower(),
+            Password = PasswordEncryptionProvider.EncryptPassword(password),
             UserRole = UserRole.User,
         });
 

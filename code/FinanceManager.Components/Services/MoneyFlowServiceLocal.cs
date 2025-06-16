@@ -336,4 +336,9 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financalAccountServi
     {
         throw new NotImplementedException();
     }
+
+    public Task<List<TimeSeriesModel>> GetBalance(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+    {
+        throw new NotImplementedException();
+    }
 }

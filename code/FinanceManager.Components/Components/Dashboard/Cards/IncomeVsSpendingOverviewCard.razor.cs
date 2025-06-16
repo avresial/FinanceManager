@@ -1,160 +1,102 @@
-using ApexCharts;
-using FinanceManager.Components.Helpers;
-using FinanceManager.Domain.Entities.Login;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Components.Components.Charts;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using MudBlazor;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards;
 
 public partial class IncomeVsSpendingOverviewCard
 {
-    private UserSession? _user;
 
-    private ApexChart<IncomeVsSpendingEntry>? _chart;
+    private List<List<ChartJsLineDataPoint>> _series = [];
+    private bool _isInitializing = true;
+    private bool _isLoading = false;
 
-    private ApexChartOptions<IncomeVsSpendingEntry> _options = new()
-    {
-        Colors = new List<string> { "#00FF00", "#FF0000" },
-        Fill = new Fill
-        {
-            Type = new List<FillType> { FillType.Gradient, FillType.Gradient },
-            Gradient = new FillGradient
-            {
-                ShadeIntensity = 1,
-                OpacityFrom = 0.2,
-                OpacityTo = 0.9,
-
-            },
-        },
-    };
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
+    [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
+    [Parameter] public bool DisplayIncome { get; set; }
+    [Parameter] public bool DisplaySpending { get; set; }
+    [Parameter] public bool DisplayBalance { get; set; }
+    [Parameter] public bool UseOnlyPrimaryColor { get; set; }
 
     [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
     [Inject] public required ILogger<IncomeVsSpendingOverviewCard> Logger { get; set; }
+    [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
+    [Inject] public required ILoginService LoginService { get; set; }
 
-    public List<IncomeVsSpendingEntry> ChartData { get; set; } = [];
-
-    protected override void OnInitialized()
-    {
-        _options.Tooltip = new ApexCharts.Tooltip
-        {
-            Y = new TooltipY
-            {
-                Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
-            }
-        };
-        _options.Chart = new Chart
-        {
-            Toolbar = new ApexCharts.Toolbar
-            {
-                Show = false
-            },
-            Zoom = new Zoom()
-            {
-                Enabled = false
-            },
-            Sparkline = new ChartSparkline()
-            {
-                Enabled = true,
-            },
-        };
-
-
-        _options.Xaxis = new XAxis()
-        {
-            AxisTicks = new AxisTicks()
-            {
-                Show = false,
-            },
-            AxisBorder = new AxisBorder()
-            {
-                Show = false
-            },
-            Position = XAxisPosition.Bottom,
-            Type = XAxisType.Datetime
-
-        };
-
-        _options.Yaxis = new List<YAxis>();
-
-        _options.Yaxis.Add(new YAxis
-        {
-            AxisTicks = new AxisTicks()
-            {
-                Show = false
-            },
-            Show = false,
-            SeriesName = "NetValue",
-            DecimalsInFloat = 0,
-
-        });
-        _options.Colors = new List<string>
-        {
-            "#B2BF84",
-            "#D93D3D",
-        };
-    }
 
 
     protected override async Task OnParametersSetAsync()
     {
-        _user = await loginService.GetLoggedUser();
-        if (_user is null) return;
+        _isLoading = true;
 
-        ChartData.Clear();
-        ChartData.AddRange(await GetData());
+        var user = await LoginService.GetLoggedUser();
+        if (user is null) return;
 
-        if (_chart is not null) await _chart.UpdateSeriesAsync(true);
-    }
+        var timespanInDays = (EndDateTime - StartDateTime).TotalDays;
+        _series.Clear();
 
-    private async Task<List<IncomeVsSpendingEntry>> GetData()
-    {
-        List<IncomeVsSpendingEntry> result = [];
-        TimeSpan timeSeriesStep = new TimeSpan(1, 0, 0, 0);
-        DateTime end = DateTime.UtcNow;
-        if (_user is null) return [];
-        List<TimeSeriesModel> income = [];
-        List<TimeSeriesModel> spending = [];
+        TimeSpan chartTimeSpan = TimeSpan.FromDays(1);
+
+        List<TimeSeriesChartSeries> newData = [];
         try
         {
-            income = await MoneyFlowService.GetIncome(_user.UserId, StartDateTime, end, timeSeriesStep);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error getting income data");
-        }
-
-        try
-        {
-            spending = await MoneyFlowService.GetSpending(_user.UserId, StartDateTime, end, timeSeriesStep);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error getting spending data");
-        }
-
-        if (income.Count == 0 && spending.Count == 0) return [];
-
-        for (var date = end; date >= StartDateTime; date = date.Add(-timeSeriesStep))
-        {
-            result.Add(new IncomeVsSpendingEntry
+            if (DisplayIncome)
             {
-                Date = date,
-                Income = income.FirstOrDefault(x => x.DateTime == date)?.Value ?? 0,
-                Spending = spending.FirstOrDefault(x => x.DateTime == date)?.Value ?? 0
-            });
+                var incomeData = (await MoneyFlowService.GetIncome(user.UserId, StartDateTime.Date, EndDateTime, chartTimeSpan))
+                    .OrderBy(x => x.DateTime)
+                    .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
+                    .ToList();
+
+                _series.Add(incomeData);
+
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
         }
 
-        return result;
+        try
+        {
+            if (DisplaySpending)
+            {
+                var incomeData = (await MoneyFlowService.GetSpending(user.UserId, StartDateTime.Date, EndDateTime, chartTimeSpan))
+                    .OrderBy(x => x.DateTime)
+                    .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
+                    .ToList();
+
+                _series.Add(incomeData);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+        }
+
+        try
+        {
+            if (DisplayBalance)
+            {
+                var incomeData = (await MoneyFlowService.GetBalance(user.UserId, StartDateTime.Date, EndDateTime, chartTimeSpan))
+                      .OrderBy(x => x.DateTime)
+                      .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
+                      .ToList();
+
+                _series.Add(incomeData);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, ex.Message);
+        }
+
+        _isLoading = false;
+        _isInitializing = false;
     }
-}
-public class IncomeVsSpendingEntry
-{
-    public DateTime Date;
-    public decimal Income;
-    public decimal Spending;
 }

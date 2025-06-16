@@ -8,7 +8,6 @@ namespace FinanceManager.WebUi.Pages;
 public partial class LandingPage
 {
     private MudTheme Theme = new();
-
     [Inject] public required ILocalStorageService LocalStorageService { get; set; }
     [Inject] public required PricingProvider PricingProvider { get; set; }
     [Inject] public required NewVisitorsService NewVisitorsService { get; set; }
@@ -28,4 +27,6 @@ public partial class LandingPage
         await LoginService.Login("Guest", "GuestPassword");
         Navigation.NavigateTo("");
     }
+
+
 }

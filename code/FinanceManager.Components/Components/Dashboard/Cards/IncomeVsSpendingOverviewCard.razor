@@ -1,57 +1,28 @@
-﻿@using ApexCharts
-@using FinanceManager.Domain.Entities
-@using FinanceManager.Domain.Entities.Login
-@using FinanceManager.Domain.Repositories
-@using FinanceManager.Domain.Extensions
-@using FinanceManager.Domain.Entities.Accounts
-@using FinanceManager.Domain.Repositories.Account
-@using FinanceManager.Domain.Services
-@using FinanceManager.Components.Helpers
-
-@inject IFinancialAccountService FinancalAccountService;
-@inject ISettingsService settingsService;
-@inject ILoginService loginService;
-
-
-<div class="card" style="height:@Height;">
-    <div class="row m-0">
-        <div class="card-body">
-            <div class="container-fluid d-flex flex-column h-100 px-1">
-                <div class="col px-0">
-                    <h5 class="card-title">Income & expenses</h5>
-                </div>
+﻿@using FinanceManager.Components.Components.Charts
+<MudCard Outlined Class="d-flex flex-nowrap " Style="@($"height:{Height};")">
+    <MudPaper Class="flex-grow-1 p-3 pb-1" Elevation="0">
+        <MudText Typo=Typo.h5>
+            @(DisplayIncome ? "Income" : "")
+            @(DisplaySpending ? "Spending" : "")
+            @(DisplayBalance ? "Balance" : "")
+        </MudText>
+    </MudPaper>
+    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
+        @if (_isLoading && _isInitializing)
+        {
+            <div style="height:100%">
+                <ChartSpinner MaxHeight=@Height />
             </div>
-        </div>
-    </div>
-
-    <div class="row flex-fill" style="height:1px;">
-        <div class="h-100" style="position:relative; bottom:-2px">
-            @if (ChartData.Any())
-            {
-                <ApexChart @ref="_chart" Height="@("100%")" TItem="IncomeVsSpendingEntry" Options="_options" XAxisType="XAxisType.Datetime">
-                    <ChildContent>
-                        <ApexPointSeries TItem="IncomeVsSpendingEntry"
-                                         Items="ChartData"
-                                         Name="Income"
-                                         XValue="@(e => e.Date.ToLocalTime())"
-                                         YValue="e=> e.Income"
-                                         SeriesType="SeriesType.Area" />
-
-                        <ApexPointSeries TItem="IncomeVsSpendingEntry"
-                                         Items="ChartData"
-                                         Name="Spending"
-                                         XValue="@(e => e.Date.ToLocalTime())"
-                                         YValue="e=> e.Spending"
-                                         SeriesType="SeriesType.Area" />
-                    </ChildContent>
-                </ApexChart>
-            }
-            else
-            {
-                <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
-                    <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
-                </div>
-            }
-        </div>
-    </div>
-</div>
+        }
+        else if (_series.Any())
+        {
+            <LineChartJs Series="@_series" />
+        }
+        else
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
+            </div>
+        }
+    </MudPaper>
+</MudCard>

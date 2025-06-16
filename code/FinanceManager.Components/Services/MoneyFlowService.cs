@@ -28,6 +28,11 @@ public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
         return [];
     }
 
+    public Task<List<TimeSeriesModel>> GetBalance(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task<List<PieChartModel>> GetEndAssetsPerAccount(int userId, DateTime start, DateTime end)
     {
         if (_httpClient is null) return [];

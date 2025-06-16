@@ -1,3 +1,4 @@
+using FinanceManager.Components.Helpers;
 using FinanceManager.Components.Services;
 using Microsoft.AspNetCore.Components;
 
@@ -6,35 +7,27 @@ namespace FinanceManager.Components.Components.Dashboard
     public partial class Dashboard : ComponentBase
     {
         private const int _unitHeight = 130;
-        public DateTime StartDateTime { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; } = DateTime.UtcNow;
 
         [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
 
-        protected override async Task OnInitializedAsync()
+        protected override void OnInitialized()
         {
-            await GetThisMonth();
-        }
-        public async Task GetQuarter()
-        {
-            DateTime currentUtcDateTime = DateTime.UtcNow;
-            if (currentUtcDateTime.Month <= 3) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 1, 1), new(), DateTimeKind.Utc);
-            else if (currentUtcDateTime.Month <= 6) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 4, 1), new(), DateTimeKind.Utc);
-            else if (currentUtcDateTime.Month <= 9) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 7, 1), new(), DateTimeKind.Utc);
-            else if (currentUtcDateTime.Month <= 12) StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 10, 1), new(), DateTimeKind.Utc);
+            var (Start, End) = DateRangeHelper.GetCurrentMonthRange();
 
-            await Task.CompletedTask;
+            StartDate = Start;
+            EndDate = End;
+
+            base.OnInitialized();
         }
 
-        public async Task GetThisMonth()
+        public void DateChanged((DateTime Start, DateTime End) changed)
         {
-            StartDateTime = new(new(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1), new(), DateTimeKind.Utc);
-            await Task.CompletedTask;
+            StartDate = changed.Start;
+            EndDate = changed.End;
+            StateHasChanged();
         }
 
-        public async Task GetThisYear()
-        {
-            StartDateTime = new(new DateOnly(DateTime.UtcNow.Year, 1, 1), new(), DateTimeKind.Utc);
-            await Task.CompletedTask;
-        }
     }
 }
