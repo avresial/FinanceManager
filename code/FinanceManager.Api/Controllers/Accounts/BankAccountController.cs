@@ -210,7 +210,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var account = await _bankAccountRepository.Get(accountId);
         if (account == null || account.UserId != userId) return BadRequest();
 
-        return Ok(_bankAccountEntryRepository.Delete(accountId, entryId));
+        return Ok(await _bankAccountEntryRepository.Delete(accountId, entryId));
     }
 
     [HttpPut("UpdateEntry")]
