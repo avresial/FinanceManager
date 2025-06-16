@@ -53,6 +53,7 @@ public partial class AssetsTimeSeriesCard
     public List<TimeSeriesModel> ChartData { get; set; } = [];
 
     [Parameter] public DateTime StartDateTime { get; set; }
+    [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
     [Inject] public required ILogger<AssetsTimeSeriesCard> Logger { get; set; }
     [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
@@ -90,7 +91,7 @@ public partial class AssetsTimeSeriesCard
 
         try
         {
-            return await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow);
+            return await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, EndDateTime);
         }
         catch (Exception ex)
         {

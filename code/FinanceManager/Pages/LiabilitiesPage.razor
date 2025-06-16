@@ -1,25 +1,24 @@
 ﻿@page "/Liabilities"
 @using FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 
-
 <PageTitle>Liabilities</PageTitle>
 
 <MudContainer>
     <MudGrid Spacing="2">
         <MudItem xs="12">
-            <LiabilitiesTimeSeriesCard StartDateTime=StartDate />
+            <LiabilitiesTimeSeriesCard StartDateTime=StartDate EndDateTime="@EndDate" />
+        </MudItem>
+        
+        <MudItem xs="12" lg="4">
+            <LiabilityPerTypeOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
         </MudItem>
 
         <MudItem xs="12" lg="4">
-            <LiabilityPerTypeOverviewCard StartDateTime=StartDate Height="@($"{1.5 * _unitHeight}px")" />
+            <LiabilitiesPerAccountOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
         </MudItem>
 
         <MudItem xs="12" lg="4">
-            <LiabilitiesPerAccountOverviewCard Height="@($"{1.5 * _unitHeight}px")" StartDateTime=StartDate />
-        </MudItem>
-
-        <MudItem xs="12" lg="4">
-            <LiabilitiesPerAccountOverviewCard DisplayAsChart="false" Height="@($"{1.5 * _unitHeight}px")" StartDateTime=StartDate />
+            <LiabilitiesPerAccountOverviewCard DisplayAsChart="false" StartDateTime=StartDate EndDateTime="@EndDate"  Height="@($"{1.5 * _unitHeight}px")" />
         </MudItem>
 
     </MudGrid>

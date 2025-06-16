@@ -19,6 +19,7 @@ namespace FinanceManager.Domain.Repositories.Account
         public Task UpdateAccount<T>(T account) where T : BasicAccountInformation;
         public Task RemoveAccount(int id);
 
+        public Task<T?> GetNextYounger<T>(int accountId, DateTime date) where T : FinancialEntryBase;
         public Task AddEntry<T>(T accountEntry, int id) where T : FinancialEntryBase;
         public Task UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase;
         public Task RemoveEntry(int accountEntryId, int id);

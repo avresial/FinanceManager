@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
@@ -12,41 +13,65 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
     public async Task<List<PieChartModel>> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end)
     {
         List<PieChartModel> result = [];
-        var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
-        foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value <= 0))
+        foreach (BankAccount account in await _financialAccountService.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) return result;
+            BankAccountEntry? entry = account.Entries.FirstOrDefault();
+
+            if (entry is null)
+            {
+                if (account.OlderThanLoadedEntry is null) continue;
+
+                entry = await _financialAccountService.GetNextYounger<BankAccountEntry>(account.AccountId, start.Date);
+                if (entry is null) continue;
+            }
+
+            if (entry.Value > 0) continue;
 
             result.Add(new PieChartModel()
             {
                 Name = account.Name,
-                Value = account.Entries.First().Value
+                Value = entry.Value
             });
         }
-
 
         return await Task.FromResult(result);
     }
     public async Task<List<PieChartModel>> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
     {
         List<PieChartModel> result = [];
-        var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
-        foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value <= 0))
+        foreach (BankAccount account in await _financialAccountService.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) return result;
+            BankAccountEntry? entry = account.Entries.FirstOrDefault();
+
+            if (entry is null)
+            {
+                if (account.OlderThanLoadedEntry is null) continue;
+
+                entry = await _financialAccountService.GetNextYounger<BankAccountEntry>(account.AccountId, start.Date);
+                if (entry is null) continue;
+
+            }
+
+            if (entry.Value > 0) continue;
+
             var existingResult = result.FirstOrDefault(x => x.Name == account.AccountType.ToString());
             if (existingResult is null)
             {
                 result.Add(new PieChartModel()
                 {
                     Name = account.AccountType.ToString(),
-                    Value = account.Entries.First().Value
+                    Value = entry.Value
                 });
             }
             else
             {
-                existingResult.Value += account.Entries.First().Value;
+                existingResult.Value += entry.Value;
             }
+
+
+
         }
         return await Task.FromResult(result);
     }
@@ -57,11 +82,26 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
         Dictionary<DateTime, decimal> prices = [];
         TimeSpan step = new TimeSpan(1, 0, 0, 0);
 
-        var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
-        foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value <= 0))
+        foreach (BankAccount account in await _financialAccountService.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) continue;
-            decimal previousValue = account.Entries.Last().Value - account.Entries.Last().ValueChange;
+
+            decimal previousValue = 0;
+
+            if (account.Entries.Any() && account.Entries.Last().PostingDate.Date == start.Date)
+            {
+                previousValue = account.Entries.Last().Value - account.Entries.Last().ValueChange;
+            }
+            else if (account.OlderThanLoadedEntry is not null)
+            {
+                BankAccountEntry? previousEntry = await _financialAccountService.GetNextYounger<BankAccountEntry>(account.AccountId, start.Date);
+
+                if (previousEntry is not null)
+                    previousValue = previousEntry.Value;
+            }
+
+            if (previousValue > 0) continue;
+
 
             for (DateTime date = start; date <= end; date = date.Add(step))
             {
@@ -73,6 +113,8 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
                     prices[date] += previousValue;
                     continue;
                 }
+
+                if (newestEntry.Value > 0) break;
 
                 prices[date] += newestEntry.Value;
                 previousValue = prices[date];

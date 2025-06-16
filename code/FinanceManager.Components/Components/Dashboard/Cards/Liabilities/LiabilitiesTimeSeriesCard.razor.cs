@@ -52,6 +52,7 @@ public partial class LiabilitiesTimeSeriesCard
     public List<TimeSeriesModel> ChartData { get; set; } = [];
 
     [Parameter] public DateTime StartDateTime { get; set; }
+    [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
     [Inject] public required ILogger<LiabilitiesTimeSeriesCard> Logger { get; set; }
     [Inject] public required ILiabilitiesService LiabilitiesService { get; set; }
@@ -89,7 +90,7 @@ public partial class LiabilitiesTimeSeriesCard
 
         try
         {
-            return await LiabilitiesService.GetLiabilitiesTimeSeries(user.UserId, StartDateTime, DateTime.UtcNow);
+            return await LiabilitiesService.GetLiabilitiesTimeSeries(user.UserId, StartDateTime, EndDateTime);
         }
         catch (Exception ex)
         {

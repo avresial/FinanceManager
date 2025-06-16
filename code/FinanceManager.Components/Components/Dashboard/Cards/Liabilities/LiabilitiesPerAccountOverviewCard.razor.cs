@@ -18,6 +18,8 @@ public partial class LiabilitiesPerAccountOverviewCard
     [Parameter] public bool DisplayAsChart { get; set; } = true;
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
+    [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
+
 
     [Inject] public required ILogger<LiabilitiesPerAccountOverviewCard> Logger { get; set; }
     [Inject] public required ILiabilitiesService LiabilitiesService { get; set; }
@@ -116,7 +118,7 @@ public partial class LiabilitiesPerAccountOverviewCard
         {
             try
             {
-                Data.AddRange(await LiabilitiesService.GetEndLiabilitiesPerAccount(_user.UserId, StartDateTime, DateTime.UtcNow));
+                Data.AddRange(await LiabilitiesService.GetEndLiabilitiesPerAccount(_user.UserId, StartDateTime, EndDateTime));
             }
             catch (Exception ex)
             {

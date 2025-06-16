@@ -6,19 +6,19 @@
 <div class="container mt-2">
     <div class="row g-2">
         <div class="col-12">
-            <AssetsTimeSeriesCard StartDateTime=StartDate />
+            <AssetsTimeSeriesCard StartDateTime=StartDate EndDateTime="@EndDate" />
         </div>
 
         <div class="col-md-12 col-lg-4">
-            <AssetsPerTypeOverviewCard Height="@($"{1.5 * _unitHeight}px")" StartDateTime=StartDate />
+            <AssetsPerTypeOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
         </div>
 
         <div class="col-md-12 col-lg-4">
-            <AssetsPerAccountOverviewCard Height="@($"{1.5 * _unitHeight}px")" StartDateTime=StartDate/>
+            <AssetsPerAccountOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
         </div>
 
         <div class="col-md-12 col-lg-4">
-            <AssetsPerAccountOverviewCard DisplayAsChart="false" Height="@($"{1.5 * _unitHeight}px")" StartDateTime=StartDate />
+            <AssetsPerAccountOverviewCard DisplayAsChart="false" StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
         </div>
                
     </div>

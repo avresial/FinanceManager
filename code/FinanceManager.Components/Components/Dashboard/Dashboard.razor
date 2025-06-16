@@ -7,7 +7,7 @@
 
 
         <MudItem xs="12" md="12">
-            <NetWorthOverviewCard Height="@($"{_unitHeight}px")" StartDateTime="@StartDate" />
+            <NetWorthOverviewCard Height="@($"{_unitHeight}px")"  EndDateTime="@EndDate" />
         </MudItem>
 
         <MudItem xs="12" md="6">
@@ -19,15 +19,15 @@
         </MudItem>
 
         <MudItem xs="12" md="6" lg="4">
-            <LiabilityPerTypeOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate" />
+            <LiabilityPerTypeOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate" EndDateTime="@EndDate" />
         </MudItem>
 
         <MudItem xs="12" md="6" lg="4">
-            <SpendingCathegoryOverviewCard Height="@($"{_unitHeight * 3 }px")" StartDateTime="@StartDate" />
+            <SpendingCathegoryOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate" EndDateTime="@EndDate" />
         </MudItem>
 
         <MudItem xs="12" md="6" lg="4">
-            <AssetsPerTypeOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate" />
+            <AssetsPerTypeOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate" EndDateTime="@EndDate" />
         </MudItem>
 
         @* <MudItem xs="12" md="6">

@@ -10,7 +10,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         private decimal? _totalNetWorth = null;
 
         [Parameter] public string Height { get; set; } = "300px";
-        [Parameter] public DateTime StartDateTime { get; set; }
+        [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
         [Inject] public required ILogger<NetWorthOverviewCard> Logger { get; set; }
         [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
@@ -21,13 +21,15 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         {
             _currency = SettingsService.GetCurrency();
             _totalNetWorth = null;
+
             var user = await LoginService.GetLoggedUser();
             if (user is null) return;
+
             decimal? result = null;
 
             try
             {
-                result = await MoneyFlowService.GetNetWorth(user.UserId, DateTime.UtcNow);
+                result = await MoneyFlowService.GetNetWorth(user.UserId, EndDateTime);
             }
             catch (Exception ex)
             {

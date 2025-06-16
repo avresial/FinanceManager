@@ -13,23 +13,14 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         private string currency = string.Empty;
         private List<SpendingCathegoryOverviewEntry> Data = new();
 
-        [Parameter]
-        public string Height { get; set; } = "300px";
+        [Parameter] public string Height { get; set; } = "300px";
+        [Parameter] public DateTime StartDateTime { get; set; }
+        [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
-        [Parameter]
-        public DateTime StartDateTime { get; set; }
-
-        [Inject]
-        public required ILogger<SpendingCathegoryOverviewCard> Logger { get; set; }
-
-        [Inject]
-        public required IFinancialAccountService FinancalAccountService { get; set; }
-
-        [Inject]
-        public required ISettingsService settingsService { get; set; }
-
-        [Inject]
-        public required ILoginService loginService { get; set; }
+        [Inject] public required ILogger<SpendingCathegoryOverviewCard> Logger { get; set; }
+        [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+        [Inject] public required ISettingsService settingsService { get; set; }
+        [Inject] public required ILoginService loginService { get; set; }
 
         protected override void OnInitialized()
         {
@@ -44,7 +35,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             IEnumerable<BankAccount> bankAccounts = [];
             try
             {
-                bankAccounts = await FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now);
+                bankAccounts = await FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, EndDateTime);
             }
             catch (Exception ex)
             {

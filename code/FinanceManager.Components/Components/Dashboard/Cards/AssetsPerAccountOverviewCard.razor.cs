@@ -19,6 +19,7 @@ public partial class AssetsPerAccountOverviewCard
     [Parameter] public bool DisplayAsChart { get; set; } = true;
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
+    [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
     [Inject] public required ILogger<AssetsPerAccountOverviewCard> Logger { get; set; }
     [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
@@ -116,7 +117,7 @@ public partial class AssetsPerAccountOverviewCard
         {
             try
             {
-                return await MoneyFlowService.GetEndAssetsPerAccount(_user.UserId, StartDateTime, DateTime.UtcNow);
+                return await MoneyFlowService.GetEndAssetsPerAccount(_user.UserId, StartDateTime, EndDateTime);
             }
             catch (Exception ex)
             {

@@ -165,6 +165,7 @@ namespace FinanceManager.Infrastructure.Repositories
             throw new NotImplementedException();
         }
 
+        public async Task<T?> GetNextYounger<T>(int accountId, DateTime date) where T : FinancialEntryBase => await _bankAccountEntryRepository.GetNextYounger(accountId, date) as T;
         public async Task AddEntry<T>(T bankAccountEntry, int id) where T : FinancialEntryBase
         {
             if (bankAccountEntry is BankAccountEntry bankEntry)
@@ -300,6 +301,7 @@ namespace FinanceManager.Infrastructure.Repositories
                 return ExpenseType.Other;
             return (ExpenseType)result;
         }
+
 
     }
 }

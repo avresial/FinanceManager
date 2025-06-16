@@ -30,6 +30,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 
         [Parameter] public string Height { get; set; } = "300px";
         [Parameter] public DateTime StartDateTime { get; set; }
+        [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
         [Inject] public required ILogger<LiabilityPerTypeOverviewCard> Logger { get; set; }
         [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
@@ -63,7 +64,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
             List<PieChartModel> result = [];
             try
             {
-                result = await LiabilitiesService.GetEndLiabilitiesPerType(user.UserId, StartDateTime, DateTime.UtcNow);
+                result = await LiabilitiesService.GetEndLiabilitiesPerType(user.UserId, StartDateTime, EndDateTime);
             }
             catch (Exception ex)
             {
