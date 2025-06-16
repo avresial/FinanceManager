@@ -9,16 +9,7 @@
     </h3>
 
     <div class="col-12 mb-4" style="min-height:150px;">
-        <LineChartJs Series="@ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime, x.Value)).ToList()" />
-        @* <ApexChart @ref="_chart" TItem="TimeSeriesModel" Height="150" Options=@_options XAxisType="XAxisType.Datetime">
-            <ApexPointSeries TItem="TimeSeriesModel"
-                             Items="ChartData"
-                             Name="@Account.Name"
-                             XValue="e => e.DateTime.ToLocalTime()"
-                             YValue="e=> e.Value"
-                             SeriesType="SeriesType.Area"
-                             OrderByDescending="@(e=>e.X)" />
-        </ApexChart> *@
+        <LineChartJs Series="@([ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()])" />
     </div>
 
     <div class="container mt-3">

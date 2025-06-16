@@ -1,3 +1,4 @@
+using FinanceManager.Domain.Providers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
@@ -5,16 +6,14 @@ namespace FinanceManager.Components.Components.Charts;
 public partial class LineChartJs : ComponentBase, IAsyncDisposable
 {
     private IJSObjectReference? _chartInstance;
+    private CancellationTokenSource _cancellationTokenSource = new();
 
     [Inject] public required IJSRuntime JSRunTime { get; set; }
-    [Parameter] public List<ChartJsLineDataPoint> Series { get; set; } = [];
-    public string Id { get; set; } = "chartCanvas";
-    CancellationTokenSource cancellationTokenSource = new();
-    protected override void OnInitialized()
-    {
-        _cancellationToken = cancellationTokenSource.Token;
-        base.OnInitialized();
-    }
+
+    [Parameter] public List<List<ChartJsLineDataPoint>> Series { get; set; } = [];
+    [Parameter] public List<string> ColorPallet { get; set; } = [];
+
+    public string Id { get; set; } = Guid.NewGuid().ToString();
 
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -75,47 +74,106 @@ public partial class LineChartJs : ComponentBase, IAsyncDisposable
                     },
                     Animation = new
                     {
-                        duration = 250
+                        duration = 50
                     }
 
                 }
             };
 
-            _chartInstance = await JSRunTime.InvokeAsync<IJSObjectReference>("setupChart", _cancellationToken, Id, config);
+            if (ColorPallet.Count == 0) ColorPallet = ColorsProvider.GetColors();
 
-            foreach (var newDataElement in Series)
+            List<Dataset> datasets = [];
+            for (int i = 0; i < Series.Count; i++)
             {
-                if (_cancellationToken.IsCancellationRequested) break;
-                await JSRunTime.InvokeVoidAsync("addDataPoint", _cancellationToken, _chartInstance, newDataElement);
-                await Task.Delay(250);
+                datasets.Add(new Dataset()
+                {
+                    BackgroundColor = ColorPallet[i % ColorPallet.Count] + "80",
+                    BorderColor = ColorPallet[i % ColorPallet.Count]
+                });
             }
+
+            _chartInstance = await JSRunTime.InvokeAsync<IJSObjectReference>("setupChart", _cancellationTokenSource.Token, Id, config, datasets);
+
+
+            List<List<ChartJsLineDataPoint>> newSeries = [];
+            try
+            {
+                foreach (var serie in Series)
+                {
+                    List<ChartJsLineDataPoint> singleSerie = [];
+                    foreach (var element in serie)
+                        singleSerie.Add(element);
+                    newSeries.Add(singleSerie);
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+            await DisplayData(_cancellationTokenSource.Token, newSeries);
 
         }
     }
-    bool isLoading = false;
-    CancellationToken _cancellationToken = default(CancellationToken);
+
     protected override async Task OnParametersSetAsync()
     {
         if (_chartInstance is null) return;
-        if (isLoading) return;
-        isLoading = true;
-        await JSRunTime.InvokeVoidAsync("clearDatasets", _cancellationToken, _chartInstance);
 
-        foreach (var newDataElement in Series)
+        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource = new CancellationTokenSource();
+
+        List<List<ChartJsLineDataPoint>> newSeries = [];
+        try
         {
-            if (_cancellationToken.IsCancellationRequested) break;
+            foreach (var serie in Series)
+            {
+                List<ChartJsLineDataPoint> singleSerie = [];
 
-            await JSRunTime.InvokeVoidAsync("addDataPoint", _cancellationToken, _chartInstance, newDataElement);
-            await Task.Delay(200);
+                foreach (var element in serie)
+                    singleSerie.Add(element);
+
+                newSeries.Add(singleSerie);
+            }
         }
-        isLoading = false;
+        catch (Exception ex)
+        {
+        }
 
+        await DisplayData(_cancellationTokenSource.Token, newSeries);
     }
 
+    private async Task DisplayData(CancellationToken cancellationToken, List<List<ChartJsLineDataPoint>> newSeries)
+    {
+        await JSRunTime.InvokeVoidAsync("clearDatasets", cancellationToken, _chartInstance);
+
+        foreach (var serie in newSeries)
+        {
+            if (cancellationToken.IsCancellationRequested) break;
+            if (serie.Count <= 0) continue;
+
+            int delay = 1000 * 5 / serie.Count;
+            if (delay > 100) delay = 100;
+            foreach (var newDataElement in serie)
+            {
+                if (cancellationToken.IsCancellationRequested) break;
+                var index = newSeries.IndexOf(serie);
+                if (index < 0) break;
+
+                await JSRunTime.InvokeVoidAsync("addDataPoint", cancellationToken, _chartInstance, index, newDataElement);
+
+                try
+                {
+                    await Task.Delay(delay, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                }
+            }
+        }
+    }
 
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
-        cancellationTokenSource.Cancel();
+        _cancellationTokenSource.Cancel();
         if (_chartInstance is not null)
             await _chartInstance.DisposeAsync();
     }
@@ -132,5 +190,13 @@ public class ChartJsLineDataPoint
         this.x = x.ToString("yyyy-MM-dd");
         this.y = y;
     }
+
+}
+
+public class Dataset
+{
+    public string BorderColor { get; set; } = "#FFAB00";
+    public string BackgroundColor { get; set; } = "#FFAB0080";
+    public string Fill { get; set; } = "origin";
 
 }

@@ -1,11 +1,8 @@
-using ApexCharts;
-using FinanceManager.Components.Helpers;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -23,50 +20,12 @@ public partial class BankAccountDetailsPageContent : ComponentBase
     private DateTime? _youngestEntryDate;
 
     private bool _addEntryVisibility;
-    private ApexChart<TimeSeriesModel>? _chart;
 
     private List<BankAccountEntry>? _top5;
     private List<BankAccountEntry>? _bottom5;
     private string _currency = "PLN";
     private UserSession? _user;
-    private ApexChartOptions<TimeSeriesModel> _options = new()
-    {
-        Chart = new Chart
-        {
-            Sparkline = new ChartSparkline()
-            {
-                Enabled = true,
-            },
-            Toolbar = new Toolbar
-            {
-                Show = false
-            },
-        },
-        Xaxis = new XAxis()
-        {
-            AxisTicks = new AxisTicks()
-            {
-                Show = false,
-            },
-            AxisBorder = new AxisBorder()
-            {
-                Show = false
-            },
-        },
-        Yaxis = new List<YAxis>()
-        {
-            new YAxis
-            {
-                Show = false,
-                SeriesName = "Vaue",
-                DecimalsInFloat = 0,
-            }
-        },
-        Colors = new List<string>
-        {
-           ColorsProvider.GetColors().First()
-        }
-    };
+
 
     public bool IsLoading = false;
     public BankAccount? Account { get; set; }
@@ -127,20 +86,12 @@ public partial class BankAccountDetailsPageContent : ComponentBase
 
         UpdateChartData();
 
-        if (_chart is not null) await _chart.RenderAsync();
         await UpdateInfo();
         _isLoadingMore = false;
     }
 
     protected override async Task OnInitializedAsync()
     {
-        _options.Tooltip = new Tooltip
-        {
-            Y = new TooltipY
-            {
-                Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
-            }
-        };
         _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
         await UpdateEntries();
 
@@ -152,22 +103,9 @@ public partial class BankAccountDetailsPageContent : ComponentBase
         _user = await loginService.GetLoggedUser();
         if (_user is null) return;
 
-        //if (_chart is not null)
-        //{
-        //    if (Account is not null && Account.Entries is not null)
-        //        Account.Entries.Clear();
-
-        //    await _chart.RenderAsync();
-        //}
-
         _loadedAllData = false;
         await UpdateEntries();
 
-        //if (_chart is not null)
-        //{
-        //    StateHasChanged();
-        //    await _chart.RenderAsync();
-        //}
         IsLoading = false;
     }
 
@@ -238,7 +176,6 @@ public partial class BankAccountDetailsPageContent : ComponentBase
               await InvokeAsync(async () =>
               {
                   await UpdateEntries();
-                  if (_chart is not null) await _chart.RenderAsync();
                   StateHasChanged();
               });
           });

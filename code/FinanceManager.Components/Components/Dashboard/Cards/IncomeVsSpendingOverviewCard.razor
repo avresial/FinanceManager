@@ -1,4 +1,5 @@
-﻿<MudCard Outlined Class="d-flex flex-nowrap " Style="@($"height:{Height};")">
+﻿@using FinanceManager.Components.Components.Charts
+<MudCard Outlined Class="d-flex flex-nowrap " Style="@($"height:{Height};")">
     <MudPaper Class="flex-grow-1 p-3 pb-1" Elevation="0">
         <MudText Typo=Typo.h5>
             @(DisplayIncome ? "Income" : "")
@@ -15,14 +16,7 @@
         }
         else if (_series.Any())
         {
-            <MudTimeSeriesChart ChartSeries="@_series" Width="100%" Height="100%"
-                                AxisChartOptions="@_axisChartOptions"
-                                ChartOptions=_chartOptions
-                                CanHideSeries="true"
-                                TimeLabelSpacing="_timeLabelSpacing"
-                                DataMarkerTooltipTimeLabelFormat="MMM dd"
-                                TimeLabelFormat="MMM dd"
-                                Class="px-1 pt-3" />
+            <LineChartJs Series="@_series" />
         }
         else
         {

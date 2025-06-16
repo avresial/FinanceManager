@@ -1,3 +1,4 @@
+using FinanceManager.Components.Components.Charts;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -9,24 +10,10 @@ namespace FinanceManager.Components.Components.Dashboard.Cards;
 public partial class IncomeVsSpendingOverviewCard
 {
 
-    private TimeSpan _timeLabelSpacing = TimeSpan.FromDays(1);
+    private List<List<ChartJsLineDataPoint>> _series = [];
     private bool _isInitializing = true;
     private bool _isLoading = false;
-    private List<TimeSeriesChartSeries> _series = [];
 
-    private readonly AxisChartOptions _axisChartOptions = new()
-    {
-        MatchBoundsToSize = true,
-    };
-    private readonly ChartOptions _chartOptions = new()
-    {
-        MaxNumYAxisTicks = 5,
-        YAxisRequireZeroPoint = true,
-        XAxisLines = false,
-        LineStrokeWidth = 3,
-        ChartPalette = ["#B2BF84", "#D93D3D", "#ffab00"],
-        ShowLegend = false,
-    };
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
@@ -42,43 +29,32 @@ public partial class IncomeVsSpendingOverviewCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
+
+
     protected override async Task OnParametersSetAsync()
     {
         _isLoading = true;
-        if (UseOnlyPrimaryColor) _chartOptions.ChartPalette = ["#ffab00"];
 
         var user = await LoginService.GetLoggedUser();
-        if (user is null)
-        {
-            _series.Clear();
-            return;
-        }
-        var timespanInDays = (EndDateTime - StartDateTime).TotalDays;
+        if (user is null) return;
 
-        if (timespanInDays < 32)
-            _timeLabelSpacing = TimeSpan.FromDays(7);
-        else if (timespanInDays < 90)
-            _timeLabelSpacing = TimeSpan.FromDays(31);
-        else
-            _timeLabelSpacing = TimeSpan.FromDays(90);
+        var timespanInDays = (EndDateTime - StartDateTime).TotalDays;
+        _series.Clear();
 
         TimeSpan chartTimeSpan = TimeSpan.FromDays(1);
+
         List<TimeSeriesChartSeries> newData = [];
         try
         {
             if (DisplayIncome)
             {
-                newData.Add(new TimeSeriesChartSeries
-                {
-                    Index = 0,
-                    Name = "Income",
-                    Data = (await MoneyFlowService.GetIncome(user.UserId, StartDateTime.Date, EndDateTime, chartTimeSpan))
-                    .Select(x => new TimeSeriesChartSeries.TimeValue(x.DateTime, (double)x.Value)).ToList(),
-                    IsVisible = true,
-                    LineDisplayType = LineDisplayType.Line,
-                    DataMarkerTooltipTitleFormat = "{{X_VALUE}}",
-                    DataMarkerTooltipSubtitleFormat = "{{Y_VALUE}}"
-                });
+                var incomeData = (await MoneyFlowService.GetIncome(user.UserId, StartDateTime.Date, EndDateTime, chartTimeSpan))
+                    .OrderBy(x => x.DateTime)
+                    .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
+                    .ToList();
+
+                _series.Add(incomeData);
+
             }
         }
         catch (Exception ex)
@@ -90,17 +66,12 @@ public partial class IncomeVsSpendingOverviewCard
         {
             if (DisplaySpending)
             {
-                newData.Add(new TimeSeriesChartSeries
-                {
-                    Index = 0,
-                    Name = "Spending",
-                    Data = (await MoneyFlowService.GetSpending(user.UserId, StartDateTime.Date, EndDateTime, chartTimeSpan))
-                    .Select(x => new TimeSeriesChartSeries.TimeValue(x.DateTime, (double)x.Value)).ToList(),
-                    IsVisible = true,
-                    LineDisplayType = LineDisplayType.Line,
-                    DataMarkerTooltipTitleFormat = "{{X_VALUE}}",
-                    DataMarkerTooltipSubtitleFormat = "{{Y_VALUE}}"
-                });
+                var incomeData = (await MoneyFlowService.GetSpending(user.UserId, StartDateTime.Date, EndDateTime, chartTimeSpan))
+                    .OrderBy(x => x.DateTime)
+                    .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
+                    .ToList();
+
+                _series.Add(incomeData);
             }
         }
         catch (Exception ex)
@@ -112,17 +83,12 @@ public partial class IncomeVsSpendingOverviewCard
         {
             if (DisplayBalance)
             {
-                newData.Add(new TimeSeriesChartSeries
-                {
-                    Index = 0,
-                    Name = "Balance",
-                    Data = (await MoneyFlowService.GetBalance(user.UserId, StartDateTime.Date, EndDateTime, chartTimeSpan))
-                    .Select(x => new TimeSeriesChartSeries.TimeValue(x.DateTime, (double)x.Value)).ToList(),
-                    IsVisible = true,
-                    LineDisplayType = LineDisplayType.Line,
-                    DataMarkerTooltipTitleFormat = "{{X_VALUE}}",
-                    DataMarkerTooltipSubtitleFormat = "{{Y_VALUE}}"
-                });
+                var incomeData = (await MoneyFlowService.GetBalance(user.UserId, StartDateTime.Date, EndDateTime, chartTimeSpan))
+                      .OrderBy(x => x.DateTime)
+                      .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
+                      .ToList();
+
+                _series.Add(incomeData);
             }
         }
         catch (Exception ex)
@@ -130,7 +96,6 @@ public partial class IncomeVsSpendingOverviewCard
             Logger.LogError(ex, ex.Message);
         }
 
-        _series = newData;
         _isLoading = false;
         _isInitializing = false;
     }
