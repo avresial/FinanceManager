@@ -6,6 +6,7 @@ using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -61,14 +62,8 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
 
         IEnumerable<BankAccountEntry> entries = await _bankAccountEntryRepository.Get(accountId, startDate, endDate);
 
-        DateTime? olderThanLoadedEntryDate = null;
-        DateTime? youngerThanLoadedEntryDate = null;
-
         var olderEntry = await _bankAccountEntryRepository.GetNextOlder(accountId, startDate);
-        if (olderEntry is not null) olderThanLoadedEntryDate = olderEntry.PostingDate;
-
         var youngerEntry = await _bankAccountEntryRepository.GetNextYounger(accountId, endDate);
-        if (youngerEntry is not null) youngerThanLoadedEntryDate = youngerEntry.PostingDate;
 
         BankAccountDto bankAccountDto = new()
         {
@@ -76,8 +71,9 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
             UserId = account.UserId,
             Name = account.Name,
             AccountLabel = account.AccountType,
-            OlderThanLoadedEntry = olderThanLoadedEntryDate,
-            YoungerThanLoadedEntry = youngerThanLoadedEntryDate,
+            NextOlderEntry = olderEntry is null ? null : olderEntry.ToDto(),
+            NextYoungerEntry = youngerEntry is null ? null : youngerEntry.ToDto(),
+
             Entries = entries.Select(x => new BankAccountEntryDto
             {
                 AccountId = x.AccountId,

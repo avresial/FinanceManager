@@ -16,15 +16,18 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
     public async Task<List<PieChartModel>> GetEndAssetsPerAccount(int userId, DateTime start, DateTime end)
     {
         List<PieChartModel> result = [];
-        var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
-        foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
+        foreach (BankAccount account in await _financialAccountService.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) return result;
+
+            var entry = account.Entries.Any() ? account.Entries.FirstOrDefault() : account.NextOlderEntry;
+
+            if (entry is null || entry.Value <= 0) continue;
 
             result.Add(new PieChartModel()
             {
                 Name = account.Name,
-                Value = account.Entries.First().Value
+                Value = entry.Value
             });
         }
 
@@ -59,22 +62,26 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
     public async Task<List<PieChartModel>> GetEndAssetsPerType(int userId, DateTime start, DateTime end)
     {
         List<PieChartModel> result = [];
-        var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
-        foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
+
+        foreach (BankAccount account in await _financialAccountService.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) return result;
+
+            var entry = account.Entries.Any() ? account.Entries.FirstOrDefault() : account.NextOlderEntry;
+            if (entry is null || entry.Value <= 0) continue;
+
             var existingResult = result.FirstOrDefault(x => x.Name == account.AccountType.ToString());
             if (existingResult is null)
             {
                 result.Add(new PieChartModel()
                 {
                     Name = account.AccountType.ToString(),
-                    Value = account.Entries.First().Value
+                    Value = entry.Value
                 });
             }
             else
             {
-                existingResult.Value += account.Entries.First().Value;
+                existingResult.Value += entry.Value;
             }
         }
 
@@ -113,11 +120,16 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         Dictionary<DateTime, decimal> prices = [];
         TimeSpan step = new TimeSpan(1, 0, 0, 0);
 
-        var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
-        foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
+        //var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
+        //foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
+        foreach (BankAccount account in await _financialAccountService.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) continue;
-            decimal previousValue = account.Entries.Last().Value - account.Entries.Last().ValueChange;
+
+            var entry = account.Entries.Any() ? account.Entries.FirstOrDefault() : account.NextOlderEntry;
+            if (entry is null || entry.Value <= 0) continue;
+
+            decimal previousValue = entry.Value;
 
             for (DateTime date = start; date <= end; date = date.Add(step))
             {
@@ -198,10 +210,11 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         var BankAccounts = (await _financialAccountService.GetAccounts<BankAccount>(userId, date.Date, date)).ToList();
         foreach (var bankAccount in BankAccounts)
         {
-            if (bankAccount.OlderThanLoadedEntry is null) continue;
+            if (bankAccount.NextOlderEntry is null) continue;
             if (bankAccount.Entries is null) continue;
 
-            var newBankAccount = await _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThanLoadedEntry.Value, bankAccount.OlderThanLoadedEntry.Value.AddSeconds(1));
+            var newBankAccount = await _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.NextOlderEntry.PostingDate,
+                bankAccount.NextOlderEntry.PostingDate.AddSeconds(1));
             if (newBankAccount is not null && newBankAccount.Entries is not null)
                 bankAccount.Add(newBankAccount.Entries, false);
         }
@@ -340,9 +353,10 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
                 if (youngestEntry is not null && youngestEntry.Value > 0)
                     return true;
             }
-            else if (bankAccount.OlderThanLoadedEntry is not null)
+            else if (bankAccount.NextOlderEntry is not null)
             {
-                var newBankAccount = await _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThanLoadedEntry.Value, bankAccount.OlderThanLoadedEntry.Value.AddSeconds(1));
+                var newBankAccount = await _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.NextOlderEntry.PostingDate,
+                    bankAccount.NextOlderEntry.PostingDate.AddSeconds(1));
                 if (newBankAccount is null || newBankAccount.Entries is null) continue;
                 var youngestEntry = newBankAccount.Entries.FirstOrDefault();
                 if (youngestEntry is not null && youngestEntry.Value > 0)

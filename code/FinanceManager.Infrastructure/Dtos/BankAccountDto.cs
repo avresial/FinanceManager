@@ -2,8 +2,8 @@
 
 public class BankAccountDto : FinancialAccountBaseDto
 {
-    public DateTime? OlderThanLoadedEntry { get; set; }
-    public DateTime? YoungerThanLoadedEntry { get; set; }
+    public BankAccountEntryDto? NextOlderEntry { get; set; }
+    public BankAccountEntryDto? NextYoungerEntry { get; set; }
     public IEnumerable<BankAccountEntryDto> Entries { get; set; } = [];
 };
 

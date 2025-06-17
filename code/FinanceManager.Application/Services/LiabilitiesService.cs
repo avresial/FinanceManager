@@ -20,10 +20,9 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
 
             if (entry is null)
             {
-                if (account.OlderThanLoadedEntry is null) continue;
+                if (account.NextOlderEntry is null) continue;
 
-                entry = await _financialAccountService.GetNextYounger<BankAccountEntry>(account.AccountId, start.Date);
-                if (entry is null) continue;
+                entry = account.NextOlderEntry;
             }
 
             if (entry.Value > 0) continue;
@@ -47,11 +46,9 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
 
             if (entry is null)
             {
-                if (account.OlderThanLoadedEntry is null) continue;
+                if (account.NextOlderEntry is null) continue;
 
-                entry = await _financialAccountService.GetNextYounger<BankAccountEntry>(account.AccountId, start.Date);
-                if (entry is null) continue;
-
+                entry = account.NextOlderEntry;
             }
 
             if (entry.Value > 0) continue;
@@ -69,10 +66,8 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
             {
                 existingResult.Value += entry.Value;
             }
-
-
-
         }
+
         return await Task.FromResult(result);
     }
     public async Task<List<TimeSeriesModel>> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end)
@@ -92,12 +87,9 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
             {
                 previousValue = account.Entries.Last().Value - account.Entries.Last().ValueChange;
             }
-            else if (account.OlderThanLoadedEntry is not null)
+            else if (account.NextOlderEntry is not null)
             {
-                BankAccountEntry? previousEntry = await _financialAccountService.GetNextYounger<BankAccountEntry>(account.AccountId, start.Date);
-
-                if (previousEntry is not null)
-                    previousValue = previousEntry.Value;
+                previousValue = account.NextOlderEntry.Value;
             }
 
             if (previousValue > 0) continue;
@@ -136,13 +128,9 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
                 if (youngestEntry is not null && youngestEntry.Value < 0)
                     return true;
             }
-            else if (bankAccount.OlderThanLoadedEntry is not null)
+            else if (bankAccount.NextOlderEntry is not null && bankAccount.NextOlderEntry.Value < 0)
             {
-                var newBankAccount = await _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThanLoadedEntry.Value, bankAccount.OlderThanLoadedEntry.Value.AddSeconds(1));
-                if (newBankAccount is null || newBankAccount.Entries is null) continue;
-                var youngestEntry = newBankAccount.Entries.FirstOrDefault();
-                if (youngestEntry is not null && youngestEntry.Value < 0)
-                    return true;
+                return true;
             }
         }
 

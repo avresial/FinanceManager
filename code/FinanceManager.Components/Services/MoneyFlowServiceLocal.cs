@@ -199,10 +199,12 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financalAccountServi
         var BankAccounts = await _financalAccountService.GetAccounts<BankAccount>(userId, date.Date, date);
         foreach (var bankAccount in BankAccounts)
         {
-            if (bankAccount.OlderThanLoadedEntry is null) continue;
+            if (bankAccount.NextOlderEntry is null) continue;
             if (bankAccount.Entries is null) continue;
 
-            var newBankAccount = await _financalAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.OlderThanLoadedEntry.Value, bankAccount.OlderThanLoadedEntry.Value.AddSeconds(1));
+            var newBankAccount = await _financalAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.NextOlderEntry.PostingDate,
+                bankAccount.NextOlderEntry.PostingDate.AddSeconds(1));
+
             if (newBankAccount is not null && newBankAccount.Entries is not null)
                 bankAccount.Add(newBankAccount.Entries, false);
         }

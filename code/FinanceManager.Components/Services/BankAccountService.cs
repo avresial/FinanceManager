@@ -29,8 +29,16 @@ public class BankAccountService(HttpClient httpClient)
         var result = await _httpClient.GetFromJsonAsync<BankAccountDto>($"{_httpClient.BaseAddress}api/BankAccount/{accountId}&{startDate:O}&{endDate:O}");
 
         if (result is null) return null;
+
+        var nextOlderEntry = result.NextOlderEntry is null ? null : new BankAccountEntry(result.NextOlderEntry.AccountId, result.NextOlderEntry.EntryId,
+            result.NextOlderEntry.PostingDate, result.NextOlderEntry.Value, result.NextOlderEntry.ValueChange);
+
+        var nextYoungerEntry = result.NextYoungerEntry is null ? null : new BankAccountEntry(result.NextYoungerEntry.AccountId, result.NextYoungerEntry.EntryId,
+            result.NextYoungerEntry.PostingDate, result.NextYoungerEntry.Value, result.NextYoungerEntry.ValueChange);
+
+
         return new BankAccount(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new BankAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange) { ExpenseType = x.ExpenseType, Description = x.Description }),
-            result.AccountLabel, result.OlderThanLoadedEntry, result.YoungerThanLoadedEntry);
+            result.AccountLabel, nextOlderEntry, nextYoungerEntry);
     }
 
 

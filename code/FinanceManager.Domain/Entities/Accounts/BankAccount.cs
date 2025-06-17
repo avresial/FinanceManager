@@ -8,19 +8,19 @@ namespace FinanceManager.Domain.Entities.Accounts
 {
     public class BankAccount : FinancialAccountBase<BankAccountEntry>
     {
-        public readonly DateTime? OlderThanLoadedEntry = default;
-        public readonly DateTime? YoungerThanLoadedEntry = default;
+        public readonly BankAccountEntry? NextOlderEntry = null;
+        public readonly BankAccountEntry? NextYoungerEntry = null;
         public AccountLabel AccountType { get; set; }
 
         [JsonConstructorAttribute]
-        public BankAccount(int userId, int accountId, string name, IEnumerable<BankAccountEntry>? entries = null, AccountLabel accountType = AccountLabel.Other, DateTime? olderThanLoadedEntry = null,
-            DateTime? youngerThanLoadedEntry = null) : base(userId, accountId, name)
+        public BankAccount(int userId, int accountId, string name, IEnumerable<BankAccountEntry>? entries = null, AccountLabel accountType = AccountLabel.Other,
+            BankAccountEntry? nextOlderEntry = null, BankAccountEntry? nextYoungerEntry = null) : base(userId, accountId, name)
         {
             this.UserId = userId;
             Entries = entries is null ? ([]) : entries.ToList();
             AccountType = accountType;
-            OlderThanLoadedEntry = olderThanLoadedEntry;
-            YoungerThanLoadedEntry = youngerThanLoadedEntry;
+            NextOlderEntry = nextOlderEntry;
+            NextYoungerEntry = nextYoungerEntry;
         }
         public BankAccount(int userId, int id, string name, AccountLabel accountType) : base(userId, id, name)
         {

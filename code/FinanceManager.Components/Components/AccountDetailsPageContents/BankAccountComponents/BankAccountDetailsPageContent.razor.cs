@@ -89,9 +89,9 @@ public partial class BankAccountDetailsPageContent : ComponentBase
 
         if (Account is not null && Account.Entries is not null && Account.Entries.Count == entriesCountBeforeUpdate)
         {
-            if (Account.OlderThanLoadedEntry.HasValue)
+            if (Account.NextOlderEntry is not null)
             {
-                _dateStart = Account.OlderThanLoadedEntry.Value;
+                _dateStart = Account.NextOlderEntry.PostingDate;
                 Account = await FinancialAccountService.GetAccount<BankAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
             }
         }
@@ -160,9 +160,11 @@ public partial class BankAccountDetailsPageContent : ComponentBase
         for (DateTime date = _dateStart; date <= _dateEnd; date = date.AddDays(1))
         {
             var entries = Account.Entries.Where(x => x.PostingDate.Date == date.Date).ToList();
-            if (date == _dateStart && entries.Count == 0 && Account.OlderThanLoadedEntry.HasValue)
+            if (date == _dateStart && entries.Count == 0 && Account.NextOlderEntry is not null)
             {
-                var olderAccount = (await FinancialAccountService.GetAccount<BankAccount>(_user.UserId, AccountId, Account.OlderThanLoadedEntry.Value.Date, Account.OlderThanLoadedEntry.Value.Date.AddDays(1).AddTicks(-1)));
+                var olderAccount = (await FinancialAccountService.GetAccount<BankAccount>(_user.UserId, AccountId, Account.NextOlderEntry.PostingDate,
+                    Account.NextOlderEntry.PostingDate.Date.AddDays(1).AddTicks(-1)));
+
                 if (olderAccount is not null)
                 {
                     var olderEntries = olderAccount.Entries;

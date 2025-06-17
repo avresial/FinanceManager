@@ -116,8 +116,11 @@ public class BankAccountControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         var returnValue = Assert.IsType<BankAccountDto>(okResult.Value);
         Assert.Equal(accountId, returnValue.AccountId);
-        Assert.Equal(olderThanLoadedDate, returnValue.OlderThanLoadedEntry);
-        Assert.Equal(youngerThanLoadedDate, returnValue.YoungerThanLoadedEntry);
+        Assert.NotNull(returnValue.NextOlderEntry);
+        Assert.Equal(olderThanLoadedDate, returnValue.NextOlderEntry.PostingDate);
+
+        Assert.NotNull(returnValue.NextYoungerEntry);
+        Assert.Equal(youngerThanLoadedDate, returnValue.NextYoungerEntry.PostingDate);
     }
 
     [Fact]

@@ -75,20 +75,15 @@ namespace FinanceManager.Infrastructure.Repositories
 
                     IEnumerable<BankAccountEntry> entries = (await _bankAccountEntryRepository.Get(item.AccountId, dateStart, dateEnd)).ToList();
 
-                    DateTime? olderThanLoadedEntryDate = null;
-                    var olderEntry = await _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
-                    if (olderEntry is not null) olderThanLoadedEntryDate = olderEntry.PostingDate;
-
-                    DateTime? youngerThanLoadedEntryDate = null;
-                    var youngerEntry = await _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
-                    if (youngerEntry is not null) youngerThanLoadedEntryDate = youngerEntry.PostingDate;
+                    var nextOlderEntry = await _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
+                    var nextYoungerEntry = await _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
 
                     var newResultAccount = new BankAccount(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries,
-                        resultAccount.AccountType, olderThanLoadedEntryDate, youngerThanLoadedEntryDate);
+                        resultAccount.AccountType, nextOlderEntry, nextYoungerEntry);
 
                     resultAccount.Add(entries, false);
-                    if (newResultAccount is T resultElement)
-                        return resultElement;
+
+                    if (newResultAccount is T resultElement) return resultElement;
                 }
             }
 
@@ -112,16 +107,12 @@ namespace FinanceManager.Infrastructure.Repositories
 
                     IEnumerable<BankAccountEntry> entries = (await _bankAccountEntryRepository.Get(item.AccountId, dateStart, dateEnd)).ToList();
 
-                    DateTime? olderThanLoadedEntryDate = null;
-                    var olderEntry = await _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
-                    if (olderEntry is not null) olderThanLoadedEntryDate = olderEntry.PostingDate;
+                    var nextOlderEntry = await _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
 
-                    DateTime? youngerThanLoadedEntryDate = null;
-                    var youngerEntry = await _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
-                    if (youngerEntry is not null) youngerThanLoadedEntryDate = youngerEntry.PostingDate;
+                    var nextYoungerEntry = await _bankAccountEntryRepository.GetNextYounger(item.AccountId, dateStart);
 
                     var newResultAccount = new BankAccount(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries,
-                        resultAccount.AccountType, olderThanLoadedEntryDate, youngerThanLoadedEntryDate);
+                        resultAccount.AccountType, nextOlderEntry, nextYoungerEntry);
 
                     resultAccount.Add(entries, false);
                     if (newResultAccount is T resultElement)

@@ -13,10 +13,9 @@
         </MudButtonGroup>
 
         <MudCollapse Expanded="_expanded">
-            <MudStack Spacing="1"  Style="max-width: 350px">
-                <MudDateRangePicker Label="" @bind-DateRange="_dateRange" RelativeWidth="DropdownWidth.Ignore" Class="px-1 pt-1" />
-                <MudButton @onclick=ApplyDates>Apply</MudButton>
-            </MudStack>
+            <MudPaper Elevation="0" Style="max-width: 350px; min-height:50px">
+                <MudDateRangePicker @bind-DateRange="dateRange" RelativeWidth="DropdownWidth.Ignore" Class="px-1 pt-1" />
+            </MudPaper>
         </MudCollapse>
     </MudStack>
 </MudPaper>
@@ -25,7 +24,22 @@
 @code {
     private bool _expanded;
 
+
     private DateRange _dateRange = new DateRange();
+
+    public DateRange dateRange
+    {
+        get { return _dateRange; }
+        set
+        {
+            if (_dateRange == value) return;
+
+            _dateRange = value;
+            ApplyDates();
+        }
+    }
+
+    // private DateRange _dateRange = new DateRange();
 
     [Parameter] public string StartingOption { get; set; } = "ThisMonth";
     [Parameter] public required Action<(DateTime Start, DateTime End)> DateChanged { get; set; }
@@ -53,7 +67,7 @@
         if (range is not null)
         {
             _dateRange.Start = range.Value.Start;
-            _dateRange.End = range.Value.End;
+            _dateRange.End = range.Value.End < DateTime.UtcNow ? range.Value.End : DateTime.UtcNow;
         }
     }
     public void SetRange((DateTime Start, DateTime End) range)
@@ -61,7 +75,7 @@
         _dateRange.Start = range.Start;
         _dateRange.End = range.End;
 
-        DateChanged((_dateRange.Start.Value, _dateRange.End.Value));
+        DateChanged((_dateRange.Start.Value, _dateRange.End.Value < DateTime.UtcNow ? _dateRange.End.Value : DateTime.UtcNow));
     }
 
 
