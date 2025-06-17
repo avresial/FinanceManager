@@ -79,6 +79,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
     {
         if (Account is null || Account.Start is null) return;
         if (_user is null) return;
+
         _isLoadingMore = true;
         _dateStart = _dateStart.AddMonths(-1);
 
@@ -116,7 +117,6 @@ public partial class BankAccountDetailsPageContent : ComponentBase
 
         _loadedAllData = false;
         await UpdateEntries();
-
         IsLoading = false;
     }
 
@@ -139,7 +139,6 @@ public partial class BankAccountDetailsPageContent : ComponentBase
                     }
                 }
             }
-
         }
         catch (Exception ex)
         {
@@ -179,14 +178,13 @@ public partial class BankAccountDetailsPageContent : ComponentBase
             if (value != 0 && initialZero) initialZero = false;
             if (initialZero) continue;
 
-            TimeSeriesModel timeSeriesModel = new()
+            ChartData.Add(new()
             {
                 DateTime = date,
                 Value = entries.Count != 0 ? value : previousValue,
-            };
-            if (entries.Count != 0) previousValue = value;
+            });
 
-            ChartData.Add(timeSeriesModel);
+            if (entries.Count != 0) previousValue = value;
         }
     }
     private async Task UpdateDates()

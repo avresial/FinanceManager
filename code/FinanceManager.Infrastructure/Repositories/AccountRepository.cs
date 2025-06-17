@@ -10,11 +10,17 @@ namespace FinanceManager.Infrastructure.Repositories
         private readonly Random _random = new();
         private readonly IBankAccountRepository<BankAccount> _bankAccountAccountRepository;
         private readonly IAccountEntryRepository<BankAccountEntry> _bankAccountEntryRepository;
+        private readonly IAccountRepository<StockAccount> _stockAccountRepository;
+        private readonly IAccountEntryRepository<StockAccountEntry> _stockEntryRepository;
 
-        public AccountRepository(IBankAccountRepository<BankAccount> bankAccountAccountRepository, IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository)
+        public AccountRepository(IBankAccountRepository<BankAccount> bankAccountAccountRepository, IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
+            IAccountRepository<StockAccount> stockAccountRepository, IAccountEntryRepository<StockAccountEntry> _stockEntryRepository
+            )
         {
             _bankAccountAccountRepository = bankAccountAccountRepository;
             _bankAccountEntryRepository = bankAccountEntryRepository;
+            _stockAccountRepository = stockAccountRepository;
+            this._stockEntryRepository = _stockEntryRepository;
         }
 
         public async Task<Dictionary<int, Type>> GetAvailableAccounts(int userId)
@@ -125,18 +131,32 @@ namespace FinanceManager.Infrastructure.Repositories
 
         public async Task<int?> AddAccount<T>(T account) where T : BasicAccountInformation
         {
-            if (account is BankAccount bankAccount)
+            switch (account)
             {
-                var accountId = await _bankAccountAccountRepository.Add(bankAccount.UserId, 0, bankAccount.Name, bankAccount.AccountType);
+                case BankAccount bankAccount:
+                    var bankAccountId = await _bankAccountAccountRepository.Add(bankAccount.UserId, 0, bankAccount.Name, bankAccount.AccountType);
 
-                if (bankAccount is not null && bankAccount.Entries is not null)
-                    foreach (var entry in bankAccount.Entries)
-                    {
-                        entry.AccountId = accountId ?? 0; // Ensure the entry has the correct account ID
-                        await _bankAccountEntryRepository.Add(entry);
-                    }
+                    if (bankAccount is not null && bankAccount.Entries is not null)
+                        foreach (var entry in bankAccount.Entries)
+                        {
+                            entry.AccountId = bankAccountId ?? 0; // Ensure the entry has the correct account ID
+                            await _bankAccountEntryRepository.Add(entry);
+                        }
 
-                return accountId;
+                    return bankAccountId;
+
+                case StockAccount stockAccount:
+
+                    var stockAccountId = await _stockAccountRepository.Add(account.UserId, 0, account.Name);
+
+                    if (stockAccount is not null && stockAccount.Entries is not null)
+                        foreach (var entry in stockAccount.Entries)
+                        {
+                            entry.AccountId = stockAccountId ?? 0; // Ensure the entry has the correct account ID
+                            await _stockEntryRepository.Add(entry);
+                        }
+
+                    return stockAccountId;
             }
 
             throw new NotSupportedException($"Account type {account.GetType()} is not supported.");

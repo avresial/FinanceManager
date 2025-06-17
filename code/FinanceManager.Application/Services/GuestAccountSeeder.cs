@@ -34,8 +34,9 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
 
     private async Task AddStockAccount(DateTime start, DateTime end)
     {
-        StockAccount stockAccount = await GetNewStockAccount("Cash 1", AccountLabel.Cash);
+        StockAccount stockAccount = await GetNewStockAccount("Stock 1", AccountLabel.Stock);
         int entryId = 0;
+
         for (DateTime date = start; date <= end; date = date.AddDays(1))
             stockAccount.Add(GetNewStockAccountEntry(_guestUserId, entryId++, date, -90, 100, "RandomTicker"));
         await _accountRepository.AddAccount(stockAccount);
@@ -62,8 +63,8 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
     public async Task<StockAccount> GetNewStockAccount(string accountName, AccountLabel accountType)
     {
         var accountId = (await _accountIdProvider.GetMaxId()) + 1;
-        StockAccount bankAccount = new(_guestUserId, accountId is null ? 0 : accountId.Value, accountName);
-        return bankAccount;
+        StockAccount stockAccount = new(_guestUserId, accountId is null ? 0 : accountId.Value, accountName);
+        return stockAccount;
     }
     public StockAccountEntry GetNewStockAccountEntry(int accountId, int entryId, DateTime date, int minValue, int maxValue, string ticker, InvestmentType investmentType = InvestmentType.Stock)
     {

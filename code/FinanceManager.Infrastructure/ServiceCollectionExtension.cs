@@ -14,7 +14,7 @@ public static class ServiceCollectionExtension
 {
     public static IServiceCollection AddInfrastructureFrontend(this IServiceCollection services)
     {
-        services.AddScoped<IStockRepository, StockRepositoryMock>()
+        services//.AddScoped<IStockRepository, StockRepositoryMock>()
                 .AddScoped<IUserRepository, UserLocalStorageRepository>();
 
         return services;

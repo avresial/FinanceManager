@@ -11,8 +11,13 @@ public class InMemoryStockEntryRepository(AppDbContext context) : IAccountEntryR
 
     public async Task<bool> Add(StockAccountEntry entry)
     {
-        await _dbContext.StockEntries.AddAsync(entry);
+        StockAccountEntry newBankAccountEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange, entry.Ticker, entry.InvestmentType);
+
+        _dbContext.StockEntries.Add(newBankAccountEntry);
         await _dbContext.SaveChangesAsync();
+
+        await RecalculateValues(newBankAccountEntry.AccountId, newBankAccountEntry.EntryId);
+
         return true;
     }
 
@@ -105,5 +110,25 @@ public class InMemoryStockEntryRepository(AppDbContext context) : IAccountEntryR
         entryToUpdate.Update(entry);
         await _dbContext.SaveChangesAsync();
         return true;
+    }
+
+    private async Task RecalculateValues(int accountId, int entryId)
+    {
+        var entry = await _dbContext.StockEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
+        if (entry is null) return;
+
+        var entriesToUpdate = await Get(accountId, entry.PostingDate, DateTime.UtcNow);
+        var previousEntry = await GetNextOlder(accountId, entry.PostingDate);
+
+        foreach (var entryToUpdate in entriesToUpdate.OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
+        {
+            if (previousEntry is not null)
+                entryToUpdate.Value = previousEntry.Value + entryToUpdate.ValueChange;
+            else
+                entryToUpdate.Value = entryToUpdate.ValueChange;
+
+            previousEntry = entryToUpdate;
+        }
+        _dbContext.SaveChanges();
     }
 }

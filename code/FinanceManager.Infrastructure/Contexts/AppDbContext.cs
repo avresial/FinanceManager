@@ -68,16 +68,15 @@ public class AppDbContext(IConfiguration configuration) : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        //optionsBuilder.UseInMemoryDatabase(databaseName: "Db");
+        optionsBuilder.UseInMemoryDatabase(databaseName: "Db");
 
-        var connectionString = _configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-        optionsBuilder.UseSqlServer(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
+        //var connectionString = _configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+        //optionsBuilder.UseSqlServer(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
     }
 
     public DbSet<ActiveUser> ActiveUsers { get; set; }
     public DbSet<UserDto> Users { get; set; }
-    public DbSet<FinancialAccountBaseDto> BankAccounts { get; set; }
-    public DbSet<FinancialAccountBaseDto> StockAccounts { get; set; }
+    public DbSet<FinancialAccountBaseDto> Accounts { get; set; }
     public DbSet<BankAccountEntry> BankEntries { get; set; }
     public DbSet<StockAccountEntry> StockEntries { get; set; }
     public DbSet<StockPriceDto> StockPrices { get; set; }

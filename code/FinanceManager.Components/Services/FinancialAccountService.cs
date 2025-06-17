@@ -28,10 +28,9 @@ public class FinancialAccountService : IFinancialAccountService
     }
     public async Task<bool> AccountExists<T>(int id)
     {
-        if (typeof(T) == typeof(BankAccount))
-            return (await _bankAccountService.GetAvailableAccountsAsync()).Any(x => x.AccountId == id);
-        if (typeof(T) == typeof(StockAccount))
-            return (await _stockAccountService.GetAvailableAccountsAsync()).Any(x => x.AccountId == id);
+        if (typeof(T) == typeof(BankAccount)) return (await _bankAccountService.GetAvailableAccountsAsync()).Any(x => x.AccountId == id);
+
+        if (typeof(T) == typeof(StockAccount)) return (await _stockAccountService.GetAvailableAccountsAsync()).Any(x => x.AccountId == id);
 
         return false;
     }

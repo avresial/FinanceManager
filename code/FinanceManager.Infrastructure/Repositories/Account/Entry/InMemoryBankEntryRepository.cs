@@ -113,7 +113,7 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
         if (entry is null) return;
 
         var entriesToUpdate = await Get(accountId, entry.PostingDate, DateTime.UtcNow);
-        BankAccountEntry? previousEntry = await GetNextOlder(accountId, entry.PostingDate);
+        var previousEntry = await GetNextOlder(accountId, entry.PostingDate);
 
         foreach (var entryToUpdate in entriesToUpdate.OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
         {

@@ -25,8 +25,8 @@ namespace FinanceManager.Components.Components
         protected override async Task OnInitializedAsync()
         {
 #if DEBUG
-            //await LoginService.Login("guest", "GuestPassword");
-            //Navigation.NavigateTo("");
+            await LoginService.Login("guest", "GuestPassword");
+            Navigation.NavigateTo("");
             //Navigation.NavigateTo("UserSettings");
 
             //await LoginService.Login("admin", "admin");

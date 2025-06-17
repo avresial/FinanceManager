@@ -1,4 +1,5 @@
-﻿@using FinanceManager.Domain.Entities.Accounts
+﻿@using FinanceManager.Components.HttpContexts
+@using FinanceManager.Domain.Entities.Accounts
 @using System.ComponentModel.DataAnnotations
 @using FinanceManager.Domain.Entities.Accounts.Entries
 @using FinanceManager.Domain.Enums
@@ -83,7 +84,7 @@
     public required ISettingsService SettingsService { get; set; }
 
     [Inject]
-    public required IStockRepository StockRepository { get; set; }
+    public required StockPriceHttpContext stockPriceHttpContext { get; set; }
 
 
     protected async Task OnFieldChanged(FormFieldChangedEventArgs args)
@@ -102,7 +103,7 @@
             if (!numericField.Label.ToLower().Contains("change")) return;
         }
 
-        var pricePerUnit = await StockRepository.GetStockPrice(Ticker, PostingDate.Value);
+        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, PostingDate.Value);
         if (pricePerUnit is null) return;
 
         PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;

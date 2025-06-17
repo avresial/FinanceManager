@@ -222,12 +222,12 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         var InvestmentAccounts = await _financialAccountService.GetAccounts<StockAccount>(userId, date.Date, date);
         foreach (var investmentAccount in InvestmentAccounts)
         {
-            foreach (var item in investmentAccount.OlderThanLoadedEntry)
+            foreach (var item in investmentAccount.NextOlderEntries)
             {
                 if (investmentAccount.Entries is null) continue;
                 if (investmentAccount.Entries.Any(x => x.Ticker == item.Key)) continue;
 
-                var newInvestmentAccount = await _financialAccountService.GetAccount<StockAccount>(userId, investmentAccount.AccountId, item.Value, item.Value.AddSeconds(1));
+                var newInvestmentAccount = await _financialAccountService.GetAccount<StockAccount>(userId, investmentAccount.AccountId, item.Value.PostingDate, item.Value.PostingDate.AddSeconds(1));
                 if (newInvestmentAccount is not null && newInvestmentAccount.Entries is not null)
                     investmentAccount.Add(newInvestmentAccount.Entries, false);
             }

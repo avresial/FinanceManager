@@ -8,8 +8,9 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using MudBlazor.Utilities
 @using static MudBlazor.CategoryTypes
+
 @inject ISettingsService settingsService
-@inject IStockRepository stockRepository
+@inject StockPriceHttpContext stockPriceHttpContext
 
 <MudForm @ref="form" FieldChanged=OnFieldChanged>
     <MudContainer MaxWidth="MaxWidth.Medium" onchange="">
@@ -62,17 +63,11 @@
     public decimal? BalanceChange;
     public decimal? PricePerUnit { get; set; } = null;
 
-    [Parameter]
-    public Func<Task>? ActionCompleted { get; set; }
+    [Parameter] public Func<Task>? ActionCompleted { get; set; }
+    [Parameter] public required StockAccount InvestmentAccount { get; set; }
+    [Parameter] public required StockAccountEntry InvestmentEntry { get; set; }
 
-    [Parameter]
-    public required StockAccount InvestmentAccount { get; set; }
-
-    [Parameter]
-    public required StockAccountEntry InvestmentEntry { get; set; }
-
-    [Inject]
-    public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
 
     protected async Task OnFieldChanged(FormFieldChangedEventArgs args)
     {
@@ -90,7 +85,7 @@
             if (!numericField.Label.ToLower().Contains("change")) return;
         }
 
-        var pricePerUnit = await stockRepository.GetStockPrice(Ticker, PostingDate.Value);
+        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, PostingDate.Value);
         if (pricePerUnit is null) return;
 
         PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;

@@ -12,19 +12,19 @@ internal class InMemoryBankAccountRepository(AppDbContext context) : IBankAccoun
 {
     private readonly AppDbContext _dbContext = context;
 
-    public async Task<int> GetAccountsCount() => await _dbContext.BankAccounts.CountAsync();
+    public async Task<int> GetAccountsCount() => await _dbContext.Accounts.CountAsync();
 
     public async Task<int?> GetLastAccountId()
     {
-        if (await _dbContext.BankAccounts.AnyAsync())
-            return await _dbContext.BankAccounts.MaxAsync(x => x.AccountId);
+        if (await _dbContext.Accounts.AnyAsync())
+            return await _dbContext.Accounts.MaxAsync(x => x.AccountId);
 
         return null;
     }
     public async Task<int?> Add(int userId, int accountId, string accountName) => await Add(userId, accountId, accountName, AccountLabel.Other);
     public async Task<int?> Add(int userId, int accountId, string accountName, AccountLabel accountLabel)
     {
-        var result = _dbContext.BankAccounts.Add(new FinancialAccountBaseDto
+        var result = _dbContext.Accounts.Add(new FinancialAccountBaseDto
         {
             UserId = userId,
             AccountId = 0,
@@ -39,32 +39,32 @@ internal class InMemoryBankAccountRepository(AppDbContext context) : IBankAccoun
     }
     public async Task<bool> Delete(int accountId)
     {
-        var toRemove = await _dbContext.BankAccounts.Where(x => x.AccountId == accountId && x.AccountType == AccountType.Bank).ToListAsync();
+        var toRemove = await _dbContext.Accounts.Where(x => x.AccountId == accountId && x.AccountType == AccountType.Bank).ToListAsync();
         if (toRemove.Count == 0) return false;
 
-        _dbContext.BankAccounts.RemoveRange(toRemove);
+        _dbContext.Accounts.RemoveRange(toRemove);
         await _dbContext.SaveChangesAsync();
 
         return true;
     }
     public async Task<IEnumerable<AvailableAccount>> GetAvailableAccounts(int userId) =>
-        await _dbContext.BankAccounts
+        await _dbContext.Accounts
         .Where(x => x.UserId == userId && x.AccountType == AccountType.Bank)
         .Select(x => new AvailableAccount(x.AccountId, x.Name))
         .ToListAsync();
 
-    public Task<bool> Exists(int accountId) => _dbContext.BankAccounts.AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bank);
+    public Task<bool> Exists(int accountId) => _dbContext.Accounts.AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bank);
 
     public async Task<BankAccount?> Get(int accountId)
     {
-        var accountToReturn = await _dbContext.BankAccounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bank);
+        var accountToReturn = await _dbContext.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bank);
         if (accountToReturn is null) return null;
         return new BankAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name, accountToReturn.AccountLabel);
     }
 
     public async Task<bool> Update(int accountId, string accountName)
     {
-        var bankAccount = await _dbContext.BankAccounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bank);
+        var bankAccount = await _dbContext.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bank);
         if (bankAccount == null) return false;
         bankAccount.Name = accountName;
         await _dbContext.SaveChangesAsync();
@@ -72,7 +72,7 @@ internal class InMemoryBankAccountRepository(AppDbContext context) : IBankAccoun
     }
     public async Task<bool> Update(int accountId, string accountName, AccountLabel accountType)
     {
-        var bankAccount = await _dbContext.BankAccounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bank);
+        var bankAccount = await _dbContext.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bank);
         if (bankAccount == null) return false;
         bankAccount.Name = accountName;
         bankAccount.AccountLabel = accountType;
