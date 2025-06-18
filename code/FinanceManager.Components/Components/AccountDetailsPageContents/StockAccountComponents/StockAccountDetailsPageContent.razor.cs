@@ -99,13 +99,14 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         {
             if (Account is null || Account.Start is null) return;
             if (_user is null) return;
+
             _isLoadingMore = true;
             _dateStart = _dateStart.AddMonths(-1);
 
             int entriesCountBeforeUpdate = 0;
             if (Account.Entries is not null) entriesCountBeforeUpdate = Account.Entries.Count();
 
-            Account = await FinancialAccountService.GetAccount<StockAccount>(Account.UserId, AccountId, _dateStart, Account.Start.Value);
+            Account = await FinancialAccountService.GetAccount<StockAccount>(Account.UserId, AccountId, _dateStart, _dateEnd);
 
             if (Account is not null && Account.Entries is not null && Account.Entries.Count == entriesCountBeforeUpdate)
             {

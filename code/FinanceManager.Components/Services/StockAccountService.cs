@@ -35,11 +35,15 @@ public class StockAccountService
 
         if (result is null) return null;
 
-        //return new StockAccount(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new StockAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.Ticker, x.InvestmentType))
-        //, result.NextOlderEntries, result.NextYoungerEntries);
+        Dictionary<string, StockAccountEntry> nextOlder = result.NextOlderEntries is null ? [] :
+            result.NextOlderEntries.ToDictionary(x => x.Key, x => x.Value.ToStockAccountEntry());
 
-        return new StockAccount(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new StockAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.Ticker, x.InvestmentType))
-            , new Dictionary<string, StockAccountEntry>(), new Dictionary<string, StockAccountEntry>());
+        Dictionary<string, StockAccountEntry> nextYounger = result.NextYoungerEntries is null ? [] :
+            result.NextYoungerEntries.ToDictionary(x => x.Key, x => x.Value.ToStockAccountEntry());
+
+        return new StockAccount(result.UserId, result.AccountId, result.Name, result.Entries
+            .Select(x => new StockAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.Ticker, x.InvestmentType)),
+            nextOlder, nextYounger);
     }
     public async Task<DateTime?> GetOldestEntryDate(int accountId)
     {
