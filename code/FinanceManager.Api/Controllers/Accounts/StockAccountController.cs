@@ -4,6 +4,7 @@ using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,10 +16,10 @@ namespace FinanceManager.Api.Controllers.Accounts
     public class StockAccountController : ControllerBase
     {
         private readonly IAccountRepository<StockAccount> _accountRepository;
-        private readonly IAccountEntryRepository<StockAccountEntry> _entryRepository;
+        private readonly IStockAccountEntryRepository<StockAccountEntry> _entryRepository;
 
         public StockAccountController(IAccountRepository<StockAccount> stockAccountRepository,
-            IAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository)
+            IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository)
         {
             this._accountRepository = stockAccountRepository ?? throw new ArgumentNullException(nameof(stockAccountRepository));
             this._entryRepository = stockAccountEntryRepository ?? throw new ArgumentNullException(nameof(stockAccountEntryRepository));
@@ -59,15 +60,14 @@ namespace FinanceManager.Api.Controllers.Accounts
             if (account.UserId != userId) return BadRequest("User ID does not match the account owner.");
 
             var entries = await _entryRepository.Get(accountId, startDate, endDate);
+
             StockAccountDto bankAccountDto = new()
             {
                 AccountId = account.AccountId,
                 UserId = account.UserId,
                 Name = account.Name,
-                //NextOlderEntries = account.NextOlderEntries,
-                NextOlderEntries = [],
-                //NextYoungerEntries = account.NextYoungerEntries,
-                NextYoungerEntries = [],
+                NextOlderEntries = (await _entryRepository.GetNextOlder(accountId, startDate)).ToDictionary(x => x.Key, x => x.Value.ToDto()),
+                NextYoungerEntries = (await _entryRepository.GetNextYounger(accountId, startDate)).ToDictionary(x => x.Key, x => x.Value.ToDto()),
                 Entries = entries.Select(x => new StockAccountEntryDto
                 {
                     Ticker = x.Ticker,
@@ -79,6 +79,7 @@ namespace FinanceManager.Api.Controllers.Accounts
                     ValueChange = x.ValueChange,
                 })
             };
+
             return Ok(bankAccountDto);
         }
 

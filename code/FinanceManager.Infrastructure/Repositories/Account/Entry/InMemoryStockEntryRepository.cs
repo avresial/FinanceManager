@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories.Account.Entry;
 
-public class InMemoryStockEntryRepository(AppDbContext context) : IAccountEntryRepository<StockAccountEntry>
+public class InMemoryStockEntryRepository(AppDbContext context) : IStockAccountEntryRepository<StockAccountEntry>
 {
     private readonly AppDbContext _dbContext = context;
 
@@ -71,6 +71,27 @@ public class InMemoryStockEntryRepository(AppDbContext context) : IAccountEntryR
             .FirstOrDefaultAsync();
     }
 
+    async Task<Dictionary<string, StockAccountEntry>> IStockAccountEntryRepository<StockAccountEntry>.GetNextOlder(int accountId, DateTime date)
+    {
+        Dictionary<string, StockAccountEntry> result = [];
+
+        var tickers = await _dbContext.StockEntries.Select(m => m.Ticker).Distinct().ToListAsync();
+
+        foreach (var ticker in tickers)
+        {
+            var nextOlder = await _dbContext.StockEntries
+                   .Where(e => e.Ticker == ticker && e.AccountId == accountId && e.PostingDate < date)
+                   .OrderByDescending(e => e.PostingDate)
+                   .FirstOrDefaultAsync();
+
+            if (nextOlder is null) continue;
+
+            result.Add(ticker, nextOlder);
+        }
+
+        return result;
+    }
+
     public async Task<StockAccountEntry?> GetNextYounger(int accountId, int entryId)
     {
         var entry = await _dbContext.StockEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
@@ -87,6 +108,27 @@ public class InMemoryStockEntryRepository(AppDbContext context) : IAccountEntryR
             .Where(e => e.AccountId == accountId && e.PostingDate > date)
             .OrderBy(e => e.PostingDate)
             .FirstOrDefaultAsync();
+    }
+
+
+    async Task<Dictionary<string, StockAccountEntry>> IStockAccountEntryRepository<StockAccountEntry>.GetNextYounger(int accountId, DateTime date)
+    {
+        Dictionary<string, StockAccountEntry> result = [];
+        var tickers = await _dbContext.StockEntries.Select(m => m.Ticker).Distinct().ToListAsync();
+
+        foreach (var ticker in tickers)
+        {
+            var nextOlder = await _dbContext.StockEntries
+                   .Where(e => e.Ticker == ticker && e.AccountId == accountId && e.PostingDate > date)
+                   .OrderBy(e => e.PostingDate)
+                   .FirstOrDefaultAsync();
+
+            if (nextOlder is null) continue;
+
+            result.Add(ticker, nextOlder);
+        }
+
+        return result;
     }
 
     public async Task<StockAccountEntry?> GetOldest(int accountId)
@@ -111,6 +153,8 @@ public class InMemoryStockEntryRepository(AppDbContext context) : IAccountEntryR
         await _dbContext.SaveChangesAsync();
         return true;
     }
+
+
 
     private async Task RecalculateValues(int accountId, int entryId)
     {

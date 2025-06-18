@@ -11,10 +11,10 @@ namespace FinanceManager.Infrastructure.Repositories
         private readonly IBankAccountRepository<BankAccount> _bankAccountAccountRepository;
         private readonly IAccountEntryRepository<BankAccountEntry> _bankAccountEntryRepository;
         private readonly IAccountRepository<StockAccount> _stockAccountRepository;
-        private readonly IAccountEntryRepository<StockAccountEntry> _stockEntryRepository;
+        private readonly IStockAccountEntryRepository<StockAccountEntry> _stockEntryRepository;
 
         public AccountRepository(IBankAccountRepository<BankAccount> bankAccountAccountRepository, IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
-            IAccountRepository<StockAccount> stockAccountRepository, IAccountEntryRepository<StockAccountEntry> _stockEntryRepository
+            IAccountRepository<StockAccount> stockAccountRepository, IStockAccountEntryRepository<StockAccountEntry> _stockEntryRepository
             )
         {
             _bankAccountAccountRepository = bankAccountAccountRepository;
