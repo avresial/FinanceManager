@@ -14,7 +14,7 @@ public static class ServiceCollectionExtension
 {
     public static IServiceCollection AddInfrastructureFrontend(this IServiceCollection services)
     {
-        services.AddScoped<IStockRepository, StockRepositoryMock>()
+        services//.AddScoped<IStockRepository, StockRepositoryMock>()
                 .AddScoped<IUserRepository, UserLocalStorageRepository>();
 
         return services;
@@ -28,7 +28,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IUserRepository, UserRepository>()
                 .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()
                 .AddScoped<IAccountEntryRepository<BankAccountEntry>, InMemoryBankEntryRepository>()
-                .AddScoped<IAccountEntryRepository<StockAccountEntry>, InMemoryStockEntryRepository>()
+                .AddScoped<IStockAccountEntryRepository<StockAccountEntry>, InMemoryStockEntryRepository>()
                 .AddScoped<IAccountRepository<StockAccount>, InMemoryStockAccountRepository>()
                 .AddScoped<IBankAccountRepository<BankAccount>, InMemoryBankAccountRepository>()
                 .AddScoped<NewVisitsRepository>()

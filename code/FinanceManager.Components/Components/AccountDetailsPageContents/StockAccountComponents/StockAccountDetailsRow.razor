@@ -143,26 +143,18 @@
     private bool UpdateEntryVisibility;
     internal string currency = "PLN";
 
-    [Parameter]
-    public required StockAccount InvestmentAccount { get; set; }
+    [Parameter] public required StockAccount InvestmentAccount { get; set; }
+    [Parameter] public required StockAccountEntry InvestmentEntry { get; set; }
 
-    [Parameter]
-    public required StockAccountEntry InvestmentEntry { get; set; }
-
-    [Inject]
-    public required IFinancialAccountService FinancalAccountService { get; set; }
-
-    [Inject]
-    public required ISettingsService SettingsService { get; set; }
-
-    [Inject]
-    public required IStockRepository StockRepository { get; set; }
+    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
+    [Inject] public required StockPriceHttpContext stockPriceHttpContext { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
         try
         {
-            _price = (await StockRepository.GetStockPrice(InvestmentEntry.Ticker, InvestmentEntry.PostingDate)).PricePerUnit * InvestmentEntry.Value;
+            _price = (await stockPriceHttpContext.GetStockPrice(InvestmentEntry.Ticker, InvestmentEntry.PostingDate)).PricePerUnit * InvestmentEntry.Value;
         }
         catch (Exception ex)
         {
@@ -186,7 +178,7 @@
         await InvokeAsync(StateHasChanged);
 
         InvestmentAccount.Remove(InvestmentEntry.EntryId);
-        await FinancalAccountService.RemoveEntry(InvestmentEntry.EntryId, InvestmentAccount.AccountId);
+        await FinancialAccountService.RemoveEntry(InvestmentEntry.EntryId, InvestmentAccount.AccountId);
     }
 
     public async Task Cancel()
@@ -206,7 +198,7 @@
     public async Task ShowEditOverlay()
     {
         UpdateEntryVisibility = true;
-                await Task.CompletedTask;
+        await Task.CompletedTask;
     }
     public async Task ShowRemoveOverlay()
     {

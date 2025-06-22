@@ -37,20 +37,12 @@
     private string ticker = "Ticker";
     private string investmentType = "InvestmentType";
 
-    [Parameter]
-    public required Func<Task> Confirm { get; set; }
+    [Parameter] public required Func<Task> Confirm { get; set; }
+    [Parameter] public required Func<Task> Cancel { get; set; }
+    [Parameter] public required string InvestmentAccountName { get; set; }
+    [Parameter] public required StockAccountEntry InvestmentEntry { get; set; }
 
-    [Parameter]
-    public required Func<Task> Cancel { get; set; }
-
-    [Parameter]
-    public required string InvestmentAccountName { get; set; }
-
-    [Parameter]
-    public required StockAccountEntry InvestmentEntry { get; set; }
-
-    [Inject]
-    public required ISettingsService SettingsService { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
 
     protected override void OnParametersSet()
     {

@@ -6,9 +6,6 @@
         <MudTextField T="string" @bind-Value=_accountName Label="Account name" Required="true" RequiredError="User name is required!"
                       Validation="@(new Func<string, IEnumerable<string>>(AccountNameValidation))" />
 
-        @if (false)
-        {
-
             <MudStack>
                 <MudSelect @bind-Value="_selectedAccountType"
                            Variant="Variant.Text"
@@ -19,7 +16,6 @@
                     }
                 </MudSelect>
             </MudStack>
-        }
 
         <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_success)" Class="ml-auto" @onclick=Add>Add</MudButton>
         @if (_addedAccountId is not null)

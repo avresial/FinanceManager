@@ -6,15 +6,16 @@ namespace FinanceManager.Domain.Entities.Accounts;
 
 public class StockAccount : FinancialAccountBase<StockAccountEntry>
 {
-    public readonly Dictionary<string, DateTime> OlderThanLoadedEntry = new();
-    public readonly Dictionary<string, DateTime> YoungerThanLoadedEntry = new();
+    public readonly Dictionary<string, StockAccountEntry> NextOlderEntries = new();
+    public readonly Dictionary<string, StockAccountEntry> NextYoungerEntries = new();
 
-    public StockAccount(int userId, int accountId, string name, IEnumerable<StockAccountEntry> entries, Dictionary<string, DateTime>? olderThanLoadedEntry = null, Dictionary<string, DateTime>? youngerThanLoadedEntry = null)
+    public StockAccount(int userId, int accountId, string name, IEnumerable<StockAccountEntry> entries, Dictionary<string, StockAccountEntry>? nextOlderEntries = null,
+        Dictionary<string, StockAccountEntry>? nextYoungerEntries = null)
         : base(userId, accountId, name)
     {
         Entries = entries.ToList();
-        OlderThanLoadedEntry = olderThanLoadedEntry ?? [];
-        YoungerThanLoadedEntry = youngerThanLoadedEntry ?? [];
+        NextOlderEntries = nextOlderEntries ?? [];
+        NextYoungerEntries = nextYoungerEntries ?? [];
     }
     public StockAccount(int userId, int id, string name) : base(userId, id, name)
     {

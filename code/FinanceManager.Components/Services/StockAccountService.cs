@@ -34,8 +34,16 @@ public class StockAccountService
         var result = await _httpClient.GetFromJsonAsync<StockAccountDto>($"{_httpClient.BaseAddress}api/StockAccount/{accountId}&{startDate:O}&{endDate:O}");
 
         if (result is null) return null;
-        return new StockAccount(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new StockAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.Ticker, x.InvestmentType))
-            , result.OlderThanLoadedEntry, result.YoungerThanLoadedEntry);
+
+        Dictionary<string, StockAccountEntry> nextOlder = result.NextOlderEntries is null ? [] :
+            result.NextOlderEntries.ToDictionary(x => x.Key, x => x.Value.ToStockAccountEntry());
+
+        Dictionary<string, StockAccountEntry> nextYounger = result.NextYoungerEntries is null ? [] :
+            result.NextYoungerEntries.ToDictionary(x => x.Key, x => x.Value.ToStockAccountEntry());
+
+        return new StockAccount(result.UserId, result.AccountId, result.Name, result.Entries
+            .Select(x => new StockAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.Ticker, x.InvestmentType)),
+            nextOlder, nextYounger);
     }
     public async Task<DateTime?> GetOldestEntryDate(int accountId)
     {
@@ -73,8 +81,7 @@ public class StockAccountService
 
     public async Task<bool> DeleteAccountAsync(DeleteAccount deleteAccount)
     {
-        var response = await _httpClient.PostAsJsonAsync($"{_httpClient.BaseAddress}api/StockAccount/Delete", deleteAccount);
-        return response.IsSuccessStatusCode;
+        return await _httpClient.DeleteFromJsonAsync<bool>($"{_httpClient.BaseAddress}api/StockAccount/Delete/{deleteAccount.accountId}");
     }
 
     public async Task<bool> DeleteEntryAsync(int accountId, int entryId)

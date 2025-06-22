@@ -15,12 +15,13 @@ public partial class AddAccount : ComponentBase
 
     private readonly string[] _accountTypes =
     {
-        "Bank account", "Stock"
+        "Bank account", "Stock account"
     };
 
     [Inject] public required ILogger<AddAccount> Logger { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required BankAccountService BankAccountService { get; set; }
+    [Inject] public required StockAccountService StockAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
@@ -34,8 +35,8 @@ public partial class AddAccount : ComponentBase
                     _addedAccountId = await BankAccountService.AddAccountAsync(new Application.Commands.Account.AddAccount(_accountName));
                     break;
 
-                case "Stock":
-                    // TODO add implementation
+                case "Stock account":
+                    _addedAccountId = await StockAccountService.AddAccountAsync(new Application.Commands.Account.AddAccount(_accountName));
                     break;
             }
         }
@@ -50,7 +51,7 @@ public partial class AddAccount : ComponentBase
         if (_errors.Length == 0)
         {
             _accountName = string.Empty;
-            //_selectedAccountType = string.Empty;
+            _selectedAccountType = string.Empty;
             await AccountDataSynchronizationService.AccountChanged();
         }
 

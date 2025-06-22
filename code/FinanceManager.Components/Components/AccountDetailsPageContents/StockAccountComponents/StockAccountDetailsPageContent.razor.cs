@@ -1,13 +1,10 @@
-using ApexCharts;
-using FinanceManager.Components.Helpers;
+using FinanceManager.Components.HttpContexts;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Providers;
-using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -16,116 +13,52 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 {
     public partial class StockAccountDetailsPageContent : ComponentBase
     {
-
+        private bool _isLoadingMore = false;
         private decimal? _balanceChange = null;
-        private ApexChart<TimeSeriesModel>? _chart;
-        private Dictionary<StockAccountEntry, StockPrice> _prices = new();
-        private List<string> _stocks = [];
-        private bool _loadedAllData;
+        private bool _loadedAllData = false;
         private DateTime _dateStart;
         private DateTime _dateEnd = DateTime.UtcNow;
         private DateTime? _oldestEntryDate;
         private DateTime? _youngestEntryDate;
-        private UserSession? _user;
-        private List<TimeSeriesModel> _pricesDaily = [];
-        private bool _visible;
+
+        private bool _addEntryVisibility;
+
         private List<(StockAccountEntry, decimal)>? _top5;
         private List<(StockAccountEntry, decimal)>? _bottom5;
-        private string _currency = string.Empty;
+        private string _currency = "PLN";
+        private UserSession? _user;
 
-        public bool IsLoading;
+        private Dictionary<StockAccountEntry, StockPrice> _prices = new();
+        private List<string> _stocks = [];
+
+
+        public bool IsLoading = false;
         public StockAccount? Account { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
-        public Type? accountType;
+        public List<TimeSeriesModel> ChartData { get; set; } = [];
+
 
         [Parameter] public required int AccountId { get; set; }
 
         [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
         [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
-        [Inject] public required IStockRepository StockRepository { get; set; }
+        [Inject] public required StockPriceHttpContext stockPriceHttpContext { get; set; }
         [Inject] public required ISettingsService settingsService { get; set; }
         [Inject] public required ILoginService loginService { get; set; }
 
         public async Task ShowOverlay()
         {
-            _visible = true;
+            _addEntryVisibility = true;
             StateHasChanged();
 
             await Task.CompletedTask;
         }
-
         public async Task HideOverlay()
         {
-            _visible = false;
+            _addEntryVisibility = false;
             await UpdateInfo();
 
-            if (_chart is not null) await _chart.RenderAsync();
-
             StateHasChanged();
-        }
-
-        protected override async Task OnInitializedAsync()
-        {
-            options.Tooltip = new Tooltip
-            {
-                Y = new TooltipY
-                {
-                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
-                }
-            };
-
-            await UpdateEntries();
-
-            AccountDataSynchronizationService.AccountsChanged += AccountsService_AccountsChanged;
-        }
-        protected override async Task OnParametersSetAsync()
-        {
-            IsLoading = true;
-            _currency = settingsService.GetCurrency();
-            _user = await loginService.GetLoggedUser();
-            if (_user is null) return;
-            if (_chart is not null)
-            {
-                if (Account is not null && Account.Entries is not null)
-                    Account.Entries.Clear();
-
-                await _chart.RenderAsync();
-            }
-
-            _loadedAllData = true;
-            await UpdateEntries();
-            IsLoading = false;
-        }
-        private async Task UpdateEntries()
-        {
-            try
-            {
-                _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-                var accounts = await FinancialAccountService.GetAvailableAccounts();
-                if (accounts.ContainsKey(AccountId))
-                {
-                    accountType = accounts[AccountId];
-
-                    await UpdateDates();
-
-                    if (accountType == typeof(StockAccount))
-                    {
-                        _prices.Clear();
-                        _loadedAllData = true;
-                        if (_user is not null)
-                            Account = await FinancialAccountService.GetAccount<StockAccount>(_user.UserId, AccountId, _dateStart, DateTime.UtcNow);
-
-                        if (Account is not null && Account.Entries is not null)
-                            await UpdateInfo();
-                    }
-                }
-
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = ex.Message;
-                Console.WriteLine(ex);
-            }
         }
         public async Task UpdateInfo()
         {
@@ -136,7 +69,9 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             {
                 if (_prices.ContainsKey(entry)) continue;
 
-                var price = await StockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
+                var price = await stockPriceHttpContext.GetStockPrice(entry.Ticker, entry.PostingDate);
+                if (price is null) continue;
+
                 _prices.Add(entry, price);
             }
 
@@ -145,17 +80,16 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
             await UpdateChartData();
 
-            if (_pricesDaily is not null && _pricesDaily.Count >= 2)
-                _balanceChange = _pricesDaily.Last().Value - _pricesDaily.First().Value;
+            if (ChartData is not null && ChartData.Count >= 2)
+                _balanceChange = ChartData.Last().Value - ChartData.First().Value;
 
-            if (_chart is not null) await _chart.RenderAsync();
 
             if (Account.Entries is null) return;
 
-            List<(StockAccountEntry, decimal)> orderedByPrice = new List<(StockAccountEntry, decimal)>();
+            List<(StockAccountEntry, decimal)> orderedByPrice = [];
             foreach (var entry in Account.Entries)
             {
-                var price = await StockRepository.GetStockPrice(entry.Ticker, entry.PostingDate);
+                var price = _prices[entry];
                 orderedByPrice.Add(new(entry, entry.ValueChange * price.PricePerUnit));
             }
 
@@ -163,51 +97,89 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             _top5 = orderedByPrice.Take(5).ToList();
             _bottom5 = orderedByPrice.Skip(Account.Entries.Count - 5).Take(5).OrderBy(x => x.Item2).ToList();
         }
-
         public async Task LoadMore()
         {
             if (Account is null || Account.Start is null) return;
+            if (_user is null) return;
 
+            _isLoadingMore = true;
             _dateStart = _dateStart.AddMonths(-1);
-            var newData = await FinancialAccountService.GetAccount<StockAccount>(Account.UserId, AccountId, _dateStart, Account.Start.Value);
 
-            if (Account.Entries is null || newData is null || newData.Entries is null || newData.Entries.Count() == 1)
-                return;
+            int entriesCountBeforeUpdate = 0;
+            if (Account.Entries is not null) entriesCountBeforeUpdate = Account.Entries.Count();
 
-            var newEntriesWithoutOldest = newData.Entries.Skip(1);
+            Account = await FinancialAccountService.GetAccount<StockAccount>(Account.UserId, AccountId, _dateStart, _dateEnd);
 
-            Account.Add(newEntriesWithoutOldest, false);
-            if (_oldestEntryDate is not null)
-                _loadedAllData = (_oldestEntryDate >= Account.Entries.Last().PostingDate);
+            if (Account is not null && Account.Entries is not null && Account.Entries.Count == entriesCountBeforeUpdate)
+            {
+                if (Account.NextOlderEntries is not null && Account.NextOlderEntries.Any())
+                {
+                    _dateStart = Account.NextOlderEntries.First().Value.PostingDate;
+                    Account = await FinancialAccountService.GetAccount<StockAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
+                }
+            }
 
+            await UpdateChartData();
             await UpdateInfo();
+
+            _isLoadingMore = false;
+        }
+
+        protected override async Task OnInitializedAsync()
+        {
+            _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            await UpdateEntries();
+
+            AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
+        }
+        protected override async Task OnParametersSetAsync()
+        {
+            IsLoading = true;
+            _user = await loginService.GetLoggedUser();
+            if (_user is null) return;
+
+            _currency = settingsService.GetCurrency();
+
+            _loadedAllData = true;
+            await UpdateEntries();
+            IsLoading = false;
+        }
+
+        private async Task UpdateEntries()
+        {
+            _prices.Clear();
+            try
+            {
+                var accounts = await FinancialAccountService.GetAvailableAccounts();
+                if (accounts.ContainsKey(AccountId))
+                {
+                    var accountType = accounts[AccountId];
+                    if (accountType == typeof(StockAccount))
+                    {
+                        await UpdateDates();
+                        if (_user is not null)
+                        {
+                            Account = await FinancialAccountService.GetAccount<StockAccount>(_user.UserId, AccountId, _dateStart, DateTime.UtcNow);
+                            if (Account is not null && Account.Entries is not null)
+                                await UpdateInfo();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+                Console.WriteLine(ex);
+            }
         }
         private async Task UpdateChartData()
         {
-            _pricesDaily.Clear();
+            ChartData.Clear();
 
             if (Account is null || Account.Entries is null) return;
-            Dictionary<DateOnly, decimal> pricesDaily = await Account.GetDailyPrice(StockRepository.GetStockPrice);
-            decimal previousValue = 0;
+            Dictionary<DateOnly, decimal> pricesDaily = await Account.GetDailyPrice(stockPriceHttpContext.GetStockPrice);
 
-            for (DateTime date = _dateStart; date <= _dateEnd; date = date.AddDays(1))
-            {
-                decimal? value = null;
-                var dateOnly = DateOnly.FromDateTime(date.Date);
-
-                if (pricesDaily.ContainsKey(dateOnly))
-                    value = pricesDaily[DateOnly.FromDateTime(date.Date)];
-
-                TimeSeriesModel timeSeriesModel = new()
-                {
-                    DateTime = date,
-                    Value = value ?? previousValue,
-                };
-
-                if (value is not null) previousValue = value.Value;
-
-                _pricesDaily.Add(timeSeriesModel);
-            }
+            ChartData = pricesDaily.Select(x => new TimeSeriesModel() { DateTime = x.Key.ToDateTime(new TimeOnly()), Value = x.Value }).ToList();
         }
         private async Task UpdateDates()
         {
@@ -217,48 +189,14 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             if (_youngestEntryDate is not null && _dateStart > _youngestEntryDate)
                 _dateStart = new DateTime(_youngestEntryDate.Value.Date.Year, _youngestEntryDate.Value.Date.Month, 1);
         }
-        private ApexChartOptions<TimeSeriesModel> options { get; set; } = new()
-        {
-            Chart = new Chart
-            {
-                Sparkline = new()
-                {
-                    Enabled = true,
-                },
-                Toolbar = new()
-                {
-                    Show = false
-                },
-            },
-            Xaxis = new()
-            {
-                AxisTicks = new()
-                {
-                    Show = false,
-                },
-                AxisBorder = new()
-                {
-                    Show = false
-                },
-            },
-            Yaxis =
-            [
-                new()
-                {
-                    Show = false,
-                    SeriesName = "Vaue",
-                    DecimalsInFloat = 0,
-                }
-            ],
-            Colors = [ColorsProvider.GetColors().First()]
-        };
 
-        private void AccountsService_AccountsChanged()
+        private void AccountDataSynchronizationService_AccountsChanged()
         {
-            if (_chart is not null)
-                _ = UpdateInfo();
-
-            StateHasChanged();
+            Task.Run(async () =>
+            {
+                await UpdateEntries();
+                await InvokeAsync(StateHasChanged);
+            });
         }
     }
 }

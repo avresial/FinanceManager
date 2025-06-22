@@ -1,8 +1,8 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
+using FinanceManager.Components.HttpContexts;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
-using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -58,7 +58,7 @@ public partial class InvestmentTypeTimeSeriesCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<InvestmentTypeTimeSeriesCard> Logger { get; set; }
-    [Inject] public required IStockRepository StockRepository { get; set; }
+    [Inject] public required StockPriceHttpContext stockPriceHttpContext { get; set; }
     [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
 
 
