@@ -23,7 +23,7 @@ public static class ServiceCollectionExtension
     public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
     {
         services.AddDbContext<AppDbContext>()
-                .AddScoped<IStockRepository, StockRepositoryMock>()
+                .AddScoped<IStockRepository, StockRepository>()
                 .AddScoped<IFinancalAccountRepository, AccountRepository>()
                 .AddScoped<IUserRepository, UserRepository>()
                 .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()

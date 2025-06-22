@@ -79,8 +79,6 @@ public class AppDbContext(IConfiguration configuration) : DbContext
             var connectionString = _configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
             optionsBuilder.UseSqlServer(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
         }
-
-
     }
 
     public DbSet<ActiveUser> ActiveUsers { get; set; }
