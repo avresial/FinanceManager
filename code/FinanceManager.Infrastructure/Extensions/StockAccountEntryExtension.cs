@@ -4,16 +4,13 @@ using FinanceManager.Infrastructure.Dtos;
 namespace FinanceManager.Infrastructure.Extensions;
 public static class StockAccountEntryExtension
 {
-    public static StockAccountEntryDto ToDto(this StockAccountEntry bankAccountEntry)
+    public static StockAccountEntryDto ToDto(this StockAccountEntry stockAccountEntry) => new StockAccountEntryDto
     {
-        return new StockAccountEntryDto()
-        {
-            AccountId = bankAccountEntry.AccountId,
-            EntryId = bankAccountEntry.EntryId,
-            ValueChange = bankAccountEntry.ValueChange,
-            Value = bankAccountEntry.Value,
-            Ticker = bankAccountEntry.Ticker,
-            PostingDate = bankAccountEntry.PostingDate,
-        };
-    }
+        AccountId = stockAccountEntry.AccountId,
+        EntryId = stockAccountEntry.EntryId,
+        ValueChange = stockAccountEntry.ValueChange,
+        Value = stockAccountEntry.Value,
+        Ticker = stockAccountEntry.Ticker,
+        PostingDate = stockAccountEntry.PostingDate,
+    };
 }

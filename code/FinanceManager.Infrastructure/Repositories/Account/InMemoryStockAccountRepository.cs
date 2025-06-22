@@ -14,7 +14,7 @@ namespace FinanceManager.Infrastructure.Repositories.Account
 
         public async Task<int> GetAccountsCount()
         {
-            return await _dbContext.Accounts.CountAsync();
+            return await _dbContext.Accounts.Where(x => x.AccountType == AccountType.Stock).CountAsync();
         }
         public async Task<int?> Add(int userId, int accountId, string accountName)
         {

@@ -82,7 +82,11 @@ public class InMemoryStockEntryRepository(AppDbContext context) : IStockAccountE
     {
         Dictionary<string, StockAccountEntry> result = [];
 
-        var tickers = await _dbContext.StockEntries.Select(m => m.Ticker).Distinct().ToListAsync();
+        var tickers = await _dbContext.StockEntries
+                                .Where(e => e.AccountId == accountId)
+                                .Select(m => m.Ticker)
+                                .Distinct()
+                                .ToListAsync();
 
         foreach (var ticker in tickers)
         {
@@ -183,6 +187,6 @@ public class InMemoryStockEntryRepository(AppDbContext context) : IStockAccountE
             previousEntry = entryToUpdate;
         }
 
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync();
     }
 }

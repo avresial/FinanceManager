@@ -156,10 +156,11 @@ namespace FinanceManager.Api.Controllers.Accounts
         public async Task<IActionResult> Delete(int accountId)
         {
             var userId = ApiAuthenticationHelper.GetUserId(User);
-            if (userId is null) return BadRequest();
+            if (userId is null) return BadRequest("User ID is null.");
 
             var account = await _accountRepository.Get(accountId);
-            if (account == null || account.UserId != userId) return BadRequest();
+            if (account == null) return NotFound("Account not found.");
+            if (account.UserId != userId) return StatusCode(StatusCodes.Status403Forbidden, "Forbidden: User does not own this account.");
 
             await _entryRepository.Delete(accountId);
             return Ok(await _accountRepository.Delete(accountId));

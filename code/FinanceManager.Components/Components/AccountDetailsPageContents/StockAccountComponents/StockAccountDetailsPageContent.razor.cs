@@ -70,6 +70,8 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
                 if (_prices.ContainsKey(entry)) continue;
 
                 var price = await stockPriceHttpContext.GetStockPrice(entry.Ticker, entry.PostingDate);
+                if (price is null) continue;
+
                 _prices.Add(entry, price);
             }
 
@@ -87,7 +89,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             List<(StockAccountEntry, decimal)> orderedByPrice = [];
             foreach (var entry in Account.Entries)
             {
-                var price = await stockPriceHttpContext.GetStockPrice(entry.Ticker, entry.PostingDate);
+                var price = _prices[entry];
                 orderedByPrice.Add(new(entry, entry.ValueChange * price.PricePerUnit));
             }
 

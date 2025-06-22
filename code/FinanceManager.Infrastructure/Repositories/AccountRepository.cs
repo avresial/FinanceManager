@@ -5,23 +5,14 @@ using FinanceManager.Domain.Repositories.Account;
 
 namespace FinanceManager.Infrastructure.Repositories
 {
-    public class AccountRepository : IFinancalAccountRepository
+    public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAccountRepository, IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
+        IAccountRepository<StockAccount> stockAccountRepository, IStockAccountEntryRepository<StockAccountEntry> stockEntryRepository) : IFinancalAccountRepository
     {
         private readonly Random _random = new();
-        private readonly IBankAccountRepository<BankAccount> _bankAccountAccountRepository;
-        private readonly IAccountEntryRepository<BankAccountEntry> _bankAccountEntryRepository;
-        private readonly IAccountRepository<StockAccount> _stockAccountRepository;
-        private readonly IStockAccountEntryRepository<StockAccountEntry> _stockEntryRepository;
-
-        public AccountRepository(IBankAccountRepository<BankAccount> bankAccountAccountRepository, IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
-            IAccountRepository<StockAccount> stockAccountRepository, IStockAccountEntryRepository<StockAccountEntry> _stockEntryRepository
-            )
-        {
-            _bankAccountAccountRepository = bankAccountAccountRepository;
-            _bankAccountEntryRepository = bankAccountEntryRepository;
-            _stockAccountRepository = stockAccountRepository;
-            this._stockEntryRepository = _stockEntryRepository;
-        }
+        private readonly IBankAccountRepository<BankAccount> _bankAccountAccountRepository = bankAccountAccountRepository;
+        private readonly IAccountEntryRepository<BankAccountEntry> _bankAccountEntryRepository = bankAccountEntryRepository;
+        private readonly IAccountRepository<StockAccount> _stockAccountRepository = stockAccountRepository;
+        private readonly IStockAccountEntryRepository<StockAccountEntry> _stockEntryRepository = stockEntryRepository;
 
         public async Task<Dictionary<int, Type>> GetAvailableAccounts(int userId)
         {
