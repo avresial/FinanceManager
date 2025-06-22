@@ -190,7 +190,11 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
         private void AccountDataSynchronizationService_AccountsChanged()
         {
-            StateHasChanged();
+            Task.Run(async () =>
+            {
+                await UpdateEntries();
+                await InvokeAsync(StateHasChanged);
+            });
         }
     }
 }

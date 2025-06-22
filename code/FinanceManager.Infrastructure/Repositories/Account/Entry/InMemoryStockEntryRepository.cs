@@ -42,6 +42,12 @@ public class InMemoryStockEntryRepository(AppDbContext context) : IStockAccountE
             .Where(e => e.AccountId == accountId && e.PostingDate >= startDate && e.PostingDate <= endDate)
             .ToListAsync();
     }
+    public async Task<IEnumerable<StockAccountEntry>> Get(int accountId, string ticker, DateTime startDate, DateTime endDate)
+    {
+        return await _dbContext.StockEntries
+            .Where(e => e.AccountId == accountId && e.Ticker == ticker && e.PostingDate >= startDate && e.PostingDate <= endDate)
+            .ToListAsync();
+    }
 
     public Task<StockAccountEntry?> Get(int accountId, int entryId)
     {
@@ -57,6 +63,7 @@ public class InMemoryStockEntryRepository(AppDbContext context) : IStockAccountE
     {
         var entry = await _dbContext.StockEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (entry is null) return null;
+
         return await _dbContext.StockEntries
             .Where(e => e.AccountId == accountId && e.PostingDate < entry.PostingDate)
             .OrderByDescending(e => e.PostingDate)
@@ -161,8 +168,10 @@ public class InMemoryStockEntryRepository(AppDbContext context) : IStockAccountE
         var entry = await _dbContext.StockEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (entry is null) return;
 
-        var entriesToUpdate = await Get(accountId, entry.PostingDate, DateTime.UtcNow);
-        var previousEntry = await GetNextOlder(accountId, entry.PostingDate);
+        var entriesToUpdate = await Get(accountId, entry.Ticker, entry.PostingDate, DateTime.UtcNow);
+        var previousEntries = await ((IStockAccountEntryRepository<StockAccountEntry>)this).GetNextOlder(accountId, entry.PostingDate);
+
+        StockAccountEntry? previousEntry = previousEntries.ContainsKey(entry.Ticker) ? previousEntries[entry.Ticker] : null;
 
         foreach (var entryToUpdate in entriesToUpdate.OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
         {
@@ -173,6 +182,7 @@ public class InMemoryStockEntryRepository(AppDbContext context) : IStockAccountE
 
             previousEntry = entryToUpdate;
         }
+
         _dbContext.SaveChanges();
     }
 }

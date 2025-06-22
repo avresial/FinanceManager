@@ -197,13 +197,10 @@ public partial class BankAccountDetailsPageContent : ComponentBase
     }
     private void AccountDataSynchronizationService_AccountsChanged()
     {
-        _ = Task.Run(async () =>
-          {
-              await InvokeAsync(async () =>
-              {
-                  await UpdateEntries();
-                  StateHasChanged();
-              });
-          });
+        Task.Run(async () =>
+        {
+            await UpdateEntries();
+            await InvokeAsync(StateHasChanged);
+        });
     }
 }
