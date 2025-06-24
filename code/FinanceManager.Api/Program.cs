@@ -2,7 +2,9 @@ using FinanceManager.Api.Services;
 using FinanceManager.Application;
 using FinanceManager.Application.Services;
 using FinanceManager.Infrastructure;
+using FinanceManager.Infrastructure.Contexts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Text;
@@ -14,6 +16,20 @@ builder.Services.AddApplicationApi().AddInfrastructureApi();
 builder.Services.AddControllers();
 
 builder.Services.AddOpenApi("v1", options => { options.AddDocumentTransformer<BearerSecuritySchemeTransformer>(); });
+
+if (builder.Configuration.GetValue<bool>("UseInMemoryDatabase", false))
+{
+
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseInMemoryDatabase(databaseName: "Db"));
+}
+else
+{
+    //_configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.")
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+}
+
 
 builder.Services.AddCors(options =>
 {
