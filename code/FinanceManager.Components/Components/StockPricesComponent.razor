@@ -1,0 +1,58 @@
+﻿@using FinanceManager.Components.Components.Charts
+@using FinanceManager.Components.Components.Dashboard
+
+<MudText Typo="Typo.h3" Class="mx-2" style="position: absolute; z-index: 50; display: inline-block;">@Ticker.ToUpper()</MudText>
+<LineChartJs Series="@([_stockPrices.Select(x => new ChartJsLineDataPoint(x.Date.ToLocalTime(), x.PricePerUnit)).ToList()])" />
+
+<DashboardDatePicker StockStyle DateChanged=DateChanged />
+
+<MudContainer Class="mt-3">
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudStack Row>
+                <MudTextField @bind-Value="Ticker" Label="Ticker" Variant="Variant.Text" />
+                <MudButton @onclick=GetStockPriceAsync>Search</MudButton>
+            </MudStack>
+        </MudItem>
+
+        @*  <MudItem xs="12">
+            <MudTextField @bind-Value="_pricePerUnit" Label="Price per unit" Variant="Variant.Text" />
+            <MudTextField @bind-Value="_currency" Label="Currency" Variant="Variant.Text" Disabled />
+            <MudDatePicker Label="Basic example" @bind-Date="_date" />
+            <MudButton @onclick=AddNewStock>Add</MudButton>
+        </MudItem> *@
+
+
+        @if (_missingDates.Any())
+        {
+            <MudItem xs="12">
+                <MudText Typo="Typo.h3">Missing days</MudText>
+            </MudItem>
+            <MudItem xs="12">
+
+                <MudSimpleTable Hover="false" Dense="true" Elevation="0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>New price</th>
+                            <th>Currency</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in _missingDates.Take(31))
+                        {
+                            <tr>
+                                <td>@row.ToLocalTime().ToString("yyyy-MM-dd")</td>
+                                <td><MudTextField @bind-Value="Ticker" Label="Price" Variant="Variant.Text" /></td>
+                                <td><MudTextField @bind-Value="_currency" Label="Currency" Variant="Variant.Text" /></td>
+                                <td><MudButton>Add</MudButton></td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+
+            </MudItem>
+        }
+    </MudGrid>
+</MudContainer>

@@ -11,15 +11,12 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddApplicationApi().AddInfrastructureApi();
 
-builder.Services.AddControllers();
 
 builder.Services.AddOpenApi("v1", options => { options.AddDocumentTransformer<BearerSecuritySchemeTransformer>(); });
 
 if (builder.Configuration.GetValue<bool>("UseInMemoryDatabase", false))
 {
-
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseInMemoryDatabase(databaseName: "Db"));
 }
@@ -29,6 +26,8 @@ else
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 }
+builder.Services.AddApplicationApi().AddInfrastructureApi();
+builder.Services.AddControllers();
 
 
 builder.Services.AddCors(options =>

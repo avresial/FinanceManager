@@ -1,29 +1,91 @@
 ﻿@using FinanceManager.Components.Helpers
+@if (StockStyle)
+{
+    <MudToggleGroup T="string" @bind-Value="selectedStockTimeSpan" Outlined=false Delimiters=false>
+        <MudToggleItem Value="@("1D")" />
+        <MudToggleItem Value="@("5D")" />
+        <MudToggleItem Value="@("1M")" />
+        <MudToggleItem Value="@("6M")" />
+        <MudToggleItem Value="@("YTD")" />
+        <MudToggleItem Value="@("1Y")" />
+        <MudToggleItem Value="@("5Y")" />
+        <MudToggleItem Value="@("Max")" />
+    </MudToggleGroup>
+}
+else
+{
 
-<MudPaper Elevation="1" Style="right: 30px; position: fixed; bottom: 3vh; z-index:2;">
-    <MudStack Spacing="0">
+    <MudPaper Elevation="1" Style="right: 30px; position: fixed; bottom: 3vh; z-index:2;">
+        <MudStack Spacing="0">
 
-        <MudButtonGroup T="string" Variant="Variant.Text">
+            <MudButtonGroup T="string" Variant="Variant.Text">
 
-            <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentMonthRange()))>This month</MudButton>
-            <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentQuarterRange()))>This quarter</MudButton>
-            <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentYearRange()))>This year</MudButton>
+                <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentMonthRange()))>This month</MudButton>
+                <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentQuarterRange()))>This quarter</MudButton>
+                <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentYearRange()))>This year</MudButton>
 
-            <MudIconButton Icon="@Icons.Material.Filled.ArrowDropDown" OnClick="@(() => _expanded = !_expanded)" />
-        </MudButtonGroup>
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowDropDown" OnClick="@(() => _expanded = !_expanded)" />
+            </MudButtonGroup>
 
-        <MudCollapse Expanded="_expanded">
-            <MudPaper Elevation="0" Style="max-width: 350px; min-height:50px">
-                <MudDateRangePicker @bind-DateRange="dateRange" RelativeWidth="DropdownWidth.Ignore" Class="px-1 pt-1" />
-            </MudPaper>
-        </MudCollapse>
-    </MudStack>
-</MudPaper>
+            <MudCollapse Expanded="_expanded">
+                <MudPaper Elevation="0" Style="max-width: 350px; min-height:50px">
+                    <MudDateRangePicker @bind-DateRange="dateRange" RelativeWidth="DropdownWidth.Ignore" Class="px-1 pt-1" />
+                </MudPaper>
+            </MudCollapse>
+        </MudStack>
+    </MudPaper>
+}
 
 
 @code {
     private bool _expanded;
 
+    private string _selectedStockTimeSpan;
+
+    public string selectedStockTimeSpan
+    {
+        get { return _selectedStockTimeSpan; }
+        set { 
+            _selectedStockTimeSpan = value;
+            StockTimeSpanChanged(value);
+        }
+    }
+
+    private void StockTimeSpanChanged(string value)
+    {
+        switch (_selectedStockTimeSpan)
+        {
+            case "1D":
+                _dateRange = new DateRange(DateTime.UtcNow.AddDays(-1), DateTime.UtcNow);
+                break;
+            case "5D":
+                _dateRange = new DateRange(DateTime.UtcNow.AddDays(-5), DateTime.UtcNow);
+                break;
+            case "1W":
+                _dateRange = new DateRange(DateTime.UtcNow.AddDays(-7), DateTime.UtcNow);
+                break;
+            case "1M":
+                _dateRange = new DateRange(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
+                break;
+            case "6M":
+                _dateRange = new DateRange(DateTime.UtcNow.AddMonths(-6), DateTime.UtcNow);
+                break;
+            case "1YTD":
+                _dateRange = new DateRange(DateTime.UtcNow.AddYears(-1), DateTime.UtcNow);
+                break;
+            case "1Y":
+                _dateRange = new DateRange(DateTime.UtcNow.AddYears(-1), DateTime.UtcNow);
+                break;
+            case "5Y":
+                _dateRange = new DateRange(DateTime.UtcNow.AddYears(-5), DateTime.UtcNow);
+                break;
+            case "Max":
+                _dateRange = new DateRange(DateTime.UtcNow.AddYears(-99), DateTime.UtcNow);
+                break;
+        }
+
+        DateChanged((_dateRange!.Start!.Value, _dateRange!.End!.Value));
+    }
 
     private DateRange _dateRange = new DateRange();
 
@@ -39,8 +101,8 @@
         }
     }
 
-    // private DateRange _dateRange = new DateRange();
 
+    [Parameter] public bool StockStyle { get; set; }
     [Parameter] public string StartingOption { get; set; } = "ThisMonth";
     [Parameter] public required Action<(DateTime Start, DateTime End)> DateChanged { get; set; }
 
