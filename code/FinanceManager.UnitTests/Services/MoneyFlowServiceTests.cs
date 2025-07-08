@@ -45,10 +45,10 @@ public class MoneyFlowServiceTests
 
         _totalAssetsValue = 100;
 
-        _stockRepository.Setup(x => x.GetStockPrice("testStock1", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = "PLN", Ticker = "AnyTicker", PricePerUnit = 2 });
-        _stockRepository.Setup(x => x.GetStockPrice("testStock2", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = "PLN", Ticker = "AnyTicker", PricePerUnit = 4 });
+        _stockRepository.Setup(x => x.GetStockPrice("testStock1", DefaultCurrency.Currency, It.IsAny<DateTime>()))
+                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "AnyTicker", PricePerUnit = 2 });
+        _stockRepository.Setup(x => x.GetStockPrice("testStock2", DefaultCurrency.Currency, It.IsAny<DateTime>()))
+                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "AnyTicker", PricePerUnit = 4 });
 
         _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _stockRepository.Object);
     }

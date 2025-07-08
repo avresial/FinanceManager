@@ -4,55 +4,46 @@
 <MudText Typo="Typo.h3" Class="mx-2" style="position: absolute; z-index: 50; display: inline-block;">@Ticker.ToUpper()</MudText>
 <LineChartJs Series="@([_stockPrices.Select(x => new ChartJsLineDataPoint(x.Date.ToLocalTime(), x.PricePerUnit)).ToList()])" />
 
-<DashboardDatePicker StockStyle DateChanged=DateChanged />
+<DashboardDatePicker StockStyle DateChanged=DateChanged InitialDateRange=_dateRange />
 
 <MudContainer Class="mt-3">
     <MudGrid>
         <MudItem xs="12" md="6">
             <MudStack Row>
                 <MudTextField @bind-Value="Ticker" Label="Ticker" Variant="Variant.Text" />
-                <MudButton @onclick=GetStockPriceAsync>Search</MudButton>
+                <MudButton @onclick=GetStockPriceAsync>Apply</MudButton>
             </MudStack>
         </MudItem>
 
-        @*  <MudItem xs="12">
-            <MudTextField @bind-Value="_pricePerUnit" Label="Price per unit" Variant="Variant.Text" />
-            <MudTextField @bind-Value="_currency" Label="Currency" Variant="Variant.Text" Disabled />
-            <MudDatePicker Label="Basic example" @bind-Date="_date" />
-            <MudButton @onclick=AddNewStock>Add</MudButton>
-        </MudItem> *@
+        <MudItem xs="12" Class="mt-2">
+            <MudText Typo="Typo.h4">Missing days</MudText>
+        </MudItem>
 
+        <MudItem xs="12">
+            <MudGrid>
+                <MudItem xs="6">
+                    <MudTextField Immediate @bind-Value="_pricePerUnit" Label="Price per unit" Adornment="Adornment.Start" AdornmentText="@_currency" Variant="Variant.Text" />
+                </MudItem>
+                @* <MudItem xs="6">
+                    <MudTextField @bind-Value="_currency" Label="Currency" Variant="Variant.Text" Disabled />
+                </MudItem> *@
+                <MudItem xs="6">
+                    <MudDatePicker Label="Date" @bind-Date="Date" />
+                </MudItem>
 
-        @if (_missingDates.Any())
-        {
-            <MudItem xs="12">
-                <MudText Typo="Typo.h3">Missing days</MudText>
-            </MudItem>
-            <MudItem xs="12">
+                <MudItem xs="12">
+                    @if (!stockPriceExists)
+                    {
+                        <MudButton @onclick=AddNewStock Variant="Variant.Filled" Color="Color.Primary" Disabled=@(string.IsNullOrEmpty(Ticker) || _pricePerUnit <= 0)>Add</MudButton>
+                    }
+                    else
+                    {
+                        <MudButton @onclick=UpdateStockPrice Variant="Variant.Filled" Color="Color.Primary" Disabled>Update</MudButton>
+                        @* <MudButton @onclick=UpdateStockPrice Variant="Variant.Filled" Color="Color.Primary" Disabled=@(string.IsNullOrEmpty(Ticker))>Update</MudButton> *@
+                    }
+                </MudItem>
+            </MudGrid>
+        </MudItem>
 
-                <MudSimpleTable Hover="false" Dense="true" Elevation="0">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>New price</th>
-                            <th>Currency</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var row in _missingDates.Take(31))
-                        {
-                            <tr>
-                                <td>@row.ToLocalTime().ToString("yyyy-MM-dd")</td>
-                                <td><MudTextField @bind-Value="Ticker" Label="Price" Variant="Variant.Text" /></td>
-                                <td><MudTextField @bind-Value="_currency" Label="Currency" Variant="Variant.Text" /></td>
-                                <td><MudButton>Add</MudButton></td>
-                            </tr>
-                        }
-                    </tbody>
-                </MudSimpleTable>
-
-            </MudItem>
-        }
     </MudGrid>
 </MudContainer>

@@ -1,3 +1,43 @@
 ﻿@page "/StockPrices"
+@page "/StockPrices/{Ticker}/{Date}"
 
-<StockPricesComponent />
+
+@if (!string.IsNullOrEmpty(Ticker) && ParsedDate is not null)
+{
+    <StockPricesComponent Ticker="@Ticker" Date="@ParsedDate" />
+}
+else
+{
+    <StockPricesComponent />
+}
+
+@code
+{
+    private DateTime? ParsedDate { get; set; } = null;
+
+
+    [Parameter] public string Ticker { get; set; }
+    [Parameter] public string Date { get; set; }
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(Date))
+            {
+
+                var parsedDate = DateTime.Parse(Date).Date;
+                DateOnly dateOnly = DateOnly.FromDateTime(parsedDate);
+                TimeOnly timeOnly = TimeOnly.FromDateTime(parsedDate);
+                ParsedDate = new DateTime(dateOnly, timeOnly, DateTimeKind.Utc);
+            }
+        }
+        catch (Exception ex)
+        {
+            ParsedDate = null;
+            Console.WriteLine(ex.ToString());
+        }
+
+        base.OnInitialized();
+    }
+}

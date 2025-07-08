@@ -25,7 +25,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
         private List<(StockAccountEntry, decimal)>? _top5;
         private List<(StockAccountEntry, decimal)>? _bottom5;
-        private string _currency = "PLN";
+        private string _currency = DefaultCurrency.Currency;
         private UserSession? _user;
 
         private Dictionary<StockAccountEntry, StockPrice> _prices = new();
@@ -69,7 +69,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             {
                 if (_prices.ContainsKey(entry)) continue;
 
-                var price = await stockPriceHttpContext.GetStockPrice(entry.Ticker, entry.PostingDate);
+                var price = await stockPriceHttpContext.GetStockPrice(entry.Ticker, DefaultCurrency.Currency, entry.PostingDate);
                 if (price is null) continue;
 
                 _prices.Add(entry, price);
@@ -89,8 +89,14 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             List<(StockAccountEntry, decimal)> orderedByPrice = [];
             foreach (var entry in Account.Entries)
             {
-                var price = _prices[entry];
-                orderedByPrice.Add(new(entry, entry.ValueChange * price.PricePerUnit));
+                decimal price = entry.ValueChange;
+                if (_prices.ContainsKey(entry))
+                {
+                    StockPrice stockPrice = _prices[entry];
+                    price = entry.ValueChange * stockPrice.PricePerUnit;
+                }
+
+                orderedByPrice.Add(new(entry, price));
             }
 
             orderedByPrice = orderedByPrice.OrderByDescending(x => x.Item2).ToList();

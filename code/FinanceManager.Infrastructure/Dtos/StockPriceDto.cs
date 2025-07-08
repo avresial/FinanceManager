@@ -2,7 +2,7 @@
 
 namespace FinanceManager.Infrastructure.Dtos;
 
-public record StockPriceDto(int Id, string Ticker, decimal PricePerUnit, string Currency, DateTime Date)
+public record StockPriceDto(int Id, string Ticker, decimal PricePerUnit, string Currency, DateTime Date, bool Verified = false)
 {
     public StockPrice ToStockPrice() => new()
     {

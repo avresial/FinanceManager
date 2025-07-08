@@ -1,51 +1,59 @@
-﻿using FinanceManager.Domain.Entities;
+﻿using FinanceManager.Components.Helpers;
+using FinanceManager.Domain.Entities;
+using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpContexts;
-public class StockPriceHttpContext
+
+
+public class StockPriceHttpContext(HttpClient httpClient)
 {
-    public async Task<StockPrice> AddStockPrice(string ticker, decimal pricePerUnit, string currency, DateTime date)
+    private readonly HttpClient _httpClient = httpClient;
+
+    public async Task AddStockPrice(string ticker, decimal pricePerUnit, string currency, DateTime date)
     {
-        return new StockPrice()
-        {
-            Currency = "pln",
-            Ticker = ticker,
-            Date = date,
-            PricePerUnit = 1
-        };
-    }
-    public async Task<StockPrice> GetStockPrice(string ticker, DateTime date)
-    {
-        return new StockPrice()
-        {
-            Currency = "pln",
-            Ticker = ticker,
-            Date = date,
-            PricePerUnit = 1
-        };
+        var response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/StockPrice/add-stock-price?ticker={ticker}&pricePerUnit={pricePerUnit}&currency={currency}&date={date.ToRfc3339()}&", null);
+        response.EnsureSuccessStatusCode();
     }
 
-    public async Task<IEnumerable<StockPrice>> GetStockPrice(string ticker, DateTime start, DateTime end, TimeSpan step)
+    public async Task UpdateStockPrice(string ticker, decimal pricePerUnit, string currency, DateTime date)
     {
-        List<StockPrice> prices = new List<StockPrice>();
-        DateTime date = start;
-        do
+        var response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/StockPrice/update-stock-price?ticker={ticker}&pricePerUnit={pricePerUnit}&currency={currency}&date={date.ToRfc3339()}&", null);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<StockPrice?> GetStockPrice(string ticker, string currency, DateTime date)
+    {
+        if (_httpClient is null) return default;
+        try
         {
-            if (Random.Shared.Next(0, 10) % 9 == 0)
-            {
-                date = date.Add(step);
-                continue;
-            }
+            var result = await _httpClient.GetFromJsonAsync<StockPrice?>($"{_httpClient.BaseAddress}api/StockPrice/get-stock-price/?ticker={ticker.ToUpper()}&ticker={currency.ToUpper()}&date={date.ToRfc3339()}");
 
-            prices.Add(new StockPrice()
-            {
-                Currency = "pln",
-                Ticker = ticker,
-                Date = date,
-                PricePerUnit = Random.Shared.Next(1, 100)
-            });
-            date = date.Add(step);
-        } while (date < end);
+            if (result is not null) return result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching stock price: {ex.Message}");
+        }
+        return default;
 
-        return prices;
+    }
+
+    public async Task<IEnumerable<StockPrice>> GetStockPrices(string ticker, DateTime start, DateTime end, TimeSpan step)
+    {
+        if (_httpClient is null) return [];
+
+        var result = await _httpClient.GetFromJsonAsync<IEnumerable<StockPrice>>($"{_httpClient.BaseAddress}api/StockPrice/get-stock-prices/?ticker={ticker.ToUpper()}&start={start.ToRfc3339()}&end={end.ToRfc3339()}&step={step.Ticks}");
+
+        if (result is not null) return result;
+        return [];
+    }
+    public async Task<DateTime?> GetLatestMissingStockPrice(string ticker)
+    {
+        if (_httpClient is null) return default;
+
+        var result = await _httpClient.GetFromJsonAsync<DateTime?>($"{_httpClient.BaseAddress}api/StockPrice/get-latest-missing-stock-price/?ticker={ticker.ToUpper()}");
+
+        if (result is not null) return result;
+        return default;
     }
 }

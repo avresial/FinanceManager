@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Components.HttpContexts;
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
@@ -33,7 +34,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
 
             foreach (var ticker in account.GetStoredTickers())
             {
-                var stockPrice = await _stockPriceHttpContext.GetStockPrice(ticker, end);
+                var stockPrice = await _stockPriceHttpContext.GetStockPrice(ticker, DefaultCurrency.Currency, end);
                 var latestEntry = account.Get(end).FirstOrDefault(x => x.Ticker == ticker);
                 if (latestEntry is null) continue;
                 var existingResult = result.FirstOrDefault(x => x.Name == account.Name);
@@ -83,7 +84,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
 
             foreach (var ticker in account.GetStoredTickers())
             {
-                var stockPrice = await _stockPriceHttpContext.GetStockPrice(ticker, end);
+                var stockPrice = await _stockPriceHttpContext.GetStockPrice(ticker, DefaultCurrency.Currency, end);
                 var latestEntry = account.Entries.FirstOrDefault(x => x.Ticker == ticker);
                 if (latestEntry is null) continue;
 
@@ -147,7 +148,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
                     var newestEntry = group.OrderByDescending(x => x.PostingDate).FirstOrDefault();
                     if (newestEntry is null)
                         continue;
-                    var price = await _stockPriceHttpContext.GetStockPrice(newestEntry.Ticker, date);
+                    var price = await _stockPriceHttpContext.GetStockPrice(newestEntry.Ticker, DefaultCurrency.Currency, date);
 
                     prices[date] += newestEntry.Value * price.PricePerUnit;
                 }
@@ -242,7 +243,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
                 var newestEntry = tickerGroup.OrderByDescending(x => x.PostingDate).FirstOrDefault();
                 if (newestEntry is null) continue;
 
-                var price = await _stockPriceHttpContext.GetStockPrice(newestEntry.Ticker, date);
+                var price = await _stockPriceHttpContext.GetStockPrice(newestEntry.Ticker, DefaultCurrency.Currency, date);
                 result += newestEntry.Value * price.PricePerUnit;
             }
         }

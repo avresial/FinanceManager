@@ -2,7 +2,7 @@
 @if (StockStyle)
 {
     <MudToggleGroup T="string" @bind-Value="selectedStockTimeSpan" Outlined=false Delimiters=false>
-        <MudToggleItem Value="@("1D")" />
+        @* <MudToggleItem Value="@("1D")" /> *@
         <MudToggleItem Value="@("5D")" />
         <MudToggleItem Value="@("1M")" />
         <MudToggleItem Value="@("6M")" />
@@ -40,7 +40,7 @@ else
 @code {
     private bool _expanded;
 
-    private string _selectedStockTimeSpan;
+    private string _selectedStockTimeSpan="1M";
 
     public string selectedStockTimeSpan
     {
@@ -102,6 +102,7 @@ else
     }
 
 
+    [Parameter] public DateRange InitialDateRange { get; set; } = null;
     [Parameter] public bool StockStyle { get; set; }
     [Parameter] public string StartingOption { get; set; } = "ThisMonth";
     [Parameter] public required Action<(DateTime Start, DateTime End)> DateChanged { get; set; }
@@ -109,6 +110,10 @@ else
     protected override void OnInitialized()
     {
         (DateTime Start, DateTime End)? range = null;
+        if (InitialDateRange is not null)
+        {
+            range = (InitialDateRange.Start.Value, InitialDateRange.Start.Value);
+        }
 
         switch (StartingOption)
         {
@@ -132,6 +137,7 @@ else
             _dateRange.End = range.Value.End < DateTime.UtcNow ? range.Value.End : DateTime.UtcNow;
         }
     }
+    
     public void SetRange((DateTime Start, DateTime End) range)
     {
         _dateRange.Start = range.Start;
@@ -139,8 +145,6 @@ else
 
         DateChanged((_dateRange.Start.Value, _dateRange.End.Value < DateTime.UtcNow ? _dateRange.End.Value : DateTime.UtcNow));
     }
-
-
     public void ApplyDates()
     {
         if (_dateRange.Start is null || _dateRange.End is null) return;

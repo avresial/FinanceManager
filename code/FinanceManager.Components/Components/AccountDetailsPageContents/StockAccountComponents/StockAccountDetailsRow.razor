@@ -1,4 +1,6 @@
-﻿@using FinanceManager.Domain.Entities.Accounts
+﻿@using FinanceManager.Components.Helpers
+@using FinanceManager.Domain.Entities
+@using FinanceManager.Domain.Entities.Accounts
 @using FinanceManager.Domain.Entities.Accounts.Entries
 @using FinanceManager.Domain.Repositories;
 @using FinanceManager.Domain.Repositories.Account
@@ -68,59 +70,64 @@
     </TitleContent>
 
     <ChildContent>
-        <div class="row">
-            <div class="col-12 mt-4">
-                <div class="row">
-                    <div class="col-4">
-                        <div class="row text-muted">
-                            <div style="font-size:0.8rem !important">
-                                Investment type
+        @if (_expanded)
+        {
+            <div class="row">
+                <div class="col-12 mt-4">
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="row text-muted">
+                                <div style="font-size:0.8rem !important">
+                                    Investment type
+                                </div>
+                            </div>
+                            <div class="row mb-1">
+                                <div>
+                                    @InvestmentEntry.InvestmentType
+                                </div>
                             </div>
                         </div>
-                        <div class="row mb-1">
-                            <div>
-                                @InvestmentEntry.InvestmentType
+                        <div class="col-4">
+                            <div class="row text-muted">
+                                <div style="font-size:0.8rem !important">
+                                    Posting date
+                                </div>
                             </div>
+                            <div class="row mb-1">
+                                <div>
+                                    @InvestmentEntry.PostingDate
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            @if (_price.HasValue)
+                            {
+                                <div class="row text-muted">
+                                    <div style="font-size:0.8rem !important">
+                                        Price
+                                    </div>
+                                </div>
+                                <div class="row mb-1">
+                                    <div>
+                                        @($"{_price.Value.ToString("0.00")} {currency}")
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <MudButton Color=Color.Warning Variant="Variant.Text" Href=@($"StockPrices/{InvestmentEntry.Ticker}/{InvestmentEntry.PostingDate.ToUniversalTime().ToRfc3339()}")>
+                                    Add ticker price
+                                </MudButton>
+                            }
                         </div>
                     </div>
-                    <div class="col-4">
-                        <div class="row text-muted">
-                            <div style="font-size:0.8rem !important">
-                                Posting date
-                            </div>
-                        </div>
-                        <div class="row mb-1">
-                            <div>
-                                @InvestmentEntry.PostingDate
-                            </div>
-                        </div>
+                    <div class="row">
+                        <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
+                        <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove</MudButton>
                     </div>
-                    <div class="col-4">
-                        <div class="row text-muted">
-                            <div style="font-size:0.8rem !important">
-                                Price
-                            </div>
-                        </div>
-                        <div class="row mb-1">
-                            <div>
-                                @if (_price.HasValue)
-                                {
-                                    @($"{_price.Value.ToString("0.00")} {currency}")
-                                }
-                                else
-                                {
-                                    @("Price can not be calculated")
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
-                    <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove</MudButton>
                 </div>
             </div>
-        </div>
+        }
     </ChildContent>
 </MudExpansionPanel>
 
@@ -141,7 +148,7 @@
     private bool _expanded = false;
     private bool RemoveEntryVisibility;
     private bool UpdateEntryVisibility;
-    internal string currency = "PLN";
+    internal string currency = DefaultCurrency.Currency;
 
     [Parameter] public required StockAccount InvestmentAccount { get; set; }
     [Parameter] public required StockAccountEntry InvestmentEntry { get; set; }
@@ -154,7 +161,15 @@
     {
         try
         {
-            _price = (await stockPriceHttpContext.GetStockPrice(InvestmentEntry.Ticker, InvestmentEntry.PostingDate)).PricePerUnit * InvestmentEntry.Value;
+            var price = await stockPriceHttpContext.GetStockPrice(InvestmentEntry.Ticker, currency, InvestmentEntry.PostingDate);
+            if (price is null)
+            {
+                _price = null;
+            }
+            else
+            {
+                _price = price.PricePerUnit * InvestmentEntry.Value;
+            }
         }
         catch (Exception ex)
         {

@@ -1,4 +1,5 @@
-﻿@using FinanceManager.Domain.Entities.Accounts
+﻿@using FinanceManager.Domain.Entities
+@using FinanceManager.Domain.Entities.Accounts
 @using System.ComponentModel.DataAnnotations
 @using FinanceManager.Domain.Entities.Accounts.Entries
 @using FinanceManager.Domain.Enums
@@ -85,7 +86,7 @@
             if (!numericField.Label.ToLower().Contains("change")) return;
         }
 
-        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, PostingDate.Value);
+        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, DefaultCurrency.Currency, PostingDate.Value);
         if (pricePerUnit is null) return;
 
         PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;
