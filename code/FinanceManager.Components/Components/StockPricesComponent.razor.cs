@@ -57,6 +57,15 @@ public partial class StockPricesComponent
 
     [Inject] private StockPriceHttpContext StockPriceHttpContext { get; set; } = default!;
 
+    private List<string> _currencies = ["USD", "PLN"];
+
+    private async Task<IEnumerable<string>> Search(string value, CancellationToken token)
+    {
+        if (string.IsNullOrEmpty(value))
+            return _currencies;
+
+        return await Task.FromResult(_currencies.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase)));
+    }
     private void DateChanged((DateTime Start, DateTime End) dates)
     {
         _dateRange = new DateRange(dates.Start, dates.End);

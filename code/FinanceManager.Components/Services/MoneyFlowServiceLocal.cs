@@ -175,7 +175,9 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
         {
             if (account is null || account.Entries is null) continue;
 
-            assets.AddRange(await account.Entries.Where(x => x.InvestmentType == investmentType).ToList().GetAssets(start, end, _stockPriceHttpContext.GetStockPrice));
+            assets.AddRange(await account.Entries.Where(x => x.InvestmentType == investmentType)
+                .ToList()
+                .GetAssets(start, end, DefaultCurrency.Currency, _stockPriceHttpContext.GetStockPrice));
         }
 
 

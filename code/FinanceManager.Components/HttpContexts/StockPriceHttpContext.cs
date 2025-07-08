@@ -26,7 +26,7 @@ public class StockPriceHttpContext(HttpClient httpClient)
         if (_httpClient is null) return default;
         try
         {
-            var result = await _httpClient.GetFromJsonAsync<StockPrice?>($"{_httpClient.BaseAddress}api/StockPrice/get-stock-price/?ticker={ticker.ToUpper()}&ticker={currency.ToUpper()}&date={date.ToRfc3339()}");
+            var result = await _httpClient.GetFromJsonAsync<StockPrice?>($"{_httpClient.BaseAddress}api/StockPrice/get-stock-price/?ticker={ticker.ToUpper()}&currency={currency.ToUpper()}&date={date.ToRfc3339()}");
 
             if (result is not null) return result;
         }

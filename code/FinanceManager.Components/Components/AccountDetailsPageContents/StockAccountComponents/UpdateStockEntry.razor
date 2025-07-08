@@ -86,12 +86,11 @@
             if (!numericField.Label.ToLower().Contains("change")) return;
         }
 
-        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, DefaultCurrency.Currency, SelectedPostingDate.Value.Date.ToUniversalTime());
-        if (pricePerUnit is null) return;
+        await UpdatePricePerUnit();
 
-        PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;
     }
-    protected override void OnParametersSet()
+
+    protected override async Task OnParametersSetAsync()
     {
         if (loadedEntryId.HasValue && loadedEntryId.Value == InvestmentEntry.EntryId) return;
         loadedEntryId = InvestmentEntry.EntryId;
@@ -102,16 +101,8 @@
         ExpenseType = InvestmentEntry.InvestmentType.ToString();
         Ticker = InvestmentEntry.Ticker;
         BalanceChange = InvestmentEntry.ValueChange;
-    }
 
-    public async Task RecalculatePrice()
-    {
-        if (!PricePerUnit.HasValue)
-            PricePerUnit = 0;
-        else
-            PricePerUnit += 1;
-
-        await Task.CompletedTask;
+        await UpdatePricePerUnit();
     }
 
     public async Task Update()
@@ -151,12 +142,22 @@
         if (ActionCompleted is not null)
             await ActionCompleted();
     }
-
     public async Task Cancel()
     {
         if (ActionCompleted is not null)
             await ActionCompleted();
     }
+    
+    private async Task UpdatePricePerUnit()
+    {
+        if (SelectedPostingDate is null) return;
+
+        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, DefaultCurrency.Currency, SelectedPostingDate.Value.Date.ToUniversalTime());
+        if (pricePerUnit is null) return;
+
+        PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;
+    }
+
     private async Task<IEnumerable<string>> Search(string value, CancellationToken token)
     {
         if (string.IsNullOrEmpty(value))

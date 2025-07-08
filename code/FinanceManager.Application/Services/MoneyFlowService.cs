@@ -1,5 +1,4 @@
-﻿using FinanceManager.Domain.Entities;
-using FinanceManager.Domain.Entities.Accounts;
+﻿using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
@@ -9,10 +8,10 @@ using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Services;
 
-public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, IStockRepository stockRepository) : IMoneyFlowService
+public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, IStockPriceRepository stockRepository) : IMoneyFlowService
 {
     private readonly IFinancalAccountRepository _financialAccountService = bankAccountRepository;
-    private readonly IStockRepository _stockRepository = stockRepository;
+    private readonly IStockPriceRepository _stockRepository = stockRepository;
 
     public async Task<List<PieChartModel>> GetEndAssetsPerAccount(int userId, DateTime start, DateTime end)
     {
@@ -39,7 +38,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
 
             foreach (var ticker in account.GetStoredTickers())
             {
-                var stockPrice = await _stockRepository.GetStockPrice(ticker, DefaultCurrency.Currency, end);
+                var stockPrice = await _stockRepository.GetStockPrice(ticker, end);
                 var latestEntry = account.Get(end).First(x => x.Ticker == ticker);
 
                 var existingResult = result.FirstOrDefault(x => x.Name == account.Name);
@@ -93,7 +92,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
 
             foreach (var ticker in account.GetStoredTickers())
             {
-                var stockPrice = await _stockRepository.GetStockPrice(ticker, DefaultCurrency.Currency, end);
+                var stockPrice = await _stockRepository.GetStockPrice(ticker, end);
                 var latestEntry = account.Entries.First(x => x.Ticker == ticker);
 
                 var existingResult = result.FirstOrDefault(x => x.Name == latestEntry.InvestmentType.ToString());
@@ -161,7 +160,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
                     var newestEntry = group.OrderByDescending(x => x.PostingDate).FirstOrDefault();
                     if (newestEntry is null)
                         continue;
-                    var price = await _stockRepository.GetStockPrice(newestEntry.Ticker, DefaultCurrency.Currency, date);
+                    var price = await _stockRepository.GetStockPrice(newestEntry.Ticker, date);
 
                     prices[date] += newestEntry.Value * price.PricePerUnit;
                 }
@@ -253,7 +252,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
                 var newestEntry = tickerGroup.OrderByDescending(x => x.PostingDate).FirstOrDefault();
                 if (newestEntry is null) continue;
 
-                var price = await _stockRepository.GetStockPrice(newestEntry.Ticker, DefaultCurrency.Currency, date);
+                var price = await _stockRepository.GetStockPrice(newestEntry.Ticker, date);
                 result += newestEntry.Value * price.PricePerUnit;
             }
         }

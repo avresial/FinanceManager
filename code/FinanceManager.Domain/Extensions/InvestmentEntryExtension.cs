@@ -7,7 +7,7 @@ namespace FinanceManager.Domain.Extensions
     public static class InvestmentEntryExtension
     {
         public static async Task<List<(DateTime, decimal)>> GetAssets(this IEnumerable<StockAccountEntry> accountEntries,
-            DateTime start, DateTime end, Func<string, string, DateTime, Task<StockPrice?>> getStockPrice)
+            DateTime start, DateTime end, Func<string, DateTime, Task<StockPrice?>> getStockPrice)
         {
             List<(DateTime, decimal)> result = new();
             if (accountEntries is null || !accountEntries.Any()) return result;
@@ -20,7 +20,30 @@ namespace FinanceManager.Domain.Extensions
                     var entries = accountEntries.Get(i);
                     var newestEntry = accountEntries.Get(i).OrderByDescending(x => x.PostingDate).FirstOrDefault(x => x.Ticker == ticker);
                     if (newestEntry is null) continue;
-                    var stockPrice = await getStockPrice(newestEntry.Ticker, DefaultCurrency.Currency, newestEntry.PostingDate);
+                    var stockPrice = await getStockPrice(newestEntry.Ticker, newestEntry.PostingDate);
+                    price += newestEntry.Value * stockPrice.PricePerUnit;
+                }
+                result.Add((i, price));
+            }
+
+            return result;
+        }
+
+        public static async Task<List<(DateTime, decimal)>> GetAssets(this IEnumerable<StockAccountEntry> accountEntries,
+            DateTime start, DateTime end, string currency, Func<string, string, DateTime, Task<StockPrice?>> getStockPrice)
+        {
+            List<(DateTime, decimal)> result = new();
+            if (accountEntries is null || !accountEntries.Any()) return result;
+            List<string> tickers = accountEntries.GetStoredTickers();
+            for (DateTime i = end; i >= start; i = i.AddDays(-1))
+            {
+                decimal price = 0;
+                foreach (var ticker in tickers)
+                {
+                    var entries = accountEntries.Get(i);
+                    var newestEntry = accountEntries.Get(i).OrderByDescending(x => x.PostingDate).FirstOrDefault(x => x.Ticker == ticker);
+                    if (newestEntry is null) continue;
+                    var stockPrice = await getStockPrice(newestEntry.Ticker, currency, newestEntry.PostingDate);
                     price += newestEntry.Value * stockPrice.PricePerUnit;
                 }
                 result.Add((i, price));

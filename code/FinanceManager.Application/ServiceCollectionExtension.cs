@@ -29,6 +29,8 @@ namespace FinanceManager.Application
                     .AddScoped<UserPlanVerifier>()
                     .AddScoped<IAdministrationUsersService, AdministrationUsersService>()
                     .AddScoped<DuplicateEntryResolverService>()
+                    .AddScoped<ICurrencyExchangeService, CurrencyExchangeService>()
+
                 ;
 
             return services;

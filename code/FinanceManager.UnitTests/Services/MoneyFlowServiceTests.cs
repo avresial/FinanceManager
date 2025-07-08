@@ -17,7 +17,7 @@ public class MoneyFlowServiceTests
 
     private readonly MoneyFlowService _moneyFlowService;
     private readonly Mock<IFinancalAccountRepository> _financialAccountRepositoryMock = new();
-    private readonly Mock<IStockRepository> _stockRepository = new();
+    private readonly Mock<IStockPriceRepository> _stockRepository = new();
     private readonly List<BankAccount> _bankAccounts;
     private readonly List<StockAccount> _investmentAccountAccounts;
 
@@ -45,9 +45,9 @@ public class MoneyFlowServiceTests
 
         _totalAssetsValue = 100;
 
-        _stockRepository.Setup(x => x.GetStockPrice("testStock1", DefaultCurrency.Currency, It.IsAny<DateTime>()))
+        _stockRepository.Setup(x => x.GetStockPrice("testStock1", It.IsAny<DateTime>()))
                         .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "AnyTicker", PricePerUnit = 2 });
-        _stockRepository.Setup(x => x.GetStockPrice("testStock2", DefaultCurrency.Currency, It.IsAny<DateTime>()))
+        _stockRepository.Setup(x => x.GetStockPrice("testStock2", It.IsAny<DateTime>()))
                         .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "AnyTicker", PricePerUnit = 4 });
 
         _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _stockRepository.Object);

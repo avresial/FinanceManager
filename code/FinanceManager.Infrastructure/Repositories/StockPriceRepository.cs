@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories;
 
-public class StockRepository(AppDbContext context) : IStockRepository
+public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
 {
     private readonly AppDbContext _dbContext = context;
 
@@ -45,12 +45,28 @@ public class StockRepository(AppDbContext context) : IStockRepository
 
     }
 
-    public async Task<StockPrice?> GetStockPrice(string ticker, string currency, DateTime date)
+    public async Task<StockPrice?> GetStockPrice(string ticker, DateTime date)
     {
         StockPriceDto? stockPrice = await _dbContext.StockPrices
-            .FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == date.Date && x.Currency == currency);
+            .FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == date.Date);
 
         if (stockPrice is null) return null;
+
+
+        return stockPrice.ToStockPrice();
+    }
+
+    public async Task<StockPrice?> UpdateStockPrice(string ticker, decimal pricePerUnit, string currency, DateTime date)
+    {
+        StockPriceDto? stockPrice = await _dbContext.StockPrices
+                        .FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == date.Date);
+
+        if (stockPrice is null) return null;
+
+        stockPrice.PricePerUnit = pricePerUnit;
+        stockPrice.Currency = currency;
+
+        await _dbContext.SaveChangesAsync();
 
         return stockPrice.ToStockPrice();
     }

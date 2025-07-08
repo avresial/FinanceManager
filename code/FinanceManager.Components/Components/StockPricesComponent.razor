@@ -22,11 +22,11 @@
         <MudItem xs="12">
             <MudGrid>
                 <MudItem xs="6">
-                    <MudTextField Immediate @bind-Value="_pricePerUnit" Label="Price per unit" Adornment="Adornment.Start" AdornmentText="@_currency" Variant="Variant.Text" />
+                    <div class="d-flex flex-grow-1 gap-4">
+                        <MudAutocomplete @bind-Value="_currency" Label="Currency" Variant="Variant.Text" SearchFunc="Search" Class="flex-grow-0" />
+                        <MudTextField Immediate @bind-Value="_pricePerUnit" Label="Price per unit" Variant="Variant.Text" Class="flex-grow-1"  />
+                    </div>
                 </MudItem>
-                @* <MudItem xs="6">
-                    <MudTextField @bind-Value="_currency" Label="Currency" Variant="Variant.Text" Disabled />
-                </MudItem> *@
                 <MudItem xs="6">
                     <MudDatePicker Label="Date" @bind-Date="Date" />
                 </MudItem>
@@ -38,8 +38,7 @@
                     }
                     else
                     {
-                        <MudButton @onclick=UpdateStockPrice Variant="Variant.Filled" Color="Color.Primary" Disabled>Update</MudButton>
-                        @* <MudButton @onclick=UpdateStockPrice Variant="Variant.Filled" Color="Color.Primary" Disabled=@(string.IsNullOrEmpty(Ticker))>Update</MudButton> *@
+                        <MudButton @onclick=UpdateStockPrice Variant="Variant.Filled" Color="Color.Primary" Disabled=@(string.IsNullOrEmpty(Ticker))>Update</MudButton>
                     }
                 </MudItem>
             </MudGrid>
