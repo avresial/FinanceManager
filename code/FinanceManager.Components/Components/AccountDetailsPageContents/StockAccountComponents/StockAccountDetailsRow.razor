@@ -62,7 +62,7 @@
                 </div>
                 <div class="row">
                     <div>
-                        @InvestmentEntry.PostingDate.ToString("yyyy-MM-dd")
+                        @InvestmentEntry.PostingDate.ToLocalTime().ToString("yyyy-MM-dd")
                     </div>
                 </div>
             </div>
@@ -95,7 +95,7 @@
                             </div>
                             <div class="row mb-1">
                                 <div>
-                                    @InvestmentEntry.PostingDate
+                                    @InvestmentEntry.PostingDate.ToLocalTime()
                                 </div>
                             </div>
                         </div>
@@ -115,7 +115,7 @@
                             }
                             else
                             {
-                                <MudButton Color=Color.Warning Variant="Variant.Text" Href=@($"StockPrices/{InvestmentEntry.Ticker}/{InvestmentEntry.PostingDate.ToUniversalTime().ToRfc3339()}")>
+                                <MudButton Color=Color.Warning Variant="Variant.Text" Href=@($"StockPrices/{InvestmentEntry.Ticker}/{InvestmentEntry.PostingDate.ToRfc3339()}")>
                                     Add ticker price
                                 </MudButton>
                             }

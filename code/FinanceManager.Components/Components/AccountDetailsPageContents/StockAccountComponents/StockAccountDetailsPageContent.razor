@@ -126,7 +126,7 @@
                                     </div>
                                     <div class="row text-muted">
                                         <div style="font-size:0.8rem !important">
-                                            @entry.Item1.PostingDate.ToString("yyyy-MM-dd")
+                                            @entry.Item1.PostingDate.ToLocalTime().ToString("yyyy-MM-dd")
                                         </div>
                                     </div>
                                 </div>
@@ -156,7 +156,7 @@
                                     </div>
                                     <div class="row fs-6 text-muted">
                                         <div style="font-size:0.8rem !important">
-                                            @entry.Item1.PostingDate.ToString("yyyy-MM-dd")
+                                            @entry.Item1.PostingDate.ToLocalTime().ToString("yyyy-MM-dd")
                                         </div>
                                     </div>
                                 </div>
