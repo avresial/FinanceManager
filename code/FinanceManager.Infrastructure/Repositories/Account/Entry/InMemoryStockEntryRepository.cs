@@ -25,8 +25,15 @@ public class InMemoryStockEntryRepository(AppDbContext context) : IStockAccountE
     {
         var entry = await _dbContext.StockEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (entry is null) return false;
+
+        var nextYounger = await GetNextYounger(accountId, entryId);
+
         _dbContext.StockEntries.Remove(entry);
         await _dbContext.SaveChangesAsync();
+
+        if (nextYounger is not null)
+            await RecalculateValues(nextYounger.AccountId, nextYounger.EntryId);
+
         return true;
     }
     public async Task<bool> Delete(int accountId)
@@ -162,6 +169,8 @@ public class InMemoryStockEntryRepository(AppDbContext context) : IStockAccountE
         if (entryToUpdate is null) return false;
         entryToUpdate.Update(entry);
         await _dbContext.SaveChangesAsync();
+
+        await RecalculateValues(entry.AccountId, entry.EntryId);
         return true;
     }
 

@@ -24,7 +24,7 @@
                 <MudTimePicker Label="Time" @bind-Time="Time" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudDatePicker Label="Posting date" @bind-Date="PostingDate" Validation="@(new NotInFutureAttribute())" />
+                <MudDatePicker Label="Posting date" @bind-Date="SelectedPostingDate" Validation="@(new NotInFutureAttribute())" />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudTextField @bind-Value="Ticker" T="string" Label="Ticker" Variant="Variant.Text" MaxLines="5" AutoGrow="true" Immediate />
@@ -57,7 +57,7 @@
     List<string> InvestmentType = Enum.GetValues(typeof(InvestmentType)).Cast<InvestmentType>().Select(x => x.ToString()).ToList();
 
     [Required]
-    private DateTime? PostingDate = DateTime.Today;
+    private DateTime? SelectedPostingDate = DateTime.Today;
     private TimeSpan? Time = new TimeSpan(01, 00, 00);
     public string ExpenseType { get; set; } = FinanceManager.Domain.Enums.InvestmentType.Stock.ToString();
     public string Ticker { get; set; } = string.Empty;
@@ -73,7 +73,7 @@
     protected async Task OnFieldChanged(FormFieldChangedEventArgs args)
     {
         if (string.IsNullOrEmpty(Ticker)) return;
-        if (!PostingDate.HasValue) return;
+        if (!SelectedPostingDate.HasValue) return;
         if (args.Field is MudTextField<decimal?> textField)
         {
             if (textField is null || textField.Label is null) return;
@@ -86,7 +86,7 @@
             if (!numericField.Label.ToLower().Contains("change")) return;
         }
 
-        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, DefaultCurrency.Currency, PostingDate.Value);
+        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, DefaultCurrency.Currency, SelectedPostingDate.Value.Date.ToUniversalTime());
         if (pricePerUnit is null) return;
 
         PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;
@@ -98,7 +98,7 @@
 
         _currency = settingsService.GetCurrency();
         Time = new TimeSpan(InvestmentEntry.PostingDate.Hour, InvestmentEntry.PostingDate.Minute, InvestmentEntry.PostingDate.Second);
-        PostingDate = InvestmentEntry.PostingDate;
+        SelectedPostingDate = InvestmentEntry.PostingDate;
         ExpenseType = InvestmentEntry.InvestmentType.ToString();
         Ticker = InvestmentEntry.Ticker;
         BalanceChange = InvestmentEntry.ValueChange;
@@ -121,10 +121,10 @@
         await form.Validate();
         if (!form.IsValid) return;
         if (!BalanceChange.HasValue) return;
-        if (!PostingDate.HasValue) return;
+        if (!SelectedPostingDate.HasValue) return;
         if (!Time.HasValue) return;
 
-        DateTime date = new DateTime(PostingDate.Value.Year, PostingDate.Value.Month, PostingDate.Value.Day, Time.Value.Hours, Time.Value.Minutes, Time.Value.Seconds);
+        DateTime date = new DateTime(SelectedPostingDate.Value.Year, SelectedPostingDate.Value.Month, SelectedPostingDate.Value.Day, Time.Value.Hours, Time.Value.Minutes, Time.Value.Seconds);
         InvestmentType investmentType = FinanceManager.Domain.Enums.InvestmentType.Stock;
         try
         {

@@ -26,7 +26,13 @@
                 <MudTimePicker Label="Time" @bind-Time="Time" Validation="@(new NotInFutureAttributeTime(PostingDate))" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="Ticker" T="string" Label="Ticker" Variant="Variant.Text" MaxLines="5" AutoGrow="true" Immediate />
+                @* <MudAutocomplete T="string" Label="Ticker" @bind-Value="Ticker" SearchFunc="@SearchTicker" ResetValueOnEmptyText=false SelectValueOnTab /> *@
+
+                <MudAutocomplete T="string" Label="Ticker" @bind-Value="Ticker" SearchFunc="@SearchTicker"
+                                 ResetValueOnEmptyText=false CoerceText=false CoerceValue=false SelectValueOnTab=false />
+
+
+                @* <MudTextField @bind-Value="Ticker" T="string" Label="Ticker" Variant="Variant.Text" MaxLines="5" AutoGrow="true" Immediate /> *@
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudNumericField ReadOnly HideSpinButtons="true" @bind-Value="PricePerUnit" Label="Price per unit" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
@@ -53,6 +59,12 @@
 </MudForm>
 
 @code {
+    private async Task<IEnumerable<string>> SearchTicker(string value, CancellationToken token)
+    {
+        if (string.IsNullOrEmpty(value)) return Tickers;
+
+        return Tickers.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
 
     private string _currency = string.Empty;
     private bool success;
@@ -68,25 +80,14 @@
     public decimal? BalanceChange;
     public decimal? PricePerUnit { get; set; } = null;
 
+    [Parameter] public List<string> Tickers { get; set; } = [];
+    [Parameter] public RenderFragment? CustomButton { get; set; }
+    [Parameter] public Func<Task>? ActionCompleted { get; set; }
+    [Parameter] public required StockAccount InvestmentAccount { get; set; }
 
-    [Parameter]
-    public RenderFragment? CustomButton { get; set; }
-
-    [Parameter]
-    public Func<Task>? ActionCompleted { get; set; }
-
-    [Parameter]
-    public required StockAccount InvestmentAccount { get; set; }
-
-    [Inject]
-    public required IFinancialAccountService FinancalAccountService { get; set; }
-
-    [Inject]
-    public required ISettingsService SettingsService { get; set; }
-
-    [Inject]
-    public required StockPriceHttpContext stockPriceHttpContext { get; set; }
-
+    [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
+    [Inject] public required StockPriceHttpContext stockPriceHttpContext { get; set; }
 
     protected async Task OnFieldChanged(FormFieldChangedEventArgs args)
     {
@@ -163,6 +164,7 @@
         if (ActionCompleted is not null)
             await ActionCompleted();
     }
+
     private async Task<IEnumerable<string>> Search(string value, CancellationToken token)
     {
         if (string.IsNullOrEmpty(value))
@@ -170,4 +172,6 @@
 
         return await Task.FromResult(InvestmentType.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase)));
     }
+
+
 }

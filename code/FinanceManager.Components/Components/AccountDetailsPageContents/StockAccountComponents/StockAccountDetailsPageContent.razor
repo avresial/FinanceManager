@@ -8,7 +8,7 @@
     </h3>
 
     <div class="col-12 mb-2" style="min-height:150px;">
-        
+
         <LineChartJs Series="@([ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()])" />
     </div>
     <div class="container">
@@ -26,7 +26,7 @@
 
                     <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
                         <MudPaper Class="p-5">
-                            <AddStockEntry InvestmentAccount=Account ActionCompleted="HideOverlay" />
+                            <AddStockEntry InvestmentAccount=Account ActionCompleted="HideOverlay" Tickers=@_stocks />
                         </MudPaper>
                     </MudOverlay>
                 </div>
@@ -41,7 +41,14 @@
                     </MudExpansionPanels>
                 </div>
                 <div class="row" style="min-height:40px">
-                    @if (!_loadedAllData && !IsLoading)
+
+                    @if (_isLoadingMore)
+                    {
+                        <MudStack Justify="Justify.Center" Row>
+                            <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate Class="my-3" />
+                        </MudStack>
+                    }
+                    else if (!_loadedAllData && !IsLoading)
                     {
                         <button class="btn text-center" title="Load more" @onclick="LoadMore">
                             <div>
@@ -170,9 +177,9 @@
 }
 else if (Account is not null && (Account.Entries is null || !Account.Entries.Any()))
 {
-    <AddStockEntry InvestmentAccount=Account ActionCompleted="HideOverlay">
+    <AddStockEntry InvestmentAccount=Account ActionCompleted="HideOverlay" Tickers=@_stocks>
         <CustomButton>
-            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.Name}")" > Import</MudButton>
+            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.Name}")"> Import</MudButton>
         </CustomButton>
     </AddStockEntry>
 }

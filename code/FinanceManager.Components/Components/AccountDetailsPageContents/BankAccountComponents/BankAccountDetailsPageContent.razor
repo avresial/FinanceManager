@@ -45,7 +45,9 @@
                 <div class="row" style="min-height:40px">
                     @if (_isLoadingMore)
                     {
-                        <MudProgressCircular Indeterminate="true" Color="MudBlazor.Color.Primary" Class="mx-auto my-3" Style="width: 40px; height: 40px;" />
+                        <MudStack Justify="Justify.Center" Row>
+                            <MudProgressCircular Color="MudBlazor.Color.Primary" Size="MudBlazor.Size.Small" Indeterminate Class="my-3" />
+                        </MudStack>
                     }
                     else if (!_loadedAllData && !IsLoading)
                     {
