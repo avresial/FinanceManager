@@ -56,6 +56,14 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         return stockPrice.ToStockPrice();
     }
 
+    public async Task<string?> GetTickerCurrency(string ticker)
+    {
+        StockPriceDto? stockPrice = await _dbContext.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker);
+
+        if (stockPrice is null) return null;
+        return stockPrice.Currency;
+    }
+
     public async Task<StockPrice?> UpdateStockPrice(string ticker, decimal pricePerUnit, string currency, DateTime date)
     {
         StockPriceDto? stockPrice = await _dbContext.StockPrices

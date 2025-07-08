@@ -46,7 +46,7 @@ public class StockPriceController(IStockPriceRepository stockRepository, ICurren
         if (string.IsNullOrWhiteSpace(currency) || currency.Equals(stockPrice.Currency, StringComparison.OrdinalIgnoreCase))
             return Ok(stockPrice);
 
-        var exchangeRate = await _currencyExchangeService.GetExchangeRateAsync(stockPrice.Currency, currency, date);
+        var exchangeRate = await _currencyExchangeService.GetExchangeRateAsync(stockPrice.Currency, currency, date); // TODO add cache
         if (exchangeRate is null)
             return NotFound($"Exchange rate from {stockPrice.Currency} to {currency} not found for the specified date.");
 
@@ -73,8 +73,7 @@ public class StockPriceController(IStockPriceRepository stockRepository, ICurren
         }
 
 
-        if (!stockPrices.Any())
-            return NotFound("Stock prices not found.");
+        if (!stockPrices.Any()) return NotFound("Stock prices not found.");
 
         return Ok(stockPrices);
     }
@@ -90,7 +89,18 @@ public class StockPriceController(IStockPriceRepository stockRepository, ICurren
         if (stockPrice is null) return NotFound("Stock price not found.");
 
         return Ok(stockPrice);
-
     }
 
+    [HttpGet("get-ticker-currency")]
+    public async Task<IActionResult> GetTickerCurrency(string ticker)
+    {
+        if (string.IsNullOrWhiteSpace(ticker))
+            return BadRequest("Invalid input parameters.");
+
+        var currency = await _stockPriceRepository.GetTickerCurrency(ticker);
+
+        if (currency is null) return NotFound("Stock price not found.");
+
+        return Ok(new TickerCurrency(ticker, currency));
+    }
 }

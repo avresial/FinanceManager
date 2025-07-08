@@ -16,19 +16,27 @@
         </MudItem>
 
         <MudItem xs="12" Class="mt-2">
-            <MudText Typo="Typo.h4">Missing days</MudText>
+            <MudText Typo="Typo.h4">Missing stock prices</MudText>
         </MudItem>
 
         <MudItem xs="12">
             <MudGrid>
                 <MudItem xs="6">
                     <div class="d-flex flex-grow-1 gap-4">
-                        <MudAutocomplete @bind-Value="_currency" Label="Currency" Variant="Variant.Text" SearchFunc="Search" Class="flex-grow-0" />
-                        <MudTextField Immediate @bind-Value="_pricePerUnit" Label="Price per unit" Variant="Variant.Text" Class="flex-grow-1"  />
+                        @if (string.IsNullOrEmpty(_existingCurrency))
+                        {
+                            <MudAutocomplete @bind-Value="_selectedCurrency" Label="Currency" Variant="Variant.Text" SearchFunc="Search" Class="flex-grow-0" Disabled=@(string.IsNullOrEmpty(Ticker)) />
+                            <MudTextField Immediate @bind-Value="_pricePerUnit" Label="Price per unit" Variant="Variant.Text" Class="flex-grow-1" Disabled=@(string.IsNullOrEmpty(Ticker)) />
+                        }
+                        else
+                        {
+                            <MudTextField Immediate @bind-Value="_pricePerUnit" Adornment="Adornment.Start" AdornmentText="@_existingCurrency" Label="Price per unit" Variant="Variant.Text" Class="flex-grow-1" Disabled=@(string.IsNullOrEmpty(Ticker)) />
+                        }
+
                     </div>
                 </MudItem>
                 <MudItem xs="6">
-                    <MudDatePicker Label="Date" @bind-Date="Date" />
+                    <MudDatePicker Label="Date" @bind-Date="Date" Disabled=@(string.IsNullOrEmpty(Ticker)) />
                 </MudItem>
 
                 <MudItem xs="12">

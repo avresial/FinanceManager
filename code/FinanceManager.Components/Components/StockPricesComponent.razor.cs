@@ -8,7 +8,8 @@ public partial class StockPricesComponent
 {
     private DateRange _dateRange { get; set; } = new DateRange(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
     private decimal _pricePerUnit { get; set; }
-    private string _currency { get; set; } = DefaultCurrency.Currency;
+    private string _existingCurrency { get; set; }
+    private string _selectedCurrency { get; set; }
     private DateTime? _missingDate { get; set; } = null;
 
     private List<StockPrice> _stockPrices = [];
@@ -30,7 +31,7 @@ public partial class StockPricesComponent
                 if (utcDate.Kind != DateTimeKind.Utc)
                     utcDate = utcDate.ToUniversalTime();
 
-                StockPriceHttpContext.GetStockPrice(Ticker, _currency, value.Value).ContinueWith(task =>
+                StockPriceHttpContext.GetStockPrice(Ticker, _selectedCurrency, value.Value).ContinueWith(task =>
                 {
                     if (task.IsCompletedSuccessfully)
                     {
@@ -80,7 +81,7 @@ public partial class StockPricesComponent
 
         try
         {
-            await StockPriceHttpContext.AddStockPrice(Ticker, _pricePerUnit, _currency, Date.Value);
+            await StockPriceHttpContext.AddStockPrice(Ticker, _pricePerUnit, _selectedCurrency, Date.Value);
             await GetStockPriceAsync();
         }
         catch (Exception ex)
@@ -97,7 +98,7 @@ public partial class StockPricesComponent
             return;
         try
         {
-            await StockPriceHttpContext.UpdateStockPrice(Ticker, _pricePerUnit, _currency, Date.Value);
+            await StockPriceHttpContext.UpdateStockPrice(Ticker, _pricePerUnit, _selectedCurrency, Date.Value);
 
             await GetStockPriceAsync();
         }
@@ -112,13 +113,24 @@ public partial class StockPricesComponent
     {
         TimeSpan timeSpan = TimeSpan.FromDays(1);
 
-
         if (string.IsNullOrWhiteSpace(Ticker) || _dateRange is null || _dateRange.Start is null || _dateRange.End is null)
             return;
 
         try
         {
-            _stockPrices = (await StockPriceHttpContext.GetStockPrices(Ticker, _dateRange.Start.Value, _dateRange.End.Value, timeSpan)).ToList();
+            _stockPrices = [.. await StockPriceHttpContext.GetStockPrices(Ticker, _dateRange.Start.Value, _dateRange.End.Value, timeSpan)];
+            var tickerCurrency = await StockPriceHttpContext.GetTickerCurrency(Ticker);
+
+            if (tickerCurrency is not null)
+            {
+                _existingCurrency = tickerCurrency.currency;
+                _selectedCurrency = tickerCurrency.currency;
+            }
+            else
+            {
+                _existingCurrency = null;
+                _selectedCurrency = DefaultCurrency.Currency;
+            }
         }
         catch (Exception ex)
         {
