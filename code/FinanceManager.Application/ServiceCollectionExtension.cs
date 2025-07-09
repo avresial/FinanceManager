@@ -30,7 +30,7 @@ namespace FinanceManager.Application
                     .AddScoped<IAdministrationUsersService, AdministrationUsersService>()
                     .AddScoped<DuplicateEntryResolverService>()
                     .AddScoped<ICurrencyExchangeService, CurrencyExchangeService>()
-
+                    .AddScoped<HttpClient>()
                 ;
 
             return services;

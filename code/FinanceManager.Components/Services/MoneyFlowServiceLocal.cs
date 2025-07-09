@@ -12,7 +12,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
     private readonly IFinancialAccountService _financialAccountService = financialAccountService;
     private readonly StockPriceHttpContext _stockPriceHttpContext = stockPriceHttpContext;
 
-    public async Task<List<PieChartModel>> GetEndAssetsPerAccount(int userId, DateTime start, DateTime end)
+    public async Task<List<PieChartModel>> GetEndAssetsPerAccount(int userId, string currency, DateTime start, DateTime end)
     {
         List<PieChartModel> result = [];
         var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);

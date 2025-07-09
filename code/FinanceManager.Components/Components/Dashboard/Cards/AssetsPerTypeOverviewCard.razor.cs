@@ -70,7 +70,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             List<PieChartModel> chartData = [];
 
             if (user is not null) chartData = await MoneyFlowService.GetEndAssetsPerType(user.UserId, StartDateTime, EndDateTime);
-            if (chartData.Count != 0) _totalAssets = chartData.Sum(x => x.Value);
+            if (chartData.Count != 0) _totalAssets = Math.Round(chartData.Sum(x => x.Value), 2);
 
             return chartData;
         }

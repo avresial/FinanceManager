@@ -5,7 +5,7 @@ namespace FinanceManager.Domain.Services;
 public interface IMoneyFlowService
 {
     Task<bool> IsAnyAccountWithAssets(int userId);
-    Task<List<PieChartModel>> GetEndAssetsPerAccount(int userId, DateTime start, DateTime end);
+    Task<List<PieChartModel>> GetEndAssetsPerAccount(int userId, string currency, DateTime start, DateTime end);
     Task<List<PieChartModel>> GetEndAssetsPerType(int userId, DateTime start, DateTime end);
     Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, DateTime start, DateTime end);
     Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, DateTime start, DateTime end, InvestmentType investmentType);

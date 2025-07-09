@@ -93,29 +93,76 @@ namespace FinanceManager.Infrastructure.Repositories
         public async Task<IEnumerable<T>> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
         {
             List<T> result = new();
-            if (typeof(T) == typeof(BankAccount))
+
+            switch (typeof(T))
             {
-                var availableAccounts = await _bankAccountAccountRepository.GetAvailableAccounts(userId);
+                case Type t when t == typeof(BankAccount):
+                    var availableAccounts = await _bankAccountAccountRepository.GetAvailableAccounts(userId);
 
-                foreach (var item in availableAccounts)
-                {
-                    var resultAccount = await _bankAccountAccountRepository.Get(item.AccountId);
-                    if (resultAccount is null) continue;
+                    foreach (var item in availableAccounts)
+                    {
+                        var resultAccount = await _bankAccountAccountRepository.Get(item.AccountId);
+                        if (resultAccount is null) continue;
 
-                    IEnumerable<BankAccountEntry> entries = (await _bankAccountEntryRepository.Get(item.AccountId, dateStart, dateEnd)).ToList();
+                        IEnumerable<BankAccountEntry> entries = (await _bankAccountEntryRepository.Get(item.AccountId, dateStart, dateEnd)).ToList();
 
-                    var nextOlderEntry = await _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
+                        var nextOlderEntry = await _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
 
-                    var nextYoungerEntry = await _bankAccountEntryRepository.GetNextYounger(item.AccountId, dateStart);
+                        var nextYoungerEntry = await _bankAccountEntryRepository.GetNextYounger(item.AccountId, dateStart);
 
-                    var newResultAccount = new BankAccount(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries,
-                        resultAccount.AccountType, nextOlderEntry, nextYoungerEntry);
+                        var newResultAccount = new BankAccount(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries,
+                            resultAccount.AccountType, nextOlderEntry, nextYoungerEntry);
 
-                    resultAccount.Add(entries, false);
-                    if (newResultAccount is T resultElement)
-                        result.Add(resultElement);
-                }
+                        resultAccount.Add(entries, false);
+                        if (newResultAccount is T resultElement)
+                            result.Add(resultElement);
+                    }
+                    break;
+
+                case Type t when t == typeof(StockAccount):
+                    var stockAccounts = await _stockAccountRepository.GetAvailableAccounts(userId);
+                    foreach (var item in stockAccounts)
+                    {
+                        var resultAccount = await _stockAccountRepository.Get(item.AccountId);
+                        if (resultAccount is null) continue;
+                        IEnumerable<StockAccountEntry> entries = (await _stockEntryRepository.Get(item.AccountId, dateStart, dateEnd)).ToList();
+                        var nextOlderEntry = await _stockEntryRepository.GetNextOlder(item.AccountId, dateStart);
+                        var nextYoungerEntry = await _stockEntryRepository.GetNextYounger(item.AccountId, dateStart);
+                        var newResultAccount = new StockAccount(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries, nextOlderEntry, nextYoungerEntry);
+                        resultAccount.Add(entries, false);
+                        if (newResultAccount is T resultElement)
+                            result.Add(resultElement);
+                    }
+                    break;
             }
+
+
+
+
+
+            //if (typeof(T) == typeof(BankAccount))
+            //{
+            //    var availableAccounts = await _bankAccountAccountRepository.GetAvailableAccounts(userId);
+
+            //    foreach (var item in availableAccounts)
+            //    {
+            //        var resultAccount = await _bankAccountAccountRepository.Get(item.AccountId);
+            //        if (resultAccount is null) continue;
+
+            //        IEnumerable<BankAccountEntry> entries = (await _bankAccountEntryRepository.Get(item.AccountId, dateStart, dateEnd)).ToList();
+
+            //        var nextOlderEntry = await _bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
+
+            //        var nextYoungerEntry = await _bankAccountEntryRepository.GetNextYounger(item.AccountId, dateStart);
+
+            //        var newResultAccount = new BankAccount(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries,
+            //            resultAccount.AccountType, nextOlderEntry, nextYoungerEntry);
+
+            //        resultAccount.Add(entries, false);
+            //        if (newResultAccount is T resultElement)
+            //            result.Add(resultElement);
+            //    }
+            //}
 
             return result;
         }

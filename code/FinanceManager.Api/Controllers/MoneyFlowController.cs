@@ -12,10 +12,10 @@ namespace FinanceManager.Api.Controllers
     {
         private readonly IMoneyFlowService _moneyFlowService = moneyFlowService;
 
-        [HttpGet("GetEndAssetsPerAccount/{userId:int}/{start:DateTime}/{end:DateTime}")]
-        public async Task<IActionResult> GetEndAssetsPerAccount(int userId, DateTime start, DateTime end)
+        [HttpGet("GetEndAssetsPerAccount/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}")]
+        public async Task<IActionResult> GetEndAssetsPerAccount(int userId, string currency, DateTime start, DateTime end)
         {
-            return Ok(await _moneyFlowService.GetEndAssetsPerAccount(userId, start, end));
+            return Ok(await _moneyFlowService.GetEndAssetsPerAccount(userId, currency, start, end));
         }
 
         [HttpGet("GetEndAssetsPerType/{userId:int}/{start:DateTime}/{end:DateTime}")]
