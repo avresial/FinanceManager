@@ -18,10 +18,10 @@
                     <MudText Typo="Typo.subtitle1">@BankAccount.Name</MudText>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudTimePicker Label="Time" @bind-Time="Time" />
+                    <MudDatePicker Label="Posting date" @bind-Date="PostingDate" Validation="@(new NotInFutureAttribute())" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudDatePicker Label="Posting date" @bind-Date="PostingDate" Validation="@(new NotInFutureAttribute())" />
+                    <MudTimePicker Label="Time" @bind-Time="Time" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />

@@ -21,6 +21,26 @@ namespace FinanceManager.Domain.Extensions
             return [lastEntry];
         }
 
+        public static T? GetNextOlder<T>(this IEnumerable<T> entries, DateTime date) where T : FinancialEntryBase
+        {
+            var lastEntry = entries.FirstOrDefault(x => x.PostingDate < date);
+            if (lastEntry is null) return default;
+
+            return lastEntry;
+        }
+        public static T? GetThisOrNextOlder<T>(this IEnumerable<T> entries, DateTime date) where T : FinancialEntryBase
+        {
+            var results = entries.Get(date);
+            if (results is null || !results.Any()) return default;
+
+            T? result = results.OrderByDescending(x => x.PostingDate).FirstOrDefault();
+
+            if (result is not null) return result;
+
+            return entries.GetNextOlder(date);
+        }
+
+
         public static List<FinancialEntryBase> GetEntriesMonthlyValue(this IEnumerable<FinancialEntryBase> entries)
         {
 

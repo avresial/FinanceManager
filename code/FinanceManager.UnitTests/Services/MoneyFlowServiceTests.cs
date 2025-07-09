@@ -87,7 +87,7 @@ public class MoneyFlowServiceTests
         // Arrange
 
         // Act
-        var result = await _moneyFlowService.GetAssetsTimeSeries(1, _startDate, _endDate);
+        var result = await _moneyFlowService.GetAssetsTimeSeries(1, DefaultCurrency.Currency, _startDate, _endDate);
 
         // Assert
         Assert.NotEmpty(result);
@@ -103,7 +103,7 @@ public class MoneyFlowServiceTests
     {
         // Arrange
         // Act
-        var result = await _moneyFlowService.GetAssetsTimeSeries(1, _startDate, _endDate, investmentType);
+        var result = await _moneyFlowService.GetAssetsTimeSeries(1, DefaultCurrency.Currency, _startDate, _endDate, investmentType);
 
         // Assert
         Assert.Equal(result.First().Value, finalValue);

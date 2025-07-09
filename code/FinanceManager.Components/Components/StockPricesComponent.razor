@@ -21,7 +21,7 @@
 
         <MudItem xs="12">
             <MudGrid>
-                <MudItem xs="6">
+                <MudItem  xs="12" sm="6">
                     <div class="d-flex flex-grow-1 gap-4">
                         @if (string.IsNullOrEmpty(_existingCurrency))
                         {
@@ -35,7 +35,7 @@
 
                     </div>
                 </MudItem>
-                <MudItem xs="6">
+                <MudItem xs="12" sm="6">
                     <MudDatePicker Label="Date" @bind-Date="Date" Disabled=@(string.IsNullOrEmpty(Ticker)) />
                 </MudItem>
 

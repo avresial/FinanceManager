@@ -64,12 +64,27 @@ namespace FinanceManager.Domain.Extensions
 
             return accountEntries.DistinctBy(x => x.Ticker).Select(x => x.Ticker).ToList();
         }
-        public static IEnumerable<StockAccountEntry> GetPrevious(this IEnumerable<StockAccountEntry> entries, DateTime date, string ticker)
+        public static IEnumerable<StockAccountEntry> GetNextOlder(this IEnumerable<StockAccountEntry> entries, DateTime date, string ticker)
         {
             var lastEntry = entries.FirstOrDefault(x => x.PostingDate < date && x.Ticker == ticker);
             if (lastEntry is null) return [];
 
             return [lastEntry];
+        }
+        public static StockAccountEntry? GetThisOrNextOlder(this IEnumerable<StockAccountEntry> accountEntries, DateTime date, string ticker)
+        {
+            var result = accountEntries.Get(date, ticker);
+
+            if (result is not null) return result;
+
+            return accountEntries.GetNextOlder(date, ticker).OrderByDescending(x => x.PostingDate).FirstOrDefault();
+        }
+        public static StockAccountEntry? Get(this IEnumerable<StockAccountEntry> accountEntries, DateTime date, string ticker)
+        {
+            if (accountEntries is null) return default;
+
+            return accountEntries.Where(x => x.PostingDate.Year == date.Year && x.PostingDate.Month == date.Month && x.PostingDate.Day == date.Day &&
+             x.Ticker == ticker).OrderByDescending(x => x.PostingDate).FirstOrDefault();
         }
         public static IEnumerable<StockAccountEntry> Get(this IEnumerable<StockAccountEntry> accountEntries, DateTime date) // needs to be upgraded
         {
@@ -79,10 +94,10 @@ namespace FinanceManager.Domain.Extensions
             if (entries.DistinctBy(x => x.Ticker).Count() == accountEntries.GetStoredTickers().Count())
                 return entries;
 
-            foreach (var ticker in accountEntries.GetStoredTickers())
+            foreach (var storedTicker in accountEntries.GetStoredTickers())
             {
-                if (entries.Any(x => x.Ticker == ticker)) continue;
-                var newEntry = accountEntries.FirstOrDefault(x => x.Ticker == ticker && x.PostingDate <= date);
+                if (entries.Any(x => x.Ticker == storedTicker)) continue;
+                var newEntry = accountEntries.FirstOrDefault(x => x.Ticker == storedTicker && x.PostingDate <= date);
 
                 if (newEntry is not null)
                     entries.Add(newEntry);

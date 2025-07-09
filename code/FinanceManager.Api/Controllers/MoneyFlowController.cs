@@ -12,6 +12,12 @@ namespace FinanceManager.Api.Controllers
     {
         private readonly IMoneyFlowService _moneyFlowService = moneyFlowService;
 
+        [HttpGet("IsAnyAccountWithAssets/{userId:int}")]
+        public async Task<IActionResult> IsAnyAccountWithAssets(int userId)
+        {
+            return Ok(await _moneyFlowService.IsAnyAccountWithAssets(userId));
+        }
+
         [HttpGet("GetEndAssetsPerAccount/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}")]
         public async Task<IActionResult> GetEndAssetsPerAccount(int userId, string currency, DateTime start, DateTime end)
         {
@@ -24,23 +30,16 @@ namespace FinanceManager.Api.Controllers
             return Ok(await _moneyFlowService.GetEndAssetsPerType(userId, currency, start, end));
         }
 
-        [HttpGet("IsAnyAccountWithAssets/{userId:int}")]
-        public async Task<IActionResult> IsAnyAccountWithAssets(int userId)
+        [HttpGet("GetAssetsTimeSeries/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}")]
+        public async Task<IActionResult> GetAssetsTimeSeries(int userId, string currency, DateTime start, DateTime end)
         {
-            return Ok(await _moneyFlowService.IsAnyAccountWithAssets(userId));
+            return Ok(await _moneyFlowService.GetAssetsTimeSeries(userId, currency, start, end));
         }
 
-
-        [HttpGet("GetAssetsTimeSeries/{userId:int}/{start:DateTime}/{end:DateTime}")]
-        public async Task<IActionResult> GetAssetsTimeSeries(int userId, DateTime start, DateTime end)
+        [HttpGet("GetAssetsTimeSeries/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}/{investmentType}")]
+        public async Task<IActionResult> GetAssetsTimeSeries(int userId, string currency, DateTime start, DateTime end, InvestmentType investmentType)
         {
-            return Ok(await _moneyFlowService.GetAssetsTimeSeries(userId, start, end));
-        }
-
-        [HttpGet("GetAssetsTimeSeries/{userId:int}/{start:DateTime}/{end:DateTime}/{investmentType}")]
-        public async Task<IActionResult> GetAssetsTimeSeries(int userId, DateTime start, DateTime end, InvestmentType investmentType)
-        {
-            return Ok(await _moneyFlowService.GetAssetsTimeSeries(userId, start, end, investmentType));
+            return Ok(await _moneyFlowService.GetAssetsTimeSeries(userId, currency, start, end, investmentType));
         }
 
         [HttpGet("GetNetWorth/{userId:int}/{currency}/{date:DateTime}")]
@@ -55,16 +54,16 @@ namespace FinanceManager.Api.Controllers
             return Ok(await _moneyFlowService.GetNetWorth(userId, currency, start, end));
         }
 
-        [HttpGet("GetIncome/{userId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]
-        public async Task<IActionResult> GetIncome(int userId, DateTime start, DateTime end, long? step = null)
+        [HttpGet("GetIncome/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}/{step:long?}")]
+        public async Task<IActionResult> GetIncome(int userId, string currency, DateTime start, DateTime end, long? step = null)
         {
-            return Ok(await _moneyFlowService.GetIncome(userId, start, end, step is null ? null : new(step.Value)));
+            return Ok(await _moneyFlowService.GetIncome(userId, currency, start, end, step is null ? null : new(step.Value)));
         }
 
-        [HttpGet("GetSpending/{userId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]
-        public async Task<IActionResult> GetSpending(int userId, DateTime start, DateTime end, long? step = null)
+        [HttpGet("GetSpending/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}/{step:long?}")]
+        public async Task<IActionResult> GetSpending(int userId, string currency, DateTime start, DateTime end, long? step = null)
         {
-            return Ok(await _moneyFlowService.GetSpending(userId, start, end, step is null ? null : new(step.Value)));
+            return Ok(await _moneyFlowService.GetSpending(userId, currency, start, end, step is null ? null : new(step.Value)));
         }
     }
 }

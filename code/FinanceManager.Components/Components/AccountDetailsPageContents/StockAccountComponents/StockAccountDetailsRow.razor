@@ -28,7 +28,7 @@
                 </div>
                 <div class="row">
                     <div>
-                        @InvestmentEntry.Value
+                        @InvestmentEntry.Value.ToString("G29")
                     </div>
                 </div>
             </div>
@@ -42,13 +42,13 @@
                     @if (InvestmentEntry.ValueChange > 0)
                     {
                         <div class="text-success">
-                            @InvestmentEntry.ValueChange
+                            @InvestmentEntry.ValueChange.ToString("G29")
                         </div>
                     }
                     else
                     {
                         <div class="text-danger">
-                            @InvestmentEntry.ValueChange
+                            @InvestmentEntry.ValueChange.ToString("G29")
                         </div>
                     }
 

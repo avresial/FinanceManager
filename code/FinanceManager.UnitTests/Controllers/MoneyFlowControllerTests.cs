@@ -70,10 +70,10 @@ public class MoneyFlowControllerTests
         // Arrange
         var startDate = new DateTime(2000, 1, 1);
         var endDate = new DateTime(2000, 2, 1);
-        _mockmoneyFlowService.Setup(repo => repo.GetAssetsTimeSeries(testUserId, startDate, endDate)).ReturnsAsync([new()]);
+        _mockmoneyFlowService.Setup(repo => repo.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
-        IActionResult result = await _controller.GetAssetsTimeSeries(testUserId, startDate, endDate);
+        IActionResult result = await _controller.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -88,10 +88,10 @@ public class MoneyFlowControllerTests
         var startDate = new DateTime(2000, 1, 1);
         var endDate = new DateTime(2000, 2, 1);
         var type = InvestmentType.Cash;
-        _mockmoneyFlowService.Setup(repo => repo.GetAssetsTimeSeries(testUserId, startDate, endDate, type)).ReturnsAsync([new()]);
+        _mockmoneyFlowService.Setup(repo => repo.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate, type)).ReturnsAsync([new()]);
 
         // Act
-        IActionResult result = await _controller.GetAssetsTimeSeries(testUserId, startDate, endDate, type);
+        IActionResult result = await _controller.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate, type);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -141,10 +141,10 @@ public class MoneyFlowControllerTests
         // Arrange
         var startDate = new DateTime(2000, 1, 1);
         var endDate = new DateTime(2000, 2, 1);
-        _mockmoneyFlowService.Setup(repo => repo.GetIncome(testUserId, startDate, endDate, It.IsAny<TimeSpan?>())).ReturnsAsync([new()]);
+        _mockmoneyFlowService.Setup(repo => repo.GetIncome(testUserId, DefaultCurrency.Currency, startDate, endDate, It.IsAny<TimeSpan?>())).ReturnsAsync([new()]);
 
         // Act
-        IActionResult result = await _controller.GetIncome(testUserId, startDate, endDate);
+        IActionResult result = await _controller.GetIncome(testUserId, DefaultCurrency.Currency, startDate, endDate);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -158,10 +158,10 @@ public class MoneyFlowControllerTests
         // Arrange
         var startDate = new DateTime(2000, 1, 1);
         var endDate = new DateTime(2000, 2, 1);
-        _mockmoneyFlowService.Setup(repo => repo.GetSpending(testUserId, startDate, endDate, It.IsAny<TimeSpan?>())).ReturnsAsync([new()]);
+        _mockmoneyFlowService.Setup(repo => repo.GetSpending(testUserId, DefaultCurrency.Currency, startDate, endDate, It.IsAny<TimeSpan?>())).ReturnsAsync([new()]);
 
         // Act
-        IActionResult result = await _controller.GetSpending(testUserId, startDate, endDate);
+        IActionResult result = await _controller.GetSpending(testUserId, DefaultCurrency.Currency, startDate, endDate);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);

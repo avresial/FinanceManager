@@ -21,10 +21,10 @@
                 <MudText Typo="Typo.subtitle1">@InvestmentAccount.Name</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTimePicker Label="Time" @bind-Time="Time" />
+                <MudDatePicker Label="Posting date" @bind-Date="SelectedPostingDate" Validation="@(new NotInFutureAttribute())" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudDatePicker Label="Posting date" @bind-Date="SelectedPostingDate" Validation="@(new NotInFutureAttribute())" />
+                <MudTimePicker Label="Time" @bind-Time="Time" />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudTextField @bind-Value="Ticker" T="string" Label="Ticker" Variant="Variant.Text" MaxLines="5" AutoGrow="true" Immediate />
@@ -96,8 +96,8 @@
         loadedEntryId = InvestmentEntry.EntryId;
 
         _currency = settingsService.GetCurrency();
-        Time = new TimeSpan(InvestmentEntry.PostingDate.Hour, InvestmentEntry.PostingDate.Minute, InvestmentEntry.PostingDate.Second);
-        SelectedPostingDate = InvestmentEntry.PostingDate;
+        SelectedPostingDate = InvestmentEntry.PostingDate.ToLocalTime();
+        Time = new TimeSpan(SelectedPostingDate.Value.Hour, SelectedPostingDate.Value.Minute, SelectedPostingDate.Value.Second);
         ExpenseType = InvestmentEntry.InvestmentType.ToString();
         Ticker = InvestmentEntry.Ticker;
         BalanceChange = InvestmentEntry.ValueChange;
@@ -115,7 +115,7 @@
         if (!SelectedPostingDate.HasValue) return;
         if (!Time.HasValue) return;
 
-        DateTime date = new DateTime(SelectedPostingDate.Value.Year, SelectedPostingDate.Value.Month, SelectedPostingDate.Value.Day, Time.Value.Hours, Time.Value.Minutes, Time.Value.Seconds);
+        DateTime date = SelectedPostingDate.Value.ToUniversalTime();
         InvestmentType investmentType = FinanceManager.Domain.Enums.InvestmentType.Stock;
         try
         {

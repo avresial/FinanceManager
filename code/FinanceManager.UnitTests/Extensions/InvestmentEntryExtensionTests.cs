@@ -19,7 +19,7 @@ namespace FinanceManager.UnitTests.Extensions
             };
 
             // Act
-            var testValue = entries.GetPrevious(new DateTime(2000, 1, 3), "Ticker1").First();
+            var testValue = entries.GetNextOlder(new DateTime(2000, 1, 3), "Ticker1").First();
 
             // Assert
             Assert.Equal(new DateTime(2000, 1, 2), testValue.PostingDate);
@@ -39,7 +39,7 @@ namespace FinanceManager.UnitTests.Extensions
             };
 
             // Act
-            var testValue = entries.GetPrevious(new DateTime(2000, 1, 4), "Ticker1").First();
+            var testValue = entries.GetNextOlder(new DateTime(2000, 1, 4), "Ticker1").First();
 
             // Assert
             Assert.Equal(new DateTime(2000, 1, 3), testValue.PostingDate);

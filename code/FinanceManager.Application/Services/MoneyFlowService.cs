@@ -8,12 +8,40 @@ using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Services;
 
-public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, IStockPriceRepository stockRepository, ICurrencyExchangeService currencyExchangeService) : IMoneyFlowService
+public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, IStockPriceRepository stockRepository,
+    ICurrencyExchangeService currencyExchangeService) : IMoneyFlowService
 {
     private readonly IFinancalAccountRepository _financialAccountService = bankAccountRepository;
     private readonly IStockPriceRepository _stockRepository = stockRepository;
     private readonly ICurrencyExchangeService _currencyExchangeService = currencyExchangeService;
 
+    public async Task<bool> IsAnyAccountWithAssets(int userId)
+    {
+        var start = DateTime.UtcNow.AddDays(-1);
+        var end = start.AddDays(1);
+
+        var bankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
+        foreach (var bankAccount in bankAccounts)
+        {
+            if (bankAccount.Entries is not null && bankAccount.Entries.Count > 0)
+            {
+                var youngestEntry = bankAccount.Entries.FirstOrDefault();
+                if (youngestEntry is not null && youngestEntry.Value > 0)
+                    return true;
+            }
+            else if (bankAccount.NextOlderEntry is not null)
+            {
+                var newBankAccount = await _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.NextOlderEntry.PostingDate,
+                    bankAccount.NextOlderEntry.PostingDate.AddSeconds(1));
+                if (newBankAccount is null || newBankAccount.Entries is null) continue;
+                var youngestEntry = newBankAccount.Entries.FirstOrDefault();
+                if (youngestEntry is not null && youngestEntry.Value > 0)
+                    return true;
+            }
+        }
+
+        return await Task.FromResult(false);
+    }
     public async Task<List<PieChartModel>> GetEndAssetsPerAccount(int userId, string currency, DateTime start, DateTime end)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
@@ -62,7 +90,6 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
 
         return result;
     }
-
     public async Task<List<PieChartModel>> GetEndAssetsPerType(int userId, string currency, DateTime start, DateTime end)
     {
         List<PieChartModel> result = [];
@@ -120,7 +147,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
 
         return result;
     }
-    public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, DateTime start, DateTime end)
+    public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, string currency, DateTime start, DateTime end)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         if (start == new DateTime()) return [];
@@ -132,7 +159,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         {
             if (account is null || account.Entries is null) continue;
 
-            var entry = account.Entries.Any() ? account.Entries.FirstOrDefault() : account.NextOlderEntry;
+            var entry = account.GetThisOrNextOlder(end);
             if (entry is null || entry.Value <= 0) continue;
 
             decimal previousValue = entry.Value;
@@ -141,7 +168,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
             {
                 if (!prices.ContainsKey(date)) prices.Add(date, 0);
 
-                var newestEntry = account.Get(date).OrderByDescending(x => x.PostingDate).FirstOrDefault();
+                var newestEntry = account.GetThisOrNextOlder(date);
                 if (newestEntry is null)
                 {
                     prices[date] += previousValue;
@@ -159,17 +186,14 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
             if (account is null || account.Entries is null) continue;
             foreach (var date in prices.Keys)
             {
-                var tickerEntries = account.Get(date).GroupBy(x => x.Ticker);
-
-                foreach (var group in tickerEntries)
+                var tickerEntries = account.Get(date).GroupBy(x => x.Ticker).ToList();
+                foreach (var ticker in account.GetStoredTickers())
                 {
-                    var newestEntry = group.OrderByDescending(x => x.PostingDate).FirstOrDefault();
-                    if (newestEntry is null)
-                        continue;
-                    var stockPrice = await _stockRepository.GetStockPrice(newestEntry.Ticker, date);
-                    decimal pricePerUnit = 1;
-                    if (stockPrice is not null) pricePerUnit = stockPrice.PricePerUnit;
-                    prices[date] += newestEntry.Value * pricePerUnit;
+                    var entry = account.GetThisOrNextOlder(date, ticker);
+                    if (entry is null) continue;
+
+                    decimal pricePerUnit = await GetPricePerUnit(currency, end, entry.Ticker);
+                    prices[date] += entry.Value * pricePerUnit;
                 }
             }
         }
@@ -178,7 +202,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
                     .OrderByDescending(x => x.DateTime)
                     .ToList();
     }
-    public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, DateTime start, DateTime end, InvestmentType investmentType)
+    public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, string currency, DateTime start, DateTime end, InvestmentType investmentType)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         List<(DateTime, decimal)> assets = [];
@@ -282,8 +306,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         }
         return result;
     }
-
-    public async Task<List<TimeSeriesModel>> GetIncome(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+    public async Task<List<TimeSeriesModel>> GetIncome(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
     {
         TimeSpan timeSeriesStep = step ?? new TimeSpan(1, 0, 0, 0);
 
@@ -317,8 +340,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
 
         return await Task.FromResult(result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList());
     }
-
-    public async Task<List<TimeSeriesModel>> GetSpending(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+    public async Task<List<TimeSeriesModel>> GetSpending(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
     {
         TimeSpan timeSeriesStep = step ?? new TimeSpan(1, 0, 0, 0);
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
@@ -350,36 +372,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
 
         return await Task.FromResult(result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList());
     }
-
-    public async Task<bool> IsAnyAccountWithAssets(int userId)
-    {
-        var start = DateTime.UtcNow.AddDays(-1);
-        var end = start.AddDays(1);
-
-        var bankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
-        foreach (var bankAccount in bankAccounts)
-        {
-            if (bankAccount.Entries is not null && bankAccount.Entries.Count > 0)
-            {
-                var youngestEntry = bankAccount.Entries.FirstOrDefault();
-                if (youngestEntry is not null && youngestEntry.Value > 0)
-                    return true;
-            }
-            else if (bankAccount.NextOlderEntry is not null)
-            {
-                var newBankAccount = await _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.NextOlderEntry.PostingDate,
-                    bankAccount.NextOlderEntry.PostingDate.AddSeconds(1));
-                if (newBankAccount is null || newBankAccount.Entries is null) continue;
-                var youngestEntry = newBankAccount.Entries.FirstOrDefault();
-                if (youngestEntry is not null && youngestEntry.Value > 0)
-                    return true;
-            }
-        }
-
-        return await Task.FromResult(false);
-    }
-
-    public Task<List<TimeSeriesModel>> GetBalance(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+    public Task<List<TimeSeriesModel>> GetBalance(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         throw new NotImplementedException();
