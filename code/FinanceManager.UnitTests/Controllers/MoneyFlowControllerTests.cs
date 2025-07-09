@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Api.Controllers;
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
@@ -35,10 +36,10 @@ public class MoneyFlowControllerTests
         // Arrange
         var startDate = new DateTime(2000, 1, 1);
         var endDate = new DateTime(2000, 2, 1);
-        _mockmoneyFlowService.Setup(repo => repo.GetEndAssetsPerAccount(testUserId, startDate, endDate)).ReturnsAsync([new()]);
+        _mockmoneyFlowService.Setup(repo => repo.GetEndAssetsPerAccount(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
-        IActionResult result = await _controller.GetEndAssetsPerAccount(testUserId, startDate, endDate);
+        IActionResult result = await _controller.GetEndAssetsPerAccount(testUserId, DefaultCurrency.Currency, startDate, endDate);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -52,10 +53,10 @@ public class MoneyFlowControllerTests
         // Arrange
         var startDate = new DateTime(2000, 1, 1);
         var endDate = new DateTime(2000, 2, 1);
-        _mockmoneyFlowService.Setup(repo => repo.GetEndAssetsPerType(testUserId, startDate, endDate)).ReturnsAsync([new()]);
+        _mockmoneyFlowService.Setup(repo => repo.GetEndAssetsPerType(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
-        IActionResult result = await _controller.GetEndAssetsPerType(testUserId, startDate, endDate);
+        IActionResult result = await _controller.GetEndAssetsPerType(testUserId, DefaultCurrency.Currency, startDate, endDate);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);

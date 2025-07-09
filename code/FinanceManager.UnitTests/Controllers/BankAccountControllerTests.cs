@@ -5,7 +5,6 @@ using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.Login;
-using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
@@ -21,7 +20,6 @@ public class BankAccountControllerTests
 {
     private readonly Mock<IBankAccountRepository<BankAccount>> _mockBankAccountRepository;
     private readonly Mock<IAccountEntryRepository<BankAccountEntry>> _mockBankAccountEntryRepository;
-    private readonly Mock<AccountIdProvider> _mockAccountIdProvider;
 
     private readonly Mock<IUserRepository> _userRepository;
     private readonly Mock<UserPlanVerifier> _userPlanVerifier;
@@ -32,13 +30,12 @@ public class BankAccountControllerTests
     {
         _mockBankAccountRepository = new Mock<IBankAccountRepository<BankAccount>>();
         _mockBankAccountEntryRepository = new Mock<IAccountEntryRepository<BankAccountEntry>>();
-        _mockAccountIdProvider = new Mock<AccountIdProvider>(new Mock<IAccountRepository<StockAccount>>().Object, _mockBankAccountRepository.Object);
 
         _userRepository = new Mock<IUserRepository>();
         var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = Domain.Enums.PricingLevel.Premium, CreationDate = DateTime.UtcNow };
         _userRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
         _userPlanVerifier = new Mock<UserPlanVerifier>(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userRepository.Object, new PricingProvider());
-        _controller = new BankAccountController(_mockBankAccountRepository.Object, _mockAccountIdProvider.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object);
+        _controller = new BankAccountController(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object);
 
         // Mock user identity
         var userClaims = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]

@@ -1,3 +1,4 @@
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
@@ -69,7 +70,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
             List<PieChartModel> chartData = [];
 
-            if (user is not null) chartData = await MoneyFlowService.GetEndAssetsPerType(user.UserId, StartDateTime, EndDateTime);
+            if (user is not null) chartData = await MoneyFlowService.GetEndAssetsPerType(user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
             if (chartData.Count != 0) _totalAssets = Math.Round(chartData.Sum(x => x.Value), 2);
 
             return chartData;

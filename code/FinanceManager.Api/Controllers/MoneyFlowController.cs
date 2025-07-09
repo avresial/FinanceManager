@@ -18,10 +18,10 @@ namespace FinanceManager.Api.Controllers
             return Ok(await _moneyFlowService.GetEndAssetsPerAccount(userId, currency, start, end));
         }
 
-        [HttpGet("GetEndAssetsPerType/{userId:int}/{start:DateTime}/{end:DateTime}")]
-        public async Task<IActionResult> GetEndAssetsPerType(int userId, DateTime start, DateTime end)
+        [HttpGet("GetEndAssetsPerType/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}")]
+        public async Task<IActionResult> GetEndAssetsPerType(int userId, string currency, DateTime start, DateTime end)
         {
-            return Ok(await _moneyFlowService.GetEndAssetsPerType(userId, start, end));
+            return Ok(await _moneyFlowService.GetEndAssetsPerType(userId, currency, start, end));
         }
 
         [HttpGet("IsAnyAccountWithAssets/{userId:int}")]

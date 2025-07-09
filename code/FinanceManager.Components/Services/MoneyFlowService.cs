@@ -42,10 +42,10 @@ public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
         return [];
     }
 
-    public async Task<List<PieChartModel>> GetEndAssetsPerType(int userId, DateTime start, DateTime end)
+    public async Task<List<PieChartModel>> GetEndAssetsPerType(int userId, string currency, DateTime start, DateTime end)
     {
         if (_httpClient is null) return [];
-        var result = await _httpClient.GetFromJsonAsync<List<PieChartModel>>($"{_httpClient.BaseAddress}api/MoneyFlow/GetEndAssetsPerType/{userId}/{start.ToRfc3339()}/{end.ToRfc3339()}");
+        var result = await _httpClient.GetFromJsonAsync<List<PieChartModel>>($"{_httpClient.BaseAddress}api/MoneyFlow/GetEndAssetsPerType/{userId}/{currency}/{start.ToRfc3339()}/{end.ToRfc3339()}");
 
         if (result is not null) return result;
         return [];

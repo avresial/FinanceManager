@@ -55,7 +55,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
 
         return result;
     }
-    public async Task<List<PieChartModel>> GetEndAssetsPerType(int userId, DateTime start, DateTime end)
+    public async Task<List<PieChartModel>> GetEndAssetsPerType(int userId, string currency, DateTime start, DateTime end)
     {
         List<PieChartModel> result = [];
         var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);

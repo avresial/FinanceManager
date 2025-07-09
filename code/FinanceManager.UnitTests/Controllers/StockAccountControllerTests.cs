@@ -2,7 +2,6 @@ using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
-using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
 using Microsoft.AspNetCore.Http;
@@ -14,16 +13,14 @@ namespace FinanceManager.UnitTests.Controllers;
 public class StockAccountControllerTests
 {
     private readonly Mock<IAccountRepository<StockAccount>> _mockStockAccountRepository;
-    private readonly Mock<IAccountEntryRepository<StockAccountEntry>> _mockStockAccountEntryRepository;
-    private readonly Mock<AccountIdProvider> _mockAccountIdProvider;
+    private readonly Mock<IStockAccountEntryRepository<StockAccountEntry>> _mockStockAccountEntryRepository;
     private readonly StockAccountController _controller;
 
     public StockAccountControllerTests()
     {
         _mockStockAccountRepository = new Mock<IAccountRepository<StockAccount>>();
-        _mockStockAccountEntryRepository = new Mock<IAccountEntryRepository<StockAccountEntry>>();
-        _mockAccountIdProvider = new Mock<AccountIdProvider>(_mockStockAccountRepository.Object, new Mock<IBankAccountRepository<BankAccount>>().Object);
-        _controller = new StockAccountController(_mockStockAccountRepository.Object, _mockAccountIdProvider.Object, _mockStockAccountEntryRepository.Object);
+        _mockStockAccountEntryRepository = new Mock<IStockAccountEntryRepository<StockAccountEntry>>();
+        _controller = new StockAccountController(_mockStockAccountRepository.Object, _mockStockAccountEntryRepository.Object);
 
         // Mock user identity
         var user = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
@@ -101,7 +98,7 @@ public class StockAccountControllerTests
         _mockStockAccountRepository.Setup(repo => repo.Delete(accountId)).ReturnsAsync(true);
 
         // Act
-        var result = await _controller.Delete(deleteAccount);
+        var result = await _controller.Delete(deleteAccount.accountId);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);

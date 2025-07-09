@@ -5,6 +5,7 @@ using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.Services;
 using Moq;
 
 namespace FinanceManager.UnitTests.Services;
@@ -18,6 +19,7 @@ public class MoneyFlowServiceTests
     private readonly MoneyFlowService _moneyFlowService;
     private readonly Mock<IFinancalAccountRepository> _financialAccountRepositoryMock = new();
     private readonly Mock<IStockPriceRepository> _stockRepository = new();
+    private readonly Mock<ICurrencyExchangeService> _currencyExchangeService = new();
     private readonly List<BankAccount> _bankAccounts;
     private readonly List<StockAccount> _investmentAccountAccounts;
 
@@ -50,7 +52,7 @@ public class MoneyFlowServiceTests
         _stockRepository.Setup(x => x.GetStockPrice("testStock2", It.IsAny<DateTime>()))
                         .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "AnyTicker", PricePerUnit = 4 });
 
-        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _stockRepository.Object);
+        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _stockRepository.Object, _currencyExchangeService.Object);
     }
 
     [Fact]
@@ -59,7 +61,7 @@ public class MoneyFlowServiceTests
         // Arrange
 
         // Act
-        var result = await _moneyFlowService.GetEndAssetsPerAccount(1, _startDate, _endDate);
+        var result = await _moneyFlowService.GetEndAssetsPerAccount(1, DefaultCurrency.Currency, _startDate, _endDate);
 
         // Assert
         Assert.Equal(_bankAccounts.Count + _investmentAccountAccounts.Count, result.Count);
@@ -72,7 +74,7 @@ public class MoneyFlowServiceTests
         // Arrange
 
         // Act
-        var result = await _moneyFlowService.GetEndAssetsPerType(1, _startDate, _endDate);
+        var result = await _moneyFlowService.GetEndAssetsPerType(1, DefaultCurrency.Currency, _startDate, _endDate);
 
         // Assert
         Assert.Equal(2, result.Count);

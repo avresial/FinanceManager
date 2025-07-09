@@ -46,7 +46,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
                 {
                     var priceInRightCurrency = await _currencyExchangeService.GetExchangeRateAsync(stockPrice.Currency, currency, end.Date);
                     if (priceInRightCurrency is not null)
-                        pricePerUnit = priceInRightCurrency.Value;
+                        pricePerUnit = stockPrice.PricePerUnit * priceInRightCurrency.Value;
                 }
 
                 var latestEntry = account.Get(end).First(x => x.Ticker == ticker);
@@ -69,7 +69,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
 
         return result;
     }
-    public async Task<List<PieChartModel>> GetEndAssetsPerType(int userId, DateTime start, DateTime end)
+    public async Task<List<PieChartModel>> GetEndAssetsPerType(int userId, string currency, DateTime start, DateTime end)
     {
         List<PieChartModel> result = [];
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
@@ -105,7 +105,13 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
             {
                 var stockPrice = await _stockRepository.GetStockPrice(ticker, end);
                 decimal pricePerUnit = 1;
-                if (stockPrice is not null) pricePerUnit = stockPrice.PricePerUnit;
+
+                if (stockPrice is not null)
+                {
+                    var priceInRightCurrency = await _currencyExchangeService.GetExchangeRateAsync(stockPrice.Currency, currency, end.Date);
+                    if (priceInRightCurrency is not null)
+                        pricePerUnit = stockPrice.PricePerUnit * priceInRightCurrency.Value;
+                }
 
                 var latestEntry = account.Entries.First(x => x.Ticker == ticker);
 
