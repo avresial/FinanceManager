@@ -195,7 +195,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
         }
         return result;
     }
-    public async Task<decimal?> GetNetWorth(int userId, DateTime date)
+    public async Task<decimal?> GetNetWorth(int userId, string currency, DateTime date)
     {
         decimal result = 0;
 
@@ -252,7 +252,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
 
         return result;
     }
-    public async Task<Dictionary<DateTime, decimal>> GetNetWorth(int userId, DateTime start, DateTime end)
+    public async Task<Dictionary<DateTime, decimal>> GetNetWorth(int userId, string currency, DateTime start, DateTime end)
     {
         if (start == new DateTime()) return [];
 
@@ -260,7 +260,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
 
         for (DateTime date = end; date >= start; date = date.AddDays(-1))
         {
-            var netWorth = await GetNetWorth(userId, date);
+            var netWorth = await GetNetWorth(userId, DefaultCurrency.Currency, date);
             if (netWorth is null) continue;
             result.Add(date, netWorth.Value);
         }

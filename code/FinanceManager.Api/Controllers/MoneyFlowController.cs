@@ -43,16 +43,16 @@ namespace FinanceManager.Api.Controllers
             return Ok(await _moneyFlowService.GetAssetsTimeSeries(userId, start, end, investmentType));
         }
 
-        [HttpGet("GetNetWorth/{userId:int}/{date:DateTime}")]
-        public async Task<IActionResult> GetNetWorth(int userId, DateTime date)
+        [HttpGet("GetNetWorth/{userId:int}/{currency}/{date:DateTime}")]
+        public async Task<IActionResult> GetNetWorth(int userId, string currency, DateTime date)
         {
-            return Ok(await _moneyFlowService.GetNetWorth(userId, date));
+            return Ok(await _moneyFlowService.GetNetWorth(userId, currency, date));
         }
 
-        [HttpGet("GetNetWorth/{userId:int}/{start:DateTime}/{end:DateTime}")]
-        public async Task<IActionResult> GetNetWorth(int userId, DateTime start, DateTime end)
+        [HttpGet("GetNetWorth/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}")]
+        public async Task<IActionResult> GetNetWorth(int userId, string currency, DateTime start, DateTime end)
         {
-            return Ok(await _moneyFlowService.GetNetWorth(userId, start, end));
+            return Ok(await _moneyFlowService.GetNetWorth(userId, currency, start, end));
         }
 
         [HttpGet("GetIncome/{userId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]

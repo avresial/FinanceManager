@@ -1,3 +1,4 @@
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -29,7 +30,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
             try
             {
-                result = await MoneyFlowService.GetNetWorth(user.UserId, EndDateTime);
+                result = await MoneyFlowService.GetNetWorth(user.UserId, DefaultCurrency.Currency, EndDateTime);
             }
             catch (Exception ex)
             {

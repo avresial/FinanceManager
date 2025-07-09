@@ -104,10 +104,10 @@ public class MoneyFlowControllerTests
     {
         // Arrange
         var date = new DateTime(2000, 1, 1);
-        _mockmoneyFlowService.Setup(repo => repo.GetNetWorth(testUserId, date)).ReturnsAsync((decimal)1);
+        _mockmoneyFlowService.Setup(repo => repo.GetNetWorth(testUserId, DefaultCurrency.Currency, date)).ReturnsAsync((decimal)1);
 
         // Act
-        IActionResult result = await _controller.GetNetWorth(testUserId, date);
+        IActionResult result = await _controller.GetNetWorth(testUserId, DefaultCurrency.Currency, date);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -124,10 +124,10 @@ public class MoneyFlowControllerTests
         {
             { startDate, 1 }
         };
-        _mockmoneyFlowService.Setup(repo => repo.GetNetWorth(testUserId, startDate, endDate)).ReturnsAsync(netWorth);
+        _mockmoneyFlowService.Setup(repo => repo.GetNetWorth(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync(netWorth);
 
         // Act
-        IActionResult result = await _controller.GetNetWorth(testUserId, startDate, endDate);
+        IActionResult result = await _controller.GetNetWorth(testUserId, DefaultCurrency.Currency, startDate, endDate);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);

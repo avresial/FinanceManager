@@ -121,7 +121,7 @@ public class MoneyFlowServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, date.Date, date)).ReturnsAsync(bankAccounts);
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, date);
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.Currency, date);
 
         // Assert
         Assert.Equal(1000, result);
@@ -144,7 +144,7 @@ public class MoneyFlowServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, end, end)).ReturnsAsync(bankAccounts);
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, start, end);
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.Currency, start, end);
 
         // Assert
         Assert.NotEmpty(result);

@@ -64,20 +64,20 @@ public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
         return [];
     }
 
-    public async Task<decimal?> GetNetWorth(int userId, DateTime date)
+    public async Task<decimal?> GetNetWorth(int userId, string currency, DateTime date)
     {
         if (_httpClient is null) return default;
 
-        var result = await _httpClient.GetFromJsonAsync<decimal?>($"{_httpClient.BaseAddress}api/MoneyFlow/GetNetWorth/{userId}/{date.ToRfc3339()}");
+        var result = await _httpClient.GetFromJsonAsync<decimal?>($"{_httpClient.BaseAddress}api/MoneyFlow/GetNetWorth/{userId}/{currency}/{date.ToRfc3339()}");
 
         if (result is not null) return result;
         return default;
     }
 
-    public async Task<Dictionary<DateTime, decimal>> GetNetWorth(int userId, DateTime start, DateTime end)
+    public async Task<Dictionary<DateTime, decimal>> GetNetWorth(int userId, string currency, DateTime start, DateTime end)
     {
         if (_httpClient is null) return [];
-        var result = await _httpClient.GetFromJsonAsync<Dictionary<DateTime, decimal>>($"{_httpClient.BaseAddress}api/MoneyFlow/GetNetWorth/{userId}/{start.ToRfc3339()}/{end.ToRfc3339()}");
+        var result = await _httpClient.GetFromJsonAsync<Dictionary<DateTime, decimal>>($"{_httpClient.BaseAddress}api/MoneyFlow/GetNetWorth/{userId}/{currency}/{start.ToRfc3339()}/{end.ToRfc3339()}");
 
         if (result is not null) return result;
         return [];
