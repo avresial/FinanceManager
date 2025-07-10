@@ -118,6 +118,8 @@ public partial class StockPricesComponent
 
         try
         {
+            // TODO new endpoint should be added- Get and GetThisOrNextOlder !
+            // GetStockPrices functions as GetThisOrNextOlder so finding missing stock does not work properly
             _stockPrices = [.. await StockPriceHttpContext.GetStockPrices(Ticker, _dateRange.Start.Value, _dateRange.End.Value, timeSpan)];
             var tickerCurrency = await StockPriceHttpContext.GetTickerCurrency(Ticker);
 

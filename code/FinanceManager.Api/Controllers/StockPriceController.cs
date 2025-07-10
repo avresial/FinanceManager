@@ -19,7 +19,7 @@ public class StockPriceController(IStockPriceRepository stockRepository, ICurren
         if (string.IsNullOrWhiteSpace(ticker) || pricePerUnit <= 0 || string.IsNullOrWhiteSpace(currency) || date == default)
             return BadRequest("Invalid input parameters.");
 
-        var stockPrice = await _stockPriceRepository.AddStockPrice(ticker.ToUpper(), pricePerUnit, currency.ToUpper(), date);
+        var stockPrice = await _stockPriceRepository.Add(ticker.ToUpper(), pricePerUnit, currency.ToUpper(), date);
         return Ok(stockPrice);
     }
 
@@ -30,7 +30,7 @@ public class StockPriceController(IStockPriceRepository stockRepository, ICurren
         if (string.IsNullOrWhiteSpace(ticker) || pricePerUnit <= 0 || string.IsNullOrWhiteSpace(currency) || date == default)
             return BadRequest("Invalid input parameters.");
 
-        var stockPrice = await _stockPriceRepository.UpdateStockPrice(ticker.ToUpper(), pricePerUnit, currency.ToUpper(), date);
+        var stockPrice = await _stockPriceRepository.Update(ticker.ToUpper(), pricePerUnit, currency.ToUpper(), date);
         return Ok(stockPrice);
     }
 
@@ -40,7 +40,7 @@ public class StockPriceController(IStockPriceRepository stockRepository, ICurren
         if (string.IsNullOrWhiteSpace(ticker) || date == default)
             return BadRequest("Invalid input parameters.");
 
-        var stockPrice = await _stockPriceRepository.GetStockPrice(ticker, date);
+        var stockPrice = await _stockPriceRepository.GetThisOrNextOlder(ticker, date);
 
         if (stockPrice is null) return NotFound("Stock price not found.");
         if (string.IsNullOrWhiteSpace(currency) || currency.Equals(stockPrice.Currency, StringComparison.OrdinalIgnoreCase))
@@ -67,7 +67,7 @@ public class StockPriceController(IStockPriceRepository stockRepository, ICurren
 
         for (var i = start; i < end; i = i.Add(new(step)))
         {
-            var stockPrice = await _stockPriceRepository.GetStockPrice(ticker, i);
+            var stockPrice = await _stockPriceRepository.Get(ticker, i);
             if (stockPrice is null) continue;
             stockPrices.Add(stockPrice);
         }
@@ -84,7 +84,7 @@ public class StockPriceController(IStockPriceRepository stockRepository, ICurren
         if (string.IsNullOrWhiteSpace(ticker))
             return BadRequest("Invalid input parameters.");
 
-        var stockPrice = await _stockPriceRepository.GetLatestMissingStockPrice(ticker);
+        var stockPrice = await _stockPriceRepository.GetLatestMissing(ticker);
 
         if (stockPrice is null) return NotFound("Stock price not found.");
 

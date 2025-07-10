@@ -124,7 +124,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
 
             foreach (var ticker in account.GetStoredTickers())
             {
-                var stockPrice = await _stockRepository.GetStockPrice(ticker, end);
+                var stockPrice = await _stockRepository.Get(ticker, end);
                 decimal pricePerUnit = await GetPricePerUnit(currency, end, ticker);
 
                 var latestEntry = account.Entries.First(x => x.Ticker == ticker);
@@ -219,7 +219,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         {
             if (account is null || account.Entries is null) continue;
 
-            assets.AddRange(await account.Entries.Where(x => x.InvestmentType == investmentType).ToList().GetAssets(start, end, _stockRepository.GetStockPrice));
+            assets.AddRange(await account.Entries.Where(x => x.InvestmentType == investmentType).ToList().GetAssets(start, end, _stockRepository.Get));
         }
 
 
@@ -380,7 +380,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
 
     private async Task<decimal> GetPricePerUnit(string currency, DateTime date, string ticker)
     {
-        var stockPrice = await _stockRepository.GetStockPrice(ticker, date);
+        var stockPrice = await _stockRepository.GetThisOrNextOlder(ticker, date);
         decimal pricePerUnit = 1;
         if (stockPrice is not null)
         {
