@@ -66,7 +66,7 @@ namespace FinanceManager.Infrastructure.Repositories
                 case Type t when t == typeof(BankAccount):
                     var availableAccounts = (await _bankAccountAccountRepository.GetAvailableAccounts(userId)).Where(x => x.AccountId == accountId);
 
-                    foreach (var item in availableAccounts)
+                    foreach (var item in availableAccounts.Where(x => x.AccountId == accountId))
                     {
                         var resultAccount = await _bankAccountAccountRepository.Get(item.AccountId);
                         if (resultAccount is null) continue;
@@ -86,7 +86,7 @@ namespace FinanceManager.Infrastructure.Repositories
                     break;
                 case Type t when t == typeof(StockAccount):
                     var stockAccounts = await _stockAccountRepository.GetAvailableAccounts(userId);
-                    foreach (var item in stockAccounts)
+                    foreach (var item in stockAccounts.Where(x => x.AccountId == accountId))
                     {
                         var resultAccount = await _stockAccountRepository.Get(item.AccountId);
                         if (resultAccount is null) continue;

@@ -133,7 +133,11 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
         protected override async Task OnInitializedAsync()
         {
+            _user = await loginService.GetLoggedUser();
+            if (_user is null) return;
             _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            _currency = settingsService.GetCurrency();
+
             await UpdateEntries();
 
             AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
@@ -141,10 +145,6 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         protected override async Task OnParametersSetAsync()
         {
             IsLoading = true;
-            _user = await loginService.GetLoggedUser();
-            if (_user is null) return;
-
-            _currency = settingsService.GetCurrency();
 
             _loadedAllData = true;
             await UpdateEntries();
