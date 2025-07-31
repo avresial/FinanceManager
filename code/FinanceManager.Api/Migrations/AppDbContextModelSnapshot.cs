@@ -44,9 +44,11 @@ namespace FinanceManager.Api.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<decimal>("Value")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ValueChange")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("EntryId");
@@ -76,10 +78,12 @@ namespace FinanceManager.Api.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Value")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
 
                     b.Property<decimal>("ValueChange")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
 
                     b.HasKey("EntryId");
 
@@ -167,7 +171,7 @@ namespace FinanceManager.Api.Migrations
 
                     b.HasKey("AccountId");
 
-                    b.ToTable("FinancialAccountBaseDto");
+                    b.ToTable("Accounts");
                 });
 
             modelBuilder.Entity("FinanceManager.Infrastructure.Dtos.StockPriceDto", b =>
@@ -186,11 +190,15 @@ namespace FinanceManager.Api.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<decimal>("PricePerUnit")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
 
                     b.Property<string>("Ticker")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("Verified")
+                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 

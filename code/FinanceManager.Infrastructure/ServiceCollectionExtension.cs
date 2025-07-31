@@ -2,7 +2,6 @@
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
@@ -22,8 +21,9 @@ public static class ServiceCollectionExtension
 
     public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
     {
-        services.AddDbContext<AppDbContext>()
-                .AddScoped<IStockRepository, StockRepositoryMock>()
+
+        services
+                .AddScoped<IStockPriceRepository, StockPriceRepository>()
                 .AddScoped<IFinancalAccountRepository, AccountRepository>()
                 .AddScoped<IUserRepository, UserRepository>()
                 .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()

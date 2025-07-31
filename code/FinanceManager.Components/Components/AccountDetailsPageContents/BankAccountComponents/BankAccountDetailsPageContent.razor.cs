@@ -1,4 +1,5 @@
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.Login;
@@ -23,7 +24,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
 
     private List<BankAccountEntry>? _top5;
     private List<BankAccountEntry>? _bottom5;
-    private string _currency = "PLN";
+    private string _currency = DefaultCurrency.Currency;
     private UserSession? _user;
 
 

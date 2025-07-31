@@ -5,6 +5,7 @@ using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.Services;
 using Moq;
 
 namespace FinanceManager.UnitTests.Services;
@@ -17,7 +18,8 @@ public class MoneyFlowServiceTests
 
     private readonly MoneyFlowService _moneyFlowService;
     private readonly Mock<IFinancalAccountRepository> _financialAccountRepositoryMock = new();
-    private readonly Mock<IStockRepository> _stockRepository = new();
+    private readonly Mock<IStockPriceRepository> _stockRepository = new();
+    private readonly Mock<ICurrencyExchangeService> _currencyExchangeService = new();
     private readonly List<BankAccount> _bankAccounts;
     private readonly List<StockAccount> _investmentAccountAccounts;
 
@@ -45,12 +47,12 @@ public class MoneyFlowServiceTests
 
         _totalAssetsValue = 100;
 
-        _stockRepository.Setup(x => x.GetStockPrice("testStock1", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = "PLN", Ticker = "AnyTicker", PricePerUnit = 2 });
-        _stockRepository.Setup(x => x.GetStockPrice("testStock2", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = "PLN", Ticker = "AnyTicker", PricePerUnit = 4 });
+        _stockRepository.Setup(x => x.Get("testStock1", It.IsAny<DateTime>()))
+                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "AnyTicker", PricePerUnit = 2 });
+        _stockRepository.Setup(x => x.Get("testStock2", It.IsAny<DateTime>()))
+                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "AnyTicker", PricePerUnit = 4 });
 
-        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _stockRepository.Object);
+        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _stockRepository.Object, _currencyExchangeService.Object);
     }
 
     [Fact]
@@ -59,7 +61,7 @@ public class MoneyFlowServiceTests
         // Arrange
 
         // Act
-        var result = await _moneyFlowService.GetEndAssetsPerAccount(1, _startDate, _endDate);
+        var result = await _moneyFlowService.GetEndAssetsPerAccount(1, DefaultCurrency.Currency, _startDate, _endDate);
 
         // Assert
         Assert.Equal(_bankAccounts.Count + _investmentAccountAccounts.Count, result.Count);
@@ -72,7 +74,7 @@ public class MoneyFlowServiceTests
         // Arrange
 
         // Act
-        var result = await _moneyFlowService.GetEndAssetsPerType(1, _startDate, _endDate);
+        var result = await _moneyFlowService.GetEndAssetsPerType(1, DefaultCurrency.Currency, _startDate, _endDate);
 
         // Assert
         Assert.Equal(2, result.Count);
@@ -85,7 +87,7 @@ public class MoneyFlowServiceTests
         // Arrange
 
         // Act
-        var result = await _moneyFlowService.GetAssetsTimeSeries(1, _startDate, _endDate);
+        var result = await _moneyFlowService.GetAssetsTimeSeries(1, DefaultCurrency.Currency, _startDate, _endDate);
 
         // Assert
         Assert.NotEmpty(result);
@@ -101,7 +103,7 @@ public class MoneyFlowServiceTests
     {
         // Arrange
         // Act
-        var result = await _moneyFlowService.GetAssetsTimeSeries(1, _startDate, _endDate, investmentType);
+        var result = await _moneyFlowService.GetAssetsTimeSeries(1, DefaultCurrency.Currency, _startDate, _endDate, investmentType);
 
         // Assert
         Assert.Equal(result.First().Value, finalValue);
@@ -119,7 +121,7 @@ public class MoneyFlowServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, date.Date, date)).ReturnsAsync(bankAccounts);
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, date);
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.Currency, date);
 
         // Assert
         Assert.Equal(1000, result);
@@ -142,7 +144,7 @@ public class MoneyFlowServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, end, end)).ReturnsAsync(bankAccounts);
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, start, end);
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.Currency, start, end);
 
         // Assert
         Assert.NotEmpty(result);

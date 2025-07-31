@@ -29,15 +29,69 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
 
         return Entries.GetStoredTypes();
     }
+    public List<string> GetStoredTickers()
+    {
+        if (Entries is null) return [];
+
+        return Entries.DistinctBy(x => x.Ticker).Select(x => x.Ticker).ToList();
+    }
+    public async Task<Dictionary<DateOnly, decimal>> GetDailyPrice(Func<string, string, DateTime, Task<StockPrice>> getStockPrice)
+    {
+        var result = new Dictionary<DateOnly, decimal>();
+        if (Entries is null || Start is null || End is null) return result;
+
+        DateOnly index = DateOnly.FromDateTime(Start.Value.Date);
+
+        Dictionary<string, decimal> lastTickerValue = new Dictionary<string, decimal>();
+
+        while (index <= DateOnly.FromDateTime(End.Value))
+        {
+            var entriesOfTheDay = Entries.Where(x => DateOnly.FromDateTime(x.PostingDate) == index);
+            decimal dailyPrice = 0;
+
+            var countedTicker = GetStoredTickers();
+            foreach (var entry in entriesOfTheDay)
+            {
+                countedTicker.RemoveAll(x => x == entry.Ticker);
+
+                decimal price = entry.Value;
+                var stockPrice = await getStockPrice(entry.Ticker, DefaultCurrency.Currency, index.ToDateTime(new TimeOnly(), DateTimeKind.Utc));
+                if (stockPrice is not null)
+                    price = entry.Value * (stockPrice).PricePerUnit;
+
+                if (!lastTickerValue.ContainsKey(entry.Ticker))
+                    lastTickerValue.Add(entry.Ticker, price);
+                else
+                    lastTickerValue[entry.Ticker] = price;
+                dailyPrice += price;
+            }
+
+            foreach (var item in countedTicker)
+            {
+                if (!lastTickerValue.ContainsKey(item)) continue;
+                dailyPrice += lastTickerValue[item];
+            }
+
+            result.Add(index, dailyPrice);
+            index = index.AddDays(+1);
+        }
+
+        return result;
+    }
     public override IEnumerable<StockAccountEntry> Get(DateTime date)
     {
         if (Entries is null) return [];
         return Entries.Get(date);
     }
-    public override void Add(IEnumerable<StockAccountEntry> entries, bool recalculateValues = true)
+    public StockAccountEntry? GetThisOrNextOlder(DateTime date, string ticker)
     {
-        foreach (var entry in entries)
-            Add(entry, recalculateValues);
+        if (Entries is null) return default;
+        var result = Entries.GetThisOrNextOlder(date, ticker);
+
+        if (result is not null) return result;
+        if (!NextOlderEntries.ContainsKey(ticker)) return default;
+
+        return NextOlderEntries[ticker];
     }
     public int GetNextFreeId()
     {
@@ -45,6 +99,11 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
         if (currentMaxId is not null)
             return currentMaxId.Value + 1;
         return 0;
+    }
+    public override void Add(IEnumerable<StockAccountEntry> entries, bool recalculateValues = true)
+    {
+        foreach (var entry in entries)
+            Add(entry, recalculateValues);
     }
     public void Add(AddInvestmentEntryDto entry)
     {
@@ -141,50 +200,6 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
         Entries.RemoveAt(index);
         RecalculateEntryValues(index - 1);
     }
-    public List<string> GetStoredTickers()
-    {
-        if (Entries is null) return [];
-
-        return Entries.DistinctBy(x => x.Ticker).Select(x => x.Ticker).ToList();
-    }
-    public async Task<Dictionary<DateOnly, decimal>> GetDailyPrice(Func<string, DateTime, Task<StockPrice>> getStockPrice)
-    {
-        var result = new Dictionary<DateOnly, decimal>();
-        if (Entries is null || Start is null || End is null) return result;
-
-        DateOnly index = DateOnly.FromDateTime(Start.Value.Date);
-
-        Dictionary<string, decimal> lastTickerValue = new Dictionary<string, decimal>();
-
-        while (index <= DateOnly.FromDateTime(End.Value))
-        {
-            var entriesOfTheDay = Entries.Where(x => DateOnly.FromDateTime(x.PostingDate) == index);
-            decimal dailyPrice = 0;
-
-            var countedTicker = GetStoredTickers();
-            foreach (var entry in entriesOfTheDay)
-            {
-                countedTicker.RemoveAll(x => x == entry.Ticker);
-                var price = entry.Value * (await getStockPrice(entry.Ticker, index.ToDateTime(new TimeOnly()))).PricePerUnit;
-                if (!lastTickerValue.ContainsKey(entry.Ticker))
-                    lastTickerValue.Add(entry.Ticker, price);
-                else
-                    lastTickerValue[entry.Ticker] = price;
-                dailyPrice += price;
-            }
-
-            foreach (var item in countedTicker)
-            {
-                if (!lastTickerValue.ContainsKey(item)) continue;
-                dailyPrice += lastTickerValue[item];
-            }
-
-            result.Add(index, dailyPrice);
-            index = index.AddDays(+1);
-        }
-
-        return result;
-    }
     private new void RecalculateEntryValues(int? startingIndex)
     {
         if (Entries is null) return;
@@ -195,7 +210,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
             if (Entries.Count() < i) continue;
 
             StockAccountEntry? previousIterationEntry = null; // could be stored in local dictionary to improve speed
-            var previousElements = Entries.GetPrevious(Entries[i].PostingDate, Entries[i].Ticker);
+            var previousElements = Entries.GetNextOlder(Entries[i].PostingDate, Entries[i].Ticker);
             if (previousElements is not null && previousElements.Any())
                 previousIterationEntry = previousElements.FirstOrDefault();
 

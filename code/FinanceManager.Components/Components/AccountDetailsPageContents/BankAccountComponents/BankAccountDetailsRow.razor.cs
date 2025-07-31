@@ -1,4 +1,5 @@
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Services;
@@ -12,7 +13,7 @@ public partial class BankAccountDetailsRow
     private bool _expanded = false;
     private bool _removeEntryVisibility;
     private bool _updateEntryVisibility;
-    internal string _currency = "PLN";
+    internal string _currency = DefaultCurrency.Currency;
 
     [Parameter] public required BankAccount BankAccount { get; set; }
     [Parameter] public required BankAccountEntry BankAccountEntry { get; set; }

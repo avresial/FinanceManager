@@ -1,3 +1,4 @@
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -32,7 +33,7 @@ public partial class AssetsTimeSeriesCard
 
         try
         {
-            return await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, EndDateTime);
+            return await MoneyFlowService.GetAssetsTimeSeries(user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
         }
         catch (Exception ex)
         {

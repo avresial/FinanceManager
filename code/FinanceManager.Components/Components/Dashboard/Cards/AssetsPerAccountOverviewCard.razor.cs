@@ -1,5 +1,6 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
@@ -101,7 +102,7 @@ public partial class AssetsPerAccountOverviewCard
 
         Data = await GetData();
 
-        if (Data.Count != 0) _totalAssets = Data.Sum(x => x.Value);
+        if (Data.Count != 0) _totalAssets = Math.Round(Data.Sum(x => x.Value), 2);
 
         StateHasChanged();
 
@@ -117,7 +118,7 @@ public partial class AssetsPerAccountOverviewCard
         {
             try
             {
-                return await MoneyFlowService.GetEndAssetsPerAccount(_user.UserId, StartDateTime, EndDateTime);
+                return await MoneyFlowService.GetEndAssetsPerAccount(_user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
             }
             catch (Exception ex)
             {

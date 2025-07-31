@@ -28,9 +28,14 @@ namespace FinanceManager.Domain.Entities.Accounts
             Entries = [];
         }
 
-        public virtual void GetEntry(DateTime start)
+        public BankAccountEntry? GetThisOrNextOlder(DateTime date)
         {
-            throw new NotImplementedException();
+            if (Entries is null) return default;
+            var result = Entries.GetThisOrNextOlder(date);
+
+            if (result is not null) return result;
+
+            return NextOlderEntry;
         }
         public void AddEntry(AddBankEntryDto entry)
         {

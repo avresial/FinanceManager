@@ -1,4 +1,5 @@
-﻿@using FinanceManager.Domain.Entities.Accounts;
+﻿@using FinanceManager.Domain.Entities
+@using FinanceManager.Domain.Entities.Accounts;
 @using FinanceManager.Domain.Entities.Accounts.Entries
 
 @if (InvestmentEntry is not null)
@@ -23,8 +24,8 @@
                 <MudTextField @bind-Value="investmentType" T="string" Label="investmentType" Variant="Variant.Text" MaxLines="5" AutoGrow="true" ReadOnly />
             </MudItem>
             <MudItem xs="12">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Cancel>Cancel</MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Confirm Class="mx-2">Confirm</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" DropShadow="false" OnClick=Cancel>Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" DropShadow="false" OnClick=Confirm Class="mx-2">Confirm</MudButton>
             </MudItem>
         </MudGrid>
     </MudContainer>
@@ -33,7 +34,7 @@
 @code {
     private DateTime? date = new DateTime();
     private decimal balanceChange = 0;
-    private string currency = "PLN";
+    private string currency = DefaultCurrency.Currency;
     private string ticker = "Ticker";
     private string investmentType = "InvestmentType";
 

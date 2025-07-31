@@ -1,5 +1,6 @@
 using FinanceManager.Components.Components.Charts;
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -48,7 +49,7 @@ public partial class IncomeVsSpendingOverviewCard
         {
             if (DisplayIncome)
             {
-                var incomeData = (await MoneyFlowService.GetIncome(user.UserId, StartDateTime.Date, EndDateTime, chartTimeSpan))
+                var incomeData = (await MoneyFlowService.GetIncome(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime, chartTimeSpan))
                     .OrderBy(x => x.DateTime)
                     .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
                     .ToList();
@@ -66,7 +67,7 @@ public partial class IncomeVsSpendingOverviewCard
         {
             if (DisplaySpending)
             {
-                var incomeData = (await MoneyFlowService.GetSpending(user.UserId, StartDateTime.Date, EndDateTime, chartTimeSpan))
+                var incomeData = (await MoneyFlowService.GetSpending(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime, chartTimeSpan))
                     .OrderBy(x => x.DateTime)
                     .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
                     .ToList();
@@ -83,7 +84,7 @@ public partial class IncomeVsSpendingOverviewCard
         {
             if (DisplayBalance)
             {
-                var incomeData = (await MoneyFlowService.GetBalance(user.UserId, StartDateTime.Date, EndDateTime, chartTimeSpan))
+                var incomeData = (await MoneyFlowService.GetBalance(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime, chartTimeSpan))
                       .OrderBy(x => x.DateTime)
                       .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
                       .ToList();

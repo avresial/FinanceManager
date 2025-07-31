@@ -1,4 +1,4 @@
-# FinanceManager
+![Logo](imgs/Logo.svg)
 
 ![GitHub stars](https://img.shields.io/github/stars/avresial/FinanceManager)
 ![GitHub issues](https://img.shields.io/github/issues/avresial/FinanceManager)

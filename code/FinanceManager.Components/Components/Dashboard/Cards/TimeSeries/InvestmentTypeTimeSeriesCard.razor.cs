@@ -1,6 +1,7 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpContexts;
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
@@ -94,7 +95,7 @@ public partial class InvestmentTypeTimeSeriesCard
         List<TimeSeriesModel> result = [];
         try
         {
-            result = await MoneyFlowService.GetAssetsTimeSeries(user.UserId, StartDateTime, EndDateTime);
+            result = await MoneyFlowService.GetAssetsTimeSeries(user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
         }
         catch (Exception ex)
         {
