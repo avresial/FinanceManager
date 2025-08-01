@@ -80,7 +80,8 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
                 Value = x.Value,
                 ValueChange = x.ValueChange,
                 ExpenseType = x.ExpenseType,
-                Description = x.Description
+                Description = x.Description,
+                Labels = x.Labels
             })
         };
         return await Task.FromResult(Ok(bankAccountDto));

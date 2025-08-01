@@ -1,4 +1,6 @@
-﻿namespace FinanceManager.Infrastructure.Dtos;
+﻿using FinanceManager.Domain.Entities.Accounts.Entries;
+
+namespace FinanceManager.Infrastructure.Dtos;
 
 public class FinancialEntryBaseDto
 {
@@ -7,4 +9,7 @@ public class FinancialEntryBaseDto
     public DateTime PostingDate { get; set; }
     public decimal Value { get; set; }
     public decimal ValueChange { get; set; }
+
+    public List<FinancialLabel> Labels { get; set; } = [];
+
 }
