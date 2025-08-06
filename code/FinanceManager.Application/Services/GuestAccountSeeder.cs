@@ -78,7 +78,7 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
     }
     public AddBankEntryDto GetNewBankAccountEntry(DateTime date, int minValue, int maxValue, ExpenseType expenseType = ExpenseType.Other, string description = "")
     {
-        return new AddBankEntryDto(date, _random.Next(minValue, maxValue), expenseType, description);
+        return new AddBankEntryDto(date, _random.Next(minValue, maxValue), expenseType, description, [new() { Name = "Sallary" }]);
     }
 
 

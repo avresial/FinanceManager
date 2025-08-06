@@ -338,7 +338,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
             var finalPostingDate = postingDate ?? DateTime.UtcNow;
 
-            account.AddEntry(new AddBankEntryDto(finalPostingDate, balanceChange, expenseType, description));
+            account.AddEntry(new AddBankEntryDto(finalPostingDate, balanceChange, expenseType, description, [new() { Name = "Sallary" }]));
         }
         private async Task UpdateBankAccountEntry(int id, BankAccountEntry bankAccountEntry)
         {
