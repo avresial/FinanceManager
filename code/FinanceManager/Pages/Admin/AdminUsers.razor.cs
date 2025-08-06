@@ -13,14 +13,13 @@ public partial class AdminUsers
     private int _recordsPerPage = 20;
     private int _pagesCount;
 
-    List<string> _errors = [];
+    private List<string> _errors = [];
+    private IEnumerable<UserDetails> _elements = [];
 
     [Inject] required public AdministrationUsersService AdministrationUsersService { get; set; }
     [Inject] required public IUserService UserService { get; set; }
 
-
     public MudTable<UserDetails>? _table;
-    private IEnumerable<UserDetails> _elements = [];
 
     protected override async Task OnInitializedAsync()
     {

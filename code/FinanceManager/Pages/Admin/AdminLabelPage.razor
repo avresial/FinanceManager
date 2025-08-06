@@ -1,0 +1,41 @@
+﻿@page "/Admin/Labels"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+
+<h3>Existing labels</h3>
+
+<MudStack Spacing="2">
+
+    @foreach (var message in _errors)
+    {
+        <MudAlert Severity="Severity.Error">@message</MudAlert>
+    }
+</MudStack>
+
+<MudTable @ref="@_table" Items="@_elements" RowsPerPage="@_recordsPerPage" Dense Breakpoint="Breakpoint.Md" LoadingProgressColor="Color.Info" Elevation="0" Class="my-3">
+    <HeaderContent>
+        <MudTh>Label id</MudTh>
+        <MudTh>Label name</MudTh>
+        <MudTh>Action</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Label id">@context.Id</MudTd>
+        <MudTd DataLabel="Label name">@context.Name</MudTd>
+        <MudTd DataLabel="Action">
+            <MudMenu Label="Action" Variant="Variant.Text">
+                <MudMenuItem Label="Edit" Href=@($"Admin/EditLabel/{context.Id}") />
+                <MudMenuItem Label="Remove" OnClick="@(() => RemoveLabel(context.Id))" />
+            </MudMenu>
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        @if (_table is not null && _pagesCount > 1)
+        {
+            <MudPagination SelectedChanged="PageChanged" Count="@_pagesCount" Selected="@_selectedPage" Class="pa-4" />
+        }
+    </PagerContent>
+</MudTable>
+
+
+            
