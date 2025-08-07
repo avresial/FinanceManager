@@ -3,7 +3,8 @@
 @layout AdminLayout
 
 @if (_labelData is not null)
-{ <MudGrid Spacing="6">
+{ 
+    <MudGrid Spacing="6">
         <MudItem xs="12">
             <MudText Typo="Typo.h3">
                 @_labelData.Name.ToUpper()
@@ -22,11 +23,11 @@
                                       RequiredError="Name is required!" />
 
 
-                        <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-4" OnClick="ChangeNameAsync" Disabled="@(!_success)">Update name</MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-4" OnClick="UpdateNameAsync" Disabled="@(!_success)">Update name</MudButton>
                     </MudForm>
                 </MudItem>
             </MudGrid>
-            <MudDivider Class="my-3" />
+            @* <MudDivider Class="my-3" /> *@
         </MudItem>
 
         <MudItem xs="12">

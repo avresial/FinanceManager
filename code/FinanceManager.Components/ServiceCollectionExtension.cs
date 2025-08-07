@@ -21,6 +21,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<ILiabilitiesService, LiabilitiesService>()
                 .AddScoped<NewVisitorsService>()
                 .AddScoped<DuplicateEntryResolverService>()
+                .AddScoped<FinancialLabelHttpContext>()
 
                 ;
         return services;

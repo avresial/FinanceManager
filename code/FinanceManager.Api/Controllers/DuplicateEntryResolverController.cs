@@ -18,6 +18,31 @@ public class DuplicateEntryResolverController : ControllerBase
         _duplicateEntryRepository = duplicateEntryRepository;
     }
 
+    [HttpGet("GetDuplicatesCount")]
+    public async Task<IActionResult> GetDuplicatesCount([FromQuery] int accountId)
+    {
+        try
+        {
+            return Ok(await _duplicateEntryRepository.GetDuplicatesCount(accountId));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
+    [HttpGet("GetDuplicates")]
+    public async Task<IActionResult> GetDuplicates([FromQuery] int accountId, [FromQuery] int index, [FromQuery] int count)
+    {
+        try
+        {
+            return Ok(await _duplicateEntryRepository.GetDuplicates(accountId, index, count));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
     [HttpPost("Scan")]
     public async Task<IActionResult> Scan([FromQuery] int accountId)
     {
@@ -62,29 +87,5 @@ public class DuplicateEntryResolverController : ControllerBase
         }
     }
 
-    [HttpGet("GetDuplicatesCount")]
-    public async Task<IActionResult> GetDuplicatesCount([FromQuery] int accountId)
-    {
-        try
-        {
-            return Ok(await _duplicateEntryRepository.GetDuplicatesCount(accountId));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { error = ex.Message });
-        }
-    }
 
-    [HttpGet("GetDuplicates")]
-    public async Task<IActionResult> GetDuplicates([FromQuery] int accountId, [FromQuery] int index, [FromQuery] int count)
-    {
-        try
-        {
-            return Ok(await _duplicateEntryRepository.GetDuplicates(accountId, index, count));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { error = ex.Message });
-        }
-    }
 }

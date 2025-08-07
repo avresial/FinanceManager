@@ -1,3 +1,4 @@
+using FinanceManager.Components.HttpContexts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -16,6 +17,8 @@ public partial class EditLabelPage
     private bool _isLoadingPage;
     private bool _success;
 
+    [Inject] public required FinancialLabelHttpContext FinancialLabelHttpContext { get; set; }
+
     [Parameter] public required int LabelId { get; set; }
 
     protected override async Task OnParametersSetAsync()
@@ -24,7 +27,13 @@ public partial class EditLabelPage
 
         try
         {
-            _labelData = new FinancialLabel() { Id = LabelId, Name = $"Test {Random.Shared.Next(0, 10)}" };
+            _labelData = await FinancialLabelHttpContext.Get(LabelId);
+            if (_labelData is null)
+            {
+                _errors.Add("Label not found.");
+                _isLoadingPage = false;
+                return;
+            }
             _nameField = _labelData.Name;
         }
         catch (Exception ex)
@@ -34,7 +43,7 @@ public partial class EditLabelPage
 
         _isLoadingPage = false;
     }
-    private async Task ChangeNameAsync()
+    private async Task UpdateNameAsync()
     {
         if (_labelData is null) return;
         if (_nameField is null) return;
@@ -42,7 +51,7 @@ public partial class EditLabelPage
         await _nameForm.Validate();
         if (_nameForm.IsValid)
         {
-            var result = false; // LabelService.ChangeLabelName(_labelData.Id, _nameField.Value);
+            var result = await FinancialLabelHttpContext.UpdateName(_labelData.Id, _nameField);
             if (!result)
             {
                 _errors.Insert(0, "Failed to change name.");
@@ -63,7 +72,5 @@ public partial class EditLabelPage
             yield return "Name is required!";
             yield break;
         }
-
     }
-
 }
