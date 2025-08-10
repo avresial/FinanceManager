@@ -211,19 +211,24 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
     }
 
     [HttpPut("UpdateEntry")]
-    public async Task<IActionResult> UpdateEntry(UpdateBankAccountEntry entry)
+    public async Task<IActionResult> UpdateEntry(UpdateBankAccountEntry updateEntry)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
 
-        var account = await _accountRepository.Get(entry.AccountId);
+        var account = await _accountRepository.Get(updateEntry.AccountId);
         if (account == null || account.UserId != userId) return BadRequest();
 
-        var newEntry = new BankAccountEntry(entry.AccountId, entry.EntryId, entry.PostingDate, entry.Value, entry.ValueChange)
+        var newEntry = new BankAccountEntry(updateEntry.AccountId, updateEntry.EntryId, updateEntry.PostingDate, updateEntry.Value, updateEntry.ValueChange)
         {
-            Description = entry.Description,
-            ExpenseType = entry.ExpenseType,
+            Description = updateEntry.Description,
+            ExpenseType = updateEntry.ExpenseType,
         };
+
+        if (updateEntry.Labels is null)
+            newEntry.Labels = new List<FinancialLabel>();
+        else
+            newEntry.Labels = updateEntry.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id }).ToList();
 
         return Ok(await _entryRepository.Update(newEntry));
     }

@@ -103,6 +103,11 @@ public class BankAccountService(HttpClient httpClient)
 
     public async Task<bool> UpdateEntryAsync(BankAccountEntry entry)
     {
+        var labels = entry.Labels is null || !entry.Labels.Any() ? [] : entry.Labels.Select(x => new UpdateFiancialLabel(x.Id, x.Name)).ToList();
+
+        UpdateBankAccountEntry bankAccountEntry = new(entry.AccountId, entry.EntryId, entry.PostingDate, entry.Value,
+            entry.ValueChange, entry.Description, entry.ExpenseType, labels);
+
         var response = await _httpClient.PutAsJsonAsync($"{_httpClient.BaseAddress}api/BankAccount/UpdateEntry", entry);
         return response.IsSuccessStatusCode;
     }

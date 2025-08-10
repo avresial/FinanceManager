@@ -98,8 +98,19 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
 
     public async Task<bool> Update(BankAccountEntry entry)
     {
-        var existingEntry = await _dbContext.BankEntries.FirstOrDefaultAsync(e => e.AccountId == entry.AccountId && e.EntryId == entry.EntryId);
+        var existingEntry = await _dbContext.BankEntries.Include(x => x.Labels).FirstOrDefaultAsync(e => e.AccountId == entry.AccountId && e.EntryId == entry.EntryId);
         if (existingEntry is null) return false;
+
+        List<FinancialLabel> newLabels = [];
+        foreach (var label in entry.Labels)
+        {
+            var existingLabel = await _dbContext.FinancialLabels.FirstOrDefaultAsync(x => x.Id == label.Id);
+            if (existingLabel is null) continue;
+
+            newLabels.Add(existingLabel);
+        }
+
+        entry.Labels = newLabels;
 
         existingEntry.Update(entry);
         await _dbContext.SaveChangesAsync();

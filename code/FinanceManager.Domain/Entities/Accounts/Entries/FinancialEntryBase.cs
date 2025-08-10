@@ -32,5 +32,6 @@ public class FinancialEntryBase
 
         ValueChange = financialEntryBase.ValueChange;
         AccountId = financialEntryBase.AccountId;
+        Labels = financialEntryBase.Labels ?? [];
     }
 }
