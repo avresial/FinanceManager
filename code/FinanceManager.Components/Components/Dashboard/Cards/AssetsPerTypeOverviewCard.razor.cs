@@ -60,7 +60,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             StateHasChanged();
         }
 
-        private async Task<List<PieChartModel>> GetData()
+        private async Task<List<NameValueResult>> GetData()
         {
             _totalAssets = 0;
             var user = await LoginService.GetLoggedUser();
@@ -68,7 +68,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             if (StartDateTime == new DateTime()) return [];
             if (user is null) return [];
 
-            List<PieChartModel> chartData = [];
+            List<NameValueResult> chartData = [];
 
             if (user is not null) chartData = await MoneyFlowService.GetEndAssetsPerType(user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
             if (chartData.Count != 0) _totalAssets = Math.Round(chartData.Sum(x => x.Value), 2);

@@ -61,6 +61,7 @@
     private ExpenseType ExpenseType { get; set; } = FinanceManager.Domain.Enums.ExpenseType.Other;
     private string? Description { get; set; } = string.Empty;
     private decimal? BalanceChange { get; set; } = 0;
+    private List<FinancialLabel> _labels { get; set; } = [];
 
     [Parameter] public Func<Task>? ActionCompleted { get; set; }
 
@@ -83,6 +84,7 @@
         ExpenseType = BankAccountEntry.ExpenseType;
         Description = BankAccountEntry.Description;
         BalanceChange = BankAccountEntry.ValueChange;
+        _labels = BankAccountEntry.Labels?.ToList() ?? [];
     }
 
     public async Task Update()
@@ -99,7 +101,8 @@
         BankAccountEntry bankAccountEntry = new(BankAccountEntry.AccountId, BankAccountEntry.EntryId, date, -1, BalanceChange.Value)
         {
             Description = this.Description is null ? string.Empty : this.Description,
-            ExpenseType = ExpenseType
+            ExpenseType = ExpenseType,
+            Labels = _labels
         };
 
         try

@@ -141,8 +141,13 @@ public class BankAccountControllerTests
     public async Task AddEntry_ReturnsOkResult_WithNewEntry()
     {
         // Arrange
-        var addEntry = new AddBankAccountEntry(new BankAccountEntry(1, 1, DateTime.Now, 100, 0));
-        _mockBankAccountEntryRepository.Setup(repo => repo.Add(addEntry.entry)).ReturnsAsync(true);
+        var addEntry = new AddBankAccountEntry(1, 1, DateTime.Now, 100, 0, "", Domain.Enums.ExpenseType.Entertainment);
+        BankAccountEntry bankAccountEntry = new(addEntry.AccountId, addEntry.EntryId, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
+        {
+            Description = addEntry.Description,
+            ExpenseType = addEntry.ExpenseType
+        };
+        _mockBankAccountEntryRepository.Setup(repo => repo.Add(bankAccountEntry)).ReturnsAsync(true);
 
         // Act
         var result = await _controller.AddEntry(addEntry);

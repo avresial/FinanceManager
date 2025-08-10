@@ -81,7 +81,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
                 ValueChange = x.ValueChange,
                 ExpenseType = x.ExpenseType,
                 Description = x.Description,
-                Labels = x.Labels
+                Labels = x.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id }).ToList()
             })
         };
         return await Task.FromResult(Ok(bankAccountDto));
@@ -157,7 +157,11 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
 
         try
         {
-            return Ok(await _entryRepository.Add(addEntry.entry));
+            return Ok(await _entryRepository.Add(new BankAccountEntry(addEntry.AccountId, addEntry.EntryId, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
+            {
+                Description = addEntry.Description,
+                ExpenseType = addEntry.ExpenseType,
+            }));
         }
         catch (Exception ex)
         {
@@ -207,7 +211,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
     }
 
     [HttpPut("UpdateEntry")]
-    public async Task<IActionResult> UpdateEntry(BankAccountEntry entry)
+    public async Task<IActionResult> UpdateEntry(UpdateBankAccountEntry entry)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
@@ -215,6 +219,12 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var account = await _accountRepository.Get(entry.AccountId);
         if (account == null || account.UserId != userId) return BadRequest();
 
-        return Ok(await _entryRepository.Update(entry));
+        var newEntry = new BankAccountEntry(entry.AccountId, entry.EntryId, entry.PostingDate, entry.Value, entry.ValueChange)
+        {
+            Description = entry.Description,
+            ExpenseType = entry.ExpenseType,
+        };
+
+        return Ok(await _entryRepository.Update(newEntry));
     }
 }

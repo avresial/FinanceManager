@@ -198,4 +198,19 @@ public class InMemoryStockEntryRepository(AppDbContext context) : IStockAccountE
 
         await _dbContext.SaveChangesAsync();
     }
+    public async Task<bool> AddLabel(int entryId, int labelId)
+    {
+        var entry = await _dbContext.StockEntries.FirstOrDefaultAsync(e => e.EntryId == entryId);
+        var label = await _dbContext.FinancialLabels.FirstOrDefaultAsync(l => l.Id == labelId);
+
+        if (entry is null || label is null) return false;
+
+        //if (entry.LabelBankEntries.Any(l => l.FinancialLabelId == labelId)) return false;
+
+
+        await _dbContext.SaveChangesAsync();
+
+        return true;
+
+    }
 }

@@ -240,6 +240,15 @@ namespace FinanceManager.Infrastructure.Repositories
             if (bankAccountEntry is StockAccountEntry investmentEntry)
                 await AddStockAccountEntry(id, investmentEntry.Ticker, investmentEntry.InvestmentType, investmentEntry.ValueChange, investmentEntry.PostingDate);
         }
+        public Task<bool> AddLabel<T>(T accountEntry, int labelId) where T : FinancialEntryBase
+        {
+            if (accountEntry is BankAccountEntry bankEntry)
+                return _bankAccountEntryRepository.AddLabel(bankEntry.EntryId, labelId);
+            //if (accountEntry is StockAccountEntry investmentEntry)
+            //    return _stockEntryRepository.AddLabel(investmentEntry.EntryId, labelId);
+
+            return Task.FromResult(false);
+        }
         public async Task UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase
         {
             if (accountEntry is BankAccountEntry bankEntry)

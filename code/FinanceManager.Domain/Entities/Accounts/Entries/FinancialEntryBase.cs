@@ -11,7 +11,7 @@ public class FinancialEntryBase
     public decimal Value { get; set; }
     public decimal ValueChange { get; set; }
 
-    public List<FinancialLabel> Labels { get; set; } = [];
+    public ICollection<FinancialLabel> Labels { get; set; }
 
     public FinancialEntryBase(int accountId, int entryId, DateTime postingDate, decimal value, decimal valueChange)
     {
@@ -32,6 +32,5 @@ public class FinancialEntryBase
 
         ValueChange = financialEntryBase.ValueChange;
         AccountId = financialEntryBase.AccountId;
-        Labels = financialEntryBase.Labels;
     }
 }

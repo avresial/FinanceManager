@@ -65,5 +65,11 @@ namespace FinanceManager.Api.Controllers
         {
             return Ok(await _moneyFlowService.GetSpending(userId, currency, start, end, step is null ? null : new(step.Value)));
         }
+
+        [HttpGet("GetLabelsValue")]
+        public async Task<IActionResult> GetLabelsValue([FromQuery] int userId, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long? step = null)
+        {
+            return Ok(await _moneyFlowService.GetLabelsValue(userId, start, end, step is null ? null : new(step.Value)));
+        }
     }
 }

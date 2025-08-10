@@ -14,9 +14,9 @@ public class BankAccountEntryConfiguration : IEntityTypeConfiguration<BankAccoun
             .ValueGeneratedOnAdd();
 
         builder.HasMany(e => e.Labels)
-            .WithOne()
-            .HasForeignKey(l => l.Id)
-            .OnDelete(DeleteBehavior.SetNull);
+            .WithMany(e => e.Entries);
+        //.HasForeignKey(l => l.Id)
+        //.OnDelete(DeleteBehavior.SetNull);
 
         builder.Property(e => e.Value)
             .HasPrecision(18, 2);

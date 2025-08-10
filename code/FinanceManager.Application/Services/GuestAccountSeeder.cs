@@ -2,11 +2,12 @@
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Providers;
+using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 
 namespace FinanceManager.Application.Services;
 
-public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, AccountIdProvider accountIdProvider)
+public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, AccountIdProvider accountIdProvider, IFinancialLabelsRepository financialLabelsRepository)
 {
     private readonly int _guestUserId = 1;
     private readonly Random _random = new Random();
@@ -44,20 +45,22 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
 
     private async Task AddBankAccount(DateTime start, DateTime end)
     {
+        var labels = await financialLabelsRepository.GetLabels();
         BankAccount bankAccount = await GetNewBankAccount("Cash 1", AccountLabel.Cash);
         for (DateTime date = start; date <= end; date = date.AddDays(1))
-            bankAccount.AddEntry(GetNewBankAccountEntry(date, -90, 100));
+            bankAccount.AddEntry(GetNewBankAccountEntry(date, -90, 100, labels));
 
         await _accountRepository.AddAccount(bankAccount);
     }
 
     private async Task AddLoanAccount(DateTime start, DateTime end)
     {
+        var labels = await financialLabelsRepository.GetLabels();
         BankAccount loanAccount = await GetNewBankAccount("Loan 1", AccountLabel.Loan);
         var days = (int)((end - start).TotalDays);
-        loanAccount.AddEntry(GetNewBankAccountEntry(start, days * -100 - 1000, days * -100));
+        loanAccount.AddEntry(GetNewBankAccountEntry(start, days * -100 - 1000, days * -100, labels));
         for (DateTime date = start.AddDays(1); date <= end; date = date.AddDays(1))
-            loanAccount.AddEntry(GetNewBankAccountEntry(date, 10, 100, ExpenseType.DebtRepayment));
+            loanAccount.AddEntry(GetNewBankAccountEntry(date, 10, 100, labels, ExpenseType.DebtRepayment));
         await _accountRepository.AddAccount(loanAccount);
     }
     public async Task<StockAccount> GetNewStockAccount(string accountName, AccountLabel accountType)
@@ -76,9 +79,10 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
         BankAccount bankAccount = new BankAccount(_guestUserId, accountId is null ? 0 : accountId.Value, accountName, accountType);
         return bankAccount;
     }
-    public AddBankEntryDto GetNewBankAccountEntry(DateTime date, int minValue, int maxValue, ExpenseType expenseType = ExpenseType.Other, string description = "")
+    public AddBankEntryDto GetNewBankAccountEntry(DateTime date, int minValue, int maxValue, List<FinancialLabel> labels,
+        ExpenseType expenseType = ExpenseType.Other, string description = "")
     {
-        return new AddBankEntryDto(date, _random.Next(minValue, maxValue), expenseType, description, [new() { Name = "Sallary" }]);
+        return new AddBankEntryDto(date, _random.Next(minValue, maxValue), expenseType, description, labels);
     }
 
 

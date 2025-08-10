@@ -12,15 +12,15 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
     private readonly IFinancialAccountService _financialAccountService = financialAccountService;
     private readonly StockPriceHttpContext _stockPriceHttpContext = stockPriceHttpContext;
 
-    public async Task<List<PieChartModel>> GetEndAssetsPerAccount(int userId, string currency, DateTime start, DateTime end)
+    public async Task<List<NameValueResult>> GetEndAssetsPerAccount(int userId, string currency, DateTime start, DateTime end)
     {
-        List<PieChartModel> result = [];
+        List<NameValueResult> result = [];
         var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
         foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
             if (account is null || account.Entries is null) return result;
 
-            result.Add(new PieChartModel()
+            result.Add(new NameValueResult()
             {
                 Name = account.Name,
                 Value = account.Entries.First().Value
@@ -40,7 +40,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
                 var existingResult = result.FirstOrDefault(x => x.Name == account.Name);
                 if (existingResult is null)
                 {
-                    result.Add(new PieChartModel()
+                    result.Add(new NameValueResult()
                     {
                         Name = account.Name,
                         Value = latestEntry.Value * stockPrice.PricePerUnit
@@ -55,9 +55,9 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
 
         return result;
     }
-    public async Task<List<PieChartModel>> GetEndAssetsPerType(int userId, string currency, DateTime start, DateTime end)
+    public async Task<List<NameValueResult>> GetEndAssetsPerType(int userId, string currency, DateTime start, DateTime end)
     {
-        List<PieChartModel> result = [];
+        List<NameValueResult> result = [];
         var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
         foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
@@ -65,7 +65,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
             var existingResult = result.FirstOrDefault(x => x.Name == account.AccountType.ToString());
             if (existingResult is null)
             {
-                result.Add(new PieChartModel()
+                result.Add(new NameValueResult()
                 {
                     Name = account.AccountType.ToString(),
                     Value = account.Entries.First().Value
@@ -91,7 +91,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
                 var existingResult = result.FirstOrDefault(x => x.Name == latestEntry.InvestmentType.ToString());
                 if (existingResult is null)
                 {
-                    result.Add(new PieChartModel()
+                    result.Add(new NameValueResult()
                     {
                         Name = latestEntry.InvestmentType.ToString(),
                         Value = latestEntry.Value * stockPrice.PricePerUnit
@@ -343,6 +343,11 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
     }
 
     public Task<List<TimeSeriesModel>> GetBalance(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<List<NameValueResult>> GetLabelsValue(int userId, DateTime start, DateTime end, TimeSpan? step = null)
     {
         throw new NotImplementedException();
     }

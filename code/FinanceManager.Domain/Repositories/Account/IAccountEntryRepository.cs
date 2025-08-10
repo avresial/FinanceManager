@@ -18,6 +18,7 @@ public interface IAccountEntryRepository<T>
     Task<int?> GetCount(int accountId);
 
     Task<bool> Add(T entry);
+    Task<bool> AddLabel(int entryId, int labelId);
     Task<bool> Update(T entry);
     Task<bool> Delete(int accountId, int entryId);
     Task<bool> Delete(int accountId);

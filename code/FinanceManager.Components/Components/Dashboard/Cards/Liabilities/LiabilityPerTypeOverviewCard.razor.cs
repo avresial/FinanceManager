@@ -46,7 +46,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 
         protected override async Task OnParametersSetAsync()
         {
-            List<PieChartModel> data = await GetData();
+            List<NameValueResult> data = await GetData();
 
             _data = data.Select(x => (double)x.Value).ToArray();
             _labels = data.Select(x => x.Name).ToArray();
@@ -54,14 +54,14 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
             StateHasChanged();
         }
 
-        private async Task<List<PieChartModel>> GetData()
+        private async Task<List<NameValueResult>> GetData()
         {
             if (StartDateTime == new DateTime())
                 return [];
 
             var user = await LoginService.GetLoggedUser();
             if (user is null) return [];
-            List<PieChartModel> result = [];
+            List<NameValueResult> result = [];
             try
             {
                 result = await LiabilitiesService.GetEndLiabilitiesPerType(user.UserId, StartDateTime, EndDateTime);

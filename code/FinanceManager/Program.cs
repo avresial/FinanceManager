@@ -18,6 +18,7 @@ builder.Services.AddMudServices();
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddBlazoredSessionStorage();
 
+
 #if (DEBUG)
 {
     builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:5001/") });

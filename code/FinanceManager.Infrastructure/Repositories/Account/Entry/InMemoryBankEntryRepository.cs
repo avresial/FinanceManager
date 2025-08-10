@@ -19,12 +19,12 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
         BankAccountEntry newBankAccountEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange)
         {
             Description = entry.Description,
-            ExpenseType = entry.ExpenseType
+            ExpenseType = entry.ExpenseType,
+            Labels = entry.Labels,
         };
 
         _dbContext.BankEntries.Add(newBankAccountEntry);
         await _dbContext.SaveChangesAsync();
-
         await RecalculateValues(newBankAccountEntry.AccountId, newBankAccountEntry.EntryId);
         return true;
     }
@@ -48,7 +48,7 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
     }
 
     public async Task<IEnumerable<BankAccountEntry>> Get(int accountId, DateTime startDate, DateTime endDate) => await _dbContext.BankEntries
-            .Where(x => x.AccountId == accountId && x.PostingDate >= startDate && x.PostingDate <= endDate)
+            .Where(x => x.AccountId == accountId && x.PostingDate >= startDate && x.PostingDate <= endDate).Include(x => x.Labels)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId).ToListAsync();
     public async Task<BankAccountEntry?> Get(int accountId, int entryId) => await _dbContext.BankEntries
             .FirstOrDefaultAsync(x => x.AccountId == accountId && x.EntryId == entryId);
@@ -150,5 +150,26 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
             .DefaultIfEmpty(0)
             .Max();
 
+    public async Task<bool> AddLabel(int entryId, int labelId)
+    {
+        var entry = await _dbContext.BankEntries.FirstOrDefaultAsync(e => e.EntryId == entryId);
+        var label = await _dbContext.FinancialLabels.FirstOrDefaultAsync(l => l.Id == labelId);
 
+        if (entry is null || label is null) return false;
+
+        //if (entry.LabelBankEntries.Any(l => l.FinancialLabelId == labelId)) return false;
+
+        //_dbContext.LabelBankEntries.Add(new FinancialLabelBankAccountEntry
+        //{
+        //    FinancialLabelId = labelId,
+        //    FinancialLabel = label,
+        //    BankAccountEntryId = entryId,
+        //    BankAccountEntry = entry
+        //});
+
+        await _dbContext.SaveChangesAsync();
+
+        return true;
+
+    }
 }

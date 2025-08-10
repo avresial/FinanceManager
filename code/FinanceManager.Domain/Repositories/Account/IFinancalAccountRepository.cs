@@ -21,6 +21,7 @@ namespace FinanceManager.Domain.Repositories.Account
 
         public Task<T?> GetNextYounger<T>(int accountId, DateTime date) where T : FinancialEntryBase;
         public Task AddEntry<T>(T accountEntry, int id) where T : FinancialEntryBase;
+        Task<bool> AddLabel<T>(T accountEntry, int labelId) where T : FinancialEntryBase;
         public Task UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase;
         public Task RemoveEntry(int accountEntryId, int id);
     }

@@ -15,7 +15,7 @@ public partial class AssetsPerAccountOverviewCard
     private string _currency = "";
     private decimal _totalAssets = 0;
     private UserSession? _user;
-    private ApexChart<PieChartModel>? _chart;
+    private ApexChart<NameValueResult>? _chart;
 
     [Parameter] public bool DisplayAsChart { get; set; } = true;
     [Parameter] public string Height { get; set; } = "300px";
@@ -27,7 +27,7 @@ public partial class AssetsPerAccountOverviewCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    private ApexChartOptions<PieChartModel> Options { get; set; } = new()
+    private ApexChartOptions<NameValueResult> Options { get; set; } = new()
     {
         Chart = new Chart
         {
@@ -71,7 +71,7 @@ public partial class AssetsPerAccountOverviewCard
         Colors = ColorsProvider.GetColors()
     };
 
-    public List<PieChartModel> Data { get; set; } = new List<PieChartModel>();
+    public List<NameValueResult> Data { get; set; } = new List<NameValueResult>();
 
 
     protected override async Task OnInitializedAsync()
@@ -110,7 +110,7 @@ public partial class AssetsPerAccountOverviewCard
 
     }
 
-    async Task<List<PieChartModel>> GetData()
+    async Task<List<NameValueResult>> GetData()
     {
         if (StartDateTime == new DateTime()) return [];
 

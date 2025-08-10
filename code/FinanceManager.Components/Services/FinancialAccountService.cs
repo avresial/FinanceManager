@@ -50,7 +50,8 @@ public class FinancialAccountService : IFinancialAccountService
             {
                 if (item is BankAccountEntry bankEntry)
                 {
-                    await _bankAccountService.AddEntryAsync(new AddBankAccountEntry(bankEntry));
+                    await _bankAccountService.AddEntryAsync(new AddBankAccountEntry(bankEntry.AccountId, bankEntry.EntryId, bankEntry.PostingDate,
+                        bankEntry.Value, bankEntry.ValueChange, bankEntry.Description, bankEntry.ExpenseType));
                 }
             }
         }
@@ -70,8 +71,9 @@ public class FinancialAccountService : IFinancialAccountService
     {
         switch (accountEntry)
         {
-            case BankAccountEntry bankAccountEntry:
-                await _bankAccountService.AddEntryAsync(new AddBankAccountEntry(bankAccountEntry));
+            case BankAccountEntry bankEntry:
+                await _bankAccountService.AddEntryAsync(new AddBankAccountEntry(bankEntry.AccountId, bankEntry.EntryId, bankEntry.PostingDate, bankEntry.Value,
+                    bankEntry.ValueChange, bankEntry.Description, bankEntry.ExpenseType));
                 break;
 
             case StockAccountEntry stockAccountEntry:
