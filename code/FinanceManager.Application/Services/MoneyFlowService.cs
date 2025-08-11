@@ -397,32 +397,25 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         var labels = await _financialLabelsRepository.GetLabels();
-        List<(int LabelId, decimal Value, string Name)> result = labels.Select(x => (x.Id, (decimal)0.0, x.Name)).ToList();
-
+        Dictionary<int, NameValueResult> result = labels.ToDictionary(x => x.Id, x => new NameValueResult() { Name = x.Name, Value = 0 });
         foreach (BankAccount account in await _financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) continue;
             if (account.Entries is null || !account.Entries.Any()) continue;
 
-            //foreach (var entry in account.Entries.Where(x => x.Labels is not null && x.Labels.Any()))
-            //{
-            //    foreach (var label in entry.Labels)
-            //    {
-            //        var existingResult = result.FirstOrDefault(x => x.LabelId == label.Id);
-            //        if (existingResult == default) continue;
-            //        existingResult.Value += entry.ValueChange;
-            //    }
-            //}
+            foreach (var entry in account.Entries.Where(x => x.Labels is not null && x.Labels.Any()))
+            {
+                foreach (var label in entry.Labels)
+                {
+                    if (!result.ContainsKey(label.Id)) continue;
+                    result[label.Id].Value += entry.ValueChange;
+                }
+            }
 
         }
 
-        var InvestmentAccounts = await _financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
-        foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
-        {
-            if (account is null || account.Entries is null) continue;
+        // TODO: Add labels for stock accounts
 
-        }
-
-        return result.Where(x => x.Value != 0).Select(x => new NameValueResult() { Name = x.Name, Value = x.Value }).ToList();
+        return result.Values.ToList();
     }
 }

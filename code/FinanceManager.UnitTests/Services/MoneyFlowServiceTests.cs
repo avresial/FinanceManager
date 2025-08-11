@@ -52,7 +52,7 @@ public class MoneyFlowServiceTests
         _stockRepository.Setup(x => x.Get("testStock2", It.IsAny<DateTime>()))
                         .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "AnyTicker", PricePerUnit = 4 });
 
-        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _stockRepository.Object, _currencyExchangeService.Object);
+        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _stockRepository.Object, _currencyExchangeService.Object, null);
     }
 
     [Fact]

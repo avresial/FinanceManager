@@ -1,52 +1,13 @@
-﻿@using FinanceManager.Domain.Entities.Accounts
-@using System.ComponentModel.DataAnnotations
-@using FinanceManager.Domain.Entities.Accounts.Entries
-@using FinanceManager.Domain.Enums
-@using FinanceManager.Domain.Repositories
-@using FinanceManager.Components.CustomValidationAttributes
-@using FinanceManager.Domain.Repositories.Account
+using FinanceManager.Components.Services;
+using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Enums;
+using Microsoft.AspNetCore.Components;
+using MudBlazor;
 
-@inject ISettingsService settingsService
-
-@if (BankAccountEntry is not null && BankAccount is not null)
+namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAccountComponents;
+public partial class UpdateBankEntry
 {
-    <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
-        <MudContainer MaxWidth="MaxWidth.Medium">
-            <MudGrid Justify="Justify.Center">
-                <MudItem xs="12" sm="12" md="12">
-                    <MudText Typo="Typo.h4">Update</MudText>
-                    <MudText Typo="Typo.subtitle1">@BankAccount.Name</MudText>
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudDatePicker Label="Posting date" @bind-Date="PostingDate" Validation="@(new NotInFutureAttribute())" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudTimePicker Label="Time" @bind-Time="Time" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudSelect @bind-Value="ExpenseType" Label="Expense type">
-                        @foreach (var type in Enum.GetValues(typeof(ExpenseType)).Cast<ExpenseType>())
-                        {
-                            <MudSelectItem Value="type">@type</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField @bind-Value="Description" T="string" Label="Description" Variant="Variant.Text" MaxLines="5" AutoGrow="true" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel Class="mx-2">Cancel</MudButton>
-                </MudItem>
-            </MudGrid>
-        </MudContainer>
-    </MudForm>
-}
-
-@code {
     private int? loadedEntryId = null;
     private string _currency = string.Empty;
     private bool success;

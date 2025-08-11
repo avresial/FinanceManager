@@ -31,6 +31,7 @@ public class FinancialLabelController : ControllerBase
             return StatusCode(500, new { error = ex.Message });
         }
     }
+
     [HttpGet("get-count")]
     public async Task<IActionResult> GetCount()
     {
