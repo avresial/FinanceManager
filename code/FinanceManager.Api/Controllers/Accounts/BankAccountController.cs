@@ -79,7 +79,6 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
                 PostingDate = x.PostingDate,
                 Value = x.Value,
                 ValueChange = x.ValueChange,
-                ExpenseType = x.ExpenseType,
                 Description = x.Description,
                 Labels = x.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id }).ToList()
             })
@@ -160,7 +159,6 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
             return Ok(await _entryRepository.Add(new BankAccountEntry(addEntry.AccountId, addEntry.EntryId, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
             {
                 Description = addEntry.Description,
-                ExpenseType = addEntry.ExpenseType,
             }));
         }
         catch (Exception ex)
@@ -219,10 +217,10 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var account = await _accountRepository.Get(updateEntry.AccountId);
         if (account == null || account.UserId != userId) return BadRequest();
 
-        var newEntry = new BankAccountEntry(updateEntry.AccountId, updateEntry.EntryId, updateEntry.PostingDate, updateEntry.Value, updateEntry.ValueChange)
+        var newEntry = new BankAccountEntry(updateEntry.AccountId, updateEntry.EntryId, updateEntry.PostingDate, updateEntry.Value,
+            updateEntry.ValueChange)
         {
             Description = updateEntry.Description,
-            ExpenseType = updateEntry.ExpenseType,
         };
 
         if (updateEntry.Labels is null)

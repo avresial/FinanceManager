@@ -51,7 +51,7 @@ public class FinancialAccountService : IFinancialAccountService
                 if (item is BankAccountEntry bankEntry)
                 {
                     await _bankAccountService.AddEntryAsync(new AddBankAccountEntry(bankEntry.AccountId, bankEntry.EntryId, bankEntry.PostingDate,
-                        bankEntry.Value, bankEntry.ValueChange, bankEntry.Description, bankEntry.ExpenseType));
+                        bankEntry.Value, bankEntry.ValueChange, bankEntry.Description));
                 }
             }
         }
@@ -73,7 +73,7 @@ public class FinancialAccountService : IFinancialAccountService
         {
             case BankAccountEntry bankEntry:
                 await _bankAccountService.AddEntryAsync(new AddBankAccountEntry(bankEntry.AccountId, bankEntry.EntryId, bankEntry.PostingDate, bankEntry.Value,
-                    bankEntry.ValueChange, bankEntry.Description, bankEntry.ExpenseType));
+                    bankEntry.ValueChange, bankEntry.Description));
                 break;
 
             case StockAccountEntry stockAccountEntry:

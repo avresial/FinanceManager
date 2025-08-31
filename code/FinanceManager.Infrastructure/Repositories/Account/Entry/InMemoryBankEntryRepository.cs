@@ -19,7 +19,6 @@ public class InMemoryBankEntryRepository : IAccountEntryRepository<BankAccountEn
         BankAccountEntry newBankAccountEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange)
         {
             Description = entry.Description,
-            ExpenseType = entry.ExpenseType,
             Labels = entry.Labels,
         };
 

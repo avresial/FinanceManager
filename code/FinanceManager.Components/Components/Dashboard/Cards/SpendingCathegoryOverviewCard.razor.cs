@@ -1,6 +1,5 @@
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -47,17 +46,17 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                 if (account.Entries is null || !account.Entries.Any()) continue;
                 foreach (var entry in account.Entries.Where(x => x.ValueChange < 0))
                 {
-                    var key = entry.ExpenseType.ToString();
-                    var entryElement = Data.FirstOrDefault(x => x.ExpenseType == entry.ExpenseType);
+                    //var key = entry.ExpenseType.ToString();
+                    //var entryElement = Data.FirstOrDefault(x => x.ExpenseType == entry.ExpenseType);
 
-                    if (entryElement is not null)
-                    {
-                        entryElement.Value += -entry.ValueChange;
-                    }
-                    else
-                    {
-                        Data.Add(new SpendingCathegoryOverviewEntry() { ExpenseType = entry.ExpenseType, Value = -entry.ValueChange });
-                    }
+                    //if (entryElement is not null)
+                    //{
+                    //    entryElement.Value += -entry.ValueChange;
+                    //}
+                    //else
+                    //{
+                    //    Data.Add(new SpendingCathegoryOverviewEntry() { Name = "Unknown", Value = -entry.ValueChange });
+                    //}
                 }
             }
 
@@ -66,7 +65,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
         private class SpendingCathegoryOverviewEntry
         {
-            public ExpenseType ExpenseType { get; set; }
+            public string Name { get; set; }
             public decimal Value { get; set; }
         }
 

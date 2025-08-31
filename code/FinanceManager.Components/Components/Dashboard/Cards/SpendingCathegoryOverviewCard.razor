@@ -3,13 +3,17 @@
         <MudText Typo=Typo.h5>Spending</MudText>
     </MudPaper>
     <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
+       <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Class="m-2"> 
+           In developement
+       </MudAlert>
+        
         @if (Data.Any())
         {
             <ul class="list-group list-group-flush">
                 @foreach (var entry in Data)
                 {
                     <li class="list-group-item">
-                        @entry.ExpenseType - @entry.Value @currency
+                        @entry.Name - @entry.Value @currency
                     </li>
                 }
 

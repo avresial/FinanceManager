@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
@@ -396,7 +397,11 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
     public async Task<List<NameValueResult>> GetLabelsValue(int userId, DateTime start, DateTime end, TimeSpan? step = null)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
-        var labels = await _financialLabelsRepository.GetLabels();
+
+        var labels = new List<FinancialLabel>();
+        await foreach (var label in financialLabelsRepository.GetLabels())
+            labels.Add(label);
+
         Dictionary<int, NameValueResult> result = labels.ToDictionary(x => x.Id, x => new NameValueResult() { Name = x.Name, Value = 0 });
         foreach (BankAccount account in await _financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
         {

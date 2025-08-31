@@ -57,8 +57,7 @@ namespace FinanceManager.Domain.Entities.Accounts
             var newEntry = new BankAccountEntry(AccountId, GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange)
             {
                 Description = entry.Description,
-                ExpenseType = entry.ExpenseType,
-                Labels = entry.labels
+                Labels = entry.Labels
             };
 
 

@@ -45,7 +45,11 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
 
     private async Task AddBankAccount(DateTime start, DateTime end)
     {
-        var labels = await financialLabelsRepository.GetLabels();
+        var labels = new List<FinancialLabel>();
+        await foreach (var label in financialLabelsRepository.GetLabels())
+        {
+            labels.Add(label);
+        }
         BankAccount bankAccount = await GetNewBankAccount("Cash 1", AccountLabel.Cash);
         for (DateTime date = start; date <= end; date = date.AddDays(1))
             bankAccount.AddEntry(GetNewBankAccountEntry(date, -90, 100, labels));
@@ -55,12 +59,15 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
 
     private async Task AddLoanAccount(DateTime start, DateTime end)
     {
-        var labels = await financialLabelsRepository.GetLabels();
+        var labels = new List<FinancialLabel>();
+        await foreach (var label in financialLabelsRepository.GetLabels())
+            labels.Add(label);
+
         BankAccount loanAccount = await GetNewBankAccount("Loan 1", AccountLabel.Loan);
         var days = (int)((end - start).TotalDays);
         loanAccount.AddEntry(GetNewBankAccountEntry(start, days * -100 - 1000, days * -100, labels));
         for (DateTime date = start.AddDays(1); date <= end; date = date.AddDays(1))
-            loanAccount.AddEntry(GetNewBankAccountEntry(date, 10, 100, labels, ExpenseType.DebtRepayment));
+            loanAccount.AddEntry(GetNewBankAccountEntry(date, 10, 100, labels));
         await _accountRepository.AddAccount(loanAccount);
     }
     public async Task<StockAccount> GetNewStockAccount(string accountName, AccountLabel accountType)
@@ -80,9 +87,9 @@ public class GuestAccountSeeder(IFinancalAccountRepository accountRepository, Ac
         return bankAccount;
     }
     public AddBankEntryDto GetNewBankAccountEntry(DateTime date, int minValue, int maxValue, List<FinancialLabel> labels,
-        ExpenseType expenseType = ExpenseType.Other, string description = "")
+        string description = "")
     {
-        return new AddBankEntryDto(date, _random.Next(minValue, maxValue), expenseType, description, labels);
+        return new AddBankEntryDto(date, _random.Next(minValue, maxValue), description, labels);
     }
 
 

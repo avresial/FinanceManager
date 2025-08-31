@@ -81,7 +81,7 @@
         await _nameForm.Validate();
         if (_nameForm.IsValid)
         {
-            var result = await FinancialLabelHttpContext.Add(_labelData.Name); 
+            var result = await FinancialLabelHttpContext.Add(new(_labelData.Name)); 
             if (!result)
             {
                 _errors.Insert(0, "Adding label failed.");

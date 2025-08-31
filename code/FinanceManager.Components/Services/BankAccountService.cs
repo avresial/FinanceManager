@@ -37,7 +37,11 @@ public class BankAccountService(HttpClient httpClient)
             result.NextYoungerEntry.PostingDate, result.NextYoungerEntry.Value, result.NextYoungerEntry.ValueChange);
 
 
-        return new BankAccount(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new BankAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange) { ExpenseType = x.ExpenseType, Description = x.Description, Labels = x.Labels }),
+        return new BankAccount(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new BankAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange)
+        {
+            Description = x.Description,
+            Labels = x.Labels
+        }),
             result.AccountLabel, nextOlderEntry, nextYoungerEntry);
     }
 
@@ -106,7 +110,7 @@ public class BankAccountService(HttpClient httpClient)
         var labels = entry.Labels is null || !entry.Labels.Any() ? [] : entry.Labels.Select(x => new UpdateFiancialLabel(x.Id, x.Name)).ToList();
 
         UpdateBankAccountEntry bankAccountEntry = new(entry.AccountId, entry.EntryId, entry.PostingDate, entry.Value,
-            entry.ValueChange, entry.Description, entry.ExpenseType, labels);
+            entry.ValueChange, entry.Description, labels);
 
         var response = await _httpClient.PutAsJsonAsync($"{_httpClient.BaseAddress}api/BankAccount/UpdateEntry", entry);
         return response.IsSuccessStatusCode;

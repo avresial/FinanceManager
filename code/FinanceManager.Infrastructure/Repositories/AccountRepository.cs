@@ -236,7 +236,7 @@ namespace FinanceManager.Infrastructure.Repositories
         public async Task AddEntry<T>(T bankAccountEntry, int id) where T : FinancialEntryBase
         {
             if (bankAccountEntry is BankAccountEntry bankEntry)
-                await AddBankAccountEntry(id, bankEntry.ValueChange, bankEntry.Description, bankEntry.ExpenseType, bankEntry.PostingDate);
+                await AddBankAccountEntry(id, bankEntry.ValueChange, bankEntry.Description, bankEntry.PostingDate);
             if (bankAccountEntry is StockAccountEntry investmentEntry)
                 await AddStockAccountEntry(id, investmentEntry.Ticker, investmentEntry.InvestmentType, investmentEntry.ValueChange, investmentEntry.PostingDate);
         }
@@ -297,23 +297,17 @@ namespace FinanceManager.Infrastructure.Repositories
         private async Task AddBankAccount(int userId, DateTime startDay, decimal startingBalance, string accountName, AccountLabel accountType)
         {
             int accountId = (await GetLastAccountId()) + 1;
-            ExpenseType expenseType = GetRandomType();
-            if (accountType == AccountLabel.Stock)
-                expenseType = ExpenseType.Investment;
 
             await AddAccount(new BankAccount(userId, accountId, accountName, accountType));
-            await AddBankAccountEntry(accountId, startingBalance, $"Lorem ipsum {0}", expenseType, startDay);
+            await AddBankAccountEntry(accountId, startingBalance, $"Lorem ipsum {0}", startDay);
             startDay = startDay.AddMinutes(1);
             int index = 0;
             while (startDay.Date <= DateTime.UtcNow.Date)
             {
                 decimal balanceChange = (decimal)(_random.Next(-150, 200) + Math.Round(_random.NextDouble(), 2));
 
-                expenseType = GetRandomType();
-                if (accountType == AccountLabel.Stock)
-                    expenseType = ExpenseType.Investment;
 
-                await AddBankAccountEntry(accountId, balanceChange, $"Lorem ipsum {index++}", expenseType, startDay);
+                await AddBankAccountEntry(accountId, balanceChange, $"Lorem ipsum {index++}", startDay);
                 startDay = startDay.AddDays(1);
             }
         }
@@ -323,7 +317,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
             await AddAccount(new BankAccount(userId, accountId, accountName, AccountLabel.Loan));
 
-            await AddBankAccountEntry(accountId, startingBalance, $"Lorem ipsum {0}", ExpenseType.DebtRepayment, startDay);
+            await AddBankAccountEntry(accountId, startingBalance, $"Lorem ipsum {0}", startDay);
             startDay = startDay.AddMinutes(1);
             decimal repaidAmount = 0;
 
@@ -335,19 +329,19 @@ namespace FinanceManager.Infrastructure.Repositories
                 if (repaidAmount >= -startingBalance)
                     balanceChange = repaidAmount + startingBalance;
 
-                await AddBankAccountEntry(accountId, balanceChange, $"Lorem ipsum {index++}", ExpenseType.Other, startDay);
+                await AddBankAccountEntry(accountId, balanceChange, $"Lorem ipsum {index++}", startDay);
 
                 startDay = startDay.AddDays(1);
             }
         }
-        private async Task AddBankAccountEntry(int id, decimal balanceChange, string description, ExpenseType expenseType, DateTime? postingDate = null)
+        private async Task AddBankAccountEntry(int id, decimal balanceChange, string description, DateTime? postingDate = null)
         {
             var account = await FindAccount<BankAccount>(id);
             if (account is null) return;
 
             var finalPostingDate = postingDate ?? DateTime.UtcNow;
 
-            account.AddEntry(new AddBankEntryDto(finalPostingDate, balanceChange, expenseType, description, [new() { Name = "Sallary" }]));
+            account.AddEntry(new AddBankEntryDto(finalPostingDate, balanceChange, description, [new() { Name = "Sallary" }]));
         }
         private async Task UpdateBankAccountEntry(int id, BankAccountEntry bankAccountEntry)
         {
@@ -368,14 +362,6 @@ namespace FinanceManager.Infrastructure.Repositories
             if (entryToUpdate is null) return;
 
             entryToUpdate.Update(investmentEntry);
-        }
-        private ExpenseType GetRandomType()
-        {
-            Array values = Enum.GetValues<ExpenseType>();
-            var result = values.GetValue(_random.Next(values.Length));
-            if (result is null)
-                return ExpenseType.Other;
-            return (ExpenseType)result;
         }
 
 
