@@ -1,7 +1,7 @@
 ﻿@page "/AddAccount"
 
 <MudContainer MaxWidth="MaxWidth.Small">
-    <MudForm Spacing="3" @bind-IsValid="@_success" @bind-Errors="@_errors" Class="mt-4">
+    <MudForm Spacing="3" @bind-IsValid="@_success" @bind-Errors="@_errors">
         <MudText Typo="Typo.h4">Add new account</MudText>
         <MudTextField T="string" @bind-Value=_accountName Label="Account name" Required="true" RequiredError="User name is required!"
                       Validation="@(new Func<string, IEnumerable<string>>(AccountNameValidation))" />

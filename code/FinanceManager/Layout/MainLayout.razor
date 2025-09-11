@@ -1,24 +1,44 @@
-﻿@inherits LayoutComponentBase
+﻿@using FinanceManager.Domain.Services
+
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject ILoginService LoginService
 
 <AuthorizeView>
     <NotAuthorized>
         <RedirectToLogin />
     </NotAuthorized>
     <Authorized>
-        <div class="page">
-            <div class="sidebar mud-elevation-25">
+        <MudLayout>
+            <MudDrawer @bind-Open="_drawerOpen" Elevation="0">
                 <NavMenu />
-            </div>
+                <MudSpacer />
 
-            <main>
-                <div class="top-row px-4 auth">
-                    <LoginDisplay />
-                </div>
+                @* <LoginDisplay /> *@
 
-                <article class="px-0" style="padding: 0px !important;">
-                    @Body
-                </article>
-            </main>
-        </div>
+                <MudNavMenu>
+                    <MudNavLink Icon="@Icons.Material.Filled.Settings" href="UserSettings">Settings</MudNavLink>
+                    <MudNavLink Icon="@Icons.Material.Filled.Logout" @onclick=LogOut>Log out</MudNavLink>
+                </MudNavMenu>
+            </MudDrawer>
+            <MudMainContent Class="pt-2">
+                @Body
+            </MudMainContent>
+        </MudLayout>
     </Authorized>
 </AuthorizeView>
+
+@code {
+
+    bool _drawerOpen = true;
+
+    private async Task LogOut()
+    {
+        await LoginService.Logout();
+        Navigation.NavigateTo("login");
+    }
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}
