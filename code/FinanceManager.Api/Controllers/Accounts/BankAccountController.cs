@@ -142,7 +142,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         if (!await userPlanVerifier.CanAddMoreAccounts(userId.Value))
             return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
-        return Ok(await _accountRepository.Add(userId.Value, 0, addAccount.accountName));
+        return Ok(await _accountRepository.Add(userId.Value, addAccount.accountName));
     }
 
     [HttpPost("AddEntry")]

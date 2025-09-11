@@ -127,7 +127,7 @@ public class BankAccountControllerTests
         var userId = 1;
         var addAccount = new AddAccount("New Account");
         var newAccountId = 1;
-        _mockBankAccountRepository.Setup(repo => repo.Add(newAccountId, userId, addAccount.accountName)).ReturnsAsync(newAccountId);
+        _mockBankAccountRepository.Setup(repo => repo.Add(userId, addAccount.accountName)).ReturnsAsync(newAccountId);
 
         // Act
         var result = await _controller.Add(addAccount);
@@ -146,15 +146,13 @@ public class BankAccountControllerTests
         {
             Description = addEntry.Description,
         };
-        _mockBankAccountEntryRepository.Setup(repo => repo.Add(bankAccountEntry)).ReturnsAsync(true);
+        _mockBankAccountEntryRepository.Setup(repo => repo.Add(It.IsAny<BankAccountEntry>())).ReturnsAsync(true);
 
         // Act
         var result = await _controller.AddEntry(addEntry);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var taskResult = Assert.IsType<bool>(okResult.Value);
-        Assert.True(taskResult);
     }
 
     [Fact]

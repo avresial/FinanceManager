@@ -9,20 +9,17 @@ using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Services;
 
-public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, IStockPriceRepository stockRepository,
+public class MoneyFlowService(IFinancalAccountRepository financialAccountRepository, IStockPriceRepository stockRepository,
     ICurrencyExchangeService currencyExchangeService, IFinancialLabelsRepository financialLabelsRepository) : IMoneyFlowService
 {
-    private readonly IFinancalAccountRepository _financialAccountRepository = bankAccountRepository;
-    private readonly IStockPriceRepository _stockRepository = stockRepository;
-    private readonly ICurrencyExchangeService _currencyExchangeService = currencyExchangeService;
-    private readonly IFinancialLabelsRepository _financialLabelsRepository = financialLabelsRepository;
 
     public async Task<bool> IsAnyAccountWithAssets(int userId)
     {
         var start = DateTime.UtcNow.AddDays(-1);
         var end = start.AddDays(1);
 
-        var bankAccounts = await _financialAccountRepository.GetAccounts<BankAccount>(userId, start, end);
+        var bankAccounts = await financialAccountRepository.GetAccounts<BankAccount>(userId, start, end);
+
         foreach (var bankAccount in bankAccounts)
         {
             if (bankAccount.Entries is not null && bankAccount.Entries.Count > 0)
@@ -33,11 +30,24 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
             }
             else if (bankAccount.NextOlderEntry is not null)
             {
-                var newBankAccount = await _financialAccountRepository.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.NextOlderEntry.PostingDate,
-                    bankAccount.NextOlderEntry.PostingDate.AddSeconds(1));
-                if (newBankAccount is null || newBankAccount.Entries is null) continue;
-                var youngestEntry = newBankAccount.Entries.FirstOrDefault();
+                if (bankAccount.NextOlderEntry.Value > 0)
+                    return true;
+            }
+        }
+
+        var stockAccounts = await financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
+
+        foreach (var stockAccount in stockAccounts)
+        {
+            if (stockAccount.Entries is not null && stockAccount.Entries.Count > 0)
+            {
+                var youngestEntry = stockAccount.Entries.FirstOrDefault();
                 if (youngestEntry is not null && youngestEntry.Value > 0)
+                    return true;
+            }
+            else if (stockAccount.NextOlderEntries.Any())
+            {
+                if (stockAccount.NextOlderEntries.Any(x => x.Value.Value > 0))
                     return true;
             }
         }
@@ -48,7 +58,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         List<NameValueResult> result = [];
-        foreach (BankAccount account in await _financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
+        foreach (BankAccount account in await financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) return result;
 
@@ -63,7 +73,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
             });
         }
 
-        var InvestmentAccounts = await _financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
+        var InvestmentAccounts = await financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
         foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
             if (account is null || account.Entries is null) return result;
@@ -97,7 +107,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         List<NameValueResult> result = [];
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
 
-        foreach (BankAccount account in await _financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
+        foreach (BankAccount account in await financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) return result;
 
@@ -119,14 +129,14 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
             }
         }
 
-        var InvestmentAccounts = await _financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
+        var InvestmentAccounts = await financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
         foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
             if (account is null || account.Entries is null) return result;
 
             foreach (var ticker in account.GetStoredTickers())
             {
-                var stockPrice = await _stockRepository.Get(ticker, end);
+                var stockPrice = await stockRepository.Get(ticker, end);
                 decimal pricePerUnit = await GetPricePerUnit(currency, end, ticker);
 
                 var latestEntry = account.Entries.First(x => x.Ticker == ticker);
@@ -157,7 +167,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         Dictionary<DateTime, decimal> prices = [];
         TimeSpan step = new TimeSpan(1, 0, 0, 0);
 
-        foreach (BankAccount account in await _financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
+        foreach (BankAccount account in await financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) continue;
 
@@ -182,7 +192,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
             }
         }
 
-        var InvestmentAccounts = await _financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
+        var InvestmentAccounts = await financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
         foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
             if (account is null || account.Entries is null) continue;
@@ -208,7 +218,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         List<(DateTime, decimal)> assets = [];
-        var BankAccounts = (await _financialAccountRepository.GetAccounts<BankAccount>(userId, start, end)).Where(x => x.AccountType.ToString() == investmentType.ToString());
+        var BankAccounts = (await financialAccountRepository.GetAccounts<BankAccount>(userId, start, end)).Where(x => x.AccountType.ToString() == investmentType.ToString());
         foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
             if (account is null || account.Entries is null) continue;
@@ -216,12 +226,12 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
             assets.AddRange(account.Entries.GetAssets(start, end));
         }
 
-        var InvestmentAccounts = await _financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
+        var InvestmentAccounts = await financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
         foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
             if (account is null || account.Entries is null) continue;
 
-            assets.AddRange(await account.Entries.Where(x => x.InvestmentType == investmentType).ToList().GetAssets(start, end, _stockRepository.Get));
+            assets.AddRange(await account.Entries.Where(x => x.InvestmentType == investmentType).ToList().GetAssets(start, end, stockRepository.Get));
         }
 
 
@@ -242,19 +252,19 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
         if (date > DateTime.UtcNow) date = DateTime.UtcNow;
         decimal result = 0;
 
-        var BankAccounts = (await _financialAccountRepository.GetAccounts<BankAccount>(userId, date.Date, date)).ToList();
+        var BankAccounts = (await financialAccountRepository.GetAccounts<BankAccount>(userId, date.Date, date)).ToList();
         foreach (var bankAccount in BankAccounts)
         {
             if (bankAccount.NextOlderEntry is null) continue;
             if (bankAccount.Entries is null) continue;
 
-            var newBankAccount = await _financialAccountRepository.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.NextOlderEntry.PostingDate,
+            var newBankAccount = await financialAccountRepository.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.NextOlderEntry.PostingDate,
                 bankAccount.NextOlderEntry.PostingDate.AddSeconds(1));
             if (newBankAccount is not null && newBankAccount.Entries is not null)
                 bankAccount.Add(newBankAccount.Entries, false);
         }
 
-        var InvestmentAccounts = await _financialAccountRepository.GetAccounts<StockAccount>(userId, date.Date, date);
+        var InvestmentAccounts = await financialAccountRepository.GetAccounts<StockAccount>(userId, date.Date, date);
         foreach (var investmentAccount in InvestmentAccounts)
         {
             foreach (var item in investmentAccount.NextOlderEntries)
@@ -262,7 +272,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
                 if (investmentAccount.Entries is null) continue;
                 if (investmentAccount.Entries.Any(x => x.Ticker == item.Key)) continue;
 
-                var newInvestmentAccount = await _financialAccountRepository.GetAccount<StockAccount>(userId, investmentAccount.AccountId, item.Value.PostingDate, item.Value.PostingDate.AddSeconds(1));
+                var newInvestmentAccount = await financialAccountRepository.GetAccount<StockAccount>(userId, investmentAccount.AccountId, item.Value.PostingDate, item.Value.PostingDate.AddSeconds(1));
                 if (newInvestmentAccount is not null && newInvestmentAccount.Entries is not null)
                     investmentAccount.Add(newInvestmentAccount.Entries, false);
             }
@@ -317,7 +327,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
 
         try
         {
-            bankAccounts = await _financialAccountRepository.GetAccounts<BankAccount>(userId, start, end);
+            bankAccounts = await financialAccountRepository.GetAccounts<BankAccount>(userId, start, end);
         }
         catch (Exception ex)
         {
@@ -350,7 +360,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
 
         try
         {
-            bankAccounts = await _financialAccountRepository.GetAccounts<BankAccount>(userId, start, end);
+            bankAccounts = await financialAccountRepository.GetAccounts<BankAccount>(userId, start, end);
         }
         catch (Exception ex)
         {
@@ -382,11 +392,11 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
 
     private async Task<decimal> GetPricePerUnit(string currency, DateTime date, string ticker)
     {
-        var stockPrice = await _stockRepository.GetThisOrNextOlder(ticker, date);
+        var stockPrice = await stockRepository.GetThisOrNextOlder(ticker, date);
         decimal pricePerUnit = 1;
         if (stockPrice is not null)
         {
-            var priceInRightCurrency = await _currencyExchangeService.GetExchangeRateAsync(stockPrice.Currency, currency, date.Date);
+            var priceInRightCurrency = await currencyExchangeService.GetExchangeRateAsync(stockPrice.Currency, currency, date.Date);
             if (priceInRightCurrency is not null)
                 pricePerUnit = stockPrice.PricePerUnit * priceInRightCurrency.Value;
         }
@@ -403,7 +413,7 @@ public class MoneyFlowService(IFinancalAccountRepository bankAccountRepository, 
             labels.Add(label);
 
         Dictionary<int, NameValueResult> result = labels.ToDictionary(x => x.Id, x => new NameValueResult() { Name = x.Name, Value = 0 });
-        foreach (BankAccount account in await _financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
+        foreach (BankAccount account in await financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) continue;
             if (account.Entries is null || !account.Entries.Any()) continue;

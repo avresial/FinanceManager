@@ -190,7 +190,7 @@ namespace FinanceManager.Infrastructure.Repositories
             switch (account)
             {
                 case BankAccount bankAccount:
-                    var bankAccountId = await _bankAccountAccountRepository.Add(bankAccount.UserId, 0, bankAccount.Name, bankAccount.AccountType);
+                    var bankAccountId = await _bankAccountAccountRepository.Add(bankAccount.UserId, bankAccount.Name, bankAccount.AccountType);
 
                     if (bankAccount is not null && bankAccount.Entries is not null)
                         foreach (var entry in bankAccount.Entries)
@@ -203,7 +203,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
                 case StockAccount stockAccount:
 
-                    var stockAccountId = await _stockAccountRepository.Add(account.UserId, 0, account.Name);
+                    var stockAccountId = await _stockAccountRepository.Add(account.UserId, account.Name);
 
                     if (stockAccount is not null && stockAccount.Entries is not null)
                         foreach (var entry in stockAccount.Entries)

@@ -108,6 +108,18 @@
                             {
                                 <div class="row mb-3 mx-0 px-0">
                                     <div class="col-6">
+                                        <div class="row">
+                                            <div style="font-size:0.8rem !important">
+                                                @if (entry.Labels.Any())
+                                                {
+                                                    @entry.Labels.First().Name
+                                                }
+                                                else
+                                                {
+                                                    @("Transaction")
+                                                }
+                                            </div>
+                                        </div>
                                         <div class="row text-muted">
                                             <div style="font-size:0.8rem !important">
                                                 @entry.Description
@@ -134,6 +146,18 @@
                             {
                                 <div class="row mb-3 mx-0 px-0">
                                     <div class="col-6">
+                                        <div class="row">
+                                            <div style="font-size:0.8rem !important">
+                                                @if (entry.Labels.Any())
+                                                {
+                                                    @entry.Labels.First().Name
+                                                }
+                                                else
+                                                {
+                                                    @("Transaction")
+                                                }
+                                            </div>
+                                        </div>
                                         <div class="row fs-6 text-muted">
                                             <div style="font-size:0.8rem !important">
                                                 @entry.Description

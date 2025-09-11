@@ -125,7 +125,7 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (!userId.HasValue) return BadRequest("User ID is null.");
 
-            return Ok(await _accountRepository.Add(userId.Value, 0, addAccount.accountName));
+            return Ok(await _accountRepository.Add(userId.Value, addAccount.accountName));
         }
 
         [HttpPost("AddEntry")]

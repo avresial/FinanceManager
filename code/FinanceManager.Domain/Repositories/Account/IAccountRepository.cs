@@ -5,7 +5,7 @@ namespace FinanceManager.Domain.Repositories.Account
 {
     public interface IBankAccountRepository<T> : IAccountRepository<T>
     {
-        Task<int?> Add(int userId, int accountId, string accountName, AccountLabel accountType);
+        Task<int?> Add(int userId, string accountName, AccountLabel accountType);
         Task<bool> Update(int accountId, string accountName, AccountLabel accountType);
     }
 
@@ -16,7 +16,7 @@ namespace FinanceManager.Domain.Repositories.Account
         Task<IEnumerable<AvailableAccount>> GetAvailableAccounts(int userId);
         Task<T?> Get(int accountId);
         Task<bool> Exists(int accountId);
-        Task<int?> Add(int userId, int accountId, string accountName);
+        Task<int?> Add(int userId, string accountName);
         Task<bool> Update(int accountId, string accountName);
         Task<bool> Delete(int accountId);
     }

@@ -20,6 +20,23 @@ public partial class FinancialLabelsListCard
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
     [Parameter] public CardMode CardMode { get; set; } = CardMode.List;
 
+    protected override async Task OnParametersSetAsync()
+    {
+        _isLoading = true;
+        currency = SettingsService.GetCurrency();
+        var userId = await LoginService.GetLoggedUser();
+
+        try
+        {
+            if (userId is not null)
+                _data = await MoneyFlowService.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime, null);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         _isLoading = true;
