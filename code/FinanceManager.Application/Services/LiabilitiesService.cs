@@ -10,9 +10,9 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
 {
     private readonly IFinancalAccountRepository _financialAccountService = bankAccountRepository;
 
-    public async Task<List<PieChartModel>> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end)
+    public async Task<List<NameValueResult>> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end)
     {
-        List<PieChartModel> result = [];
+        List<NameValueResult> result = [];
         foreach (BankAccount account in await _financialAccountService.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) return result;
@@ -27,7 +27,7 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
 
             if (entry.Value > 0) continue;
 
-            result.Add(new PieChartModel()
+            result.Add(new NameValueResult()
             {
                 Name = account.Name,
                 Value = entry.Value
@@ -36,9 +36,9 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
 
         return await Task.FromResult(result);
     }
-    public async Task<List<PieChartModel>> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
+    public async Task<List<NameValueResult>> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
     {
-        List<PieChartModel> result = [];
+        List<NameValueResult> result = [];
         foreach (BankAccount account in await _financialAccountService.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) return result;
@@ -56,7 +56,7 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
             var existingResult = result.FirstOrDefault(x => x.Name == account.AccountType.ToString());
             if (existingResult is null)
             {
-                result.Add(new PieChartModel()
+                result.Add(new NameValueResult()
                 {
                     Name = account.AccountType.ToString(),
                     Value = entry.Value

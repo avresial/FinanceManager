@@ -1,0 +1,32 @@
+﻿
+<MudCard Outlined Class="d-flex flex-nowrap" Style="@($"height:{Height};")">
+    <MudPaper Class="flex-grow-0 p-3" Elevation="0">
+        <MudText Typo=Typo.h5>Labels</MudText>
+    </MudPaper>
+
+    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
+        @if (_isLoading)
+        {
+            <div style="height:100%">
+                <ChartSpinner MaxHeight=@Height />
+            </div>
+        }
+        else if (_data.Any())
+        {
+            <MudStack Row>
+                <MudList T="string" ReadOnly>
+                    @foreach (var label in _data)
+                    {
+                        <MudListItem Text="@($"{label.Name} - {label.Value} {currency}")" />
+                    }
+                </MudList>
+            </MudStack>
+        }
+        else
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
+            </div>
+        }
+    </MudPaper>
+</MudCard>

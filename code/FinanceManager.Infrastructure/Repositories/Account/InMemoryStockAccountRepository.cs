@@ -16,12 +16,11 @@ namespace FinanceManager.Infrastructure.Repositories.Account
         {
             return await _dbContext.Accounts.Where(x => x.AccountType == AccountType.Stock).CountAsync();
         }
-        public async Task<int?> Add(int userId, int accountId, string accountName)
+        public async Task<int?> Add(int userId, string accountName)
         {
             var result = _dbContext.Accounts.Add(new FinancialAccountBaseDto
             {
                 UserId = userId,
-                AccountId = 0,
                 Name = accountName,
                 AccountType = AccountType.Stock
             });

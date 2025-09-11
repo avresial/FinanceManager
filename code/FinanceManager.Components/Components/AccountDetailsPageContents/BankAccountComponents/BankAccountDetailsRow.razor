@@ -67,11 +67,6 @@
                                     Type
                                 </div>
                             </div>
-                            <div class="row mb-1">
-                                <div>
-                                    @BankAccountEntry.ExpenseType
-                                </div>
-                            </div>
                         </div>
                         <div class="col-6">
                             <div class="row text-muted">
@@ -85,20 +80,40 @@
                                 </div>
                             </div>
                         </div>
+                        @if (!string.IsNullOrEmpty(BankAccountEntry.Description))
+                        {
 
-                        <div class="col-12">
-                            <div class="row text-muted">
-                                <div style="font-size:0.8rem !important">
-                                    Description
+                            <div class="col-12">
+                                <div class="row text-muted">
+                                    <div style="font-size:0.8rem !important">
+                                        Description
+                                    </div>
+                                </div>
+                                <div class="row mb-1">
+                                    <div>
+                                        @BankAccountEntry.Description
+                                    </div>
                                 </div>
                             </div>
-                            <div class="row mb-1">
-                                <div>
-                                    @BankAccountEntry.Description
+                        }
+                        @if (BankAccountEntry.Labels is not null && BankAccountEntry.Labels.Any())
+                        {
+                            <div class="col-12">
+                                <div class="row text-muted">
+                                    <div style="font-size:0.8rem !important">
+                                        Labels
+                                    </div>
+                                </div>
+                                <div class="row mb-1">
+                                    <div>
+                                        @foreach (var item in BankAccountEntry.Labels)
+                                        {
+                                            <MudChip T="string">@item.Name</MudChip>
+                                        }
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-
+                        }
                         <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
                         <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove</MudButton>
                     </div>

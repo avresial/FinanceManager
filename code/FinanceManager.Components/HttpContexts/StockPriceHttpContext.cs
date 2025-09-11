@@ -4,7 +4,6 @@ using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpContexts;
 
-
 public class StockPriceHttpContext(HttpClient httpClient)
 {
     private readonly HttpClient _httpClient = httpClient;

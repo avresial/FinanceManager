@@ -10,7 +10,7 @@
 
 @if (BankAccountEntry is not null && BankAccount is not null)
 {
-    <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+    <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
         <MudContainer MaxWidth="MaxWidth.Medium">
             <MudGrid Justify="Justify.Center">
                 <MudItem xs="12" sm="12" md="12">
@@ -18,25 +18,24 @@
                     <MudText Typo="Typo.subtitle1">@BankAccount.Name</MudText>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudDatePicker Label="Posting date" @bind-Date="PostingDate" Validation="@(new NotInFutureAttribute())" />
+                    <MudDatePicker Label="Posting date" @bind-Date="_postingDate" Validation="@(new NotInFutureAttribute())" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudTimePicker Label="Time" @bind-Time="Time" />
+                    <MudTimePicker Label="Time" @bind-Time="_time" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
+                    <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="_balanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudSelect @bind-Value="ExpenseType" Label="Expense type">
-                        @foreach (var type in Enum.GetValues(typeof(ExpenseType)).Cast<ExpenseType>())
+                    <MudSelect T="string" Label="Label" MultiSelection="true" @bind-Value="_labelValue" @bind-SelectedValues="_selectedLabels">
+                        @foreach (var state in _possibleLabels.Select(x => x.Name))
                         {
-                            <MudSelectItem Value="type">@type</MudSelectItem>
+                            <MudSelectItem T="string" Value="@state">@state</MudSelectItem>
                         }
                     </MudSelect>
-                    @* <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text" SearchFunc="Search" /> *@
                 </MudItem>
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="Description" T="string" Label="Description" Variant="Variant.Text" MaxLines="5" AutoGrow="true" />
+                    <MudTextField @bind-Value="_description" T="string" Label="Description" Variant="Variant.Text" MaxLines="5" AutoGrow="true" />
                 </MudItem>
                 <MudItem xs="12">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update</MudButton>
@@ -47,90 +46,4 @@
     </MudForm>
 }
 
-@code {
-    private int? loadedEntryId = null;
-    private string _currency = string.Empty;
-    private bool success;
-    private string[] errors = [];
-    private MudForm? form;
 
-    private List<string> ExpenseTypes = Enum.GetValues(typeof(ExpenseType)).Cast<ExpenseType>().Select(x => x.ToString()).ToList();
-
-    private TimeSpan? Time = new TimeSpan(01, 00, 00);
-    private DateTime? PostingDate = DateTime.Today;
-    private ExpenseType ExpenseType { get; set; } = FinanceManager.Domain.Enums.ExpenseType.Other;
-    private string? Description { get; set; } = string.Empty;
-    private decimal? BalanceChange { get; set; } = 0;
-
-    [Parameter] public Func<Task>? ActionCompleted { get; set; }
-
-    [Parameter] public required BankAccount BankAccount { get; set; }
-
-    [Parameter] public required BankAccountEntry BankAccountEntry { get; set; }
-
-    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
-
-    [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
-
-    protected override void OnParametersSet()
-    {
-        if (loadedEntryId.HasValue && loadedEntryId.Value == BankAccountEntry.EntryId) return;
-        loadedEntryId = BankAccountEntry.EntryId;
-
-        _currency = settingsService.GetCurrency();
-        PostingDate = BankAccountEntry.PostingDate;
-        Time = new TimeSpan(BankAccountEntry.PostingDate.Hour, BankAccountEntry.PostingDate.Minute, BankAccountEntry.PostingDate.Second);
-        ExpenseType = BankAccountEntry.ExpenseType;
-        Description = BankAccountEntry.Description;
-        BalanceChange = BankAccountEntry.ValueChange;
-    }
-
-    public async Task Update()
-    {
-        if (form is null) return;
-        await form.Validate();
-
-        if (!form.IsValid) return;
-        if (!BalanceChange.HasValue) return;
-        if (!PostingDate.HasValue) return;
-        if (!Time.HasValue) return;
-
-        DateTime date = new DateTime(PostingDate.Value.Year, PostingDate.Value.Month, PostingDate.Value.Day, Time.Value.Hours, Time.Value.Minutes, Time.Value.Seconds);
-        BankAccountEntry bankAccountEntry = new(BankAccountEntry.AccountId, BankAccountEntry.EntryId, date, -1, BalanceChange.Value)
-        {
-            Description = this.Description is null ? string.Empty : this.Description,
-            ExpenseType = ExpenseType
-        };
-
-        try
-        {
-            await FinancialAccountService.UpdateEntry(bankAccountEntry);
-        }
-        catch (Exception ex)
-        {
-            errors = [ex.ToString()];
-        }
-
-        if (errors.Length == 0)
-        {
-            await AccountDataSynchronizationService.AccountChanged();
-
-            if (ActionCompleted is not null)
-                await ActionCompleted();
-        }
-    }
-
-    public async Task Cancel()
-    {
-        if (ActionCompleted is not null)
-            await ActionCompleted();
-    }
-
-    private async Task<IEnumerable<string?>> Search(string value, CancellationToken token)
-    {
-        if (string.IsNullOrEmpty(value))
-            return ExpenseTypes;
-
-        return await Task.FromResult(ExpenseTypes.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase)));
-    }
-}

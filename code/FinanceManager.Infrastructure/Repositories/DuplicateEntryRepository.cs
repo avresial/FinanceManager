@@ -6,12 +6,11 @@ using Microsoft.EntityFrameworkCore;
 namespace FinanceManager.Infrastructure.Repositories;
 internal class DuplicateEntryRepository(AppDbContext context) : IDuplicateEntryRepository
 {
-    private readonly AppDbContext _context = context;
 
     public async Task AddDuplicate(DuplicateEntry duplicate)
     {
-        await _context.DuplicateEntries.AddAsync(duplicate);
-        await _context.SaveChangesAsync();
+        await context.DuplicateEntries.AddAsync(duplicate);
+        await context.SaveChangesAsync();
     }
 
     public async Task AddDuplicate(IEnumerable<DuplicateEntry> duplicates)
@@ -25,25 +24,25 @@ internal class DuplicateEntryRepository(AppDbContext context) : IDuplicateEntryR
         }
 
 
-        await _context.DuplicateEntries.AddRangeAsync(duplicates);
-        await _context.SaveChangesAsync();
+        await context.DuplicateEntries.AddRangeAsync(duplicates);
+        await context.SaveChangesAsync();
     }
 
     public async Task<DuplicateEntry?> GetDuplicate(int accountId, int duplicateId)
     {
-        return await _context.DuplicateEntries
+        return await context.DuplicateEntries
             .FirstOrDefaultAsync(x => x.AccountId == accountId && x.Id == duplicateId);
     }
 
     public async Task<DuplicateEntry?> GetDuplicateByEntry(int accountId, int entryIndex)
     {
-        return await _context.DuplicateEntries
+        return await context.DuplicateEntries
             .FirstOrDefaultAsync(x => x.AccountId == accountId && x.EntriesId.Contains(entryIndex));
     }
 
     public async Task<IEnumerable<DuplicateEntry>> GetDuplicates(int accountId, int index, int count)
     {
-        return await _context.DuplicateEntries
+        return await context.DuplicateEntries
             .Where(x => x.AccountId == accountId)
             .OrderBy(x => x.Id)
             .Skip(index)
@@ -53,33 +52,33 @@ internal class DuplicateEntryRepository(AppDbContext context) : IDuplicateEntryR
 
     public async Task<int> GetDuplicatesCount(int accountId)
     {
-        return await _context.DuplicateEntries.CountAsync(x => x.AccountId == accountId);
+        return await context.DuplicateEntries.CountAsync(x => x.AccountId == accountId);
     }
 
     public async Task RemoveDuplicate(int duplicateId)
     {
-        var entity = await _context.DuplicateEntries.FindAsync(duplicateId);
+        var entity = await context.DuplicateEntries.FindAsync(duplicateId);
         if (entity != null)
         {
-            _context.DuplicateEntries.Remove(entity);
-            await _context.SaveChangesAsync();
+            context.DuplicateEntries.Remove(entity);
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task RemoveDuplicate(IEnumerable<DuplicateEntry> duplicates)
     {
-        _context.DuplicateEntries.RemoveRange(duplicates);
-        await _context.SaveChangesAsync();
+        context.DuplicateEntries.RemoveRange(duplicates);
+        await context.SaveChangesAsync();
     }
 
     public async Task<DuplicateEntry> UpdateDuplicate(int duplicateId, int accountId, List<int> newEntryIds)
     {
-        var entity = await _context.DuplicateEntries.FirstOrDefaultAsync(x => x.Id == duplicateId && x.AccountId == accountId);
+        var entity = await context.DuplicateEntries.FirstOrDefaultAsync(x => x.Id == duplicateId && x.AccountId == accountId);
 
         if (entity == null) throw new InvalidOperationException("DuplicateEntry not found");
 
         entity.EntriesId = newEntryIds;
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return entity;
     }
 }

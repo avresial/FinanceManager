@@ -47,12 +47,18 @@ public class MoneyFlowServiceTests
 
         _totalAssetsValue = 100;
 
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("testStock1", It.IsAny<DateTime>()))
+                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "testStock1", PricePerUnit = 2 });
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("testStock2", It.IsAny<DateTime>()))
+                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "testStock2", PricePerUnit = 4 });
         _stockRepository.Setup(x => x.Get("testStock1", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "AnyTicker", PricePerUnit = 2 });
+                       .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "testStock1", PricePerUnit = 2 });
         _stockRepository.Setup(x => x.Get("testStock2", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "AnyTicker", PricePerUnit = 4 });
+                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "testStock2", PricePerUnit = 4 });
 
-        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _stockRepository.Object, _currencyExchangeService.Object);
+        _currencyExchangeService.Setup(x => x.GetExchangeRateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>())).ReturnsAsync(1);
+
+        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _stockRepository.Object, _currencyExchangeService.Object, null);
     }
 
     [Fact]

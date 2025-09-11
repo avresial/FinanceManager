@@ -110,7 +110,14 @@
                                     <div class="col-6">
                                         <div class="row mb-1">
                                             <div>
-                                                @entry.ExpenseType
+                                                @if (entry.Labels.Any())
+                                                {
+                                                    @entry.Labels.First().Name
+                                                }
+                                                else
+                                                {
+                                                    @("Transaction")
+                                                }
                                             </div>
                                         </div>
                                         <div class="row text-muted">
@@ -141,7 +148,14 @@
                                     <div class="col-6">
                                         <div class="row mb-1">
                                             <div>
-                                                @entry.ExpenseType
+                                                @if (entry.Labels.Any())
+                                                {
+                                                    @entry.Labels.First().Name
+                                                }
+                                                else
+                                                {
+                                                    @("Transaction")
+                                                }
                                             </div>
                                         </div>
                                         <div class="row fs-6 text-muted">

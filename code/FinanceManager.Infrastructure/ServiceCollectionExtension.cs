@@ -33,8 +33,11 @@ public static class ServiceCollectionExtension
                 .AddScoped<IBankAccountRepository<BankAccount>, InMemoryBankAccountRepository>()
                 .AddScoped<NewVisitsRepository>()
                 .AddScoped<IDuplicateEntryRepository, DuplicateEntryRepository>()
+                .AddScoped<IFinancialLabelsRepository, FinancialLabelsRepository>()
+                .AddHostedService<DatabaseInitializer>()
                 ;
 
         return services;
     }
+
 }

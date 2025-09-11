@@ -74,9 +74,9 @@
             <div class="h-100">
                 @if (Data.Any())
                 {
-                    <ApexChart @ref="_chart" Height="@("100%")" TItem="PieChartModel" Options="_options">
+                    <ApexChart @ref="_chart" Height="@("100%")" TItem="NameValueResult" Options="_options">
 
-                        <ApexPointSeries TItem="PieChartModel"
+                        <ApexPointSeries TItem="NameValueResult"
                                          Items="Data"
                                          Name="Liabilities"
                                          XValue="e => e.Name.ToString()"

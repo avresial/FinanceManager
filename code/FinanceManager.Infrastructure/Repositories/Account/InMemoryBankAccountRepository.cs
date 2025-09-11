@@ -21,8 +21,8 @@ internal class InMemoryBankAccountRepository(AppDbContext context) : IBankAccoun
 
         return null;
     }
-    public async Task<int?> Add(int userId, int accountId, string accountName) => await Add(userId, accountId, accountName, AccountLabel.Other);
-    public async Task<int?> Add(int userId, int accountId, string accountName, AccountLabel accountLabel)
+    public async Task<int?> Add(int userId, string accountName) => await Add(userId, accountName, AccountLabel.Other);
+    public async Task<int?> Add(int userId, string accountName, AccountLabel accountLabel)
     {
         var result = _dbContext.Accounts.Add(new FinancialAccountBaseDto
         {

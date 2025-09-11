@@ -1,0 +1,106 @@
+﻿@page "/Admin/AddLabel"
+@using FinanceManager.Components.HttpContexts
+@using FinanceManager.Domain.Entities.Accounts.Entries
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+
+
+    <MudGrid Spacing="6">
+        <MudItem xs="12">
+            <MudText Typo="Typo.h3">
+                @_labelData.Name.ToUpper()
+            </MudText>
+        </MudItem>
+
+
+        <MudItem xs="12">
+            <MudText Typo="Typo.h6">Change name</MudText>
+            <MudGrid>
+                <MudItem xs="8">
+                    <MudForm @ref="_nameForm" @bind-IsValid="@_success" Spacing="3">
+
+                    <MudTextField T="string" Label="Name" HelperText="Choose a name" @bind-value="_labelData.Name"
+                                      InputType="InputType.Text" Validation="@(new Func<string, IEnumerable<string>>(ValidateName))" Required
+                                      RequiredError="Name is required!" />
+
+
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-4" OnClick="UpdateNameAsync" Disabled="@(!_success)">Add</MudButton>
+                    </MudForm>
+                </MudItem>
+            </MudGrid>
+        @* <MudDivider Class="my-3" /> *@
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudStack Spacing="2">
+
+                @foreach (var message in _errors)
+                {
+                    <MudAlert Severity="Severity.Error">@message</MudAlert>
+                }
+
+                @foreach (var message in _warnings)
+                {
+                    <MudAlert Severity="Severity.Warning">@message</MudAlert>
+                }
+
+                @foreach (var message in _info)
+                {
+                    <MudAlert Severity="Severity.Info">@message</MudAlert>
+                }
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+
+
+@code {
+    private readonly List<string> _errors = [];
+    private readonly List<string> _warnings = [];
+    private readonly List<string> _info = [];
+
+    private MudForm? _nameForm;
+    private FinancialLabel _labelData = new FinancialLabel() { Name = "Name me"};
+
+    private bool _isLoadingPage;
+    private bool _success;
+
+    [Inject] public required FinancialLabelHttpContext FinancialLabelHttpContext { get; set; }
+
+    [Parameter] public required int LabelId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _isLoadingPage = true;
+
+        _isLoadingPage = false;
+    }
+    private async Task UpdateNameAsync()
+    {
+        if (_labelData is null) return;
+
+        await _nameForm.Validate();
+        if (_nameForm.IsValid)
+        {
+            var result = await FinancialLabelHttpContext.Add(new(_labelData.Name)); 
+            if (!result)
+            {
+                _errors.Insert(0, "Adding label failed.");
+                return;
+            }
+            else
+            {
+                _errors.Clear();
+                _info.Insert(0, "Added new label successfully.");
+            }
+        }
+    }
+
+    private static IEnumerable<string> ValidateName(string pw)
+    {
+        if (string.IsNullOrWhiteSpace(pw))
+        {
+            yield return "Name is required!";
+            yield break;
+        }
+    }
+}

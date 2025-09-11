@@ -26,7 +26,14 @@ else
 
 builder.Services.AddApplicationApi().AddInfrastructureApi();
 builder.Services.AddControllers();
+//.AddJsonOptions(x =>
+//x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve);
 
+//.AddJsonOptions(options =>
+//{
+//    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+//    options.JsonSerializerOptions.WriteIndented = true; // Optional: for better readability
+//});
 
 builder.Services.AddCors(options =>
 {
@@ -85,7 +92,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
 
 using (var scope = app.Services.CreateScope())
 {

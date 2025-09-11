@@ -190,7 +190,7 @@ namespace FinanceManager.Infrastructure.Repositories
             switch (account)
             {
                 case BankAccount bankAccount:
-                    var bankAccountId = await _bankAccountAccountRepository.Add(bankAccount.UserId, 0, bankAccount.Name, bankAccount.AccountType);
+                    var bankAccountId = await _bankAccountAccountRepository.Add(bankAccount.UserId, bankAccount.Name, bankAccount.AccountType);
 
                     if (bankAccount is not null && bankAccount.Entries is not null)
                         foreach (var entry in bankAccount.Entries)
@@ -203,7 +203,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
                 case StockAccount stockAccount:
 
-                    var stockAccountId = await _stockAccountRepository.Add(account.UserId, 0, account.Name);
+                    var stockAccountId = await _stockAccountRepository.Add(account.UserId, account.Name);
 
                     if (stockAccount is not null && stockAccount.Entries is not null)
                         foreach (var entry in stockAccount.Entries)
@@ -236,9 +236,18 @@ namespace FinanceManager.Infrastructure.Repositories
         public async Task AddEntry<T>(T bankAccountEntry, int id) where T : FinancialEntryBase
         {
             if (bankAccountEntry is BankAccountEntry bankEntry)
-                await AddBankAccountEntry(id, bankEntry.ValueChange, bankEntry.Description, bankEntry.ExpenseType, bankEntry.PostingDate);
+                await AddBankAccountEntry(id, bankEntry.ValueChange, bankEntry.Description, bankEntry.PostingDate);
             if (bankAccountEntry is StockAccountEntry investmentEntry)
                 await AddStockAccountEntry(id, investmentEntry.Ticker, investmentEntry.InvestmentType, investmentEntry.ValueChange, investmentEntry.PostingDate);
+        }
+        public Task<bool> AddLabel<T>(T accountEntry, int labelId) where T : FinancialEntryBase
+        {
+            if (accountEntry is BankAccountEntry bankEntry)
+                return _bankAccountEntryRepository.AddLabel(bankEntry.EntryId, labelId);
+            //if (accountEntry is StockAccountEntry investmentEntry)
+            //    return _stockEntryRepository.AddLabel(investmentEntry.EntryId, labelId);
+
+            return Task.FromResult(false);
         }
         public async Task UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase
         {
@@ -288,23 +297,17 @@ namespace FinanceManager.Infrastructure.Repositories
         private async Task AddBankAccount(int userId, DateTime startDay, decimal startingBalance, string accountName, AccountLabel accountType)
         {
             int accountId = (await GetLastAccountId()) + 1;
-            ExpenseType expenseType = GetRandomType();
-            if (accountType == AccountLabel.Stock)
-                expenseType = ExpenseType.Investment;
 
             await AddAccount(new BankAccount(userId, accountId, accountName, accountType));
-            await AddBankAccountEntry(accountId, startingBalance, $"Lorem ipsum {0}", expenseType, startDay);
+            await AddBankAccountEntry(accountId, startingBalance, $"Lorem ipsum {0}", startDay);
             startDay = startDay.AddMinutes(1);
             int index = 0;
             while (startDay.Date <= DateTime.UtcNow.Date)
             {
                 decimal balanceChange = (decimal)(_random.Next(-150, 200) + Math.Round(_random.NextDouble(), 2));
 
-                expenseType = GetRandomType();
-                if (accountType == AccountLabel.Stock)
-                    expenseType = ExpenseType.Investment;
 
-                await AddBankAccountEntry(accountId, balanceChange, $"Lorem ipsum {index++}", expenseType, startDay);
+                await AddBankAccountEntry(accountId, balanceChange, $"Lorem ipsum {index++}", startDay);
                 startDay = startDay.AddDays(1);
             }
         }
@@ -314,7 +317,7 @@ namespace FinanceManager.Infrastructure.Repositories
 
             await AddAccount(new BankAccount(userId, accountId, accountName, AccountLabel.Loan));
 
-            await AddBankAccountEntry(accountId, startingBalance, $"Lorem ipsum {0}", ExpenseType.DebtRepayment, startDay);
+            await AddBankAccountEntry(accountId, startingBalance, $"Lorem ipsum {0}", startDay);
             startDay = startDay.AddMinutes(1);
             decimal repaidAmount = 0;
 
@@ -326,19 +329,19 @@ namespace FinanceManager.Infrastructure.Repositories
                 if (repaidAmount >= -startingBalance)
                     balanceChange = repaidAmount + startingBalance;
 
-                await AddBankAccountEntry(accountId, balanceChange, $"Lorem ipsum {index++}", ExpenseType.Other, startDay);
+                await AddBankAccountEntry(accountId, balanceChange, $"Lorem ipsum {index++}", startDay);
 
                 startDay = startDay.AddDays(1);
             }
         }
-        private async Task AddBankAccountEntry(int id, decimal balanceChange, string description, ExpenseType expenseType, DateTime? postingDate = null)
+        private async Task AddBankAccountEntry(int id, decimal balanceChange, string description, DateTime? postingDate = null)
         {
             var account = await FindAccount<BankAccount>(id);
             if (account is null) return;
 
             var finalPostingDate = postingDate ?? DateTime.UtcNow;
 
-            account.AddEntry(new AddBankEntryDto(finalPostingDate, balanceChange, expenseType, description));
+            account.AddEntry(new AddBankEntryDto(finalPostingDate, balanceChange, description, [new() { Name = "Sallary" }]));
         }
         private async Task UpdateBankAccountEntry(int id, BankAccountEntry bankAccountEntry)
         {
@@ -359,14 +362,6 @@ namespace FinanceManager.Infrastructure.Repositories
             if (entryToUpdate is null) return;
 
             entryToUpdate.Update(investmentEntry);
-        }
-        private ExpenseType GetRandomType()
-        {
-            Array values = Enum.GetValues<ExpenseType>();
-            var result = values.GetValue(_random.Next(values.Length));
-            if (result is null)
-                return ExpenseType.Other;
-            return (ExpenseType)result;
         }
 
 

@@ -1,0 +1,61 @@
+﻿@page "/Admin/EditLabel/{LabelId:int}"
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+
+@if (_labelData is not null)
+{ 
+    <MudGrid Spacing="6">
+        <MudItem xs="12">
+            <MudText Typo="Typo.h3">
+                @_labelData.Name.ToUpper()
+            </MudText>
+        </MudItem>
+
+
+        <MudItem xs="12">
+            <MudText Typo="Typo.h6">Change name</MudText>
+            <MudGrid>
+                <MudItem xs="8">
+                    <MudForm @ref="_nameForm" @bind-IsValid="@_success" Spacing="3">
+
+                        <MudTextField T="string" Label="Name" HelperText="Choose a name" @bind-value="_nameField"
+                                      InputType="InputType.Text" Validation="@(new Func<string, IEnumerable<string>>(ValidateName))" Required
+                                      RequiredError="Name is required!" />
+
+
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-4" OnClick="UpdateNameAsync" Disabled="@(!_success)">Update name</MudButton>
+                    </MudForm>
+                </MudItem>
+            </MudGrid>
+            @* <MudDivider Class="my-3" /> *@
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudStack Spacing="2">
+
+                @foreach (var message in _errors)
+                {
+                    <MudAlert Severity="Severity.Error">@message</MudAlert>
+                }
+
+                @foreach (var message in _warnings)
+                {
+                    <MudAlert Severity="Severity.Warning">@message</MudAlert>
+                }
+
+                @foreach (var message in _info)
+                {
+                    <MudAlert Severity="Severity.Info">@message</MudAlert>
+                }
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+}
+else if (_isLoadingPage)
+{
+
+}
+else
+{
+    <MudAlert Severity="Severity.Error">Label with id @LabelId could not be found.</MudAlert>
+}

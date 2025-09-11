@@ -20,7 +20,7 @@ public partial class AllAccountsSummary : ComponentBase
     }
 
     public Dictionary<AccountLabel, List<BankAccountEntry>> ExpensesTypesAgregate { get; set; } = [];
-    public Dictionary<ExpenseType, List<BankAccountEntry>> ExpensesCathegoriesAgregate { get; set; } = [];
+    public Dictionary<string, List<BankAccountEntry>> ExpensesCathegoriesAgregate { get; set; } = [];
 
     void InitializeWealthByCategory()
     {
@@ -60,13 +60,12 @@ public partial class AllAccountsSummary : ComponentBase
         SpendingByCategory.Clear();
         ExpensesCathegoriesAgregate.Clear();
 
-        List<ExpenseType> expenseTypes = Enum.GetValues(typeof(ExpenseType)).Cast<ExpenseType>().ToList();
 
-        foreach (var expenseType in expenseTypes)
-        {
-            ExpensesCathegoriesAgregate.Add(expenseType, new List<BankAccountEntry>());
-            SpendingByCategory.Add(new ExpenseTypeSummaryViewModel() { ExpenseType = expenseType, Value = 0 });
-        }
+        //foreach (var expenseType in expenseTypes)
+        //{
+        //    ExpensesCathegoriesAgregate.Add(expenseType, new List<BankAccountEntry>());
+        //    SpendingByCategory.Add(new ExpenseTypeSummaryViewModel() { ExpenseType = expenseType, Value = 0 });
+        //}
 
 
         DateTime iterationDate;
@@ -88,17 +87,17 @@ public partial class AllAccountsSummary : ComponentBase
             {
                 if (account.Entries is null) continue;
 
-                foreach (var expenseType in expenseTypes)
-                {
-                    var category = SpendingByCategory.FirstOrDefault(x => x.ExpenseType == expenseType);
-                    if (category is null) continue;
+                //foreach (var expenseType in expenseTypes)
+                //{
+                //    var category = SpendingByCategory.FirstOrDefault(x => x.ExpenseType == expenseType);
+                //    if (category is null) continue;
 
-                    var spendingDuringDay = account.Entries.Where(x => x.ExpenseType == expenseType && x.PostingDate.Year == iterationDate.Year &&
-                                                                x.PostingDate.Month == iterationDate.Month && x.PostingDate.Day == iterationDate.Day).ToList();
+                //    var spendingDuringDay = account.Entries.Where(x => x.ExpenseType == expenseType && x.PostingDate.Year == iterationDate.Year &&
+                //                                                x.PostingDate.Month == iterationDate.Month && x.PostingDate.Day == iterationDate.Day).ToList();
 
-                    category.Value += spendingDuringDay.Sum(x => x.ValueChange);
-                    ExpensesCathegoriesAgregate[expenseType].AddRange(spendingDuringDay);
-                }
+                //    category.Value += spendingDuringDay.Sum(x => x.ValueChange);
+                //    ExpensesCathegoriesAgregate[expenseType].AddRange(spendingDuringDay);
+                //}
             }
 
             iterationDate = iterationDate.AddDays(1);

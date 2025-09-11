@@ -43,7 +43,7 @@ public class MoneyFlowControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<List<PieChartModel>>(okResult.Value);
+        var returnValue = Assert.IsType<List<NameValueResult>>(okResult.Value);
         Assert.Single(returnValue);
     }
 
@@ -60,7 +60,7 @@ public class MoneyFlowControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<List<PieChartModel>>(okResult.Value);
+        var returnValue = Assert.IsType<List<NameValueResult>>(okResult.Value);
         Assert.Single(returnValue);
     }
 

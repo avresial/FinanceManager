@@ -13,6 +13,11 @@ public class BankAccountEntryConfiguration : IEntityTypeConfiguration<BankAccoun
         builder.Property(e => e.EntryId)
             .ValueGeneratedOnAdd();
 
+        builder.HasMany(e => e.Labels)
+            .WithMany(e => e.Entries);
+        //.HasForeignKey(l => l.Id)
+        //.OnDelete(DeleteBehavior.SetNull);
+
         builder.Property(e => e.Value)
             .HasPrecision(18, 2);
 

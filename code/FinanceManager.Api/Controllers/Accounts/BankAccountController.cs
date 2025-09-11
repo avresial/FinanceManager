@@ -79,8 +79,8 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
                 PostingDate = x.PostingDate,
                 Value = x.Value,
                 ValueChange = x.ValueChange,
-                ExpenseType = x.ExpenseType,
-                Description = x.Description
+                Description = x.Description,
+                Labels = x.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id }).ToList()
             })
         };
         return await Task.FromResult(Ok(bankAccountDto));
@@ -142,7 +142,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         if (!await userPlanVerifier.CanAddMoreAccounts(userId.Value))
             return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
-        return Ok(await _accountRepository.Add(userId.Value, 0, addAccount.accountName));
+        return Ok(await _accountRepository.Add(userId.Value, addAccount.accountName));
     }
 
     [HttpPost("AddEntry")]
@@ -156,7 +156,10 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
 
         try
         {
-            return Ok(await _entryRepository.Add(addEntry.entry));
+            return Ok(await _entryRepository.Add(new BankAccountEntry(addEntry.AccountId, addEntry.EntryId, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
+            {
+                Description = addEntry.Description,
+            }));
         }
         catch (Exception ex)
         {
@@ -206,14 +209,25 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
     }
 
     [HttpPut("UpdateEntry")]
-    public async Task<IActionResult> UpdateEntry(BankAccountEntry entry)
+    public async Task<IActionResult> UpdateEntry(UpdateBankAccountEntry updateEntry)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
 
-        var account = await _accountRepository.Get(entry.AccountId);
+        var account = await _accountRepository.Get(updateEntry.AccountId);
         if (account == null || account.UserId != userId) return BadRequest();
 
-        return Ok(await _entryRepository.Update(entry));
+        var newEntry = new BankAccountEntry(updateEntry.AccountId, updateEntry.EntryId, updateEntry.PostingDate, updateEntry.Value,
+            updateEntry.ValueChange)
+        {
+            Description = updateEntry.Description,
+        };
+
+        if (updateEntry.Labels is null)
+            newEntry.Labels = new List<FinancialLabel>();
+        else
+            newEntry.Labels = updateEntry.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id }).ToList();
+
+        return Ok(await _entryRepository.Update(newEntry));
     }
 }

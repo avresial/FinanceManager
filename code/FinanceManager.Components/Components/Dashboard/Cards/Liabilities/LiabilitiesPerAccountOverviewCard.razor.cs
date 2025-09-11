@@ -13,7 +13,7 @@ public partial class LiabilitiesPerAccountOverviewCard
     private string _currency = "";
     private decimal _totalLiabilities = 0;
     private UserSession? _user;
-    private ApexChart<PieChartModel>? _chart;
+    private ApexChart<NameValueResult>? _chart;
 
     [Parameter] public bool DisplayAsChart { get; set; } = true;
     [Parameter] public string Height { get; set; } = "300px";
@@ -26,7 +26,7 @@ public partial class LiabilitiesPerAccountOverviewCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    private ApexChartOptions<PieChartModel> _options { get; set; } = new()
+    private ApexChartOptions<NameValueResult> _options { get; set; } = new()
     {
         Chart = new Chart
         {
@@ -70,7 +70,7 @@ public partial class LiabilitiesPerAccountOverviewCard
         Colors = ColorsProvider.GetColors()
     };
 
-    public List<PieChartModel> Data { get; set; } = new List<PieChartModel>();
+    public List<NameValueResult> Data { get; set; } = new List<NameValueResult>();
 
 
     protected override async Task OnInitializedAsync()

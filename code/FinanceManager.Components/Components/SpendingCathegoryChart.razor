@@ -23,7 +23,7 @@ Title="@Title" XAxisType="XAxisType.Datetime" Height="300">
 	private ApexChart<BankAccountEntry>? chart;
 
 	[Parameter]
-	public Dictionary<ExpenseType, List<BankAccountEntry>> DataDictionary { get; set; } = new Dictionary<ExpenseType, List<BankAccountEntry>>();
+	public Dictionary<string, List<BankAccountEntry>> DataDictionary { get; set; } = new Dictionary<string, List<BankAccountEntry>>();
 
 	[Parameter]
 	public string Title { get; set; } = string.Empty;
