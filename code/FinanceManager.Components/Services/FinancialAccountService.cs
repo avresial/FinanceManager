@@ -183,8 +183,23 @@ public class FinancialAccountService : IFinancialAccountService
     public async Task UpdateEntry<T>(T accountEntry) where T : FinancialEntryBase
     {
         if (accountEntry is BankAccountEntry bankAccountEntry)
+        {
             await _bankAccountService.UpdateEntryAsync(bankAccountEntry);
+        }
         else if (accountEntry is StockAccountEntry stockAccountEntry)
-            await _stockAccountService.UpdateEntryAsync(stockAccountEntry);
+        {
+            List<UpdateFiancialLabel> labels = [];
+
+            if (stockAccountEntry.Labels is not null && stockAccountEntry.Labels.Count != 0)
+            {
+                labels = stockAccountEntry.Labels.Select(x => new UpdateFiancialLabel(x.Id, x.Name)).ToList();
+            }
+
+            UpdateStockAccountEntry updateStockAccountEntry = new(stockAccountEntry.AccountId, stockAccountEntry.EntryId,
+                stockAccountEntry.PostingDate, stockAccountEntry.Value, stockAccountEntry.ValueChange, stockAccountEntry.Ticker,
+                stockAccountEntry.InvestmentType, labels);
+
+            await _stockAccountService.UpdateEntryAsync(updateStockAccountEntry);
+        }
     }
 }

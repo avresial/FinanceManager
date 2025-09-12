@@ -2,25 +2,16 @@
 
 namespace FinanceManager.Domain.Entities.Accounts;
 
-public class FinancialEntryBase
+public class FinancialEntryBase(int accountId, int entryId, DateTime postingDate, decimal value, decimal valueChange)
 {
-    public int EntryId { get; internal set; }
-    public int AccountId { get; set; }
-    public DateTime PostingDate { get; set; }
+    public int EntryId { get; internal set; } = entryId;
+    public int AccountId { get; set; } = accountId;
+    public DateTime PostingDate { get; set; } = postingDate;
 
-    public decimal Value { get; set; }
-    public decimal ValueChange { get; set; }
+    public decimal Value { get; set; } = value;
+    public decimal ValueChange { get; set; } = valueChange;
 
-    public ICollection<FinancialLabel> Labels { get; set; }
-
-    public FinancialEntryBase(int accountId, int entryId, DateTime postingDate, decimal value, decimal valueChange)
-    {
-        AccountId = accountId;
-        EntryId = entryId;
-        PostingDate = postingDate;
-        Value = value;
-        ValueChange = valueChange;
-    }
+    public ICollection<FinancialLabel> Labels { get; set; } = [];
 
     public virtual void Update(FinancialEntryBase financialEntryBase)
     {

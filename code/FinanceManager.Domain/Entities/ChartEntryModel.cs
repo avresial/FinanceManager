@@ -1,8 +1,7 @@
-﻿namespace FinanceManager.Domain.Entities
+﻿namespace FinanceManager.Domain.Entities;
+
+public class ChartEntryModel
 {
-    public class ChartEntryModel
-    {
-        public DateTime Date { get; set; }
-        public decimal Value { get; set; }
-    }
+    public DateTime Date { get; set; }
+    public decimal Value { get; set; }
 }

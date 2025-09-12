@@ -39,16 +39,16 @@ public class AdministrationUsersService(HttpClient httpClient, ILogger<Administr
         }
     }
 
-    public async Task<int?> GetAccountsCount()
+    public async Task<int> GetAccountsCount()
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<int?>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetAccountsCount");
+            return await _httpClient.GetFromJsonAsync<int>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetAccountsCount");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error getting accounts count");
-            return null;
+            return 0;
         }
     }
     public async Task<int?> GetTotalTrackedMoney()
@@ -63,18 +63,18 @@ public class AdministrationUsersService(HttpClient httpClient, ILogger<Administr
             return null;
         }
     }
-    public async Task<int?> GetUsersCount()
+    public async Task<int> GetUsersCount()
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<int?>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetUsersCount");
+            return await _httpClient.GetFromJsonAsync<int>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetUsersCount");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error getting user count");
         }
 
-        return null;
+        return 0;
     }
     public async Task<IEnumerable<UserDetails>> GetUsers(int recordIndex, int recordsCount)
     {

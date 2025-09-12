@@ -9,36 +9,31 @@ namespace FinanceManager.Application.Services;
 public class DuplicateEntryResolverService(IBankAccountRepository<BankAccount> bankAccountRepository,
     IAccountEntryRepository<BankAccountEntry> accountEntryRepository, IDuplicateEntryRepository duplicateEntryRepository)
 {
-    private readonly IBankAccountRepository<BankAccount> _bankAccountRepository = bankAccountRepository;
-    private readonly IAccountEntryRepository<BankAccountEntry> _accountEntryRepository = accountEntryRepository;
-    private readonly IDuplicateEntryRepository _duplicateEntryRepository = duplicateEntryRepository;
-
-
     public async Task<bool> Resolve(int accountId, int duplicateId, int entryIdToBeRemained)
     {
-        var existingDuplicate = await _duplicateEntryRepository.GetDuplicate(accountId, duplicateId);
+        var existingDuplicate = await duplicateEntryRepository.GetDuplicate(accountId, duplicateId);
         if (existingDuplicate is null) return false;
 
         foreach (var entryId in existingDuplicate.EntriesId)
         {
             if (entryId == entryIdToBeRemained) continue;
-            await _accountEntryRepository.Delete(accountId, entryId);
+            await accountEntryRepository.Delete(accountId, entryId);
         }
 
-        await _duplicateEntryRepository.RemoveDuplicate(existingDuplicate.Id);
+        await duplicateEntryRepository.RemoveDuplicate(existingDuplicate.Id);
 
         return true;
     }
     public async Task Scan(int accountId)
     {
-        if (!(await _bankAccountRepository.Exists(accountId))) return;
+        if (!(await bankAccountRepository.Exists(accountId))) return;
 
-        var oldestEntry = await _accountEntryRepository.GetOldest(accountId);
+        var oldestEntry = await accountEntryRepository.GetOldest(accountId);
         if (oldestEntry is null) return;
 
         for (var i = oldestEntry.PostingDate; i <= DateTime.UtcNow; i = i.AddDays(1))
         {
-            var entries = await _accountEntryRepository.Get(accountId, i, i.AddDays(1));
+            var entries = await accountEntryRepository.Get(accountId, i, i.AddDays(1));
 
             var groups = entries.GroupBy(x => new { x.PostingDate, x.ValueChange }).Where(g => g.Count() > 1);
 
@@ -56,17 +51,17 @@ public class DuplicateEntryResolverService(IBankAccountRepository<BankAccount> b
                 DuplicateEntry? existingDuplicate = null;
                 foreach (var entryId in duplicate.EntriesId)
                 {
-                    existingDuplicate = await _duplicateEntryRepository.GetDuplicateByEntry(duplicate.AccountId, entryId);
+                    existingDuplicate = await duplicateEntryRepository.GetDuplicateByEntry(duplicate.AccountId, entryId);
                     if (existingDuplicate is not null) break;
                 }
 
                 if (existingDuplicate is not null)
-                    await _duplicateEntryRepository.UpdateDuplicate(existingDuplicate.Id, existingDuplicate.AccountId, duplicate.EntriesId);
+                    await duplicateEntryRepository.UpdateDuplicate(existingDuplicate.Id, existingDuplicate.AccountId, duplicate.EntriesId);
                 else
                     duplicatesToAdd.Add(duplicate);
             }
 
-            await _duplicateEntryRepository.AddDuplicate(duplicatesToAdd);
+            await duplicateEntryRepository.AddDuplicate(duplicatesToAdd);
         }
     }
 }

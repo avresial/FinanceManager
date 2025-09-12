@@ -37,7 +37,7 @@ public class UserRepository : IUserRepository
 
     public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole)
     {
-        _dbContext.Add(new UserDto
+        _dbContext.Add(new
         {
             Login = login,
             Password = password,
@@ -59,14 +59,14 @@ public class UserRepository : IUserRepository
     }
     public async Task<User?> GetUser(string login)
     {
-        UserDto? userDto = await _dbContext.Users.FirstOrDefaultAsync(x => x.Login == login);
+        var userDto = await _dbContext.Users.FirstOrDefaultAsync(x => x.Login == login);
         if (userDto is null) return null;
 
         return userDto.ToUser();
     }
     public async Task<User?> GetUser(int id)
     {
-        UserDto? userDto = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == id);
+        var userDto = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == id);
         if (userDto is null) return null;
 
         return userDto.ToUser();
@@ -84,10 +84,8 @@ public class UserRepository : IUserRepository
             .Select(x => x.ToUser())
             .ToListAsync();
     }
-    public async Task<int> GetUsersCount()
-    {
-        return await _dbContext.Users.CountAsync();
-    }
+    public Task<int> GetUsersCount() => _dbContext.Users.CountAsync();
+
     public async Task<bool> RemoveUser(int userId)
     {
         var userToRemove = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);

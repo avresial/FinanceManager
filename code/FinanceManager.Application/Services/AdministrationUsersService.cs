@@ -7,19 +7,13 @@ using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Services;
-public class AdministrationUsersService(IFinancalAccountRepository financalAccountRepository, IUserRepository userRepository, IActiveUsersRepository activeUsersRepository, UserPlanVerifier userPlanVerifier, PricingProvider pricingProvider, ILogger<AdministrationUsersService> logger) : IAdministrationUsersService
+public class AdministrationUsersService(IFinancialAccountRepository financialAccountRepository, IUserRepository userRepository,
+    IActiveUsersRepository activeUsersRepository, UserPlanVerifier userPlanVerifier, PricingProvider pricingProvider,
+    ILogger<AdministrationUsersService> logger) : IAdministrationUsersService
 {
-    private readonly IFinancalAccountRepository _financalAccountRepository = financalAccountRepository;
-    private readonly IUserRepository _userRepository = userRepository;
-    private readonly IActiveUsersRepository _activeUsersRepository = activeUsersRepository;
-    private readonly UserPlanVerifier _userPlanVerifier = userPlanVerifier;
-    private readonly PricingProvider _pricingProvider = pricingProvider;
-    private readonly ILogger<AdministrationUsersService> _logger = logger;
 
-    public async Task<int?> GetAccountsCount()
-    {
-        return await _financalAccountRepository.GetAccountsCount();
-    }
+    public Task<int> GetAccountsCount() => financialAccountRepository.GetAccountsCount();
+
     public async Task<IEnumerable<ChartEntryModel>> GetDailyActiveUsers()
     {
         DateTime end = DateTime.Now.Date;
@@ -29,7 +23,7 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
 
         try
         {
-            var activeUsers = await _activeUsersRepository.GetActiveUsersCount(DateOnly.FromDateTime(start), DateOnly.FromDateTime(DateTime.Now));
+            var activeUsers = await activeUsersRepository.GetActiveUsersCount(DateOnly.FromDateTime(start), DateOnly.FromDateTime(DateTime.Now));
 
             for (DateTime i = start; i <= end; i = i.AddDays(1))
             {
@@ -56,7 +50,7 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting daily active users");
+            logger.LogError(ex, $"Error getting daily active users");
         }
 
         return [];
@@ -84,7 +78,7 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting new users daily");
+            logger.LogError(ex, $"Error getting new users daily");
         }
 
         return [];
@@ -96,7 +90,7 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
     }
     public async Task<IEnumerable<UserDetails>> GetUsers(int recordIndex, int recordsCount)
     {
-        var users = await _userRepository.GetUsers(recordIndex, recordsCount);
+        var users = await userRepository.GetUsers(recordIndex, recordsCount);
 
         return users.Select(users => new UserDetails()
         {
@@ -105,14 +99,11 @@ public class AdministrationUsersService(IFinancalAccountRepository financalAccou
             PricingLevel = users.PricingLevel,
             RecordCapacity = new Domain.Entities.Login.RecordCapacity()
             {
-                UsedCapacity = _userPlanVerifier.GetUsedRecordsCapacity(users.UserId).Result,
-                TotalCapacity = _pricingProvider.GetMaxAllowedEntries(users.PricingLevel)
+                UsedCapacity = userPlanVerifier.GetUsedRecordsCapacity(users.UserId).Result,
+                TotalCapacity = pricingProvider.GetMaxAllowedEntries(users.PricingLevel)
             }
         }).ToList();
 
     }
-    public async Task<int?> GetUsersCount()
-    {
-        return await _userRepository.GetUsersCount();
-    }
+    public Task<int> GetUsersCount() => userRepository.GetUsersCount();
 }

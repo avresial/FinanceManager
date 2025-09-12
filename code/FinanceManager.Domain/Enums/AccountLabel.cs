@@ -10,8 +10,3 @@ public enum AccountLabel
     RealEstate,
     Other
 }
-public enum AccountType
-{
-    Bank,
-    Stock,
-}

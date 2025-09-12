@@ -1,17 +1,13 @@
-﻿@using ApexCharts
-@using FinanceManager.Components.Components.Charts
-@using FinanceManager.Domain.Entities.MoneyFlowModels;
+﻿@using FinanceManager.Components.Components.Charts
 
-<div class="card" style="background-color:transparent">
-    <div class="row m-0">
-        <div class="card-body">
-            <h5 class="card-title">Assets value over time</h5>
-        </div>
-    </div>
-    <div class="row" style="min-height: 150px; position:relative; bottom:-2px">
+<MudCard Outlined Class="d-flex flex-nowrap " Style="@($"height:{Height}")">
+    <MudPaper Class="flex-grow-0 p-3" Elevation="0">
+        <MudText Typo=Typo.h5>Assets value over time</MudText>
+    </MudPaper>
+    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
         @if (ChartData.Any())
         {
-             <LineChartJs Series="@([ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()])" />
+            <LineChartJs Series="@([ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()])" />
         }
         else
         {
@@ -19,5 +15,5 @@
                 <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
             </div>
         }
-    </div>
-</div>
+    </MudPaper>
+</MudCard>

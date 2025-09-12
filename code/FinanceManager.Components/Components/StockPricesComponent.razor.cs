@@ -125,8 +125,8 @@ public partial class StockPricesComponent
 
             if (tickerCurrency is not null)
             {
-                _existingCurrency = tickerCurrency.currency;
-                _selectedCurrency = tickerCurrency.currency;
+                _existingCurrency = tickerCurrency.Currency;
+                _selectedCurrency = tickerCurrency.Currency;
             }
             else
             {

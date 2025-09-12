@@ -9,42 +9,34 @@ namespace FinanceManager.Application.Services;
 public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRepository, IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
     IUserRepository userRepository, PricingProvider pricingProvider)
 {
-    private readonly IBankAccountRepository<BankAccount> _bankAccountRepository = bankAccountRepository;
-    private readonly IAccountEntryRepository<BankAccountEntry> _bankAccountEntryRepository = bankAccountEntryRepository;
-    private readonly IUserRepository _userRepository = userRepository;
-    private readonly PricingProvider _pricingProvider = pricingProvider;
-
     public async Task<int> GetUsedRecordsCapacity(int userId)
     {
-        var accounts = await _bankAccountRepository.GetAvailableAccounts(userId);
+        var accounts = await bankAccountRepository.GetAvailableAccounts(userId);
         int totalEntries = 0;
+
         foreach (var account in accounts)
-        {
-            var count = await _bankAccountEntryRepository.GetCount(account.AccountId);
-            if (count is null) continue;
-            totalEntries += count.Value;
-        }
+            totalEntries += await bankAccountEntryRepository.GetCount(account.AccountId);
 
         return await Task.FromResult(totalEntries);
     }
 
     public async Task<bool> CanAddMoreEntries(int userId)
     {
-        var user = await _userRepository.GetUser(userId);
+        var user = await userRepository.GetUser(userId);
         if (user is null) return false;
 
         int totalEntries = await GetUsedRecordsCapacity(userId);
 
-        return totalEntries < _pricingProvider.GetMaxAllowedEntries(user.PricingLevel);
+        return totalEntries < pricingProvider.GetMaxAllowedEntries(user.PricingLevel);
     }
 
     public async Task<bool> CanAddMoreAccounts(int userId)
     {
-        var user = await _userRepository.GetUser(userId);
+        var user = await userRepository.GetUser(userId);
         if (user is null) return false;
 
-        var accounts = await _bankAccountRepository.GetAvailableAccounts(userId);
+        var accounts = await bankAccountRepository.GetAvailableAccounts(userId);
 
-        return accounts.Count() < _pricingProvider.GetMaxAccountCount(user.PricingLevel);
+        return accounts.Count() < pricingProvider.GetMaxAccountCount(user.PricingLevel);
     }
 }

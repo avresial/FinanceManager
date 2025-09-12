@@ -90,7 +90,7 @@ public class StockAccountService
         return response.IsSuccessStatusCode;
     }
 
-    public async Task<bool> UpdateEntryAsync(StockAccountEntry entry)
+    public async Task<bool> UpdateEntryAsync(UpdateStockAccountEntry entry)
     {
         var response = await _httpClient.PutAsJsonAsync($"{_httpClient.BaseAddress}api/StockAccount/UpdateEntry", entry);
         return response.IsSuccessStatusCode;

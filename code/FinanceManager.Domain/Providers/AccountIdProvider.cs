@@ -3,25 +3,16 @@ using FinanceManager.Domain.Repositories.Account;
 
 namespace FinanceManager.Domain.Providers;
 
-public class AccountIdProvider
+public class AccountIdProvider(IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository)
 {
-    private readonly IAccountRepository<StockAccount> _stockAccountRepository;
-    private readonly IBankAccountRepository<BankAccount> _bankAccountRepository;
-
-    public AccountIdProvider(IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository)
-    {
-        this._stockAccountRepository = stockAccountRepository;
-        this._bankAccountRepository = bankAccountRepository;
-    }
-
     public async Task<int?> GetMaxId()
     {
         List<int> ids = [];
         int? stockAccountsLastId = null;
         int? bankAccountsLastId = null;
 
-        stockAccountsLastId = await _stockAccountRepository.GetLastAccountId();
-        bankAccountsLastId = await _bankAccountRepository.GetLastAccountId();
+        stockAccountsLastId = await stockAccountRepository.GetLastAccountId();
+        bankAccountsLastId = await bankAccountRepository.GetLastAccountId();
 
         if (stockAccountsLastId is not null)
             ids.Add(stockAccountsLastId.Value);

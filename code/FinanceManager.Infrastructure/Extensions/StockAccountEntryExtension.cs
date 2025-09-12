@@ -4,7 +4,7 @@ using FinanceManager.Infrastructure.Dtos;
 namespace FinanceManager.Infrastructure.Extensions;
 public static class StockAccountEntryExtension
 {
-    public static StockAccountEntryDto ToDto(this StockAccountEntry stockAccountEntry) => new StockAccountEntryDto
+    public static StockAccountEntryDto ToDto(this StockAccountEntry stockAccountEntry) => new()
     {
         AccountId = stockAccountEntry.AccountId,
         EntryId = stockAccountEntry.EntryId,

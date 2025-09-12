@@ -6,14 +6,11 @@ namespace FinanceManager.Application.Services;
 
 internal class CurrencyExchangeService(HttpClient httpClient, ILogger<CurrencyExchangeService> logger) : ICurrencyExchangeService
 {
-    private readonly HttpClient _httpClient = httpClient;
-    private readonly ILogger<CurrencyExchangeService> _logger = logger;
-
     public async Task<decimal?> GetExchangeRateAsync(string fromCurrency, string toCurrency, DateTime date)
     {
         try
         {
-            var response = await _httpClient.GetAsync($"https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date:yyyy-MM-dd}/v1/currencies/{fromCurrency.ToLower()}.json");
+            var response = await httpClient.GetAsync($"https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date:yyyy-MM-dd}/v1/currencies/{fromCurrency.ToLower()}.json");
             var jObject = JObject.Parse(await response.Content.ReadAsStringAsync());
             var tokenPath = $"$.{fromCurrency.ToLower()}.{toCurrency.ToLower()}";
 
@@ -21,7 +18,7 @@ internal class CurrencyExchangeService(HttpClient httpClient, ILogger<CurrencyEx
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get exchange rate from {FromCurrency} to {ToCurrency} on {Date}", fromCurrency, toCurrency, date);
+            logger.LogError(ex, "Failed to get exchange rate from {FromCurrency} to {ToCurrency} on {Date}", fromCurrency, toCurrency, date);
         }
 
 

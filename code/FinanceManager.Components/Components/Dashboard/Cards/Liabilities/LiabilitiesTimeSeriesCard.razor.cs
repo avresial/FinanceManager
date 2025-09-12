@@ -10,7 +10,7 @@ public partial class LiabilitiesTimeSeriesCard
 
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
-    [Parameter] public string Height { get; set; } = "300px";
+    [Parameter] public string Height { get; set; } = "250px";
 
     [Inject] public required ILogger<LiabilitiesTimeSeriesCard> Logger { get; set; }
     [Inject] public required ILiabilitiesService LiabilitiesService { get; set; }

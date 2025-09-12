@@ -1,175 +1,174 @@
 ﻿using FinanceManager.Domain.Extensions;
 
-namespace FinanceManager.Domain.Entities.Accounts
+namespace FinanceManager.Domain.Entities.Accounts;
+
+public class FinancialAccountBase<T> : BasicAccountInformation where T : FinancialEntryBase
 {
-    public class FinancialAccountBase<T> : BasicAccountInformation where T : FinancialEntryBase
+    public override DateTime? Start => GetStartDate();
+    public override DateTime? End => GetEndDate();
+
+    public List<T>? Entries { get; protected set; }
+
+    public FinancialAccountBase(int userId, int accountId, string name)
     {
-        public override DateTime? Start => GetStartDate();
-        public override DateTime? End => GetEndDate();
+        UserId = userId;
+        AccountId = accountId;
+        Name = name;
+    }
+    public virtual IEnumerable<T> Get()
+    {
+        if (Entries is null) return [];
+        return Entries;
+    }
+    public virtual IEnumerable<T> Get(DateTime date)
+    {
+        if (Entries is null) return [];
+        return Entries.Get(date);
+    }
 
-        public List<T>? Entries { get; protected set; }
+    public virtual IEnumerable<T> Get(DateTime start, DateTime end)
+    {
+        if (Entries is null) return [];
 
-        public FinancialAccountBase(int userId, int accountId, string name)
+        return Entries.Where(x => x.PostingDate >= start && x.PostingDate <= end);
+    }
+
+    public virtual void Add(T entry, bool recalculateValues = true)
+    {
+        Entries ??= [];
+        var alreadyExistingEntry = Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
+        if (alreadyExistingEntry is not null)
         {
-            UserId = userId;
-            AccountId = accountId;
-            Name = name;
+            Console.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alreadyExistingEntry.EntryId}, Posting date{alreadyExistingEntry.PostingDate}, Value change {alreadyExistingEntry.ValueChange}");
+            return;
         }
-        public virtual IEnumerable<T> Get()
+        var previousEntry = Entries.GetNextYounger(entry.PostingDate).FirstOrDefault();
+
+        if (Entries is null) return;
+
+        var index = -1;
+        if (previousEntry is not null)
+            index = Entries.IndexOf(previousEntry);
+
+        if (index < 0)
         {
-            if (Entries is null) return [];
-            return Entries;
+            Entries.Add(entry);
+            index = Entries.Count - 1;
         }
-        public virtual IEnumerable<T> Get(DateTime date)
+        else
         {
-            if (Entries is null) return [];
-            return Entries.Get(date);
+            Entries.Insert(index, entry);
         }
 
-        public virtual IEnumerable<T> Get(DateTime start, DateTime end)
-        {
-            if (Entries is null) return [];
+        if (recalculateValues)
+            RecalculateEntryValues(index);
+    }
 
-            return Entries.Where(x => x.PostingDate >= start && x.PostingDate <= end);
+    public virtual void Add(IEnumerable<T> entries, bool recalculateValues = true)
+    {
+        foreach (var entry in entries)
+            Add(entry, recalculateValues);
+    }
+
+    public virtual void UpdateEntry(T entry, bool recalculateValues = true)
+    {
+        Entries ??= [];
+
+        var entryToUpdate = Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
+        if (entryToUpdate is null) return;
+
+        entryToUpdate.Update(entry);
+        Entries.Remove(entryToUpdate);
+        var previousEntry = Entries.GetNextYounger(entryToUpdate.PostingDate).FirstOrDefault();
+
+        if (previousEntry is null)
+        {
+            Entries.Add(entryToUpdate);
+        }
+        else
+        {
+            var newIndex = Entries.IndexOf(previousEntry);
+            Entries.Insert(newIndex, entryToUpdate);
         }
 
-        public virtual void Add(T entry, bool recalculateValues = true)
+        var index = Entries.IndexOf(entryToUpdate);
+        if (recalculateValues)
+            RecalculateEntryValues(index);
+    }
+
+    public virtual void Remove(int id)
+    {
+        if (Entries is null) return;
+
+        var entry = Entries.FirstOrDefault(x => x.EntryId == id);
+        if (entry is null) return;
+        var indexToRemove = Entries.IndexOf(entry);
+        Entries.RemoveAt(indexToRemove);
+
+        if (indexToRemove > 0)
+            Entries[indexToRemove - 1].Value -= entry.ValueChange;
+
+        RecalculateEntryValues(indexToRemove - 1);
+    }
+    public int? GetMaxId()
+    {
+        if (Entries is null || Entries.Count == 0)
+            return null;
+
+        return Entries.Max(x => x.EntryId);
+    }
+    public IEnumerable<T> GetDaily()
+    {
+        throw new NotImplementedException();
+    }
+
+    public IEnumerable<T> GetMonthly()
+    {
+        throw new NotImplementedException();
+    }
+
+    public IEnumerable<T> GetYearly()
+    {
+        throw new NotImplementedException();
+    }
+
+    public IEnumerable<T> GetExpenses()
+    {
+        throw new NotImplementedException();
+    }
+
+    public IEnumerable<T> GetEarnings()
+    {
+        throw new NotImplementedException();
+    }
+
+    internal void RecalculateEntryValues(int? startingIndex)
+    {
+        if (Entries is null || Entries.Count == 0) return;
+
+        int startIndex = startingIndex ?? Entries.Count - 1;
+        for (int i = startIndex; i >= 0; i--)
         {
-            Entries ??= [];
-            var alreadyExistingEntry = Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
-            if (alreadyExistingEntry is not null)
+            if (Entries.Count - 1 <= i)
             {
-                Console.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alreadyExistingEntry.EntryId}, Posting date{alreadyExistingEntry.PostingDate}, Value change {alreadyExistingEntry.ValueChange}");
-                return;
-            }
-            var previousEntry = Entries.GetNextYounger(entry.PostingDate).FirstOrDefault();
-
-            if (Entries is null) return;
-
-            var index = -1;
-            if (previousEntry is not null)
-                index = Entries.IndexOf(previousEntry);
-
-            if (index < 0)
-            {
-                Entries.Add(entry);
-                index = Entries.Count - 1;
-            }
-            else
-            {
-                Entries.Insert(index, entry);
+                Entries[i].Value = Entries[i].ValueChange;
+                continue;
             }
 
-            if (recalculateValues)
-                RecalculateEntryValues(index);
+            var newValue = Entries[i + 1].Value + Entries[i].ValueChange;
+            Entries[i].Value = newValue;
         }
-
-        public virtual void Add(IEnumerable<T> entries, bool recalculateValues = true)
-        {
-            foreach (var entry in entries)
-                Add(entry, recalculateValues);
-        }
-
-        public virtual void UpdateEntry(T entry, bool recalculateValues = true)
-        {
-            Entries ??= [];
-
-            var entryToUpdate = Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
-            if (entryToUpdate is null) return;
-
-            entryToUpdate.Update(entry);
-            Entries.Remove(entryToUpdate);
-            var previousEntry = Entries.GetNextYounger(entryToUpdate.PostingDate).FirstOrDefault();
-
-            if (previousEntry is null)
-            {
-                Entries.Add(entryToUpdate);
-            }
-            else
-            {
-                var newIndex = Entries.IndexOf(previousEntry);
-                Entries.Insert(newIndex, entryToUpdate);
-            }
-
-            var index = Entries.IndexOf(entryToUpdate);
-            if (recalculateValues)
-                RecalculateEntryValues(index);
-        }
-
-        public virtual void Remove(int id)
-        {
-            if (Entries is null) return;
-
-            var entry = Entries.FirstOrDefault(x => x.EntryId == id);
-            if (entry is null) return;
-            var indexToRemove = Entries.IndexOf(entry);
-            Entries.RemoveAt(indexToRemove);
-
-            if (indexToRemove > 0)
-                Entries[indexToRemove - 1].Value -= entry.ValueChange;
-
-            RecalculateEntryValues(indexToRemove - 1);
-        }
-        public int? GetMaxId()
-        {
-            if (Entries is null || Entries.Count == 0)
-                return null;
-
-            return Entries.Max(x => x.EntryId);
-        }
-        public IEnumerable<T> GetDaily()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerable<T> GetMonthly()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerable<T> GetYearly()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerable<T> GetExpenses()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerable<T> GetEarnings()
-        {
-            throw new NotImplementedException();
-        }
-
-        internal void RecalculateEntryValues(int? startingIndex)
-        {
-            if (Entries is null || Entries.Count == 0) return;
-
-            int startIndex = startingIndex ?? Entries.Count - 1;
-            for (int i = startIndex; i >= 0; i--)
-            {
-                if (Entries.Count - 1 <= i)
-                {
-                    Entries[i].Value = Entries[i].ValueChange;
-                    continue;
-                }
-
-                var newValue = Entries[i + 1].Value + Entries[i].ValueChange;
-                Entries[i].Value = newValue;
-            }
-        }
-        private DateTime? GetStartDate()
-        {
-            if (Entries is null || Entries.Count == 0) return null;
-            var minDate = Entries.Min(x => x.PostingDate);
-            return Entries.First(x => x.PostingDate == minDate).PostingDate;
-        }
-        private DateTime? GetEndDate()
-        {
-            if (Entries is null || Entries.Count == 0) return null;
-            var maxDate = Entries.Max(x => x.PostingDate);
-            return Entries.First(x => x.PostingDate == maxDate).PostingDate;
-        }
+    }
+    private DateTime? GetStartDate()
+    {
+        if (Entries is null || Entries.Count == 0) return null;
+        var minDate = Entries.Min(x => x.PostingDate);
+        return Entries.First(x => x.PostingDate == minDate).PostingDate;
+    }
+    private DateTime? GetEndDate()
+    {
+        if (Entries is null || Entries.Count == 0) return null;
+        var maxDate = Entries.Max(x => x.PostingDate);
+        return Entries.First(x => x.PostingDate == maxDate).PostingDate;
     }
 }

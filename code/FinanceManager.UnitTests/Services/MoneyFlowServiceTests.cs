@@ -17,7 +17,7 @@ public class MoneyFlowServiceTests
     private readonly decimal _totalAssetsValue = 0;
 
     private readonly MoneyFlowService _moneyFlowService;
-    private readonly Mock<IFinancalAccountRepository> _financialAccountRepositoryMock = new();
+    private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
     private readonly Mock<IStockPriceRepository> _stockRepository = new();
     private readonly Mock<ICurrencyExchangeService> _currencyExchangeService = new();
     private readonly List<BankAccount> _bankAccounts;

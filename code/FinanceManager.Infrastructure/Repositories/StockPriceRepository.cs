@@ -8,11 +8,9 @@ namespace FinanceManager.Infrastructure.Repositories;
 
 public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
 {
-    private readonly AppDbContext _dbContext = context;
-
     public async Task<StockPrice> Add(string ticker, decimal pricePerUnit, string currency, DateTime date)
     {
-        var stockPriceDto = new StockPriceDto(
+        StockPriceDto stockPriceDto = new(
             0, // Id is autoincremented, will be set by the database
             ticker,
             pricePerUnit,
@@ -20,38 +18,34 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
             date.Date
         );
 
-        var entry = await _dbContext.StockPrices.AddAsync(stockPriceDto);
-        await _dbContext.SaveChangesAsync();
+        var entry = await context.StockPrices.AddAsync(stockPriceDto);
+        await context.SaveChangesAsync();
 
         return entry.Entity.ToStockPrice();
     }
 
     public async Task<DateTime?> GetLatestMissing(string ticker)
     {
-        DateTime searchDate = DateTime.UtcNow.Date;
-        StockPriceDto? stockPrice = await _dbContext.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == searchDate.Date);
+        var searchDate = DateTime.UtcNow.Date;
+        var stockPrice = await context.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == searchDate.Date);
         if (stockPrice is null) return searchDate;
 
         int tries = 365 * 99;
         do
         {
             searchDate = searchDate.AddDays(-1);
-            stockPrice = await _dbContext.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == searchDate.Date);
+            stockPrice = await context.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == searchDate.Date);
             if (stockPrice is null) return searchDate;
 
         } while (stockPrice is not null && --tries > 0);
 
         return null;
-
     }
 
     public async Task<StockPrice?> Get(string ticker, DateTime date)
     {
-        StockPriceDto? stockPrice = await _dbContext.StockPrices
-            .FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == date.Date);
-
+        var stockPrice = await context.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == date.Date);
         if (stockPrice is null) return null;
-
 
         return stockPrice.ToStockPrice();
     }
@@ -60,7 +54,7 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         var result = await Get(ticker, date);
         if (result is not null) return result;
 
-        return await _dbContext.StockPrices
+        return await context.StockPrices
             .Where(x => x.Ticker == ticker && x.Date < date)
             .OrderByDescending(x => x.Date)
             .Select(x => x.ToStockPrice())
@@ -69,7 +63,7 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
 
     public async Task<string?> GetTickerCurrency(string ticker)
     {
-        StockPriceDto? stockPrice = await _dbContext.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker);
+        var stockPrice = await context.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker);
 
         if (stockPrice is null) return null;
         return stockPrice.Currency;
@@ -77,20 +71,15 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
 
     public async Task<StockPrice?> Update(string ticker, decimal pricePerUnit, string currency, DateTime date)
     {
-        StockPriceDto? stockPrice = await _dbContext.StockPrices
-                        .FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == date.Date);
+        var stockPrice = await context.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == date.Date);
 
         if (stockPrice is null) return null;
 
         stockPrice.PricePerUnit = pricePerUnit;
         stockPrice.Currency = currency;
 
-        await _dbContext.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
         return stockPrice.ToStockPrice();
     }
-
-    private StockPriceDto GetRandomStockPrice(string ticker, DateTime date, string currency) =>
-        new(0, ticker, (decimal)Math.Round(Random.Shared.Next(1, 100) + Random.Shared.NextDouble(), 5), currency, date.Date);
-
 }
