@@ -9,90 +9,59 @@
 @using FinanceManager.Domain.Services
 @using FinanceManager.Components.Helpers
 
-
-
-<div class="card" style="height:@Height; background-color:transparent">
-    <div class="row m-0">
-        <div class="card-body">
-            <h5 class="card-title">Liabilities per wallet</h5>
-            @if (DisplayAsChart && Data.Any())
-            {
-                <h6 class="card-subtitle mb-2 text-muted">@Math.Round(_totalLiabilities, 2) @_currency</h6>
-            }
-            <div class="row flex-fill overflow-auto">
-                @if (!DisplayAsChart)
+<MudCard Outlined Class="d-flex flex-nowrap " Style="@($"height:{Height};")">
+    <MudPaper Class="flex-grow-0 p-3" Elevation="0">
+        <MudText Typo=Typo.h5>Liabilities per wallet</MudText>
+        @if (DisplayAsChart && Data.Any())
+        {
+            <MudText Typo=Typo.h6 Class="mb-2 text-muted">@Math.Round(_totalLiabilities, 2) @_currency</MudText>
+        }
+    </MudPaper>
+    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
+        @if (Data.Any() && !DisplayAsChart)
+        {
+            <MudStack Spacing="1">
+                @foreach (var wealthCategory in Data)
                 {
-                    @if (Data.Any())
-                    {
-                        <div class="h-100">
-                            @foreach (var wealthCategory in Data)
-                            {
-                                <div class="row mb-2">
-                                    <div class="col">
-                                        @wealthCategory.Name
-                                    </div>
-
-                                    <div class="col-auto">
-                                       - @wealthCategory.Value.ToString("0.00") @_currency
-                                    </div>
-                                </div>
-                            }
-
-                            <hr class="mt-1 mb-1" />
-                            <div class="row mb-2">
-                                <div class="col">
-                                    Sum
-                                </div>
-                                @if (_totalLiabilities < 0)
-                                {
-                                    <div class="col-auto" style="color:red">
-                                        @_totalLiabilities.ToString("0.00") @_currency
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="col-auto" style="color:green">
-                                        @_totalLiabilities.ToString("0.00") @_currency
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
-                            <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
-                        </div>
-                    }
+                    <MudPaper Class="d-flex justify-space-between flex-grow-1 gap-1 px-3" Elevation="0">
+                        <MudPaper Elevation="0">
+                            @($"{wealthCategory.Name}")
+                        </MudPaper>
+                        <MudPaper Elevation="0">
+                            @($"{wealthCategory.Value.ToString("0.00")} {_currency}")
+                        </MudPaper>
+                    </MudPaper>
                 }
+
+                <MudDivider Class="my-0" />
+                <MudPaper Class="d-flex justify-space-between flex-grow-1 gap-1 px-3" Elevation="0">
+                    <MudPaper Elevation="0">
+                        @($"Sum")
+                    </MudPaper>
+                    <MudPaper Elevation="0" style="@(_totalLiabilities < 0 ? "color:red" : "color:green")">
+                        @($"{_totalLiabilities.ToString("0.00")} {_currency}")
+                    </MudPaper>
+                </MudPaper>
+            </MudStack>
+        }
+        else if (Data.Any())
+        {
+            <ApexChart @ref="_chart" Height="@("100%")" TItem="NameValueResult" Options="_options">
+
+                <ApexPointSeries TItem="NameValueResult"
+                                 Items="Data"
+                                 Name="Liabilities"
+                                 XValue="e => e.Name.ToString()"
+                                 YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"
+                                 SeriesType="SeriesType.Pie"
+                                 OrderByDescending="@(e=>e.Y)" />
+            </ApexChart>
+        }
+        else
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
             </div>
-        </div>
-    </div>
-    @if (DisplayAsChart)
-    {
-        <div class="row flex-fill pb-2" style="height:1px;">
-            <div class="h-100">
-                @if (Data.Any())
-                {
-                    <ApexChart @ref="_chart" Height="@("100%")" TItem="NameValueResult" Options="_options">
-
-                        <ApexPointSeries TItem="NameValueResult"
-                                         Items="Data"
-                                         Name="Liabilities"
-                                         XValue="e => e.Name.ToString()"
-                                         YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"
-                                         SeriesType="SeriesType.Pie"
-                                         OrderByDescending="@(e=>e.Y)" />
-
-                    </ApexChart>
-                }
-                else
-                {
-                    <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
-                        <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
-                    </div>
-                }
-            </div>
-        </div>
-    }
-</div>
+        }
+    </MudPaper>
+</MudCard>

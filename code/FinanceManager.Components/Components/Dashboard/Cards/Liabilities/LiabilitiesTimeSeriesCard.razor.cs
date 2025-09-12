@@ -6,11 +6,11 @@ using Microsoft.Extensions.Logging;
 namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities;
 public partial class LiabilitiesTimeSeriesCard
 {
-
     public List<TimeSeriesModel> ChartData { get; set; } = [];
 
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
+    [Parameter] public string Height { get; set; } = "300px";
 
     [Inject] public required ILogger<LiabilitiesTimeSeriesCard> Logger { get; set; }
     [Inject] public required ILiabilitiesService LiabilitiesService { get; set; }
