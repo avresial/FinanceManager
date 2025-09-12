@@ -5,56 +5,47 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-namespace FinanceManager.Api.Services
+namespace FinanceManager.Api.Services;
+
+public class JwtTokenGenerator(IConfiguration configuration)
 {
-    public class JwtTokenGenerator
+    public LoginResponseModel? GenerateToken(string userName, int userId, UserRole userRole)
     {
-        private readonly IConfiguration configuration;
+        if (string.IsNullOrEmpty(userName)) return null;
 
-        public JwtTokenGenerator(IConfiguration configuration)
+        // Check user validity with database
+
+        var tokenValidityInMins = configuration.GetValue<int>("JwtConfig:TokenValidityMins");
+        var tokenExpiryTimeStamp = DateTime.UtcNow.AddMinutes(tokenValidityInMins);
+
+        var tokenDescriptor = new SecurityTokenDescriptor()
         {
-            this.configuration = configuration;
-        }
 
+            Subject = new(
+            [
+                new(JwtRegisteredClaimNames.Name, userName),
+                new(ClaimTypes.NameIdentifier, userId.ToString()),
+                new(ClaimTypes.Role, userRole.ToString()),
+            ]),
 
-        public LoginResponseModel? GenerateToken(string userName, int userId, UserRole userRole)
+            Expires = tokenExpiryTimeStamp,
+            Issuer = configuration["JwtConfig:Issuer"],
+            Audience = configuration["JwtConfig:Audience"],
+            SigningCredentials = new(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JwtConfig:Key"]!)),
+            SecurityAlgorithms.HmacSha512Signature),
+        };
+
+        JwtSecurityTokenHandler tokenHandler = new();
+        var securityToken = tokenHandler.CreateToken(tokenDescriptor);
+        var accessToken = tokenHandler.WriteToken(securityToken);
+
+        return new()
         {
-            if (string.IsNullOrEmpty(userName)) return null;
-
-            // Check user validity with database
-
-            var tokenValidityInMins = configuration.GetValue<int>("JwtConfig:TokenValidityMins");
-            var tokenExpiryTimeStamp = DateTime.UtcNow.AddMinutes(tokenValidityInMins);
-
-            var tokenDescriptor = new SecurityTokenDescriptor()
-            {
-
-                Subject = new ClaimsIdentity(new[]
-                {
-                    new Claim(JwtRegisteredClaimNames.Name, userName),
-                    new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                    new Claim(ClaimTypes.Role, userRole.ToString()),
-                }),
-
-                Expires = tokenExpiryTimeStamp,
-                Issuer = configuration["JwtConfig:Issuer"],
-                Audience = configuration["JwtConfig:Audience"],
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JwtConfig:Key"]!)),
-                SecurityAlgorithms.HmacSha512Signature),
-            };
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var securityToken = tokenHandler.CreateToken(tokenDescriptor);
-            var accessToken = tokenHandler.WriteToken(securityToken);
-
-            return new LoginResponseModel()
-            {
-                AccessToken = accessToken,
-                UserName = userName,
-                UserId = userId,
-                UserRole = userRole,
-                ExpiresIn = tokenValidityInMins
-            };
-        }
+            AccessToken = accessToken,
+            UserName = userName,
+            UserId = userId,
+            UserRole = userRole,
+            ExpiresIn = tokenValidityInMins
+        };
     }
 }

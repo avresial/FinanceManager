@@ -9,38 +9,37 @@ using FinanceManager.Domain.Services;
 namespace FinanceManager.Components.Services;
 public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountService, StockPriceHttpContext stockPriceHttpContext) : IMoneyFlowService
 {
-    private readonly IFinancialAccountService _financialAccountService = financialAccountService;
-    private readonly StockPriceHttpContext _stockPriceHttpContext = stockPriceHttpContext;
-
     public async Task<List<NameValueResult>> GetEndAssetsPerAccount(int userId, string currency, DateTime start, DateTime end)
     {
         List<NameValueResult> result = [];
-        var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
+        var BankAccounts = await financialAccountService.GetAccounts<BankAccount>(userId, start, end);
         foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
             if (account is null || account.Entries is null) return result;
 
-            result.Add(new NameValueResult()
+            result.Add(new()
             {
                 Name = account.Name,
                 Value = account.Entries.First().Value
             });
         }
 
-        var InvestmentAccounts = await _financialAccountService.GetAccounts<StockAccount>(userId, start, end);
+        var InvestmentAccounts = await financialAccountService.GetAccounts<StockAccount>(userId, start, end);
         foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
             if (account is null || account.Entries is null) return result;
 
             foreach (var ticker in account.GetStoredTickers())
             {
-                var stockPrice = await _stockPriceHttpContext.GetStockPrice(ticker, DefaultCurrency.Currency, end);
+                var stockPrice = await stockPriceHttpContext.GetStockPrice(ticker, DefaultCurrency.Currency, end);
+                if (stockPrice is null) continue;
+
                 var latestEntry = account.Get(end).FirstOrDefault(x => x.Ticker == ticker);
                 if (latestEntry is null) continue;
                 var existingResult = result.FirstOrDefault(x => x.Name == account.Name);
                 if (existingResult is null)
                 {
-                    result.Add(new NameValueResult()
+                    result.Add(new()
                     {
                         Name = account.Name,
                         Value = latestEntry.Value * stockPrice.PricePerUnit
@@ -58,14 +57,14 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
     public async Task<List<NameValueResult>> GetEndAssetsPerType(int userId, string currency, DateTime start, DateTime end)
     {
         List<NameValueResult> result = [];
-        var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
+        var BankAccounts = await financialAccountService.GetAccounts<BankAccount>(userId, start, end);
         foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
             if (account is null || account.Entries is null) return result;
             var existingResult = result.FirstOrDefault(x => x.Name == account.AccountType.ToString());
             if (existingResult is null)
             {
-                result.Add(new NameValueResult()
+                result.Add(new()
                 {
                     Name = account.AccountType.ToString(),
                     Value = account.Entries.First().Value
@@ -77,21 +76,21 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
             }
         }
 
-        var InvestmentAccounts = await _financialAccountService.GetAccounts<StockAccount>(userId, start, end);
+        var InvestmentAccounts = await financialAccountService.GetAccounts<StockAccount>(userId, start, end);
         foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
             if (account is null || account.Entries is null) return result;
 
             foreach (var ticker in account.GetStoredTickers())
             {
-                var stockPrice = await _stockPriceHttpContext.GetStockPrice(ticker, DefaultCurrency.Currency, end);
+                var stockPrice = await stockPriceHttpContext.GetStockPrice(ticker, DefaultCurrency.Currency, end);
                 var latestEntry = account.Entries.FirstOrDefault(x => x.Ticker == ticker);
                 if (latestEntry is null) continue;
 
                 var existingResult = result.FirstOrDefault(x => x.Name == latestEntry.InvestmentType.ToString());
                 if (existingResult is null)
                 {
-                    result.Add(new NameValueResult()
+                    result.Add(new()
                     {
                         Name = latestEntry.InvestmentType.ToString(),
                         Value = latestEntry.Value * stockPrice.PricePerUnit
@@ -111,9 +110,9 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
         if (start == new DateTime()) return [];
 
         Dictionary<DateTime, decimal> prices = [];
-        TimeSpan step = new TimeSpan(1, 0, 0, 0);
+        TimeSpan step = new(1, 0, 0, 0);
 
-        var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
+        var BankAccounts = await financialAccountService.GetAccounts<BankAccount>(userId, start, end);
         foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
             if (account is null || account.Entries is null) continue;
@@ -135,7 +134,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
             }
         }
 
-        var InvestmentAccounts = await _financialAccountService.GetAccounts<StockAccount>(userId, start, end);
+        var InvestmentAccounts = await financialAccountService.GetAccounts<StockAccount>(userId, start, end);
         foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
             if (account is null || account.Entries is null) continue;
@@ -148,7 +147,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
                     var newestEntry = group.OrderByDescending(x => x.PostingDate).FirstOrDefault();
                     if (newestEntry is null)
                         continue;
-                    var price = await _stockPriceHttpContext.GetStockPrice(newestEntry.Ticker, DefaultCurrency.Currency, date);
+                    var price = await stockPriceHttpContext.GetStockPrice(newestEntry.Ticker, DefaultCurrency.Currency, date);
 
                     prices[date] += newestEntry.Value * price.PricePerUnit;
                 }
@@ -162,7 +161,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, string currency, DateTime start, DateTime end, InvestmentType investmentType)
     {
         List<(DateTime, decimal)> assets = [];
-        var BankAccounts = (await _financialAccountService.GetAccounts<BankAccount>(userId, start, end)).Where(x => x.AccountType.ToString() == investmentType.ToString());
+        var BankAccounts = (await financialAccountService.GetAccounts<BankAccount>(userId, start, end)).Where(x => x.AccountType.ToString() == investmentType.ToString());
         foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
             if (account is null || account.Entries is null) continue;
@@ -170,14 +169,14 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
             assets.AddRange(account.Entries.GetAssets(start, end));
         }
 
-        var InvestmentAccounts = await _financialAccountService.GetAccounts<StockAccount>(userId, start, end);
+        var InvestmentAccounts = await financialAccountService.GetAccounts<StockAccount>(userId, start, end);
         foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
             if (account is null || account.Entries is null) continue;
 
             assets.AddRange(await account.Entries.Where(x => x.InvestmentType == investmentType)
                 .ToList()
-                .GetAssets(start, end, DefaultCurrency.Currency, _stockPriceHttpContext.GetStockPrice));
+                .GetAssets(start, end, DefaultCurrency.Currency, stockPriceHttpContext.GetStockPrice));
         }
 
 
@@ -187,7 +186,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
             var assetsToSum = assets.Where(x => x.Item1 == i);
             if (!assetsToSum.Any()) continue;
 
-            result.Add(new TimeSeriesModel()
+            result.Add(new()
             {
                 DateTime = i,
                 Value = assetsToSum.Sum(x => x.Item2),
@@ -199,20 +198,20 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
     {
         decimal result = 0;
 
-        var BankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, date.Date, date);
+        var BankAccounts = await financialAccountService.GetAccounts<BankAccount>(userId, date.Date, date);
         foreach (var bankAccount in BankAccounts)
         {
             if (bankAccount.NextOlderEntry is null) continue;
             if (bankAccount.Entries is null) continue;
 
-            var newBankAccount = await _financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.NextOlderEntry.PostingDate,
+            var newBankAccount = await financialAccountService.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.NextOlderEntry.PostingDate,
                 bankAccount.NextOlderEntry.PostingDate.AddSeconds(1));
 
             if (newBankAccount is not null && newBankAccount.Entries is not null)
                 bankAccount.Add(newBankAccount.Entries, false);
         }
 
-        var InvestmentAccounts = await _financialAccountService.GetAccounts<StockAccount>(userId, date.Date, date);
+        var InvestmentAccounts = await financialAccountService.GetAccounts<StockAccount>(userId, date.Date, date);
         foreach (var investmentAccount in InvestmentAccounts)
         {
             foreach (var item in investmentAccount.NextOlderEntries)
@@ -220,7 +219,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
                 if (investmentAccount.Entries is null) continue;
                 if (investmentAccount.Entries.Any(x => x.Ticker == item.Key)) continue;
 
-                var newInvestmentAccount = await _financialAccountService.GetAccount<StockAccount>(userId, investmentAccount.AccountId, item.Value.PostingDate, item.Value.PostingDate.AddSeconds(1));
+                var newInvestmentAccount = await financialAccountService.GetAccount<StockAccount>(userId, investmentAccount.AccountId, item.Value.PostingDate, item.Value.PostingDate.AddSeconds(1));
                 if (newInvestmentAccount is not null && newInvestmentAccount.Entries is not null)
                     investmentAccount.Add(newInvestmentAccount.Entries, false);
             }
@@ -245,7 +244,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
                 var newestEntry = tickerGroup.OrderByDescending(x => x.PostingDate).FirstOrDefault();
                 if (newestEntry is null) continue;
 
-                var price = await _stockPriceHttpContext.GetStockPrice(newestEntry.Ticker, DefaultCurrency.Currency, date);
+                var price = await stockPriceHttpContext.GetStockPrice(newestEntry.Ticker, DefaultCurrency.Currency, date);
                 result += newestEntry.Value * price.PricePerUnit;
             }
         }
@@ -269,12 +268,12 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
     }
     public async Task<List<TimeSeriesModel>> GetIncome(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
     {
-        TimeSpan timeSeriesStep = step ?? new TimeSpan(1, 0, 0, 0);
+        TimeSpan timeSeriesStep = step ?? new(1, 0, 0, 0);
         IEnumerable<BankAccount> bankAccounts = [];
 
         try
         {
-            bankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
+            bankAccounts = await financialAccountService.GetAccounts<BankAccount>(userId, start, end);
         }
         catch (Exception ex)
         {
@@ -301,12 +300,12 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
     }
     public async Task<List<TimeSeriesModel>> GetSpending(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
     {
-        TimeSpan timeSeriesStep = step ?? new TimeSpan(1, 0, 0, 0);
+        TimeSpan timeSeriesStep = step ?? new(1, 0, 0, 0);
         IEnumerable<BankAccount> bankAccounts = [];
 
         try
         {
-            bankAccounts = await _financialAccountService.GetAccounts<BankAccount>(userId, start, end);
+            bankAccounts = await financialAccountService.GetAccounts<BankAccount>(userId, start, end);
         }
         catch (Exception ex)
         {
@@ -332,23 +331,8 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
         return result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList();
     }
 
-    public Task<bool> IsAnyAccountWithAssets(int userId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<bool> IsAnyAccountWithLiabilities(int userId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<List<TimeSeriesModel>> GetBalance(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<List<NameValueResult>> GetLabelsValue(int userId, DateTime start, DateTime end, TimeSpan? step = null)
-    {
-        throw new NotImplementedException();
-    }
+    public Task<bool> IsAnyAccountWithAssets(int userId) => throw new NotImplementedException();
+    public Task<bool> IsAnyAccountWithLiabilities(int userId) => throw new NotImplementedException();
+    public Task<List<TimeSeriesModel>> GetBalance(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null) => throw new NotImplementedException();
+    public Task<List<NameValueResult>> GetLabelsValue(int userId, DateTime start, DateTime end, TimeSpan? step = null) => throw new NotImplementedException();
 }

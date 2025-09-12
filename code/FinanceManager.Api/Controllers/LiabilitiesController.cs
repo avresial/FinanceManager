@@ -12,27 +12,19 @@ public class LiabilitiesController(ILiabilitiesService liabilitiesService) : Con
     private readonly ILiabilitiesService _liabilitiesService = liabilitiesService;
 
     [HttpGet("IsAnyAccountWithLiabilities/{userId:int}")]
-    public async Task<IActionResult> IsAnyAccountWithLiabilities(int userId)
-    {
-        return Ok(await _liabilitiesService.IsAnyAccountWithLiabilities(userId));
-    }
+    public async Task<IActionResult> IsAnyAccountWithLiabilities(int userId) =>
+        Ok(await _liabilitiesService.IsAnyAccountWithLiabilities(userId));
 
     [HttpGet("GetEndLiabilitiesPerAccount/{userId:int}/{start:DateTime}/{end:DateTime}")]
-    public async Task<IActionResult> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end)
-    {
-        return Ok(await _liabilitiesService.GetEndLiabilitiesPerAccount(userId, start, end));
-    }
+    public async Task<IActionResult> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end) =>
+        Ok(await _liabilitiesService.GetEndLiabilitiesPerAccount(userId, start, end));
 
     [HttpGet("GetEndLiabilitiesPerType/{userId:int}/{start:DateTime}/{end:DateTime}")]
-    public async Task<IActionResult> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
-    {
-        return Ok(await _liabilitiesService.GetEndLiabilitiesPerType(userId, start, end));
-    }
+    public async Task<IActionResult> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end) =>
+        Ok(await _liabilitiesService.GetEndLiabilitiesPerType(userId, start, end));
 
     [HttpGet("GetLiabilitiesTimeSeries/{userId:int}/{start:DateTime}/{end:DateTime}")]
-    public async Task<IActionResult> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end)
-    {
-        return Ok(await _liabilitiesService.GetLiabilitiesTimeSeries(userId, start, end));
-    }
+    public async Task<IActionResult> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end) =>
+        Ok(await _liabilitiesService.GetLiabilitiesTimeSeries(userId, start, end));
 
 }

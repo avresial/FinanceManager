@@ -8,7 +8,6 @@ namespace FinanceManager.Api.Controllers;
 [ApiController]
 public class NewVisitorsController(NewVisitsRepository newVisitsRepository) : ControllerBase
 {
-    private readonly NewVisitsRepository _newVisitsRepository = newVisitsRepository;
 
     [AllowAnonymous]
     [HttpPut(Name = "AddNewVisitor")]
@@ -16,7 +15,7 @@ public class NewVisitorsController(NewVisitsRepository newVisitsRepository) : Co
     {
         try
         {
-            if (await _newVisitsRepository.AddVisitAsync(DateTime.UtcNow))
+            if (await newVisitsRepository.AddVisitAsync(DateTime.UtcNow))
                 return Ok(new { message = "Visit recorded successfully" });
 
             return BadRequest(new { error = "Failed to record visit" });
@@ -33,7 +32,7 @@ public class NewVisitorsController(NewVisitsRepository newVisitsRepository) : Co
     {
         try
         {
-            return Ok(await _newVisitsRepository.GetVisitAsync(dateTime));
+            return Ok(await newVisitsRepository.GetVisitAsync(dateTime));
         }
         catch (Exception)
         {

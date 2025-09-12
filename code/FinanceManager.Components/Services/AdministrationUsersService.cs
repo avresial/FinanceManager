@@ -7,20 +7,17 @@ using System.Net.Http.Json;
 namespace FinanceManager.Components.Services;
 public class AdministrationUsersService(HttpClient httpClient, ILogger<AdministrationUsersService> logger) : IAdministrationUsersService
 {
-    private readonly HttpClient _httpClient = httpClient;
-    private readonly ILogger<AdministrationUsersService> _logger = logger;
-
     public async Task<IEnumerable<ChartEntryModel>> GetNewUsersDaily()
     {
         try
         {
-            var result = await _httpClient.GetFromJsonAsync<IEnumerable<ChartEntryModel>>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetNewUsersDaily");
+            var result = await httpClient.GetFromJsonAsync<IEnumerable<ChartEntryModel>>($"{httpClient.BaseAddress}api/AdministrationUsers/GetNewUsersDaily");
             if (result is null) return [];
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting New Users Daily");
+            logger.LogError(ex, $"Error getting New Users Daily");
             return [];
         }
     }
@@ -28,13 +25,13 @@ public class AdministrationUsersService(HttpClient httpClient, ILogger<Administr
     {
         try
         {
-            var result = await _httpClient.GetFromJsonAsync<IEnumerable<ChartEntryModel>>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetDailyActiveUsers");
+            var result = await httpClient.GetFromJsonAsync<IEnumerable<ChartEntryModel>>($"{httpClient.BaseAddress}api/AdministrationUsers/GetDailyActiveUsers");
             if (result is null) return [];
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error Daily Active Users");
+            logger.LogError(ex, $"Error Daily Active Users");
             return [];
         }
     }
@@ -43,11 +40,11 @@ public class AdministrationUsersService(HttpClient httpClient, ILogger<Administr
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<int>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetAccountsCount");
+            return await httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/AdministrationUsers/GetAccountsCount");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting accounts count");
+            logger.LogError(ex, $"Error getting accounts count");
             return 0;
         }
     }
@@ -55,11 +52,11 @@ public class AdministrationUsersService(HttpClient httpClient, ILogger<Administr
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<int?>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetTotalTrackedMoney");
+            return await httpClient.GetFromJsonAsync<int?>($"{httpClient.BaseAddress}api/AdministrationUsers/GetTotalTrackedMoney");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting Total Tracked Money");
+            logger.LogError(ex, $"Error getting Total Tracked Money");
             return null;
         }
     }
@@ -67,11 +64,11 @@ public class AdministrationUsersService(HttpClient httpClient, ILogger<Administr
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<int>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetUsersCount");
+            return await httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/AdministrationUsers/GetUsersCount");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting user count");
+            logger.LogError(ex, $"Error getting user count");
         }
 
         return 0;
@@ -80,14 +77,14 @@ public class AdministrationUsersService(HttpClient httpClient, ILogger<Administr
     {
         try
         {
-            var result = await _httpClient.GetFromJsonAsync<IEnumerable<UserDetails>>($"{_httpClient.BaseAddress}api/AdministrationUsers/GetUsers/{recordIndex}/{recordsCount}");
+            var result = await httpClient.GetFromJsonAsync<IEnumerable<UserDetails>>($"{httpClient.BaseAddress}api/AdministrationUsers/GetUsers/{recordIndex}/{recordsCount}");
 
             if (result is null) return [];
             else return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting users");
+            logger.LogError(ex, $"Error getting users");
         }
 
         return null;

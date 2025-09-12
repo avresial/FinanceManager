@@ -41,7 +41,6 @@ public class FinancialLabelController(IFinancialLabelsRepository financialLabels
         {
             var result = await financialLabelsRepository.GetLabels().Skip(index).Take(count).ToListAsync();
 
-
             return Ok(result);
         }
         catch (Exception ex)
@@ -64,20 +63,13 @@ public class FinancialLabelController(IFinancialLabelsRepository financialLabels
     }
 
     [HttpPost("add")]
-    public async Task<IActionResult> Add(AddFinancialLabel addFinancialLabel)
-    {
-        return Ok(await financialLabelsRepository.Add(addFinancialLabel.Name));
-    }
+    public async Task<IActionResult> Add(AddFinancialLabel addFinancialLabel) => Ok(await financialLabelsRepository.Add(addFinancialLabel.Name));
 
     [HttpPost("update-name")]
-    public async Task<IActionResult> UpdateName([FromQuery] int id, string name)
-    {
-        return Ok(await financialLabelsRepository.UpdateName(id, name));
-    }
+    public async Task<IActionResult> UpdateName([FromQuery] int id, string name) => Ok(await financialLabelsRepository.UpdateName(id, name));
+
 
     [HttpDelete("delete")]
-    public async Task<IActionResult> Delete([FromQuery] int id)
-    {
-        return Ok(await financialLabelsRepository.Delete(id));
-    }
+    public async Task<IActionResult> Delete([FromQuery] int id) => Ok(await financialLabelsRepository.Delete(id));
+
 }

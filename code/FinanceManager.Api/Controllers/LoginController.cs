@@ -5,57 +5,43 @@ using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FinanceManager.Api.Controllers
+namespace FinanceManager.Api.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepository userRepository, IActiveUsersRepository activeUsersRepository,
+    GuestAccountSeeder guestAccountSeeder, ILogger<LoginController> logger) : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class LoginController : ControllerBase
+
+    [AllowAnonymous]
+    [HttpPost(Name = "Login")]
+    public async Task<IActionResult> Login(LoginRequestModel requestModel)
     {
-        private readonly JwtTokenGenerator _jwtTokenGenerator;
-        private readonly IUserRepository _userRepository;
-        private readonly IActiveUsersRepository _activeUsersRepository;
-        private readonly GuestAccountSeeder _guestAccountSeeder;
-        private readonly ILogger<LoginController> _logger;
-
-        public LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepository userRepository, IActiveUsersRepository activeUsersRepository, GuestAccountSeeder guestAccountSeeder, ILogger<LoginController> logger)
+        try
         {
-            _jwtTokenGenerator = jwtTokenGenerator;
-            _userRepository = userRepository;
-            _activeUsersRepository = activeUsersRepository;
-            _guestAccountSeeder = guestAccountSeeder;
-            _logger = logger;
+            if (requestModel.userName == "guest")
+                await guestAccountSeeder.SeedNewData(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while seeding guest account data");
         }
 
-        [AllowAnonymous]
-        [HttpPost(Name = "Login")]
-        public async Task<IActionResult> Login(LoginRequestModel requestModel)
+        var user = await userRepository.GetUser(requestModel.userName, requestModel.password);
+
+        if (user is null) return BadRequest();
+
+        var token = jwtTokenGenerator.GenerateToken(requestModel.userName, user.UserId, user.UserRole);
+
+        try
         {
-            try
-            {
-                if (requestModel.userName == "guest")
-                    await _guestAccountSeeder.SeedNewData(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while seeding guest account data");
-            }
-
-            var user = await _userRepository.GetUser(requestModel.userName, requestModel.password);
-
-            if (user is null) return BadRequest();
-
-            LoginResponseModel? token = _jwtTokenGenerator.GenerateToken(requestModel.userName, user.UserId, user.UserRole);
-
-            try
-            {
-                if (token is not null) await _activeUsersRepository.Add(token.UserId, DateOnly.FromDateTime(DateTime.UtcNow));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while adding user to active users repository");
-            }
-
-            return Ok(token);
+            if (token is not null) await activeUsersRepository.Add(token.UserId, DateOnly.FromDateTime(DateTime.UtcNow));
         }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while adding user to active users repository");
+        }
+
+        return Ok(token);
     }
 }

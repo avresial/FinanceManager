@@ -10,13 +10,13 @@ namespace FinanceManager.UnitTests.Extensions
         public async Task GetPrevious()
         {
             // Arrange
-            List<StockAccountEntry> entries = new List<StockAccountEntry>()
-            {
-                new StockAccountEntry(1,1,new DateTime(2000, 1, 4), 0, 100, "Ticker1", InvestmentType.Stock),
-                new StockAccountEntry(1,2,new DateTime(2000, 1, 3), 0, 100, "Ticker1", InvestmentType.Stock),
-                new StockAccountEntry(1,3,new DateTime(2000, 1, 2), 0, 100, "Ticker1", InvestmentType.Stock),
-                new StockAccountEntry(1,4,new DateTime(2000, 1, 1), 0, 100, "Ticker1", InvestmentType.Stock),
-            };
+            List<StockAccountEntry> entries =
+            [
+                new (1,1,new (2000, 1, 4), 0, 100, "Ticker1", InvestmentType.Stock),
+                new (1,2,new (2000, 1, 3), 0, 100, "Ticker1", InvestmentType.Stock),
+                new (1,3,new (2000, 1, 2), 0, 100, "Ticker1", InvestmentType.Stock),
+                new (1,4,new (2000, 1, 1), 0, 100, "Ticker1", InvestmentType.Stock),
+            ];
 
             // Act
             var testValue = entries.GetNextOlder(new DateTime(2000, 1, 3), "Ticker1").First();
@@ -28,21 +28,21 @@ namespace FinanceManager.UnitTests.Extensions
         public async Task GetPrevious_MultipleTickers()
         {
             // Arrange
-            List<StockAccountEntry> entries = new List<StockAccountEntry>()
-            {
-                new StockAccountEntry(1,1,new DateTime(2000, 1, 4), 0, 100, "Ticker1", InvestmentType.Stock),
-                new StockAccountEntry(1,2,new DateTime(2000, 1, 3), 0, 100, "Ticker1", InvestmentType.Stock),
-                new StockAccountEntry(1,3,new DateTime(2000, 1, 3), 0, 100, "Ticker2", InvestmentType.Stock),
-                new StockAccountEntry(1,4,new DateTime(2000, 1, 2), 0, 100, "Ticker2", InvestmentType.Stock),
-                new StockAccountEntry(1,5,new DateTime(2000, 1, 2), 0, 100, "Ticker1", InvestmentType.Stock),
-                new StockAccountEntry(1,6,new DateTime(2000, 1, 1), 0, 100, "Ticker1", InvestmentType.Stock),
-            };
+            List<StockAccountEntry> entries =
+            [
+                new (1,1,new (2000, 1, 4), 0, 100, "Ticker1", InvestmentType.Stock),
+                new (1,2,new (2000, 1, 3), 0, 100, "Ticker1", InvestmentType.Stock),
+                new (1,3,new (2000, 1, 3), 0, 100, "Ticker2", InvestmentType.Stock),
+                new (1,4,new (2000, 1, 2), 0, 100, "Ticker2", InvestmentType.Stock),
+                new (1,5,new (2000, 1, 2), 0, 100, "Ticker1", InvestmentType.Stock),
+                new (1,6,new (2000, 1, 1), 0, 100, "Ticker1", InvestmentType.Stock),
+            ];
 
             // Act
-            var testValue = entries.GetNextOlder(new DateTime(2000, 1, 4), "Ticker1").First();
+            var testValue = entries.GetNextOlder(new(2000, 1, 4), "Ticker1").First();
 
             // Assert
-            Assert.Equal(new DateTime(2000, 1, 3), testValue.PostingDate);
+            Assert.Equal(new(2000, 1, 3), testValue.PostingDate);
         }
     }
 }

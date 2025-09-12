@@ -12,7 +12,5 @@ public static class ApiAuthenticationHelper
         if (userIdValue is null) return null;
 
         return int.Parse(userIdValue);
-
     }
-
 }
