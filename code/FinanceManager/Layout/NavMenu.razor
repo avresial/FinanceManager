@@ -16,30 +16,30 @@
     @if (Accounts is not null && Accounts.Any())
     {
         <MudDivider Class="my-2" />
-        <MudNavLink Icon="@Icons.Material.Filled.Dashboard" href="">Dashboard</MudNavLink>
+        <MudNavLink Icon="@Icons.Material.Filled.Dashboard" Href="">Dashboard</MudNavLink>
         if (_displayAssetsLink)
         {
-            <MudNavLink Icon="@Icons.Material.Filled.TrendingUp" href="Assets">Assets</MudNavLink>
+            <MudNavLink Icon="@Icons.Material.Filled.TrendingUp" Href="Assets">Assets</MudNavLink>
         }
         @if (_displayLiabilitiesLink)
         {
-            <MudNavLink Icon="@Icons.Material.Filled.TrendingDown" href="Liabilities">Liabilities</MudNavLink>
+            <MudNavLink Icon="@Icons.Material.Filled.TrendingDown" Href="Liabilities">Liabilities</MudNavLink>
         }
         <MudDivider Class="my-2" />
         <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary">Accounts</MudText>
 
         @foreach (var account in Accounts)
         {
-            <MudNavLink Icon="@Icons.Material.Filled.Wallet" href="@($"AccountDetails/{account.Key}")">@account.Value</MudNavLink>
+            <MudNavLink Icon="@Icons.Material.Filled.Wallet" Href="@($"AccountDetails/{account.Key}")">@account.Value</MudNavLink>
         }
 
-        <MudNavLink Icon="@Icons.Material.Filled.Add" href="AddAccount">Add</MudNavLink>
+        <MudNavLink Icon="@Icons.Material.Filled.Add" Href="AddAccount">Add</MudNavLink>
 
         <AuthorizeView>
             <Authorized>
                 @if (@context.User.IsInRole(UserRole.Admin.ToString()))
                 {
-                    <MudNavLink Icon="@Icons.Material.Filled.AdminPanelSettings" href="Admin/Dashboard">Admin page</MudNavLink>
+                    <MudNavLink Icon="@Icons.Material.Filled.AdminPanelSettings" Href="Admin/Dashboard">Admin page</MudNavLink>
                 }
             </Authorized>
         </AuthorizeView>

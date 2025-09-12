@@ -37,7 +37,7 @@ public class UserRepository : IUserRepository
 
     public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole)
     {
-        _dbContext.Add(new
+        _dbContext.Add(new UserDto
         {
             Login = login,
             Password = password,
