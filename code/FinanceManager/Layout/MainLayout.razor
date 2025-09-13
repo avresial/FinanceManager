@@ -10,18 +10,20 @@
     </NotAuthorized>
     <Authorized>
         <MudLayout>
+            <MudAppBar Elevation="0">
+                <MudIconButton Icon="@Icons.Material.Filled.Menu" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+            </MudAppBar>
+
             <MudDrawer @bind-Open="_drawerOpen" Elevation="0">
                 <NavMenu />
                 <MudSpacer />
-
-                @* <LoginDisplay /> *@
-
                 <MudNavMenu>
                     <MudNavLink Icon="@Icons.Material.Filled.Settings" Href="/UserSettings">Settings</MudNavLink>
                     <MudNavLink Icon="@Icons.Material.Filled.Logout" @onclick=LogOut>Log out</MudNavLink>
                 </MudNavMenu>
             </MudDrawer>
-            <MudMainContent Class="pt-2">
+
+            <MudMainContent>
                 @Body
             </MudMainContent>
         </MudLayout>
