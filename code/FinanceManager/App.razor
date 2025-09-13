@@ -21,7 +21,7 @@
 
 @code {
     private bool _isDarkMode;
-    private bool _useSystemPreferences = false;
+    private bool _useSystemPreferences = true;
     private MudThemeProvider? _mudThemeProvider;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -29,25 +29,32 @@
         if (firstRender)
         {
             if (_useSystemPreferences && _mudThemeProvider is not null)
-                _isDarkMode = await _mudThemeProvider.GetSystemPreference();
+                _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
 
             StateHasChanged();
         }
     }
 
     private MudTheme MyCustomTheme = new MudTheme()
+    {
+        PaletteLight = new PaletteLight()
         {
-            PaletteLight = new PaletteLight()
-            {
-                Primary = Colors.Amber.Accent4,
-                Secondary = Colors.Amber.Accent2,
-                AppbarBackground = Colors.Shades.White,
-            },
-            PaletteDark = new PaletteDark()
-            {
-                Primary = Colors.Amber.Accent4,
-                Secondary = Colors.Green.Accent4,
-                AppbarBackground = Colors.Gray.Lighten2,
-            },
-        };
+            Primary = Colors.Amber.Darken1,
+            Secondary = Colors.Amber.Lighten2,
+            AppbarBackground = Colors.Shades.White,
+        },
+        PaletteDark = new PaletteDark()
+        {
+            Primary = Colors.Amber.Darken3,
+            Secondary = Colors.Amber.Darken1,
+
+            Background = Colors.Gray.Darken4,
+            
+            AppbarBackground = Colors.Gray.Darken4,
+            DrawerBackground = Colors.Gray.Darken4,
+            Surface = Colors.Gray.Darken3,
+           
+            
+        },
+    };
 }

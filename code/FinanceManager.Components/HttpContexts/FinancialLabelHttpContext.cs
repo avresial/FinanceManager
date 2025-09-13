@@ -5,13 +5,13 @@ using System.Net.Http.Json;
 namespace FinanceManager.Components.HttpContexts;
 public class FinancialLabelHttpContext(HttpClient httpClient)
 {
-    public async Task<int> GetCount()
+    public Task<int> GetCount()
     {
-        return await httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/FinancialLabel/get-count");
+        return httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/FinancialLabel/get-count");
     }
-    public async Task<FinancialLabel?> Get(int labelId)
+    public Task<FinancialLabel?> Get(int labelId)
     {
-        return await httpClient.GetFromJsonAsync<FinancialLabel>($"{httpClient.BaseAddress}api/FinancialLabel/get-by-id?id={labelId}");
+        return httpClient.GetFromJsonAsync<FinancialLabel>($"{httpClient.BaseAddress}api/FinancialLabel/get-by-id?id={labelId}");
     }
     public async Task<List<FinancialLabel>> Get(int index, int count)
     {

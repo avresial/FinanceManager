@@ -8,9 +8,6 @@ namespace FinanceManager.Api.Controllers;
 [ApiController]
 public class AdministrationUsersController(IAdministrationUsersService administrationUsersService, ILogger<UserController> logger) : ControllerBase
 {
-    private readonly IAdministrationUsersService _administrationUsersService = administrationUsersService;
-    private readonly ILogger<UserController> _logger = logger;
-
 
     [HttpGet]
     [Route("GetNewUsersDaily")]
@@ -18,11 +15,11 @@ public class AdministrationUsersController(IAdministrationUsersService administr
     {
         try
         {
-            return Ok(await _administrationUsersService.GetNewUsersDaily());
+            return Ok(await administrationUsersService.GetNewUsersDaily());
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting new users daily");
+            logger.LogError(ex, $"Error getting new users daily");
         }
 
         return BadRequest("Failed to retrieve new users daily data");
@@ -35,11 +32,11 @@ public class AdministrationUsersController(IAdministrationUsersService administr
     {
         try
         {
-            return Ok(await _administrationUsersService.GetDailyActiveUsers());
+            return Ok(await administrationUsersService.GetDailyActiveUsers());
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting daily active users");
+            logger.LogError(ex, $"Error getting daily active users");
         }
 
         return BadRequest();
@@ -52,12 +49,12 @@ public class AdministrationUsersController(IAdministrationUsersService administr
     {
         try
         {
-            var result = await _administrationUsersService.GetAccountsCount();
+            var result = await administrationUsersService.GetAccountsCount();
             return Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting accounts count");
+            logger.LogError(ex, $"Error getting accounts count");
         }
 
         return BadRequest();
@@ -69,7 +66,7 @@ public class AdministrationUsersController(IAdministrationUsersService administr
     {
         try
         {
-            var result = await _administrationUsersService.GetTotalTrackedMoney();
+            var result = await administrationUsersService.GetTotalTrackedMoney();
             if (result is null)
                 return NoContent();
             else
@@ -77,7 +74,7 @@ public class AdministrationUsersController(IAdministrationUsersService administr
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting total tracked money");
+            logger.LogError(ex, $"Error getting total tracked money");
         }
 
         return BadRequest();
@@ -89,11 +86,11 @@ public class AdministrationUsersController(IAdministrationUsersService administr
     {
         try
         {
-            return Ok(await _administrationUsersService.GetUsersCount());
+            return Ok(await administrationUsersService.GetUsersCount());
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting user count");
+            logger.LogError(ex, $"Error getting user count");
         }
 
         return BadRequest();
@@ -107,11 +104,11 @@ public class AdministrationUsersController(IAdministrationUsersService administr
 
         try
         {
-            return Ok(await _administrationUsersService.GetUsers(recordIndex, recordsCount));
+            return Ok(await administrationUsersService.GetUsers(recordIndex, recordsCount));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting users with pagination");
+            logger.LogError(ex, $"Error getting users with pagination");
         }
 
         return BadRequest();

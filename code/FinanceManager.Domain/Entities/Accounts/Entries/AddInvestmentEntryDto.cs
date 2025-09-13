@@ -1,17 +1,16 @@
 ﻿using FinanceManager.Domain.Enums;
 
-namespace FinanceManager.Domain.Entities.Accounts.Entries
-{
-    public record AddInvestmentEntryDto : AddFinancialEntryBaseDto
-    {
-        public string Ticker { get; }
-        public InvestmentType InvestmentType { get; }
+namespace FinanceManager.Domain.Entities.Accounts.Entries;
 
-        public AddInvestmentEntryDto(DateTime postingDate, decimal valueChange, string ticker, InvestmentType investmentType) : base(postingDate, valueChange)
-        {
-            Ticker = ticker;
-            InvestmentType = investmentType;
-        }
+public record AddInvestmentEntryDto : AddFinancialEntryBaseDto
+{
+    public string Ticker { get; }
+    public InvestmentType InvestmentType { get; }
+
+    public AddInvestmentEntryDto(DateTime postingDate, decimal valueChange, string ticker, InvestmentType investmentType) : base(postingDate, valueChange)
+    {
+        Ticker = ticker;
+        InvestmentType = investmentType;
     }
 }
 

@@ -10,64 +10,60 @@ namespace FinanceManager.Components.Services;
 
 public class UserService(HttpClient httpClient, ILogger<UserService> logger) : IUserService
 {
-    private readonly HttpClient _httpClient = httpClient;
-    private readonly ILogger<UserService> _logger = logger;
-
     public event Action<User>? OnUserChangeEvent;
 
     public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel)
     {
-        AddUser addUserCommand = new AddUser(login, password, pricingLevel);
+        AddUser addUserCommand = new(login, password, pricingLevel);
 
         try
         {
-            var response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/User/Add",
+            var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/User/Add",
                  JsonHelper.GenerateStringContent(JsonHelper.SerializeObj(addUserCommand)));
             var result = await response.Content.ReadFromJsonAsync<bool>();
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error adding user {login}", login);
+            logger.LogError(ex, $"Error adding user {login}", login);
         }
         return false;
     }
-    public async Task<User?> GetUser(int id)
+    public Task<User?> GetUser(int id)
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<User>($"{_httpClient.BaseAddress}api/User/Get/{id}");
+            return httpClient.GetFromJsonAsync<User>($"{httpClient.BaseAddress}api/User/Get/{id}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting user {id}", id);
+            logger.LogError(ex, $"Error getting user {id}", id);
         }
-
-        return null;
+        return Task.FromResult((User?)null);
     }
-    public async Task<RecordCapacity?> GetRecordCapacity(int userId)
+    public Task<RecordCapacity?> GetRecordCapacity(int userId)
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<RecordCapacity>($"{_httpClient.BaseAddress}api/User/GetRecordCapacity/{userId}");
+            httpClient.GetFromJsonAsync<RecordCapacity>($"{httpClient.BaseAddress}api/User/GetRecordCapacity/{userId}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting user record capacity {userId}", userId);
+            logger.LogError(ex, $"Error getting user record capacity {userId}", userId);
         }
 
-        return null;
+        return Task.FromResult((RecordCapacity?)null); ;
     }
     public async Task<bool> Delete(int userId)
     {
         try
         {
-            var response = await _httpClient.DeleteAsync($"{_httpClient.BaseAddress}api/User/Delete/{userId}");
+            var response = await httpClient.DeleteAsync($"{httpClient.BaseAddress}api/User/Delete/{userId}");
             if (response.StatusCode == System.Net.HttpStatusCode.OK) return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error removing user {userId}", userId);
+            logger.LogError(ex, $"Error removing user {userId}", userId);
         }
 
         return false;
@@ -79,8 +75,8 @@ public class UserService(HttpClient httpClient, ILogger<UserService> logger) : I
             var existingUser = await GetUser(userId);
             if (existingUser is null) return false;
 
-            UpdatePassword updatePasswordCommand = new UpdatePassword(userId, newPassword);
-            var response = await _httpClient.PutAsJsonAsync($"{_httpClient.BaseAddress}api/User/UpdatePassword/", updatePasswordCommand);
+            UpdatePassword updatePasswordCommand = new(userId, newPassword);
+            var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/User/UpdatePassword/", updatePasswordCommand);
             if (response.StatusCode == System.Net.HttpStatusCode.OK)
             {
                 OnUserChangeEvent?.Invoke(existingUser);
@@ -89,7 +85,7 @@ public class UserService(HttpClient httpClient, ILogger<UserService> logger) : I
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error removing user {userId}", userId);
+            logger.LogError(ex, $"Error removing user {userId}", userId);
         }
         return false;
     }
@@ -100,8 +96,8 @@ public class UserService(HttpClient httpClient, ILogger<UserService> logger) : I
             var existingUser = await GetUser(userId);
             if (existingUser is null) return false;
 
-            UpdatePricingPlan updatePricingPlan = new UpdatePricingPlan(userId, newPricingLevel);
-            var response = await _httpClient.PutAsJsonAsync($"{_httpClient.BaseAddress}api/User/UpdatePricingPlan/", updatePricingPlan);
+            UpdatePricingPlan updatePricingPlan = new(userId, newPricingLevel);
+            var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/User/UpdatePricingPlan/", updatePricingPlan);
 
             if (response.StatusCode == System.Net.HttpStatusCode.OK)
             {
@@ -112,7 +108,7 @@ public class UserService(HttpClient httpClient, ILogger<UserService> logger) : I
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error removing user {userId}", userId);
+            logger.LogError(ex, $"Error removing user {userId}", userId);
         }
 
         return false;
@@ -125,8 +121,8 @@ public class UserService(HttpClient httpClient, ILogger<UserService> logger) : I
             var existingUser = await GetUser(userId);
             if (existingUser is null) return false;
 
-            UpdateUserRole updateUserRole = new UpdateUserRole(userId, userRole);
-            var response = await _httpClient.PutAsJsonAsync($"{_httpClient.BaseAddress}api/User/UpdateUserRole/", updateUserRole);
+            UpdateUserRole updateUserRole = new(userId, userRole);
+            var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/User/UpdateUserRole/", updateUserRole);
 
             if (response.StatusCode == System.Net.HttpStatusCode.OK)
             {
@@ -136,7 +132,7 @@ public class UserService(HttpClient httpClient, ILogger<UserService> logger) : I
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error updating role for user {userId}", userId);
+            logger.LogError(ex, $"Error updating role for user {userId}", userId);
         }
 
         return false;

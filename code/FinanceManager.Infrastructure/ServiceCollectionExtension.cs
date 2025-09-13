@@ -24,13 +24,13 @@ public static class ServiceCollectionExtension
 
         services
                 .AddScoped<IStockPriceRepository, StockPriceRepository>()
-                .AddScoped<IFinancalAccountRepository, AccountRepository>()
+                .AddScoped<IFinancialAccountRepository, AccountRepository>()
                 .AddScoped<IUserRepository, UserRepository>()
                 .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()
-                .AddScoped<IAccountEntryRepository<BankAccountEntry>, InMemoryBankEntryRepository>()
-                .AddScoped<IStockAccountEntryRepository<StockAccountEntry>, InMemoryStockEntryRepository>()
-                .AddScoped<IAccountRepository<StockAccount>, InMemoryStockAccountRepository>()
-                .AddScoped<IBankAccountRepository<BankAccount>, InMemoryBankAccountRepository>()
+                .AddScoped<IAccountEntryRepository<BankAccountEntry>, BankEntryRepository>()
+                .AddScoped<IStockAccountEntryRepository<StockAccountEntry>, StockEntryRepository>()
+                .AddScoped<IAccountRepository<StockAccount>, StockAccountRepository>()
+                .AddScoped<IBankAccountRepository<BankAccount>, BankAccountRepository>()
                 .AddScoped<NewVisitsRepository>()
                 .AddScoped<IDuplicateEntryRepository, DuplicateEntryRepository>()
                 .AddScoped<IFinancialLabelsRepository, FinancialLabelsRepository>()

@@ -17,7 +17,7 @@ public class MoneyFlowServiceTests
     private readonly decimal _totalAssetsValue = 0;
 
     private readonly MoneyFlowService _moneyFlowService;
-    private readonly Mock<IFinancalAccountRepository> _financialAccountRepositoryMock = new();
+    private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
     private readonly Mock<IStockPriceRepository> _stockRepository = new();
     private readonly Mock<ICurrencyExchangeService> _currencyExchangeService = new();
     private readonly List<BankAccount> _bankAccounts;
@@ -33,7 +33,7 @@ public class MoneyFlowServiceTests
         BankAccount bankAccount2 = new(1, 2, "testBank2", AccountLabel.Cash);
         bankAccount2.Add(new BankAccountEntry(1, 1, _endDate, 10, 10));
 
-        _bankAccounts = new List<BankAccount> { bankAccount1, bankAccount2 };
+        _bankAccounts = [bankAccount1, bankAccount2];
         _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(1, _startDate, _endDate))
                                       .ReturnsAsync(_bankAccounts);
 
@@ -122,7 +122,7 @@ public class MoneyFlowServiceTests
     {
         // Arrange
         var userId = 1;
-        var date = new DateTime(2023, 12, 31);
+        DateTime date = new(2023, 12, 31);
         List<BankAccount> bankAccounts = [new(userId, 1, "Bank Account 1", [new(1, 1, date, 1000, 0)])];
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, date.Date, date)).ReturnsAsync(bankAccounts);
 
@@ -138,8 +138,8 @@ public class MoneyFlowServiceTests
     {
         // Arrange
         var userId = 1;
-        var start = new DateTime(2023, 1, 1);
-        var end = new DateTime(2023, 12, 31);
+        DateTime start = new(2023, 1, 1);
+        DateTime end = new(2023, 12, 31);
         List<BankAccount> bankAccounts =
             [
                 new (userId, 1, "Bank Account 1",

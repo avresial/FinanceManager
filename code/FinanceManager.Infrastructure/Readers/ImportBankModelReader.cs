@@ -10,13 +10,10 @@ public static class ImportBankModelReader
 {
     public static async Task<List<ImportBankModel>> Read(CsvConfiguration config, IBrowserFile file, string postingDateHeader, string valueChangeHeader)
     {
-        List<ImportBankModel> result = [];
-        using (var reader = new StreamReader(file.OpenReadStream()))
-        using (var csv = new CsvReader(reader, config))
-        {
-            csv.Context.RegisterClassMap(new ImportBankModelMap(postingDateHeader, valueChangeHeader));
-            result = await csv.GetRecordsAsync<ImportBankModel>().ToListAsync();
-        }
-        return result;
+        using var reader = new StreamReader(file.OpenReadStream());
+        using var csv = new CsvReader(reader, config);
+
+        csv.Context.RegisterClassMap(new ImportBankModelMap(postingDateHeader, valueChangeHeader));
+        return await csv.GetRecordsAsync<ImportBankModel>().ToListAsync();
     }
 }

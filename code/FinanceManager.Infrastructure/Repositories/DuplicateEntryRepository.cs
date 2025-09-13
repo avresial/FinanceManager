@@ -16,29 +16,19 @@ internal class DuplicateEntryRepository(AppDbContext context) : IDuplicateEntryR
     public async Task AddDuplicate(IEnumerable<DuplicateEntry> duplicates)
     {
         foreach (var duplicate in duplicates)
-        {
             if (duplicate.EntriesId == null || !duplicate.EntriesId.Any())
-            {
                 throw new ArgumentException("DuplicateEntry must have at least one entry ID.", nameof(duplicates));
-            }
-        }
 
 
         await context.DuplicateEntries.AddRangeAsync(duplicates);
         await context.SaveChangesAsync();
     }
 
-    public async Task<DuplicateEntry?> GetDuplicate(int accountId, int duplicateId)
-    {
-        return await context.DuplicateEntries
-            .FirstOrDefaultAsync(x => x.AccountId == accountId && x.Id == duplicateId);
-    }
+    public Task<DuplicateEntry?> GetDuplicate(int accountId, int duplicateId) =>
+        context.DuplicateEntries.FirstOrDefaultAsync(x => x.AccountId == accountId && x.Id == duplicateId);
 
-    public async Task<DuplicateEntry?> GetDuplicateByEntry(int accountId, int entryIndex)
-    {
-        return await context.DuplicateEntries
-            .FirstOrDefaultAsync(x => x.AccountId == accountId && x.EntriesId.Contains(entryIndex));
-    }
+    public Task<DuplicateEntry?> GetDuplicateByEntry(int accountId, int entryIndex) =>
+     context.DuplicateEntries.FirstOrDefaultAsync(x => x.AccountId == accountId && x.EntriesId.Contains(entryIndex));
 
     public async Task<IEnumerable<DuplicateEntry>> GetDuplicates(int accountId, int index, int count)
     {
@@ -50,10 +40,9 @@ internal class DuplicateEntryRepository(AppDbContext context) : IDuplicateEntryR
             .ToListAsync();
     }
 
-    public async Task<int> GetDuplicatesCount(int accountId)
-    {
-        return await context.DuplicateEntries.CountAsync(x => x.AccountId == accountId);
-    }
+    public Task<int> GetDuplicatesCount(int accountId) =>
+        context.DuplicateEntries.CountAsync(x => x.AccountId == accountId);
+
 
     public async Task RemoveDuplicate(int duplicateId)
     {

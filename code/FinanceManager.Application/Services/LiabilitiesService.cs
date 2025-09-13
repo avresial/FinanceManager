@@ -6,14 +6,12 @@ using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Services;
 
-public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository) : ILiabilitiesService
+public class LiabilitiesService(IFinancialAccountRepository financialAccountService) : ILiabilitiesService
 {
-    private readonly IFinancalAccountRepository _financialAccountService = bankAccountRepository;
-
     public async Task<List<NameValueResult>> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end)
     {
         List<NameValueResult> result = [];
-        foreach (BankAccount account in await _financialAccountService.GetAccounts<BankAccount>(userId, start, end))
+        foreach (BankAccount account in await financialAccountService.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) return result;
             BankAccountEntry? entry = account.Entries.FirstOrDefault();
@@ -39,7 +37,7 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
     public async Task<List<NameValueResult>> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
     {
         List<NameValueResult> result = [];
-        foreach (BankAccount account in await _financialAccountService.GetAccounts<BankAccount>(userId, start, end))
+        foreach (BankAccount account in await financialAccountService.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) return result;
             BankAccountEntry? entry = account.Entries.FirstOrDefault();
@@ -77,7 +75,7 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
         Dictionary<DateTime, decimal> prices = [];
         TimeSpan step = new TimeSpan(1, 0, 0, 0);
 
-        foreach (BankAccount account in await _financialAccountService.GetAccounts<BankAccount>(userId, start, end))
+        foreach (BankAccount account in await financialAccountService.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) continue;
 
@@ -119,7 +117,7 @@ public class LiabilitiesService(IFinancalAccountRepository bankAccountRepository
     }
     public async Task<bool> IsAnyAccountWithLiabilities(int userId)
     {
-        var BankAccounts = (await _financialAccountService.GetAccounts<BankAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow)).ToList();
+        var BankAccounts = (await financialAccountService.GetAccounts<BankAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow)).ToList();
         foreach (var bankAccount in BankAccounts)
         {
             if (bankAccount.Entries is not null && bankAccount.Entries.Count > 0)

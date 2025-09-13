@@ -15,14 +15,14 @@ public static class DateRangeHelper
         int currentQuarter = (now.Month - 1) / 3 + 1;
         int startMonth = (currentQuarter - 1) * 3 + 1;
 
-        var start = new DateTime(now.Year, startMonth, 1, 0, 0, 0, DateTimeKind.Utc);
+        DateTime start = new(now.Year, startMonth, 1, 0, 0, 0, DateTimeKind.Utc);
         var end = start.AddMonths(3).AddTicks(-1);
         return (start, end);
     }
 
     public static (DateTime Start, DateTime End) GetCurrentYearRange()
     {
-        var start = new DateTime(DateTime.UtcNow.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        DateTime start = new(DateTime.UtcNow.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var end = start.AddYears(1).AddTicks(-1);
         return (start, end);
     }

@@ -12,16 +12,16 @@ public class NewVisitorsService(HttpClient httpClient)
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task<int> GetVisit(DateTime dateTime)
+    public Task<int> GetVisit(DateTime dateTime)
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<int>($"{_httpClient.BaseAddress}api/NewVisitors/GetNewVisitor/{dateTime.Date.ToRfc3339()}");
+            return _httpClient.GetFromJsonAsync<int>($"{_httpClient.BaseAddress}api/NewVisitors/GetNewVisitor/{dateTime.Date.ToRfc3339()}");
         }
         catch (HttpRequestException ex)
         {
             Debug.WriteLine(ex.ToString());
-            return 0;
+            return Task.FromResult(0);
         }
     }
 }

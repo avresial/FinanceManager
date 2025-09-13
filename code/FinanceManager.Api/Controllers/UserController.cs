@@ -12,23 +12,20 @@ namespace FinanceManager.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class UserController(IUserRepository loginRepository, UserPlanVerifier userPlanVerifier, PricingProvider pricingProvider, ILogger<UserController> logger) : ControllerBase
+public class UserController(IUserRepository userRepository, UserPlanVerifier userPlanVerifier, PricingProvider pricingProvider,
+    ILogger<UserController> logger) : ControllerBase
 {
-    private readonly IUserRepository _userRepository = loginRepository;
-    private readonly UserPlanVerifier _userPlanVerifier = userPlanVerifier;
-    private readonly PricingProvider _pricingProvider = pricingProvider;
-    private readonly ILogger<UserController> _logger = logger;
 
     [AllowAnonymous]
     [HttpPost]
     [Route("Add")]
     public async Task<IActionResult> Add(AddUser addUserCommand)
     {
-        var existingUser = await _userRepository.GetUser(addUserCommand.userName);
+        var existingUser = await userRepository.GetUser(addUserCommand.userName);
         if (existingUser is not null) return BadRequest();
 
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(addUserCommand.password);
-        var result = await _userRepository.AddUser(addUserCommand.userName, encryptedPassword, addUserCommand.pricingLevel, UserRole.User);
+        var result = await userRepository.AddUser(addUserCommand.userName, encryptedPassword, addUserCommand.pricingLevel, UserRole.User);
 
         if (result) return Ok(result);
         return BadRequest();
@@ -39,7 +36,7 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     [Route("Get/{userId:int}")]
     public async Task<IActionResult> Get(int userId)
     {
-        var result = await _userRepository.GetUser(userId);
+        var result = await userRepository.GetUser(userId);
 
         if (result is not null) return Ok(result);
         return BadRequest();
@@ -52,21 +49,21 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     {
         if (!IsValidUserOrAdmin(userId)) return BadRequest();
 
-        var user = await _userRepository.GetUser(userId);
+        var user = await userRepository.GetUser(userId);
         if (user is null) return BadRequest();
 
         try
         {
             var result = new RecordCapacity()
             {
-                TotalCapacity = _pricingProvider.GetMaxAllowedEntries(user.PricingLevel),
-                UsedCapacity = await _userPlanVerifier.GetUsedRecordsCapacity(userId)
+                TotalCapacity = pricingProvider.GetMaxAllowedEntries(user.PricingLevel),
+                UsedCapacity = await userPlanVerifier.GetUsedRecordsCapacity(userId)
             };
             if (result is not null) return Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while getting record capacity for user {UserId}", userId);
+            logger.LogError(ex, "Error while getting record capacity for user {UserId}", userId);
             return StatusCode(500, "Unable to retrieve record capacity.");
         }
 
@@ -81,7 +78,7 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     {
         if (!IsValidUserOrAdmin(userId)) return BadRequest();
 
-        var result = await _userRepository.RemoveUser(userId);
+        var result = await userRepository.RemoveUser(userId);
 
         return Ok(result);
     }
@@ -94,7 +91,7 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
         if (!IsValidUserOrAdmin(updatePassword.UserId)) return BadRequest();
 
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(updatePassword.Password);
-        var result = await _userRepository.UpdatePassword(updatePassword.UserId, encryptedPassword);
+        var result = await userRepository.UpdatePassword(updatePassword.UserId, encryptedPassword);
         if (result) return Ok(result);
         return BadRequest();
     }
@@ -106,7 +103,7 @@ public class UserController(IUserRepository loginRepository, UserPlanVerifier us
     {
         if (!IsValidUserOrAdmin(updatePricingPlan.UserId)) return BadRequest();
 
-        var result = await _userRepository.UpdatePricingPlan(updatePricingPlan.UserId, updatePricingPlan.PricingLevel);
+        var result = await userRepository.UpdatePricingPlan(updatePricingPlan.UserId, updatePricingPlan.PricingLevel);
         if (result) return Ok(result);
         return BadRequest();
     }

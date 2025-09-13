@@ -7,10 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace FinanceManager.Api.Controllers;
 [Route("api/[controller]")]
 [ApiController]
-public class StockPriceController(IStockPriceRepository stockRepository, ICurrencyExchangeService currencyExchangeService) : ControllerBase
+public class StockPriceController(IStockPriceRepository stockPriceRepository, ICurrencyExchangeService currencyExchangeService) : ControllerBase
 {
-    private readonly IStockPriceRepository _stockPriceRepository = stockRepository;
-    private readonly ICurrencyExchangeService _currencyExchangeService = currencyExchangeService;
 
     [Authorize]
     [HttpPost("add-stock-price")]
@@ -19,7 +17,7 @@ public class StockPriceController(IStockPriceRepository stockRepository, ICurren
         if (string.IsNullOrWhiteSpace(ticker) || pricePerUnit <= 0 || string.IsNullOrWhiteSpace(currency) || date == default)
             return BadRequest("Invalid input parameters.");
 
-        var stockPrice = await _stockPriceRepository.Add(ticker.ToUpper(), pricePerUnit, currency.ToUpper(), date);
+        var stockPrice = await stockPriceRepository.Add(ticker.ToUpper(), pricePerUnit, currency.ToUpper(), date);
         return Ok(stockPrice);
     }
 
@@ -30,7 +28,7 @@ public class StockPriceController(IStockPriceRepository stockRepository, ICurren
         if (string.IsNullOrWhiteSpace(ticker) || pricePerUnit <= 0 || string.IsNullOrWhiteSpace(currency) || date == default)
             return BadRequest("Invalid input parameters.");
 
-        var stockPrice = await _stockPriceRepository.Update(ticker.ToUpper(), pricePerUnit, currency.ToUpper(), date);
+        var stockPrice = await stockPriceRepository.Update(ticker.ToUpper(), pricePerUnit, currency.ToUpper(), date);
         return Ok(stockPrice);
     }
 
@@ -40,13 +38,13 @@ public class StockPriceController(IStockPriceRepository stockRepository, ICurren
         if (string.IsNullOrWhiteSpace(ticker) || date == default)
             return BadRequest("Invalid input parameters.");
 
-        var stockPrice = await _stockPriceRepository.GetThisOrNextOlder(ticker, date);
+        var stockPrice = await stockPriceRepository.GetThisOrNextOlder(ticker, date);
 
         if (stockPrice is null) return NotFound("Stock price not found.");
         if (string.IsNullOrWhiteSpace(currency) || currency.Equals(stockPrice.Currency, StringComparison.OrdinalIgnoreCase))
             return Ok(stockPrice);
 
-        var exchangeRate = await _currencyExchangeService.GetExchangeRateAsync(stockPrice.Currency, currency, date); // TODO add cache
+        var exchangeRate = await currencyExchangeService.GetExchangeRateAsync(stockPrice.Currency, currency, date); // TODO add cache
         if (exchangeRate is null)
             return NotFound($"Exchange rate from {stockPrice.Currency} to {currency} not found for the specified date.");
 
@@ -67,7 +65,7 @@ public class StockPriceController(IStockPriceRepository stockRepository, ICurren
 
         for (var i = start; i < end; i = i.Add(new(step)))
         {
-            var stockPrice = await _stockPriceRepository.Get(ticker, i);
+            var stockPrice = await stockPriceRepository.Get(ticker, i);
             if (stockPrice is null) continue;
             stockPrices.Add(stockPrice);
         }
@@ -84,7 +82,7 @@ public class StockPriceController(IStockPriceRepository stockRepository, ICurren
         if (string.IsNullOrWhiteSpace(ticker))
             return BadRequest("Invalid input parameters.");
 
-        var stockPrice = await _stockPriceRepository.GetLatestMissing(ticker);
+        var stockPrice = await stockPriceRepository.GetLatestMissing(ticker);
 
         if (stockPrice is null) return NotFound("Stock price not found.");
 
@@ -97,7 +95,7 @@ public class StockPriceController(IStockPriceRepository stockRepository, ICurren
         if (string.IsNullOrWhiteSpace(ticker))
             return BadRequest("Invalid input parameters.");
 
-        var currency = await _stockPriceRepository.GetTickerCurrency(ticker);
+        var currency = await stockPriceRepository.GetTickerCurrency(ticker);
 
         if (currency is null) return NotFound("Stock price not found.");
 

@@ -1,89 +1,50 @@
 ﻿@using FinanceManager.Domain.Enums
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <AuthorizeView>
-            <Authorized>
-                @if (@context.User.IsInRole(UserRole.Admin.ToString()))
-                {
-                    <MudLink Class="px-4" href="Admin/Dashboard" Underline="Underline.None">
-                        <MudText Typo="Typo.h6">Finance Manager</MudText>
-                    </MudLink>
-                }
-                else if (@context.User.IsInRole(UserRole.User.ToString()))
-                {
-                    <MudLink Class="px-4" href="" Underline="Underline.None">
-                        <MudText Typo="Typo.h6">Finance Manager</MudText>
-                    </MudLink>
-                }
-            </Authorized>
-        </AuthorizeView>
+<MudNavMenu Class="pt-2">
+    <AuthorizeView>
+        <Authorized>
+            @if (@context.User.IsInRole(UserRole.Admin.ToString()))
+            {
+                <MudNavLink Icon="@Icons.Material.Filled.Dashboard" href="Admin/Dashboard">Finance Manager</MudNavLink>
+            }
+            else if (@context.User.IsInRole(UserRole.User.ToString()))
+            {
+                <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary">FinanceManager</MudText>
+                <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">@ApplicationVersion.Version</MudText>
+            }
+        </Authorized>
+    </AuthorizeView>
+    <MudDivider Class="my-2" />
+    <MudNavLink Icon="@Icons.Material.Filled.Dashboard" Href="/" Match="NavLinkMatch.All">Dashboard</MudNavLink>
 
-        <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">@ApplicationVersion.Version</MudText>
+    @if (_displayAssetsLink)
+    {
+        <MudNavLink Icon="@Icons.Material.Filled.TrendingUp" Href="Assets">Assets</MudNavLink>
+    }
 
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <MudIcon Icon="@Icons.Material.Filled.Menu" Color="Color.Primary" />
-        </button>
-    </div>
-</div>
+    @if (_displayLiabilitiesLink)
+    {
+        <MudNavLink Icon="@Icons.Material.Filled.TrendingDown" Href="Liabilities">Liabilities</MudNavLink>
+    }
+    <MudDivider Class="my-2" />
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="flex-column">
-        @if (Accounts is not null && Accounts.Any())
+    <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary">Accounts</MudText>
+    @if (Accounts is not null && Accounts.Any())
+    {
+        @foreach (var account in Accounts)
         {
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                    <span class="bi bi-speedometer2 navbarIcon" aria-hidden="true"></span> Dashboard
-                </NavLink>
-            </div>
-            if (_displayAssetsLink)
-            {
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Assets" Match="NavLinkMatch.All">
-                        <span class="bi bi-currency-exchange navbarIcon" aria-hidden="true"></span> Assets
-                    </NavLink>
-                </div>
-            }
-            @if (_displayLiabilitiesLink)
-            {
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Liabilities" Match="NavLinkMatch.All">
-                        <span class="bi bi-clipboard2-data navbarIcon" aria-hidden="true"></span> Liabilities
-                    </NavLink>
-                </div>
-            }
-
-            <br>
-            <div class="nav-item px-3" style="padding-bottom: 0.0rem">
-                Accounts
-            </div>
-
-            @foreach (var account in Accounts)
-            {
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link py-0" href="@($"AccountDetails/{account.Key}")" Match="NavLinkMatch.All">
-                        <span class="bi bi-wallet-fill navbarIcon" aria-hidden="true"></span>@account.Value
-                    </NavLink>
-                </div>
-            }
-
-            <div class="nav-item px-3">
-                <NavLink class="nav-link py-0" href="AddAccount" Match="NavLinkMatch.All">
-                    <span class="bi bi-plus navbarIcon" aria-hidden="true"></span>Add
-                </NavLink>
-            </div>
-
-            <AuthorizeView>
-                <Authorized>
-                    @if (@context.User.IsInRole(UserRole.Admin.ToString()))
-                    {
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link py-0" href="Admin/Dashboard" Match="NavLinkMatch.All">
-                                <span class="bi bi-gear-wide navbarIcon" aria-hidden="true"></span>Admin page
-                            </NavLink>
-                        </div>
-                    }
-                </Authorized>
-            </AuthorizeView>
+            <MudNavLink Icon="@Icons.Material.Filled.Wallet" Href="@($"AccountDetails/{account.Key}")">@account.Value</MudNavLink>
         }
-    </nav>
-</div>
+    }
+
+    <MudNavLink Icon="@Icons.Material.Filled.Add" Href="AddAccount">Add</MudNavLink>
+
+    <AuthorizeView>
+        <Authorized>
+            @if (@context.User.IsInRole(UserRole.Admin.ToString()))
+            {
+                <MudNavLink Icon="@Icons.Material.Filled.AdminPanelSettings" Href="Admin/Dashboard">Admin page</MudNavLink>
+            }
+        </Authorized>
+    </AuthorizeView>
+
+</MudNavMenu>

@@ -35,13 +35,13 @@ public class BankAccountControllerTests
         var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = Domain.Enums.PricingLevel.Premium, CreationDate = DateTime.UtcNow };
         _userRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
         _userPlanVerifier = new Mock<UserPlanVerifier>(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userRepository.Object, new PricingProvider());
-        _controller = new BankAccountController(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object);
+        _controller = new(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object);
 
         // Mock user identity
-        var userClaims = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString())
-        }, "mock"));
+        var userClaims = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new (ClaimTypes.NameIdentifier, user.UserId.ToString())
+        ], "mock"));
 
         _controller.ControllerContext = new ControllerContext
         {
@@ -54,7 +54,7 @@ public class BankAccountControllerTests
     {
         // Arrange
         var userId = 1;
-        var accounts = new List<AvailableAccount> { new(1, "Test Account") };
+        List<AvailableAccount> accounts = new() { new(1, "Test Account") };
         _mockBankAccountRepository.Setup(repo => repo.GetAvailableAccounts(userId)).ReturnsAsync(accounts);
 
         // Act
@@ -72,7 +72,7 @@ public class BankAccountControllerTests
         // Arrange
         var userId = 1;
         var accountId = 1;
-        var account = new BankAccount(userId, accountId, "Test Account");
+        BankAccount account = new(userId, accountId, "Test Account");
         _mockBankAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
 
         // Act
@@ -95,7 +95,7 @@ public class BankAccountControllerTests
 
         var userId = 1;
         var accountId = 1;
-        var account = new BankAccount(userId, accountId, "Test Account");
+        BankAccount account = new(userId, accountId, "Test Account");
         BankAccountEntry bankAccountEntry = new(accountId, 1, olderThanLoadedDate, 1, 0);
 
         _mockBankAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
@@ -125,7 +125,7 @@ public class BankAccountControllerTests
     {
         // Arrange
         var userId = 1;
-        var addAccount = new AddAccount("New Account");
+        AddAccount addAccount = new("New Account");
         var newAccountId = 1;
         _mockBankAccountRepository.Setup(repo => repo.Add(userId, addAccount.accountName)).ReturnsAsync(newAccountId);
 
@@ -141,7 +141,7 @@ public class BankAccountControllerTests
     public async Task AddEntry_ReturnsOkResult_WithNewEntry()
     {
         // Arrange
-        var addEntry = new AddBankAccountEntry(1, 1, DateTime.Now, 100, 0, "");
+        AddBankAccountEntry addEntry = new(1, 1, DateTime.Now, 100, 0, "");
         BankAccountEntry bankAccountEntry = new(addEntry.AccountId, addEntry.EntryId, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
         {
             Description = addEntry.Description,
@@ -160,8 +160,8 @@ public class BankAccountControllerTests
     {
         // Arrange
         var userId = 1;
-        var updateAccount = new UpdateAccount(1, "Updated Account");
-        var account = new BankAccount(userId, updateAccount.accountId, "Test Account");
+        UpdateAccount updateAccount = new(1, "Updated Account");
+        BankAccount account = new(userId, updateAccount.accountId, "Test Account");
         _mockBankAccountRepository.Setup(repo => repo.Get(updateAccount.accountId)).ReturnsAsync(account);
         _mockBankAccountRepository.Setup(repo => repo.Update(updateAccount.accountId, updateAccount.accountName)).ReturnsAsync(true);
 
@@ -178,8 +178,8 @@ public class BankAccountControllerTests
     {
         // Arrange
         var userId = 1;
-        var deleteAccount = new DeleteAccount(1);
-        var account = new BankAccount(userId, deleteAccount.accountId, "Test Account");
+        DeleteAccount deleteAccount = new(1);
+        BankAccount account = new(userId, deleteAccount.accountId, "Test Account");
         _mockBankAccountRepository.Setup(repo => repo.Get(deleteAccount.accountId)).ReturnsAsync(account);
         _mockBankAccountRepository.Setup(repo => repo.Delete(deleteAccount.accountId)).ReturnsAsync(true);
 

@@ -7,43 +7,32 @@
 @using FinanceManager.Domain.Services
 @using FinanceManager.Components.Helpers
 
+<MudCard Outlined Class="d-flex flex-nowrap " Style="@($"height:{Height};")">
+    <MudPaper Class="flex-grow-0 p-3" Elevation="0">
+        <MudText Typo=Typo.h5>Income source</MudText>
+        @if ( ChartData.Any())
+        {
+            <MudText Typo=Typo.h6 Class="mb-2 text-muted">@Total @_currency</MudText>
+        }
+    </MudPaper>
+    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
+        @if (ChartData.Any())
+        {
+            <ApexChart @ref="_chart" TItem="IncomeSourceOverviewEntry" Height="@("100%")" Options="options">
+                <ApexPointSeries TItem="IncomeSourceOverviewEntry"
+                                 Items="ChartData"
+                                 Name="Income"
+                                 XValue="@(e => e.Source)"
+                                 YValue="e=> e.Value"
+                                 SeriesType="SeriesType.Bar" />
 
-
-<div class="card" style="height:@Height;">
-    <div class="card-body">
-        <div class="container-fluid d-flex flex-column h-100">
-            <div class="row">
-                <div class="col px-0">
-                    <h5 class="card-title">Income source</h5>
-                    @if (ChartData.Any())
-                    {
-                        <h6 class="card-subtitle mb-2 text-muted">@Total @_currency</h6>
-                    }
-                </div>
+            </ApexChart>
+        }
+        else
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
             </div>
-
-            <div class="row flex-fill" style="height:1px;">
-                <div class="h-100">
-                    @if (ChartData.Any())
-                    {
-                        <ApexChart @ref="_chart" TItem="IncomeSourceOverviewEntry" Height="@("100%")" Options="options">
-                            <ApexPointSeries TItem="IncomeSourceOverviewEntry"
-                                             Items="ChartData"
-                                             Name="Income"
-                                             XValue="@(e => e.Source)"
-                                             YValue="e=> e.Value"
-                                             SeriesType="SeriesType.Bar" />
-
-                        </ApexChart>
-                    }
-                    else
-                    {
-                        <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
-                            <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+        }
+    </MudPaper>
+</MudCard>

@@ -9,10 +9,9 @@ using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Services;
 
-public class MoneyFlowService(IFinancalAccountRepository financialAccountRepository, IStockPriceRepository stockRepository,
+public class MoneyFlowService(IFinancialAccountRepository financialAccountRepository, IStockPriceRepository stockRepository,
     ICurrencyExchangeService currencyExchangeService, IFinancialLabelsRepository financialLabelsRepository) : IMoneyFlowService
 {
-
     public async Task<bool> IsAnyAccountWithAssets(int userId)
     {
         var start = DateTime.UtcNow.AddDays(-1);

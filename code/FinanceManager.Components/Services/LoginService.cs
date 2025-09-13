@@ -26,11 +26,11 @@ public class LoginService : ILoginService
 
     private AuthenticationStateProvider _authStateProvider { get; set; }
     public LoginService(ISessionStorageService sessionStorageService, ILocalStorageService localStorageService,
-        AuthenticationStateProvider AuthState, IUserRepository loginRepository, HttpClient httpClient)
+        AuthenticationStateProvider authState, IUserRepository loginRepository, HttpClient httpClient)
     {
         _sessionStorageService = sessionStorageService;
         _localStorageService = localStorageService;
-        _authStateProvider = AuthState;
+        _authStateProvider = authState;
 
         _loginRepository = loginRepository;
         _httpClient = httpClient;
@@ -60,7 +60,7 @@ public class LoginService : ILoginService
 
     public async Task<bool> Login(UserSession userSession)
     {
-        LoginRequestModel loginRequestModel = new LoginRequestModel(userSession.UserName, userSession.Password);
+        LoginRequestModel loginRequestModel = new(userSession.UserName, userSession.Password);
         LoginResponseModel? result = null;
         HttpResponseMessage? response = null;
 
@@ -95,7 +95,7 @@ public class LoginService : ILoginService
     }
     public async Task<bool> Login(string username, string password)
     {
-        var loginResult = await Login(new UserSession()
+        var loginResult = await Login(new()
         {
             UserId = 0,
             UserName = username.ToLower(),

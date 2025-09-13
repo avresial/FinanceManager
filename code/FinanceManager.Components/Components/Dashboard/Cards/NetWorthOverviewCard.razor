@@ -1,13 +1,15 @@
-﻿<div class="card" style="height:@Height;">
-    <div class="card-body">
-        <h5 class="card-title">Total net worth</h5>
-        @if (_totalNetWorth is not null)
-        {
-            <h1 class="card-subtitle mb-2 text-muted">@_totalNetWorth @_currency</h1>
-        }
-        else
-        {
-            <h1 class="card-subtitle mb-2 text-muted">No data</h1>
-        }
-    </div>
-</div>
+﻿<MudCard Outlined Class="d-flex flex-nowrap " Style="@($"height:{Height};")">
+    <MudPaper Class="flex-grow-0 p-3" Elevation="0">
+        <MudText Typo=Typo.h5>Total net worth</MudText>
+        <MudText Typo=Typo.h3 class="card-subtitle text-muted">
+            @if (_totalNetWorth is not null)
+            {
+                @_totalNetWorth@_currency
+            }
+            else
+            {
+                @("No data")
+            }
+        </MudText>
+    </MudPaper>
+</MudCard>

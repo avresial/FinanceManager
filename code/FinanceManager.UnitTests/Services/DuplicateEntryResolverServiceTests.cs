@@ -18,13 +18,13 @@ public class DuplicateEntryResolverServiceTests
     public DuplicateEntryResolverServiceTests()
     {
         _bankAccountRepositoryMock.Setup(x => x.Exists(1)).ReturnsAsync(true);
-        List<BankAccountEntry> entries = new()
-        {
-            new BankAccountEntry(1, 1, new DateTime(2000, 1, 1), 100, 100),
-            new BankAccountEntry(1, 2, new DateTime(2000, 1, 1), 200, 100),
-        };
+        List<BankAccountEntry> entries =
+        [
+            new (1, 1, new (2000, 1, 1), 100, 100),
+            new (1, 2, new (2000, 1, 1), 200, 100),
+        ];
 
-        _accountEntryRepositoryMock.Setup(x => x.Get(1, new DateTime(2000, 1, 1), new DateTime(2000, 1, 2))).ReturnsAsync(entries);
+        _accountEntryRepositoryMock.Setup(x => x.Get(1, new(2000, 1, 1), new(2000, 1, 2))).ReturnsAsync(entries);
         _accountEntryRepositoryMock.Setup(x => x.GetOldest(1)).ReturnsAsync(entries.First());
         _duplicateEntryRepository.Setup(x => x.AddDuplicate(It.IsAny<IEnumerable<DuplicateEntry>>()));
 

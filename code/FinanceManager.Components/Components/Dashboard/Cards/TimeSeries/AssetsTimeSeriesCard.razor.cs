@@ -12,6 +12,7 @@ public partial class AssetsTimeSeriesCard
 
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
+    [Parameter] public string Height { get; set; } = "250px";
 
     [Inject] public required ILogger<AssetsTimeSeriesCard> Logger { get; set; }
     [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }

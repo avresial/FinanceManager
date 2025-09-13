@@ -7,23 +7,15 @@ namespace FinanceManager.Api.Controllers;
 //[Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class DuplicateEntryResolverController : ControllerBase
+public class DuplicateEntryResolverController(DuplicateEntryResolverService duplicateEntryResolverService, IDuplicateEntryRepository duplicateEntryRepository) : ControllerBase
 {
-    private readonly DuplicateEntryResolverService _duplicateEntryResolverService;
-    private readonly IDuplicateEntryRepository _duplicateEntryRepository;
-
-    public DuplicateEntryResolverController(DuplicateEntryResolverService duplicateEntryResolverService, IDuplicateEntryRepository duplicateEntryRepository)
-    {
-        _duplicateEntryResolverService = duplicateEntryResolverService;
-        _duplicateEntryRepository = duplicateEntryRepository;
-    }
 
     [HttpGet("GetDuplicatesCount")]
     public async Task<IActionResult> GetDuplicatesCount([FromQuery] int accountId)
     {
         try
         {
-            return Ok(await _duplicateEntryRepository.GetDuplicatesCount(accountId));
+            return Ok(await duplicateEntryRepository.GetDuplicatesCount(accountId));
         }
         catch (Exception ex)
         {
@@ -36,7 +28,7 @@ public class DuplicateEntryResolverController : ControllerBase
     {
         try
         {
-            return Ok(await _duplicateEntryRepository.GetDuplicates(accountId, index, count));
+            return Ok(await duplicateEntryRepository.GetDuplicates(accountId, index, count));
         }
         catch (Exception ex)
         {
@@ -48,7 +40,7 @@ public class DuplicateEntryResolverController : ControllerBase
     {
         try
         {
-            await _duplicateEntryResolverService.Scan(accountId);
+            await duplicateEntryResolverService.Scan(accountId);
             return Ok(new { message = "Scan completed." });
         }
         catch (Exception ex)
@@ -62,7 +54,7 @@ public class DuplicateEntryResolverController : ControllerBase
     {
         try
         {
-            if (await _duplicateEntryResolverService.Resolve(accountId, duplicateId, entryIdToBeRemained))
+            if (await duplicateEntryResolverService.Resolve(accountId, duplicateId, entryIdToBeRemained))
                 return Ok(new { message = "Duplicate resolved." });
             else
                 return NotFound(new { message = "Duplicate entry not found or already resolved." });
@@ -78,7 +70,7 @@ public class DuplicateEntryResolverController : ControllerBase
     {
         try
         {
-            await _duplicateEntryRepository.RemoveDuplicate(duplicateId);
+            await duplicateEntryRepository.RemoveDuplicate(duplicateId);
             return Ok(new { message = "Duplicate removed." });
         }
         catch (Exception ex)

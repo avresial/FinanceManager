@@ -180,15 +180,22 @@ namespace FinanceManager.Api.Controllers.Accounts
         }
 
         [HttpPut("UpdateEntry")]
-        public async Task<IActionResult> UpdateEntry(StockAccountEntry entry)
+        public async Task<IActionResult> UpdateEntry(UpdateStockAccountEntry updateCommand)
         {
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (userId is null) return BadRequest("User ID is null.");
 
-            var account = await _accountRepository.Get(entry.AccountId);
+            var account = await _accountRepository.Get(updateCommand.AccountId);
             if (account == null || account.UserId != userId) return BadRequest("User ID does not match the account owner.");
 
-            var result = await _entryRepository.Update(entry);
+            var entryToUpdate = await _entryRepository.Get(updateCommand.AccountId, updateCommand.EntryId);
+
+            if (entryToUpdate is null) return NoContent();
+
+            entryToUpdate.Update(new StockAccountEntry(updateCommand.AccountId, updateCommand.EntryId, updateCommand.PostingDate, updateCommand.Value,
+                updateCommand.ValueChange, updateCommand.Ticker, updateCommand.investmentType));
+
+            var result = await _entryRepository.Update(entryToUpdate);
             return Ok(result);
         }
     }

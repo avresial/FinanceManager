@@ -13,6 +13,6 @@ internal class NotInFutureAttribute : ValidationAttribute
         if (DateTime.UtcNow.CompareTo(dateTime.ToUniversalTime()) >= 0)
             return ValidationResult.Success!;
 
-        return new ValidationResult("Date must not be in the future!");
+        return new("Date must not be in the future!");
     }
 }

@@ -6,31 +6,21 @@ using FinanceManager.Infrastructure.Dtos;
 
 namespace FinanceManager.Infrastructure.Repositories;
 
-public class UserLocalStorageRepository : IUserRepository
+public class UserLocalStorageRepository(ILocalStorageService localStorageService) : IUserRepository
 {
-    private readonly ILocalStorageService _localStorageService;
-
-    public UserLocalStorageRepository(ILocalStorageService localStorageService)
-    {
-        _localStorageService = localStorageService;
-    }
-
     async Task<User?> IUserRepository.GetUser(string login, string password)
     {
         login = login.ToLower();
-        List<UserDto>? databaseUserDtos = await _localStorageService.GetItemAsync<List<UserDto>>("Users");
+        var databaseUserDtos = await localStorageService.GetItemAsync<List<UserDto>>("Users");
         if (databaseUserDtos is null) return null;
 
-        List<UserDto> userDtos = [];
-
-        if (databaseUserDtos is not null)
-            userDtos = databaseUserDtos;
+        var userDtos = databaseUserDtos is not null ? databaseUserDtos : [];
 
         var foundUser = userDtos.FirstOrDefault(x => x.Login == login);
         if (foundUser is null) return null;
         if (foundUser.Password != password) return null;
 
-        return new User()
+        return new()
         {
             Login = foundUser.Login,
             UserId = foundUser.Id,
@@ -40,18 +30,15 @@ public class UserLocalStorageRepository : IUserRepository
     }
     public async Task<User?> GetUser(int id)
     {
-        List<UserDto>? databaseUserDtos = await _localStorageService.GetItemAsync<List<UserDto>>("Users");
+        var databaseUserDtos = await localStorageService.GetItemAsync<List<UserDto>>("Users");
         if (databaseUserDtos is null) return null;
 
-        List<UserDto> userDtos = [];
-
-        if (databaseUserDtos is not null)
-            userDtos = databaseUserDtos;
+        var userDtos = databaseUserDtos is not null ? databaseUserDtos : [];
 
         var foundUser = userDtos.FirstOrDefault(x => x.Id == id);
         if (foundUser is null) return null;
 
-        return new User()
+        return new()
         {
             Login = foundUser.Login,
             UserId = foundUser.Id,
@@ -62,16 +49,13 @@ public class UserLocalStorageRepository : IUserRepository
     async Task<bool> IUserRepository.AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole)
     {
         login = login.ToLower();
-        List<UserDto>? databaseUserDtos = await _localStorageService.GetItemAsync<List<UserDto>>("Users");
-        List<UserDto> userDtos = [];
-
-        if (databaseUserDtos is not null)
-            userDtos = databaseUserDtos;
+        var databaseUserDtos = await localStorageService.GetItemAsync<List<UserDto>>("Users");
+        var userDtos = databaseUserDtos is not null ? databaseUserDtos : [];
 
         if (userDtos.Any(x => x.Login == login))
             return false; // maybe throw exception?
 
-        userDtos.Add(new UserDto()
+        userDtos.Add(new()
         {
             Login = login,
             Password = password,
@@ -83,7 +67,7 @@ public class UserLocalStorageRepository : IUserRepository
 
         try
         {
-            await _localStorageService.SetItemAsync("Users", userDtos);
+            await localStorageService.SetItemAsync("Users", userDtos);
         }
         catch (Exception ex)
         {
@@ -96,19 +80,16 @@ public class UserLocalStorageRepository : IUserRepository
 
     async Task<bool> IUserRepository.RemoveUser(int userId)
     {
-        List<UserDto>? databaseUserDtos = await _localStorageService.GetItemAsync<List<UserDto>>("Users");
+        var databaseUserDtos = await localStorageService.GetItemAsync<List<UserDto>>("Users");
         if (databaseUserDtos is null) return false;
 
-        List<UserDto> userDtos = [];
-
-        if (databaseUserDtos is not null)
-            userDtos = databaseUserDtos;
+        var userDtos = databaseUserDtos is not null ? databaseUserDtos : [];
 
         userDtos.RemoveAll(x => x.Id == userId);
 
         try
         {
-            await _localStorageService.SetItemAsync("Users", userDtos);
+            await localStorageService.SetItemAsync("Users", userDtos);
         }
         catch (Exception ex)
         {
@@ -119,33 +100,10 @@ public class UserLocalStorageRepository : IUserRepository
         return true;
     }
 
-    public Task<bool> UpdatePassword(int userId, string password)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<User?> GetUser(string login)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<int> GetUsersCount()
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<IEnumerable<User>> GetUsers(int recordIndex, int recordsCount)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<IEnumerable<User>> GetUsers(DateTime startDate, DateTime endDate)
-    {
-        throw new NotImplementedException();
-    }
+    public Task<bool> UpdatePassword(int userId, string password) => throw new NotImplementedException();
+    public Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel) => throw new NotImplementedException();
+    public Task<User?> GetUser(string login) => throw new NotImplementedException();
+    public Task<int> GetUsersCount() => throw new NotImplementedException();
+    public Task<IEnumerable<User>> GetUsers(int recordIndex, int recordsCount) => throw new NotImplementedException();
+    public Task<IEnumerable<User>> GetUsers(DateTime startDate, DateTime endDate) => throw new NotImplementedException();
 }

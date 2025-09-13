@@ -10,12 +10,10 @@
 
 <MudGrid>
     <MudItem xs="12">
-        <MudPaper Elevation="0" Outlined="false">
-            <MudToolBar>
-                <MudSpacer />
-                <MudLink Href="login" Class="py-4" Underline="Underline.None">Login</MudLink>
-            </MudToolBar>
-        </MudPaper>
+        <MudToolBar>
+            <MudSpacer />
+            <MudLink Href="login" Class="py-4" Underline="Underline.None">Login</MudLink>
+        </MudToolBar>
     </MudItem>
 
     <MudItem xs="12" Class="py-5">
@@ -23,7 +21,7 @@
 
             <MudItem xs="12" md="4" Class="d-flex flex-grow-1 gap-4 align-center">
                 <div class="d-flex flex-grow-1 m-4">
-                    <MudPaper Class="flex-grow-1 text-center" Elevation="0">
+                    <MudPaper Class="flex-grow-1 text-center" Elevation="0" Style="background-color:transparent">
                         <MudText Typo="Typo.h1">Finance</MudText>
                         <MudText Typo="Typo.h1">Manager</MudText>
                     </MudPaper>
@@ -32,7 +30,7 @@
 
             <MudItem xs="12" md="8" Class="d-flex flex-grow-1 gap-4 align-center">
                 <div class="d-flex flex-grow-1 m-4">
-                    <MudPaper Class="flex-grow-1" Elevation="0">
+                    <MudPaper Class="flex-grow-1" Elevation="0" Style="background-color:transparent">
                         <MudText Typo="Typo.h3" Class="py-5">Stop wasting  money on stuff you don't need.</MudText>
                         <MudText Typo="Typo.h5" Class="py-5">Get your very own finance manager.</MudText>
                         <div class="pt-5">
@@ -54,7 +52,7 @@
 
     <MudItem xs="12" Class="py-5">
         <div class="d-flex flex-grow-1 justify-center ">
-            <MudPaper Elevation="0" Class="flex-grow-1 py-8 text-center">
+            <MudPaper Elevation="0" Class="flex-grow-1 py-8 text-center" Style="background-color:transparent">
                 <MudText Typo="Typo.h5" Class="text-center m-1">Learn more!</MudText>
                 <MudIcon Icon="@Icons.Material.Filled.KeyboardDoubleArrowDown" Title="KeyboardArrowDown" Class="text-center m-1 upAndDownAnimation" />
             </MudPaper>
@@ -71,7 +69,7 @@
 
             <MudItem xs="12" md="6" Class="order-1 order-md-2 d-flex flex-grow-1 gap-4 align-center">
                 <div class="d-flex flex-grow-1 m-4">
-                    <MudPaper Class="flex-grow-1 text-center" Elevation="0">
+                    <MudPaper Class="flex-grow-1 text-center" Elevation="0" Style="background-color:transparent">
                         <MudText Typo="Typo.h3">Intuitive dashboard design</MudText>
                         <MudText Typo="Typo.h5" Class="mt-4">Keep it simple and gather your important data in one place.</MudText>
                     </MudPaper>
@@ -84,7 +82,7 @@
         <MudGrid style="min-height: 60vh;">
             <MudItem xs="12" md="6" Class="d-flex flex-grow-1 gap-4 align-center">
                 <div class="d-flex flex-grow-1">
-                    <MudPaper Class="flex-grow-1 text-center" Elevation="0">
+                    <MudPaper Class="flex-grow-1 text-center" Elevation="0" Style="background-color:transparent">
                         <MudText Typo="Typo.h3">Assets</MudText>
                         <MudText Typo="Typo.h5" Class="mt-4">Manage your assets like a real pro</MudText>
                     </MudPaper>
@@ -104,7 +102,7 @@
 
             <MudItem xs="12" Class="d-flex flex-grow-1 gap-4 align-center">
                 <div class="d-flex flex-grow-1">
-                    <MudPaper Class="flex-grow-1 text-center" Elevation="0">
+                    <MudPaper Class="flex-grow-1 text-center" Elevation="0" Style="background-color:transparent">
                         <MudText Typo="Typo.h3">Accounts</MudText>
                         <MudText Typo="Typo.h5" Class="mt-4">Track cash, shares, ETF, real estate value and more...</MudText>
                     </MudPaper>
@@ -220,7 +218,7 @@
                             </MudList>
                         </MudCardContent>
                         <MudCardActions Class="d-flex justify-center">
-                            <MudButton Href="@($"register/{PricingLevel.Premium}")" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Style="width:50%;" >Start Now</MudButton>
+                            <MudButton Href="@($"register/{PricingLevel.Premium}")" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Style="width:50%;">Start Now</MudButton>
                         </MudCardActions>
                     </MudCard>
                 </MudItem>
