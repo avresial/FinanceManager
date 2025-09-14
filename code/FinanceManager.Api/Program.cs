@@ -2,38 +2,21 @@ using FinanceManager.Api.Services;
 using FinanceManager.Application;
 using FinanceManager.Application.Services;
 using FinanceManager.Infrastructure;
-using FinanceManager.Infrastructure.Contexts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi("v1", options => { options.AddDocumentTransformer<BearerSecuritySchemeTransformer>(); });
-
-if (builder.Configuration.GetValue<bool>("UseInMemoryDatabase", false))
+builder.Services.AddOpenApi("v1", options =>
 {
-    builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseInMemoryDatabase(databaseName: "Db"));
-}
-else
-{
-    builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
-        b => b.MigrationsAssembly("FinanceManager.Api")));
-}
-
-builder.Services.AddApplicationApi().AddInfrastructureApi();
-builder.Services.AddControllers();
-//.AddJsonOptions(x =>
-//x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve);
-
-//.AddJsonOptions(options =>
-//{
-//    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-//    options.JsonSerializerOptions.WriteIndented = true; // Optional: for better readability
-//});
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+})
+    .AddDatabase(builder.Configuration)
+    .AddApplicationApi()
+    .AddInfrastructureApi()
+    .AddControllers();
 
 builder.Services.AddCors(options =>
 {
@@ -43,10 +26,9 @@ builder.Services.AddCors(options =>
             builder.AllowAnyOrigin()
             .AllowAnyHeader()
             .AllowAnyMethod()
-                .SetIsOriginAllowedToAllowWildcardSubdomains();
+            .SetIsOriginAllowedToAllowWildcardSubdomains();
         });
-});
-builder.Services.AddAuthentication(options =>
+}).AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -95,6 +77,7 @@ app.MapControllers();
 
 using (var scope = app.Services.CreateScope())
 {
+    scope.ApplyMigrations();
     var seeder = scope.ServiceProvider.GetRequiredService<AdminAccountSeeder>();
 
     try

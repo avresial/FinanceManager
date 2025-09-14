@@ -6,25 +6,21 @@ using Microsoft.Extensions.Hosting;
 namespace FinanceManager.Infrastructure;
 internal class DatabaseInitializer(IServiceProvider serviceProvider) : IHostedService
 {
-    public Task StartAsync(CancellationToken cancellationToken = default)
+    public async Task StartAsync(CancellationToken cancellationToken = default)
     {
         using var scope = serviceProvider.CreateScope();
 
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        if (dbContext.Database.IsRelational()) dbContext.Database.Migrate();
+        if (dbContext.Database.IsRelational()) await dbContext.Database.MigrateAsync(cancellationToken);
 
-        var financialLabels = dbContext.FinancialLabels.ToList();
-        if (financialLabels.Any())
-            return Task.CompletedTask;
+        var financialLabels = await dbContext.FinancialLabels.ToListAsync(cancellationToken);
+        if (financialLabels.Count != 0) return;
 
-        financialLabels = [new() { Name = "Sallary" }];
+        financialLabels = [new() { Name = "Salary" }];
 
         dbContext.FinancialLabels.AddRange(financialLabels);
-        dbContext.SaveChanges();
-
-        return Task.CompletedTask;
-
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public Task StopAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
