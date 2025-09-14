@@ -10,12 +10,12 @@
     </NotAuthorized>
     <Authorized>
         <MudLayout>
-            <MudAppBar Elevation="0">
+            <MudAppBar Dense Elevation="0">
                 <MudIconButton Icon="@Icons.Material.Filled.Menu" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
             </MudAppBar>
 
-            <MudDrawer @bind-Open="_drawerOpen" Elevation="0">
-                <NavMenu />
+            <MudDrawer @bind-Open="_drawerOpen" Variant="@DrawerVariant.Mini" Elevation="0">
+                <NavMenu DrawerIsOpen=_drawerOpen />
                 <MudSpacer />
                 <MudNavMenu>
                     <MudNavLink Icon="@Icons.Material.Filled.Settings" Href="/UserSettings">Settings</MudNavLink>

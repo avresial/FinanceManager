@@ -13,6 +13,7 @@ public partial class NavMenu : ComponentBase
     private bool _displayAssetsLink = false;
     private bool _displayLiabilitiesLink = false;
 
+    [Parameter] public bool DrawerIsOpen { get; set; }
     [Inject] public required IAssetsService AssetsService { get; set; }
     [Inject] public required ILiabilitiesService LiabilitiesService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
