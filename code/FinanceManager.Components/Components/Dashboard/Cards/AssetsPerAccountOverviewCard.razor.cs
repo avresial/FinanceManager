@@ -23,7 +23,7 @@ public partial class AssetsPerAccountOverviewCard
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
     [Inject] public required ILogger<AssetsPerAccountOverviewCard> Logger { get; set; }
-    [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
+    [Inject] public required IAssetsService AssetsService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
@@ -118,7 +118,7 @@ public partial class AssetsPerAccountOverviewCard
         {
             try
             {
-                return await MoneyFlowService.GetEndAssetsPerAccount(_user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
+                return await AssetsService.GetEndAssetsPerAccount(_user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
             }
             catch (Exception ex)
             {

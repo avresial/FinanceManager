@@ -33,7 +33,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
         [Inject] public required ILogger<AssetsPerTypeOverviewCard> Logger { get; set; }
-        [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
+        [Inject] public required IAssetsService AssetsService { get; set; }
         [Inject] public required ISettingsService SettingsService { get; set; }
         [Inject] public required ILoginService LoginService { get; set; }
 
@@ -70,7 +70,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
             List<NameValueResult> chartData = [];
 
-            if (user is not null) chartData = await MoneyFlowService.GetEndAssetsPerType(user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
+            if (user is not null) chartData = await AssetsService.GetEndAssetsPerType(user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
             if (chartData.Count != 0) _totalAssets = Math.Round(chartData.Sum(x => x.Value), 2);
 
             return chartData;

@@ -1,58 +1,11 @@
 ﻿using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.Services;
-
 public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
 {
-    public async Task<bool> IsAnyAccountWithAssets(int userId)
-    {
-        if (httpClient is null) return default;
-        try
-        {
-            return await httpClient.GetFromJsonAsync<bool>($"{httpClient.BaseAddress}api/MoneyFlow/IsAnyAccountWithAssets/{userId}");
-        }
-        catch (Exception ex)
-        {
-            return false;
-        }
-    }
-    public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, string currency, DateTime start, DateTime end)
-    {
-        if (httpClient is null) return [];
-
-        var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>($"{httpClient.BaseAddress}api/MoneyFlow/GetAssetsTimeSeries/{userId}/{currency}/{start.ToRfc3339()}/{end.ToRfc3339()}");
-
-        if (result is not null) return result;
-        return [];
-    }
-    public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, string currency, DateTime start, DateTime end, InvestmentType investmentType)
-    {
-        if (httpClient is null) return [];
-        var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>($"{httpClient.BaseAddress}api/MoneyFlow/GetAssetsTimeSeries/{userId}/{currency}/{start.ToRfc3339()}/{end.ToRfc3339()}/{investmentType}");
-
-        if (result is not null) return result;
-        return [];
-    }
-    public async Task<List<NameValueResult>> GetEndAssetsPerAccount(int userId, string currency, DateTime start, DateTime end)
-    {
-        if (httpClient is null) return [];
-        var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>($"{httpClient.BaseAddress}api/MoneyFlow/GetEndAssetsPerAccount/{userId}/{currency}/{start.ToRfc3339()}/{end.ToRfc3339()}");
-
-        if (result is not null) return result;
-        return [];
-    }
-    public async Task<List<NameValueResult>> GetEndAssetsPerType(int userId, string currency, DateTime start, DateTime end)
-    {
-        if (httpClient is null) return [];
-        var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>($"{httpClient.BaseAddress}api/MoneyFlow/GetEndAssetsPerType/{userId}/{currency}/{start.ToRfc3339()}/{end.ToRfc3339()}");
-
-        if (result is not null) return result;
-        return [];
-    }
     public async Task<List<TimeSeriesModel>> GetBalance(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
     {
         if (httpClient is null) return [];

@@ -17,6 +17,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<AdministrationUsersService>()
                 .AddScoped<StockAccountService>()
                 .AddScoped<IFinancialAccountService, FinancialAccountService>()
+                .AddScoped<IAssetsService, AssetsService>()
                 .AddScoped<IMoneyFlowService, MoneyFlowService>()
                 .AddScoped<ILiabilitiesService, LiabilitiesService>()
                 .AddScoped<NewVisitorsService>()

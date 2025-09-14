@@ -13,7 +13,7 @@ public partial class NavMenu : ComponentBase
     private bool _displayAssetsLink = false;
     private bool _displayLiabilitiesLink = false;
 
-    [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
+    [Inject] public required IAssetsService AssetsService { get; set; }
     [Inject] public required ILiabilitiesService LiabilitiesService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
@@ -99,7 +99,7 @@ public partial class NavMenu : ComponentBase
         }
         try
         {
-            _displayAssetsLink = await MoneyFlowService.IsAnyAccountWithAssets(user.UserId);
+            _displayAssetsLink = await AssetsService.IsAnyAccountWithAssets(user.UserId);
         }
         catch (HttpRequestException ex)
         {

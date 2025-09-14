@@ -14,12 +14,14 @@ public class MoneyFlowControllerTests
     private const int testUserId = 1;
 
     private readonly Mock<IMoneyFlowService> _mockmoneyFlowService;
+    private readonly Mock<IAssetsService> _mockAssetsService;
     private readonly MoneyFlowController _controller;
 
     public MoneyFlowControllerTests()
     {
         _mockmoneyFlowService = new Mock<IMoneyFlowService>();
-        _controller = new MoneyFlowController(_mockmoneyFlowService.Object);
+        _mockAssetsService = new Mock<IAssetsService>();
+        _controller = new MoneyFlowController(_mockmoneyFlowService.Object, _mockAssetsService.Object);
 
         // Mock user identity
         var user = new ClaimsPrincipal(new ClaimsIdentity([new(ClaimTypes.NameIdentifier, testUserId.ToString())], "mock"));
@@ -36,7 +38,7 @@ public class MoneyFlowControllerTests
         // Arrange
         DateTime startDate = new(2000, 1, 1);
         DateTime endDate = new(2000, 2, 1);
-        _mockmoneyFlowService.Setup(repo => repo.GetEndAssetsPerAccount(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
+        _mockAssetsService.Setup(repo => repo.GetEndAssetsPerAccount(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
         var result = await _controller.GetEndAssetsPerAccount(testUserId, DefaultCurrency.Currency, startDate, endDate);
@@ -53,7 +55,7 @@ public class MoneyFlowControllerTests
         // Arrange
         DateTime startDate = new(2000, 1, 1);
         DateTime endDate = new(2000, 2, 1);
-        _mockmoneyFlowService.Setup(repo => repo.GetEndAssetsPerType(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
+        _mockAssetsService.Setup(repo => repo.GetEndAssetsPerType(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
         var result = await _controller.GetEndAssetsPerType(testUserId, DefaultCurrency.Currency, startDate, endDate);
@@ -70,7 +72,7 @@ public class MoneyFlowControllerTests
         // Arrange
         DateTime startDate = new(2000, 1, 1);
         DateTime endDate = new(2000, 2, 1);
-        _mockmoneyFlowService.Setup(repo => repo.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
+        _mockAssetsService.Setup(repo => repo.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
         var result = await _controller.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate);
@@ -88,7 +90,7 @@ public class MoneyFlowControllerTests
         DateTime startDate = new(2000, 1, 1);
         DateTime endDate = new(2000, 2, 1);
         var type = InvestmentType.Cash;
-        _mockmoneyFlowService.Setup(repo => repo.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate, type)).ReturnsAsync([new()]);
+        _mockAssetsService.Setup(repo => repo.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate, type)).ReturnsAsync([new()]);
 
         // Act
         var result = await _controller.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate, type);

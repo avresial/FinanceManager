@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Services;
+﻿using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
@@ -24,5 +25,16 @@ internal class CurrencyExchangeService(HttpClient httpClient, ILogger<CurrencyEx
 
         // TODO implement fallback logic to get exchange rate from another source
         return default;
+    }
+
+    public async Task<decimal> GetPricePerUnit(StockPrice stockPrice, string currency, DateTime date)
+    {
+        if (stockPrice is null) return 1;
+
+        var priceInRightCurrency = await GetExchangeRateAsync(stockPrice.Currency, currency, date.Date);
+        if (priceInRightCurrency is not null)
+            return stockPrice.PricePerUnit * priceInRightCurrency.Value;
+
+        return 1;
     }
 }
