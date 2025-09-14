@@ -50,11 +50,9 @@
                     }
                     else if (!_loadedAllData && !IsLoading)
                     {
-                        <button class="btn text-center" title="Load more" @onclick="LoadMore">
-                            <div>
-                                <i class="bi bi-arrow-bar-down"></i>
-                            </div>
-                        </button>
+                        <MudButton @onclick="LoadMore">
+                            <i class="bi bi-arrow-bar-down"></i>
+                        </MudButton>
                     }
                 </div>
             </div>

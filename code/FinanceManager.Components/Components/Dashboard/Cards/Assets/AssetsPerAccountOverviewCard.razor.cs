@@ -8,7 +8,7 @@ using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Components.Components.Dashboard.Cards;
+namespace FinanceManager.Components.Components.Dashboard.Cards.Assets;
 
 public partial class AssetsPerAccountOverviewCard
 {
