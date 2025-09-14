@@ -1,7 +1,6 @@
 ﻿using FinanceManager.Api.Controllers;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +20,7 @@ public class MoneyFlowControllerTests
     {
         _mockmoneyFlowService = new Mock<IMoneyFlowService>();
         _mockAssetsService = new Mock<IAssetsService>();
-        _controller = new MoneyFlowController(_mockmoneyFlowService.Object, _mockAssetsService.Object);
+        _controller = new MoneyFlowController(_mockmoneyFlowService.Object);
 
         // Mock user identity
         var user = new ClaimsPrincipal(new ClaimsIdentity([new(ClaimTypes.NameIdentifier, testUserId.ToString())], "mock"));
@@ -32,74 +31,74 @@ public class MoneyFlowControllerTests
         };
     }
 
-    [Fact]
-    public async Task GetEndAssetsPerAcount_ReturnsSingleElement()
-    {
-        // Arrange
-        DateTime startDate = new(2000, 1, 1);
-        DateTime endDate = new(2000, 2, 1);
-        _mockAssetsService.Setup(repo => repo.GetEndAssetsPerAccount(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
+    //[Fact]
+    //public async Task GetEndAssetsPerAcount_ReturnsSingleElement()
+    //{
+    //    // Arrange
+    //    DateTime startDate = new(2000, 1, 1);
+    //    DateTime endDate = new(2000, 2, 1);
+    //    _mockAssetsService.Setup(repo => repo.GetEndAssetsPerAccount(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
 
-        // Act
-        var result = await _controller.GetEndAssetsPerAccount(testUserId, DefaultCurrency.Currency, startDate, endDate);
+    //    // Act
+    //    var result = await _controller.GetEndAssetsPerAccount(testUserId, DefaultCurrency.Currency, startDate, endDate);
 
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<List<NameValueResult>>(okResult.Value);
-        Assert.Single(returnValue);
-    }
+    //    // Assert
+    //    var okResult = Assert.IsType<OkObjectResult>(result);
+    //    var returnValue = Assert.IsType<List<NameValueResult>>(okResult.Value);
+    //    Assert.Single(returnValue);
+    //}
 
-    [Fact]
-    public async Task GetEndAssetsPerType_ReturnsSingleElement()
-    {
-        // Arrange
-        DateTime startDate = new(2000, 1, 1);
-        DateTime endDate = new(2000, 2, 1);
-        _mockAssetsService.Setup(repo => repo.GetEndAssetsPerType(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
+    //[Fact]
+    //public async Task GetEndAssetsPerType_ReturnsSingleElement()
+    //{
+    //    // Arrange
+    //    DateTime startDate = new(2000, 1, 1);
+    //    DateTime endDate = new(2000, 2, 1);
+    //    _mockAssetsService.Setup(repo => repo.GetEndAssetsPerType(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
 
-        // Act
-        var result = await _controller.GetEndAssetsPerType(testUserId, DefaultCurrency.Currency, startDate, endDate);
+    //    // Act
+    //    var result = await _controller.GetEndAssetsPerType(testUserId, DefaultCurrency.Currency, startDate, endDate);
 
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<List<NameValueResult>>(okResult.Value);
-        Assert.Single(returnValue);
-    }
+    //    // Assert
+    //    var okResult = Assert.IsType<OkObjectResult>(result);
+    //    var returnValue = Assert.IsType<List<NameValueResult>>(okResult.Value);
+    //    Assert.Single(returnValue);
+    //}
 
-    [Fact]
-    public async Task GetAssetsTimeSeries_ReturnsSingleElement()
-    {
-        // Arrange
-        DateTime startDate = new(2000, 1, 1);
-        DateTime endDate = new(2000, 2, 1);
-        _mockAssetsService.Setup(repo => repo.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
+    //[Fact]
+    //public async Task GetAssetsTimeSeries_ReturnsSingleElement()
+    //{
+    //    // Arrange
+    //    DateTime startDate = new(2000, 1, 1);
+    //    DateTime endDate = new(2000, 2, 1);
+    //    _mockAssetsService.Setup(repo => repo.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
 
-        // Act
-        var result = await _controller.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate);
+    //    // Act
+    //    var result = await _controller.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate);
 
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<List<TimeSeriesModel>>(okResult.Value);
-        Assert.Single(returnValue);
-    }
+    //    // Assert
+    //    var okResult = Assert.IsType<OkObjectResult>(result);
+    //    var returnValue = Assert.IsType<List<TimeSeriesModel>>(okResult.Value);
+    //    Assert.Single(returnValue);
+    //}
 
-    [Fact]
-    public async Task GetAssetsTimeSeriesByType_ReturnsSingleElement()
-    {
-        // Arrange
-        DateTime startDate = new(2000, 1, 1);
-        DateTime endDate = new(2000, 2, 1);
-        var type = InvestmentType.Cash;
-        _mockAssetsService.Setup(repo => repo.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate, type)).ReturnsAsync([new()]);
+    //[Fact]
+    //public async Task GetAssetsTimeSeriesByType_ReturnsSingleElement()
+    //{
+    //    // Arrange
+    //    DateTime startDate = new(2000, 1, 1);
+    //    DateTime endDate = new(2000, 2, 1);
+    //    var type = InvestmentType.Cash;
+    //    _mockAssetsService.Setup(repo => repo.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate, type)).ReturnsAsync([new()]);
 
-        // Act
-        var result = await _controller.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate, type);
+    //    // Act
+    //    var result = await _controller.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate, type);
 
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<List<TimeSeriesModel>>(okResult.Value);
-        Assert.Single(returnValue);
-    }
+    //    // Assert
+    //    var okResult = Assert.IsType<OkObjectResult>(result);
+    //    var returnValue = Assert.IsType<List<TimeSeriesModel>>(okResult.Value);
+    //    Assert.Single(returnValue);
+    //}
 
     [Fact]
     public async Task GetNetWorth_ReturnsNotNull()
