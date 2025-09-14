@@ -1,5 +1,4 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
@@ -8,13 +7,31 @@ namespace FinanceManager.Application.Services;
 
 public class LiabilitiesService(IFinancialAccountRepository financialAccountService) : ILiabilitiesService
 {
-    public async Task<List<NameValueResult>> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end)
+    public async Task<bool> IsAnyAccountWithLiabilities(int userId)
     {
-        List<NameValueResult> result = [];
-        foreach (BankAccount account in await financialAccountService.GetAccounts<BankAccount>(userId, start, end))
+        var bankAccounts = financialAccountService.GetAccounts<BankAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow);
+        await foreach (var bankAccount in bankAccounts)
         {
-            if (account is null || account.Entries is null) return result;
-            BankAccountEntry? entry = account.Entries.FirstOrDefault();
+            if (bankAccount.Entries is not null && bankAccount.Entries.Count > 0)
+            {
+                var youngestEntry = bankAccount.Entries.FirstOrDefault();
+                if (youngestEntry is not null && youngestEntry.Value < 0)
+                    return true;
+            }
+            else if (bankAccount.NextOlderEntry is not null && bankAccount.NextOlderEntry.Value < 0)
+            {
+                return true;
+            }
+        }
+
+        return await Task.FromResult(false);
+    }
+    public async IAsyncEnumerable<NameValueResult> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end)
+    {
+        await foreach (BankAccount account in financialAccountService.GetAccounts<BankAccount>(userId, start, end))
+        {
+            if (account is null || account.Entries is null) continue;
+            var entry = account.Entries.FirstOrDefault();
 
             if (entry is null)
             {
@@ -25,75 +42,72 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
 
             if (entry.Value > 0) continue;
 
-            result.Add(new NameValueResult()
+            yield return new NameValueResult()
             {
                 Name = account.Name,
                 Value = entry.Value
-            });
+            };
         }
-
-        return await Task.FromResult(result);
     }
-    public async Task<List<NameValueResult>> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
+    public async IAsyncEnumerable<NameValueResult> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
     {
-        List<NameValueResult> result = [];
-        foreach (BankAccount account in await financialAccountService.GetAccounts<BankAccount>(userId, start, end))
+        await foreach (var accounts in financialAccountService.GetAccounts<BankAccount>(userId, start, end).GroupBy(x => x.AccountType))
         {
-            if (account is null || account.Entries is null) return result;
-            BankAccountEntry? entry = account.Entries.FirstOrDefault();
-
-            if (entry is null)
+            NameValueResult? result = null;
+            await foreach (var account in accounts)
             {
-                if (account.NextOlderEntry is null) continue;
+                if (account is null || account.Entries is null) continue;
+                var entry = account.Entries.FirstOrDefault();
 
-                entry = account.NextOlderEntry;
-            }
-
-            if (entry.Value > 0) continue;
-
-            var existingResult = result.FirstOrDefault(x => x.Name == account.AccountType.ToString());
-            if (existingResult is null)
-            {
-                result.Add(new NameValueResult()
+                if (entry is null)
                 {
-                    Name = account.AccountType.ToString(),
-                    Value = entry.Value
-                });
-            }
-            else
-            {
-                existingResult.Value += entry.Value;
-            }
-        }
+                    if (account.NextOlderEntry is null) continue;
 
-        return await Task.FromResult(result);
+                    entry = account.NextOlderEntry;
+                }
+
+                if (entry.Value > 0) continue;
+
+
+                if (result is null)
+                {
+                    result = new()
+                    {
+                        Name = account.AccountType.ToString(),
+                        Value = entry.Value
+                    };
+                }
+                else
+                {
+                    result.Value += entry.Value;
+                }
+            }
+            if (result is not null)
+                yield return result;
+        }
     }
-    public async Task<List<TimeSeriesModel>> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end)
+    public async IAsyncEnumerable<TimeSeriesModel> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end)
     {
-        if (start == new DateTime()) return [];
+        if (start == new DateTime()) yield break;
 
         Dictionary<DateTime, decimal> prices = [];
-        TimeSpan step = new TimeSpan(1, 0, 0, 0);
+        TimeSpan step = new(1, 0, 0, 0);
 
-        foreach (BankAccount account in await financialAccountService.GetAccounts<BankAccount>(userId, start, end))
+        await foreach (var account in financialAccountService.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) continue;
 
             decimal previousValue = 0;
 
-            if (account.Entries.Any() && account.Entries.Last().PostingDate.Date == start.Date)
-            {
+            if (account.Entries.Count != 0 && account.Entries.Last().PostingDate.Date == start.Date)
                 previousValue = account.Entries.Last().Value - account.Entries.Last().ValueChange;
-            }
             else if (account.NextOlderEntry is not null)
-            {
                 previousValue = account.NextOlderEntry.Value;
-            }
 
             if (previousValue > 0) continue;
 
 
-            for (DateTime date = start; date <= end; date = date.Add(step))
+            for (var date = start; date <= end; date = date.Add(step))
             {
                 if (!prices.ContainsKey(date)) prices.Add(date, 0);
 
@@ -111,27 +125,7 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
             }
         }
 
-        return await Task.FromResult(prices.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value })
-                    .OrderByDescending(x => x.DateTime)
-                    .ToList());
-    }
-    public async Task<bool> IsAnyAccountWithLiabilities(int userId)
-    {
-        var BankAccounts = (await financialAccountService.GetAccounts<BankAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow)).ToList();
-        foreach (var bankAccount in BankAccounts)
-        {
-            if (bankAccount.Entries is not null && bankAccount.Entries.Count > 0)
-            {
-                var youngestEntry = bankAccount.Entries.FirstOrDefault();
-                if (youngestEntry is not null && youngestEntry.Value < 0)
-                    return true;
-            }
-            else if (bankAccount.NextOlderEntry is not null && bankAccount.NextOlderEntry.Value < 0)
-            {
-                return true;
-            }
-        }
-
-        return await Task.FromResult(false);
+        foreach (var price in prices.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).OrderByDescending(x => x.DateTime))
+            yield return price;
     }
 }

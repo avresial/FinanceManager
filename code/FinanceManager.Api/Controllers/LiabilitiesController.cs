@@ -17,14 +17,14 @@ public class LiabilitiesController(ILiabilitiesService liabilitiesService) : Con
 
     [HttpGet("GetEndLiabilitiesPerAccount/{userId:int}/{start:DateTime}/{end:DateTime}")]
     public async Task<IActionResult> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end) =>
-        Ok(await _liabilitiesService.GetEndLiabilitiesPerAccount(userId, start, end));
+        Ok(await _liabilitiesService.GetEndLiabilitiesPerAccount(userId, start, end).ToListAsync());
 
     [HttpGet("GetEndLiabilitiesPerType/{userId:int}/{start:DateTime}/{end:DateTime}")]
     public async Task<IActionResult> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end) =>
-        Ok(await _liabilitiesService.GetEndLiabilitiesPerType(userId, start, end));
+        Ok(await _liabilitiesService.GetEndLiabilitiesPerType(userId, start, end).ToListAsync());
 
     [HttpGet("GetLiabilitiesTimeSeries/{userId:int}/{start:DateTime}/{end:DateTime}")]
     public async Task<IActionResult> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end) =>
-        Ok(await _liabilitiesService.GetLiabilitiesTimeSeries(userId, start, end));
+        Ok(await _liabilitiesService.GetLiabilitiesTimeSeries(userId, start, end).ToListAsync());
 
 }

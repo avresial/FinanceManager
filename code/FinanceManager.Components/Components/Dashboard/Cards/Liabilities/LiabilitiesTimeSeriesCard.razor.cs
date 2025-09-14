@@ -32,7 +32,7 @@ public partial class LiabilitiesTimeSeriesCard
 
         try
         {
-            return await LiabilitiesService.GetLiabilitiesTimeSeries(user.UserId, StartDateTime, EndDateTime);
+            return await LiabilitiesService.GetLiabilitiesTimeSeries(user.UserId, StartDateTime, EndDateTime).ToListAsync();
         }
         catch (Exception ex)
         {

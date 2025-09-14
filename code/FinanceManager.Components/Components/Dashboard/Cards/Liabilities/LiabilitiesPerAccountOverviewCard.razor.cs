@@ -118,7 +118,7 @@ public partial class LiabilitiesPerAccountOverviewCard
         {
             try
             {
-                Data.AddRange(await LiabilitiesService.GetEndLiabilitiesPerAccount(_user.UserId, StartDateTime, EndDateTime));
+                Data.AddRange(await LiabilitiesService.GetEndLiabilitiesPerAccount(_user.UserId, StartDateTime, EndDateTime).ToListAsync());
             }
             catch (Exception ex)
             {

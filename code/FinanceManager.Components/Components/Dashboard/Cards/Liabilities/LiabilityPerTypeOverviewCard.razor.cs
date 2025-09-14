@@ -64,7 +64,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
             List<NameValueResult> result = [];
             try
             {
-                result = await LiabilitiesService.GetEndLiabilitiesPerType(user.UserId, StartDateTime, EndDateTime);
+                result = await LiabilitiesService.GetEndLiabilitiesPerType(user.UserId, StartDateTime, EndDateTime).ToListAsync();
             }
             catch (Exception ex)
             {

@@ -92,7 +92,7 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
         return null;
     }
     public Task<T?> GetAccount<T>(int userId, int id) where T : BasicAccountInformation => GetAccount<T>(userId, id, DateTime.UtcNow, DateTime.UtcNow);
-    public async Task<IEnumerable<T>> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
+    public async IAsyncEnumerable<T> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
     {
         List<T> result = [];
 
@@ -117,7 +117,7 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
 
                     resultAccount.Add(entries, false);
                     if (newResultAccount is T resultElement)
-                        result.Add(resultElement);
+                        yield return resultElement;
                 }
                 break;
 
@@ -133,12 +133,11 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
                     var newResultAccount = new StockAccount(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries, nextOlderEntry, nextYoungerEntry);
                     resultAccount.Add(entries, false);
                     if (newResultAccount is T resultElement)
-                        result.Add(resultElement);
+                        yield return resultElement;
                 }
                 break;
         }
 
-        return result;
     }
 
     public async Task<int?> AddAccount<T>(T account) where T : BasicAccountInformation

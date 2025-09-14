@@ -17,11 +17,10 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, A
 
         if (availableAccounts.Count != 0) return;
 
-        await AddBankAccount(start, end);
-        await AddLoanAccount(start, end);
-
         try
         {
+            await AddBankAccount(start, end);
+            await AddLoanAccount(start, end);
             await AddStockAccount(start, end);
         }
         catch (Exception ex)
@@ -32,23 +31,19 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, A
 
     private async Task AddStockAccount(DateTime start, DateTime end)
     {
-        StockAccount stockAccount = await GetNewStockAccount("Stock 1", AccountLabel.Stock);
-        int entryId = 0;
+        var stockAccount = await GetNewStockAccount("Stock 1", AccountLabel.Stock);
 
-        for (DateTime date = start; date <= end; date = date.AddDays(1))
-            stockAccount.Add(GetNewStockAccountEntry(_guestUserId, entryId++, date, -90, 100, "RandomTicker"));
+        for (var date = start; date <= end; date = date.AddDays(1))
+            stockAccount.Add(GetNewStockAccountEntry(_guestUserId, 0, date, -90, 100, "RandomTicker"));
         await accountRepository.AddAccount(stockAccount);
     }
 
     private async Task AddBankAccount(DateTime start, DateTime end)
     {
-        var labels = new List<FinancialLabel>();
-        await foreach (var label in financialLabelsRepository.GetLabels())
-        {
-            labels.Add(label);
-        }
-        BankAccount bankAccount = await GetNewBankAccount("Cash 1", AccountLabel.Cash);
-        for (DateTime date = start; date <= end; date = date.AddDays(1))
+        var labels = await GetRandomLabels().ToListAsync();
+
+        var bankAccount = await GetNewBankAccount("Cash 1", AccountLabel.Cash);
+        for (var date = start; date <= end; date = date.AddDays(1))
             bankAccount.AddEntry(GetNewBankAccountEntry(date, -90, 100, labels));
 
         await accountRepository.AddAccount(bankAccount);
@@ -56,11 +51,9 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, A
 
     private async Task AddLoanAccount(DateTime start, DateTime end)
     {
-        var labels = new List<FinancialLabel>();
-        await foreach (var label in financialLabelsRepository.GetLabels())
-            labels.Add(label);
+        var labels = await GetRandomLabels().ToListAsync();
 
-        BankAccount loanAccount = await GetNewBankAccount("Loan 1", AccountLabel.Loan);
+        var loanAccount = await GetNewBankAccount("Loan 1", AccountLabel.Loan);
         var days = (int)((end - start).TotalDays);
         loanAccount.AddEntry(GetNewBankAccountEntry(start, days * -100 - 1000, days * -100, labels));
         for (DateTime date = start.AddDays(1); date <= end; date = date.AddDays(1))
@@ -70,24 +63,25 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, A
     public async Task<StockAccount> GetNewStockAccount(string accountName, AccountLabel accountType)
     {
         var accountId = (await accountIdProvider.GetMaxId()) + 1;
-        StockAccount stockAccount = new(_guestUserId, accountId is null ? 0 : accountId.Value, accountName);
-        return stockAccount;
+        return new(_guestUserId, accountId is null ? 0 : accountId.Value, accountName);
     }
-    public StockAccountEntry GetNewStockAccountEntry(int accountId, int entryId, DateTime date, int minValue, int maxValue, string ticker, InvestmentType investmentType = InvestmentType.Stock)
-    {
-        return new StockAccountEntry(accountId, entryId, date, 0, Random.Shared.Next(minValue, maxValue), ticker, investmentType);
-    }
+    public static StockAccountEntry GetNewStockAccountEntry(int accountId, int entryId, DateTime date, int minValue, int maxValue,
+        string ticker, InvestmentType investmentType = InvestmentType.Stock) =>
+         new(accountId, entryId, date, 0, Random.Shared.Next(minValue, maxValue), ticker, investmentType);
+
     public async Task<BankAccount> GetNewBankAccount(string accountName, AccountLabel accountType)
     {
         var accountId = (await accountIdProvider.GetMaxId()) + 1;
-        BankAccount bankAccount = new BankAccount(_guestUserId, accountId is null ? 0 : accountId.Value, accountName, accountType);
-        return bankAccount;
+        return new(_guestUserId, accountId is null ? 0 : accountId.Value, accountName, accountType);
     }
     public AddBankEntryDto GetNewBankAccountEntry(DateTime date, int minValue, int maxValue, List<FinancialLabel> labels,
-        string description = "")
+        string description = "") =>
+     new(date, Random.Shared.Next(minValue, maxValue), description, labels);
+
+    private async IAsyncEnumerable<FinancialLabel> GetRandomLabels()
     {
-        return new AddBankEntryDto(date, Random.Shared.Next(minValue, maxValue), description, labels);
+        await foreach (var label in financialLabelsRepository.GetLabels())
+            if (Random.Shared.Next(0, 100) < 40)
+                yield return label;
     }
-
-
 }

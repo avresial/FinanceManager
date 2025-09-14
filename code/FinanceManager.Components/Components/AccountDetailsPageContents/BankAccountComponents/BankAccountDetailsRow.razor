@@ -64,13 +64,6 @@
                         <div class="col-6">
                             <div class="row text-muted">
                                 <div style="font-size:0.8rem !important">
-                                    Type
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="row text-muted">
-                                <div style="font-size:0.8rem !important">
                                     Posting date
                                 </div>
                             </div>
@@ -80,25 +73,10 @@
                                 </div>
                             </div>
                         </div>
-                        @if (!string.IsNullOrEmpty(BankAccountEntry.Description))
-                        {
-
-                            <div class="col-12">
-                                <div class="row text-muted">
-                                    <div style="font-size:0.8rem !important">
-                                        Description
-                                    </div>
-                                </div>
-                                <div class="row mb-1">
-                                    <div>
-                                        @BankAccountEntry.Description
-                                    </div>
-                                </div>
-                            </div>
-                        }
+                        
                         @if (BankAccountEntry.Labels is not null && BankAccountEntry.Labels.Any())
                         {
-                            <div class="col-12">
+                            <div class="col-6">
                                 <div class="row text-muted">
                                     <div style="font-size:0.8rem !important">
                                         Labels
@@ -114,6 +92,23 @@
                                 </div>
                             </div>
                         }
+                        @if (!string.IsNullOrEmpty(BankAccountEntry.Description))
+                        {
+                            <div class="col-12">
+                                <div class="row text-muted">
+                                    <div style="font-size:0.8rem !important">
+                                        Description
+                                    </div>
+                                </div>
+                                <div class="row mb-1">
+                                    <div>
+                                        @BankAccountEntry.Description
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="row">
                         <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
                         <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove</MudButton>
                     </div>
