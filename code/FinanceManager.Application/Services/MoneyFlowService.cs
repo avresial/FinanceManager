@@ -14,8 +14,8 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
         if (date > DateTime.UtcNow) date = DateTime.UtcNow;
         decimal result = 0;
 
-        var BankAccounts = financialAccountRepository.GetAccounts<BankAccount>(userId, date.Date, date);
-        await foreach (var bankAccount in BankAccounts)
+        var bankAccounts = await financialAccountRepository.GetAccounts<BankAccount>(userId, date.Date, date).ToListAsync();
+        foreach (var bankAccount in bankAccounts)
         {
             if (bankAccount.NextOlderEntry is null) continue;
             if (bankAccount.Entries is null) continue;
@@ -26,7 +26,7 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
                 bankAccount.Add(newBankAccount.Entries, false);
         }
 
-        await foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0))
+        foreach (var account in bankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0))
         {
             if (account is null || account.Entries is null) continue;
 
@@ -36,8 +36,8 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
             result += newestEntry.Value;
         }
 
-        var InvestmentAccounts = financialAccountRepository.GetAccounts<StockAccount>(userId, date.Date, date);
-        await foreach (var investmentAccount in InvestmentAccounts)
+        var investmentAccounts = await financialAccountRepository.GetAccounts<StockAccount>(userId, date.Date, date).ToListAsync();
+        foreach (var investmentAccount in investmentAccounts)
         {
             foreach (var item in investmentAccount.NextOlderEntries)
             {
@@ -50,7 +50,7 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
             }
         }
 
-        await foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0))
+        foreach (var account in investmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0))
         {
             if (account is null || account.Entries is null) continue;
 
@@ -136,7 +136,7 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
 
-        var labels = await financialLabelsRepository.GetLabelsByAccountId(userId).ToListAsync();
+        var labels = await financialLabelsRepository.GetLabels().ToListAsync();
 
         var result = labels.ToDictionary(x => x.Id, x => new NameValueResult() { Name = x.Name, Value = 0 });
         await foreach (BankAccount account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
@@ -161,14 +161,16 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
 
     public async IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end, TimeSpan? step = null)
     {
-        var labels = await financialLabelsRepository.GetLabelsByAccountId(userId).ToListAsync();
+        var labels = await financialLabelsRepository.GetLabels().ToListAsync();
+        var salaryLabel = labels.Single(x => x.Name.ToLower() == "salary");
+
         decimal salary = 0;
         await foreach (BankAccount account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) continue;
             if (account.Entries is null || !account.Entries.Any()) continue;
 
-            salary += account.Entries.Where(x => x.Labels is not null && x.Labels.Any(y => y.Name.ToLower() == "salary")).Sum(x => x.ValueChange);
+            salary += account.Entries.Where(x => x.Labels is not null && x.Labels.Any(y => y.Id == salaryLabel.Id)).Sum(x => x.ValueChange);
         }
         if (salary == 0) yield break;
 
@@ -185,7 +187,6 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
                 investmentsChange += entry.ValueChange * pricePerUnit;
             }
         }
-
 
         yield return new()
         {
