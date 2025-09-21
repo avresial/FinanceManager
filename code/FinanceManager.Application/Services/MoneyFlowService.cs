@@ -103,7 +103,7 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
             }
         }
         var timeBucket = TimeBucketService.Get(result.Select(x => (x.Key, x.Value)));
-        return timeBucket.Select(x => new TimeSeriesModel() { DateTime = x.Date, Value = x.Objects.Last() }).ToList();
+        return timeBucket.Select(x => new TimeSeriesModel() { DateTime = x.Date, Value = x.Objects.Sum(x => x) }).ToList();
     }
     public async Task<List<TimeSeriesModel>> GetSpending(int userId, string currency, DateTime start, DateTime end)
     {
@@ -126,7 +126,7 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
         }
 
         var timeBucket = TimeBucketService.Get(result.Select(x => (x.Key, x.Value)));
-        return timeBucket.Select(x => new TimeSeriesModel() { DateTime = x.Date, Value = x.Objects.Last() }).ToList();
+        return timeBucket.Select(x => new TimeSeriesModel() { DateTime = x.Date, Value = x.Objects.Sum(x => x) }).ToList();
     }
     public Task<List<TimeSeriesModel>> GetBalance(int userId, string currency, DateTime start, DateTime end)
     {
