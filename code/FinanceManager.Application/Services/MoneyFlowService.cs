@@ -81,9 +81,9 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
         }
         return result;
     }
-    public async Task<List<TimeSeriesModel>> GetIncome(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
+    public async Task<List<TimeSeriesModel>> GetIncome(int userId, string currency, DateTime start, DateTime end)
     {
-        TimeSpan timeSeriesStep = step ?? new TimeSpan(1, 0, 0, 0);
+        TimeSpan timeSeriesStep = new(1, 0, 0, 0);
 
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
 
@@ -102,12 +102,12 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
                     result[date] += entry.ValueChange;
             }
         }
-
-        return result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList();
+        var timeBucket = TimeBucketService.Get(result.Select(x => (x.Key, x.Value)));
+        return timeBucket.Select(x => new TimeSeriesModel() { DateTime = x.Date, Value = x.Objects.Last() }).ToList();
     }
-    public async Task<List<TimeSeriesModel>> GetSpending(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
+    public async Task<List<TimeSeriesModel>> GetSpending(int userId, string currency, DateTime start, DateTime end)
     {
-        TimeSpan timeSeriesStep = step ?? new TimeSpan(1, 0, 0, 0);
+        TimeSpan timeSeriesStep = new(1, 0, 0, 0);
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
 
         Dictionary<DateTime, decimal> result = [];
@@ -125,14 +125,15 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
             }
         }
 
-        return result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList();
+        var timeBucket = TimeBucketService.Get(result.Select(x => (x.Key, x.Value)));
+        return timeBucket.Select(x => new TimeSeriesModel() { DateTime = x.Date, Value = x.Objects.Last() }).ToList();
     }
-    public Task<List<TimeSeriesModel>> GetBalance(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
+    public Task<List<TimeSeriesModel>> GetBalance(int userId, string currency, DateTime start, DateTime end)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         throw new NotImplementedException();
     }
-    public async Task<List<NameValueResult>> GetLabelsValue(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+    public async Task<List<NameValueResult>> GetLabelsValue(int userId, DateTime start, DateTime end)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
 
@@ -159,7 +160,7 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
         return result.Values.ToList();
     }
 
-    public async IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+    public async IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end)
     {
         var labels = await financialLabelsRepository.GetLabels().ToListAsync();
         var salaryLabel = labels.Single(x => x.Name.ToLower() == "salary");

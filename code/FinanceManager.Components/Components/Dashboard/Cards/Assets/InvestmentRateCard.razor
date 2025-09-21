@@ -4,28 +4,26 @@
         <MudText Typo=Typo.h5>Investment rate</MudText>
     </MudPaper>
     <MudPaper Class="flex-grow-1 overflow-auto p-3" Elevation="0">
-        @if (_isLoading)
-        {
-            <div style="height:100%">
-                <ChartSpinner MaxHeight=@Height />
-            </div>
-        }
-        else
-        {
-            <MudText Typo=Typo.h3 class="card-subtitle text-muted">
+        <MudText Typo=Typo.h3 class="card-subtitle text-muted">
+            @if (_isLoading)
+            {
+                <StringSpinner CharactersCount="4" />
+            }
+            else
+            {
                 @if (_investmentRates.Any())
                 {
                     foreach (var _investmentRate in _investmentRates.Where(x => x.Salary != 0).Take(1))
                     {
-                        @($"{(100*_investmentRate.GetPercentage()).ToString("0.00")}%")
+                        @($"{(100 * _investmentRate.GetPercentage()).ToString("0.00")}%")
                     }
                 }
                 else
                 {
                     @("No data")
                 }
-            </MudText>
 
-        }
+            }
+        </MudText>
     </MudPaper>
 </MudCard>

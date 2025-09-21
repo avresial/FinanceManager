@@ -9,6 +9,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
     {
         private string _currency = string.Empty;
         private decimal? _totalNetWorth = null;
+        private bool _isLoading = false;
 
         [Parameter] public string Height { get; set; } = "300px";
         [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
@@ -20,6 +21,8 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
         protected override async Task OnParametersSetAsync()
         {
+            _isLoading = true;
+
             _currency = SettingsService.GetCurrency();
             _totalNetWorth = null;
 
@@ -39,6 +42,8 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
             if (result is not null)
                 _totalNetWorth = result.Value;
+
+            _isLoading = false;
         }
     }
 }

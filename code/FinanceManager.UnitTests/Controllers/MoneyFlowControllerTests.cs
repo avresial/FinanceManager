@@ -142,7 +142,7 @@ public class MoneyFlowControllerTests
         // Arrange
         DateTime startDate = new(2000, 1, 1);
         DateTime endDate = new(2000, 2, 1);
-        _mockmoneyFlowService.Setup(repo => repo.GetIncome(testUserId, DefaultCurrency.Currency, startDate, endDate, It.IsAny<TimeSpan?>())).ReturnsAsync([new()]);
+        _mockmoneyFlowService.Setup(repo => repo.GetIncome(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
         var result = await _controller.GetIncome(testUserId, DefaultCurrency.Currency, startDate, endDate);
@@ -159,7 +159,7 @@ public class MoneyFlowControllerTests
         // Arrange
         DateTime startDate = new(2000, 1, 1);
         DateTime endDate = new(2000, 2, 1);
-        _mockmoneyFlowService.Setup(repo => repo.GetSpending(testUserId, DefaultCurrency.Currency, startDate, endDate, It.IsAny<TimeSpan?>())).ReturnsAsync([new()]);
+        _mockmoneyFlowService.Setup(repo => repo.GetSpending(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
         var result = await _controller.GetSpending(testUserId, DefaultCurrency.Currency, startDate, endDate);

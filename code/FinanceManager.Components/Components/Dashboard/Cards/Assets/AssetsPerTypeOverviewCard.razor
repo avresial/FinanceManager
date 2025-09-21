@@ -1,7 +1,13 @@
 ﻿<MudCard Outlined Class="d-flex flex-nowrap" Style="@($"height:{Height};")">
     <MudPaper Class="flex-grow-0 p-3" Elevation="0">
         <MudText Typo=Typo.h5>Assets per type</MudText>
-        @if (_data.Any())
+        @if (_isLoading)
+        {
+            <MudText Typo=Typo.h6 Class="mb-2 text-muted">
+                <StringSpinner CharactersCount="4" />
+            </MudText>
+        }
+        else if (_data.Any())
         {
             <MudText Typo=Typo.h6 Class="mb-2 text-muted">@_totalAssets @_currency</MudText>
         }
@@ -15,8 +21,8 @@
         }
         else if (_data.Any())
         {
-            <MudChart ChartType="ChartType.Pie" InputData="@_data" InputLabels="@_labels" Width="100%" Height="100%" 
-            ChartOptions=_chartOptions AxisChartOptions=_axisChartOptions Class="p-3" />
+            <MudChart ChartType="ChartType.Pie" InputData="@_data" InputLabels="@_labels" Width="100%" Height="100%"
+                      ChartOptions=_chartOptions AxisChartOptions=_axisChartOptions Class="p-3" />
         }
         else
         {

@@ -29,7 +29,7 @@ public partial class FinancialLabelsListCard
         try
         {
             if (userId is not null)
-                _data = await MoneyFlowService.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime, null);
+                _data = await MoneyFlowService.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime);
         }
         finally
         {
@@ -46,7 +46,7 @@ public partial class FinancialLabelsListCard
         try
         {
             if (userId is not null)
-                _data = await MoneyFlowService.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime, null);
+                _data = await MoneyFlowService.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime);
         }
         finally
         {

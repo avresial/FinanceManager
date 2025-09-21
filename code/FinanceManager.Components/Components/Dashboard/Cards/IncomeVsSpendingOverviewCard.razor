@@ -9,7 +9,7 @@
         </MudText>
     </MudPaper>
     <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
-        @if (_isLoading && _isInitializing)
+        @if (_isLoading || _isInitializing)
         {
             <div style="height:100%">
                 <ChartSpinner MaxHeight=@Height />

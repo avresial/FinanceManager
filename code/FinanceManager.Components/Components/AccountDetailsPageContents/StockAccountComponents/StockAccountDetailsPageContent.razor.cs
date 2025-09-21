@@ -1,3 +1,4 @@
+using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpContexts;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities;
@@ -185,7 +186,13 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             if (Account is null || Account.Entries is null) return;
             Dictionary<DateOnly, decimal> pricesDaily = await Account.GetDailyPrice(stockPriceHttpContext.GetStockPrice);
 
-            ChartData = pricesDaily.Select(x => new TimeSeriesModel() { DateTime = x.Key.ToDateTime(new TimeOnly()), Value = x.Value }).ToList();
+            var result = pricesDaily.Select(x => new TimeSeriesModel() { DateTime = x.Key.ToDateTime(new TimeOnly()), Value = x.Value }).ToList();
+            var timeBucket = TimeBucketService.Get(result.Select(x => (x.DateTime, x.Value)));
+            ChartData.AddRange(timeBucket.Select(x => new TimeSeriesModel()
+            {
+                DateTime = x.Date,
+                Value = x.Objects.Last(),
+            }));
         }
         private async Task UpdateDates()
         {

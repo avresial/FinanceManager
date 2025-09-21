@@ -6,22 +6,20 @@ using System.Net.Http.Json;
 namespace FinanceManager.Components.Services;
 public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
 {
-    public async Task<List<TimeSeriesModel>> GetBalance(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
+    public async Task<List<TimeSeriesModel>> GetBalance(int userId, string currency, DateTime start, DateTime end)
     {
         if (httpClient is null) return [];
 
         string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetBalance/{userId}/{currency}/{start.ToRfc3339()}/{end.ToRfc3339()}";
-        if (step is not null) endpoint += $"/{step.Value.Ticks}";
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
 
         if (result is not null) return result;
         return [];
     }
-    public async Task<List<TimeSeriesModel>> GetIncome(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
+    public async Task<List<TimeSeriesModel>> GetIncome(int userId, string currency, DateTime start, DateTime end)
     {
         if (httpClient is null) return [];
         string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetIncome/{userId}/{currency}/{start.ToRfc3339()}/{end.ToRfc3339()}";
-        if (step is not null) endpoint += $"/{step.Value.Ticks}";
 
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
 
@@ -45,24 +43,22 @@ public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
         if (result is not null) return result;
         return [];
     }
-    public async Task<List<TimeSeriesModel>> GetSpending(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
+    public async Task<List<TimeSeriesModel>> GetSpending(int userId, string currency, DateTime start, DateTime end)
     {
         if (httpClient is null) return [];
 
         string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetSpending/{userId}/{currency}/{start.ToRfc3339()}/{end.ToRfc3339()}";
-        if (step is not null) endpoint += $"/{step.Value.Ticks}";
 
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
 
         if (result is not null) return result;
         return [];
     }
-    public async Task<List<NameValueResult>> GetLabelsValue(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+    public async Task<List<NameValueResult>> GetLabelsValue(int userId, DateTime start, DateTime end)
     {
         if (httpClient is null) return [];
 
         string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetLabelsValue?userId={userId}&start={start.ToRfc3339()}&end={end.ToRfc3339()}";
-        if (step is not null) endpoint += $"/{step.Value.Ticks}";
 
         var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>(endpoint);
 
@@ -70,7 +66,7 @@ public class MoneyFlowService(HttpClient httpClient) : IMoneyFlowService
         return [];
     }
 
-    public async IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end, TimeSpan? step = null)
+    public async IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end)
     {
         if (httpClient is null) yield break;
         var results = await httpClient.GetFromJsonAsync<List<InvestmentRate>>($"{httpClient.BaseAddress}api/MoneyFlow/GetInvestmentRate?userId={userId}&start={start.ToRfc3339()}&end={end.ToRfc3339()}");

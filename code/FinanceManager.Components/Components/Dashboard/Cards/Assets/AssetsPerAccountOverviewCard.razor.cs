@@ -16,6 +16,7 @@ public partial class AssetsPerAccountOverviewCard
     private decimal _totalAssets = 0;
     private UserSession? _user;
     private ApexChart<NameValueResult>? _chart;
+    private bool _isLoading = false;
 
     [Parameter] public bool DisplayAsChart { get; set; } = true;
     [Parameter] public string Height { get; set; } = "300px";
@@ -91,22 +92,32 @@ public partial class AssetsPerAccountOverviewCard
 
     protected override async Task OnParametersSetAsync()
     {
-        _user = await LoginService.GetLoggedUser();
-        if (_user is null) return;
+        _isLoading = true;
 
-        foreach (var dataEntry in Data)
-            dataEntry.Value = 0;
+        try
+        {
+            _user = await LoginService.GetLoggedUser();
+            if (_user is null) return;
 
-        if (_chart is not null) await _chart.UpdateSeriesAsync(true);
-        _totalAssets = 0;
+            foreach (var dataEntry in Data)
+                dataEntry.Value = 0;
 
-        Data = await GetData();
+            if (_chart is not null) await _chart.UpdateSeriesAsync(true);
+            _totalAssets = 0;
 
-        if (Data.Count != 0) _totalAssets = Math.Round(Data.Sum(x => x.Value), 2);
+            Data = await GetData();
+
+            if (Data.Count != 0) _totalAssets = Math.Round(Data.Sum(x => x.Value), 2);
+            if (_chart is not null) await _chart.UpdateSeriesAsync(true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex.Message, ex);
+        }
 
         StateHasChanged();
 
-        if (_chart is not null) await _chart.UpdateSeriesAsync(true);
+        _isLoading = false;
 
     }
 

@@ -17,17 +17,13 @@ namespace FinanceManager.Api.Controllers.Accounts;
 public class BankAccountController(IBankAccountRepository<BankAccount> bankAccountRepository,
 IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVerifier userPlanVerifier) : ControllerBase
 {
-    private readonly IBankAccountRepository<BankAccount> _accountRepository = bankAccountRepository;
-    private readonly IAccountEntryRepository<BankAccountEntry> _entryRepository = bankAccountEntryRepository;
-    private readonly UserPlanVerifier _userPlanVerifier = userPlanVerifier;
-
     [HttpGet]
     public async Task<IActionResult> Get()
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
 
-        var account = await _accountRepository.GetAvailableAccounts(userId.Value);
+        var account = await bankAccountRepository.GetAvailableAccounts(userId.Value);
 
         if (account == null) return NoContent();
 
@@ -40,7 +36,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
 
-        var account = await _accountRepository.Get(accountId);
+        var account = await bankAccountRepository.Get(accountId);
         if (account == null) return NoContent();
         if (account.UserId != userId) return BadRequest();
 
@@ -53,15 +49,15 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
 
-        var account = await _accountRepository.Get(accountId);
+        var account = await bankAccountRepository.Get(accountId);
 
         if (account == null) return NoContent();
         if (account.UserId != userId) return BadRequest();
 
-        IEnumerable<BankAccountEntry> entries = await _entryRepository.Get(accountId, startDate, endDate);
+        IEnumerable<BankAccountEntry> entries = await bankAccountEntryRepository.Get(accountId, startDate, endDate);
 
-        var olderEntry = await _entryRepository.GetNextOlder(accountId, startDate);
-        var youngerEntry = await _entryRepository.GetNextYounger(accountId, endDate);
+        var olderEntry = await bankAccountEntryRepository.GetNextOlder(accountId, startDate);
+        var youngerEntry = await bankAccountEntryRepository.GetNextYounger(accountId, endDate);
 
         BankAccountDto bankAccountDto = new()
         {
@@ -92,7 +88,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
 
-        var account = await _entryRepository.Get(accountId, entryId);
+        var account = await bankAccountEntryRepository.Get(accountId, entryId);
         if (account == null) return NoContent();
 
         return await Task.FromResult(Ok(account));
@@ -104,12 +100,12 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
 
-        var account = await _accountRepository.Get(accountId);
+        var account = await bankAccountRepository.Get(accountId);
 
         if (account == null) return NoContent();
         if (account.UserId != userId) return BadRequest();
 
-        var entry = await _entryRepository.GetYoungest(accountId);
+        var entry = await bankAccountEntryRepository.GetYoungest(accountId);
         if (entry is not null)
             return await Task.FromResult(Ok(entry.PostingDate));
 
@@ -122,12 +118,12 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
 
-        var account = await _accountRepository.Get(accountId);
+        var account = await bankAccountRepository.Get(accountId);
 
         if (account == null) return NoContent();
         if (account.UserId != userId) return BadRequest();
 
-        var entry = await _entryRepository.GetOldest(accountId);
+        var entry = await bankAccountEntryRepository.GetOldest(accountId);
         if (entry is not null)
             return await Task.FromResult(Ok(entry.PostingDate));
 
@@ -142,7 +138,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         if (!await userPlanVerifier.CanAddMoreAccounts(userId.Value))
             return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
-        return Ok(await _accountRepository.Add(userId.Value, addAccount.accountName));
+        return Ok(await bankAccountRepository.Add(userId.Value, addAccount.accountName));
     }
 
     [HttpPost("AddEntry")]
@@ -151,12 +147,12 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (!userId.HasValue) return BadRequest();
 
-        if (!await _userPlanVerifier.CanAddMoreEntries(userId.Value))
+        if (!await userPlanVerifier.CanAddMoreEntries(userId.Value))
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
         try
         {
-            return Ok(await _entryRepository.Add(new BankAccountEntry(addEntry.AccountId, addEntry.EntryId, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
+            return Ok(await bankAccountEntryRepository.Add(new BankAccountEntry(addEntry.AccountId, addEntry.EntryId, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
             {
                 Description = addEntry.Description,
             }));
@@ -173,14 +169,14 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
 
-        var account = await _accountRepository.Get(updateAccount.accountId);
+        var account = await bankAccountRepository.Get(updateAccount.accountId);
 
         if (account == null || account.UserId != userId) return BadRequest();
 
         if (updateAccount.accountType is null)
-            return Ok(await _accountRepository.Update(updateAccount.accountId, updateAccount.accountName));
+            return Ok(await bankAccountRepository.Update(updateAccount.accountId, updateAccount.accountName));
         else
-            return Ok(await _accountRepository.Update(updateAccount.accountId, updateAccount.accountName, updateAccount.accountType.Value));
+            return Ok(await bankAccountRepository.Update(updateAccount.accountId, updateAccount.accountName, updateAccount.accountType.Value));
     }
 
     [HttpDelete("Delete/{accountId:int}")]
@@ -189,11 +185,11 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
 
-        var account = await _accountRepository.Get(accountId);
+        var account = await bankAccountRepository.Get(accountId);
         if (account == null || account.UserId != userId) return BadRequest();
 
-        await _entryRepository.Delete(accountId);
-        return Ok(await _accountRepository.Delete(accountId));
+        await bankAccountEntryRepository.Delete(accountId);
+        return Ok(await bankAccountRepository.Delete(accountId));
     }
 
     [HttpDelete("DeleteEntry/{accountId:int}/{entryId:int}")]
@@ -202,10 +198,10 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
 
-        var account = await _accountRepository.Get(accountId);
+        var account = await bankAccountRepository.Get(accountId);
         if (account == null || account.UserId != userId) return BadRequest();
 
-        return Ok(await _entryRepository.Delete(accountId, entryId));
+        return Ok(await bankAccountEntryRepository.Delete(accountId, entryId));
     }
 
     [HttpPut("UpdateEntry")]
@@ -214,7 +210,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
 
-        var account = await _accountRepository.Get(updateEntry.AccountId);
+        var account = await bankAccountRepository.Get(updateEntry.AccountId);
         if (account == null || account.UserId != userId) return BadRequest();
 
         var newEntry = new BankAccountEntry(updateEntry.AccountId, updateEntry.EntryId, updateEntry.PostingDate, updateEntry.Value,
@@ -228,6 +224,6 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         else
             newEntry.Labels = updateEntry.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id }).ToList();
 
-        return Ok(await _entryRepository.Update(newEntry));
+        return Ok(await bankAccountEntryRepository.Update(newEntry));
     }
 }

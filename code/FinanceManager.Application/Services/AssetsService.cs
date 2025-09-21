@@ -209,9 +209,8 @@ public class AssetsService(IFinancialAccountRepository financialAccountRepositor
             }
         }
 
-        return prices.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value })
-                    .OrderByDescending(x => x.DateTime)
-                    .ToList();
+        var timeBucket = TimeBucketService.Get(prices.Select(x => (x.Key, x.Value))).OrderByDescending(x => x.Date);
+        return timeBucket.Select(x => new TimeSeriesModel() { DateTime = x.Date, Value = x.Objects.Last() }).ToList();
     }
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, string currency, DateTime start, DateTime end, InvestmentType investmentType)
     {

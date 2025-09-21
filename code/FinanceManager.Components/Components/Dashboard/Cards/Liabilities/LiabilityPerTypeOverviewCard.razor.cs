@@ -46,11 +46,22 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 
         protected override async Task OnParametersSetAsync()
         {
-            List<NameValueResult> data = await GetData();
+            _isLoading = true;
+            StateHasChanged();
 
-            _data = data.Select(x => (double)x.Value).ToArray();
-            _labels = data.Select(x => x.Name).ToArray();
+            try
+            {
+                var data = await GetData();
+                _data = data.Select(x => (double)x.Value).ToArray();
+                _labels = data.Select(x => x.Name).ToArray();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex.Message, ex);
+            }
 
+
+            _isLoading = false;
             StateHasChanged();
         }
 
