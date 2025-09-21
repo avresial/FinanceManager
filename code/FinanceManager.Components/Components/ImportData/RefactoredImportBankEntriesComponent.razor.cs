@@ -1,5 +1,3 @@
-using CsvHelper;
-using CsvHelper.Configuration;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
@@ -10,24 +8,17 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
-using System.Globalization;
 
 namespace FinanceManager.Components.Components.ImportData;
-
-public partial class ImportBankEntriesComponent : ComponentBase
+public partial class RefactoredImportBankEntriesComponent
 {
     private const string _defaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
     private string _dragClass = _defaultDragClass;
-
-    private CsvConfiguration _config = new(new CultureInfo("de-DE"))
-    {
-        Delimiter = ";",
-        HasHeaderRecord = true,
-    };
-
+    private string _separator = ",";
+    private List<string> _rawData = [];
     private List<ImportBankModel> _importModels = [];
-
     private List<IBrowserFile> LoadedFiles = [];
+
     private List<string> _erorrs = [];
     private List<string> _warnings = [];
     private List<string> _summaryInfos = [];
@@ -61,70 +52,34 @@ public partial class ImportBankEntriesComponent : ComponentBase
             AccountName = existingAccount.Name;
     }
 
-    public async Task UploadFiles(InputFileChangeEventArgs e)
+    public async Task UploadFiles(InputFileChangeEventArgs inputFile)
     {
         _isImportingData = true;
 
         _importModels.Clear();
 
         _erorrs.Clear();
-        if (Path.GetExtension(e.File.Name) != ".csv")
+        if (Path.GetExtension(inputFile.File.Name) != ".csv")
         {
-            _erorrs.Add($"{e.File.Name} is not a csv file. Select csv file to continue.");
+            _erorrs.Add($"{inputFile.File.Name} is not a csv file. Select csv file to continue.");
             _isImportingData = false;
             return;
         }
-
-        LoadedFiles = e.GetMultipleFiles(1).ToList();
+        LoadedFiles = inputFile.GetMultipleFiles(1).ToList();
 
         var file = LoadedFiles.FirstOrDefault();
         if (file is null) return;
-
         try
         {
-            int index = 0;
-            int valuechangeIndex = -1;
-            int postingDateIndex = -1;
-            var data = await ImportBankModelReader.Read(file, ",");
-            foreach (var line in data)
-            {
-                if (index++ == 0)
-                {
-                    //valuechangeIndex = line.FindIndex(x => x.Equals(_valueChangeHeader, StringComparison.OrdinalIgnoreCase));
-                    //postingDateIndex = line.FindIndex(x => x.Equals(_postingDateHeader, StringComparison.OrdinalIgnoreCase));
-                    continue;
-                }
 
-                //Logger.LogWarning($"{index}: {line.Count}");
-            }
+            _rawData = await ImportBankModelReader.Read(file, _separator);
 
         }
-        catch (Exception)
+        catch (Exception ex)
         {
 
-            throw;
         }
 
-        try
-        {
-            _importModels = await ImportBankModelReader.Read(_config, file, _postingDateHeader, _valueChangeHeader);
-        }
-        catch (HeaderValidationException ex)
-        {
-            Console.WriteLine(ex);
-            _erorrs.Add($"Invalid headers. Required headers:{_postingDateHeader}, {_valueChangeHeader}.");
-        }
-
-        _step1Complete = _importModels.Any();
-
-        if (_step1Complete)
-        {
-            _stepIndex++;
-        }
-        else
-        {
-            _erorrs.Add("Step 1 can not be completed - loading files failed.");
-        }
         _isImportingData = false;
     }
     public async Task BeginImport()
