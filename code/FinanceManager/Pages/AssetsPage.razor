@@ -1,28 +1,30 @@
 ﻿@page "/Assets"
+@using FinanceManager.Components.Components.Dashboard.Cards.Assets
 
 
 <PageTitle>Assets</PageTitle>
-
-<div class="container mt-2">
-    <div class="row g-2">
-        <div class="col-12">
+<MudContainer Class="mt-2">
+    <MudGrid Spacing="2">
+        <MudItem xs="12">
             <AssetsTimeSeriesCard StartDateTime=StartDate EndDateTime="@EndDate" />
-        </div>
+        </MudItem>
 
-        <div class="col-md-12 col-lg-4">
+        <MudItem xs="12" lg="4">
             <AssetsPerTypeOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
-        </div>
+        </MudItem>
 
-        <div class="col-md-12 col-lg-4">
+        <MudItem xs="12" lg="4">
             <AssetsPerAccountOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
-        </div>
+        </MudItem>
 
-        <div class="col-md-12 col-lg-4">
+        <MudItem xs="12" lg="4">
             <AssetsPerAccountOverviewCard DisplayAsChart="false" StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
-        </div>
-               
-    </div>
-</div>
+        </MudItem>
 
+        <MudItem xs="12" lg="4">
+            <InvestmentRateCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1 * _unitHeight}px")" />
+        </MudItem>
+    </MudGrid>
+</MudContainer>
 
 <DashboardDatePicker DateChanged=DateChanged StartingOption="ThisMonth" />

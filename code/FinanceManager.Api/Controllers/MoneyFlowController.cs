@@ -28,5 +28,9 @@ namespace FinanceManager.Api.Controllers
         [HttpGet("GetLabelsValue")]
         public async Task<IActionResult> GetLabelsValue([FromQuery] int userId, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long? step = null) =>
             Ok(await moneyFlowService.GetLabelsValue(userId, start, end, step is null ? null : new(step.Value)));
+
+        [HttpGet("GetInvestmentRate")]
+        public async Task<IActionResult> GetInvestmentRate([FromQuery] int userId, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long? step = null) =>
+            Ok(await moneyFlowService.GetInvestmentRate(userId, start, end, step is null ? null : new(step.Value)).ToListAsync());
     }
 }

@@ -24,7 +24,10 @@ internal class FinancialLabelsRepository(AppDbContext context) : IFinancialLabel
 
     public IAsyncEnumerable<FinancialLabel> GetLabels() => context.FinancialLabels.ToAsyncEnumerable();
 
-    public IAsyncEnumerable<FinancialLabel> GetLabelsByAccountId(int accountId) => context.FinancialLabels.Where(x => x.Entries.Any(y => y.AccountId == accountId)).ToAsyncEnumerable();
+    public IAsyncEnumerable<FinancialLabel> GetLabelsByAccountId(int accountId) => context.FinancialLabels
+        .Include(x => x.Entries)
+        .Where(x => x.Entries.Any(y => y.AccountId == accountId))
+        .ToAsyncEnumerable();
 
     public Task<FinancialLabel> GetLabelsById(int id) => context.FinancialLabels.SingleAsync(x => x.Id == id);
 

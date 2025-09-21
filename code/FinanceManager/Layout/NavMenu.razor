@@ -8,8 +8,17 @@
             }
             else if (@context.User.IsInRole(UserRole.User.ToString()))
             {
-                <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary">FinanceManager</MudText>
-                <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">@ApplicationVersion.Version</MudText>
+                @if (DrawerIsOpen)
+                {
+                    <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary">FinanceManager</MudText>
+                    <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">@ApplicationVersion.Version</MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary">FM</MudText>
+                    <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary" Style="color:transparent">@ApplicationVersion.Version</MudText>
+                }
+                
             }
         </Authorized>
     </AuthorizeView>
@@ -27,7 +36,16 @@
     }
     <MudDivider Class="my-2" />
 
-    <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary">Accounts</MudText>
+    <MudText Typo="Typo.h6" Class="px-5" Color="Color.Primary">
+        @if (DrawerIsOpen)
+        {
+            @("Accounts")
+        }
+        else
+        {
+            @("A")
+        }
+    </MudText>
     @if (Accounts is not null && Accounts.Any())
     {
         @foreach (var account in Accounts)
