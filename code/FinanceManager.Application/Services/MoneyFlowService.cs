@@ -89,12 +89,12 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
 
         Dictionary<DateTime, decimal> result = [];
 
-        for (var date = end; date >= start; date = date.Add(-timeSeriesStep))
+        await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
         {
-            result.Add(date, 0);
-
-            await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
+            for (var date = end; date >= start; date = date.Add(-timeSeriesStep))
             {
+                if (!result.ContainsKey(date)) result.Add(date, 0);
+
                 if (account.Entries is null) continue;
                 var entries = account.Get(date);
 
@@ -111,12 +111,12 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
 
         Dictionary<DateTime, decimal> result = [];
-        for (var date = end; date >= start; date = date.Add(-timeSeriesStep)) // TODO fix for time series step other than 1 day
+        await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
         {
-            result.Add(date, 0);
-
-            await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
+            for (var date = end; date >= start; date = date.Add(-timeSeriesStep)) // TODO fix for time series step other than 1 day
             {
+                if (!result.ContainsKey(date)) result.Add(date, 0);
+
                 if (account.Entries is null) continue;
                 var entries = account.Get(date);
 
