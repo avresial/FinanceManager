@@ -125,7 +125,9 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
             }
         }
 
-        foreach (var price in prices.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).OrderByDescending(x => x.DateTime))
+        var timeBucket = TimeBucketService.Get(prices.Select(x => (x.Key, x.Value))).OrderByDescending(x => x.Date);
+
+        foreach (var price in timeBucket.Select(x => new TimeSeriesModel() { DateTime = x.Date, Value = x.Objects.Last() }))
             yield return price;
     }
 }

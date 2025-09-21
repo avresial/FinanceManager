@@ -21,19 +21,28 @@ public partial class InvestmentRateCard
 
     protected override async Task OnParametersSetAsync()
     {
-        _investmentRates.Clear();
-
-        var user = await LoginService.GetLoggedUser();
-        if (user is null) return;
-
+        _isLoading = true;
         try
         {
-            _investmentRates = await MoneyFlowService.GetInvestmentRate(user.UserId, StartDateTime, EndDateTime).ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error while getting net worth");
-        }
+            _investmentRates.Clear();
 
+            var user = await LoginService.GetLoggedUser();
+            if (user is null) return;
+
+            try
+            {
+                _investmentRates = await MoneyFlowService.GetInvestmentRate(user.UserId, StartDateTime, EndDateTime).ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error while getting net worth");
+            }
+        }
+        catch (Exception)
+        {
+
+            throw;
+        }
+        _isLoading = false;
     }
 }

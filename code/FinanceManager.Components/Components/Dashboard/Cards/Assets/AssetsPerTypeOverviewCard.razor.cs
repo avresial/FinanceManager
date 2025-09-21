@@ -53,10 +53,22 @@ public partial class AssetsPerTypeOverviewCard
     }
     protected override async Task OnParametersSetAsync()
     {
-        var data = await GetData();
-        _data = data.Select(x => (double)x.Value).ToArray();
-        _labels = data.Select(x => x.Name).ToArray();
+        _isLoading = true;
+        StateHasChanged();
 
+        try
+        {
+            var data = await GetData();
+            _data = data.Select(x => (double)x.Value).ToArray();
+            _labels = data.Select(x => x.Name).ToArray();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex.Message, ex);
+        }
+
+
+        _isLoading = false;
         StateHasChanged();
     }
 

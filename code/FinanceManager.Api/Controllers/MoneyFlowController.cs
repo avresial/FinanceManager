@@ -19,18 +19,18 @@ namespace FinanceManager.Api.Controllers
 
         [HttpGet("GetIncome/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}/{step:long?}")]
         public async Task<IActionResult> GetIncome(int userId, string currency, DateTime start, DateTime end, long? step = null) =>
-            Ok(await moneyFlowService.GetIncome(userId, currency, start, end, step is null ? null : new(step.Value)));
+            Ok(await moneyFlowService.GetIncome(userId, currency, start, end));
 
         [HttpGet("GetSpending/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}/{step:long?}")]
         public async Task<IActionResult> GetSpending(int userId, string currency, DateTime start, DateTime end, long? step = null) =>
-            Ok(await moneyFlowService.GetSpending(userId, currency, start, end, step is null ? null : new(step.Value)));
+            Ok(await moneyFlowService.GetSpending(userId, currency, start, end));
 
         [HttpGet("GetLabelsValue")]
         public async Task<IActionResult> GetLabelsValue([FromQuery] int userId, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long? step = null) =>
-            Ok(await moneyFlowService.GetLabelsValue(userId, start, end, step is null ? null : new(step.Value)));
+            Ok(await moneyFlowService.GetLabelsValue(userId, start, end));
 
         [HttpGet("GetInvestmentRate")]
         public async Task<IActionResult> GetInvestmentRate([FromQuery] int userId, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long? step = null) =>
-            Ok(await moneyFlowService.GetInvestmentRate(userId, start, end, step is null ? null : new(step.Value)).ToListAsync());
+            Ok(await moneyFlowService.GetInvestmentRate(userId, start, end).ToListAsync());
     }
 }

@@ -1,3 +1,5 @@
+using FinanceManager.Application.Services;
+using FinanceManager.Components.Components.Charts;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
@@ -21,7 +23,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
     private DateTime? _youngestEntryDate;
 
     private bool _addEntryVisibility;
-
+    private List<ChartJsLineDataPoint> chartData = [];
     private List<BankAccountEntry>? _top5;
     private List<BankAccountEntry>? _bottom5;
     private string _currency = DefaultCurrency.Currency;
@@ -151,7 +153,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
     private async Task UpdateChartData()
     {
         ChartData.Clear();
-
+        List<TimeSeriesModel> chartData = [];
         if (Account is null || Account.Entries is null) return;
 
         decimal previousValue = 0;
@@ -179,7 +181,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
             if (value != 0 && initialZero) initialZero = false;
             if (initialZero) continue;
 
-            ChartData.Add(new()
+            chartData.Add(new()
             {
                 DateTime = date,
                 Value = entries.Count != 0 ? value : previousValue,
@@ -187,6 +189,14 @@ public partial class BankAccountDetailsPageContent : ComponentBase
 
             if (entries.Count != 0) previousValue = value;
         }
+
+        var timeBucket = TimeBucketService.Get(chartData.Select(x => (x.DateTime, x.Value)));
+        ChartData.AddRange(timeBucket.Select(x => new TimeSeriesModel()
+        {
+            DateTime = x.Date,
+            Value = x.Objects.Last(),
+        }));
+
     }
     private async Task UpdateDates()
     {

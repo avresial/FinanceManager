@@ -5,7 +5,14 @@
         <MudText Typo=Typo.h5>Assets value over time</MudText>
     </MudPaper>
     <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
-        @if (ChartData.Any())
+
+        @if (_isLoading)
+        {
+            <div style="height:100%">
+                <ChartSpinner MaxHeight=@Height />
+            </div>
+        }
+        else if (ChartData.Any())
         {
             <LineChartJs Series="@([ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()])" />
         }

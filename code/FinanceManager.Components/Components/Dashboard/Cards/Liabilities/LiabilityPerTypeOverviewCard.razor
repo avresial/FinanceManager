@@ -1,7 +1,13 @@
 ﻿<MudCard Outlined Class="d-flex flex-nowrap " Style="@($"height:{Height};")">
     <MudPaper Class="flex-grow-0 p-3" Elevation="0">
         <MudText Typo=Typo.h5>Liabilities per type</MudText>
-        @if (_data.Any())
+        @if (_isLoading)
+        {
+            <MudText Typo=Typo.h6 Class="mb-2 text-muted">
+                <StringSpinner CharactersCount="4" />
+            </MudText>
+        }
+        else if (_data.Any())
         {
             <MudText Typo=Typo.h6 Class="mb-2 text-muted">@_totalLiabilities @_currency</MudText>
         }

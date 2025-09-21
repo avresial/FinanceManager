@@ -20,7 +20,7 @@ public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepositor
         try
         {
             if (requestModel.userName == "guest")
-                await guestAccountSeeder.SeedNewData(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
+                await guestAccountSeeder.SeedNewData(DateTime.UtcNow.AddMonths(-3), DateTime.UtcNow);
         }
         catch (Exception ex)
         {

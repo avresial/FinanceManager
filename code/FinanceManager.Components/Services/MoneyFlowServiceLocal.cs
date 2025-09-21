@@ -266,9 +266,9 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
 
         return result;
     }
-    public async Task<List<TimeSeriesModel>> GetIncome(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
+    public async Task<List<TimeSeriesModel>> GetIncome(int userId, string currency, DateTime start, DateTime end)
     {
-        TimeSpan timeSeriesStep = step ?? new(1, 0, 0, 0);
+        TimeSpan timeSeriesStep = new(1, 0, 0, 0);
         IEnumerable<BankAccount> bankAccounts = [];
 
         try
@@ -298,9 +298,9 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
 
         return result.Select(x => new TimeSeriesModel() { DateTime = x.Key, Value = x.Value }).ToList();
     }
-    public async Task<List<TimeSeriesModel>> GetSpending(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null)
+    public async Task<List<TimeSeriesModel>> GetSpending(int userId, string currency, DateTime start, DateTime end)
     {
-        TimeSpan timeSeriesStep = step ?? new(1, 0, 0, 0);
+        TimeSpan timeSeriesStep = new(1, 0, 0, 0);
         IEnumerable<BankAccount> bankAccounts = [];
 
         try
@@ -333,7 +333,7 @@ public class MoneyFlowServiceLocal(IFinancialAccountService financialAccountServ
 
     public Task<bool> IsAnyAccountWithAssets(int userId) => throw new NotImplementedException();
     public Task<bool> IsAnyAccountWithLiabilities(int userId) => throw new NotImplementedException();
-    public Task<List<TimeSeriesModel>> GetBalance(int userId, string currency, DateTime start, DateTime end, TimeSpan? step = null) => throw new NotImplementedException();
-    public Task<List<NameValueResult>> GetLabelsValue(int userId, DateTime start, DateTime end, TimeSpan? step = null) => throw new NotImplementedException();
-    public IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end, TimeSpan? step = null) => throw new NotImplementedException();
+    public Task<List<TimeSeriesModel>> GetBalance(int userId, string currency, DateTime start, DateTime end) => throw new NotImplementedException();
+    public Task<List<NameValueResult>> GetLabelsValue(int userId, DateTime start, DateTime end) => throw new NotImplementedException();
+    public IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end) => throw new NotImplementedException();
 }

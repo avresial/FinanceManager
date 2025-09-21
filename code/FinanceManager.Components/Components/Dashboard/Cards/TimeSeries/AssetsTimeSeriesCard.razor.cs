@@ -8,6 +8,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.TimeSeries;
 
 public partial class AssetsTimeSeriesCard
 {
+    private bool _isLoading;
     public List<TimeSeriesModel> ChartData { get; set; } = [];
 
     [Parameter] public DateTime StartDateTime { get; set; }
@@ -23,8 +24,20 @@ public partial class AssetsTimeSeriesCard
     {
         var user = await LoginService.GetLoggedUser();
         if (user is null) return;
-        ChartData.Clear();
-        ChartData.AddRange((await GetData()).OrderBy(x => x.DateTime));
+
+        _isLoading = true;
+        StateHasChanged();
+        try
+        {
+            ChartData.Clear();
+            ChartData.AddRange((await GetData()).OrderBy(x => x.DateTime));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex.Message, ex);
+        }
+
+        _isLoading = false;
     }
 
     private async Task<List<TimeSeriesModel>> GetData()

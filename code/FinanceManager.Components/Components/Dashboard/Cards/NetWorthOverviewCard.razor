@@ -2,13 +2,22 @@
     <MudPaper Class="flex-grow-0 p-3" Elevation="0">
         <MudText Typo=Typo.h5>Total net worth</MudText>
         <MudText Typo=Typo.h3 class="card-subtitle text-muted">
-            @if (_totalNetWorth is not null)
+            @if (_isLoading)
             {
-                @_totalNetWorth@_currency
+                <StringSpinner CharactersCount="4" /> 
+                @_currency
             }
             else
             {
-                @("No data")
+                @if (_totalNetWorth is not null)
+                {
+                    @_totalNetWorth
+                    @_currency
+                }
+                else
+                {
+                    @("No data")
+                }
             }
         </MudText>
     </MudPaper>

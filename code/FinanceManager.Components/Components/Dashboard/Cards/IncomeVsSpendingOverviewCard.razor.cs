@@ -35,21 +35,19 @@ public partial class IncomeVsSpendingOverviewCard
     protected override async Task OnParametersSetAsync()
     {
         _isLoading = true;
+        StateHasChanged();
 
         var user = await LoginService.GetLoggedUser();
         if (user is null) return;
 
         var timespanInDays = (EndDateTime - StartDateTime).TotalDays;
         _series.Clear();
-
-        TimeSpan chartTimeSpan = TimeSpan.FromDays(1);
-
         List<TimeSeriesChartSeries> newData = [];
         try
         {
             if (DisplayIncome)
             {
-                var incomeData = (await MoneyFlowService.GetIncome(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime, chartTimeSpan))
+                var incomeData = (await MoneyFlowService.GetIncome(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime))
                     .OrderBy(x => x.DateTime)
                     .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
                     .ToList();
@@ -67,7 +65,7 @@ public partial class IncomeVsSpendingOverviewCard
         {
             if (DisplaySpending)
             {
-                var incomeData = (await MoneyFlowService.GetSpending(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime, chartTimeSpan))
+                var incomeData = (await MoneyFlowService.GetSpending(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime))
                     .OrderBy(x => x.DateTime)
                     .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
                     .ToList();
@@ -84,7 +82,7 @@ public partial class IncomeVsSpendingOverviewCard
         {
             if (DisplayBalance)
             {
-                var incomeData = (await MoneyFlowService.GetBalance(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime, chartTimeSpan))
+                var incomeData = (await MoneyFlowService.GetBalance(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime))
                       .OrderBy(x => x.DateTime)
                       .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
                       .ToList();
