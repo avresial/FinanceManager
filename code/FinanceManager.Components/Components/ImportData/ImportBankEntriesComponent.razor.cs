@@ -148,6 +148,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
     }
 
 
+
     public async Task UploadFiles(InputFileChangeEventArgs e)
     {
         _isImportingData = true;
@@ -228,35 +229,15 @@ public partial class ImportBankEntriesComponent : ComponentBase
             return;
         }
 
-        var postingIndex = _headers.FindIndex(h => h.Equals(_selectedPostingDateHeader, StringComparison.OrdinalIgnoreCase));
-        var valueIndex = _headers.FindIndex(h => h.Equals(_selectedValueChangeHeader, StringComparison.OrdinalIgnoreCase));
-
-        if (postingIndex < 0 || valueIndex < 0)
+        try
         {
-            _erorrs.Add("Selected headers are invalid.");
-            _step2Complete = false;
-            return;
+            _mappedPreview = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, _headers, _rawPreview).ToList();
+        }
+        catch (Exception ex)
+        {
+            _erorrs.Add(ex.Message);
         }
 
-        foreach (var row in _rawPreview)
-        {
-            var posting = postingIndex < row.Count ? row[postingIndex] : string.Empty;
-            var value = valueIndex < row.Count ? row[valueIndex] : string.Empty;
-
-            if (!DateTime.TryParse(posting, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
-            {
-                _erorrs.Add($"Could not parse posting date: '{posting}'");
-                break;
-            }
-
-            if (!decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var valueChange))
-            {
-                _erorrs.Add($"Could not parse value change: '{value}'");
-                break;
-            }
-
-            _mappedPreview.Add((date, valueChange));
-        }
 
         _step2Complete = _erorrs.Count == 0 && _mappedPreview.Count != 0;
     }
@@ -269,17 +250,38 @@ public partial class ImportBankEntriesComponent : ComponentBase
         _warnings.Clear();
 
         _stepIndex = 2;
+        if (string.IsNullOrEmpty(_uploadedContent))
+        {
+            _erorrs.Add("No data to import.");
+            _step3Complete = false;
+            _isImportingData = false;
+            return;
+        }
 
         try
         {
-            var count = _mappedPreview.Count;
-            await Task.Delay(3000); // simulate some work
-            _summaryInfos.Add($"Mock imported {count} entries.");
+            if (string.IsNullOrEmpty(_selectedPostingDateHeader))
+                throw new Exception("Posting date header is not selected.");
 
+            if (string.IsNullOrEmpty(_selectedValueChangeHeader))
+                throw new Exception("Value change header is not selected.");
+
+            await Task.Delay(3000); // simulate some work
+
+            var result = await ImportBankModelReader.Read(_uploadedContent, _delimiter, CancellationToken.None);
+
+            if (result is null)
+                throw new Exception("Failed to read data for import.");
+
+            var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, result.Value.Headers, result.Value.Data).ToList();
+            _summaryInfos.Add($"Imported {result.Value.Data.Count} entries.");
         }
         catch (Exception ex)
         {
-            _warnings.Add("No mapped entries to import.");
+            _erorrs.Add($"Export failed - {ex.Message}");
+            _step3Complete = false;
+            _isImportingData = false;
+            return;
         }
 
         _step3Complete = true;
@@ -321,9 +323,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
 
     private void SetDragClass() => _dragClass = $"{_defaultDragClass} mud-border-primary";
     private void ClearDragClass() => _dragClass = _defaultDragClass;
-
     private void GoToNextStep() => _stepIndex++;
-
     private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
     {
         if (arg.Action == StepAction.Complete)
@@ -383,5 +383,27 @@ public partial class ImportBankEntriesComponent : ComponentBase
         }
         await Task.CompletedTask;
     }
+    private IEnumerable<(DateTime PostingDate, decimal ValueChange)> GetExportData(string postingDateHeader, string valueChangeHeader,
+           List<string> headers, List<List<string>> dataToConvert)
+    {
+        var postingIndex = headers.FindIndex(h => h.Equals(postingDateHeader, StringComparison.OrdinalIgnoreCase));
+        var valueIndex = headers.FindIndex(h => h.Equals(valueChangeHeader, StringComparison.OrdinalIgnoreCase));
 
+        if (postingIndex < 0 || valueIndex < 0)
+            throw new Exception("Selected headers are invalid.");
+
+        foreach (var row in dataToConvert)
+        {
+            var posting = postingIndex < row.Count ? row[postingIndex] : string.Empty;
+            var value = valueIndex < row.Count ? row[valueIndex] : string.Empty;
+
+            if (!DateTime.TryParse(posting, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+                throw new Exception($"Could not parse posting date: '{posting}'");
+
+            if (!decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var valueChange))
+                throw new Exception($"Could not parse value change: '{value}'");
+
+            yield return (date, valueChange);
+        }
+    }
 }

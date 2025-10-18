@@ -226,4 +226,32 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
 
         return Ok(await bankAccountEntryRepository.Update(newEntry));
     }
+
+    [HttpPost("ImportBankEntries")]
+    public async Task<IActionResult> ImportBankEntries([FromBody] BankDataImportDto importDto)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (!userId.HasValue) return BadRequest();
+
+        if (importDto is null) return BadRequest("No import data provided.");
+
+        try
+        {
+            var count = importDto.Entries is null ? 0 : importDto.Entries.Count;
+            var accountId = importDto.AccountId;
+
+            var result = new
+            {
+                AccountId = accountId,
+                Imported = count,
+                Message = $"Mock imported {count} entries into account {accountId}."
+            };
+
+            return Ok(await Task.FromResult(result));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
 }
