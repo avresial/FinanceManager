@@ -17,7 +17,8 @@ else
         }
         else if (accountType == typeof(BankAccount))
         {
-            <RefactoredImportBankEntriesComponent AccountId="@AccountId" />
+            <ImportBankEntriesComponent AccountId="@AccountId" />
+            @* <RefactoredImportBankEntriesComponent AccountId="@AccountId" /> *@
         }
         else if (accountType == typeof(StockAccount))
         {

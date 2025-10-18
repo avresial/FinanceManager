@@ -1,8 +1,5 @@
-using CsvHelper;
-using CsvHelper.Configuration;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Readers;
@@ -18,13 +15,6 @@ public partial class ImportBankEntriesComponent : ComponentBase
 {
     private const string _defaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
     private string _dragClass = _defaultDragClass;
-
-    private CsvConfiguration _config = new(new CultureInfo("de-DE"))
-    {
-        Delimiter = ";",
-        HasHeaderRecord = true,
-    };
-
     private List<ImportBankModel> _importModels = [];
 
     private List<IBrowserFile> LoadedFiles = [];
@@ -32,8 +22,40 @@ public partial class ImportBankEntriesComponent : ComponentBase
     private List<string> _warnings = [];
     private List<string> _summaryInfos = [];
 
-    private int _stepIndex;
+    private List<List<string>> _rawPreview = [];
+    private List<string> _headers = [];
+    private string? _selectedPostingDateHeader;
+    private string? _selectedValueChangeHeader;
+    private List<(DateTime PostingDate, decimal ValueChange)> _mappedPreview = [];
+
+    private string? _uploadedContent;
+
+    private CancellationTokenSource? _regenCts;
+
+    private string _delimiterBacking = ",";
+    private string _delimiter
+    {
+        get => _delimiterBacking;
+        set
+        {
+            if (value == _delimiterBacking)
+                return;
+            _delimiterBacking = value;
+
+            try
+            {
+                _regenCts?.Cancel();
+                _regenCts?.Dispose();
+            }
+            catch { }
+            _regenCts = new CancellationTokenSource();
+
+            _ = RegeneratePreviewFromContentAsync(_regenCts.Token);
+        }
+    }
+
     private bool _isImportingData;
+    private int _stepIndex;
 
     private bool _step1Complete;
     private bool _step2Complete;
@@ -42,24 +64,89 @@ public partial class ImportBankEntriesComponent : ComponentBase
     private bool _isFormValid;
     private bool _isTouched;
 
-    private string _postingDateHeader = "PostingDate";
-    private string _valueChangeHeader = "ValueChange";
-
     public required string AccountName { get; set; }
 
     [Parameter] public required int AccountId { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
-    [Inject] public required ILoginService loginService { get; set; }
+    [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<ImportBankEntriesComponent> Logger { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        var user = await loginService.GetLoggedUser();
-        var existingAccount = await FinancialAccountService.GetAccount<BankAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
-        if (existingAccount is not null)
-            AccountName = existingAccount.Name;
+        try
+        {
+            var user = await LoginService.GetLoggedUser();
+            var existingAccount = await FinancialAccountService.GetAccount<BankAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            if (existingAccount is not null)
+                AccountName = existingAccount.Name;
+        }
+        catch
+        {
+        }
     }
+
+    private async Task RegeneratePreviewFromContentAsync(CancellationToken cancellationToken = default)
+    {
+        _erorrs.Clear();
+        _headers.Clear();
+        _rawPreview.Clear();
+
+        if (string.IsNullOrWhiteSpace(_uploadedContent))
+        {
+            _step1Complete = false;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        try
+        {
+            var result = await ImportBankModelReader.Read(_uploadedContent, _delimiter, cancellationToken);
+
+            _headers = result.Value.Headers ?? new List<string>();
+            var allParsedRows = result.Value.Data ?? new List<List<string>>();
+
+            if (_headers.Count != 0 && allParsedRows.Count != 0)
+                _rawPreview = allParsedRows.Take(3).ToList();
+
+            var emptyIndexes = _rawPreview.First().Where(x => string.IsNullOrEmpty(x)).Select(x => _rawPreview.First().IndexOf(x)).ToList();
+            foreach (var previewItem in _rawPreview.Skip(1))
+            {
+                var newEmptyIndexes = previewItem.Where(x => string.IsNullOrEmpty(x)).Select(x => previewItem.IndexOf(x)).ToList();
+                var indexToRemove = emptyIndexes.Where(x => !newEmptyIndexes.Any(y => y == x)).ToList();
+                emptyIndexes.RemoveAll(x => indexToRemove.Any(y => y == x));
+            }
+
+            foreach (var index in emptyIndexes.OrderByDescending(x => x))
+            {
+                _headers.RemoveAt(index);
+                foreach (var previewItem in _rawPreview)
+                    previewItem.RemoveAt(index);
+            }
+
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogDebug(ex, "CsvHelper attempt failed for delimiter {delimiter}", _delimiter);
+        }
+
+        if (_headers.Count == 0)
+        {
+            _erorrs.Add("No headers found in CSV.");
+        }
+
+        _step1Complete = _rawPreview.Count != 0;
+
+        if (!_step1Complete && !_erorrs.Any())
+            _erorrs.Add("Step 1 can not be completed - loading files failed.");
+
+        await InvokeAsync(StateHasChanged);
+    }
+
 
     public async Task UploadFiles(InputFileChangeEventArgs e)
     {
@@ -68,7 +155,14 @@ public partial class ImportBankEntriesComponent : ComponentBase
         _importModels.Clear();
 
         _erorrs.Clear();
-        if (Path.GetExtension(e.File.Name) != ".csv")
+        if (e.File is null)
+        {
+            _erorrs.Add("No file selected.");
+            _isImportingData = false;
+            return;
+        }
+
+        if (!Path.GetExtension(e.File.Name).Equals(".csv", StringComparison.InvariantCultureIgnoreCase))
         {
             _erorrs.Add($"{e.File.Name} is not a csv file. Select csv file to continue.");
             _isImportingData = false;
@@ -78,104 +172,120 @@ public partial class ImportBankEntriesComponent : ComponentBase
         LoadedFiles = e.GetMultipleFiles(1).ToList();
 
         var file = LoadedFiles.FirstOrDefault();
-        if (file is null) return;
+        if (file is null)
+        {
+            _erorrs.Add("Failed to load file.");
+            _isImportingData = false;
+            return;
+        }
+
+        await Clear();
 
         try
         {
-            int index = 0;
-            int valuechangeIndex = -1;
-            int postingDateIndex = -1;
-            var data = await ImportBankModelReader.Read(file, ",");
-            foreach (var line in data)
-            {
-                if (index++ == 0)
-                {
-                    //valuechangeIndex = line.FindIndex(x => x.Equals(_valueChangeHeader, StringComparison.OrdinalIgnoreCase));
-                    //postingDateIndex = line.FindIndex(x => x.Equals(_postingDateHeader, StringComparison.OrdinalIgnoreCase));
-                    continue;
-                }
+            using var stream = file.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
+            using var reader = new StreamReader(stream);
 
-                //Logger.LogWarning($"{index}: {line.Count}");
+            var content = await reader.ReadToEndAsync();
+
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                _erorrs.Add("File is empty.");
+                _isImportingData = false;
+                return;
             }
 
-        }
-        catch (Exception)
-        {
+            _uploadedContent = content;
 
-            throw;
+            try
+            {
+                _regenCts?.Cancel();
+                _regenCts?.Dispose();
+            }
+            catch { }
+            _regenCts = new CancellationTokenSource();
+            await RegeneratePreviewFromContentAsync(_regenCts.Token);
         }
-
-        try
+        catch (Exception ex)
         {
-            _importModels = await ImportBankModelReader.Read(_config, file, _postingDateHeader, _valueChangeHeader);
+            Logger?.LogError(ex, "Failed to read uploaded file.");
+            _erorrs.Add("Failed to read uploaded file.");
         }
-        catch (HeaderValidationException ex)
+        finally
         {
-            Console.WriteLine(ex);
-            _erorrs.Add($"Invalid headers. Required headers:{_postingDateHeader}, {_valueChangeHeader}.");
+            _isImportingData = false;
         }
-
-        _step1Complete = _importModels.Any();
-
-        if (_step1Complete)
-        {
-            _stepIndex++;
-        }
-        else
-        {
-            _erorrs.Add("Step 1 can not be completed - loading files failed.");
-        }
-        _isImportingData = false;
     }
+
+    private void OnMappingChanged()
+    {
+        _erorrs.Clear();
+        _mappedPreview.Clear();
+
+        if (string.IsNullOrWhiteSpace(_selectedPostingDateHeader) || string.IsNullOrWhiteSpace(_selectedValueChangeHeader))
+        {
+            _step2Complete = false;
+            return;
+        }
+
+        var postingIndex = _headers.FindIndex(h => h.Equals(_selectedPostingDateHeader, StringComparison.OrdinalIgnoreCase));
+        var valueIndex = _headers.FindIndex(h => h.Equals(_selectedValueChangeHeader, StringComparison.OrdinalIgnoreCase));
+
+        if (postingIndex < 0 || valueIndex < 0)
+        {
+            _erorrs.Add("Selected headers are invalid.");
+            _step2Complete = false;
+            return;
+        }
+
+        foreach (var row in _rawPreview)
+        {
+            var posting = postingIndex < row.Count ? row[postingIndex] : string.Empty;
+            var value = valueIndex < row.Count ? row[valueIndex] : string.Empty;
+
+            if (!DateTime.TryParse(posting, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+            {
+                _erorrs.Add($"Could not parse posting date: '{posting}'");
+                break;
+            }
+
+            if (!decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var valueChange))
+            {
+                _erorrs.Add($"Could not parse value change: '{value}'");
+                break;
+            }
+
+            _mappedPreview.Add((date, valueChange));
+        }
+
+        _step2Complete = _erorrs.Count == 0 && _mappedPreview.Count != 0;
+    }
+
     public async Task BeginImport()
     {
         _isImportingData = true;
 
-        int totalEntries = _importModels.Count;
-        int importedEntriesCount = 0;
+        _summaryInfos.Clear();
+        _warnings.Clear();
 
-        if (_importModels.Count != 0)
+        _stepIndex = 2;
+
+        try
         {
-            foreach (var result in _importModels.GroupBy(x => x.PostingDate.Date))
-            {
-                foreach (var (index, entry) in result.Index())
-                {
-                    try
-                    {
-                        await FinancialAccountService.AddEntry(new BankAccountEntry(AccountId, -1, entry.PostingDate.AddSeconds(index), -1, entry.ValueChange));
-                        importedEntriesCount++;
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex);
-                        _warnings.Add(ex.Message);
-                    }
-                }
-            }
+            var count = _mappedPreview.Count;
+            await Task.Delay(3000); // simulate some work
+            _summaryInfos.Add($"Mock imported {count} entries.");
+
+        }
+        catch (Exception ex)
+        {
+            _warnings.Add("No mapped entries to import.");
         }
 
-        if (importedEntriesCount > 0)
-        {
-            _summaryInfos.Add($"Imported {importedEntriesCount} rows.");
-
-            if (importedEntriesCount < totalEntries)
-                _warnings.Add($"Failed to import {totalEntries - importedEntriesCount} rows. Check warnings for details.");
-        }
-        else if (totalEntries > 0)
-        {
-            _warnings.Add("Failed to import any entries. Check warnings for details.");
-        }
-        else
-        {
-            _warnings.Add("No entries to import.");
-        }
-
-        StateHasChanged();
-
-        _step2Complete = true;
+        _step3Complete = true;
         _isImportingData = false;
-        _stepIndex++;
     }
+
     public async Task Clear()
     {
         if (LoadedFiles is not null)
@@ -188,22 +298,38 @@ public partial class ImportBankEntriesComponent : ComponentBase
         _stepIndex = 0;
 
         _erorrs.Clear();
+        _rawPreview.Clear();
+        _headers.Clear();
+        _selectedPostingDateHeader = null;
+        _selectedValueChangeHeader = null;
+        _mappedPreview.Clear();
+        _summaryInfos.Clear();
+        _warnings.Clear();
+
+        _uploadedContent = null;
+
+        try
+        {
+            _regenCts?.Cancel();
+            _regenCts?.Dispose();
+            _regenCts = null;
+        }
+        catch { }
+
         await Task.CompletedTask;
     }
 
     private void SetDragClass() => _dragClass = $"{_defaultDragClass} mud-border-primary";
     private void ClearDragClass() => _dragClass = _defaultDragClass;
 
+    private void GoToNextStep() => _stepIndex++;
+
     private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
     {
         if (arg.Action == StepAction.Complete)
-        {
             await ControlStepCompletion(arg);
-        }
         else if (arg.Action == StepAction.Activate)
-        {
             await ControlStepNavigation(arg);
-        }
     }
     private async Task ControlStepCompletion(StepperInteractionEventArgs arg)
     {
@@ -257,4 +383,5 @@ public partial class ImportBankEntriesComponent : ComponentBase
         }
         await Task.CompletedTask;
     }
+
 }
