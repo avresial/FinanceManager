@@ -22,7 +22,6 @@ public static class ImportBankModelReader
     {
         var stream = new MemoryStream();
         await file.OpenReadStream().CopyToAsync(stream);
-
         var outputFileString = System.Text.Encoding.UTF8.GetString(stream.ToArray());
         outputFileString = outputFileString.Replace("\"", string.Empty);
         return outputFileString.Split(Environment.NewLine).ToList();
