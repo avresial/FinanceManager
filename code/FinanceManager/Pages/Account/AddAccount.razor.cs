@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Components.Services;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
+using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.WebUi.Pages.Account;
 
@@ -20,8 +21,8 @@ public partial class AddAccount : ComponentBase
 
     [Inject] public required ILogger<AddAccount> Logger { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
-    [Inject] public required BankAccountService BankAccountService { get; set; }
-    [Inject] public required StockAccountService StockAccountService { get; set; }
+    [Inject] public required BankAccountHttpContext BankAccountHttpContext { get; set; }
+    [Inject] public required StockAccountHttpContext StockAccountHttpContext { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
@@ -32,11 +33,11 @@ public partial class AddAccount : ComponentBase
             switch (_selectedAccountType)
             {
                 case "Bank account":
-                    _addedAccountId = await BankAccountService.AddAccountAsync(new Application.Commands.Account.AddAccount(_accountName));
+                    _addedAccountId = await BankAccountHttpContext.AddAccountAsync(new Application.Commands.Account.AddAccount(_accountName));
                     break;
 
                 case "Stock account":
-                    _addedAccountId = await StockAccountService.AddAccountAsync(new Application.Commands.Account.AddAccount(_accountName));
+                    _addedAccountId = await StockAccountHttpContext.AddAccountAsync(new Application.Commands.Account.AddAccount(_accountName));
                     break;
             }
         }

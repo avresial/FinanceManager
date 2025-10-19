@@ -2,6 +2,7 @@ using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards
 {
@@ -15,7 +16,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
         [Inject] public required ILogger<NetWorthOverviewCard> Logger { get; set; }
-        [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
+        [Inject] public required MoneyFlowHttpContext MoneyFlowHttpContext { get; set; }
         [Inject] public required ISettingsService SettingsService { get; set; }
         [Inject] public required ILoginService LoginService { get; set; }
 
@@ -33,7 +34,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
             try
             {
-                result = await MoneyFlowService.GetNetWorth(user.UserId, DefaultCurrency.Currency, EndDateTime);
+                result = await MoneyFlowHttpContext.GetNetWorth(user.UserId, DefaultCurrency.Currency, EndDateTime);
             }
             catch (Exception ex)
             {

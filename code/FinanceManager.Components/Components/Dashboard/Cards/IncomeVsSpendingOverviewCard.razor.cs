@@ -5,6 +5,7 @@ using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
+using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards;
 
@@ -24,7 +25,7 @@ public partial class IncomeVsSpendingOverviewCard
     [Parameter] public bool DisplayBalance { get; set; }
     [Parameter] public bool UseOnlyPrimaryColor { get; set; }
 
-    [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
+    [Inject] public required MoneyFlowHttpContext MoneyFlowHttpContext { get; set; }
     [Inject] public required ILogger<IncomeVsSpendingOverviewCard> Logger { get; set; }
     [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
@@ -47,7 +48,7 @@ public partial class IncomeVsSpendingOverviewCard
         {
             if (DisplayIncome)
             {
-                var incomeData = (await MoneyFlowService.GetIncome(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime))
+                var incomeData = (await MoneyFlowHttpContext.GetIncome(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime))
                     .OrderBy(x => x.DateTime)
                     .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
                     .ToList();
@@ -65,7 +66,7 @@ public partial class IncomeVsSpendingOverviewCard
         {
             if (DisplaySpending)
             {
-                var incomeData = (await MoneyFlowService.GetSpending(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime))
+                var incomeData = (await MoneyFlowHttpContext.GetSpending(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime))
                     .OrderBy(x => x.DateTime)
                     .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
                     .ToList();
@@ -82,7 +83,7 @@ public partial class IncomeVsSpendingOverviewCard
         {
             if (DisplayBalance)
             {
-                var incomeData = (await MoneyFlowService.GetBalance(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime))
+                var incomeData = (await MoneyFlowHttpContext.GetBalance(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime))
                       .OrderBy(x => x.DateTime)
                       .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
                       .ToList();

@@ -6,7 +6,6 @@ namespace FinanceManager.Components.HttpContexts;
 
 public class StockPriceHttpContext(HttpClient httpClient)
 {
-
     public async Task AddStockPrice(string ticker, decimal pricePerUnit, string currency, DateTime date)
     {
         var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/StockPrice/add-stock-price?ticker={ticker}&pricePerUnit={pricePerUnit}&currency={currency}&date={date.ToRfc3339()}&", null);

@@ -1,9 +1,11 @@
+using FinanceManager.Components.HttpContexts;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities;
+
 public partial class LiabilitiesTimeSeriesCard
 {
     public List<TimeSeriesModel> ChartData { get; set; } = [];
@@ -13,7 +15,7 @@ public partial class LiabilitiesTimeSeriesCard
     [Parameter] public string Height { get; set; } = "250px";
 
     [Inject] public required ILogger<LiabilitiesTimeSeriesCard> Logger { get; set; }
-    [Inject] public required ILiabilitiesService LiabilitiesService { get; set; }
+    [Inject] public required LiabilitiesHttpContext LiabilitiesHttpContext { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
@@ -32,7 +34,7 @@ public partial class LiabilitiesTimeSeriesCard
 
         try
         {
-            return await LiabilitiesService.GetLiabilitiesTimeSeries(user.UserId, StartDateTime, EndDateTime).ToListAsync();
+            return await LiabilitiesHttpContext.GetLiabilitiesTimeSeries(user.UserId, StartDateTime, EndDateTime).ToListAsync();
         }
         catch (Exception ex)
         {

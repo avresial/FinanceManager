@@ -5,7 +5,6 @@ namespace FinanceManager.Components.Services;
 
 public class DuplicateEntryResolverService(HttpClient httpClient)
 {
-
     public async Task Scan(int accountId)
     {
         var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/DuplicateEntryResolver/Scan?accountId={accountId}", null);

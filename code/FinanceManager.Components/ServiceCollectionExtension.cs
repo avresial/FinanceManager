@@ -11,19 +11,19 @@ public static class ServiceCollectionExtension
     {
         services.AddScoped<ILoginService, LoginService>()
                 .AddScoped<StockPriceHttpContext>()
+                .AddScoped<BankAccountHttpContext>()
+                .AddScoped<StockAccountHttpContext>()
+                .AddScoped<MoneyFlowHttpContext>()
+                .AddScoped<AssetsHttpContext>()
+                .AddScoped<LiabilitiesHttpContext>()
+                .AddScoped<UserHttpContext>()
+                .AddScoped<FinancialLabelHttpContext>()
+                .AddScoped<AdministrationUsersHttpContext>()
+                .AddScoped<NewVisitorsHttpContext>()
                 .AddScoped<AccountDataSynchronizationService>()
                 .AddScoped<IUserService, UserService>()
-                .AddScoped<BankAccountService>()
-                .AddScoped<AdministrationUsersService>()
-                .AddScoped<StockAccountService>()
                 .AddScoped<IFinancialAccountService, FinancialAccountService>()
-                .AddScoped<IAssetsService, AssetsService>()
-                .AddScoped<IMoneyFlowService, MoneyFlowService>()
-                .AddScoped<ILiabilitiesService, LiabilitiesService>()
-                .AddScoped<NewVisitorsService>()
                 .AddScoped<DuplicateEntryResolverService>()
-                .AddScoped<FinancialLabelHttpContext>()
-
                 ;
         return services;
     }

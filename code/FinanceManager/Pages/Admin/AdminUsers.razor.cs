@@ -1,4 +1,4 @@
-using FinanceManager.Components.Services;
+using FinanceManager.Components.HttpContexts;
 using FinanceManager.Domain.Entities.User;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -16,20 +16,20 @@ public partial class AdminUsers
     private List<string> _errors = [];
     private IEnumerable<UserDetails> _elements = [];
 
-    [Inject] required public AdministrationUsersService AdministrationUsersService { get; set; }
+    [Inject] required public AdministrationUsersHttpContext AdministrationUsersHttpContext { get; set; }
     [Inject] required public IUserService UserService { get; set; }
 
     public MudTable<UserDetails>? _table;
 
     protected override async Task OnInitializedAsync()
     {
-        _usersCount = await AdministrationUsersService.GetUsersCount();
-        _elements = await AdministrationUsersService.GetUsers(0, _recordsPerPage);
+        _usersCount = await AdministrationUsersHttpContext.GetUsersCount();
+        _elements = await AdministrationUsersHttpContext.GetUsers(0, _recordsPerPage);
         _pagesCount = (int)Math.Ceiling((double)_usersCount / _recordsPerPage);
     }
 
     private async Task PageChanged(int i) =>
-        _elements = await AdministrationUsersService.GetUsers((i - 1) * _recordsPerPage, _recordsPerPage);
+        _elements = await AdministrationUsersHttpContext.GetUsers((i - 1) * _recordsPerPage, _recordsPerPage);
 
 
     private async Task RemoveUser(int userId)
@@ -41,8 +41,8 @@ public partial class AdminUsers
             return;
         }
 
-        _usersCount = await AdministrationUsersService.GetUsersCount();
+        _usersCount = await AdministrationUsersHttpContext.GetUsersCount();
 
-        _elements = await AdministrationUsersService.GetUsers((_selectedPage - 1) * _recordsPerPage, _recordsPerPage);
+        _elements = await AdministrationUsersHttpContext.GetUsers((_selectedPage - 1) * _recordsPerPage, _recordsPerPage);
     }
 }

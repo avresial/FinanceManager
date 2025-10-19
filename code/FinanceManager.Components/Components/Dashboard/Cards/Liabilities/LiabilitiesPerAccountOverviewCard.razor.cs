@@ -6,6 +6,7 @@ using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities;
 public partial class LiabilitiesPerAccountOverviewCard
@@ -22,7 +23,7 @@ public partial class LiabilitiesPerAccountOverviewCard
 
 
     [Inject] public required ILogger<LiabilitiesPerAccountOverviewCard> Logger { get; set; }
-    [Inject] public required ILiabilitiesService LiabilitiesService { get; set; }
+    [Inject] public required LiabilitiesHttpContext LiabilitiesHttpContext { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
@@ -118,7 +119,7 @@ public partial class LiabilitiesPerAccountOverviewCard
         {
             try
             {
-                Data.AddRange(await LiabilitiesService.GetEndLiabilitiesPerAccount(_user.UserId, StartDateTime, EndDateTime).ToListAsync());
+                Data.AddRange(await LiabilitiesHttpContext.GetEndLiabilitiesPerAccount(_user.UserId, StartDateTime, EndDateTime).ToListAsync());
             }
             catch (Exception ex)
             {

@@ -1,3 +1,4 @@
+using FinanceManager.Components.HttpContexts;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
@@ -34,7 +35,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 
         [Inject] public required ILogger<LiabilityPerTypeOverviewCard> Logger { get; set; }
         [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
-        [Inject] public required ILiabilitiesService LiabilitiesService { get; set; }
+        [Inject] public required LiabilitiesHttpContext LiabilitiesHttpContext { get; set; }
         [Inject] public required ISettingsService SettingsService { get; set; }
         [Inject] public required ILoginService LoginService { get; set; }
 
@@ -75,7 +76,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
             List<NameValueResult> result = [];
             try
             {
-                result = await LiabilitiesService.GetEndLiabilitiesPerType(user.UserId, StartDateTime, EndDateTime).ToListAsync();
+                result = await LiabilitiesHttpContext.GetEndLiabilitiesPerType(user.UserId, StartDateTime, EndDateTime).ToListAsync();
             }
             catch (Exception ex)
             {

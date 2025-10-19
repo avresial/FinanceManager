@@ -1,6 +1,7 @@
 using FinanceManager.Components.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.WebUi.Pages.Admin;
 public partial class AdminDashboard
@@ -26,21 +27,21 @@ public partial class AdminDashboard
     private List<ChartSeries>? _dailyActiveUsersSeries = null;
     private List<ChartSeries>? _newUsersSeries = null;
 
-    [Inject] required public AdministrationUsersService AdministrationUsersService { get; set; }
-    [Inject] required public NewVisitorsService NewVisitorsService { get; set; }
+    [Inject] required public AdministrationUsersHttpContext AdministrationUsersHttpContext { get; set; }
+    [Inject] required public NewVisitorsHttpContext NewVisitorsHttpContext { get; set; }
 
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            _userCount = await AdministrationUsersService.GetUsersCount();
-            _accountsCount = await AdministrationUsersService.GetAccountsCount();
-            _totalTrackedMoney = await AdministrationUsersService.GetTotalTrackedMoney();
-            _newVisitorsToday = await NewVisitorsService.GetVisit(DateTime.UtcNow);
+            _userCount = await AdministrationUsersHttpContext.GetUsersCount();
+            _accountsCount = await AdministrationUsersHttpContext.GetAccountsCount();
+            _totalTrackedMoney = await AdministrationUsersHttpContext.GetTotalTrackedMoney();
+            _newVisitorsToday = await NewVisitorsHttpContext.GetVisit(DateTime.UtcNow);
             StateHasChanged();
 
-            var dailyActiveUsers = await AdministrationUsersService.GetDailyActiveUsers();
+            var dailyActiveUsers = await AdministrationUsersHttpContext.GetDailyActiveUsers();
             _dailyActiveUsersSeries =
             [
                 new ChartSeries()
@@ -51,7 +52,7 @@ public partial class AdminDashboard
             ];
             StateHasChanged();
 
-            var newUsers = await AdministrationUsersService.GetNewUsersDaily();
+            var newUsers = await AdministrationUsersHttpContext.GetNewUsersDaily();
             _newUsersSeries =
             [
                 new ChartSeries()

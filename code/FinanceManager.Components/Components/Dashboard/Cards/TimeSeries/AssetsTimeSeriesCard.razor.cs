@@ -3,6 +3,7 @@ using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards.TimeSeries;
 
@@ -16,7 +17,7 @@ public partial class AssetsTimeSeriesCard
     [Parameter] public string Height { get; set; } = "250px";
 
     [Inject] public required ILogger<AssetsTimeSeriesCard> Logger { get; set; }
-    [Inject] public required IAssetsService AssetsService { get; set; }
+    [Inject] public required AssetsHttpContext AssetsHttpContext { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
@@ -47,7 +48,7 @@ public partial class AssetsTimeSeriesCard
 
         try
         {
-            return await AssetsService.GetAssetsTimeSeries(user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
+            return await AssetsHttpContext.GetAssetsTimeSeries(user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
         }
         catch (Exception ex)
         {

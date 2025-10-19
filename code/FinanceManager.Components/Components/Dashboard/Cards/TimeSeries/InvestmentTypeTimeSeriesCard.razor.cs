@@ -59,8 +59,8 @@ public partial class InvestmentTypeTimeSeriesCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<InvestmentTypeTimeSeriesCard> Logger { get; set; }
-    [Inject] public required StockPriceHttpContext stockPriceHttpContext { get; set; }
-    [Inject] public required IAssetsService AssetsService { get; set; }
+    [Inject] public required StockPriceHttpContext StockPriceHttpContext { get; set; }
+    [Inject] public required AssetsHttpContext AssetsHttpContext { get; set; }
 
 
     protected override async Task OnInitializedAsync()
@@ -95,7 +95,7 @@ public partial class InvestmentTypeTimeSeriesCard
         List<TimeSeriesModel> result = [];
         try
         {
-            result = await AssetsService.GetAssetsTimeSeries(user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
+            result = await AssetsHttpContext.GetAssetsTimeSeries(user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
         }
         catch (Exception ex)
         {

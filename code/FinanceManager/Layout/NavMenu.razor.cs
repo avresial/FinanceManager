@@ -3,6 +3,7 @@ using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
+using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.WebUi.Layout;
 
@@ -14,8 +15,8 @@ public partial class NavMenu : ComponentBase
     private bool _displayLiabilitiesLink = false;
 
     [Parameter] public bool DrawerIsOpen { get; set; }
-    [Inject] public required IAssetsService AssetsService { get; set; }
-    [Inject] public required ILiabilitiesService LiabilitiesService { get; set; }
+    [Inject] public required AssetsHttpContext AssetsHttpContext { get; set; }
+    [Inject] public required LiabilitiesHttpContext LiabilitiesHttpContext { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -100,7 +101,7 @@ public partial class NavMenu : ComponentBase
         }
         try
         {
-            _displayAssetsLink = await AssetsService.IsAnyAccountWithAssets(user.UserId);
+            _displayAssetsLink = await AssetsHttpContext.IsAnyAccountWithAssets(user.UserId);
         }
         catch (HttpRequestException ex)
         {
@@ -112,7 +113,7 @@ public partial class NavMenu : ComponentBase
         }
         try
         {
-            _displayLiabilitiesLink = await LiabilitiesService.IsAnyAccountWithLiabilities(user.UserId);
+            _displayLiabilitiesLink = await LiabilitiesHttpContext.IsAnyAccountWithLiabilities(user.UserId);
         }
         catch (HttpRequestException)
         {

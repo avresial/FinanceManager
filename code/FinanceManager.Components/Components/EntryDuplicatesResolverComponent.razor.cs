@@ -1,3 +1,4 @@
+using FinanceManager.Components.HttpContexts;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts.Entries;
@@ -6,7 +7,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Components;
-public partial class EnrtyDuplicatesResolverComponent
+public partial class EntryDuplicatesResolverComponent
 {
     private string _message = string.Empty;
     private bool _isScanning = false;
@@ -19,11 +20,11 @@ public partial class EnrtyDuplicatesResolverComponent
     private List<(DuplicateEntry Duplicate, DateTime PostingDate, decimal ValueChange)> _displayedDuplicates { get; set; } = [];
     private Dictionary<int, Type>? financialAccounts = [];
 
-    [Inject] public required ILogger<EnrtyDuplicatesResolverComponent> Logger { get; set; }
+    [Inject] public required ILogger<EntryDuplicatesResolverComponent> Logger { get; set; }
     [Inject] public required DuplicateEntryResolverService DuplicateEntryResolverService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
-    [Inject] public required BankAccountService BankAccountService { get; set; }
+    [Inject] public required BankAccountHttpContext BankAccountHttpContext { get; set; }
     private void PageChanged(int i)
     {
         _selectedPageCount = i;
@@ -68,7 +69,7 @@ public partial class EnrtyDuplicatesResolverComponent
             if (duplicates is null) continue;
             foreach (var duplicate in duplicates)
             {
-                BankAccountEntry bankEntry = (await BankAccountService.GetEntry(duplicate.AccountId, duplicate.EntriesId.First()))!;
+                BankAccountEntry bankEntry = (await BankAccountHttpContext.GetEntry(duplicate.AccountId, duplicate.EntriesId.First()))!;
                 _duplicates.Add((duplicate, bankEntry.PostingDate, bankEntry.ValueChange));
             }
         }
