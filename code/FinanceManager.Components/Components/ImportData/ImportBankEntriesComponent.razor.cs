@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 using System.Globalization;
+using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.Components.Components.ImportData;
 
@@ -71,6 +72,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<ImportBankEntriesComponent> Logger { get; set; }
+    [Inject] public required BankAccountHttpContext BankAccountHttpContext { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -274,7 +276,24 @@ public partial class ImportBankEntriesComponent : ComponentBase
                 throw new Exception("Failed to read data for import.");
 
             var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, result.Value.Headers, result.Value.Data).ToList();
-            _summaryInfos.Add($"Imported {result.Value.Data.Count} entries.");
+
+            // map to DTOs
+            var entries = exportResult.Select(x => new BankEntryImportRecordDto(x.PostingDate, x.ValueChange)).ToList();
+            var importDto = new BankDataImportDto(AccountId, entries);
+
+            try
+            {
+                var importResponse = await BankAccountHttpContext.ImportBankEntriesAsync(importDto);
+                _summaryInfos.Add($"Imported {entries.Count} entries.");
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Import failed");
+                _erorrs.Add($"Import failed - {ex.Message}");
+                _step3Complete = false;
+                _isImportingData = false;
+                return;
+            }
         }
         catch (Exception ex)
         {

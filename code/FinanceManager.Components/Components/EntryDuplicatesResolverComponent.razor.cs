@@ -21,7 +21,7 @@ public partial class EntryDuplicatesResolverComponent
     private Dictionary<int, Type>? financialAccounts = [];
 
     [Inject] public required ILogger<EntryDuplicatesResolverComponent> Logger { get; set; }
-    [Inject] public required DuplicateEntryResolverService DuplicateEntryResolverService { get; set; }
+    [Inject] public required DuplicateEntryResolverHttpContext DuplicateEntryResolverHttpContext { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required BankAccountHttpContext BankAccountHttpContext { get; set; }
@@ -57,15 +57,15 @@ public partial class EntryDuplicatesResolverComponent
 
         foreach (var financialAccountId in financialAccounts.Keys)
         {
-            var duplicatesCount = await DuplicateEntryResolverService.GetDuplicatesCount(financialAccountId);
+            var duplicatesCount = await DuplicateEntryResolverHttpContext.GetDuplicatesCount(financialAccountId);
             if (duplicatesCount == 0) continue;
             allDuplicatesCount += duplicatesCount;
         }
 
         foreach (var financialAccountId in financialAccounts.Keys)
         {
-            var duplicatesCount = await DuplicateEntryResolverService.GetDuplicatesCount(financialAccountId);
-            var duplicates = await DuplicateEntryResolverService.GetDuplicates(financialAccountId, 0, duplicatesCount);
+            var duplicatesCount = await DuplicateEntryResolverHttpContext.GetDuplicatesCount(financialAccountId);
+            var duplicates = await DuplicateEntryResolverHttpContext.GetDuplicates(financialAccountId, 0, duplicatesCount);
             if (duplicates is null) continue;
             foreach (var duplicate in duplicates)
             {
@@ -100,7 +100,7 @@ public partial class EntryDuplicatesResolverComponent
             }
 
             foreach (var financialAccountId in financialAccounts.Keys) // maybe run this in parallel?
-                await DuplicateEntryResolverService.Scan(financialAccountId);
+                await DuplicateEntryResolverHttpContext.Scan(financialAccountId);
 
             await GetDuplicates();
 
@@ -118,7 +118,7 @@ public partial class EntryDuplicatesResolverComponent
 
     private async Task ResolveDuplicates(int accountId, int duplicateId, int entryIdToBeRemained)
     {
-        await DuplicateEntryResolverService.Resolve(accountId, duplicateId, entryIdToBeRemained);
+        await DuplicateEntryResolverHttpContext.Resolve(accountId, duplicateId, entryIdToBeRemained);
 
         _duplicates.RemoveAll(d => d.Duplicate.Id == duplicateId && d.Duplicate.AccountId == accountId);
 
