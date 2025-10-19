@@ -3,6 +3,7 @@ using FinanceManager.Application.Providers;
 using FinanceManager.Components.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.WebUi.Pages;
 public partial class LandingPage
@@ -10,7 +11,7 @@ public partial class LandingPage
     private MudTheme Theme = new();
     [Inject] public required ILocalStorageService LocalStorageService { get; set; }
     [Inject] public required PricingProvider PricingProvider { get; set; }
-    [Inject] public required NewVisitorsService NewVisitorsService { get; set; }
+    [Inject] public required NewVisitorsHttpContext NewVisitorsHttpContext { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -18,7 +19,7 @@ public partial class LandingPage
              await LocalStorageService.GetItemAsync<bool>("isThisFirstVisit"))
         {
             await LocalStorageService.SetItemAsync("isThisFirstVisit", false);
-            await NewVisitorsService.AddVisit();
+            await NewVisitorsHttpContext.AddVisit();
         }
     }
 

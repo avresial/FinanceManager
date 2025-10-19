@@ -1,9 +1,9 @@
-﻿using FinanceManager.Domain.Entities;
 using System.Net.Http.Json;
+using FinanceManager.Domain.Entities;
 
-namespace FinanceManager.Components.Services;
+namespace FinanceManager.Components.HttpContexts;
 
-public class DuplicateEntryResolverService(HttpClient httpClient)
+public class DuplicateEntryResolverHttpContext(HttpClient httpClient)
 {
     public async Task Scan(int accountId)
     {
@@ -24,11 +24,11 @@ public class DuplicateEntryResolverService(HttpClient httpClient)
 
     public Task<DuplicateEntry?> GetDuplicate(int accountId, int entryIndex)
     {
-        return httpClient.GetFromJsonAsync<DuplicateEntry>($"{httpClient.BaseAddress}api/DuplicateEntryResolver/GetDuplicate?accountId={accountId}&entryIndex={entryIndex}");
+        return httpClient.GetFromJsonAsync<DuplicateEntry?>($"{httpClient.BaseAddress}api/DuplicateEntryResolver/GetDuplicate?accountId={accountId}&entryIndex={entryIndex}");
     }
 
     public Task<IEnumerable<DuplicateEntry>?> GetDuplicates(int accountId, int index, int count)
     {
-        return httpClient.GetFromJsonAsync<IEnumerable<DuplicateEntry>>($"{httpClient.BaseAddress}api/DuplicateEntryResolver/GetDuplicates?accountId={accountId}&index={index}&count={count}");
+        return httpClient.GetFromJsonAsync<IEnumerable<DuplicateEntry>?>($"{httpClient.BaseAddress}api/DuplicateEntryResolver/GetDuplicates?accountId={accountId}&index={index}&count={count}");
     }
 }

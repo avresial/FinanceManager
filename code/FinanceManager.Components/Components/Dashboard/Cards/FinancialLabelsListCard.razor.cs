@@ -2,6 +2,7 @@ using FinanceManager.Components.Components.Models;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
+using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards;
 public partial class FinancialLabelsListCard
@@ -12,7 +13,7 @@ public partial class FinancialLabelsListCard
     public List<NameValueResult> _data = [];
 
     [Inject] public required ISettingsService SettingsService { get; set; }
-    [Inject] public required IMoneyFlowService MoneyFlowService { get; set; }
+    [Inject] public required MoneyFlowHttpContext MoneyFlowHttpContext { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
     [Parameter] public string Height { get; set; } = "300px";
@@ -29,7 +30,7 @@ public partial class FinancialLabelsListCard
         try
         {
             if (userId is not null)
-                _data = await MoneyFlowService.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime);
+                _data = await MoneyFlowHttpContext.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime);
         }
         finally
         {
@@ -46,7 +47,7 @@ public partial class FinancialLabelsListCard
         try
         {
             if (userId is not null)
-                _data = await MoneyFlowService.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime);
+                _data = await MoneyFlowHttpContext.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime);
         }
         finally
         {

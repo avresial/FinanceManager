@@ -5,9 +5,11 @@ using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using ServiceDefaults;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddServiceDefaults();
 
 builder.Services.AddOpenApi("v1", options =>
 {
@@ -52,7 +54,6 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenGenerator, JwtTokenGenerator>();
 
 var app = builder.Build();
-
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

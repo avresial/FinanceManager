@@ -3,6 +3,7 @@ using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Extensions;
@@ -15,7 +16,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Route("api/[controller]")]
 [ApiController]
 public class BankAccountController(IBankAccountRepository<BankAccount> bankAccountRepository,
-IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVerifier userPlanVerifier) : ControllerBase
+IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVerifier userPlanVerifier, BankAccountImportService importService) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get()
@@ -225,5 +226,36 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
             newEntry.Labels = updateEntry.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id }).ToList();
 
         return Ok(await bankAccountEntryRepository.Update(newEntry));
+    }
+
+    [HttpPost("ImportBankEntries")]
+    public async Task<IActionResult> ImportBankEntries([FromBody] BankDataImportDto importDto)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (!userId.HasValue) return BadRequest();
+
+        if (importDto is null) return BadRequest("No import data provided.");
+
+        try
+        {
+            var domainEntries = importDto.Entries.Select(e => new BankEntryImport(e.PostingDate, e.ValueChange));
+            var domainResult = await importService.ImportEntries(userId.Value, importDto.AccountId, domainEntries);
+
+            var apiResult = new ImportResultDto(domainResult.AccountId, domainResult.Imported, domainResult.Failed, domainResult.Errors);
+
+            return Ok(apiResult);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (ArgumentNullException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 }

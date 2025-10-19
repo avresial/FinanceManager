@@ -20,14 +20,14 @@ public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRep
         return await Task.FromResult(totalEntries);
     }
 
-    public async Task<bool> CanAddMoreEntries(int userId)
+    public async Task<bool> CanAddMoreEntries(int userId, int entriesCount = 1)
     {
         var user = await userRepository.GetUser(userId);
         if (user is null) return false;
 
         int totalEntries = await GetUsedRecordsCapacity(userId);
 
-        return totalEntries < pricingProvider.GetMaxAllowedEntries(user.PricingLevel);
+        return totalEntries + entriesCount <= pricingProvider.GetMaxAllowedEntries(user.PricingLevel);
     }
 
     public async Task<bool> CanAddMoreAccounts(int userId)

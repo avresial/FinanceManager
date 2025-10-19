@@ -1,3 +1,4 @@
+using FinanceManager.Components.HttpContexts;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
@@ -33,20 +34,12 @@ public partial class AssetsPerTypeOverviewCard
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
     [Inject] public required ILogger<AssetsPerTypeOverviewCard> Logger { get; set; }
-    [Inject] public required IAssetsService AssetsService { get; set; }
+    [Inject] public required AssetsHttpContext AssetsHttpContext { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        //options.Tooltip = new Tooltip
-        //{
-        //    Y = new TooltipY
-        //    {
-        //        Formatter = ChartHelper.GetCurrencyFormatter(SettingsService.GetCurrency())
-        //    }
-        //};
-
         _currency = SettingsService.GetCurrency();
 
         await Task.CompletedTask;
@@ -82,7 +75,7 @@ public partial class AssetsPerTypeOverviewCard
 
         List<NameValueResult> chartData = [];
 
-        if (user is not null) chartData = await AssetsService.GetEndAssetsPerType(user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
+        if (user is not null) chartData = await AssetsHttpContext.GetEndAssetsPerType(user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
         if (chartData.Count != 0) _totalAssets = Math.Round(chartData.Sum(x => x.Value), 2);
 
         return chartData;
