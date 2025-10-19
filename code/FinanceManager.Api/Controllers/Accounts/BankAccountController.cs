@@ -3,6 +3,7 @@ using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Extensions;
@@ -15,7 +16,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Route("api/[controller]")]
 [ApiController]
 public class BankAccountController(IBankAccountRepository<BankAccount> bankAccountRepository,
-IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVerifier userPlanVerifier) : ControllerBase
+IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVerifier userPlanVerifier, BankAccountImportService importService) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get()
@@ -237,17 +238,20 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
 
         try
         {
-            var count = importDto.Entries is null ? 0 : importDto.Entries.Count;
-            var accountId = importDto.AccountId;
+            var domainEntries = importDto.Entries.Select(e => new BankEntryImport(e.PostingDate, e.ValueChange));
+            var domainResult = await importService.ImportEntries(userId.Value, importDto.AccountId, domainEntries);
 
-            var result = new
-            {
-                AccountId = accountId,
-                Imported = count,
-                Message = $"Mock imported {count} entries into account {accountId}."
-            };
+            var apiResult = new ImportResultDto(domainResult.AccountId, domainResult.Imported, domainResult.Failed, domainResult.Errors);
 
-            return Ok(await Task.FromResult(result));
+            return Ok(apiResult);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (ArgumentNullException ex)
+        {
+            return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {

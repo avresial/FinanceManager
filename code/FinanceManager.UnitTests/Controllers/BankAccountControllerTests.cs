@@ -23,6 +23,7 @@ public class BankAccountControllerTests
 
     private readonly Mock<IUserRepository> _userRepository;
     private readonly Mock<UserPlanVerifier> _userPlanVerifier;
+    private readonly Mock<BankAccountImportService> _mockImportService;
 
     private readonly BankAccountController _controller;
 
@@ -35,7 +36,10 @@ public class BankAccountControllerTests
         var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = Domain.Enums.PricingLevel.Premium, CreationDate = DateTime.UtcNow };
         _userRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
         _userPlanVerifier = new Mock<UserPlanVerifier>(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userRepository.Object, new PricingProvider());
-        _controller = new(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object);
+
+        _mockImportService = new Mock<BankAccountImportService>(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object);
+
+        _controller = new(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object, _mockImportService.Object);
 
         // Mock user identity
         var userClaims = new ClaimsPrincipal(new ClaimsIdentity(
@@ -189,5 +193,47 @@ public class BankAccountControllerTests
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.True((bool)okResult.Value);
+    }
+
+    [Fact]
+    public async Task ImportBankEntries_ReturnsOk_WithImportedCount()
+    {
+        // Arrange
+        var userId = 1;
+        var accountId = 1;
+
+        var account = new BankAccount(userId, accountId, "Test Account");
+        _mockBankAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
+
+        List<BankEntryImportRecordDto> entries =
+        [
+            new (DateTime.UtcNow.Date, 100m),
+            new (DateTime.UtcNow.Date.AddDays(1), 200m)
+        ];
+
+        var importDto = new BankDataImportDto(accountId, entries);
+
+        // Make repository Add succeed for each entry
+        _mockBankAccountEntryRepository.Setup(repo => repo.Add(It.IsAny<BankAccountEntry>())).ReturnsAsync(true);
+
+        // Act
+        var result = await _controller.ImportBankEntries(importDto);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(okResult.Value);
+
+        var value = okResult.Value!;
+        var importedProp = value.GetType().GetProperty("Imported");
+        var failedProp = value.GetType().GetProperty("Failed");
+
+        Assert.NotNull(importedProp);
+        Assert.NotNull(failedProp);
+
+        var imported = (int)importedProp.GetValue(value)!;
+        var failed = (int)failedProp.GetValue(value)!;
+
+        Assert.Equal(entries.Count, imported);
+        Assert.Equal(0, failed);
     }
 }
