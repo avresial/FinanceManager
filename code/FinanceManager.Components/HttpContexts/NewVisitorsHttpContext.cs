@@ -15,7 +15,8 @@ public class NewVisitorsHttpContext(HttpClient httpClient)
     {
         try
         {
-            return httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/NewVisitors/GetNewVisitor/{dateTime.Date:O}");
+            var encodedDate = Uri.EscapeDataString(dateTime.Date.ToString("O"));
+            return httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/NewVisitors/GetNewVisitor/{encodedDate}");
         }
         catch (HttpRequestException ex)
         {

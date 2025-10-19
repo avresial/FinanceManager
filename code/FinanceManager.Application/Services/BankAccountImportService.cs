@@ -38,10 +38,10 @@ public class BankAccountImportService
 
         foreach (var entry in entryList)
         {
-            var newEntry = new BankAccountEntry(accountId, 0, entry.PostingDate, entry.ValueChange, entry.ValueChange)
+            var newEntry = new BankAccountEntry(accountId, 0, entry.PostingDate, 0, entry.ValueChange) // value will be recalculated anyways
             {
                 Description = string.Empty,
-                Labels = new List<FinancialLabel>()
+                Labels = []
             };
 
             try

@@ -21,31 +21,44 @@
                                 {
                                     <MudAlert Severity="Severity.Error" Class="my-2">@error</MudAlert>
                                 }
-                                <MudFileUpload Class="mt-3" T="IBrowserFile"
-                                               Hidden="@false"
-                                               InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
-                                               InputStyle="opacity:0"
-                                               ErrorText="@string.Empty"
-                                               tabindex="-1"
-                                               @ondrop="@ClearDragClass"
-                                               @ondragenter="@SetDragClass"
-                                               @ondragleave="@ClearDragClass"
-                                               @ondragend="@ClearDragClass"
-                                               OnFilesChanged="UploadFiles">
 
-                                    <ActivatorContent>
-                                        <MudPaper Height="150px" Outlined="true" Class="@_dragClass">
-                                            <MudText Typo="Typo.h6"> Drag and drop file here or click </MudText>
-                                            @foreach (var item in LoadedFiles)
-                                            {
-                                                <MudChip T="string" Color="Color.Dark" Text="@item.Name" />
-                                            }
-
-                                        </MudPaper>
-                                    </ActivatorContent>
-                                </MudFileUpload>
-                                @if (_rawPreview.Any())
+                                @if (!_rawPreview.Any())
                                 {
+                                    <MudFileUpload Class="mt-3" T="IBrowserFile"
+                                                   Hidden="@false"
+                                                   InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
+                                                   InputStyle="opacity:0"
+                                                   ErrorText="@string.Empty"
+                                                   tabindex="-1"
+                                                   @ondrop="@ClearDragClass"
+                                                   @ondragenter="@SetDragClass"
+                                                   @ondragleave="@ClearDragClass"
+                                                   @ondragend="@ClearDragClass"
+                                                   OnFilesChanged="UploadFiles">
+
+                                        <ActivatorContent>
+                                            <MudPaper Height="150px" Outlined="true" Class="@_dragClass">
+                                                <MudText Typo="Typo.h6"> Drag and drop file here or click </MudText>
+                                                @foreach (var item in LoadedFiles)
+                                                {
+                                                    <MudChip T="string" Color="Color.Dark" Text="@item.Name" />
+                                                }
+
+                                            </MudPaper>
+                                        </ActivatorContent>
+                                    </MudFileUpload>
+                                }else
+                                {
+                                    <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles">
+                                        <ActivatorContent>
+                                            <MudButton Variant="Variant.Filled"
+                                                       Color="Color.Primary"
+                                                       StartIcon="@Icons.Material.Filled.CloudUpload">
+                                                Upload different file
+                                            </MudButton>
+                                        </ActivatorContent>
+                                    </MudFileUpload>
+
                                     <MudGrid Justify="Justify.SpaceBetween" Class="my-2">
                                         <MudItem>
                                             <MudText Class="mt-3" Typo="Typo.h4">Preview</MudText>
@@ -136,7 +149,7 @@
                                     <MudText Typo="Typo.h4" Class="mt-4">Preview</MudText>
 
                                     <div class="my-2">
-                                         <MudSimpleTable Style="overflow-x: auto;" Elevation="0">
+                                        <MudSimpleTable Style="overflow-x: auto;" Elevation="0">
                                             <thead>
                                                 <tr>
                                                     <th>Posting date</th>

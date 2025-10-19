@@ -1,3 +1,4 @@
+using FinanceManager.Components.HttpContexts;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Services;
@@ -8,7 +9,6 @@ using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 using System.Globalization;
-using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.Components.Components.ImportData;
 
@@ -73,6 +73,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<ImportBankEntriesComponent> Logger { get; set; }
     [Inject] public required BankAccountHttpContext BankAccountHttpContext { get; set; }
+    [Inject] public required DuplicateEntryResolverHttpContext DuplicateEntryResolverHttpContext { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -150,31 +151,28 @@ public partial class ImportBankEntriesComponent : ComponentBase
     }
 
 
-
-    public async Task UploadFiles(InputFileChangeEventArgs e)
+    private async Task UploadFiles(IBrowserFile? file)
     {
         _isImportingData = true;
 
         _importModels.Clear();
 
         _erorrs.Clear();
-        if (e.File is null)
+        if (file is null)
         {
             _erorrs.Add("No file selected.");
             _isImportingData = false;
             return;
         }
 
-        if (!Path.GetExtension(e.File.Name).Equals(".csv", StringComparison.InvariantCultureIgnoreCase))
+        if (!Path.GetExtension(file.Name).Equals(".csv", StringComparison.InvariantCultureIgnoreCase))
         {
-            _erorrs.Add($"{e.File.Name} is not a csv file. Select csv file to continue.");
+            _erorrs.Add($"{file.Name} is not a csv file. Select csv file to continue.");
             _isImportingData = false;
             return;
         }
 
-        LoadedFiles = e.GetMultipleFiles(1).ToList();
-
-        var file = LoadedFiles.FirstOrDefault();
+        LoadedFiles = [file];
         if (file is null)
         {
             _erorrs.Add("Failed to load file.");
@@ -218,6 +216,11 @@ public partial class ImportBankEntriesComponent : ComponentBase
         {
             _isImportingData = false;
         }
+    }
+    public async Task UploadFiles(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles(1))
+            await UploadFiles(file);
     }
 
     private void OnMappingChanged()
@@ -268,16 +271,11 @@ public partial class ImportBankEntriesComponent : ComponentBase
             if (string.IsNullOrEmpty(_selectedValueChangeHeader))
                 throw new Exception("Value change header is not selected.");
 
-            await Task.Delay(3000); // simulate some work
-
-            var result = await ImportBankModelReader.Read(_uploadedContent, _delimiter, CancellationToken.None);
-
-            if (result is null)
+            var (Headers, Data) = await ImportBankModelReader.Read(_uploadedContent, _delimiter, CancellationToken.None) ??
                 throw new Exception("Failed to read data for import.");
 
-            var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, result.Value.Headers, result.Value.Data).ToList();
+            var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, Headers, Data).ToList();
 
-            // map to DTOs
             var entries = exportResult.Select(x => new BankEntryImportRecordDto(x.PostingDate, x.ValueChange)).ToList();
             var importDto = new BankDataImportDto(AccountId, entries);
 
@@ -285,6 +283,18 @@ public partial class ImportBankEntriesComponent : ComponentBase
             {
                 var importResponse = await BankAccountHttpContext.ImportBankEntriesAsync(importDto);
                 _summaryInfos.Add($"Imported {entries.Count} entries.");
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await DuplicateEntryResolverHttpContext.Scan(AccountId);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogError(ex, "Duplicate scan failed");
+                    }
+                });
             }
             catch (Exception ex)
             {

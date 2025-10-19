@@ -38,7 +38,7 @@ public static class ImportBankModelReader
         var joinedContent = string.Join("\n", allLines);
 
 
-        using StringReader stringReader = new(content);
+        using StringReader stringReader = new(joinedContent);
         CsvConfiguration cfg = new(CultureInfo.InvariantCulture)
         {
             Delimiter = delimiter,
