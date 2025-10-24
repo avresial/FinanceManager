@@ -284,6 +284,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
             try
             {
                 _importResult = await BankAccountHttpContext.ImportBankEntriesAsync(importDto);
+
                 if (_importResult is not null)
                     _summaryInfos.Add($"Imported {_importResult.Imported} entries.");
 

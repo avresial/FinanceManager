@@ -1,0 +1,63 @@
+@using FinanceManager.Domain.Entities.Imports
+@using MudBlazor
+
+@if (_conflictsByDay.Any() == true)
+{
+    <MudText Typo="Typo.h5">@_conflictsByDay.Count() conflicts require resolving</MudText>
+    <MudText Typo="Typo.subtitle1">Selected day: @_selectedDay?.ToString("yyyy-MM-dd")</MudText>
+
+    <MudGrid Class="mt-4">
+        <MudItem xs="6">
+            <MudText Typo="Typo.h6">Import data</MudText>
+            <MudSimpleTable Elevation="0">
+                <thead>
+                    <tr>
+                        <th>Posting date</th>
+                        <th>Value change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in _selectedConflicts.Where(c => c.ImportEntry is not null))
+                    {
+                        <tr>
+                            <td>@c.ImportEntry!.PostingDate</td>
+                            <td>@c.ImportEntry!.ValueChange</td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        </MudItem>
+        <MudItem xs="6">
+            <MudText Typo="Typo.h6">Existing data</MudText>
+            <MudSimpleTable Elevation="0">
+                <thead>
+                    <tr>
+                        <th>Posting date</th>
+                        <th>Value change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in _selectedConflicts.Where(c => c.ExistingEntry is not null))
+                    {
+                        <tr>
+                            <td>@c.ExistingEntry!.PostingDate</td>
+                            <td>@c.ExistingEntry!.ValueChange</td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        </MudItem>
+
+        <MudItem xs="6">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnPickImported">pick imported</MudButton>
+        </MudItem>
+        
+        <MudItem xs="6">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnPickExisting">pick existing</MudButton>
+        </MudItem>
+    </MudGrid>
+}
+else
+{
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">@($"Go back to {AccountName}")</MudButton>
+}

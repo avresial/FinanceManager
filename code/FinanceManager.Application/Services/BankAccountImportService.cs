@@ -2,12 +2,13 @@ using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Repositories.Account;
+using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Services;
 
 public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAccountRepository,
     IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
-    UserPlanVerifier userPlanVerifier)
+    UserPlanVerifier userPlanVerifier, ILogger<BankAccountImportService> logger)
 {
 
     public async Task<ImportResult> ImportEntries(int userId, int accountId, IEnumerable<BankEntryImport> entries)
@@ -88,6 +89,31 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
         }
 
         return new(accountId, imported, failed, errors, conflicts);
+    }
+
+    public async Task ApplyResolvedConflicts(IEnumerable<ResolvedImportConflict> resolvedConflicts)
+    {
+        ArgumentNullException.ThrowIfNull(resolvedConflicts);
+
+        foreach (var resolvedConflict in resolvedConflicts.Where(x => x.ImportEntry.IsPicked && x.ImportEntry.Data is not null))
+        {
+            try
+            {
+                if (resolvedConflict.ExistingEntry.Data is int existingId)
+                    await bankAccountEntryRepository.Delete(resolvedConflict.AccountId, existingId);
+
+                var importData = resolvedConflict.ImportEntry.Data!;
+                await bankAccountEntryRepository.Add(new(resolvedConflict.AccountId, 0, importData.PostingDate, importData.ValueChange, importData.ValueChange)
+                {
+                    Description = string.Empty,
+                    Labels = []
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error applying resolved conflict for account {AccountId}", resolvedConflict.AccountId);
+            }
+        }
     }
 
     private static List<(BankEntryImport Import, BankAccountEntry Existing)> GetExactMatches(List<BankEntryImport> importsThisDay, List<BankAccountEntry> existingThisDay) =>
