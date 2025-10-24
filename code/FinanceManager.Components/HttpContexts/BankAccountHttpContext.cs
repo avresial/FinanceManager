@@ -105,4 +105,11 @@ public class BankAccountHttpContext(HttpClient httpClient)
         if (!response.IsSuccessStatusCode) throw new Exception(await response.Content.ReadAsStringAsync());
         return await response.Content.ReadFromJsonAsync<ImportResult?>();
     }
+
+    public async Task<bool> ResolveImportConflictsAsync(IEnumerable<ResolvedImportConflict> resolvedConflicts)
+    {
+        var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/BankAccount/ResolveImportConflicts", resolvedConflicts);
+        if (!response.IsSuccessStatusCode) throw new Exception(await response.Content.ReadAsStringAsync());
+        return true;
+    }
 }

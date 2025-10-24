@@ -256,4 +256,29 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
             return BadRequest(ex.Message);
         }
     }
+
+    [HttpPost("ResolveImportConflicts")]
+    public async Task<IActionResult> ResolveImportConflicts([FromBody] IEnumerable<ResolvedImportConflict> resolvedConflicts)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (!userId.HasValue) return BadRequest();
+
+        if (resolvedConflicts is null) return BadRequest("No resolved conflicts provided.");
+
+        try
+        {
+            foreach (var accountId in resolvedConflicts.Select(rc => rc.AccountId).Distinct())
+            {
+                var account = await bankAccountRepository.Get(accountId);
+                if (account is null || account.UserId != userId) return BadRequest("Account not found or access denied.");
+            }
+
+            await importService.ApplyResolvedConflicts(resolvedConflicts);
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
 }

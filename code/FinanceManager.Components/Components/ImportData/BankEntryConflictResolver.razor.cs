@@ -1,10 +1,15 @@
+using FinanceManager.Components.HttpContexts;
 using FinanceManager.Domain.Entities.Imports;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Components.ImportData;
 
 public partial class BankEntryConflictResolver
 {
+    [Inject] public required BankAccountHttpContext BankAccountHttpContext { get; set; }
+    [Inject] public ILogger<BankEntryConflictResolver> Logger { get; set; }
+
     [Parameter] public required IReadOnlyCollection<ImportConflict> Conflicts { get; set; }
     [Parameter] public required bool SkipExactMatches { get; set; } = true;
     [Parameter] public required string AccountName { get; set; }
@@ -39,25 +44,32 @@ public partial class BankEntryConflictResolver
                 _conflictsByDay.Remove(key);
         }
 
-        _selectedDay = _conflictsByDay.Keys.OrderBy(k => k).FirstOrDefault();
-        _selectedConflicts = _selectedDay.HasValue ? _conflictsByDay[_selectedDay.Value] : [];
-        AccountId = Conflicts.First().AccountId;
+        if (_conflictsByDay.Any())
+        {
+            _selectedDay = _conflictsByDay.Keys.OrderBy(k => k).FirstOrDefault();
+            _selectedConflicts = _selectedDay.HasValue ? _conflictsByDay[_selectedDay.Value] : [];
+            AccountId = Conflicts.First().AccountId;
+        }
     }
 
-    private Task OnPickImported()
+    private async Task OnPickImported()
     {
+        try
+        {
+            var resolvedImports = _selectedConflicts.Select(c => new ResolvedImportConflict(c.AccountId, true, c.ImportEntry, false, c.ExistingEntry?.EntryId))
+                                        .ToList();
+
+            await BankAccountHttpContext.ResolveImportConflictsAsync(resolvedImports);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error resolving import conflicts for account {AccountId}", AccountId);
+        }
+
         RemoveSelectedDayAndAdvance();
-
-        var resolvedImports = _selectedConflicts.Select(c => new ResolvedImportConflict(c.AccountId, (true, c.ImportEntry), (false, c.ExistingEntry?.EntryId)));
-
-        return Task.CompletedTask;
     }
 
-    private Task OnPickExisting()
-    {
-        RemoveSelectedDayAndAdvance();
-        return Task.CompletedTask;
-    }
+    private void OnPickExisting() => RemoveSelectedDayAndAdvance();
 
     private void RemoveSelectedDayAndAdvance()
     {
