@@ -276,13 +276,16 @@ public partial class ImportBankEntriesComponent : ComponentBase
 
             var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, Headers, Data).ToList();
 
-            var entries = exportResult.Select(x => new BankEntryImportRecordDto(x.PostingDate, x.ValueChange)).ToList();
+            var entries = exportResult.Select(x => new BankEntryImportRecordDto(x.PostingDate.ToUniversalTime(), x.ValueChange)).ToList();
             var importDto = new BankDataImportDto(AccountId, entries);
 
             try
             {
                 var importResponse = await BankAccountHttpContext.ImportBankEntriesAsync(importDto);
-                _summaryInfos.Add($"Imported {entries.Count} entries.");
+                if (importResponse is not null)
+                {
+                    _summaryInfos.Add($"Imported {importResponse?.Imported} entries.");
+                }
 
                 _ = Task.Run(async () =>
                 {

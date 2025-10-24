@@ -32,8 +32,7 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
         var errors = new List<string>();
         var conflicts = new List<ImportConflict>();
 
-        var existingAll = (await bankAccountEntryRepository.Get(accountId, minDay.AddDays(-1), maxDay.AddDays(1))).ToList();
-
+        var existingAll = (await bankAccountEntryRepository.Get(accountId, minDay.AddDays(-10), maxDay.AddDays(1))).ToList();
         for (var day = minDay; day <= maxDay; day = day.AddDays(1))
         {
             var importsThisDay = entryList.Where(x => x.PostingDate.Date == day).ToList();
@@ -54,14 +53,19 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
                 continue;
             }
 
+            var test = existingAll.Where(x => x.PostingDate.Date.Month == day.Month).ToList();
+
             foreach (var imp in importsThisDay)
             {
                 try
                 {
+                    if (imp.PostingDate.Kind != DateTimeKind.Utc)
+                        throw new Exception($"Date kind of this entry posting date: {imp.PostingDate}, value change: {imp.ValueChange} is not UTC - {imp.PostingDate.Kind}");
+
                     BankAccountEntry newEntry = new(accountId, 0, imp.PostingDate, imp.ValueChange, imp.ValueChange)
                     {
                         Description = string.Empty,
-                        Labels = new List<FinancialLabel>()
+                        Labels = []
                     };
 
                     if (await bankAccountEntryRepository.Add(newEntry))

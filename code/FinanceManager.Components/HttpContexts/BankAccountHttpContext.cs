@@ -98,10 +98,10 @@ public class BankAccountHttpContext(HttpClient httpClient)
         return response.IsSuccessStatusCode;
     }
 
-    public async Task<object?> ImportBankEntriesAsync(BankDataImportDto importDto)
+    public async Task<ImportResultDto?> ImportBankEntriesAsync(BankDataImportDto importDto)
     {
         var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/BankAccount/ImportBankEntries", importDto);
         if (!response.IsSuccessStatusCode) throw new Exception(await response.Content.ReadAsStringAsync());
-        return await response.Content.ReadFromJsonAsync<object?>();
+        return await response.Content.ReadFromJsonAsync<ImportResultDto?>();
     }
 }
