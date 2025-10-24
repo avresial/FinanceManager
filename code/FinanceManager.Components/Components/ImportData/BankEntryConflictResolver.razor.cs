@@ -35,18 +35,17 @@ public partial class BankEntryConflictResolver
 
         if (SkipExactMatches)
         {
-            var keysToRemove = _conflictsByDay.Where(x => x.Value.All(y => y.ImportEntry is not null && y.ExistingEntry is not null &&
-             y.ImportEntry.PostingDate == y.ExistingEntry.PostingDate && y.ImportEntry.ValueChange == y.ExistingEntry.ValueChange))
-                .Select(x => x.Key)
-                .ToList();
+            var keysToRemove = _conflictsByDay.Where(x => x.Value.All(y => y.IsExactMatch))
+                                    .Select(x => x.Key)
+                                    .ToList();
 
             foreach (var key in keysToRemove)
                 _conflictsByDay.Remove(key);
         }
 
-        if (_conflictsByDay.Any())
+        if (_conflictsByDay.Count != 0)
         {
-            _selectedDay = _conflictsByDay.Keys.OrderBy(k => k).FirstOrDefault();
+            _selectedDay = _conflictsByDay.Keys.OrderBy(k => k).First();
             _selectedConflicts = _selectedDay.HasValue ? _conflictsByDay[_selectedDay.Value] : [];
             AccountId = Conflicts.First().AccountId;
         }
@@ -56,7 +55,8 @@ public partial class BankEntryConflictResolver
     {
         try
         {
-            var resolvedImports = _selectedConflicts.Select(c => new ResolvedImportConflict(c.AccountId, true, c.ImportEntry, false, c.ExistingEntry?.EntryId))
+            var resolvedImports = _selectedConflicts
+                                        .Select(c => new ResolvedImportConflict(c.AccountId, true, c.ImportEntry, false, c.ExistingEntry?.EntryId))
                                         .ToList();
 
             await BankAccountHttpContext.ResolveImportConflictsAsync(resolvedImports);

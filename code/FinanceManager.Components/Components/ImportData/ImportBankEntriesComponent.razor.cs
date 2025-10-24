@@ -108,8 +108,8 @@ public partial class ImportBankEntriesComponent : ComponentBase
         {
             var result = await ImportBankModelReader.Read(_uploadedContent, _delimiter, cancellationToken);
 
-            _headers = result.Value.Headers ?? new List<string>();
-            var allParsedRows = result.Value.Data ?? new List<List<string>>();
+            _headers = result.Value.Headers ?? [];
+            var allParsedRows = result.Value.Data ?? [];
 
             if (_headers.Count != 0 && allParsedRows.Count != 0)
                 _rawPreview = allParsedRows.Take(3).ToList();
@@ -140,13 +140,11 @@ public partial class ImportBankEntriesComponent : ComponentBase
         }
 
         if (_headers.Count == 0)
-        {
             _erorrs.Add("No headers found in CSV.");
-        }
 
         _step1Complete = _rawPreview.Count != 0;
 
-        if (!_step1Complete && !_erorrs.Any())
+        if (!_step1Complete && _erorrs.Count == 0)
             _erorrs.Add("Step 1 can not be completed - loading files failed.");
 
         await InvokeAsync(StateHasChanged);
@@ -158,8 +156,8 @@ public partial class ImportBankEntriesComponent : ComponentBase
         _isImportingData = true;
 
         _importModels.Clear();
-
         _erorrs.Clear();
+
         if (file is null)
         {
             _erorrs.Add("No file selected.");
@@ -187,7 +185,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
         try
         {
             using var stream = file.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
-            using var reader = new StreamReader(stream);
+            using StreamReader reader = new(stream);
 
             var content = await reader.ReadToEndAsync();
 
@@ -206,7 +204,8 @@ public partial class ImportBankEntriesComponent : ComponentBase
                 _regenCts?.Dispose();
             }
             catch { }
-            _regenCts = new CancellationTokenSource();
+
+            _regenCts = new();
             await RegeneratePreviewFromContentAsync(_regenCts.Token);
         }
         catch (Exception ex)
@@ -245,7 +244,6 @@ public partial class ImportBankEntriesComponent : ComponentBase
             _erorrs.Add(ex.Message);
         }
 
-
         _step2Complete = _erorrs.Count == 0 && _mappedPreview.Count != 0;
     }
 
@@ -276,29 +274,30 @@ public partial class ImportBankEntriesComponent : ComponentBase
             var (Headers, Data) = await ImportBankModelReader.Read(_uploadedContent, _delimiter, CancellationToken.None) ??
                 throw new Exception("Failed to read data for import.");
 
-            var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, Headers, Data).ToList();
-
+            var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, Headers, Data);
             var entries = exportResult.Select(x => new BankEntryImportRecordDto(x.PostingDate.ToUniversalTime(), x.ValueChange)).ToList();
-            var importDto = new BankDataImportDto(AccountId, entries);
 
             try
             {
-                _importResult = await BankAccountHttpContext.ImportBankEntriesAsync(importDto);
+                _importResult = await BankAccountHttpContext.ImportBankEntriesAsync(new(AccountId, entries));
 
-                if (_importResult is not null)
+                if (_importResult is not null && _importResult.Imported != 0)
                     _summaryInfos.Add($"Imported {_importResult.Imported} entries.");
 
-                _ = Task.Run(async () =>
+                if (_importResult is not null && _importResult.Conflicts.Count != 0)
                 {
-                    try
-                    {
-                        await DuplicateEntryResolverHttpContext.Scan(AccountId);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger?.LogError(ex, "Duplicate scan failed");
-                    }
-                });
+                    var exactMatches = _importResult.Conflicts.Count(x => x.IsExactMatch);
+                    var exactMatchesDays = _importResult.Conflicts.Where(x => !x.IsExactMatch)
+                        .DistinctBy(x => x.DateTime.Date)
+                        .Count();
+
+                    _warnings.Add($"Already uploaded rows {exactMatches}.");
+
+                    if (_importResult.Conflicts.Count - exactMatches > 0)
+                        _warnings.Add($"Conflicts to resolve {exactMatchesDays}.");
+                }
+
+                await DuplicateEntryResolverHttpContext.Scan(AccountId);
             }
             catch (Exception ex)
             {
@@ -323,8 +322,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
 
     public async Task Clear()
     {
-        if (LoadedFiles is not null)
-            LoadedFiles.Clear();
+        LoadedFiles?.Clear();
 
         _step1Complete = false;
         _step2Complete = false;

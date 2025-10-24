@@ -4,9 +4,8 @@
 @if (_conflictsByDay.Any() == true)
 {
     <MudText Typo="Typo.h5">@_conflictsByDay.Count() conflicts require resolving</MudText>
-    <MudText Typo="Typo.subtitle1">Selected day: @_selectedDay?.ToString("yyyy-MM-dd")</MudText>
 
-    <MudGrid Class="mt-4">
+    <MudGrid Class="mt-1">
         <MudItem xs="6">
             <MudText Typo="Typo.h6">Import data</MudText>
             <MudSimpleTable Elevation="0">
