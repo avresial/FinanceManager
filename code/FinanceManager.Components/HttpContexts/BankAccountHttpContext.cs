@@ -2,6 +2,7 @@ using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.ValueObjects;
+using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Infrastructure.Dtos;
 using System.Net.Http.Json;
 
@@ -98,10 +99,10 @@ public class BankAccountHttpContext(HttpClient httpClient)
         return response.IsSuccessStatusCode;
     }
 
-    public async Task<ImportResultDto?> ImportBankEntriesAsync(BankDataImportDto importDto)
+    public async Task<ImportResult?> ImportBankEntriesAsync(BankDataImportDto importDto)
     {
         var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/BankAccount/ImportBankEntries", importDto);
         if (!response.IsSuccessStatusCode) throw new Exception(await response.Content.ReadAsStringAsync());
-        return await response.Content.ReadFromJsonAsync<ImportResultDto?>();
+        return await response.Content.ReadFromJsonAsync<ImportResult?>();
     }
 }

@@ -205,6 +205,52 @@
                                 <MudAlert Severity="Severity.Success" Variant="Variant.Text"> @summaryInfo</MudAlert>
                             }
 
+                            @if (_importResult?.Conflicts?.Any() == true)
+                            {
+                                <MudGrid Class="mt-4">
+                                    <MudItem xs="6">
+                                        <MudText Typo="Typo.h6">Incoming</MudText>
+                                        <MudSimpleTable Elevation="0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Posting date</th>
+                                                    <th>Value change</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var c in _importResult.Conflicts.Where(c => c.Incoming is not null))
+                                                {
+                                                    <tr>
+                                                        <td>@c.Incoming.PostingDate</td>
+                                                        <td>@c.Incoming.ValueChange</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </MudSimpleTable>
+                                    </MudItem>
+                                    <MudItem xs="6">
+                                        <MudText Typo="Typo.h6">Existing match</MudText>
+                                        <MudSimpleTable Elevation="0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Posting date</th>
+                                                    <th>Value change</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var c in _importResult.Conflicts.Where(c => c.ExistingMatch is not null))
+                                                {
+                                                    <tr>
+                                                        <td>@c.ExistingMatch.PostingDate</td>
+                                                        <td>@c.ExistingMatch.ValueChange</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </MudSimpleTable>
+                                    </MudItem>
+                                </MudGrid>
+                            }
+
                         </MudStack>
                     }
 

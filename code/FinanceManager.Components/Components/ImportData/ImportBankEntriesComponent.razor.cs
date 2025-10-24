@@ -1,6 +1,7 @@
 using FinanceManager.Components.HttpContexts;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Readers;
@@ -29,6 +30,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
     private string? _selectedValueChangeHeader;
     private List<(DateTime PostingDate, decimal ValueChange)> _mappedPreview = [];
 
+    private ImportResult? _importResult = null;
     private string? _uploadedContent;
 
     private CancellationTokenSource? _regenCts;
@@ -281,11 +283,9 @@ public partial class ImportBankEntriesComponent : ComponentBase
 
             try
             {
-                var importResponse = await BankAccountHttpContext.ImportBankEntriesAsync(importDto);
-                if (importResponse is not null)
-                {
-                    _summaryInfos.Add($"Imported {importResponse?.Imported} entries.");
-                }
+                _importResult = await BankAccountHttpContext.ImportBankEntriesAsync(importDto);
+                if (_importResult is not null)
+                    _summaryInfos.Add($"Imported {_importResult.Imported} entries.");
 
                 _ = Task.Run(async () =>
                 {
@@ -377,15 +377,11 @@ public partial class ImportBankEntriesComponent : ComponentBase
                 break;
             case 1:
                 if (_step2Complete != true)
-                {
                     arg.Cancel = true;
-                }
                 break;
             case 2:
                 if (_step3Complete != true)
-                {
                     arg.Cancel = true;
-                }
                 break;
         }
         await Task.CompletedTask;

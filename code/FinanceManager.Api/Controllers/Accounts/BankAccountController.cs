@@ -241,9 +241,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
             var domainEntries = importDto.Entries.Select(e => new BankEntryImport(e.PostingDate, e.ValueChange));
             var domainResult = await importService.ImportEntries(userId.Value, importDto.AccountId, domainEntries);
 
-            var apiResult = new ImportResultDto(domainResult.AccountId, domainResult.Imported, domainResult.Failed, domainResult.Errors);
-
-            return Ok(apiResult);
+            return Ok(domainResult);
         }
         catch (InvalidOperationException ex)
         {
