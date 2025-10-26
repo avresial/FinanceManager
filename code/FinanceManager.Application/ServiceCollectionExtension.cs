@@ -32,7 +32,7 @@ namespace FinanceManager.Application
                     .AddScoped<DuplicateEntryResolverService>()
                     .AddScoped<ICurrencyExchangeService, CurrencyExchangeService>()
                     .AddScoped<HttpClient>()
-                    .AddScoped<BankAccountImportService>()
+                    .AddScoped<IBankAccountImportService, BankAccountImportService>()
                     .AddScoped<IStockPriceProvider, StockPriceProvider>()
                 ;
 

@@ -2,12 +2,12 @@
 
 namespace FinanceManager.Infrastructure.Dtos;
 
-public class StockPriceDto(int id, string ticker, decimal pricePerUnit, string currency, DateTime date, bool verified = false)
+public class StockPriceDto(int id, string ticker, decimal pricePerUnit, Currency currency, DateTime date, bool verified = false)
 {
     public int Id { get; set; } = id;
     public string Ticker { get; set; } = ticker;
     public decimal PricePerUnit { get; set; } = pricePerUnit;
-    public string Currency { get; set; } = currency;
+    public Currency Currency { get; set; } = currency;
     public DateTime Date { get; set; } = date;
     public bool Verified { get; set; } = verified;
 
@@ -15,7 +15,7 @@ public class StockPriceDto(int id, string ticker, decimal pricePerUnit, string c
     {
         Ticker = Ticker,
         PricePerUnit = PricePerUnit,
-        Currency = new(Currency, ""),
+        Currency = Currency,
         Date = Date
     };
 };

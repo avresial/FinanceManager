@@ -46,12 +46,13 @@ public class BankAccountImportServiceTests
         // Ensure user plan allows importing by returning no accounts / zero used entries
         _mockBankAccountRepository.Setup(x => x.GetAvailableAccounts(userId)).Returns(new List<Domain.ValueObjects.AvailableAccount>().ToAsyncEnumerable());
 
-        var domainEntries = new List<BankEntryImport>
-        {
-            new BankEntryImport(DateTime.UtcNow.Date, 100m),
-            new BankEntryImport(DateTime.UtcNow.Date.AddDays(1), 200m)
-        };
+        List<BankEntryImport> domainEntries =
+        [
+            new (DateTime.UtcNow.Date, 100m),
+            new (DateTime.UtcNow.Date.AddDays(1), 200m)
+        ];
 
+        _mockBankAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(new List<BankAccountEntry>().ToAsyncEnumerable());
         _mockBankAccountEntryRepository.Setup(x => x.Add(It.IsAny<BankAccountEntry>())).ReturnsAsync(true);
 
         // Act

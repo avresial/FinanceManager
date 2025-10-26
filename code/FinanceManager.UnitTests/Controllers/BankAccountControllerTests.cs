@@ -4,6 +4,7 @@ using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
@@ -23,7 +24,7 @@ public class BankAccountControllerTests
 
     private readonly Mock<IUserRepository> _userRepository;
     private readonly Mock<UserPlanVerifier> _userPlanVerifier;
-    private readonly Mock<BankAccountImportService> _mockImportService;
+    private readonly Mock<IBankAccountImportService> _mockImportService;
 
     private readonly BankAccountController _controller;
 
@@ -37,7 +38,8 @@ public class BankAccountControllerTests
         _userRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
         _userPlanVerifier = new Mock<UserPlanVerifier>(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userRepository.Object, new PricingProvider());
 
-        _mockImportService = new Mock<BankAccountImportService>(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object);
+        _mockImportService = new Mock<IBankAccountImportService>(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object);
+        _mockImportService.Setup(x => x.ImportEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<BankEntryImport>>())).ReturnsAsync(new ImportResult(1, 0, 0, [], []));
 
         _controller = new(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object, _mockImportService.Object);
 

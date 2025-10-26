@@ -2,6 +2,7 @@
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
+using FinanceManager.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -13,14 +14,13 @@ public class MoneyFlowControllerTests
     private const int testUserId = 1;
 
     private readonly Mock<IMoneyFlowService> _mockmoneyFlowService;
-    private readonly Mock<IAssetsService> _mockAssetsService;
     private readonly MoneyFlowController _controller;
 
     public MoneyFlowControllerTests()
     {
         _mockmoneyFlowService = new Mock<IMoneyFlowService>();
-        _mockAssetsService = new Mock<IAssetsService>();
-        _controller = new MoneyFlowController(_mockmoneyFlowService.Object);
+        var currencyRepository = new CurrencyRepository();
+        _controller = new MoneyFlowController(_mockmoneyFlowService.Object, currencyRepository);
 
         // Mock user identity
         var user = new ClaimsPrincipal(new ClaimsIdentity([new(ClaimTypes.NameIdentifier, testUserId.ToString())], "mock"));
@@ -31,75 +31,6 @@ public class MoneyFlowControllerTests
         };
     }
 
-    //[Fact]
-    //public async Task GetEndAssetsPerAcount_ReturnsSingleElement()
-    //{
-    //    // Arrange
-    //    DateTime startDate = new(2000, 1, 1);
-    //    DateTime endDate = new(2000, 2, 1);
-    //    _mockAssetsService.Setup(repo => repo.GetEndAssetsPerAccount(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
-
-    //    // Act
-    //    var result = await _controller.GetEndAssetsPerAccount(testUserId, DefaultCurrency.Currency, startDate, endDate);
-
-    //    // Assert
-    //    var okResult = Assert.IsType<OkObjectResult>(result);
-    //    var returnValue = Assert.IsType<List<NameValueResult>>(okResult.Value);
-    //    Assert.Single(returnValue);
-    //}
-
-    //[Fact]
-    //public async Task GetEndAssetsPerType_ReturnsSingleElement()
-    //{
-    //    // Arrange
-    //    DateTime startDate = new(2000, 1, 1);
-    //    DateTime endDate = new(2000, 2, 1);
-    //    _mockAssetsService.Setup(repo => repo.GetEndAssetsPerType(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
-
-    //    // Act
-    //    var result = await _controller.GetEndAssetsPerType(testUserId, DefaultCurrency.Currency, startDate, endDate);
-
-    //    // Assert
-    //    var okResult = Assert.IsType<OkObjectResult>(result);
-    //    var returnValue = Assert.IsType<List<NameValueResult>>(okResult.Value);
-    //    Assert.Single(returnValue);
-    //}
-
-    //[Fact]
-    //public async Task GetAssetsTimeSeries_ReturnsSingleElement()
-    //{
-    //    // Arrange
-    //    DateTime startDate = new(2000, 1, 1);
-    //    DateTime endDate = new(2000, 2, 1);
-    //    _mockAssetsService.Setup(repo => repo.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate)).ReturnsAsync([new()]);
-
-    //    // Act
-    //    var result = await _controller.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate);
-
-    //    // Assert
-    //    var okResult = Assert.IsType<OkObjectResult>(result);
-    //    var returnValue = Assert.IsType<List<TimeSeriesModel>>(okResult.Value);
-    //    Assert.Single(returnValue);
-    //}
-
-    //[Fact]
-    //public async Task GetAssetsTimeSeriesByType_ReturnsSingleElement()
-    //{
-    //    // Arrange
-    //    DateTime startDate = new(2000, 1, 1);
-    //    DateTime endDate = new(2000, 2, 1);
-    //    var type = InvestmentType.Cash;
-    //    _mockAssetsService.Setup(repo => repo.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate, type)).ReturnsAsync([new()]);
-
-    //    // Act
-    //    var result = await _controller.GetAssetsTimeSeries(testUserId, DefaultCurrency.Currency, startDate, endDate, type);
-
-    //    // Assert
-    //    var okResult = Assert.IsType<OkObjectResult>(result);
-    //    var returnValue = Assert.IsType<List<TimeSeriesModel>>(okResult.Value);
-    //    Assert.Single(returnValue);
-    //}
-
     [Fact]
     public async Task GetNetWorth_ReturnsNotNull()
     {
@@ -108,7 +39,7 @@ public class MoneyFlowControllerTests
         _mockmoneyFlowService.Setup(repo => repo.GetNetWorth(testUserId, DefaultCurrency.PLN, date)).ReturnsAsync((decimal)1);
 
         // Act
-        var result = await _controller.GetNetWorth(testUserId, DefaultCurrency.PLN.ShortName, date);
+        var result = await _controller.GetNetWorth(testUserId, DefaultCurrency.PLN.Id, date);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -128,7 +59,7 @@ public class MoneyFlowControllerTests
         _mockmoneyFlowService.Setup(repo => repo.GetNetWorth(testUserId, DefaultCurrency.PLN, startDate, endDate)).ReturnsAsync(netWorth);
 
         // Act
-        var result = await _controller.GetNetWorth(testUserId, DefaultCurrency.PLN.ShortName, startDate, endDate);
+        var result = await _controller.GetNetWorth(testUserId, DefaultCurrency.PLN.Id, startDate, endDate);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -145,7 +76,7 @@ public class MoneyFlowControllerTests
         _mockmoneyFlowService.Setup(repo => repo.GetIncome(testUserId, DefaultCurrency.PLN, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
-        var result = await _controller.GetIncome(testUserId, DefaultCurrency.PLN.ShortName, startDate, endDate);
+        var result = await _controller.GetIncome(testUserId, DefaultCurrency.PLN.Id, startDate, endDate);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -162,7 +93,7 @@ public class MoneyFlowControllerTests
         _mockmoneyFlowService.Setup(repo => repo.GetSpending(testUserId, DefaultCurrency.PLN, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
-        var result = await _controller.GetSpending(testUserId, DefaultCurrency.PLN.ShortName, startDate, endDate);
+        var result = await _controller.GetSpending(testUserId, DefaultCurrency.PLN.Id, startDate, endDate);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);

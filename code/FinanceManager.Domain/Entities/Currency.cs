@@ -2,6 +2,7 @@
 
 public class Currency
 {
+    public int Id { get; set; }
     public string ShortName { get; set; }
     public string Symbol { get; set; }
 
@@ -9,8 +10,9 @@ public class Currency
     {
 
     }
-    public Currency(string shortName, string symbol)
+    public Currency(int id, string shortName, string symbol)
     {
+        Id = id;
         ShortName = shortName;
         Symbol = symbol;
     }

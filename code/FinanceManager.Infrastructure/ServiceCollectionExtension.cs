@@ -37,6 +37,8 @@ public static class ServiceCollectionExtension
                 .AddScoped<NewVisitsRepository>()
                 .AddScoped<IDuplicateEntryRepository, DuplicateEntryRepository>()
                 .AddScoped<IFinancialLabelsRepository, FinancialLabelsRepository>()
+                .AddScoped<ICurrencyRepository, CurrencyRepository>()
+
                 .AddHostedService<DatabaseInitializer>()
                 ;
 

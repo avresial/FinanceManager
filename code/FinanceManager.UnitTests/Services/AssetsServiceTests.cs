@@ -36,7 +36,7 @@ public class AssetsServiceTests
         bankAccount2.Add(new BankAccountEntry(1, 1, _endDate, 10, 10));
 
         _bankAccounts = [bankAccount1, bankAccount2];
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(1, _startDate, _endDate))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(1, It.IsAny<DateTime>(), _endDate))
                                       .Returns(_bankAccounts.ToAsyncEnumerable());
 
         StockAccount investmentAccount1 = new(1, 3, "testInvestmentAccount1");
@@ -44,7 +44,7 @@ public class AssetsServiceTests
         investmentAccount1.Add(new StockAccountEntry(1, 2, _endDate, 10, 10, "testStock2", InvestmentType.Stock));
 
         _investmentAccountAccounts = new List<StockAccount> { investmentAccount1 };
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<StockAccount>(1, _startDate, _endDate))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<StockAccount>(1, It.IsAny<DateTime>(), _endDate))
                                       .Returns(_investmentAccountAccounts.ToAsyncEnumerable());
 
         _totalAssetsValue = 80;
@@ -67,7 +67,7 @@ public class AssetsServiceTests
     }
 
     [Fact]
-    public async Task GetAssetsPerAcount()
+    public async Task GetAssetsPerAccount()
     {
         // Arrange
 

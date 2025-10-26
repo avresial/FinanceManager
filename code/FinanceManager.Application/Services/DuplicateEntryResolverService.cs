@@ -31,7 +31,10 @@ public class DuplicateEntryResolverService(IBankAccountRepository<BankAccount> b
         var oldestEntry = await accountEntryRepository.GetOldest(accountId);
         if (oldestEntry is null) return;
 
-        for (var i = oldestEntry.PostingDate; i <= DateTime.UtcNow; i = i.AddDays(1))
+        var youngestEntry = await accountEntryRepository.GetYoungest(accountId);
+        if (youngestEntry is null) return;
+
+        for (var i = oldestEntry.PostingDate; i <= youngestEntry.PostingDate; i = i.AddDays(1))
         {
             var entries = await accountEntryRepository.Get(accountId, i, i.AddDays(1)).ToListAsync();
             var groups = entries.GroupBy(x => new { x.PostingDate, x.ValueChange }).Where(g => g.Count() > 1);
