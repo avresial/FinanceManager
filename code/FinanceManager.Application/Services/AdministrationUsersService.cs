@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Services;
 public class AdministrationUsersService(IFinancialAccountRepository financialAccountRepository, IUserRepository userRepository,
-    IActiveUsersRepository activeUsersRepository, UserPlanVerifier userPlanVerifier, PricingProvider pricingProvider,
+    IActiveUsersRepository activeUsersRepository, IUserPlanVerifier userPlanVerifier, PricingProvider pricingProvider,
     ILogger<AdministrationUsersService> logger) : IAdministrationUsersService
 {
 

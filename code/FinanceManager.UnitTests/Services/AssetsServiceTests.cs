@@ -63,7 +63,8 @@ public class AssetsServiceTests
         IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
         var stockPriceProvider = new StockPriceProvider(_stockRepository.Object, _currencyExchangeService.Object, cache);
 
-        _assetsService = new(_financialAccountRepositoryMock.Object, stockPriceProvider);
+        IEnumerable<IAssetsServiceTyped> assetsServiceTypeds = [];
+        _assetsService = new(assetsServiceTypeds);
     }
 
     [Fact]

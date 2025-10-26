@@ -8,7 +8,7 @@ namespace FinanceManager.Application.Services;
 
 public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAccountRepository,
     IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
-    UserPlanVerifier userPlanVerifier, ILogger<BankAccountImportService> logger) : IBankAccountImportService
+    IUserPlanVerifier userPlanVerifier, ILogger<BankAccountImportService> logger) : IBankAccountImportService
 {
 
     public async Task<ImportResult> ImportEntries(int userId, int accountId, IEnumerable<BankEntryImport> entries)

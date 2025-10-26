@@ -21,7 +21,11 @@ namespace FinanceManager.Application
         {
             services.AddScoped<ISettingsService, SettingsService>()
                     .AddScoped<IMoneyFlowService, MoneyFlowService>()
+
+                    .AddScoped<IAssetsServiceTyped, AssetsServiceBank>()
+                    .AddScoped<IAssetsServiceTyped, AssetsServiceStock>()
                     .AddScoped<IAssetsService, AssetsService>()
+
                     .AddScoped<ILiabilitiesService, LiabilitiesService>()
                     .AddScoped<AccountIdProvider>()
                     .AddScoped<PricingProvider>()

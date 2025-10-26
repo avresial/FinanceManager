@@ -8,33 +8,33 @@ public class MoneyFlowHttpContext(HttpClient httpClient)
 {
     public async Task<List<TimeSeriesModel>> GetBalance(int userId, Currency currency, DateTime start, DateTime end)
     {
-        string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetBalance/{userId}/{currency.ShortName}/{start:O}/{end:O}";
+        string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetBalance/{userId}/{currency.Id}/{start:O}/{end:O}";
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
         return result ?? new List<TimeSeriesModel>();
     }
 
     public async Task<List<TimeSeriesModel>> GetIncome(int userId, Currency currency, DateTime start, DateTime end)
     {
-        string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetIncome/{userId}/{currency.ShortName}/{start:O}/{end:O}";
+        string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetIncome/{userId}/{currency.Id}/{start:O}/{end:O}";
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
         return result ?? new List<TimeSeriesModel>();
     }
 
     public async Task<decimal?> GetNetWorth(int userId, Currency currency, DateTime date)
     {
-        var result = await httpClient.GetFromJsonAsync<decimal?>($"{httpClient.BaseAddress}api/MoneyFlow/GetNetWorth/{userId}/{currency.ShortName}/{date:O}");
+        var result = await httpClient.GetFromJsonAsync<decimal?>($"{httpClient.BaseAddress}api/MoneyFlow/GetNetWorth/{userId}/{currency.Id}/{date:O}");
         return result;
     }
 
     public async Task<Dictionary<DateTime, decimal>> GetNetWorth(int userId, Currency currency, DateTime start, DateTime end)
     {
-        var result = await httpClient.GetFromJsonAsync<Dictionary<DateTime, decimal>>($"{httpClient.BaseAddress}api/MoneyFlow/GetNetWorth/{userId}/{currency.ShortName}/{start:O}/{end:O}");
+        var result = await httpClient.GetFromJsonAsync<Dictionary<DateTime, decimal>>($"{httpClient.BaseAddress}api/MoneyFlow/GetNetWorth/{userId}/{currency.Id}/{start:O}/{end:O}");
         return result ?? new Dictionary<DateTime, decimal>();
     }
 
     public async Task<List<TimeSeriesModel>> GetSpending(int userId, Currency currency, DateTime start, DateTime end)
     {
-        string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetSpending/{userId}/{currency.ShortName}/{start:O}/{end:O}";
+        string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetSpending/{userId}/{currency.Id}/{start:O}/{end:O}";
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
         return result ?? new List<TimeSeriesModel>();
     }
