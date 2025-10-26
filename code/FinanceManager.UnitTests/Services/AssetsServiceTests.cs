@@ -1,4 +1,5 @@
-﻿using FinanceManager.Application.Services;
+﻿using FinanceManager.Application.Providers;
+using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
@@ -6,6 +7,7 @@ using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
+using Microsoft.Extensions.Caching.Memory;
 using Moq;
 
 namespace FinanceManager.UnitTests.Services;
@@ -58,7 +60,11 @@ public class AssetsServiceTests
         _currencyExchangeService.Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>())).ReturnsAsync(1);
         _currencyExchangeService.Setup(x => x.GetPricePerUnit(It.IsAny<StockPrice>(), It.IsAny<Currency>(), It.IsAny<DateTime>())).ReturnsAsync(2);
 
-        _assetsService = new(_financialAccountRepositoryMock.Object, _stockRepository.Object, _currencyExchangeService.Object);
+        // use a real MemoryCache instance for tests
+        IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
+        var stockPriceProvider = new StockPriceProvider(_stockRepository.Object, _currencyExchangeService.Object, cache);
+
+        _assetsService = new(_financialAccountRepositoryMock.Object, stockPriceProvider);
     }
 
     [Fact]
@@ -67,7 +73,7 @@ public class AssetsServiceTests
         // Arrange
 
         // Act
-        var result = await _assetsService.GetEndAssetsPerAccount(1, DefaultCurrency.PLN, _startDate, _endDate);
+        var result = await _assetsService.GetEndAssetsPerAccount(1, DefaultCurrency.PLN, _endDate).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(_bankAccounts.Count + _investmentAccountAccounts.Count, result.Count);
@@ -80,7 +86,7 @@ public class AssetsServiceTests
         // Arrange
 
         // Act
-        var result = await _assetsService.GetEndAssetsPerType(1, DefaultCurrency.PLN, _startDate, _endDate);
+        var result = await _assetsService.GetEndAssetsPerType(1, DefaultCurrency.PLN, _endDate).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, result.Count);

@@ -7,7 +7,6 @@ namespace FinanceManager.Infrastructure.Repositories.Account.Entry;
 
 public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepository<StockAccountEntry>
 {
-
     public async Task<bool> Add(StockAccountEntry entry)
     {
         StockAccountEntry newBankAccountEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange, entry.Ticker, entry.InvestmentType);
@@ -42,18 +41,14 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
         await context.SaveChangesAsync();
         return true;
     }
-    public async Task<IEnumerable<StockAccountEntry>> Get(int accountId, DateTime startDate, DateTime endDate)
-    {
-        return await context.StockEntries
+    public IAsyncEnumerable<StockAccountEntry> Get(int accountId, DateTime startDate, DateTime endDate) => context.StockEntries
             .Where(e => e.AccountId == accountId && e.PostingDate >= startDate && e.PostingDate <= endDate)
-            .ToListAsync();
-    }
-    public async Task<IEnumerable<StockAccountEntry>> Get(int accountId, string ticker, DateTime startDate, DateTime endDate)
-    {
-        return await context.StockEntries
+            .AsAsyncEnumerable();
+
+    public IAsyncEnumerable<StockAccountEntry> Get(int accountId, string ticker, DateTime startDate, DateTime endDate) => context.StockEntries
             .Where(e => e.AccountId == accountId && e.Ticker == ticker && e.PostingDate >= startDate && e.PostingDate <= endDate)
-            .ToListAsync();
-    }
+            .AsAsyncEnumerable();
+
 
     public Task<StockAccountEntry?> Get(int accountId, int entryId) =>
         context.StockEntries.SingleOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
@@ -171,12 +166,11 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
         var entry = await context.StockEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (entry is null) return;
 
-        var entriesToUpdate = await Get(accountId, entry.Ticker, entry.PostingDate, DateTime.UtcNow);
         var previousEntries = await ((IStockAccountEntryRepository<StockAccountEntry>)this).GetNextOlder(accountId, entry.PostingDate);
 
         StockAccountEntry? previousEntry = previousEntries.ContainsKey(entry.Ticker) ? previousEntries[entry.Ticker] : null;
 
-        foreach (var entryToUpdate in entriesToUpdate.OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
+        await foreach (var entryToUpdate in Get(accountId, entry.Ticker, entry.PostingDate, DateTime.UtcNow).OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
         {
             if (previousEntry is not null)
                 entryToUpdate.Value = previousEntry.Value + entryToUpdate.ValueChange;

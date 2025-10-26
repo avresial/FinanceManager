@@ -40,7 +40,7 @@ public class StockAccountControllerTests
         // Arrange
         var userId = 1;
         List<AvailableAccount> accounts = [new(1, "Test Account")];
-        _mockStockAccountRepository.Setup(repo => repo.GetAvailableAccounts(userId)).ReturnsAsync(accounts);
+        _mockStockAccountRepository.Setup(repo => repo.GetAvailableAccounts(userId)).Returns(accounts.ToAsyncEnumerable());
 
         // Act
         var result = await _controller.Get();

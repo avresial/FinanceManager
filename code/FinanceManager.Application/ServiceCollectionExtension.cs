@@ -33,6 +33,7 @@ namespace FinanceManager.Application
                     .AddScoped<ICurrencyExchangeService, CurrencyExchangeService>()
                     .AddScoped<HttpClient>()
                     .AddScoped<BankAccountImportService>()
+                    .AddScoped<IStockPriceProvider, StockPriceProvider>()
                 ;
 
             return services;

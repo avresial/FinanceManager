@@ -33,7 +33,7 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
         var errors = new List<string>();
         var conflicts = new List<ImportConflict>();
 
-        var existingAll = (await bankAccountEntryRepository.Get(accountId, minDay.AddDays(-10), maxDay.AddDays(1))).ToList();
+        var existingAll = await bankAccountEntryRepository.Get(accountId, minDay.AddDays(-10), maxDay.AddDays(1)).ToListAsync();
         for (var day = minDay; day <= maxDay; day = day.AddDays(1))
         {
             var importsThisDay = entryList.Where(x => x.PostingDate.Date == day).ToList();
@@ -53,8 +53,6 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
 
                 continue;
             }
-
-            var test = existingAll.Where(x => x.PostingDate.Date.Month == day.Month).ToList();
 
             foreach (var imp in importsThisDay)
             {

@@ -3,121 +3,75 @@ using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
-using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Services;
 
-public class AssetsService(IFinancialAccountRepository financialAccountRepository, IStockPriceRepository stockRepository, ICurrencyExchangeService currencyExchangeService) : IAssetsService
+public class AssetsService(IFinancialAccountRepository financialAccountRepository, IStockPriceProvider stockPriceProvider) : IAssetsService
 {
     public async Task<bool> IsAnyAccountWithAssets(int userId)
     {
-        var start = DateTime.UtcNow.AddDays(-1);
-        var end = start.AddDays(1);
+        var end = DateTime.UtcNow;
+        var start = end.AddDays(+1);
 
         var bankAccounts = financialAccountRepository.GetAccounts<BankAccount>(userId, start, end);
-
-        await foreach (var bankAccount in bankAccounts)
-        {
-            if (bankAccount.Entries is not null && bankAccount.Entries.Count > 0)
-            {
-                var youngestEntry = bankAccount.Entries.FirstOrDefault();
-                if (youngestEntry is not null && youngestEntry.Value > 0)
-                    return true;
-            }
-            else if (bankAccount.NextOlderEntry is not null)
-            {
-                if (bankAccount.NextOlderEntry.Value > 0)
-                    return true;
-            }
-        }
+        if (await bankAccounts.AnyAsync(x => x.ContainsAssets)) return true;
 
         var stockAccounts = financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
+        if (await stockAccounts.AnyAsync(x => x.ContainsAssets)) return true;
 
-        await foreach (var stockAccount in stockAccounts)
-        {
-            if (stockAccount.Entries is not null && stockAccount.Entries.Count > 0)
-            {
-                var youngestEntry = stockAccount.Entries.FirstOrDefault();
-                if (youngestEntry is not null && youngestEntry.Value > 0)
-                    return true;
-            }
-            else if (stockAccount.NextOlderEntries.Any())
-            {
-                if (stockAccount.NextOlderEntries.Any(x => x.Value.Value > 0))
-                    return true;
-            }
-        }
-
-        return await Task.FromResult(false);
+        return false;
     }
-    public async Task<List<NameValueResult>> GetEndAssetsPerAccount(int userId, Currency currency, DateTime start, DateTime end)
+    public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
     {
-        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
-        List<NameValueResult> result = [];
-
-        await foreach (BankAccount account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
+        await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, asOfDate.AddMinutes(-1), asOfDate))
         {
-            if (account is null || account.Entries is null) return result;
+            if (!account.ContainsAssets) continue;
 
-            var entry = account.Entries.Any() ? account.Entries.FirstOrDefault() : account.NextOlderEntry;
-
-            if (entry is null || entry.Value <= 0) continue;
-
-            result.Add(new NameValueResult()
+            yield return new()
             {
                 Name = account.Name,
-                Value = entry.Value
-            });
+                Value = account.Entries.First().Value
+            };
         }
 
-        var InvestmentAccounts = financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
-        await foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
+        await foreach (StockAccount account in financialAccountRepository.GetAccounts<StockAccount>(userId, asOfDate.AddMinutes(-1), asOfDate))
         {
-            if (account is null || account.Entries is null) return result;
+            if (!account.ContainsAssets) continue;
+
+            NameValueResult result = new()
+            {
+                Name = account.Name,
+                Value = 0
+            };
 
             foreach (var ticker in account.GetStoredTickers())
             {
-                var stockPrice = await stockRepository.GetThisOrNextOlder(ticker, end);
-                decimal pricePerUnit = stockPrice is null ? 1 : await currencyExchangeService.GetPricePerUnit(stockPrice, currency, end);
+                var pricePerUnit = await stockPriceProvider.GetPricePerUnitAsync(ticker, currency, asOfDate);
+                var latestEntry = account.Get(asOfDate).First(x => x.Ticker == ticker);
 
-                var latestEntry = account.Get(end).First(x => x.Ticker == ticker);
-
-                var existingResult = result.FirstOrDefault(x => x.Name == account.Name);
-                if (existingResult is null)
-                {
-                    result.Add(new NameValueResult()
-                    {
-                        Name = account.Name,
-                        Value = latestEntry.Value * pricePerUnit
-                    });
-                }
-                else
-                {
-                    existingResult.Value += latestEntry.Value * pricePerUnit;
-                }
+                result.Value += latestEntry.Value * pricePerUnit;
             }
+
+            yield return result;
         }
-
-        return result;
     }
-    public async Task<List<NameValueResult>> GetEndAssetsPerType(int userId, Currency currency, DateTime start, DateTime end)
+    public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
     {
-        List<NameValueResult> result = [];
-        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
+        Dictionary<AccountLabel, NameValueResult> accountLabelResults = [];
 
-        await foreach (BankAccount account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
+        await foreach (BankAccount account in financialAccountRepository.GetAccounts<BankAccount>(userId, asOfDate.AddMinutes(-1), asOfDate))
         {
-            if (account is null || account.Entries is null) return result;
+            if (!account.ContainsAssets) continue;
 
-            var entry = account.Entries.Any() ? account.Entries.FirstOrDefault() : account.NextOlderEntry;
+            var entry = account.Entries.Count != 0 ? account.Entries.FirstOrDefault() : account.NextOlderEntry;
             if (entry is null || entry.Value <= 0) continue;
 
-            var existingResult = result.FirstOrDefault(x => x.Name == account.AccountType.ToString());
+            var existingResult = accountLabelResults.ContainsKey(account.AccountType) ? accountLabelResults[account.AccountType] : null;
             if (existingResult is null)
             {
-                result.Add(new NameValueResult()
+                accountLabelResults.Add(account.AccountType, new()
                 {
                     Name = account.AccountType.ToString(),
                     Value = entry.Value
@@ -129,23 +83,22 @@ public class AssetsService(IFinancialAccountRepository financialAccountRepositor
             }
         }
 
-        var InvestmentAccounts = financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
-        await foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
+        foreach (var value in accountLabelResults.Values)
+            yield return value;
+
+        Dictionary<InvestmentType, NameValueResult> investmentTypeResults = [];
+        await foreach (StockAccount account in financialAccountRepository.GetAccounts<StockAccount>(userId, asOfDate.AddMinutes(-1), asOfDate))
         {
-            //var test = await account.GetDailyPrice(stockRepository.Get);
-            if (account is null || account.Entries is null) return result;
+            if (!account.ContainsAssets) continue;
 
             foreach (var ticker in account.GetStoredTickers())
             {
-                var stockPrice = await stockRepository.Get(ticker, end);
-                decimal pricePerUnit = stockPrice is null ? 1 : await currencyExchangeService.GetPricePerUnit(stockPrice, currency, end);
-
+                var pricePerUnit = await stockPriceProvider.GetPricePerUnitAsync(ticker, currency, asOfDate);
                 var latestEntry = account.Entries.First(x => x.Ticker == ticker);
 
-                var existingResult = result.FirstOrDefault(x => x.Name == latestEntry.InvestmentType.ToString());
-                if (existingResult is null)
+                if (!investmentTypeResults.TryGetValue(latestEntry.InvestmentType, out NameValueResult? existingResult))
                 {
-                    result.Add(new NameValueResult()
+                    investmentTypeResults.Add(latestEntry.InvestmentType, new()
                     {
                         Name = latestEntry.InvestmentType.ToString(),
                         Value = latestEntry.Value * pricePerUnit
@@ -158,7 +111,9 @@ public class AssetsService(IFinancialAccountRepository financialAccountRepositor
             }
         }
 
-        return result;
+        foreach (var value in investmentTypeResults.Values)
+            yield return value;
+
     }
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end)
     {
@@ -168,10 +123,8 @@ public class AssetsService(IFinancialAccountRepository financialAccountRepositor
         Dictionary<DateTime, decimal> prices = [];
         TimeSpan step = new(1, 0, 0, 0);
 
-        await foreach (BankAccount account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
+        await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end).Where(x => x.ContainsAssets))
         {
-            if (account is null || account.Entries is null) continue;
-
             var entry = account.GetThisOrNextOlder(end);
             if (entry is null || entry.Value <= 0) continue;
 
@@ -193,10 +146,8 @@ public class AssetsService(IFinancialAccountRepository financialAccountRepositor
             }
         }
 
-        var InvestmentAccounts = financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
-        await foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
+        await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, start, end).Where(x => x.ContainsAssets))
         {
-            if (account is null || account.Entries is null) continue;
             foreach (var date in prices.Keys)
             {
                 var tickerEntries = account.Get(date).GroupBy(x => x.Ticker).ToList();
@@ -204,8 +155,8 @@ public class AssetsService(IFinancialAccountRepository financialAccountRepositor
                 {
                     var entry = account.GetThisOrNextOlder(date, ticker);
                     if (entry is null) continue;
-                    var stockPrice = await stockRepository.Get(ticker, end);
-                    decimal pricePerUnit = stockPrice is null ? 1 : await currencyExchangeService.GetPricePerUnit(stockPrice, currency, end);
+
+                    var pricePerUnit = await stockPriceProvider.GetPricePerUnitAsync(ticker, currency, end);
                     prices[date] += entry.Value * pricePerUnit;
                 }
             }
@@ -218,20 +169,20 @@ public class AssetsService(IFinancialAccountRepository financialAccountRepositor
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         List<(DateTime, decimal)> assets = [];
-        var BankAccounts = (financialAccountRepository.GetAccounts<BankAccount>(userId, start, end)).Where(x => x.AccountType.ToString() == investmentType.ToString());
-        await foreach (BankAccount account in BankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
+
+        await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end).Where(x => x.ContainsAssets && x.AccountType.ToString() == investmentType.ToString()))
         {
             if (account is null || account.Entries is null) continue;
 
             assets.AddRange(account.Entries.GetAssets(start, end));
         }
 
-        var InvestmentAccounts = financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
-        await foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
+        await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, start, end).Where(x => x.ContainsAssets))
         {
             if (account is null || account.Entries is null) continue;
 
-            assets.AddRange(await account.Entries.Where(x => x.InvestmentType == investmentType).ToList().GetAssets(start, end, stockRepository.Get));
+            assets.AddRange(await account.Entries.Where(x => x.InvestmentType == investmentType)
+                .GetAssets(start, end, currency, stockPriceProvider.GetPricePerUnitAsync));
         }
 
 
@@ -239,12 +190,13 @@ public class AssetsService(IFinancialAccountRepository financialAccountRepositor
         for (DateTime i = end; i >= start; i = i.AddDays(-1))
         {
             var assetsToSum = assets.Where(x => x.Item1 == i);
-            result.Add(new TimeSeriesModel
+            result.Add(new()
             {
                 DateTime = i,
                 Value = assetsToSum.Any() ? assetsToSum.Sum(x => x.Item2) : 0,
             });
         }
+
         return result;
     }
 }

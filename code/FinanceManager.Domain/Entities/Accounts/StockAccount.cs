@@ -22,7 +22,6 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
         Entries = [];
     }
 
-
     public List<InvestmentType> GetStoredTypes()
     {
         if (Entries is null) return [];

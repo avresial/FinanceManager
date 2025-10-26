@@ -75,7 +75,7 @@ public partial class AssetsPerTypeOverviewCard
 
         List<NameValueResult> chartData = [];
 
-        if (user is not null) chartData = await AssetsHttpContext.GetEndAssetsPerType(user.UserId, DefaultCurrency.PLN, StartDateTime, EndDateTime);
+        if (user is not null) chartData = await AssetsHttpContext.GetEndAssetsPerType(user.UserId, DefaultCurrency.PLN, EndDateTime);
         if (chartData.Count != 0) _totalAssets = Math.Round(chartData.Sum(x => x.Value), 2);
 
         return chartData;

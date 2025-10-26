@@ -12,13 +12,13 @@ public class AssetsController(IAssetsService assetsService) : ControllerBase
     public async Task<IActionResult> IsAnyAccountWithAssets(int userId) =>
            Ok(await assetsService.IsAnyAccountWithAssets(userId));
 
-    [HttpGet("GetEndAssetsPerAccount/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}")]
-    public async Task<IActionResult> GetEndAssetsPerAccount(int userId, string currency, DateTime start, DateTime end) =>
-        Ok(await assetsService.GetEndAssetsPerAccount(userId, new(currency, string.Empty), start, end));
+    [HttpGet("GetEndAssetsPerAccount/{userId:int}/{currency}/{asOfDate:DateTime}")]
+    public async Task<IActionResult> GetEndAssetsPerAccount(int userId, string currency, DateTime asOfDate) =>
+        Ok(await assetsService.GetEndAssetsPerAccount(userId, new(currency, string.Empty), asOfDate).ToListAsync());
 
-    [HttpGet("GetEndAssetsPerType/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}")]
-    public async Task<IActionResult> GetEndAssetsPerType(int userId, string currency, DateTime start, DateTime end) =>
-        Ok(await assetsService.GetEndAssetsPerType(userId, new(currency, string.Empty), start, end));
+    [HttpGet("GetEndAssetsPerType/{userId:int}/{currency}/{asOfDate:DateTime}")]
+    public async Task<IActionResult> GetEndAssetsPerType(int userId, string currency, DateTime asOfDate) =>
+        Ok(await assetsService.GetEndAssetsPerType(userId, new(currency, string.Empty), asOfDate).ToListAsync());
 
     [HttpGet("GetAssetsTimeSeries/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}")]
     public async Task<IActionResult> GetAssetsTimeSeries(int userId, string currency, DateTime start, DateTime end) =>

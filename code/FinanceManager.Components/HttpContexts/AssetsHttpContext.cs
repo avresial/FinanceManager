@@ -22,24 +22,24 @@ public class AssetsHttpContext(HttpClient httpClient)
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end)
     {
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>($"{httpClient.BaseAddress}api/Assets/GetAssetsTimeSeries/{userId}/{currency}/{start:O}/{end:O}");
-        return result ?? new List<TimeSeriesModel>();
+        return result ?? [];
     }
 
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end, InvestmentType investmentType)
     {
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>($"{httpClient.BaseAddress}api/Assets/GetAssetsTimeSeries/{userId}/{currency}/{start:O}/{end:O}/{investmentType}");
-        return result ?? new List<TimeSeriesModel>();
+        return result ?? [];
     }
 
-    public async Task<List<NameValueResult>> GetEndAssetsPerAccount(int userId, Currency currency, DateTime start, DateTime end)
+    public async Task<List<NameValueResult>> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
     {
-        var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>($"{httpClient.BaseAddress}api/Assets/GetEndAssetsPerAccount/{userId}/{currency}/{start:O}/{end:O}");
-        return result ?? new List<NameValueResult>();
+        var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>($"{httpClient.BaseAddress}api/Assets/GetEndAssetsPerAccount/{userId}/{currency}/{asOfDate:O}");
+        return result ?? [];
     }
 
-    public async Task<List<NameValueResult>> GetEndAssetsPerType(int userId, Currency currency, DateTime start, DateTime end)
+    public async Task<List<NameValueResult>> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
     {
-        var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>($"{httpClient.BaseAddress}api/Assets/GetEndAssetsPerType/{userId}/{currency}/{start:O}/{end:O}");
-        return result ?? new List<NameValueResult>();
+        var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>($"{httpClient.BaseAddress}api/Assets/GetEndAssetsPerType/{userId}/{currency}/{asOfDate:O}");
+        return result ?? [];
     }
 }

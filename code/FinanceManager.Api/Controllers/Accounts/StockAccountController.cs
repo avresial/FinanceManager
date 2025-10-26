@@ -13,17 +13,11 @@ namespace FinanceManager.Api.Controllers.Accounts
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class StockAccountController : ControllerBase
+    public class StockAccountController(IAccountRepository<StockAccount> stockAccountRepository,
+        IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository) : ControllerBase
     {
-        private readonly IAccountRepository<StockAccount> _accountRepository;
-        private readonly IStockAccountEntryRepository<StockAccountEntry> _entryRepository;
-
-        public StockAccountController(IAccountRepository<StockAccount> stockAccountRepository,
-            IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository)
-        {
-            this._accountRepository = stockAccountRepository ?? throw new ArgumentNullException(nameof(stockAccountRepository));
-            this._entryRepository = stockAccountEntryRepository ?? throw new ArgumentNullException(nameof(stockAccountEntryRepository));
-        }
+        private readonly IAccountRepository<StockAccount> _accountRepository = stockAccountRepository ?? throw new ArgumentNullException(nameof(stockAccountRepository));
+        private readonly IStockAccountEntryRepository<StockAccountEntry> _entryRepository = stockAccountEntryRepository ?? throw new ArgumentNullException(nameof(stockAccountEntryRepository));
 
         [HttpGet]
         public async Task<IActionResult> Get()
@@ -31,7 +25,7 @@ namespace FinanceManager.Api.Controllers.Accounts
             var userId = ApiAuthenticationHelper.GetUserId(User);
             if (userId is null) return BadRequest("User ID is null.");
 
-            var accounts = await _accountRepository.GetAvailableAccounts(userId.Value);
+            var accounts = await _accountRepository.GetAvailableAccounts(userId.Value).ToListAsync();
             if (accounts == null) return NoContent();
 
             return Ok(accounts);
@@ -59,28 +53,17 @@ namespace FinanceManager.Api.Controllers.Accounts
             if (account == null) return NoContent();
             if (account.UserId != userId) return BadRequest("User ID does not match the account owner.");
 
-            var entries = await _entryRepository.Get(accountId, startDate, endDate);
+            var entries = await _entryRepository.Get(accountId, startDate, endDate).ToListAsync();
 
-            StockAccountDto bankAccountDto = new()
+            return Ok(new StockAccountDto()
             {
                 AccountId = account.AccountId,
                 UserId = account.UserId,
                 Name = account.Name,
                 NextOlderEntries = (await _entryRepository.GetNextOlder(accountId, startDate)).ToDictionary(x => x.Key, x => x.Value.ToDto()),
                 NextYoungerEntries = (await _entryRepository.GetNextYounger(accountId, startDate)).ToDictionary(x => x.Key, x => x.Value.ToDto()),
-                Entries = entries.Select(x => new StockAccountEntryDto
-                {
-                    Ticker = x.Ticker,
-                    InvestmentType = x.InvestmentType,
-                    AccountId = x.AccountId,
-                    EntryId = x.EntryId,
-                    PostingDate = x.PostingDate,
-                    Value = x.Value,
-                    ValueChange = x.ValueChange,
-                })
-            };
-
-            return Ok(bankAccountDto);
+                Entries = entries.Select(x => x.ToDto())
+            });
         }
 
         [HttpGet("GetYoungestEntryDate/{accountId:int}")]

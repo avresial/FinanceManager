@@ -24,7 +24,7 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         var userId = ApiAuthenticationHelper.GetUserId(User);
         if (userId is null) return BadRequest();
 
-        var account = await bankAccountRepository.GetAvailableAccounts(userId.Value);
+        var account = await bankAccountRepository.GetAvailableAccounts(userId.Value).ToListAsync();
 
         if (account == null) return NoContent();
 
@@ -55,32 +55,20 @@ IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVe
         if (account == null) return NoContent();
         if (account.UserId != userId) return BadRequest();
 
-        IEnumerable<BankAccountEntry> entries = await bankAccountEntryRepository.Get(accountId, startDate, endDate);
-
+        var entries = await bankAccountEntryRepository.Get(accountId, startDate, endDate).ToListAsync();
         var olderEntry = await bankAccountEntryRepository.GetNextOlder(accountId, startDate);
         var youngerEntry = await bankAccountEntryRepository.GetNextYounger(accountId, endDate);
 
-        BankAccountDto bankAccountDto = new()
+        return Ok(new BankAccountDto()
         {
             AccountId = account.AccountId,
             UserId = account.UserId,
             Name = account.Name,
             AccountLabel = account.AccountType,
-            NextOlderEntry = olderEntry is null ? null : olderEntry.ToDto(),
-            NextYoungerEntry = youngerEntry is null ? null : youngerEntry.ToDto(),
-
-            Entries = entries.Select(x => new BankAccountEntryDto
-            {
-                AccountId = x.AccountId,
-                EntryId = x.EntryId,
-                PostingDate = x.PostingDate,
-                Value = x.Value,
-                ValueChange = x.ValueChange,
-                Description = x.Description,
-                Labels = x.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id }).ToList()
-            })
-        };
-        return await Task.FromResult(Ok(bankAccountDto));
+            NextOlderEntry = olderEntry?.ToDto(),
+            NextYoungerEntry = youngerEntry?.ToDto(),
+            Entries = entries.Select(x => x.ToDto())
+        });
     }
 
     [HttpGet("GetEntry")]

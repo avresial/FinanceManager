@@ -2,12 +2,11 @@ using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.Imports;
-using FinanceManager.Domain.Repositories.Account;
-using Moq;
-using System.Collections.Generic;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace FinanceManager.UnitTests.Services;
 
@@ -45,7 +44,7 @@ public class BankAccountImportServiceTests
         _mockBankAccountRepository.Setup(x => x.Get(accountId)).ReturnsAsync(account);
 
         // Ensure user plan allows importing by returning no accounts / zero used entries
-        _mockBankAccountRepository.Setup(x => x.GetAvailableAccounts(userId)).ReturnsAsync(new List<FinanceManager.Domain.ValueObjects.AvailableAccount>());
+        _mockBankAccountRepository.Setup(x => x.GetAvailableAccounts(userId)).Returns(new List<Domain.ValueObjects.AvailableAccount>().ToAsyncEnumerable());
 
         var domainEntries = new List<BankEntryImport>
         {

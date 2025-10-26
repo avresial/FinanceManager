@@ -12,5 +12,6 @@ public static class BankAccountEntryExtension
         Value = bankAccountEntry.Value,
         Description = bankAccountEntry.Description,
         PostingDate = bankAccountEntry.PostingDate,
+        Labels = [.. bankAccountEntry.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id })]
     };
 }

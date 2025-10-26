@@ -7,7 +7,7 @@ public class FinancialAccountBase<T> : BasicAccountInformation where T : Financi
     public override DateTime? Start => GetStartDate();
     public override DateTime? End => GetEndDate();
 
-    public List<T>? Entries { get; protected set; }
+    public List<T> Entries { get; protected set; } = [];
 
     public FinancialAccountBase(int userId, int accountId, string name)
     {
@@ -15,27 +15,13 @@ public class FinancialAccountBase<T> : BasicAccountInformation where T : Financi
         AccountId = accountId;
         Name = name;
     }
-    public virtual IEnumerable<T> Get()
-    {
-        if (Entries is null) return [];
-        return Entries;
-    }
-    public virtual IEnumerable<T> Get(DateTime date)
-    {
-        if (Entries is null) return [];
-        return Entries.Get(date);
-    }
+    public virtual IEnumerable<T> Get() => Entries;
+    public virtual IEnumerable<T> Get(DateTime date) => Entries.Get(date);
+    public virtual IEnumerable<T> Get(DateTime start, DateTime end) => Entries.Where(x => x.PostingDate >= start && x.PostingDate <= end);
 
-    public virtual IEnumerable<T> Get(DateTime start, DateTime end)
-    {
-        if (Entries is null) return [];
-
-        return Entries.Where(x => x.PostingDate >= start && x.PostingDate <= end);
-    }
-
+    public virtual bool ContainsAssets => Entries.Any() && Entries.First().Value > 0;
     public virtual void Add(T entry, bool recalculateValues = true)
     {
-        Entries ??= [];
         var alreadyExistingEntry = Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
         if (alreadyExistingEntry is not null)
         {
@@ -43,8 +29,6 @@ public class FinancialAccountBase<T> : BasicAccountInformation where T : Financi
             return;
         }
         var previousEntry = Entries.GetNextYounger(entry.PostingDate).FirstOrDefault();
-
-        if (Entries is null) return;
 
         var index = -1;
         if (previousEntry is not null)
@@ -72,8 +56,6 @@ public class FinancialAccountBase<T> : BasicAccountInformation where T : Financi
 
     public virtual void UpdateEntry(T entry, bool recalculateValues = true)
     {
-        Entries ??= [];
-
         var entryToUpdate = Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
         if (entryToUpdate is null) return;
 
@@ -98,8 +80,6 @@ public class FinancialAccountBase<T> : BasicAccountInformation where T : Financi
 
     public virtual void Remove(int id)
     {
-        if (Entries is null) return;
-
         var entry = Entries.FirstOrDefault(x => x.EntryId == id);
         if (entry is null) return;
         var indexToRemove = Entries.IndexOf(entry);
@@ -144,7 +124,7 @@ public class FinancialAccountBase<T> : BasicAccountInformation where T : Financi
 
     internal void RecalculateEntryValues(int? startingIndex)
     {
-        if (Entries is null || Entries.Count == 0) return;
+        if (Entries.Count == 0) return;
 
         int startIndex = startingIndex ?? Entries.Count - 1;
         for (int i = startIndex; i >= 0; i--)
@@ -161,13 +141,13 @@ public class FinancialAccountBase<T> : BasicAccountInformation where T : Financi
     }
     private DateTime? GetStartDate()
     {
-        if (Entries is null || Entries.Count == 0) return null;
+        if (Entries.Count == 0) return null;
         var minDate = Entries.Min(x => x.PostingDate);
         return Entries.First(x => x.PostingDate == minDate).PostingDate;
     }
     private DateTime? GetEndDate()
     {
-        if (Entries is null || Entries.Count == 0) return null;
+        if (Entries.Count == 0) return null;
         var maxDate = Entries.Max(x => x.PostingDate);
         return Entries.First(x => x.PostingDate == maxDate).PostingDate;
     }

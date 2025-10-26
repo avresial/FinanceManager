@@ -29,8 +29,8 @@ public class BankAccountControllerTests
 
     public BankAccountControllerTests()
     {
-        _mockBankAccountRepository = new Mock<IBankAccountRepository<BankAccount>>();
-        _mockBankAccountEntryRepository = new Mock<IAccountEntryRepository<BankAccountEntry>>();
+        _mockBankAccountRepository = new();
+        _mockBankAccountEntryRepository = new();
 
         _userRepository = new Mock<IUserRepository>();
         var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = Domain.Enums.PricingLevel.Premium, CreationDate = DateTime.UtcNow };
@@ -59,7 +59,7 @@ public class BankAccountControllerTests
         // Arrange
         var userId = 1;
         List<AvailableAccount> accounts = new() { new(1, "Test Account") };
-        _mockBankAccountRepository.Setup(repo => repo.GetAvailableAccounts(userId)).ReturnsAsync(accounts);
+        _mockBankAccountRepository.Setup(repo => repo.GetAvailableAccounts(userId)).Returns(accounts.ToAsyncEnumerable());
 
         // Act
         var result = await _controller.Get();
@@ -103,7 +103,7 @@ public class BankAccountControllerTests
         BankAccountEntry bankAccountEntry = new(accountId, 1, olderThanLoadedDate, 1, 0);
 
         _mockBankAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
-        _mockBankAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).ReturnsAsync(new List<BankAccountEntry>());
+        _mockBankAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns(new List<BankAccountEntry>().ToAsyncEnumerable());
         _mockBankAccountEntryRepository.Setup(repo => repo.GetNextOlder(accountId, startDate))
             .ReturnsAsync(new BankAccountEntry(accountId, 1, olderThanLoadedDate, 1, 0));
 

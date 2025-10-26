@@ -56,6 +56,7 @@ builder.Services.AddCors(options =>
         ValidateIssuerSigningKey = true,
     };
 });
+builder.Services.AddMemoryCache();
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenGenerator, JwtTokenGenerator>();
 

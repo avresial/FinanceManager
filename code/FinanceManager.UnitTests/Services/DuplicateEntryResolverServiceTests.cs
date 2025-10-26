@@ -24,7 +24,7 @@ public class DuplicateEntryResolverServiceTests
             new (1, 2, new (2000, 1, 1), 200, 100),
         ];
 
-        _accountEntryRepositoryMock.Setup(x => x.Get(1, new(2000, 1, 1), new(2000, 1, 2))).ReturnsAsync(entries);
+        _accountEntryRepositoryMock.Setup(x => x.Get(1, new(2000, 1, 1), new(2000, 1, 2))).Returns(entries.ToAsyncEnumerable());
         _accountEntryRepositoryMock.Setup(x => x.GetOldest(1)).ReturnsAsync(entries.First());
         _duplicateEntryRepository.Setup(x => x.AddDuplicate(It.IsAny<IEnumerable<DuplicateEntry>>()));
 

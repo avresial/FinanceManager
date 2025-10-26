@@ -33,8 +33,7 @@ public class DuplicateEntryResolverService(IBankAccountRepository<BankAccount> b
 
         for (var i = oldestEntry.PostingDate; i <= DateTime.UtcNow; i = i.AddDays(1))
         {
-            var entries = await accountEntryRepository.Get(accountId, i, i.AddDays(1));
-
+            var entries = await accountEntryRepository.Get(accountId, i, i.AddDays(1)).ToListAsync();
             var groups = entries.GroupBy(x => new { x.PostingDate, x.ValueChange }).Where(g => g.Count() > 1);
 
             var duplicates = groups.Select(x => new DuplicateEntry()
