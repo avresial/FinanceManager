@@ -8,8 +8,8 @@ public partial class StockPricesComponent
 {
     private DateRange _dateRange { get; set; } = new DateRange(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
     private decimal _pricePerUnit { get; set; }
-    private string _existingCurrency { get; set; }
-    private string _selectedCurrency { get; set; }
+    private Currency? _existingCurrency { get; set; }
+    private string? _selectedCurrency { get; set; }
     private DateTime? _missingDate { get; set; } = null;
 
     private List<StockPrice> _stockPrices = [];
@@ -31,7 +31,7 @@ public partial class StockPricesComponent
                 if (utcDate.Kind != DateTimeKind.Utc)
                     utcDate = utcDate.ToUniversalTime();
 
-                StockPriceHttpContext.GetStockPrice(Ticker, _selectedCurrency, value.Value).ContinueWith(task =>
+                StockPriceHttpContext.GetStockPrice(Ticker, new(_selectedCurrency, ""), value.Value).ContinueWith(task =>
                 {
                     if (task.IsCompletedSuccessfully)
                     {
@@ -81,7 +81,7 @@ public partial class StockPricesComponent
 
         try
         {
-            await StockPriceHttpContext.AddStockPrice(Ticker, _pricePerUnit, _selectedCurrency, Date.Value);
+            await StockPriceHttpContext.AddStockPrice(Ticker, _pricePerUnit, new(_selectedCurrency, ""), Date.Value);
             await GetStockPriceAsync();
         }
         catch (Exception ex)
@@ -98,7 +98,7 @@ public partial class StockPricesComponent
             return;
         try
         {
-            await StockPriceHttpContext.UpdateStockPrice(Ticker, _pricePerUnit, _selectedCurrency, Date.Value);
+            await StockPriceHttpContext.UpdateStockPrice(Ticker, _pricePerUnit, new(_selectedCurrency, ""), Date.Value);
 
             await GetStockPriceAsync();
         }
@@ -126,12 +126,12 @@ public partial class StockPricesComponent
             if (tickerCurrency is not null)
             {
                 _existingCurrency = tickerCurrency.Currency;
-                _selectedCurrency = tickerCurrency.Currency;
+                _selectedCurrency = tickerCurrency.Currency.ShortName;
             }
             else
             {
                 _existingCurrency = null;
-                _selectedCurrency = DefaultCurrency.Currency;
+                _selectedCurrency = DefaultCurrency.PLN.ShortName;
             }
         }
         catch (Exception ex)

@@ -132,7 +132,7 @@ public class AssetsService(IFinancialAccountRepository financialAccountRepositor
         var InvestmentAccounts = financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
         await foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
-            account.GetDailyPrice(stockRepository.Get);
+            var test = await account.GetDailyPrice(stockRepository.Get);
             if (account is null || account.Entries is null) return result;
 
             foreach (var ticker in account.GetStoredTickers())
@@ -160,7 +160,7 @@ public class AssetsService(IFinancialAccountRepository financialAccountRepositor
 
         return result;
     }
-    public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, string currency, DateTime start, DateTime end)
+    public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         if (start == new DateTime()) return [];
@@ -214,7 +214,7 @@ public class AssetsService(IFinancialAccountRepository financialAccountRepositor
         var timeBucket = TimeBucketService.Get(prices.Select(x => (x.Key, x.Value))).OrderByDescending(x => x.Date);
         return timeBucket.Select(x => new TimeSeriesModel() { DateTime = x.Date, Value = x.Objects.Last() }).ToList();
     }
-    public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, string currency, DateTime start, DateTime end, InvestmentType investmentType)
+    public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end, InvestmentType investmentType)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         List<(DateTime, decimal)> assets = [];

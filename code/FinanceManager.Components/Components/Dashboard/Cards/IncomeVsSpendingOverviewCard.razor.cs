@@ -48,7 +48,7 @@ public partial class IncomeVsSpendingOverviewCard
         {
             if (DisplayIncome)
             {
-                var incomeData = (await MoneyFlowHttpContext.GetIncome(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime))
+                var incomeData = (await MoneyFlowHttpContext.GetIncome(user.UserId, DefaultCurrency.PLN, StartDateTime.Date, EndDateTime))
                     .OrderBy(x => x.DateTime)
                     .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
                     .ToList();
@@ -66,7 +66,7 @@ public partial class IncomeVsSpendingOverviewCard
         {
             if (DisplaySpending)
             {
-                var incomeData = (await MoneyFlowHttpContext.GetSpending(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime))
+                var incomeData = (await MoneyFlowHttpContext.GetSpending(user.UserId, DefaultCurrency.PLN, StartDateTime.Date, EndDateTime))
                     .OrderBy(x => x.DateTime)
                     .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
                     .ToList();
@@ -83,7 +83,7 @@ public partial class IncomeVsSpendingOverviewCard
         {
             if (DisplayBalance)
             {
-                var incomeData = (await MoneyFlowHttpContext.GetBalance(user.UserId, DefaultCurrency.Currency, StartDateTime.Date, EndDateTime))
+                var incomeData = (await MoneyFlowHttpContext.GetBalance(user.UserId, DefaultCurrency.PLN, StartDateTime.Date, EndDateTime))
                       .OrderBy(x => x.DateTime)
                       .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
                       .ToList();

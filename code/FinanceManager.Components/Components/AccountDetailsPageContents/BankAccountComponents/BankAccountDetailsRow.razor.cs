@@ -13,7 +13,7 @@ public partial class BankAccountDetailsRow
     private bool _expanded = false;
     private bool _removeEntryVisibility;
     private bool _updateEntryVisibility;
-    internal string _currency = DefaultCurrency.Currency;
+    internal Currency _currency = DefaultCurrency.PLN;
 
     [Parameter] public required BankAccount BankAccount { get; set; }
     [Parameter] public required BankAccountEntry BankAccountEntry { get; set; }

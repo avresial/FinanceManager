@@ -33,7 +33,7 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
     }
 
     [HttpGet("get-stock-price")]
-    public async Task<IActionResult> GetStockPrice(string ticker, string currency, DateTime date)
+    public async Task<IActionResult> GetStockPrice(string ticker, Currency currency, DateTime date)
     {
         if (string.IsNullOrWhiteSpace(ticker) || date == default)
             return BadRequest("Invalid input parameters.");
@@ -41,7 +41,7 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
         var stockPrice = await stockPriceRepository.GetThisOrNextOlder(ticker, date);
 
         if (stockPrice is null) return NotFound("Stock price not found.");
-        if (string.IsNullOrWhiteSpace(currency) || currency.Equals(stockPrice.Currency, StringComparison.OrdinalIgnoreCase))
+        if (currency == stockPrice.Currency)
             return Ok(stockPrice);
 
         var exchangeRate = await currencyExchangeService.GetExchangeRateAsync(stockPrice.Currency, currency, date); // TODO add cache
@@ -49,7 +49,7 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
             return NotFound($"Exchange rate from {stockPrice.Currency} to {currency} not found for the specified date.");
 
         stockPrice.PricePerUnit = stockPrice.PricePerUnit * exchangeRate.Value;
-        stockPrice.Currency = currency.ToUpper();
+        stockPrice.Currency = currency;
 
         return Ok(stockPrice);
     }

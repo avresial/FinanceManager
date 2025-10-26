@@ -26,7 +26,7 @@ public partial class AssetsPerTypeOverviewCard
     private double[] _data = [];
     private string[] _labels = [];
 
-    private string _currency = "";
+    private Currency _currency = DefaultCurrency.PLN;
     private decimal _totalAssets = 0;
 
     [Parameter] public string Height { get; set; } = "300px";
@@ -75,7 +75,7 @@ public partial class AssetsPerTypeOverviewCard
 
         List<NameValueResult> chartData = [];
 
-        if (user is not null) chartData = await AssetsHttpContext.GetEndAssetsPerType(user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
+        if (user is not null) chartData = await AssetsHttpContext.GetEndAssetsPerType(user.UserId, DefaultCurrency.PLN, StartDateTime, EndDateTime);
         if (chartData.Count != 0) _totalAssets = Math.Round(chartData.Sum(x => x.Value), 2);
 
         return chartData;

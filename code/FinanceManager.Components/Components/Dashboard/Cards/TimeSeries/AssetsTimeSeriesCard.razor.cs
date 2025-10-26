@@ -48,7 +48,7 @@ public partial class AssetsTimeSeriesCard
 
         try
         {
-            return await AssetsHttpContext.GetAssetsTimeSeries(user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
+            return await AssetsHttpContext.GetAssetsTimeSeries(user.UserId, DefaultCurrency.PLN, StartDateTime, EndDateTime);
         }
         catch (Exception ex)
         {

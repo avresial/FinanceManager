@@ -5,5 +5,5 @@ namespace FinanceManager.Application.Services;
 
 public class SettingsService : ISettingsService
 {
-    public string GetCurrency() => DefaultCurrency.Currency;
+    public Currency GetCurrency() => DefaultCurrency.PLN;
 }

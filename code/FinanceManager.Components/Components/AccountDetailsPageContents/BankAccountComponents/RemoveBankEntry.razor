@@ -17,7 +17,7 @@
             </MudItem>
         
             <MudItem xs="12" sm="6">
-                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" ReadOnly />
+                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency.ShortName" Adornment="Adornment.End" ReadOnly />
             </MudItem>
 
             <MudItem xs="12" sm="6">
@@ -40,7 +40,7 @@
     private DateTime? date = new DateTime();
     private decimal BalanceChange = 0;
     private string ExpenseType = string.Empty;
-    private string _currency = DefaultCurrency.Currency;
+    private Currency _currency = DefaultCurrency.PLN;
 
     [Parameter] public required Func<Task> Confirm { get; set; }
     [Parameter] public required Func<Task> Cancel { get; set; }

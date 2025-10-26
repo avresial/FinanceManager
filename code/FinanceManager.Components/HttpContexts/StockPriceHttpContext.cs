@@ -6,14 +6,14 @@ namespace FinanceManager.Components.HttpContexts;
 
 public class StockPriceHttpContext(HttpClient httpClient)
 {
-    public async Task AddStockPrice(string ticker, decimal pricePerUnit, string currency, DateTime date)
+    public async Task AddStockPrice(string ticker, decimal pricePerUnit, Currency currency, DateTime date)
     {
-        var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/StockPrice/add-stock-price?ticker={ticker}&pricePerUnit={pricePerUnit}&currency={currency}&date={date.ToRfc3339()}&", null);
+        var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/StockPrice/add-stock-price?ticker={ticker}&pricePerUnit={pricePerUnit}&currency={currency.ShortName.ToUpper()}&date={date.ToRfc3339()}&", null);
         response.EnsureSuccessStatusCode();
     }
-    public async Task UpdateStockPrice(string ticker, decimal pricePerUnit, string currency, DateTime date)
+    public async Task UpdateStockPrice(string ticker, decimal pricePerUnit, Currency currency, DateTime date)
     {
-        var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/StockPrice/update-stock-price?ticker={ticker}&pricePerUnit={pricePerUnit}&currency={currency}&date={date.ToRfc3339()}&", null);
+        var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/StockPrice/update-stock-price?ticker={ticker}&pricePerUnit={pricePerUnit}&currency={currency.ShortName.ToUpper()}&date={date.ToRfc3339()}&", null);
         response.EnsureSuccessStatusCode();
     }
     public async Task<StockPrice?> GetStockPrice(string ticker, Currency currency, DateTime date)

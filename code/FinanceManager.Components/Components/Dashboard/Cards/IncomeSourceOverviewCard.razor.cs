@@ -1,6 +1,7 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Extensions;
 using FinanceManager.Domain.Services;
@@ -12,7 +13,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 {
     public partial class IncomeSourceOverviewCard
     {
-        private string _currency = string.Empty;
+        private Currency _currency = DefaultCurrency.PLN;
         private ApexChart<IncomeSourceOverviewEntry>? _chart;
 
         private ApexChartOptions<IncomeSourceOverviewEntry> options = new();
@@ -83,7 +84,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             {
                 Y = new TooltipY
                 {
-                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency())
+                    Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency().ShortName)
                 }
             };
 

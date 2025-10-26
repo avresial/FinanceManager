@@ -3,6 +3,7 @@ using FinanceManager.Application;
 using FinanceManager.Application.Services;
 using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using ServiceDefaults;
@@ -11,14 +12,19 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
-builder.Services.AddOpenApi("v1", options =>
-{
-    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
-})
+
+builder.Services
+    .AddSingleton(typeof(IOptionsSnapshot<>), typeof(OptionsManager<>))
+    .AddSingleton(typeof(IOptionsFactory<>), typeof(OptionsFactory<>))
+    .AddOpenApi("v1", options =>
+    {
+        options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+    })
     .AddDatabase(builder.Configuration)
     .AddApplicationApi()
     .AddInfrastructureApi()
     .AddControllers();
+
 
 builder.Services.AddCors(options =>
 {
@@ -60,8 +66,7 @@ if (app.Environment.IsDevelopment())
 
     app.MapScalarApiReference(options =>
     {
-        options.WithPreferredScheme("Bearer")
-        .WithHttpBearerAuthentication(bearer =>
+        options.AddHttpAuthentication("Bearer", bearer =>
         {
             bearer.Token = "your-bearer-token";
         });
@@ -91,5 +96,6 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "An error occurred while seeding the admin account.");
     }
 }
+
 
 app.Run();

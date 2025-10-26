@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Accounts;
+﻿using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
@@ -9,7 +10,7 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
     ICurrencyExchangeService currencyExchangeService, IFinancialLabelsRepository financialLabelsRepository) : IMoneyFlowService
 {
 
-    public async Task<decimal?> GetNetWorth(int userId, string currency, DateTime date)
+    public async Task<decimal?> GetNetWorth(int userId, Currency currency, DateTime date)
     {
         if (date > DateTime.UtcNow) date = DateTime.UtcNow;
         decimal result = 0;
@@ -66,7 +67,7 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
 
         return Math.Round(result, 2);
     }
-    public async Task<Dictionary<DateTime, decimal>> GetNetWorth(int userId, string currency, DateTime start, DateTime end)
+    public async Task<Dictionary<DateTime, decimal>> GetNetWorth(int userId, Currency currency, DateTime start, DateTime end)
     {
         if (start == new DateTime()) return [];
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
@@ -81,7 +82,7 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
         }
         return result;
     }
-    public async Task<List<TimeSeriesModel>> GetIncome(int userId, string currency, DateTime start, DateTime end)
+    public async Task<List<TimeSeriesModel>> GetIncome(int userId, Currency currency, DateTime start, DateTime end)
     {
         TimeSpan timeSeriesStep = new(1, 0, 0, 0);
 
@@ -105,7 +106,7 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
         var timeBucket = TimeBucketService.Get(result.Select(x => (x.Key, x.Value)));
         return timeBucket.Select(x => new TimeSeriesModel() { DateTime = x.Date, Value = x.Objects.Sum(x => x) }).ToList();
     }
-    public async Task<List<TimeSeriesModel>> GetSpending(int userId, string currency, DateTime start, DateTime end)
+    public async Task<List<TimeSeriesModel>> GetSpending(int userId, Currency currency, DateTime start, DateTime end)
     {
         TimeSpan timeSeriesStep = new(1, 0, 0, 0);
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
@@ -128,7 +129,7 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
         var timeBucket = TimeBucketService.Get(result.Select(x => (x.Key, x.Value)));
         return timeBucket.Select(x => new TimeSeriesModel() { DateTime = x.Date, Value = x.Objects.Sum(x => x) }).ToList();
     }
-    public Task<List<TimeSeriesModel>> GetBalance(int userId, string currency, DateTime start, DateTime end)
+    public Task<List<TimeSeriesModel>> GetBalance(int userId, Currency currency, DateTime start, DateTime end)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         throw new NotImplementedException();
@@ -165,6 +166,8 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
         var labels = await financialLabelsRepository.GetLabels().ToListAsync();
         var salaryLabel = labels.Single(x => x.Name.ToLower() == "salary");
 
+        Currency currency = DefaultCurrency.PLN; // TODO: use user currency settings
+
         decimal salary = 0;
         await foreach (BankAccount account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
         {
@@ -184,7 +187,7 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
             foreach (var entry in account.Entries)
             {
                 var stockPrice = await stockRepository.GetThisOrNextOlder(entry.Ticker, entry.PostingDate);
-                decimal pricePerUnit = stockPrice is null ? 1 : await currencyExchangeService.GetPricePerUnit(stockPrice, "PLN", entry.PostingDate);
+                decimal pricePerUnit = stockPrice is null ? 1 : await currencyExchangeService.GetPricePerUnit(stockPrice, currency, entry.PostingDate);
                 investmentsChange += entry.ValueChange * pricePerUnit;
             }
         }

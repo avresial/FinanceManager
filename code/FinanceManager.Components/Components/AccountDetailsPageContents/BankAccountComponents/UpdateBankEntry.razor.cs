@@ -1,5 +1,6 @@
 using FinanceManager.Components.HttpContexts;
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using Microsoft.AspNetCore.Components;
@@ -10,7 +11,7 @@ public partial class UpdateBankEntry
 {
 
     private int? _loadedEntryId = null;
-    private string _currency = string.Empty;
+    private Currency _currency = DefaultCurrency.PLN;
     private bool _success;
     private string[] _errors = [];
     private MudForm? _form;

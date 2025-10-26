@@ -35,7 +35,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
 
         return Entries.DistinctBy(x => x.Ticker).Select(x => x.Ticker).ToList();
     }
-    public async Task<Dictionary<DateOnly, decimal>> GetDailyPrice(Func<string, Currency, DateTime, Task<StockPrice?>> getStockPrice)
+    public async Task<Dictionary<DateOnly, decimal>> GetDailyPrice(Func<string, DateTime, Task<StockPrice?>> getStockPrice)
     {
         var result = new Dictionary<DateOnly, decimal>();
         if (Entries is null || Start is null || End is null) return result;
@@ -55,7 +55,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
                 countedTicker.RemoveAll(x => x == entry.Ticker);
 
                 decimal price = entry.Value;
-                var stockPrice = await getStockPrice(entry.Ticker, DefaultCurrency.Currency, index.ToDateTime(new TimeOnly(), DateTimeKind.Utc));
+                var stockPrice = await getStockPrice(entry.Ticker, index.ToDateTime(new TimeOnly(), DateTimeKind.Utc));
                 if (stockPrice is not null)
                     price = entry.Value * (stockPrice).PricePerUnit;
 

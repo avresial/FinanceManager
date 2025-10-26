@@ -1,5 +1,6 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
+using FinanceManager.Components.HttpContexts;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
@@ -7,13 +8,12 @@ using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
-using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards.Assets;
 
 public partial class AssetsPerAccountOverviewCard
 {
-    private string _currency = "";
+    private Currency _currency = DefaultCurrency.PLN;
     private decimal _totalAssets = 0;
     private UserSession? _user;
     private ApexChart<NameValueResult>? _chart;
@@ -82,7 +82,7 @@ public partial class AssetsPerAccountOverviewCard
         {
             Y = new TooltipY
             {
-                Formatter = ChartHelper.GetCurrencyFormatter(SettingsService.GetCurrency())
+                Formatter = ChartHelper.GetCurrencyFormatter(SettingsService.GetCurrency().ShortName)
             }
         };
 
@@ -130,7 +130,7 @@ public partial class AssetsPerAccountOverviewCard
         {
             try
             {
-                return await AssetsHttpContext.GetEndAssetsPerAccount(_user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
+                return await AssetsHttpContext.GetEndAssetsPerAccount(_user.UserId, DefaultCurrency.PLN, StartDateTime, EndDateTime);
             }
             catch (Exception ex)
             {

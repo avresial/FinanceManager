@@ -30,7 +30,7 @@
                 <MudTextField @bind-Value="Ticker" T="string" Label="Ticker" Variant="Variant.Text" MaxLines="5" AutoGrow="true" Immediate />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudNumericField ReadOnly HideSpinButtons="true" @bind-Value="PricePerUnit" Label="Price per unit" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
+                <MudNumericField ReadOnly HideSpinButtons="true" @bind-Value="PricePerUnit" Label="Price per unit" Variant="Variant.Text" AdornmentText="@_currency.ShortName" Adornment="Adornment.End" />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange"
@@ -51,7 +51,7 @@
 
 @code {
     private int? loadedEntryId = null;
-    private string _currency = "";
+    private Currency _currency = DefaultCurrency.PLN;
     private MudForm? form;
 
     List<string> InvestmentType = Enum.GetValues(typeof(InvestmentType)).Cast<InvestmentType>().Select(x => x.ToString()).ToList();
@@ -152,7 +152,7 @@
     {
         if (SelectedPostingDate is null) return;
 
-        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, DefaultCurrency.Currency, SelectedPostingDate.Value.Date.ToUniversalTime());
+        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, DefaultCurrency.PLN, SelectedPostingDate.Value.Date.ToUniversalTime());
         if (pricePerUnit is null) return;
 
         PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;

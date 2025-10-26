@@ -23,14 +23,14 @@
             <MudGrid>
                 <MudItem  xs="12" sm="6">
                     <div class="d-flex flex-grow-1 gap-4">
-                        @if (string.IsNullOrEmpty(_existingCurrency))
+                        @if (_existingCurrency is null)
                         {
                             <MudAutocomplete @bind-Value="_selectedCurrency" Label="Currency" Variant="Variant.Text" SearchFunc="Search" Class="flex-grow-0" Disabled=@(string.IsNullOrEmpty(Ticker)) />
                             <MudTextField Immediate @bind-Value="_pricePerUnit" Label="Price per unit" Variant="Variant.Text" Class="flex-grow-1" Disabled=@(string.IsNullOrEmpty(Ticker)) />
                         }
                         else
                         {
-                            <MudTextField Immediate @bind-Value="_pricePerUnit" Adornment="Adornment.Start" AdornmentText="@_existingCurrency" Label="Price per unit" Variant="Variant.Text" Class="flex-grow-1" Disabled=@(string.IsNullOrEmpty(Ticker)) />
+                            <MudTextField Immediate @bind-Value="_pricePerUnit" Adornment="Adornment.Start" AdornmentText="@_existingCurrency.ShortName" Label="Price per unit" Variant="Variant.Text" Class="flex-grow-1" Disabled=@(string.IsNullOrEmpty(Ticker)) />
                         }
 
                     </div>

@@ -8,7 +8,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 {
     public partial class NetWorthOverviewCard
     {
-        private Currency _currency = DefaultCurrency.Currency;
+        private Currency _currency = DefaultCurrency.PLN;
         private decimal? _totalNetWorth = null;
         private bool _isLoading = false;
 
@@ -34,7 +34,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
             try
             {
-                result = await MoneyFlowHttpContext.GetNetWorth(user.UserId, DefaultCurrency.Currency, EndDateTime);
+                result = await MoneyFlowHttpContext.GetNetWorth(user.UserId, DefaultCurrency.PLN, EndDateTime);
             }
             catch (Exception ex)
             {

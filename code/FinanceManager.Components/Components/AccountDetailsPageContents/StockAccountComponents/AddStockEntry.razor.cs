@@ -19,7 +19,7 @@ public partial class AddStockEntry
         return Tickers.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
     }
 
-    private string _currency = string.Empty;
+    private Currency _currency = DefaultCurrency.PLN;
     private bool success;
     private string[] errors = { };
     private MudForm? form;
@@ -58,7 +58,7 @@ public partial class AddStockEntry
             if (!numericField.Label.ToLower().Contains("change")) return;
         }
 
-        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, DefaultCurrency.Currency, PostingDate.Value);
+        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, DefaultCurrency.PLN, PostingDate.Value);
         if (pricePerUnit is null) return;
 
         PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;

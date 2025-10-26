@@ -1,5 +1,6 @@
 using FinanceManager.Components.HttpContexts;
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Services;
@@ -11,7 +12,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAc
 public partial class AddBankEntry : ComponentBase
 {
 
-    private string _currency = string.Empty;
+    private Currency _currency = DefaultCurrency.PLN;
     private bool _success;
     private string[] _errors = [];
     private MudForm? _form;

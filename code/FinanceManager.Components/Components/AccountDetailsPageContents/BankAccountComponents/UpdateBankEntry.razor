@@ -24,7 +24,7 @@
                     <MudTimePicker Label="Time" @bind-Time="_time" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="_balanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
+                    <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="_balanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency.ShortName" Adornment="Adornment.End" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudSelect T="string" Label="Label" MultiSelection="true" @bind-Value="_labelValue" @bind-SelectedValues="_selectedLabels">

@@ -9,5 +9,5 @@ public interface IStockPriceRepository
     Task<StockPrice?> Get(string ticker, DateTime date);
     Task<StockPrice?> GetThisOrNextOlder(string ticker, DateTime date);
     Task<DateTime?> GetLatestMissing(string ticker);
-    Task<string?> GetTickerCurrency(string ticker);
+    Task<Currency?> GetTickerCurrency(string ticker);
 }

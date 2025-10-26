@@ -8,13 +8,13 @@ namespace FinanceManager.Infrastructure.Repositories;
 
 public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
 {
-    public async Task<StockPrice> Add(string ticker, decimal pricePerUnit, string currency, DateTime date)
+    public async Task<StockPrice> Add(string ticker, decimal pricePerUnit, Currency currency, DateTime date)
     {
         StockPriceDto stockPriceDto = new(
             0, // Id is autoincremented, will be set by the database
             ticker,
             pricePerUnit,
-            currency,
+            currency.ShortName,
             date.Date
         );
 
@@ -61,22 +61,22 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
             .FirstOrDefaultAsync();
     }
 
-    public async Task<string?> GetTickerCurrency(string ticker)
+    public async Task<Currency?> GetTickerCurrency(string ticker)
     {
         var stockPrice = await context.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker);
 
         if (stockPrice is null) return null;
-        return stockPrice.Currency;
+        return new(stockPrice.Currency, "");
     }
 
-    public async Task<StockPrice?> Update(string ticker, decimal pricePerUnit, string currency, DateTime date)
+    public async Task<StockPrice?> Update(string ticker, decimal pricePerUnit, Currency currency, DateTime date)
     {
         var stockPrice = await context.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == date.Date);
 
         if (stockPrice is null) return null;
 
         stockPrice.PricePerUnit = pricePerUnit;
-        stockPrice.Currency = currency;
+        stockPrice.Currency = currency.ShortName;
 
         await context.SaveChangesAsync();
 

@@ -69,7 +69,7 @@ public partial class InvestmentTypeTimeSeriesCard
         {
             Y = new TooltipY
             {
-                Formatter = ChartHelper.GetCurrencyFormatter(SettingsService.GetCurrency())
+                Formatter = ChartHelper.GetCurrencyFormatter(SettingsService.GetCurrency().ShortName)
             }
         };
 
@@ -95,7 +95,7 @@ public partial class InvestmentTypeTimeSeriesCard
         List<TimeSeriesModel> result = [];
         try
         {
-            result = await AssetsHttpContext.GetAssetsTimeSeries(user.UserId, DefaultCurrency.Currency, StartDateTime, EndDateTime);
+            result = await AssetsHttpContext.GetAssetsTimeSeries(user.UserId, DefaultCurrency.PLN, StartDateTime, EndDateTime);
         }
         catch (Exception ex)
         {

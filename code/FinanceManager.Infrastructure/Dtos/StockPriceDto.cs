@@ -15,7 +15,7 @@ public class StockPriceDto(int id, string ticker, decimal pricePerUnit, string c
     {
         Ticker = Ticker,
         PricePerUnit = PricePerUnit,
-        Currency = Currency,
+        Currency = new(Currency, ""),
         Date = Date
     };
 };

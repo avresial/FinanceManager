@@ -35,7 +35,7 @@
                 @* <MudTextField @bind-Value="Ticker" T="string" Label="Ticker" Variant="Variant.Text" MaxLines="5" AutoGrow="true" Immediate /> *@
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudNumericField ReadOnly HideSpinButtons="true" @bind-Value="PricePerUnit" Label="Price per unit" Variant="Variant.Text" AdornmentText="@_currency" Adornment="Adornment.End" />
+                <MudNumericField ReadOnly HideSpinButtons="true" @bind-Value="PricePerUnit" Label="Price per unit" Variant="Variant.Text" AdornmentText="@_currency.ShortName" Adornment="Adornment.End" />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange"

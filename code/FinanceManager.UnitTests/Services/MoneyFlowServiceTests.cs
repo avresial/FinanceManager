@@ -45,15 +45,15 @@ public class MoneyFlowServiceTests
                                       .Returns(_investmentAccountAccounts.ToAsyncEnumerable());
 
         _stockRepository.Setup(x => x.GetThisOrNextOlder("testStock1", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "testStock1", PricePerUnit = 2 });
+                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "testStock1", PricePerUnit = 2 });
         _stockRepository.Setup(x => x.GetThisOrNextOlder("testStock2", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "testStock2", PricePerUnit = 4 });
+                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "testStock2", PricePerUnit = 4 });
         _stockRepository.Setup(x => x.Get("testStock1", It.IsAny<DateTime>()))
-                       .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "testStock1", PricePerUnit = 2 });
+                       .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "testStock1", PricePerUnit = 2 });
         _stockRepository.Setup(x => x.Get("testStock2", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "testStock2", PricePerUnit = 4 });
+                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "testStock2", PricePerUnit = 4 });
 
-        _currencyExchangeService.Setup(x => x.GetExchangeRateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>())).ReturnsAsync(1);
+        _currencyExchangeService.Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>())).ReturnsAsync(1);
 
         _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _stockRepository.Object, _currencyExchangeService.Object, null);
     }
@@ -71,7 +71,7 @@ public class MoneyFlowServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, date.Date, date)).Returns(_investmentAccountAccounts.ToAsyncEnumerable());
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.Currency, date);
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
 
         // Assert
         Assert.Equal(1000, result);
@@ -95,7 +95,7 @@ public class MoneyFlowServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(_investmentAccountAccounts.ToAsyncEnumerable());
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.Currency, start, end);
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, start, end);
 
         // Assert
         Assert.NotEmpty(result);

@@ -26,7 +26,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
     private List<ChartJsLineDataPoint> chartData = [];
     private List<BankAccountEntry>? _top5;
     private List<BankAccountEntry>? _bottom5;
-    private string _currency = DefaultCurrency.Currency;
+    private Currency _currency = DefaultCurrency.PLN;
     private UserSession? _user;
 
 

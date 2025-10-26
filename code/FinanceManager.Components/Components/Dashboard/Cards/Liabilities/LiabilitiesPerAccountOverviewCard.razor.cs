@@ -1,17 +1,18 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
+using FinanceManager.Components.HttpContexts;
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
-using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities;
 public partial class LiabilitiesPerAccountOverviewCard
 {
-    private string _currency = "";
+    private Currency _currency = DefaultCurrency.PLN;
     private decimal _totalLiabilities = 0;
     private UserSession? _user;
     private ApexChart<NameValueResult>? _chart;
@@ -80,7 +81,7 @@ public partial class LiabilitiesPerAccountOverviewCard
         {
             Y = new TooltipY
             {
-                Formatter = ChartHelper.GetCurrencyFormatter(SettingsService.GetCurrency())
+                Formatter = ChartHelper.GetCurrencyFormatter(SettingsService.GetCurrency().ShortName)
             }
         };
 

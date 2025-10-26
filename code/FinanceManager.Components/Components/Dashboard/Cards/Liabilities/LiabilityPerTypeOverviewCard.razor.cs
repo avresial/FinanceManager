@@ -1,5 +1,6 @@
 using FinanceManager.Components.HttpContexts;
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
@@ -26,7 +27,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
         private double[] _data = [];
         private string[] _labels = [];
 
-        private string _currency = "";
+        private Currency _currency = DefaultCurrency.PLN;
         private decimal _totalLiabilities = 0;
 
         [Parameter] public string Height { get; set; } = "300px";

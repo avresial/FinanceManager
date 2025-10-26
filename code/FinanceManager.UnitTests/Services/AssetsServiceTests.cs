@@ -47,16 +47,16 @@ public class AssetsServiceTests
 
         _totalAssetsValue = 80;
         _stockRepository.Setup(x => x.GetThisOrNextOlder("testStock1", It.IsAny<DateTime>()))
-                   .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "testStock1", PricePerUnit = 2 });
+                   .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "testStock1", PricePerUnit = 2 });
         _stockRepository.Setup(x => x.GetThisOrNextOlder("testStock2", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "testStock2", PricePerUnit = 2 });
+                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "testStock2", PricePerUnit = 2 });
         _stockRepository.Setup(x => x.Get("testStock1", It.IsAny<DateTime>()))
-                       .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "testStock1", PricePerUnit = 2 });
+                       .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "testStock1", PricePerUnit = 2 });
         _stockRepository.Setup(x => x.Get("testStock2", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.Currency, Ticker = "testStock2", PricePerUnit = 2 });
+                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "testStock2", PricePerUnit = 2 });
 
-        _currencyExchangeService.Setup(x => x.GetExchangeRateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>())).ReturnsAsync(1);
-        _currencyExchangeService.Setup(x => x.GetPricePerUnit(It.IsAny<StockPrice>(), It.IsAny<string>(), It.IsAny<DateTime>())).ReturnsAsync(2);
+        _currencyExchangeService.Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>())).ReturnsAsync(1);
+        _currencyExchangeService.Setup(x => x.GetPricePerUnit(It.IsAny<StockPrice>(), It.IsAny<Currency>(), It.IsAny<DateTime>())).ReturnsAsync(2);
 
         _assetsService = new(_financialAccountRepositoryMock.Object, _stockRepository.Object, _currencyExchangeService.Object);
     }
@@ -67,7 +67,7 @@ public class AssetsServiceTests
         // Arrange
 
         // Act
-        var result = await _assetsService.GetEndAssetsPerAccount(1, DefaultCurrency.Currency, _startDate, _endDate);
+        var result = await _assetsService.GetEndAssetsPerAccount(1, DefaultCurrency.PLN, _startDate, _endDate);
 
         // Assert
         Assert.Equal(_bankAccounts.Count + _investmentAccountAccounts.Count, result.Count);
@@ -80,7 +80,7 @@ public class AssetsServiceTests
         // Arrange
 
         // Act
-        var result = await _assetsService.GetEndAssetsPerType(1, DefaultCurrency.Currency, _startDate, _endDate);
+        var result = await _assetsService.GetEndAssetsPerType(1, DefaultCurrency.PLN, _startDate, _endDate);
 
         // Assert
         Assert.Equal(2, result.Count);
@@ -93,7 +93,7 @@ public class AssetsServiceTests
         // Arrange
 
         // Act
-        var result = await _assetsService.GetAssetsTimeSeries(1, DefaultCurrency.Currency, _startDate, _endDate);
+        var result = await _assetsService.GetAssetsTimeSeries(1, DefaultCurrency.PLN, _startDate, _endDate);
 
         // Assert
         Assert.NotEmpty(result);
@@ -109,7 +109,7 @@ public class AssetsServiceTests
     {
         // Arrange
         // Act
-        var result = await _assetsService.GetAssetsTimeSeries(1, DefaultCurrency.Currency, _startDate, _endDate, investmentType);
+        var result = await _assetsService.GetAssetsTimeSeries(1, DefaultCurrency.PLN, _startDate, _endDate, investmentType);
 
         // Assert
         Assert.Equal(result.First().Value, finalValue);

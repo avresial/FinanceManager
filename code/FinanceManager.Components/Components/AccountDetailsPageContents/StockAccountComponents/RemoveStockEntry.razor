@@ -15,7 +15,7 @@
                 <MudTextField @bind-Value="ticker" T="string" Label="ticker" Variant="Variant.Text" MaxLines="5" AutoGrow="true" ReadOnly />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="balanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@currency" Adornment="Adornment.End" ReadOnly />
+                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="balanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@currency.ShortName" Adornment="Adornment.End" ReadOnly />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudDatePicker Label="Posting date" @bind-Date="date" ReadOnly />
@@ -34,7 +34,7 @@
 @code {
     private DateTime? date = new DateTime();
     private decimal balanceChange = 0;
-    private Currency currency = DefaultCurrency.Currency;
+    private Currency currency = DefaultCurrency.PLN;
     private string ticker = "Ticker";
     private string investmentType = "InvestmentType";
 

@@ -1,2 +1,2 @@
 ﻿namespace FinanceManager.Domain.Entities;
-public record TickerCurrency(string Ticker, string Currency);
+public record TickerCurrency(string Ticker, Currency Currency);
