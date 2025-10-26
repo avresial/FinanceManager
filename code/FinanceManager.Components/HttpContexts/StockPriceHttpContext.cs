@@ -16,12 +16,12 @@ public class StockPriceHttpContext(HttpClient httpClient)
         var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/StockPrice/update-stock-price?ticker={ticker}&pricePerUnit={pricePerUnit}&currency={currency}&date={date.ToRfc3339()}&", null);
         response.EnsureSuccessStatusCode();
     }
-    public async Task<StockPrice?> GetStockPrice(string ticker, string currency, DateTime date)
+    public async Task<StockPrice?> GetStockPrice(string ticker, Currency currency, DateTime date)
     {
         if (httpClient is null) return default;
         try
         {
-            var result = await httpClient.GetFromJsonAsync<StockPrice?>($"{httpClient.BaseAddress}api/StockPrice/get-stock-price/?ticker={ticker.ToUpper()}&currency={currency.ToUpper()}&date={date.ToRfc3339()}");
+            var result = await httpClient.GetFromJsonAsync<StockPrice?>($"{httpClient.BaseAddress}api/StockPrice/get-stock-price/?ticker={ticker.ToUpper()}&currency={currency.ShortName.ToUpper()}&date={date.ToRfc3339()}");
 
             if (result is not null) return result;
         }

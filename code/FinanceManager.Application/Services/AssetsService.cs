@@ -52,7 +52,7 @@ public class AssetsService(IFinancialAccountRepository financialAccountRepositor
 
         return await Task.FromResult(false);
     }
-    public async Task<List<NameValueResult>> GetEndAssetsPerAccount(int userId, string currency, DateTime start, DateTime end)
+    public async Task<List<NameValueResult>> GetEndAssetsPerAccount(int userId, Currency currency, DateTime start, DateTime end)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         List<NameValueResult> result = [];
