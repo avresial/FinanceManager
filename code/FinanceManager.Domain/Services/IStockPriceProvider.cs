@@ -9,10 +9,10 @@ namespace FinanceManager.Domain.Services
     public interface IStockPriceProvider
     {
         /// <summary>
-        /// Get price per unit for <paramref name="ticker"/> converted to <paramref name="targetCurrency"/> as of <paramref name="asOf"/>.
+        /// Get price per unit for <paramref name="ticker"/> converted to <paramref name="targetCurrency"/> as of <paramref name="asOfDate"/>.
         /// Returns1 when no price is available.
         /// </summary>
-        Task<decimal> GetPricePerUnitAsync(string ticker, Currency targetCurrency, DateTime asOf);
+        Task<decimal> GetPricePerUnitAsync(string ticker, Currency targetCurrency, DateTime asOfDate);
 
     }
 }

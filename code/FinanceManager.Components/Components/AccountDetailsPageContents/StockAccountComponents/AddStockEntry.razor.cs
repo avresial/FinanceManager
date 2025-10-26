@@ -79,8 +79,8 @@ public partial class AddStockEntry
         if (!PostingDate.HasValue) return;
         if (!Time.HasValue) return;
 
-        DateTime date = new DateTime(PostingDate.Value.Year, PostingDate.Value.Month, PostingDate.Value.Day, Time.Value.Hours, Time.Value.Minutes, Time.Value.Seconds);
-        InvestmentType investmentType = FinanceManager.Domain.Enums.InvestmentType.Stock;
+        DateTime date = new(PostingDate.Value.Year, PostingDate.Value.Month, PostingDate.Value.Day, Time.Value.Hours, Time.Value.Minutes, Time.Value.Seconds);
+        InvestmentType investmentType = Domain.Enums.InvestmentType.Stock;
 
         try
         {
@@ -100,8 +100,8 @@ public partial class AddStockEntry
 
         try
         {
-            InvestmentAccount.Add(new AddInvestmentEntryDto(entry.PostingDate, entry.ValueChange, entry.Ticker, entry.InvestmentType));
             await FinancalAccountService.AddEntry(entry);
+            InvestmentAccount.Add(entry);
         }
         catch (Exception ex)
         {

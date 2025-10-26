@@ -39,11 +39,10 @@ public class BankAccount : FinancialAccountBase<BankAccountEntry>
     }
     public void AddEntry(AddBankEntryDto entry)
     {
-        Entries ??= [];
         var alreadyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
         if (alreadyExistingEntry is not null)
         {
-            Debug.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alreadyExistingEntry.EntryId}, Posting date{alreadyExistingEntry.PostingDate}, Value change {alreadyExistingEntry.ValueChange}");
+            Debug.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alreadyExistingEntry.EntryId}, Posting date {alreadyExistingEntry.PostingDate}, Value change {alreadyExistingEntry.ValueChange}");
             //throw new Exception($"Entry already exist, can not be added - Posting date: {alreadyExistingEntry.PostingDate}, " +
             //    $"Value change: {alreadyExistingEntry.ValueChange}");
         }

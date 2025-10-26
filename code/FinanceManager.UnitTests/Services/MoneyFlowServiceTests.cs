@@ -1,3 +1,4 @@
+using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
@@ -6,6 +7,7 @@ using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
+using Microsoft.Extensions.Caching.Memory;
 using Moq;
 
 namespace FinanceManager.UnitTests.Services;
@@ -55,7 +57,10 @@ public class MoneyFlowServiceTests
 
         _currencyExchangeService.Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>())).ReturnsAsync(1);
 
-        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _stockRepository.Object, _currencyExchangeService.Object, null);
+        IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
+        var stockPriceProvider = new StockPriceProvider(_stockRepository.Object, _currencyExchangeService.Object, cache);
+
+        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, null, stockPriceProvider);
     }
 
 

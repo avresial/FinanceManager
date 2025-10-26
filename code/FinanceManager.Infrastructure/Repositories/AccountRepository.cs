@@ -48,12 +48,13 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
 
     public async Task<T?> GetAccount<T>(int userId, int accountId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
     {
-        if (await bankAccountAccountRepository.GetAvailableAccounts(userId).SingleAsync(x => x.AccountId == accountId) is null)
-            throw new Exception($"User {userId} does not have account {accountId}");
+
 
         switch (typeof(T))
         {
             case Type t when t == typeof(BankAccount):
+                if (!await bankAccountAccountRepository.GetAvailableAccounts(userId).AnyAsync(x => x.AccountId == accountId))
+                    throw new Exception($"User {userId} does not have account {accountId}");
 
                 var resultAccount = await bankAccountAccountRepository.Get(accountId);
                 if (resultAccount is null) return null;
@@ -66,10 +67,8 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
                 if (entries.Count == 0 && nextOlderEntry is not null)
                     entries = [nextOlderEntry];
 
-                var newResultAccount = new BankAccount(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries,
+                BankAccount newResultAccount = new(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries,
                     resultAccount.AccountType, nextOlderEntry, nextYoungerEntry);
-
-                resultAccount.Add(entries, false);
 
                 if (newResultAccount is T resultElement) return resultElement;
 
@@ -77,9 +76,10 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
 
             case Type t when t == typeof(StockAccount):
 
-                var stockAccount = await stockAccountRepository.Get(accountId);
-                if (stockAccount is null) throw new ArgumentNullException();
+                if (!await stockAccountRepository.GetAvailableAccounts(userId).AnyAsync(x => x.AccountId == accountId))
+                    throw new Exception($"User {userId} does not have account {accountId}");
 
+                var stockAccount = await stockAccountRepository.Get(accountId) ?? throw new ArgumentNullException();
                 var stockEntries = await stockEntryRepository.Get(stockAccount.AccountId, dateStart, dateEnd).ToListAsync();
                 var stockNextOlderEntry = await stockEntryRepository.GetNextOlder(stockAccount.AccountId, dateStart);
                 var stockNextYoungerEntry = await stockEntryRepository.GetNextYounger(stockAccount.AccountId, dateStart);
@@ -87,8 +87,7 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
                 if (stockEntries.Count == 0 && stockNextOlderEntry is not null)
                     stockEntries = stockNextOlderEntry.Values.ToList();
 
-                var newStockResultAccount = new StockAccount(stockAccount.UserId, stockAccount.AccountId, stockAccount.Name, stockEntries, stockNextOlderEntry, stockNextYoungerEntry);
-                newStockResultAccount.Add(stockEntries, false);
+                StockAccount newStockResultAccount = new(stockAccount.UserId, stockAccount.AccountId, stockAccount.Name, stockEntries, stockNextOlderEntry, stockNextYoungerEntry);
 
                 if (newStockResultAccount is T newStockResult) return newStockResult;
                 break;
@@ -102,38 +101,13 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
         switch (typeof(T))
         {
             case Type t when t == typeof(BankAccount):
-                await foreach (var item in bankAccountAccountRepository.GetAvailableAccounts(userId))
-                {
-                    var resultAccount = await bankAccountAccountRepository.Get(item.AccountId);
-                    if (resultAccount is null) continue;
-
-                    var entries = await bankAccountEntryRepository.Get(item.AccountId, dateStart, dateEnd).ToListAsync();
-
-                    var nextOlderEntry = await bankAccountEntryRepository.GetNextOlder(item.AccountId, dateStart);
-                    var nextYoungerEntry = await bankAccountEntryRepository.GetNextYounger(item.AccountId, dateStart);
-
-                    var newResultAccount = new BankAccount(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries,
-                        resultAccount.AccountType, nextOlderEntry, nextYoungerEntry);
-
-                    resultAccount.Add(entries, false);
-                    if (newResultAccount is T resultElement)
-                        yield return resultElement;
-                }
+                await foreach (var bankAccount in bankAccountAccountRepository.GetAvailableAccounts(userId))
+                    yield return (await GetAccount<T>(userId, bankAccount.AccountId, dateStart, dateEnd))!;
                 break;
 
             case Type t when t == typeof(StockAccount):
-                await foreach (var item in stockAccountRepository.GetAvailableAccounts(userId))
-                {
-                    var resultAccount = await stockAccountRepository.Get(item.AccountId);
-                    if (resultAccount is null) continue;
-                    var entries = await stockEntryRepository.Get(item.AccountId, dateStart, dateEnd).ToListAsync();
-                    var nextOlderEntry = await stockEntryRepository.GetNextOlder(item.AccountId, dateStart);
-                    var nextYoungerEntry = await stockEntryRepository.GetNextYounger(item.AccountId, dateStart);
-                    var newResultAccount = new StockAccount(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries, nextOlderEntry, nextYoungerEntry);
-                    resultAccount.Add(entries, false);
-                    if (newResultAccount is T resultElement)
-                        yield return resultElement;
-                }
+                await foreach (var stockAccount in stockAccountRepository.GetAvailableAccounts(userId))
+                    yield return (await GetAccount<T>(userId, stockAccount.AccountId, dateStart, dateEnd))!;
                 break;
         }
     }
@@ -222,12 +196,9 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
                 break;
         }
     }
-    public async Task Clear() =>
-        throw new NotImplementedException();
-    private async Task<object?> FindAccount(int id) =>
-        throw new NotImplementedException();
-    private async Task<T?> FindAccount<T>(int id) where T : BasicAccountInformation =>
-        throw new NotImplementedException();
+    public async Task Clear() => throw new NotImplementedException();
+    private async Task<object?> FindAccount(int id) => throw new NotImplementedException();
+    private async Task<T?> FindAccount<T>(int id) where T : BasicAccountInformation => throw new NotImplementedException();
 
 
     private async Task AddStockAccountEntry(int id, string ticker, InvestmentType investmentType, decimal balanceChange, DateTime? postingDate = null)
@@ -237,7 +208,7 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
 
         var finalPostingDate = postingDate ?? DateTime.UtcNow;
 
-        account.Add(new AddInvestmentEntryDto(finalPostingDate, balanceChange, ticker, investmentType));
+        account.Add(new(finalPostingDate, balanceChange, ticker, investmentType));
     }
     private async Task AddBankAccount(int userId, DateTime startDay, decimal startingBalance, string accountName, AccountLabel accountType)
     {

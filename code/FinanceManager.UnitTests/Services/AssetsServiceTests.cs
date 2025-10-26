@@ -60,7 +60,6 @@ public class AssetsServiceTests
         _currencyExchangeService.Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>())).ReturnsAsync(1);
         _currencyExchangeService.Setup(x => x.GetPricePerUnit(It.IsAny<StockPrice>(), It.IsAny<Currency>(), It.IsAny<DateTime>())).ReturnsAsync(2);
 
-        // use a real MemoryCache instance for tests
         IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
         var stockPriceProvider = new StockPriceProvider(_stockRepository.Object, _currencyExchangeService.Object, cache);
 
