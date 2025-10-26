@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Accounts;
+﻿using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
@@ -101,7 +102,7 @@ public class AssetsService(IFinancialAccountRepository financialAccountRepositor
 
         return result;
     }
-    public async Task<List<NameValueResult>> GetEndAssetsPerType(int userId, string currency, DateTime start, DateTime end)
+    public async Task<List<NameValueResult>> GetEndAssetsPerType(int userId, Currency currency, DateTime start, DateTime end)
     {
         List<NameValueResult> result = [];
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
@@ -131,6 +132,7 @@ public class AssetsService(IFinancialAccountRepository financialAccountRepositor
         var InvestmentAccounts = financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
         await foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
+            account.GetDailyPrice(stockRepository.Get);
             if (account is null || account.Entries is null) return result;
 
             foreach (var ticker in account.GetStoredTickers())

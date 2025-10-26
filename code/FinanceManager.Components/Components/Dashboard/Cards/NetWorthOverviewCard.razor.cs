@@ -1,14 +1,14 @@
+using FinanceManager.Components.HttpContexts;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
-using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards
 {
     public partial class NetWorthOverviewCard
     {
-        private string _currency = string.Empty;
+        private Currency _currency = DefaultCurrency.Currency;
         private decimal? _totalNetWorth = null;
         private bool _isLoading = false;
 

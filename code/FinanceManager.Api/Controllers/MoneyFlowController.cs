@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Services;
+﻿using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,19 +11,19 @@ namespace FinanceManager.Api.Controllers
     public class MoneyFlowController(IMoneyFlowService moneyFlowService) : ControllerBase
     {
         [HttpGet("GetNetWorth/{userId:int}/{currency}/{date:DateTime}")]
-        public async Task<IActionResult> GetNetWorth(int userId, string currency, DateTime date) =>
+        public async Task<IActionResult> GetNetWorth(int userId, Currency currency, DateTime date) =>
             Ok(await moneyFlowService.GetNetWorth(userId, currency, date));
 
         [HttpGet("GetNetWorth/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}")]
-        public async Task<IActionResult> GetNetWorth(int userId, string currency, DateTime start, DateTime end) =>
+        public async Task<IActionResult> GetNetWorth(int userId, Currency currency, DateTime start, DateTime end) =>
             Ok(await moneyFlowService.GetNetWorth(userId, currency, start, end));
 
         [HttpGet("GetIncome/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}/{step:long?}")]
-        public async Task<IActionResult> GetIncome(int userId, string currency, DateTime start, DateTime end, long? step = null) =>
+        public async Task<IActionResult> GetIncome(int userId, Currency currency, DateTime start, DateTime end, long? step = null) =>
             Ok(await moneyFlowService.GetIncome(userId, currency, start, end));
 
         [HttpGet("GetSpending/{userId:int}/{currency}/{start:DateTime}/{end:DateTime}/{step:long?}")]
-        public async Task<IActionResult> GetSpending(int userId, string currency, DateTime start, DateTime end, long? step = null) =>
+        public async Task<IActionResult> GetSpending(int userId, Currency currency, DateTime start, DateTime end, long? step = null) =>
             Ok(await moneyFlowService.GetSpending(userId, currency, start, end));
 
         [HttpGet("GetLabelsValue")]

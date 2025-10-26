@@ -1,6 +1,8 @@
-﻿namespace FinanceManager.Domain.Services;
+﻿using FinanceManager.Domain.Entities;
+
+namespace FinanceManager.Domain.Services;
 
 public interface ISettingsService
 {
-    string GetCurrency();
+    Currency GetCurrency();
 }

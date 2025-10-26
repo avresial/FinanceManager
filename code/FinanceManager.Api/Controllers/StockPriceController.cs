@@ -12,23 +12,23 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
 
     [Authorize]
     [HttpPost("add-stock-price")]
-    public async Task<IActionResult> AddStockPrice([FromQuery] string ticker, [FromQuery] decimal pricePerUnit, [FromQuery] string currency, [FromQuery] DateTime date)
+    public async Task<IActionResult> AddStockPrice([FromQuery] string ticker, [FromQuery] decimal pricePerUnit, [FromQuery] Currency currency, [FromQuery] DateTime date)
     {
-        if (string.IsNullOrWhiteSpace(ticker) || pricePerUnit <= 0 || string.IsNullOrWhiteSpace(currency) || date == default)
+        if (string.IsNullOrWhiteSpace(ticker) || pricePerUnit <= 0 || date == default)
             return BadRequest("Invalid input parameters.");
 
-        var stockPrice = await stockPriceRepository.Add(ticker.ToUpper(), pricePerUnit, currency.ToUpper(), date);
+        var stockPrice = await stockPriceRepository.Add(ticker.ToUpper(), pricePerUnit, currency, date);
         return Ok(stockPrice);
     }
 
     [Authorize]
     [HttpPost("update-stock-price")]
-    public async Task<IActionResult> UpdateStockPrice([FromQuery] string ticker, [FromQuery] decimal pricePerUnit, [FromQuery] string currency, [FromQuery] DateTime date)
+    public async Task<IActionResult> UpdateStockPrice([FromQuery] string ticker, [FromQuery] decimal pricePerUnit, [FromQuery] Currency currency, [FromQuery] DateTime date)
     {
-        if (string.IsNullOrWhiteSpace(ticker) || pricePerUnit <= 0 || string.IsNullOrWhiteSpace(currency) || date == default)
+        if (string.IsNullOrWhiteSpace(ticker) || pricePerUnit <= 0 || date == default)
             return BadRequest("Invalid input parameters.");
 
-        var stockPrice = await stockPriceRepository.Update(ticker.ToUpper(), pricePerUnit, currency.ToUpper(), date);
+        var stockPrice = await stockPriceRepository.Update(ticker.ToUpper(), pricePerUnit, currency, date);
         return Ok(stockPrice);
     }
 
