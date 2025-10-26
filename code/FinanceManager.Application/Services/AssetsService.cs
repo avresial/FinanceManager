@@ -132,7 +132,7 @@ public class AssetsService(IFinancialAccountRepository financialAccountRepositor
         var InvestmentAccounts = financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
         await foreach (StockAccount account in InvestmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0 && x.Entries.First().Value >= 0))
         {
-            var test = await account.GetDailyPrice(stockRepository.Get);
+            //var test = await account.GetDailyPrice(stockRepository.Get);
             if (account is null || account.Entries is null) return result;
 
             foreach (var ticker in account.GetStoredTickers())

@@ -14,4 +14,6 @@ public class Currency
         ShortName = shortName;
         Symbol = symbol;
     }
+
+    public override string ToString() => ShortName.ToUpper();
 }
