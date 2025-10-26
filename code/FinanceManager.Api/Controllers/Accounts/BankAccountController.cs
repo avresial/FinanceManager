@@ -16,7 +16,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Route("api/[controller]")]
 [ApiController]
 public class BankAccountController(IBankAccountRepository<BankAccount> bankAccountRepository,
-IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, UserPlanVerifier userPlanVerifier, IBankAccountImportService importService) : ControllerBase
+IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, IUserPlanVerifier userPlanVerifier, IBankAccountImportService importService) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get()

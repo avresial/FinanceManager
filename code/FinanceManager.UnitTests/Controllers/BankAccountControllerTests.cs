@@ -1,6 +1,5 @@
 ﻿using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.Commands.Account;
-using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
@@ -23,7 +22,7 @@ public class BankAccountControllerTests
     private readonly Mock<IAccountEntryRepository<BankAccountEntry>> _mockBankAccountEntryRepository;
 
     private readonly Mock<IUserRepository> _userRepository;
-    private readonly Mock<UserPlanVerifier> _userPlanVerifier;
+    private readonly Mock<IUserPlanVerifier> _userPlanVerifier;
     private readonly Mock<IBankAccountImportService> _mockImportService;
 
     private readonly BankAccountController _controller;
@@ -36,10 +35,10 @@ public class BankAccountControllerTests
         _userRepository = new Mock<IUserRepository>();
         var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = Domain.Enums.PricingLevel.Premium, CreationDate = DateTime.UtcNow };
         _userRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
-        _userPlanVerifier = new Mock<UserPlanVerifier>(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userRepository.Object, new PricingProvider());
 
-        _mockImportService = new Mock<IBankAccountImportService>(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object);
-        _mockImportService.Setup(x => x.ImportEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<BankEntryImport>>())).ReturnsAsync(new ImportResult(1, 0, 0, [], []));
+        _userPlanVerifier = new Mock<IUserPlanVerifier>();
+
+        _mockImportService = new Mock<IBankAccountImportService>();
 
         _controller = new(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object, _mockImportService.Object);
 
@@ -60,7 +59,7 @@ public class BankAccountControllerTests
     {
         // Arrange
         var userId = 1;
-        List<AvailableAccount> accounts = new() { new(1, "Test Account") };
+        List<AvailableAccount> accounts = [new(1, "Test Account")];
         _mockBankAccountRepository.Setup(repo => repo.GetAvailableAccounts(userId)).Returns(accounts.ToAsyncEnumerable());
 
         // Act
@@ -134,6 +133,7 @@ public class BankAccountControllerTests
         AddAccount addAccount = new("New Account");
         var newAccountId = 1;
         _mockBankAccountRepository.Setup(repo => repo.Add(userId, addAccount.accountName)).ReturnsAsync(newAccountId);
+        _userPlanVerifier.Setup(x => x.CanAddMoreAccounts(userId)).ReturnsAsync(true);
 
         // Act
         var result = await _controller.Add(addAccount);
@@ -152,7 +152,10 @@ public class BankAccountControllerTests
         {
             Description = addEntry.Description,
         };
+
         _mockBankAccountEntryRepository.Setup(repo => repo.Add(It.IsAny<BankAccountEntry>())).ReturnsAsync(true);
+
+        _userPlanVerifier.Setup(x => x.CanAddMoreEntries(1, 1)).ReturnsAsync(true);
 
         // Act
         var result = await _controller.AddEntry(addEntry);
@@ -216,6 +219,8 @@ public class BankAccountControllerTests
         var importDto = new BankDataImportDto(accountId, entries);
 
         // Make repository Add succeed for each entry
+
+        _mockImportService.Setup(x => x.ImportEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<BankEntryImport>>())).ReturnsAsync(new ImportResult(1, entries.Count, 0, [], []));
         _mockBankAccountEntryRepository.Setup(repo => repo.Add(It.IsAny<BankAccountEntry>())).ReturnsAsync(true);
 
         // Act

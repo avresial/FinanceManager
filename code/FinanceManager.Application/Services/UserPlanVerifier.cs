@@ -7,7 +7,7 @@ using FinanceManager.Domain.Repositories.Account;
 namespace FinanceManager.Application.Services;
 
 public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRepository, IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
-    IUserRepository userRepository, PricingProvider pricingProvider)
+    IUserRepository userRepository, PricingProvider pricingProvider) : IUserPlanVerifier
 {
     public async Task<int> GetUsedRecordsCapacity(int userId)
     {
