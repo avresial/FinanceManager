@@ -7,6 +7,7 @@ using Moq;
 using System.Collections.Generic;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.UnitTests.Services;
 
@@ -30,7 +31,8 @@ public class BankAccountImportServiceTests
         // create a real UserPlanVerifier so its CanAddMoreEntries method can be used in test
         _userPlanVerifier = new UserPlanVerifier(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _mockUserRepository.Object, new FinanceManager.Application.Providers.PricingProvider());
 
-        _service = new BankAccountImportService(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier);
+        var mockLogger = new Mock<ILogger<BankAccountImportService>>();
+        _service = new BankAccountImportService(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier, mockLogger.Object);
     }
 
     [Fact]

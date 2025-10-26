@@ -47,7 +47,8 @@
                                             </MudPaper>
                                         </ActivatorContent>
                                     </MudFileUpload>
-                                }else
+                                }
+                                else
                                 {
                                     <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles">
                                         <ActivatorContent>
@@ -205,6 +206,11 @@
                                 <MudAlert Severity="Severity.Success" Variant="Variant.Text"> @summaryInfo</MudAlert>
                             }
 
+                            @if (_importResult is not null && _importResult.Conflicts.Any())
+                            {
+                                <BankEntryConflictResolver Conflicts=_importResult.Conflicts AccountName=AccountName />
+                            }
+
                         </MudStack>
                     }
 
@@ -225,7 +231,7 @@
                 {
                     <MudButton @onclick=BeginImport Disabled="@(_erorrs.Any() || !_mappedPreview.Any())" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Begin import</MudButton>
                 }
-                @if (_stepIndex == 2)
+                @if (_stepIndex == 2 && (_importResult is null || _importResult is not null && !_importResult.Conflicts.Any()))
                 {
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_step3Complete)" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">@($"Go back to {AccountName}")</MudButton>
                 }
