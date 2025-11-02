@@ -10,7 +10,7 @@ using FinanceManager.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace FinanceManager.UnitTests.Services;
+namespace FinanceManager.UnitTests.Application.Services;
 
 public class BankAccountImportServiceTests
 {

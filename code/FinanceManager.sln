@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AppHost", "AppHost\AppHost.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceDefaults", "ServiceDefaults\ServiceDefaults.csproj", "{DF6E482A-0DB8-5DE4-EF1E-8E4FEDE79145}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceManager.IntegrationTests", "FinanceManager.IntegrationTests\FinanceManager.IntegrationTests.csproj", "{639CF9F9-6EAE-475B-8DC8-80F926D19AC6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +73,10 @@ Global
 		{DF6E482A-0DB8-5DE4-EF1E-8E4FEDE79145}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DF6E482A-0DB8-5DE4-EF1E-8E4FEDE79145}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DF6E482A-0DB8-5DE4-EF1E-8E4FEDE79145}.Release|Any CPU.Build.0 = Release|Any CPU
+		{639CF9F9-6EAE-475B-8DC8-80F926D19AC6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{639CF9F9-6EAE-475B-8DC8-80F926D19AC6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{639CF9F9-6EAE-475B-8DC8-80F926D19AC6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{639CF9F9-6EAE-475B-8DC8-80F926D19AC6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

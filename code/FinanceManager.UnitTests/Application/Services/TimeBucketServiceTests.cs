@@ -1,10 +1,10 @@
 ﻿using FinanceManager.Application.Services;
 
-namespace FinanceManager.UnitTests.Services;
+namespace FinanceManager.UnitTests.Application.Services;
 public class TimeBucketServiceTests
 {
     [Fact]
-    public async Task Get_Daily()
+    public void Get_Daily()
     {
         // Arrange
         List<(DateTime, string)> data =
@@ -24,14 +24,14 @@ public class TimeBucketServiceTests
 
 
         // Act
-        var result = TimeBucketService.Get<string>(data, TimeBucket.Day).ToList();
+        var result = TimeBucketService.Get(data, TimeBucket.Day).ToList();
 
         // Assert
         Assert.Equal(4, result.Count);
     }
 
     [Fact]
-    public async Task Get_Weekly()
+    public void Get_Weekly()
     {
         // Arrange
         List<(DateTime, string)> data =
@@ -53,14 +53,14 @@ public class TimeBucketServiceTests
 
 
         // Act
-        var result = TimeBucketService.Get<string>(data, TimeBucket.Week).ToList();
+        var result = TimeBucketService.Get(data, TimeBucket.Week).ToList();
 
         // Assert
         Assert.Equal(4, result.Count);
     }
 
     [Fact]
-    public async Task Get_Monthly()
+    public void Get_Monthly()
     {
         // Arrange
         List<(DateTime, string)> data =
@@ -82,14 +82,14 @@ public class TimeBucketServiceTests
         ];
 
         // Act
-        var result = TimeBucketService.Get<string>(data, TimeBucket.Month).ToList();
+        var result = TimeBucketService.Get(data, TimeBucket.Month).ToList();
 
         // Assert
         Assert.Equal(4, result.Count);
     }
 
     [Fact]
-    public async Task Get_Yearly()
+    public void Get_Yearly()
     {
         // Arrange
         List<(DateTime, string)> data =
@@ -106,7 +106,7 @@ public class TimeBucketServiceTests
         ];
 
         // Act
-        var result = TimeBucketService.Get<string>(data, TimeBucket.Year).ToList();
+        var result = TimeBucketService.Get(data, TimeBucket.Year).ToList();
 
         // Assert
         Assert.Equal(2, result.Count);

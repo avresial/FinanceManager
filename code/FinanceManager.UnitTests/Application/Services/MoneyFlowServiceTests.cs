@@ -10,7 +10,7 @@ using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;
 
-namespace FinanceManager.UnitTests.Services;
+namespace FinanceManager.UnitTests.Application.Services;
 
 public class MoneyFlowServiceTests
 {
@@ -90,12 +90,13 @@ public class MoneyFlowServiceTests
         DateTime start = new(2023, 1, 1);
         DateTime end = new(2023, 12, 31);
         List<BankAccount> bankAccounts =
+        [
+            new (userId, 1, "Bank Account 1",
             [
-                new (userId, 1, "Bank Account 1",
-                [
-                    new BankAccountEntry(1, 1, end, 1000, 0)
-                ])
-            ];
+                new(1, 1, end, 1000, 0)
+            ])
+        ];
+
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(bankAccounts.ToAsyncEnumerable());
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(_investmentAccountAccounts.ToAsyncEnumerable());
 
