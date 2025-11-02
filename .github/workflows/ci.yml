@@ -1,4 +1,4 @@
-name: CI
+﻿name: CI
 on: [push, pull_request]
 
 jobs:
@@ -18,14 +18,21 @@ jobs:
       - name: Build
         run: dotnet build ./code --configuration Release --no-restore
 
-      - name: Run tests (with coverage)
-        run: dotnet test ./code --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
+      # - name: Run tests (with coverage)
+      #   run: dotnet test ./code --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
+     
+      - name: Testing code
+        run: |
+          echo "## ❔ Test results" >> $GITHUB_STEP_SUMMARY
+          dotnet test --configuration Release -v minimal --no-build --logger GitHubActions '/p:CollectCoverage=true;CoverletOutputFormat="json,lcov,cobertura";MergeWith=${{github.workspace}}/coverage.json;CoverletOutput=${{github.workspace}}/coverage' tests/Sonos.Base.Tests -- RunConfiguration.CollectSourceInformation=true
+          dotnet test --configuration Release -v minimal --no-build --logger GitHubActions '/p:CollectCoverage=true;CoverletOutputFormat="json,lcov,cobertura";MergeWith=${{github.workspace}}/coverage.json;CoverletOutput=${{github.workspace}}/coverage' tests/Sonos.Base.Events.Http.Tests -- RunConfiguration.CollectSourceInformation=true          
 
       - name: Install ReportGenerator
         run: dotnet tool install -g dotnet-reportgenerator-globaltool
 
       - name: Create Single Coverage Report file with ReportGenerator
         run: reportgenerator "-reports:coverlet\*.cobertura" "-targetdir:coverlet\report" -reporttypes:Cobertura
+
 
       - name: Generate Coverage Markdown Report
         uses: clearlyip/code-coverage-report-action@v4
