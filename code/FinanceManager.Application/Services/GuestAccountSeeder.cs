@@ -1,13 +1,13 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 
 namespace FinanceManager.Application.Services;
 
-public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, AccountIdProvider accountIdProvider, IFinancialLabelsRepository financialLabelsRepository)
+public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, IFinancialLabelsRepository financialLabelsRepository,
+    IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository)
 {
     private readonly int _guestUserId = 1;
 
@@ -62,7 +62,7 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, A
     }
     public async Task<StockAccount> GetNewStockAccount(string accountName, AccountLabel accountType)
     {
-        var accountId = (await accountIdProvider.GetMaxId()) + 1;
+        var accountId = (await GetMaxId()) + 1;
         return new(_guestUserId, accountId is null ? 0 : accountId.Value, accountName);
     }
     public static StockAccountEntry GetNewStockAccountEntry(int accountId, int entryId, DateTime date, int minValue, int maxValue,
@@ -71,7 +71,7 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, A
 
     public async Task<BankAccount> GetNewBankAccount(string accountName, AccountLabel accountType)
     {
-        var accountId = (await accountIdProvider.GetMaxId()) + 1;
+        var accountId = (await GetMaxId()) + 1;
         return new(_guestUserId, accountId is null ? 0 : accountId.Value, accountName, accountType);
     }
     public AddBankEntryDto GetNewBankAccountEntry(DateTime date, int minValue, int maxValue, List<FinancialLabel> labels,
@@ -83,5 +83,19 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, A
         await foreach (var label in financialLabelsRepository.GetLabels())
             if (Random.Shared.Next(0, 100) < 40)
                 yield return label;
+    }
+    public async Task<int?> GetMaxId() // helper method
+    {
+        var stockAccountsLastId = await stockAccountRepository.GetLastAccountId();
+        var bankAccountsLastId = await bankAccountRepository.GetLastAccountId();
+
+        List<int> ids = [];
+        if (stockAccountsLastId is not null)
+            ids.Add(stockAccountsLastId.Value);
+
+        if (bankAccountsLastId is not null)
+            ids.Add(bankAccountsLastId.Value);
+
+        return ids.Count != 0 ? ids.Max() : null;
     }
 }

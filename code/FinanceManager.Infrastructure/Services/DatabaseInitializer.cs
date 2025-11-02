@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace FinanceManager.Infrastructure;
+namespace FinanceManager.Infrastructure.Services;
 internal class DatabaseInitializer(IServiceProvider serviceProvider) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken = default)

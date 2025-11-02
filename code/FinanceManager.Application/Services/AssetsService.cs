@@ -10,7 +10,8 @@ public class AssetsService(IEnumerable<IAssetsServiceTyped> typedAssetServices) 
     public async Task<bool> IsAnyAccountWithAssets(int userId)
     {
         foreach (var service in typedAssetServices)
-            if (await service.IsAnyAccountWithAssets(userId)) return true;
+            if (await service.IsAnyAccountWithAssets(userId))
+                return true;
 
         return false;
     }

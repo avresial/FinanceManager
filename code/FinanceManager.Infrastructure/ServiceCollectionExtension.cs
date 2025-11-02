@@ -6,6 +6,7 @@ using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
+using FinanceManager.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,6 +40,8 @@ public static class ServiceCollectionExtension
                 .AddScoped<ICurrencyRepository, CurrencyRepository>()
 
                 .AddHostedService<DatabaseInitializer>()
+                .AddHostedService<AdminAccountSeederBackgroundService>()
+                .AddHostedService<GuestAccountSeederBackgroundService>()
                 ;
 
         return services;
@@ -79,10 +82,7 @@ public static class ServiceCollectionExtension
     }
     public static T GetOptions<T>(this IConfiguration configuration, string sectionName) where T : class, new()
     {
-        var section = configuration.GetSection(sectionName);
-
-        if (section == null) throw new ArgumentException($"Configuration section '{sectionName}' not found.");
-
+        var section = configuration.GetSection(sectionName) ?? throw new ArgumentException($"Configuration section '{sectionName}' not found.");
         var options = new T();
         section.Bind(options);
         return options;

@@ -21,6 +21,7 @@ public class MoneyFlowServiceTests
     private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
     private readonly Mock<IStockPriceRepository> _stockRepository = new();
     private readonly Mock<ICurrencyExchangeService> _currencyExchangeService = new();
+    private readonly Mock<IFinancialLabelsRepository> _financialLabelsRepositoryMock = new();
     private readonly List<BankAccount> _bankAccounts;
     private readonly List<StockAccount> _investmentAccountAccounts;
 
@@ -43,8 +44,6 @@ public class MoneyFlowServiceTests
         investmentAccount1.Add(new StockAccountEntry(1, 2, _endDate, 10, 10, "testStock2", InvestmentType.Stock));
 
         _investmentAccountAccounts = [investmentAccount1];
-        //_financialAccountRepositoryMock.Setup(x => x.GetAccounts<StockAccount>(1, _startDate, _endDate))
-        //                              .Returns(_investmentAccountAccounts.ToAsyncEnumerable());
 
         _stockRepository.Setup(x => x.GetThisOrNextOlder("testStock1", It.IsAny<DateTime>()))
                         .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "testStock1", PricePerUnit = 2 });
@@ -60,7 +59,7 @@ public class MoneyFlowServiceTests
         IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
         var stockPriceProvider = new StockPriceProvider(_stockRepository.Object, _currencyExchangeService.Object, cache);
 
-        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, null, stockPriceProvider);
+        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _financialLabelsRepositoryMock.Object, stockPriceProvider);
     }
 
 
@@ -104,5 +103,89 @@ public class MoneyFlowServiceTests
         // Assert
         Assert.NotEmpty(result);
         Assert.Equal(1000, result[_endDate]);
+    }
+
+    [Fact]
+    public async Task GetIncome_ReturnsIncomeTimeSeries()
+    {
+        // Arrange
+        var userId = 1;
+        var account = new BankAccount(userId, 1, "Bank Account 1", AccountLabel.Cash);
+        account.Add(new BankAccountEntry(1, 1, _startDate, 100, 100)); // Positive value change for income
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(new[] { account }.ToAsyncEnumerable());
+
+        // Act
+        var result = await _moneyFlowService.GetIncome(userId, DefaultCurrency.PLN, _startDate, _endDate);
+
+        // Assert
+        Assert.NotEmpty(result);
+        Assert.Contains(result, ts => ts.Value > 0);
+    }
+
+    [Fact]
+    public async Task GetSpending_ReturnsSpendingTimeSeries()
+    {
+        // Arrange
+        var userId = 1;
+        var account = new BankAccount(userId, 1, "Bank Account 1", AccountLabel.Cash);
+        account.Add(new BankAccountEntry(1, 1, _startDate, -50, -50)); // Negative value change for spending
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(new[] { account }.ToAsyncEnumerable());
+
+        // Act
+        var result = await _moneyFlowService.GetSpending(userId, DefaultCurrency.PLN, _startDate, _endDate);
+
+        // Assert
+        Assert.NotEmpty(result);
+        Assert.Contains(result, ts => ts.Value < 0);
+    }
+
+
+    [Fact]
+    public async Task GetLabelsValue_ReturnsLabelsValue()
+    {
+        // Arrange
+        var userId = 1;
+        var label = new FinancialLabel { Id = 1, Name = "Salary" };
+        _financialLabelsRepositoryMock.Setup(repo => repo.GetLabels()).Returns(new[] { label }.ToAsyncEnumerable());
+
+        var account = new BankAccount(userId, 1, "Bank Account 1", AccountLabel.Cash);
+        account.Add(new BankAccountEntry(1, 1, _startDate, 500, 500) { Labels = [label] });
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(new[] { account }.ToAsyncEnumerable());
+
+        // Act
+        var result = await _moneyFlowService.GetLabelsValue(userId, _startDate, _endDate);
+
+        // Assert
+        Assert.NotEmpty(result);
+        Assert.Equal(500, result.First(x => x.Name == label.Name).Value);
+    }
+
+    [Fact]
+    public async Task GetInvestmentRate_ReturnsInvestmentRate()
+    {
+        // Arrange
+        var userId = 1;
+        var salaryLabel = new FinancialLabel { Id = 1, Name = "Salary" };
+        _financialLabelsRepositoryMock.Setup(repo => repo.GetLabels()).Returns(new[] { salaryLabel }.ToAsyncEnumerable());
+
+        var bankAccount = new BankAccount(userId, 1, "Bank Account 1", AccountLabel.Cash);
+        bankAccount.Add(new BankAccountEntry(1, 1, _startDate, 1000, 1000) { Labels = [salaryLabel] }, false);
+
+        var stockAccount = new StockAccount(userId, 2, "Stock Account 1");
+        stockAccount.Add(new StockAccountEntry(1, 1, _startDate, 10, 10, "TICKER", InvestmentType.Stock), false);
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(new[] { bankAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(new[] { stockAccount }.ToAsyncEnumerable());
+
+        // Act
+        var result = await _moneyFlowService.GetInvestmentRate(userId, _startDate, _endDate).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(1000, result.First().Salary);
+        Assert.Equal(10, result.First().InvestmentsChange);
     }
 }

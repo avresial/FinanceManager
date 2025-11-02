@@ -7,27 +7,23 @@ namespace FinanceManager.Application.Providers;
 
 public class StockPriceProvider(IStockPriceRepository stockRepository, ICurrencyExchangeService currencyExchangeService, IMemoryCache cache) : IStockPriceProvider
 {
-    private readonly IStockPriceRepository _stockRepository = stockRepository ?? throw new ArgumentNullException(nameof(stockRepository));
-    private readonly ICurrencyExchangeService _currencyExchangeService = currencyExchangeService ?? throw new ArgumentNullException(nameof(currencyExchangeService));
-    private readonly IMemoryCache _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-
     public Task<decimal> GetPricePerUnitAsync(string ticker, Currency targetCurrency, DateTime asOf)
     {
         if (string.IsNullOrWhiteSpace(ticker)) throw new ArgumentException("{ticker}", nameof(ticker));
 
         var key = ticker.Trim().ToUpperInvariant();
 
-        if (_cache.TryGetValue(key, out decimal cached))
+        if (cache.TryGetValue(key, out decimal cached))
             return Task.FromResult(cached);
 
-        return _cache.GetOrCreateAsync(key, async entry =>
+        return cache.GetOrCreateAsync(key, async entry =>
         {
             entry.SlidingExpiration = TimeSpan.FromMinutes(5);
 
-            var stockPrice = await _stockRepository.GetThisOrNextOlder(ticker, asOf);
+            var stockPrice = await stockRepository.GetThisOrNextOlder(ticker, asOf);
             decimal price = 1m;
             if (stockPrice is not null)
-                price = await _currencyExchangeService.GetPricePerUnit(stockPrice, targetCurrency, asOf);
+                price = await currencyExchangeService.GetPricePerUnit(stockPrice, targetCurrency, asOf);
 
             return price;
         });

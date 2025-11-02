@@ -129,7 +129,6 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
 
         return result.Values.ToList();
     }
-
     public async IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end)
     {
         var labels = await financialLabelsRepository.GetLabels().ToListAsync();

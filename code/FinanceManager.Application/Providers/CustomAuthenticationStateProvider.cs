@@ -5,7 +5,6 @@ namespace FinanceManager.Application.Providers;
 
 public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 {
-
     private ClaimsPrincipal CurrentUser { get; set; } = GetAnonymous();
 
     public override Task<AuthenticationState> GetAuthenticationStateAsync() =>

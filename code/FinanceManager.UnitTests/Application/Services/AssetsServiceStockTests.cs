@@ -98,7 +98,7 @@ public class AssetsServiceStockTests
         _stockPriceProviderMock.Setup(x => x.GetPricePerUnitAsync(It.IsAny<string>(), It.IsAny<Currency>(), It.IsAny<DateTime>())).ReturnsAsync(1m);
 
         // act
-        var series = await _assetsServiceStock.GetAssetsTimeSeries(1, new Currency(0, "PLN", "PLN"), _start, _end);
+        var series = await _assetsServiceStock.GetAssetsTimeSeries(1, DefaultCurrency.PLN, _start, _end);
 
         // assert
         Assert.NotEmpty(series);

@@ -1,6 +1,5 @@
 using FinanceManager.Api.Services;
 using FinanceManager.Application;
-using FinanceManager.Application.Services;
 using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
@@ -81,22 +80,4 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-using (var scope = app.Services.CreateScope())
-{
-    scope.ApplyMigrations();
-    var seeder = scope.ServiceProvider.GetRequiredService<AdminAccountSeeder>();
-
-    try
-    {
-        await seeder.Seed();
-    }
-    catch (Exception ex)
-    {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while seeding the admin account.");
-    }
-}
-
-
 app.Run();

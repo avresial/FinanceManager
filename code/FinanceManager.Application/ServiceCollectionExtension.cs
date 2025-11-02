@@ -1,6 +1,5 @@
 ﻿using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
-using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,7 +26,6 @@ public static class ServiceCollectionExtension
                 .AddScoped<IAssetsService, AssetsService>()
 
                 .AddScoped<ILiabilitiesService, LiabilitiesService>()
-                .AddScoped<AccountIdProvider>()
                 .AddScoped<PricingProvider>()
                 .AddScoped<GuestAccountSeeder>()
                 .AddScoped<AdminAccountSeeder>()
