@@ -1,5 +1,5 @@
 ﻿using FinanceManager.Application.Services;
-using System.Diagnostics;
+using System.Globalization;
 
 namespace FinanceManager.UnitTests.Application.Services;
 
@@ -32,6 +32,7 @@ public class TimeBucketServiceTests
     }
 
     [Fact]
+
     public void Get_WithTimeBucket_Week_GroupsByWeek()
     {
         // Arrange
@@ -52,14 +53,21 @@ public class TimeBucketServiceTests
             (new DateTime(2025, 10, 1), "Test"),
         ];
 
-
         // Act
-        var result = TimeBucketService.Get(data, TimeBucket.Week).ToList();
-        foreach (var item in result)
+        var original = CultureInfo.CurrentCulture;
+        List<(DateTime Date, List<string> Objects)> result = [];
+        try
         {
-            Console.WriteLine($"{item.Date}");
-            Debug.WriteLine($"{item.Date}");
+            CultureInfo.CurrentCulture = new CultureInfo("en-GB"); // or "en-US", pick one
+                                                                   // Arrange ...
+            result = TimeBucketService.Get(data, TimeBucket.Week).ToList();
+            Assert.Equal(4, result.Count);
         }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+
 
         // Assert
         Assert.Equal(4, result.Count);
