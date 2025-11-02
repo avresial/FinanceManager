@@ -22,17 +22,17 @@ jobs:
         run: dotnet test ./code --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
       - name: Install reportgenerator
-        run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.1.32
+        run: dotnet tool install --global dotnet-reportgenerator-globaltool
         env:
           DOTNET_ROOT: /usr/share/dotnet
-          PATH: ${{ env.PATH }}:$HOME/.dotnet/tools
+          PATH: $HOME/.dotnet/tools:$PATH
 
       - name: Generate coverage report (HTML)
         run: |
           mkdir -p TestResults/CoverageReport
           reportgenerator -reports:./TestResults/**/coverage.cobertura.xml -targetdir:./TestResults/CoverageReport -reporttypes:HtmlSummary
         env:
-          PATH: ${{ env.PATH }}:$HOME/.dotnet/tools
+          PATH: $HOME/.dotnet/tools:$PATH
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
