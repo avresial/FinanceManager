@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Application.Services;
+using System.Diagnostics;
 
 namespace FinanceManager.UnitTests.Application.Services;
 
@@ -54,6 +55,11 @@ public class TimeBucketServiceTests
 
         // Act
         var result = TimeBucketService.Get(data, TimeBucket.Week).ToList();
+        foreach (var item in result)
+        {
+            Console.WriteLine($"{item.Date}");
+            Debug.WriteLine($"{item.Date}");
+        }
 
         // Assert
         Assert.Equal(4, result.Count);
