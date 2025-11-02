@@ -24,8 +24,8 @@ jobs:
       - name: Testing code
         run: |
           echo "## ❔ Test results" >> $GITHUB_STEP_SUMMARY
-          dotnet test --configuration Release -v minimal --no-build --logger GitHubActions '/p:CollectCoverage=true;CoverletOutputFormat="json,lcov,cobertura";MergeWith=${{github.workspace}}/coverage.json;CoverletOutput=${{github.workspace}}/coverage' tests/Sonos.Base.Tests -- RunConfiguration.CollectSourceInformation=true
-          dotnet test --configuration Release -v minimal --no-build --logger GitHubActions '/p:CollectCoverage=true;CoverletOutputFormat="json,lcov,cobertura";MergeWith=${{github.workspace}}/coverage.json;CoverletOutput=${{github.workspace}}/coverage' tests/Sonos.Base.Events.Http.Tests -- RunConfiguration.CollectSourceInformation=true          
+          dotnet test ./code --configuration Release -v minimal --no-build --logger GitHubActions '/p:CollectCoverage=true;CoverletOutputFormat="json,lcov,cobertura";MergeWith=${{github.workspace}}/coverage.json;CoverletOutput=${{github.workspace}}/coverage' tests/Sonos.Base.Tests -- RunConfiguration.CollectSourceInformation=true
+          dotnet test ./code --configuration Release -v minimal --no-build --logger GitHubActions '/p:CollectCoverage=true;CoverletOutputFormat="json,lcov,cobertura";MergeWith=${{github.workspace}}/coverage.json;CoverletOutput=${{github.workspace}}/coverage' tests/Sonos.Base.Events.Http.Tests -- RunConfiguration.CollectSourceInformation=true          
 
       - name: Install ReportGenerator
         run: dotnet tool install -g dotnet-reportgenerator-globaltool
