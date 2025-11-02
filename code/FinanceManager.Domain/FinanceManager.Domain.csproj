@@ -4,6 +4,7 @@
 		<TargetFramework>net9.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -16,9 +17,4 @@
 		<EmbeddedResource Remove="Records\**" />
 		<None Remove="Records\**" />
 	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="9.0.10" />
-	</ItemGroup>
-
 </Project>

@@ -1,22 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <Sdk Name="Aspire.AppHost.Sdk" Version="9.3.1" />
+	<Sdk Name="Aspire.AppHost.Sdk" Version="9.3.1" />
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <UserSecretsId>199907c2-55ba-4ca5-b1b7-663b4d4e59c2</UserSecretsId>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<UserSecretsId>199907c2-55ba-4ca5-b1b7-663b4d4e59c2</UserSecretsId>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.5.2" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Aspire.Hosting.AppHost" Version="9.5.2" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\FinanceManager.Api\FinanceManager.Api.csproj" />
-    <ProjectReference Include="..\FinanceManager\FinanceManager.WebUi.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\FinanceManager.Api\FinanceManager.Api.csproj" />
+		<ProjectReference Include="..\FinanceManager\FinanceManager.WebUi.csproj" />
+	</ItemGroup>
 
 </Project>

@@ -7,7 +7,6 @@ namespace FinanceManager.WebUi.Pages.Admin;
 public partial class AdminLabelPage
 {
     private bool _isLoading = true;
-    private int _selectedPage;
     private int _labelsCount;
     private int _elementsPerPage = 20;
     private int _pagesCount;
@@ -15,7 +14,8 @@ public partial class AdminLabelPage
     private List<string> _errors = [];
     private IEnumerable<FinancialLabel> _elements = [];
 
-    public MudTable<FinancialLabel>? _table;
+    public MudTable<FinancialLabel>? Table { get; set; }
+    public int SelectedPage { get; set; } = 1;
 
     [Inject] public required FinancialLabelHttpContext FinancialLabelHttpContext { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
@@ -76,6 +76,6 @@ public partial class AdminLabelPage
             return;
         }
 
-        _elements = await FinancialLabelHttpContext.Get((_selectedPage - 1) * _elementsPerPage, _elementsPerPage);
+        _elements = await FinancialLabelHttpContext.Get((SelectedPage - 1) * _elementsPerPage, _elementsPerPage);
     }
 }

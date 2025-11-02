@@ -162,7 +162,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
         for (DateTime date = _dateStart; date <= _dateEnd; date = date.AddDays(1))
         {
             var entries = Account.Entries.Where(x => x.PostingDate.Date == date.Date).ToList();
-            if (date == _dateStart && entries.Count == 0 && Account.NextOlderEntry is not null)
+            if (date == _dateStart && entries.Count == 0 && Account.NextOlderEntry is not null && _user is not null)
             {
                 var olderAccount = (await FinancialAccountService.GetAccount<BankAccount>(_user.UserId, AccountId, Account.NextOlderEntry.PostingDate,
                     Account.NextOlderEntry.PostingDate.Date.AddDays(1).AddTicks(-1)));

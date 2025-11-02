@@ -69,11 +69,9 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         return stockPrice.Currency;
     }
 
-    public async Task<StockPrice?> Update(string ticker, decimal pricePerUnit, Currency currency, DateTime date)
+    public async Task<StockPrice> Update(string ticker, decimal pricePerUnit, Currency currency, DateTime date)
     {
-        var stockPrice = await context.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == date.Date);
-
-        if (stockPrice is null) return null;
+        var stockPrice = await context.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == date.Date) ?? throw new Exception("Update failed");
 
         stockPrice.PricePerUnit = pricePerUnit;
         stockPrice.Currency = currency;

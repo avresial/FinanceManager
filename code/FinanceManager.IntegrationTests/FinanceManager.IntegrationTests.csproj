@@ -7,6 +7,7 @@
 		<RootNamespace>FinanceManager.IntegrationTests</RootNamespace>
 		<TargetFramework>net9.0</TargetFramework>
 		<OutputType>Exe</OutputType>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 	</PropertyGroup>
 
 	<ItemGroup>

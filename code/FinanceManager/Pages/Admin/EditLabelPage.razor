@@ -18,7 +18,7 @@
                 <MudItem xs="8">
                     <MudForm @ref="_nameForm" @bind-IsValid="@_success" Spacing="3">
 
-                        <MudTextField T="string" Label="Name" HelperText="Choose a name" @bind-value="_nameField"
+                        <MudTextField T="string" Label="Name" HelperText="Choose a name" @bind-value="NameField"
                                       InputType="InputType.Text" Validation="@(new Func<string, IEnumerable<string>>(ValidateName))" Required
                                       RequiredError="Name is required!" />
 

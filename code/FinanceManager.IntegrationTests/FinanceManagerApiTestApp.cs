@@ -8,14 +8,12 @@ internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<Program>
 {
     public HttpClient Client { get; }
 
-    public FinanceManagerApiTestApp(Action<IServiceCollection> services = null)
+    public FinanceManagerApiTestApp(Action<IServiceCollection>? services = null)
     {
         Client = WithWebHostBuilder(builder =>
         {
             if (services is not null)
-            {
                 builder.ConfigureServices(services);
-            }
 
             builder.ConfigureAppConfiguration((context, config) =>
             {

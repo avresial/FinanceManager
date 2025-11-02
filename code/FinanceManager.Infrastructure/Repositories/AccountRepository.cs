@@ -152,12 +152,9 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
 
         throw new NotSupportedException($"Account type {account.GetType()} is not supported.");
     }
-    public async Task AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
+    public Task AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
         where AccountType : BasicAccountInformation
-        where EntryType : FinancialEntryBase
-    {
-        throw new NotImplementedException();
-    }
+        where EntryType : FinancialEntryBase => throw new NotImplementedException();
     public Task UpdateAccount<T>(T account) where T : BasicAccountInformation => throw new NotImplementedException();
     public async Task RemoveAccount(Type accountType, int id)
     {

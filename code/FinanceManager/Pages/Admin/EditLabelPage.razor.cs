@@ -11,11 +11,11 @@ public partial class EditLabelPage
     private readonly List<string> _info = [];
 
     private MudForm? _nameForm;
-    private string _nameField { get; set; }
     private FinancialLabel? _labelData;
 
     private bool _isLoadingPage;
     private bool _success;
+    public string? NameField { get; set; }
 
     [Inject] public required FinancialLabelHttpContext FinancialLabelHttpContext { get; set; }
 
@@ -34,7 +34,7 @@ public partial class EditLabelPage
                 _isLoadingPage = false;
                 return;
             }
-            _nameField = _labelData.Name;
+            NameField = _labelData.Name;
         }
         catch (Exception ex)
         {
@@ -46,12 +46,13 @@ public partial class EditLabelPage
     private async Task UpdateNameAsync()
     {
         if (_labelData is null) return;
-        if (_nameField is null) return;
+        if (NameField is null) return;
+        if (_nameForm is null) return;
 
         await _nameForm.Validate();
         if (_nameForm.IsValid)
         {
-            var result = await FinancialLabelHttpContext.UpdateName(_labelData.Id, _nameField);
+            var result = await FinancialLabelHttpContext.UpdateName(_labelData.Id, NameField);
             if (!result)
             {
                 _errors.Insert(0, "Failed to change name.");
@@ -67,10 +68,10 @@ public partial class EditLabelPage
 
     private static IEnumerable<string> ValidateName(string pw)
     {
-        if (string.IsNullOrWhiteSpace(pw))
-        {
-            yield return "Name is required!";
+        if (!string.IsNullOrWhiteSpace(pw))
             yield break;
-        }
+
+        yield return "Name is required!";
+        yield break;
     }
 }

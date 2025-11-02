@@ -6,61 +6,53 @@ using MudBlazor;
 namespace FinanceManager.Components.Components;
 public partial class StockPricesComponent
 {
-    private DateRange _dateRange { get; set; } = new DateRange(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
-    private decimal _pricePerUnit { get; set; }
-    private Currency? _existingCurrency { get; set; }
-    private string? _selectedCurrency { get; set; }
-    private DateTime? _missingDate { get; set; } = null;
-
     private List<StockPrice> _stockPrices = [];
-    private bool stockPriceExists = false;
-    private DateTime? _Date;
+    private bool _stockPriceExists = false;
+    private readonly List<string> _currencies = ["USD", "PLN"];
 
-    [Parameter]
-    public DateTime? Date
-    {
-        get { return _Date; }
-        set
-        {
-            _Date = value;
+    public decimal PricePerUnit { get; set; }
+    public Currency? _existingCurrency { get; set; }
+    public string? SelectedCurrency { get; set; }
+    public DateTime? MissingDate { get; set; } = null;
+    public DateRange DateRange { get; set; } = new(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
 
-            if (value is not null)
-            {
-
-                var utcDate = value.Value;
-                if (utcDate.Kind != DateTimeKind.Utc)
-                    utcDate = utcDate.ToUniversalTime();
-
-                StockPriceHttpContext.GetStockPrice(Ticker, new(0, _selectedCurrency, ""), value.Value).ContinueWith(task =>
-                {
-                    if (task.IsCompletedSuccessfully)
-                    {
-                        var stockPrice = task.Result;
-                        if (stockPrice is not null)
-                        {
-                            stockPriceExists = true;
-                            _pricePerUnit = stockPrice.PricePerUnit;
-                        }
-                        else
-                        {
-                            stockPriceExists = false;
-                            _pricePerUnit = default;
-                        }
-                        StateHasChanged();
-                    }
-                });
-            }
-        }
-    }
-
-
+    [Parameter] public DateTime? Date { get; set; }
     [Parameter] public string Ticker { get; set; } = string.Empty;
 
     [Inject] private StockPriceHttpContext StockPriceHttpContext { get; set; } = default!;
 
-    private List<string> _currencies = ["USD", "PLN"];
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Date is not null)
+        {
+            var utcDate = Date.Value;
+            if (utcDate.Kind != DateTimeKind.Utc)
+                utcDate = utcDate.ToUniversalTime();
+            if (string.IsNullOrEmpty(SelectedCurrency)) return;
 
-    private async Task<IEnumerable<string>> Search(string value, CancellationToken token)
+            await StockPriceHttpContext.GetStockPrice(Ticker, new(0, SelectedCurrency, ""), Date.Value).ContinueWith(task =>
+            {
+                if (task.IsCompletedSuccessfully)
+                {
+                    var stockPrice = task.Result;
+                    if (stockPrice is not null)
+                    {
+                        _stockPriceExists = true;
+                        PricePerUnit = stockPrice.PricePerUnit;
+                    }
+                    else
+                    {
+                        _stockPriceExists = false;
+                        PricePerUnit = default;
+                    }
+                    StateHasChanged();
+                }
+            });
+        }
+        base.OnParametersSet();
+    }
+
+    private async Task<IEnumerable<string?>> Search(string value, CancellationToken token)
     {
         if (string.IsNullOrEmpty(value))
             return _currencies;
@@ -69,19 +61,22 @@ public partial class StockPricesComponent
     }
     private void DateChanged((DateTime Start, DateTime End) dates)
     {
-        _dateRange = new DateRange(dates.Start, dates.End);
+        DateRange = new DateRange(dates.Start, dates.End);
 
         if (!string.IsNullOrWhiteSpace(Ticker))
             _ = GetStockPriceAsync();
     }
     private async Task AddNewStock()
     {
-        if (string.IsNullOrWhiteSpace(Ticker) || _dateRange is null || _dateRange.Start is null || _dateRange.End is null || Date is null || _pricePerUnit <= 0)
+        if (string.IsNullOrWhiteSpace(Ticker) || DateRange is null || DateRange.Start is null || DateRange.End is null || Date is null || PricePerUnit <= 0)
+            return;
+
+        if (string.IsNullOrWhiteSpace(SelectedCurrency))
             return;
 
         try
         {
-            await StockPriceHttpContext.AddStockPrice(Ticker, _pricePerUnit, new(0, _selectedCurrency, ""), Date.Value);
+            await StockPriceHttpContext.AddStockPrice(Ticker, PricePerUnit, new(0, SelectedCurrency, ""), Date.Value);
             await GetStockPriceAsync();
         }
         catch (Exception ex)
@@ -94,11 +89,13 @@ public partial class StockPricesComponent
     private async Task UpdateStockPrice()
     {
 
-        if (string.IsNullOrWhiteSpace(Ticker) || _dateRange is null || _dateRange.Start is null || _dateRange.End is null || Date is null || _pricePerUnit <= 0)
+        if (string.IsNullOrWhiteSpace(Ticker) || DateRange is null || DateRange.Start is null || DateRange.End is null || Date is null || PricePerUnit <= 0)
             return;
+        if (string.IsNullOrWhiteSpace(SelectedCurrency)) return;
+
         try
         {
-            await StockPriceHttpContext.UpdateStockPrice(Ticker, _pricePerUnit, new(0, _selectedCurrency, ""), Date.Value);
+            await StockPriceHttpContext.UpdateStockPrice(Ticker, PricePerUnit, new(0, SelectedCurrency, ""), Date.Value);
 
             await GetStockPriceAsync();
         }
@@ -113,25 +110,25 @@ public partial class StockPricesComponent
     {
         TimeSpan timeSpan = TimeSpan.FromDays(1);
 
-        if (string.IsNullOrWhiteSpace(Ticker) || _dateRange is null || _dateRange.Start is null || _dateRange.End is null)
+        if (string.IsNullOrWhiteSpace(Ticker) || DateRange is null || DateRange.Start is null || DateRange.End is null)
             return;
 
         try
         {
             // TODO new endpoint should be added- Get and GetThisOrNextOlder !
             // GetStockPrices functions as GetThisOrNextOlder so finding missing stock does not work properly
-            _stockPrices = [.. await StockPriceHttpContext.GetStockPrices(Ticker, _dateRange.Start.Value, _dateRange.End.Value, timeSpan)];
+            _stockPrices = [.. await StockPriceHttpContext.GetStockPrices(Ticker, DateRange.Start.Value, DateRange.End.Value, timeSpan)];
             var tickerCurrency = await StockPriceHttpContext.GetTickerCurrency(Ticker);
 
             if (tickerCurrency is not null)
             {
                 _existingCurrency = tickerCurrency.Currency;
-                _selectedCurrency = tickerCurrency.Currency.ShortName;
+                SelectedCurrency = tickerCurrency.Currency.ShortName;
             }
             else
             {
                 _existingCurrency = null;
-                _selectedCurrency = DefaultCurrency.PLN.ShortName;
+                SelectedCurrency = DefaultCurrency.PLN.ShortName;
             }
         }
         catch (Exception ex)
@@ -146,8 +143,8 @@ public partial class StockPricesComponent
     {
         try
         {
-            _missingDate = await StockPriceHttpContext.GetLatestMissingStockPrice(Ticker);
-            Date = _missingDate;
+            MissingDate = await StockPriceHttpContext.GetLatestMissingStockPrice(Ticker);
+            Date = MissingDate;
         }
         catch (Exception ex)
         {

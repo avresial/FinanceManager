@@ -31,6 +31,8 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
             await AddGuestUser();
             guestUser = await userRepository.GetUser(configuration["DefaultUser:Login"]!);
 
+            if (guestUser is null) throw new Exception("Failed to create guest user");
+
             logger.LogInformation("New guest user was created with id {Id}", guestUser.UserId);
         }
 

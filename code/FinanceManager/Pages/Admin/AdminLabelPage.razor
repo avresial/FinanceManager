@@ -17,7 +17,7 @@
 
     @if (_elements.Any())
     {
-        <MudTable @ref="@_table" Items="@_elements" RowsPerPage="@_elementsPerPage" Dense Breakpoint="Breakpoint.Md" LoadingProgressColor="Color.Info"
+        <MudTable @ref="@Table" Items="@_elements" RowsPerPage="@_elementsPerPage" Dense Breakpoint="Breakpoint.Md" LoadingProgressColor="Color.Info"
                   Elevation="0" Class="my-3">
             <HeaderContent>
                 <MudTh>Label id</MudTh>
@@ -35,9 +35,9 @@
                 </MudTd>
             </RowTemplate>
             <PagerContent>
-                @if (_table is not null && _pagesCount > 1)
+                @if (Table is not null && _pagesCount > 1)
                 {
-                    <MudPagination SelectedChanged="PageChanged" Count="@_pagesCount" Selected="@_selectedPage" Class="pa-4" />
+                    <MudPagination SelectedChanged="PageChanged" Count="@_pagesCount" Selected="@SelectedPage" Class="pa-4" />
                 }
             </PagerContent>
         </MudTable>

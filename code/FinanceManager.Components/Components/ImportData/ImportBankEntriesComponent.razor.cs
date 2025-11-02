@@ -81,12 +81,15 @@ public partial class ImportBankEntriesComponent : ComponentBase
         try
         {
             var user = await LoginService.GetLoggedUser();
+            if (user is null) throw new Exception("User is null");
+
             var existingAccount = await FinancialAccountService.GetAccount<BankAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
             if (existingAccount is not null)
                 AccountName = existingAccount.Name;
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.LogError(ex, ex.Message);
         }
     }
 
