@@ -23,11 +23,9 @@ jobs:
 
       - name: Install ReportGenerator
         run: dotnet tool install -g dotnet-reportgenerator-globaltool
-        shell: cmd
 
       - name: Create Single Coverage Report file with ReportGenerator
         run: reportgenerator "-reports:coverlet\*.cobertura" "-targetdir:coverlet\report" -reporttypes:Cobertura
-        shell: cmd
 
       - name: Generate Coverage Markdown Report
         uses: clearlyip/code-coverage-report-action@v4
