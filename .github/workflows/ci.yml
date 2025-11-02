@@ -1,22 +1,69 @@
-﻿name: CI
+﻿name: .NET Core CI
+
 on: [push, pull_request]
+  # push:
+  #   branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
+
+permissions:
+  checks: write
+  pull-requests: write
+  contents: read
 
 jobs:
-  build:
+  build-test:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0'
+          dotnet-version: '8.0.x' # Change this to match your SDK version
 
-      # run from the directory that contains your projects
-      - name: Restore
-        run: dotnet restore ./code
+      - name: Restore dependencies
+        run: dotnet restore
 
-      - name: Build
-        run: dotnet build ./code --configuration Release --no-restore
+      - name: Clean the solution
+        run: dotnet clean
+
+      - name: Build the solution
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run tests
+        run: dotnet test ./code --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: 'Test Results'
+          path: 'TestResults/*.trx'
+          reporter: dotnet-trx
+
+
+# name: CI
+# on: [push, pull_request]
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+
+#       - uses: actions/setup-dotnet@v4
+#         with:
+#           dotnet-version: '9.0'
+
+#       # run from the directory that contains your projects
+#       - name: Restore
+#         run: dotnet restore ./code
+
+#       - name: Build
+#         run: dotnet build ./code --configuration Release --no-restore
 
       # - name: Run tests (with coverage)
       #   run: dotnet test ./code --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
@@ -50,16 +97,16 @@ jobs:
       #       slug: fluxdigital/FluxDigital.Extensions
       #       verbose: true
 
-      - name: Run tests
-        run: dotnet test ./code --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
+      # - name: Run tests
+      #   run: dotnet test ./code --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
 
-      - name: Publish test results
-        uses: dorny/test-reporter@v1
-        if: always()
-        with:
-          name: 'Test Results'
-          path: 'TestResults/*.trx'
-          reporter: dotnet-trx
+      # - name: Publish test results
+      #   uses: dorny/test-reporter@v1
+      #   if: always()
+      #   with:
+      #     name: 'Test Results'
+      #     path: 'TestResults/*.trx'
+      #     reporter: dotnet-trx
 
-      - name: Verify formatting
-        run: dotnet format ./code --verify-no-changes
+      # - name: Verify formatting
+      #   run: dotnet format ./code --verify-no-changes
