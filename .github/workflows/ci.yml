@@ -21,26 +21,31 @@ jobs:
       - name: Run tests (with coverage)
         run: dotnet test ./code --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
-      - name: Install reportgenerator
-        run: dotnet tool install --global dotnet-reportgenerator-globaltool
-        env:
-          DOTNET_ROOT: /usr/share/dotnet
-          PATH: $HOME/.dotnet/tools:$PATH
+      - name: Install ReportGenerator
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+        shell: cmd
 
-      - name: Generate coverage report (HTML)
-        run: |
-          mkdir -p TestResults/CoverageReport
-          reportgenerator -reports:./TestResults/**/coverage.cobertura.xml -targetdir:./TestResults/CoverageReport -reporttypes:HtmlSummary
-        env:
-          PATH: $HOME/.dotnet/tools:$PATH
+      - name: Create Single Coverage Report file with ReportGenerator
+        run: reportgenerator "-reports:coverlet\*.cobertura" "-targetdir:coverlet\report" -reporttypes:Cobertura
+        shell: cmd
 
-      - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
+      - name: Generate Coverage Markdown Report
+        uses: clearlyip/code-coverage-report-action@v4
+        id: code_coverage_report_action
         with:
-          name: coverage-report
-          path: |
-            TestResults/**/coverage.cobertura.xml
-            TestResults/CoverageReport
+            filename: 'coverlet\report\Cobertura.xml'
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+            directory: ./coverlet/report/
+            fail_ci_if_error: false
+            files: Cobertura.xml
+            flags: unittests
+            name: FluxDigital.Extensions
+            token: ${{ secrets.CODECOV_TOKEN }}
+            slug: fluxdigital/FluxDigital.Extensions
+            verbose: true
 
       - name: Verify formatting
         run: dotnet format ./code --verify-no-changes
