@@ -3,19 +3,40 @@ using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Services;
 
 public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, IFinancialLabelsRepository financialLabelsRepository,
-    IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository)
+    IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository, IUserRepository userRepository, IConfiguration configuration,
+    ILogger<GuestAccountSeeder> logger)
 {
-    private readonly int _guestUserId = 1;
+    private int _guestUserId = 1;
+
+    public async Task AddGuestUser()
+    {
+        if (configuration is null) return;
+
+        await userRepository.AddUser(configuration["DefaultUser:Login"]!, configuration["DefaultUser:Password"]!, PricingLevel.Basic, UserRole.User);
+    }
+
 
     public async Task SeedNewData(DateTime start, DateTime end)
     {
-        var availableAccounts = await accountRepository.GetAvailableAccounts(_guestUserId);
+        var guestUser = await userRepository.GetUser(configuration["DefaultUser:Login"]!);
 
-        if (availableAccounts.Count != 0) return;
+        if (guestUser is null)
+        {
+            await AddGuestUser();
+            guestUser = await userRepository.GetUser(configuration["DefaultUser:Login"]!);
+
+            logger.LogInformation("New guest user was created with id {Id}", guestUser.UserId);
+        }
+
+        if (guestUser is null) throw new Exception("Guest account does not exist");
+
+        _guestUserId = guestUser.UserId;
 
         try
         {
@@ -25,7 +46,7 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error adding stock account: {ex.Message}");
+            logger.LogError(ex, ex.Message);
         }
     }
 
@@ -34,7 +55,8 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
         var stockAccount = await GetNewStockAccount("Stock 1", AccountLabel.Stock);
 
         for (var date = start; date <= end; date = date.AddDays(1))
-            stockAccount.Add(GetNewStockAccountEntry(_guestUserId, 0, date, -90, 100, "RandomTicker"));
+            stockAccount.Add(GetNewStockAccountEntry(_guestUserId, 0, date, -90, 100, "RandomTicker"), false);
+        stockAccount.RecalculateEntryValues(0);
         await accountRepository.AddAccount(stockAccount);
     }
 
@@ -44,8 +66,8 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
 
         var bankAccount = await GetNewBankAccount("Cash 1", AccountLabel.Cash);
         for (var date = start; date <= end; date = date.AddDays(1))
-            bankAccount.AddEntry(GetNewBankAccountEntry(date, -90, 100, labels));
-
+            bankAccount.AddEntry(GetNewBankAccountEntry(date, -90, 100, labels), false);
+        bankAccount.RecalculateEntryValues(0);
         await accountRepository.AddAccount(bankAccount);
     }
 
@@ -55,9 +77,10 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
 
         var loanAccount = await GetNewBankAccount("Loan 1", AccountLabel.Loan);
         var days = (int)((end - start).TotalDays);
-        loanAccount.AddEntry(GetNewBankAccountEntry(start, days * -100 - 1000, days * -100, labels));
+        loanAccount.AddEntry(GetNewBankAccountEntry(start, days * -100 - 1000, days * -100, labels), false);
         for (DateTime date = start.AddDays(1); date <= end; date = date.AddDays(1))
-            loanAccount.AddEntry(GetNewBankAccountEntry(date, 10, 100, labels));
+            loanAccount.AddEntry(GetNewBankAccountEntry(date, 10, 100, labels), false);
+        loanAccount.RecalculateEntryValues(0);
         await accountRepository.AddAccount(loanAccount);
     }
     public async Task<StockAccount> GetNewStockAccount(string accountName, AccountLabel accountType)

@@ -37,7 +37,7 @@ public class BankAccount : FinancialAccountBase<BankAccountEntry>
 
         return NextOlderEntry;
     }
-    public void AddEntry(AddBankEntryDto entry)
+    public void AddEntry(AddBankEntryDto entry, bool recalculateValues = true)
     {
         var alreadyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
         if (alreadyExistingEntry is not null)
@@ -71,7 +71,8 @@ public class BankAccount : FinancialAccountBase<BankAccountEntry>
             Entries.Insert(index, newEntry);
         }
 
-        RecalculateEntryValues(index);
+        if (recalculateValues)
+            RecalculateEntryValues(index);
     }
     public override void UpdateEntry(BankAccountEntry entry, bool recalculateValues = true)
     {

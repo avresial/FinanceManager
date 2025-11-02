@@ -8,10 +8,18 @@ namespace FinanceManager.Infrastructure.Repositories;
 public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAccountRepository, IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
     IAccountRepository<StockAccount> stockAccountRepository, IStockAccountEntryRepository<StockAccountEntry> stockEntryRepository) : IFinancialAccountRepository
 {
-    public Task<Dictionary<int, Type>> GetAvailableAccounts(int userId) => bankAccountAccountRepository.GetAvailableAccounts(userId)
-        .ToDictionaryAsync(x => x.AccountId, x => typeof(BankAccount))
-        .AsTask();
+    public async Task<Dictionary<int, Type>> GetAvailableAccounts(int userId)
+    {
+        Dictionary<int, Type> result = [];
 
+        await foreach (var bankAccount in bankAccountAccountRepository.GetAvailableAccounts(userId))
+            result.Add(bankAccount.AccountId, typeof(BankAccount));
+
+        await foreach (var stockAccount in stockAccountRepository.GetAvailableAccounts(userId))
+            result.Add(stockAccount.AccountId, typeof(StockAccount));
+
+        return result;
+    }
     public Task<int> GetLastAccountId() => throw new NotImplementedException();
     public async Task<int> GetAccountsCount()
     {
@@ -151,7 +159,28 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
         throw new NotImplementedException();
     }
     public Task UpdateAccount<T>(T account) where T : BasicAccountInformation => throw new NotImplementedException();
-    public Task RemoveAccount(int id) => throw new NotImplementedException();
+    public async Task RemoveAccount(Type accountType, int id)
+    {
+        switch (accountType)
+        {
+            case Type t when t == typeof(BankAccount):
+                if (await bankAccountAccountRepository.Exists(id))
+                {
+                    await bankAccountEntryRepository.Delete(id);
+                    await bankAccountAccountRepository.Delete(id);
+                }
+                return;
+            case Type t when t == typeof(StockAccount):
+                if (await stockAccountRepository.Exists(id))
+                {
+                    await stockEntryRepository.Delete(id);
+                    await stockAccountRepository.Delete(id);
+                }
+                return;
+            default:
+                throw new InvalidOperationException($"Account with id {id} not found.");
+        }
+    }
 
     public async Task<T?> GetNextYounger<T>(int accountId, DateTime date) where T : FinancialEntryBase => await bankAccountEntryRepository.GetNextYounger(accountId, date) as T;
     public async Task AddEntry<T>(T bankAccountEntry, int id) where T : FinancialEntryBase

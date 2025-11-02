@@ -12,7 +12,7 @@ namespace FinanceManager.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class UserController(IUserRepository userRepository, IUserPlanVerifier userPlanVerifier, ILogger<UserController> logger) : ControllerBase
+public class UserController(IUserRepository userRepository, UsersService usersService, IUserPlanVerifier userPlanVerifier, ILogger<UserController> logger) : ControllerBase
 {
 
     [AllowAnonymous]
@@ -77,7 +77,7 @@ public class UserController(IUserRepository userRepository, IUserPlanVerifier us
     {
         if (!IsValidUserOrAdmin(userId)) return BadRequest();
 
-        var result = await userRepository.RemoveUser(userId);
+        var result = await usersService.DeleteUser(userId);
 
         return Ok(result);
     }

@@ -24,6 +24,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IAssetsServiceTyped, AssetsServiceBank>()
                 .AddScoped<IAssetsServiceTyped, AssetsServiceStock>()
                 .AddScoped<IAssetsService, AssetsService>()
+                .AddScoped<UsersService>()
 
                 .AddScoped<ILiabilitiesService, LiabilitiesService>()
                 .AddScoped<PricingProvider>()

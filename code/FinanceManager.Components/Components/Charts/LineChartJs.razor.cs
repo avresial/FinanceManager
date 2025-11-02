@@ -10,7 +10,7 @@ public partial class LineChartJs : ComponentBase, IAsyncDisposable
     private CancellationTokenSource _cancellationTokenSource = new();
 
     [Inject] public required IJSRuntime JSRunTime { get; set; }
-    [Inject] public required ILogger Logger { get; set; }
+    [Inject] public required ILogger<LineChartJs> Logger { get; set; }
 
     [Parameter] public List<List<ChartJsLineDataPoint>> Series { get; set; } = [];
     [Parameter] public List<string> ColorPallet { get; set; } = [];

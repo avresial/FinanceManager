@@ -17,7 +17,7 @@ public interface IFinancialAccountRepository
     public Task<int?> AddAccount<T>(T account) where T : BasicAccountInformation;
     public Task AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data) where AccountType : BasicAccountInformation where EntryType : FinancialEntryBase;
     public Task UpdateAccount<T>(T account) where T : BasicAccountInformation;
-    public Task RemoveAccount(int id);
+    public Task RemoveAccount(Type accountType, int id);
 
     public Task<T?> GetNextYounger<T>(int accountId, DateTime date) where T : FinancialEntryBase;
     public Task AddEntry<T>(T accountEntry, int id) where T : FinancialEntryBase;
