@@ -1,31 +1,38 @@
 name: CI
 on: [push, pull_request]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0'
-      - run: dotnet restore
-      - run: dotnet build --configuration Release
-      - run: dotnet test --configuration Release --no-build
-      - run: dotnet format --verify-no-changes
-      - name: Run tests with coverage
-        run: dotnet test --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
+
+      # run from the directory that contains your projects
+      - name: Restore
+        run: dotnet restore ./code
+
+      - name: Build
+        run: dotnet build ./code --configuration Release --no-restore
+
+      - name: Run tests (with coverage)
+        run: dotnet test ./code --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
       - name: Install reportgenerator
         run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.1.32
         env:
-          PATH: ${{ runner.toolcache }}/dotnet/tools:$PATH
+          DOTNET_ROOT: /usr/share/dotnet
+          PATH: ${{ env.PATH }}:$HOME/.dotnet/tools
 
-      - name: Generate coverage report (HTML + summary)
+      - name: Generate coverage report (HTML)
         run: |
           mkdir -p TestResults/CoverageReport
           reportgenerator -reports:./TestResults/**/coverage.cobertura.xml -targetdir:./TestResults/CoverageReport -reporttypes:HtmlSummary
         env:
-          PATH: ${{ runner.toolcache }}/dotnet/tools:$PATH
+          PATH: ${{ env.PATH }}:$HOME/.dotnet/tools
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
@@ -34,3 +41,6 @@ jobs:
           path: |
             TestResults/**/coverage.cobertura.xml
             TestResults/CoverageReport
+
+      - name: Verify formatting
+        run: dotnet format ./code --verify-no-changes
