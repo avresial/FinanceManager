@@ -6,6 +6,8 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionElements", "SolutionElements", "{A9C3628F-FD81-46A5-8C40-2CC6924E00DD}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		..\.github\workflows\ci.yml = ..\.github\workflows\ci.yml
+		Directory.Build.props = Directory.Build.props
 		..\Migrations.md = ..\Migrations.md
 		..\README.md = ..\README.md
 	EndProjectSection
