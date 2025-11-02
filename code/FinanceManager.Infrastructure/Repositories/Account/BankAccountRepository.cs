@@ -46,11 +46,10 @@ internal class BankAccountRepository(AppDbContext context) : IBankAccountReposit
 
         return true;
     }
-    public async Task<IEnumerable<AvailableAccount>> GetAvailableAccounts(int userId) =>
-        await context.Accounts
+    public IAsyncEnumerable<AvailableAccount> GetAvailableAccounts(int userId) => context.Accounts
         .Where(x => x.UserId == userId && x.AccountType == AccountType.Bank)
         .Select(x => new AvailableAccount(x.AccountId, x.Name))
-        .ToListAsync();
+        .AsAsyncEnumerable();
 
     public Task<bool> Exists(int accountId) => context.Accounts.AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bank);
 

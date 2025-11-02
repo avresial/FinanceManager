@@ -1,24 +1,19 @@
 ﻿using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using System.Net.Http.Json;
-using System.Threading;
 
 namespace FinanceManager.Components.HttpContexts;
 public class FinancialLabelHttpContext(HttpClient httpClient)
 {
-    public Task<int> GetCount(CancellationToken cancellationToken = default)
-    {
-        return httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/FinancialLabel/get-count", cancellationToken);
-    }
-    public Task<FinancialLabel?> Get(int labelId, CancellationToken cancellationToken = default)
-    {
-        return httpClient.GetFromJsonAsync<FinancialLabel>($"{httpClient.BaseAddress}api/FinancialLabel/get-by-id?id={labelId}", cancellationToken);
-    }
+    public Task<int> GetCount(CancellationToken cancellationToken = default) =>
+        httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/FinancialLabel/get-count", cancellationToken);
+    public Task<FinancialLabel?> Get(int labelId, CancellationToken cancellationToken = default) =>
+        httpClient.GetFromJsonAsync<FinancialLabel>($"{httpClient.BaseAddress}api/FinancialLabel/get-by-id?id={labelId}", cancellationToken);
     public async Task<List<FinancialLabel>> Get(int index, int count, CancellationToken cancellationToken = default)
     {
         var result = await httpClient.GetFromJsonAsync<List<FinancialLabel>>($"{httpClient.BaseAddress}api/FinancialLabel/get-by-index-and-count?index={index}&count={count}", cancellationToken);
 
-        return result ?? new List<FinancialLabel>();
+        return result ?? [];
     }
     public async Task<bool> Add(AddFinancialLabel addFinancialLabel, CancellationToken cancellationToken = default)
     {

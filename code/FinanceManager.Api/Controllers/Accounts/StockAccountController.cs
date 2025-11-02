@@ -8,195 +8,177 @@ using FinanceManager.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FinanceManager.Api.Controllers.Accounts
+namespace FinanceManager.Api.Controllers.Accounts;
+
+[Authorize]
+[Route("api/[controller]")]
+[ApiController]
+public class StockAccountController(IAccountRepository<StockAccount> stockAccountRepository,
+    IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository) : ControllerBase
 {
-    [Authorize]
-    [Route("api/[controller]")]
-    [ApiController]
-    public class StockAccountController : ControllerBase
+    private readonly IAccountRepository<StockAccount> _accountRepository = stockAccountRepository ?? throw new ArgumentNullException(nameof(stockAccountRepository));
+    private readonly IStockAccountEntryRepository<StockAccountEntry> _entryRepository = stockAccountEntryRepository ?? throw new ArgumentNullException(nameof(stockAccountEntryRepository));
+
+    [HttpGet]
+    public async Task<IActionResult> Get()
     {
-        private readonly IAccountRepository<StockAccount> _accountRepository;
-        private readonly IStockAccountEntryRepository<StockAccountEntry> _entryRepository;
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (userId is null) return BadRequest("User ID is null.");
 
-        public StockAccountController(IAccountRepository<StockAccount> stockAccountRepository,
-            IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository)
+        var accounts = await _accountRepository.GetAvailableAccounts(userId.Value).ToListAsync();
+        if (accounts == null) return NoContent();
+
+        return Ok(accounts);
+    }
+
+    [HttpGet("{accountId:int}")]
+    public async Task<IActionResult> Get(int accountId)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (userId is null) return BadRequest("User ID is null.");
+
+        var account = await _accountRepository.Get(accountId);
+        if (account == null) return NoContent();
+        if (account.UserId != userId) return StatusCode(StatusCodes.Status403Forbidden, "Forbidden: User does not own this account.");
+        return Ok(account);
+    }
+
+    [HttpGet("{accountId:int}&{startDate:DateTime}&{endDate:DateTime}")]
+    public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (userId is null) return BadRequest("User ID is null.");
+
+        var account = await _accountRepository.Get(accountId);
+        if (account == null) return NoContent();
+        if (account.UserId != userId) return BadRequest("User ID does not match the account owner.");
+
+        var entries = await _entryRepository.Get(accountId, startDate, endDate).ToListAsync();
+
+        return Ok(new StockAccountDto()
         {
-            this._accountRepository = stockAccountRepository ?? throw new ArgumentNullException(nameof(stockAccountRepository));
-            this._entryRepository = stockAccountEntryRepository ?? throw new ArgumentNullException(nameof(stockAccountEntryRepository));
-        }
+            AccountId = account.AccountId,
+            UserId = account.UserId,
+            Name = account.Name,
+            NextOlderEntries = (await _entryRepository.GetNextOlder(accountId, startDate)).ToDictionary(x => x.Key, x => x.Value.ToDto()),
+            NextYoungerEntries = (await _entryRepository.GetNextYounger(accountId, startDate)).ToDictionary(x => x.Key, x => x.Value.ToDto()),
+            Entries = entries.Select(x => x.ToDto())
+        });
+    }
 
-        [HttpGet]
-        public async Task<IActionResult> Get()
-        {
-            var userId = ApiAuthenticationHelper.GetUserId(User);
-            if (userId is null) return BadRequest("User ID is null.");
+    [HttpGet("GetYoungestEntryDate/{accountId:int}")]
+    public async Task<IActionResult> GetYoungestEntryDate(int accountId)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (userId is null) return BadRequest();
 
-            var accounts = await _accountRepository.GetAvailableAccounts(userId.Value);
-            if (accounts == null) return NoContent();
+        var account = await _accountRepository.Get(accountId);
 
-            return Ok(accounts);
-        }
+        if (account == null) return NoContent();
+        if (account.UserId != userId) return BadRequest();
 
-        [HttpGet("{accountId:int}")]
-        public async Task<IActionResult> Get(int accountId)
-        {
-            var userId = ApiAuthenticationHelper.GetUserId(User);
-            if (userId is null) return BadRequest("User ID is null.");
+        var entry = await _entryRepository.GetYoungest(accountId);
+        if (entry is not null)
+            return await Task.FromResult(Ok(entry.PostingDate));
 
-            var account = await _accountRepository.Get(accountId);
-            if (account == null) return NoContent();
-            if (account.UserId != userId) return StatusCode(StatusCodes.Status403Forbidden, "Forbidden: User does not own this account.");
-            return Ok(account);
-        }
+        return await Task.FromResult(NoContent());
+    }
 
-        [HttpGet("{accountId:int}&{startDate:DateTime}&{endDate:DateTime}")]
-        public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate)
-        {
-            var userId = ApiAuthenticationHelper.GetUserId(User);
-            if (userId is null) return BadRequest("User ID is null.");
+    [HttpGet("GetOldestEntryDate/{accountId:int}")]
+    public async Task<IActionResult> GetOldestEntryDate(int accountId)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (userId is null) return BadRequest();
 
-            var account = await _accountRepository.Get(accountId);
-            if (account == null) return NoContent();
-            if (account.UserId != userId) return BadRequest("User ID does not match the account owner.");
+        var account = await _accountRepository.Get(accountId);
 
-            var entries = await _entryRepository.Get(accountId, startDate, endDate);
+        if (account == null) return NoContent();
+        if (account.UserId != userId) return BadRequest();
 
-            StockAccountDto bankAccountDto = new()
-            {
-                AccountId = account.AccountId,
-                UserId = account.UserId,
-                Name = account.Name,
-                NextOlderEntries = (await _entryRepository.GetNextOlder(accountId, startDate)).ToDictionary(x => x.Key, x => x.Value.ToDto()),
-                NextYoungerEntries = (await _entryRepository.GetNextYounger(accountId, startDate)).ToDictionary(x => x.Key, x => x.Value.ToDto()),
-                Entries = entries.Select(x => new StockAccountEntryDto
-                {
-                    Ticker = x.Ticker,
-                    InvestmentType = x.InvestmentType,
-                    AccountId = x.AccountId,
-                    EntryId = x.EntryId,
-                    PostingDate = x.PostingDate,
-                    Value = x.Value,
-                    ValueChange = x.ValueChange,
-                })
-            };
+        var entry = await _entryRepository.GetOldest(accountId);
+        if (entry is not null)
+            return Ok(entry.PostingDate);
 
-            return Ok(bankAccountDto);
-        }
+        return await Task.FromResult(NoContent());
+    }
 
-        [HttpGet("GetYoungestEntryDate/{accountId:int}")]
-        public async Task<IActionResult> GetYoungestEntryDate(int accountId)
-        {
-            var userId = ApiAuthenticationHelper.GetUserId(User);
-            if (userId is null) return BadRequest();
+    [HttpPost("Add")]
+    public async Task<IActionResult> Add(AddAccount addAccount)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (!userId.HasValue) return BadRequest("User ID is null.");
 
-            var account = await _accountRepository.Get(accountId);
+        return Ok(await _accountRepository.Add(userId.Value, addAccount.accountName));
+    }
 
-            if (account == null) return NoContent();
-            if (account.UserId != userId) return BadRequest();
+    [HttpPost("AddEntry")]
+    public async Task<IActionResult> AddEntry(AddStockAccountEntry addEntry)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (!userId.HasValue) return BadRequest("User ID is null.");
 
-            var entry = await _entryRepository.GetYoungest(accountId);
-            if (entry is not null)
-                return await Task.FromResult(Ok(entry.PostingDate));
+        var result = await _entryRepository.Add(addEntry.entry);
+        return Ok(result);
+    }
 
-            return await Task.FromResult(NoContent());
-        }
+    [HttpPut("Update")]
+    public async Task<IActionResult> Update(UpdateAccount updateAccount)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (userId is null) return BadRequest("User ID is null.");
 
-        [HttpGet("GetOldestEntryDate/{accountId:int}")]
-        public async Task<IActionResult> GetOldestEntryDate(int accountId)
-        {
-            var userId = ApiAuthenticationHelper.GetUserId(User);
-            if (userId is null) return BadRequest();
+        var account = await _accountRepository.Get(updateAccount.accountId);
+        if (account == null || account.UserId != userId) return BadRequest("User ID does not match the account owner.");
 
-            var account = await _accountRepository.Get(accountId);
-
-            if (account == null) return NoContent();
-            if (account.UserId != userId) return BadRequest();
-
-            var entry = await _entryRepository.GetOldest(accountId);
-            if (entry is not null)
-                return Ok(entry.PostingDate);
-
-            return await Task.FromResult(NoContent());
-        }
-
-        [HttpPost("Add")]
-        public async Task<IActionResult> Add(AddAccount addAccount)
-        {
-            var userId = ApiAuthenticationHelper.GetUserId(User);
-            if (!userId.HasValue) return BadRequest("User ID is null.");
-
-            return Ok(await _accountRepository.Add(userId.Value, addAccount.accountName));
-        }
-
-        [HttpPost("AddEntry")]
-        public async Task<IActionResult> AddEntry(AddStockAccountEntry addEntry)
-        {
-            var userId = ApiAuthenticationHelper.GetUserId(User);
-            if (!userId.HasValue) return BadRequest("User ID is null.");
-
-            var result = await _entryRepository.Add(addEntry.entry);
-            return Ok(result);
-        }
-
-        [HttpPut("Update")]
-        public async Task<IActionResult> Update(UpdateAccount updateAccount)
-        {
-            var userId = ApiAuthenticationHelper.GetUserId(User);
-            if (userId is null) return BadRequest("User ID is null.");
-
-            var account = await _accountRepository.Get(updateAccount.accountId);
-            if (account == null || account.UserId != userId) return BadRequest("User ID does not match the account owner.");
-
-            var result = await _accountRepository.Update(updateAccount.accountId, updateAccount.accountName);
-            return Ok(result);
-        }
+        var result = await _accountRepository.Update(updateAccount.accountId, updateAccount.accountName);
+        return Ok(result);
+    }
 
 
-        [HttpDelete("Delete/{accountId:int}")]
-        public async Task<IActionResult> Delete(int accountId)
-        {
-            var userId = ApiAuthenticationHelper.GetUserId(User);
-            if (userId is null) return BadRequest("User ID is null.");
+    [HttpDelete("Delete/{accountId:int}")]
+    public async Task<IActionResult> Delete(int accountId)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (userId is null) return BadRequest("User ID is null.");
 
-            var account = await _accountRepository.Get(accountId);
-            if (account == null) return NotFound("Account not found.");
-            if (account.UserId != userId) return StatusCode(StatusCodes.Status403Forbidden, "Forbidden: User does not own this account.");
+        var account = await _accountRepository.Get(accountId);
+        if (account == null) return NotFound("Account not found.");
+        if (account.UserId != userId) return StatusCode(StatusCodes.Status403Forbidden, "Forbidden: User does not own this account.");
 
-            await _entryRepository.Delete(accountId);
-            return Ok(await _accountRepository.Delete(accountId));
-        }
+        await _entryRepository.Delete(accountId);
+        return Ok(await _accountRepository.Delete(accountId));
+    }
 
-        [HttpDelete("DeleteEntry/{accountId:int}/{entryId:int}")]
-        public async Task<IActionResult> DeleteEntry(int accountId, int entryId)
-        {
-            var userId = ApiAuthenticationHelper.GetUserId(User);
-            if (userId is null) return BadRequest("User ID is null.");
+    [HttpDelete("DeleteEntry/{accountId:int}/{entryId:int}")]
+    public async Task<IActionResult> DeleteEntry(int accountId, int entryId)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (userId is null) return BadRequest("User ID is null.");
 
-            var account = await _accountRepository.Get(accountId);
-            if (account == null || account.UserId != userId) return BadRequest("User ID does not match the account owner.");
+        var account = await _accountRepository.Get(accountId);
+        if (account == null || account.UserId != userId) return BadRequest("User ID does not match the account owner.");
 
-            var result = await _entryRepository.Delete(accountId, entryId);
-            return Ok(result);
-        }
+        var result = await _entryRepository.Delete(accountId, entryId);
+        return Ok(result);
+    }
 
-        [HttpPut("UpdateEntry")]
-        public async Task<IActionResult> UpdateEntry(UpdateStockAccountEntry updateCommand)
-        {
-            var userId = ApiAuthenticationHelper.GetUserId(User);
-            if (userId is null) return BadRequest("User ID is null.");
+    [HttpPut("UpdateEntry")]
+    public async Task<IActionResult> UpdateEntry(UpdateStockAccountEntry updateCommand)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (userId is null) return BadRequest("User ID is null.");
 
-            var account = await _accountRepository.Get(updateCommand.AccountId);
-            if (account == null || account.UserId != userId) return BadRequest("User ID does not match the account owner.");
+        var account = await _accountRepository.Get(updateCommand.AccountId);
+        if (account == null || account.UserId != userId) return BadRequest("User ID does not match the account owner.");
 
-            var entryToUpdate = await _entryRepository.Get(updateCommand.AccountId, updateCommand.EntryId);
+        var entryToUpdate = await _entryRepository.Get(updateCommand.AccountId, updateCommand.EntryId);
 
-            if (entryToUpdate is null) return NoContent();
+        if (entryToUpdate is null) return NoContent();
 
-            entryToUpdate.Update(new StockAccountEntry(updateCommand.AccountId, updateCommand.EntryId, updateCommand.PostingDate, updateCommand.Value,
-                updateCommand.ValueChange, updateCommand.Ticker, updateCommand.investmentType));
+        entryToUpdate.Update(new StockAccountEntry(updateCommand.AccountId, updateCommand.EntryId, updateCommand.PostingDate, updateCommand.Value,
+            updateCommand.ValueChange, updateCommand.Ticker, updateCommand.investmentType));
 
-            var result = await _entryRepository.Update(entryToUpdate);
-            return Ok(result);
-        }
+        var result = await _entryRepository.Update(entryToUpdate);
+        return Ok(result);
     }
 }

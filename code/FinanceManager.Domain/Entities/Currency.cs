@@ -2,15 +2,17 @@
 
 public class Currency
 {
-    public string ShortName { get; set; }
-    public string Symbol { get; set; }
+    public int Id { get; set; }
+    public string ShortName { get; set; } = string.Empty;
+    public string Symbol { get; set; } = string.Empty;
 
     public Currency()
     {
 
     }
-    public Currency(string shortName, string symbol)
+    public Currency(int id, string shortName, string symbol)
     {
+        Id = id;
         ShortName = shortName;
         Symbol = symbol;
     }

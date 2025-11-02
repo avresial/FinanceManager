@@ -1,5 +1,6 @@
 using FinanceManager.Domain.Providers;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
 namespace FinanceManager.Components.Components.Charts;
@@ -9,6 +10,7 @@ public partial class LineChartJs : ComponentBase, IAsyncDisposable
     private CancellationTokenSource _cancellationTokenSource = new();
 
     [Inject] public required IJSRuntime JSRunTime { get; set; }
+    [Inject] public required ILogger<LineChartJs> Logger { get; set; }
 
     [Parameter] public List<List<ChartJsLineDataPoint>> Series { get; set; } = [];
     [Parameter] public List<string> ColorPallet { get; set; } = [];
@@ -108,6 +110,7 @@ public partial class LineChartJs : ComponentBase, IAsyncDisposable
             }
             catch (Exception ex)
             {
+                Logger.LogError(ex, ex.Message);
             }
             await DisplayData(_cancellationTokenSource.Token, newSeries);
 
@@ -136,6 +139,7 @@ public partial class LineChartJs : ComponentBase, IAsyncDisposable
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, ex.Message);
         }
 
         await DisplayData(_cancellationTokenSource.Token, newSeries);
@@ -166,6 +170,7 @@ public partial class LineChartJs : ComponentBase, IAsyncDisposable
                 }
                 catch (Exception ex)
                 {
+                    Logger.LogError(ex, ex.Message);
                 }
             }
         }
@@ -180,17 +185,10 @@ public partial class LineChartJs : ComponentBase, IAsyncDisposable
 
 }
 
-public class ChartJsLineDataPoint
+public class ChartJsLineDataPoint(DateTime x, decimal y)
 {
-    public string x { get; set; }
-    public decimal y { get; set; }
-
-    public ChartJsLineDataPoint(DateTime x, decimal y)
-    {
-        this.x = x.ToString("yyyy-MM-dd");
-        this.y = y;
-    }
-
+    public string x { get; set; } = x.ToString("yyyy-MM-dd");
+    public decimal y { get; set; } = y;
 }
 
 public class Dataset

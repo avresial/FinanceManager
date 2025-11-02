@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceManager.Api.Controllers;
+
 [Route("api/[controller]")]
 [Authorize]
 [ApiController]
@@ -15,7 +16,7 @@ public class AdministrationUsersController(IAdministrationUsersService administr
     {
         try
         {
-            return Ok(await administrationUsersService.GetNewUsersDaily());
+            return Ok(await administrationUsersService.GetNewUsersDaily().ToListAsync());
         }
         catch (Exception ex)
         {
@@ -32,7 +33,7 @@ public class AdministrationUsersController(IAdministrationUsersService administr
     {
         try
         {
-            return Ok(await administrationUsersService.GetDailyActiveUsers());
+            return Ok(await administrationUsersService.GetDailyActiveUsers().ToListAsync());
         }
         catch (Exception ex)
         {
@@ -104,7 +105,7 @@ public class AdministrationUsersController(IAdministrationUsersService administr
 
         try
         {
-            return Ok(await administrationUsersService.GetUsers(recordIndex, recordsCount));
+            return Ok(await administrationUsersService.GetUsers(recordIndex, recordsCount).ToListAsync());
         }
         catch (Exception ex)
         {

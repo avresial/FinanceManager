@@ -7,14 +7,13 @@ using FinanceManager.Domain.Repositories.Account;
 namespace FinanceManager.Application.Services;
 
 public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRepository, IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
-    IUserRepository userRepository, PricingProvider pricingProvider)
+    IUserRepository userRepository) : IUserPlanVerifier
 {
     public async Task<int> GetUsedRecordsCapacity(int userId)
     {
-        var accounts = await bankAccountRepository.GetAvailableAccounts(userId);
         int totalEntries = 0;
 
-        foreach (var account in accounts)
+        await foreach (var account in bankAccountRepository.GetAvailableAccounts(userId))
             totalEntries += await bankAccountEntryRepository.GetCount(account.AccountId);
 
         return await Task.FromResult(totalEntries);
@@ -27,7 +26,7 @@ public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRep
 
         int totalEntries = await GetUsedRecordsCapacity(userId);
 
-        return totalEntries + entriesCount <= pricingProvider.GetMaxAllowedEntries(user.PricingLevel);
+        return totalEntries + entriesCount <= PricingProvider.GetMaxAllowedEntries(user.PricingLevel);
     }
 
     public async Task<bool> CanAddMoreAccounts(int userId)
@@ -35,8 +34,9 @@ public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRep
         var user = await userRepository.GetUser(userId);
         if (user is null) return false;
 
-        var accounts = await bankAccountRepository.GetAvailableAccounts(userId);
+        var accountsCount = await bankAccountRepository.GetAvailableAccounts(userId)
+            .CountAsync();
 
-        return accounts.Count() < pricingProvider.GetMaxAccountCount(user.PricingLevel);
+        return accountsCount < PricingProvider.GetMaxAccountCount(user.PricingLevel);
     }
 }

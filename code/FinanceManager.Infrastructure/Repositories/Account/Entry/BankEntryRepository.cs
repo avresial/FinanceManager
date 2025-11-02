@@ -7,7 +7,6 @@ namespace FinanceManager.Infrastructure.Repositories.Account.Entry;
 
 public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository<BankAccountEntry>
 {
-
     public async Task<bool> Add(BankAccountEntry entry)
     {
         BankAccountEntry newBankAccountEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange)
@@ -41,11 +40,16 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
         return true;
     }
 
-    public async Task<IEnumerable<BankAccountEntry>> Get(int accountId, DateTime startDate, DateTime endDate) => await context.BankEntries
-            .Where(x => x.AccountId == accountId && x.PostingDate >= startDate && x.PostingDate <= endDate).Include(x => x.Labels)
-            .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId).ToListAsync();
+    public IAsyncEnumerable<BankAccountEntry> Get(int accountId, DateTime startDate, DateTime endDate) => context.BankEntries
+            .Where(x => x.AccountId == accountId && x.PostingDate >= startDate && x.PostingDate <= endDate)
+            .Include(x => x.Labels)
+            .OrderByDescending(x => x.PostingDate)
+            .ThenByDescending(x => x.EntryId)
+            .AsAsyncEnumerable();
+
     public async Task<BankAccountEntry?> Get(int accountId, int entryId) => await context.BankEntries
             .FirstOrDefaultAsync(x => x.AccountId == accountId && x.EntryId == entryId);
+
     public async Task<int> GetCount(int accountId) => await context.BankEntries.CountAsync(x => x.AccountId == accountId);
 
     public async Task<BankAccountEntry?> GetNextOlder(int accountId, int entryId)
@@ -117,10 +121,9 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
         var entry = await context.BankEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (entry is null) return;
 
-        var entriesToUpdate = await Get(accountId, entry.PostingDate, DateTime.UtcNow);
         var previousEntry = await GetNextOlder(accountId, entry.PostingDate);
 
-        foreach (var entryToUpdate in entriesToUpdate.OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
+        await foreach (var entryToUpdate in Get(accountId, entry.PostingDate, DateTime.UtcNow).OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
         {
             if (previousEntry is not null)
                 entryToUpdate.Value = previousEntry.Value + entryToUpdate.ValueChange;
@@ -129,15 +132,15 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
 
             previousEntry = entryToUpdate;
         }
+
         context.SaveChanges();
     }
 
     private async Task RecalculateValues(int accountId, DateTime startDate)
     {
-        var entriesToUpdate = await Get(accountId, startDate, DateTime.UtcNow);
-        BankAccountEntry? previousEntry = await GetNextOlder(accountId, startDate);
+        var previousEntry = await GetNextOlder(accountId, startDate);
 
-        foreach (var entryToUpdate in entriesToUpdate.OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
+        await foreach (var entryToUpdate in Get(accountId, startDate, DateTime.UtcNow).OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
         {
             if (previousEntry is not null)
                 entryToUpdate.Value = previousEntry.Value + entryToUpdate.ValueChange;

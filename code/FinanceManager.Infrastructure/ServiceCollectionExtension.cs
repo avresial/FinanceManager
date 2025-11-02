@@ -6,6 +6,7 @@ using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
+using FinanceManager.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,9 +36,12 @@ public static class ServiceCollectionExtension
                 .AddScoped<IAccountRepository<StockAccount>, StockAccountRepository>()
                 .AddScoped<IBankAccountRepository<BankAccount>, BankAccountRepository>()
                 .AddScoped<NewVisitsRepository>()
-                .AddScoped<IDuplicateEntryRepository, DuplicateEntryRepository>()
                 .AddScoped<IFinancialLabelsRepository, FinancialLabelsRepository>()
+                .AddScoped<ICurrencyRepository, CurrencyRepository>()
+
                 .AddHostedService<DatabaseInitializer>()
+                .AddHostedService<AdminAccountSeederBackgroundService>()
+                .AddHostedService<GuestAccountSeederBackgroundService>()
                 ;
 
         return services;
@@ -75,5 +79,12 @@ public static class ServiceCollectionExtension
         {
             logger.LogInformation("No pending migrations found.");
         }
+    }
+    public static T GetOptions<T>(this IConfiguration configuration, string sectionName) where T : class, new()
+    {
+        var section = configuration.GetSection(sectionName) ?? throw new ArgumentException($"Configuration section '{sectionName}' not found.");
+        var options = new T();
+        section.Bind(options);
+        return options;
     }
 }

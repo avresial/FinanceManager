@@ -75,19 +75,21 @@ public partial class ImportBankEntriesComponent : ComponentBase
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<ImportBankEntriesComponent> Logger { get; set; }
     [Inject] public required BankAccountHttpContext BankAccountHttpContext { get; set; }
-    [Inject] public required DuplicateEntryResolverHttpContext DuplicateEntryResolverHttpContext { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             var user = await LoginService.GetLoggedUser();
+            if (user is null) throw new Exception("User is null");
+
             var existingAccount = await FinancialAccountService.GetAccount<BankAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
             if (existingAccount is not null)
                 AccountName = existingAccount.Name;
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.LogError(ex, ex.Message);
         }
     }
 
@@ -297,7 +299,6 @@ public partial class ImportBankEntriesComponent : ComponentBase
                         _warnings.Add($"Conflicts to resolve {exactMatchesDays}.");
                 }
 
-                await DuplicateEntryResolverHttpContext.Scan(AccountId);
             }
             catch (Exception ex)
             {

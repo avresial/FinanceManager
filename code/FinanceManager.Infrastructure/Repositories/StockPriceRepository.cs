@@ -14,7 +14,7 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
             0, // Id is autoincremented, will be set by the database
             ticker,
             pricePerUnit,
-            currency.ShortName,
+            currency,
             date.Date
         );
 
@@ -66,17 +66,15 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         var stockPrice = await context.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker);
 
         if (stockPrice is null) return null;
-        return new(stockPrice.Currency, "");
+        return stockPrice.Currency;
     }
 
-    public async Task<StockPrice?> Update(string ticker, decimal pricePerUnit, Currency currency, DateTime date)
+    public async Task<StockPrice> Update(string ticker, decimal pricePerUnit, Currency currency, DateTime date)
     {
-        var stockPrice = await context.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == date.Date);
-
-        if (stockPrice is null) return null;
+        var stockPrice = await context.StockPrices.FirstOrDefaultAsync(x => x.Ticker == ticker && x.Date.Date == date.Date) ?? throw new Exception("Update failed");
 
         stockPrice.PricePerUnit = pricePerUnit;
-        stockPrice.Currency = currency.ShortName;
+        stockPrice.Currency = currency;
 
         await context.SaveChangesAsync();
 

@@ -12,16 +12,16 @@ using MudBlazor.Utilities;
 namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockAccountComponents;
 public partial class AddStockEntry
 {
-    private async Task<IEnumerable<string>> SearchTicker(string value, CancellationToken token)
+    private Task<IEnumerable<string>> SearchTicker(string value, CancellationToken token)
     {
-        if (string.IsNullOrEmpty(value)) return Tickers;
+        if (string.IsNullOrEmpty(value)) return Task.FromResult(Tickers.AsEnumerable());
 
-        return Tickers.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+        return Task.FromResult(Tickers.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase)));
     }
 
     private Currency _currency = DefaultCurrency.PLN;
     private bool success;
-    private string[] errors = { };
+    private string[] errors = [];
     private MudForm? form;
 
     private List<string> InvestmentType = Enum.GetValues(typeof(InvestmentType)).Cast<InvestmentType>().Select(x => x.ToString()).ToList();
@@ -79,8 +79,8 @@ public partial class AddStockEntry
         if (!PostingDate.HasValue) return;
         if (!Time.HasValue) return;
 
-        DateTime date = new DateTime(PostingDate.Value.Year, PostingDate.Value.Month, PostingDate.Value.Day, Time.Value.Hours, Time.Value.Minutes, Time.Value.Seconds);
-        InvestmentType investmentType = FinanceManager.Domain.Enums.InvestmentType.Stock;
+        DateTime date = new(PostingDate.Value.Year, PostingDate.Value.Month, PostingDate.Value.Day, Time.Value.Hours, Time.Value.Minutes, Time.Value.Seconds);
+        InvestmentType investmentType = Domain.Enums.InvestmentType.Stock;
 
         try
         {
@@ -100,8 +100,8 @@ public partial class AddStockEntry
 
         try
         {
-            InvestmentAccount.Add(new AddInvestmentEntryDto(entry.PostingDate, entry.ValueChange, entry.Ticker, entry.InvestmentType));
             await FinancalAccountService.AddEntry(entry);
+            InvestmentAccount.Add(entry);
         }
         catch (Exception ex)
         {

@@ -22,7 +22,6 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
         Entries = [];
     }
 
-
     public List<InvestmentType> GetStoredTypes()
     {
         if (Entries is null) return [];
@@ -100,60 +99,30 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
             return currentMaxId.Value + 1;
         return 0;
     }
+    public void Add(AddInvestmentEntryDto entry, bool recalculateValues = true) =>
+        Add(new StockAccountEntry(AccountId, -1, entry.PostingDate, -1, entry.ValueChange, entry.Ticker, entry.InvestmentType), recalculateValues);
+
     public override void Add(IEnumerable<StockAccountEntry> entries, bool recalculateValues = true)
     {
         foreach (var entry in entries)
             Add(entry, recalculateValues);
     }
-    public void Add(AddInvestmentEntryDto entry)
-    {
-        Entries ??= new List<StockAccountEntry>();
-        var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.Ticker == entry.Ticker && x.ValueChange == entry.ValueChange);
-        if (alredyExistingEntry is not null)
-        {
-            throw new Exception($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.EntryId}, Posting date{alredyExistingEntry.PostingDate}, " +
-                $"Ticker {alredyExistingEntry.Ticker}, Value change {alredyExistingEntry.ValueChange}");
-        }
-
-        var previousEntry = Entries.GetNextYounger(entry.PostingDate).FirstOrDefault();
-        var index = -1;
-
-        if (previousEntry is not null)
-            index = Entries.IndexOf(previousEntry);
-
-        if (index == -1)
-        {
-            index = Entries.Count();
-            Entries.Add(new StockAccountEntry(AccountId, GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType));
-            index -= 1;
-        }
-        else
-        {
-            Entries.Insert(index, new StockAccountEntry(AccountId, GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange, entry.Ticker, entry.InvestmentType));
-        }
-
-        RecalculateEntryValues(index);
-    }
     public override void Add(StockAccountEntry entry, bool recalculateValues = true)
     {
-        Entries ??= new List<StockAccountEntry>();
-        var alredyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.Ticker == entry.Ticker && x.ValueChange == entry.ValueChange);
-        if (alredyExistingEntry is not null)
+        var alreadyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.Ticker == entry.Ticker && x.ValueChange == entry.ValueChange);
+        if (alreadyExistingEntry is not null)
         {
-            throw new Exception($"WARNING - Entry already exist, can not be added: Id:{alredyExistingEntry.EntryId}, Posting date{alredyExistingEntry.PostingDate}, " +
-                $"Ticker {alredyExistingEntry.Ticker}, Value change {alredyExistingEntry.ValueChange}");
+            throw new Exception($"WARNING -  Entry already exist, can not be added: Id:{alreadyExistingEntry.EntryId}, Posting date{alreadyExistingEntry.PostingDate}, " +
+                $"Ticker {alreadyExistingEntry.Ticker}, Value change {alreadyExistingEntry.ValueChange}");
         }
 
         var previousEntry = Entries.GetNextYounger(entry.PostingDate).FirstOrDefault();
-        var index = -1;
-
-        if (previousEntry is not null)
-            index = Entries.IndexOf(previousEntry);
+        var index = previousEntry is null ? -1 : Entries.IndexOf(previousEntry);
 
         if (index == -1)
         {
             Entries.Add(entry);
-            index = Entries.Count() - 1;
+            index = Entries.Count - 1;
         }
         else
         {
@@ -200,6 +169,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
         Entries.RemoveAt(index);
         RecalculateEntryValues(index - 1);
     }
+
     private new void RecalculateEntryValues(int? startingIndex)
     {
         if (Entries is null) return;

@@ -8,7 +8,7 @@ namespace FinanceManager.Components.Components.ImportData;
 public partial class BankEntryConflictResolver
 {
     [Inject] public required BankAccountHttpContext BankAccountHttpContext { get; set; }
-    [Inject] public ILogger<BankEntryConflictResolver> Logger { get; set; }
+    [Inject] public required ILogger<BankEntryConflictResolver> Logger { get; set; }
 
     [Parameter] public required IReadOnlyCollection<ImportConflict> Conflicts { get; set; }
     [Parameter] public required bool SkipExactMatches { get; set; } = true;

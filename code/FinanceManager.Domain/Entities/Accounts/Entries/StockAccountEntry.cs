@@ -25,5 +25,4 @@ public class StockAccountEntry : FinancialEntryBase
     }
 
     public StockAccountEntry GetCopy() => new StockAccountEntry(AccountId, EntryId, PostingDate, Value, ValueChange, Ticker, InvestmentType);
-
 }

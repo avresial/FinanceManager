@@ -6,61 +6,29 @@ using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Services;
-public class MoneyFlowService(IFinancialAccountRepository financialAccountRepository, IStockPriceRepository stockRepository,
-    ICurrencyExchangeService currencyExchangeService, IFinancialLabelsRepository financialLabelsRepository) : IMoneyFlowService
+public class MoneyFlowService(IFinancialAccountRepository financialAccountRepository, IFinancialLabelsRepository financialLabelsRepository, IStockPriceProvider stockPriceProvider) : IMoneyFlowService
 {
-
     public async Task<decimal?> GetNetWorth(int userId, Currency currency, DateTime date)
     {
         if (date > DateTime.UtcNow) date = DateTime.UtcNow;
         decimal result = 0;
 
-        var bankAccounts = await financialAccountRepository.GetAccounts<BankAccount>(userId, date.Date, date).ToListAsync();
-        foreach (var bankAccount in bankAccounts)
+        await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, date.Date, date))
         {
-            if (bankAccount.NextOlderEntry is null) continue;
-            if (bankAccount.Entries is null) continue;
-
-            var newBankAccount = await financialAccountRepository.GetAccount<BankAccount>(userId, bankAccount.AccountId, bankAccount.NextOlderEntry.PostingDate,
-                bankAccount.NextOlderEntry.PostingDate.AddSeconds(1));
-            if (newBankAccount is not null && newBankAccount.Entries is not null)
-                bankAccount.Add(newBankAccount.Entries, false);
-        }
-
-        foreach (var account in bankAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0))
-        {
-            if (account is null || account.Entries is null) continue;
-
-            var newestEntry = account.Get(date).OrderByDescending(x => x.PostingDate).FirstOrDefault();
+            var newestEntry = account.GetThisOrNextOlder(date);
             if (newestEntry is null) continue;
 
             result += newestEntry.Value;
         }
 
-        var investmentAccounts = await financialAccountRepository.GetAccounts<StockAccount>(userId, date.Date, date).ToListAsync();
-        foreach (var investmentAccount in investmentAccounts)
+        await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, date.Date, date))
         {
-            foreach (var item in investmentAccount.NextOlderEntries)
+            foreach (var ticker in account.GetStoredTickers())
             {
-                if (investmentAccount.Entries is null) continue;
-                if (investmentAccount.Entries.Any(x => x.Ticker == item.Key)) continue;
-
-                var newInvestmentAccount = await financialAccountRepository.GetAccount<StockAccount>(userId, investmentAccount.AccountId, item.Value.PostingDate, item.Value.PostingDate.AddSeconds(1));
-                if (newInvestmentAccount is not null && newInvestmentAccount.Entries is not null)
-                    investmentAccount.Add(newInvestmentAccount.Entries, false);
-            }
-        }
-
-        foreach (var account in investmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0))
-        {
-            if (account is null || account.Entries is null) continue;
-
-            foreach (var tickerGroup in account.Get(date).GroupBy(x => x.Ticker))
-            {
-                var newestEntry = tickerGroup.OrderByDescending(x => x.PostingDate).FirstOrDefault();
+                var newestEntry = account.GetThisOrNextOlder(date, ticker);
                 if (newestEntry is null) continue;
-                var stockPrice = await stockRepository.GetThisOrNextOlder(newestEntry.Ticker, date);
-                decimal pricePerUnit = stockPrice is null ? 1 : await currencyExchangeService.GetPricePerUnit(stockPrice, currency, date);
+
+                decimal pricePerUnit = await stockPriceProvider.GetPricePerUnitAsync(ticker, currency, date);
                 result += newestEntry.Value * pricePerUnit;
             }
         }
@@ -103,8 +71,8 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
                     result[date] += entry.ValueChange;
             }
         }
-        var timeBucket = TimeBucketService.Get(result.Select(x => (x.Key, x.Value)));
-        return timeBucket.Select(x => new TimeSeriesModel() { DateTime = x.Date, Value = x.Objects.Sum(x => x) }).ToList();
+
+        return TimeBucketService.Get(result.Select(x => (x.Key, x.Value))).Select(x => new TimeSeriesModel(x.Date, x.Objects.Sum(x => x))).ToList();
     }
     public async Task<List<TimeSeriesModel>> GetSpending(int userId, Currency currency, DateTime start, DateTime end)
     {
@@ -114,7 +82,7 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
         Dictionary<DateTime, decimal> result = [];
         await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
         {
-            for (var date = end; date >= start; date = date.Add(-timeSeriesStep)) // TODO fix for time series step other than 1 day
+            for (var date = end; date >= start; date = date.Add(-timeSeriesStep))
             {
                 if (!result.ContainsKey(date)) result.Add(date, 0);
 
@@ -126,8 +94,9 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
             }
         }
 
-        var timeBucket = TimeBucketService.Get(result.Select(x => (x.Key, x.Value)));
-        return timeBucket.Select(x => new TimeSeriesModel() { DateTime = x.Date, Value = x.Objects.Sum(x => x) }).ToList();
+        return TimeBucketService.Get(result.Select(x => (x.Key, x.Value)))
+            .Select(x => new TimeSeriesModel(x.Date, x.Objects.Sum(x => x)))
+            .ToList();
     }
     public Task<List<TimeSeriesModel>> GetBalance(int userId, Currency currency, DateTime start, DateTime end)
     {
@@ -160,7 +129,6 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
 
         return result.Values.ToList();
     }
-
     public async IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end)
     {
         var labels = await financialLabelsRepository.GetLabels().ToListAsync();
@@ -169,28 +137,15 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
         Currency currency = DefaultCurrency.PLN; // TODO: use user currency settings
 
         decimal salary = 0;
-        await foreach (BankAccount account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
-        {
-            if (account is null || account.Entries is null) continue;
-            if (account.Entries is null || !account.Entries.Any()) continue;
-
+        await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
             salary += account.Entries.Where(x => x.Labels is not null && x.Labels.Any(y => y.Id == salaryLabel.Id)).Sum(x => x.ValueChange);
-        }
+
         if (salary == 0) yield break;
 
         decimal investmentsChange = 0;
-        var investmentAccounts = financialAccountRepository.GetAccounts<StockAccount>(userId, start, end);
-        await foreach (StockAccount account in investmentAccounts.Where(x => x.Entries is not null && x.Entries.Count != 0))
-        {
-            if (account is null || account.Entries is null) continue;
-
+        await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, start, end))
             foreach (var entry in account.Entries)
-            {
-                var stockPrice = await stockRepository.GetThisOrNextOlder(entry.Ticker, entry.PostingDate);
-                decimal pricePerUnit = stockPrice is null ? 1 : await currencyExchangeService.GetPricePerUnit(stockPrice, currency, entry.PostingDate);
-                investmentsChange += entry.ValueChange * pricePerUnit;
-            }
-        }
+                investmentsChange += entry.ValueChange * await stockPriceProvider.GetPricePerUnitAsync(entry.Ticker, currency, entry.PostingDate);
 
         yield return new()
         {

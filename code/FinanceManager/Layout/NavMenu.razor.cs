@@ -1,9 +1,9 @@
-﻿using FinanceManager.Components.Services;
+﻿using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
-using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.WebUi.Layout;
 
@@ -105,6 +105,7 @@ public partial class NavMenu : ComponentBase
         }
         catch (HttpRequestException ex)
         {
+            Logger.LogError(ex, ex.Message);
         }
         catch (Exception ex)
         {

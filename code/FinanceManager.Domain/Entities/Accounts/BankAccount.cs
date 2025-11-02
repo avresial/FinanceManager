@@ -37,13 +37,12 @@ public class BankAccount : FinancialAccountBase<BankAccountEntry>
 
         return NextOlderEntry;
     }
-    public void AddEntry(AddBankEntryDto entry)
+    public void AddEntry(AddBankEntryDto entry, bool recalculateValues = true)
     {
-        Entries ??= [];
         var alreadyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
         if (alreadyExistingEntry is not null)
         {
-            Debug.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alreadyExistingEntry.EntryId}, Posting date{alreadyExistingEntry.PostingDate}, Value change {alreadyExistingEntry.ValueChange}");
+            Debug.WriteLine($"WARNING - Entry already exist, can not be added: Id:{alreadyExistingEntry.EntryId}, Posting date {alreadyExistingEntry.PostingDate}, Value change {alreadyExistingEntry.ValueChange}");
             //throw new Exception($"Entry already exist, can not be added - Posting date: {alreadyExistingEntry.PostingDate}, " +
             //    $"Value change: {alreadyExistingEntry.ValueChange}");
         }
@@ -72,7 +71,8 @@ public class BankAccount : FinancialAccountBase<BankAccountEntry>
             Entries.Insert(index, newEntry);
         }
 
-        RecalculateEntryValues(index);
+        if (recalculateValues)
+            RecalculateEntryValues(index);
     }
     public override void UpdateEntry(BankAccountEntry entry, bool recalculateValues = true)
     {

@@ -3,7 +3,6 @@ using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
-using System.Text.RegularExpressions;
 
 namespace FinanceManager.WebUi.Pages.Admin;
 public partial class EditUserPage
@@ -17,19 +16,19 @@ public partial class EditUserPage
     private bool _isLoadingPage;
     private bool _success;
     private string _selectedPlan = $"{PricingLevel.Free}";
-    private string _selectedUserRole;
+    private string? _selectedUserRole;
     private string? _confirmPassword { get; set; }
-    private string? _deleteConfirmation;
     private MudForm? _passwordForm;
     private MudTextField<string>? _passwordField;
-    private List<string> _plans = new() { $"{PricingLevel.Free}", $"{PricingLevel.Basic}", $"{PricingLevel.Premium}" };
-    private List<string> _roles = new() { $"{UserRole.User}", $"{UserRole.Admin}" };
+    private List<string> _plans = [$"{PricingLevel.Free}", $"{PricingLevel.Basic}", $"{PricingLevel.Premium}"];
+    private List<string> _roles = [$"{UserRole.User}", $"{UserRole.Admin}"];
     private RecordCapacity? _recordCapacity;
 
     [Parameter] public required int UserId { get; set; }
 
     [Inject] public required IUserService UserService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required ILogger<EditUserPage> Logger { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -69,8 +68,7 @@ public partial class EditUserPage
 #if DEBUG
 
         yield break;
-#endif
-
+#else
         if (pw.Length < 8)
             yield return "Password must be at least of length 8";
         if (!Regex.IsMatch(pw, @"[A-Z]"))
@@ -79,26 +77,26 @@ public partial class EditUserPage
             yield return "Password must contain at least one lowercase letter";
         if (!Regex.IsMatch(pw, @"[0-9]"))
             yield return "Password must contain at least one digit";
+#endif
     }
 
     private async Task ChangeUserRole()
     {
         if (_userData is null) return;
+        if (string.IsNullOrEmpty(_selectedUserRole)) return;
 
         try
         {
+
             var result = await UserService.UpdateRole(_userData.UserId, (UserRole)Enum.Parse(typeof(UserRole), _selectedUserRole));
             if (!result)
-            {
                 _errors.Insert(0, "Failed to change role.");
-            }
             else
-            {
                 _info.Insert(0, $"Successfully changed role");
-            }
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, ex.Message);
             _errors.Insert(0, "Failed to change role.");
             return;
         }
@@ -114,6 +112,7 @@ public partial class EditUserPage
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, ex.Message);
             _errors.Insert(0, "Failed to change plan.");
             return;
         }
@@ -144,6 +143,7 @@ public partial class EditUserPage
     private async Task ChangePasswordAsync()
     {
         if (_userData is null) return;
+        if (_passwordForm is null) return;
         if (_passwordField is null) return;
         if (string.IsNullOrEmpty(_confirmPassword)) return;
 

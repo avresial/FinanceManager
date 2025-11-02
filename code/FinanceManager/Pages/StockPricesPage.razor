@@ -16,8 +16,8 @@ else
     private DateTime? ParsedDate { get; set; } = null;
 
 
-    [Parameter] public string Ticker { get; set; }
-    [Parameter] public string Date { get; set; }
+    [Parameter] public required string Ticker { get; set; }
+    [Parameter] public required string Date { get; set; }
 
     protected override void OnInitialized()
     {

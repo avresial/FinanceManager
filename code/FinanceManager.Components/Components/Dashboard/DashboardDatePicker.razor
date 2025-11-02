@@ -1,4 +1,5 @@
 ﻿@using FinanceManager.Components.Helpers
+
 @if (StockStyle)
 {
     <MudToggleGroup T="string" @bind-Value="selectedStockTimeSpan" Outlined=false Delimiters=false>
@@ -18,7 +19,7 @@ else
     <MudPaper Elevation="1" Style="right: 30px; position: fixed; bottom: 3vh; z-index:2;">
         <MudStack Spacing="0">
 
-            <MudButtonGroup T="string" Variant="Variant.Text">
+            <MudButtonGroup Variant="Variant.Text">
 
                 <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentMonthRange()))>This month</MudButton>
                 <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentQuarterRange()))>This quarter</MudButton>
@@ -102,7 +103,7 @@ else
     }
 
 
-    [Parameter] public DateRange InitialDateRange { get; set; } = null;
+    [Parameter] public DateRange? InitialDateRange { get; set; } = null;
     [Parameter] public bool StockStyle { get; set; }
     [Parameter] public string StartingOption { get; set; } = "ThisMonth";
     [Parameter] public required Action<(DateTime Start, DateTime End)> DateChanged { get; set; }
@@ -110,10 +111,8 @@ else
     protected override void OnInitialized()
     {
         (DateTime Start, DateTime End)? range = null;
-        if (InitialDateRange is not null)
-        {
+        if (InitialDateRange is not null && InitialDateRange.Start is not null)
             range = (InitialDateRange.Start.Value, InitialDateRange.Start.Value);
-        }
 
         switch (StartingOption)
         {

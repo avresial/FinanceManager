@@ -1,16 +1,15 @@
 using Blazored.LocalStorage;
-using FinanceManager.Application.Providers;
-using FinanceManager.Components.Services;
+using FinanceManager.Components.HttpContexts;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
-using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.WebUi.Pages;
+
 public partial class LandingPage
 {
-    private MudTheme Theme = new();
+    private MudTheme _theme = new();
+
     [Inject] public required ILocalStorageService LocalStorageService { get; set; }
-    [Inject] public required PricingProvider PricingProvider { get; set; }
     [Inject] public required NewVisitorsHttpContext NewVisitorsHttpContext { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -28,6 +27,4 @@ public partial class LandingPage
         await LoginService.Login("Guest", "GuestPassword");
         Navigation.NavigateTo("");
     }
-
-
 }

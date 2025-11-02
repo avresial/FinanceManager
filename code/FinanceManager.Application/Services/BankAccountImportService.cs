@@ -8,9 +8,8 @@ namespace FinanceManager.Application.Services;
 
 public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAccountRepository,
     IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
-    UserPlanVerifier userPlanVerifier, ILogger<BankAccountImportService> logger)
+    IUserPlanVerifier userPlanVerifier, ILogger<BankAccountImportService> logger) : IBankAccountImportService
 {
-
     public async Task<ImportResult> ImportEntries(int userId, int accountId, IEnumerable<BankEntryImport> entries)
     {
         ArgumentNullException.ThrowIfNull(entries);
@@ -33,7 +32,7 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
         var errors = new List<string>();
         var conflicts = new List<ImportConflict>();
 
-        var existingAll = (await bankAccountEntryRepository.Get(accountId, minDay.AddDays(-10), maxDay.AddDays(1))).ToList();
+        var existingAll = await bankAccountEntryRepository.Get(accountId, minDay.AddDays(-10), maxDay.AddDays(1)).ToListAsync();
         for (var day = minDay; day <= maxDay; day = day.AddDays(1))
         {
             var importsThisDay = entryList.Where(x => x.PostingDate.Date == day).ToList();
@@ -53,8 +52,6 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
 
                 continue;
             }
-
-            var test = existingAll.Where(x => x.PostingDate.Date.Month == day.Month).ToList();
 
             foreach (var imp in importsThisDay)
             {

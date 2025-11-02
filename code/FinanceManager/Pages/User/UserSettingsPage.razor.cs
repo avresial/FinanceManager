@@ -3,7 +3,6 @@ using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
-using System.Text.RegularExpressions;
 
 namespace FinanceManager.WebUi.Pages.User;
 
@@ -46,7 +45,7 @@ public partial class UserSettingsPage : IBrowserViewportObserver, IAsyncDisposab
         }
     }
 
-    [Inject] private IBrowserViewportService BrowserViewportService { get; set; }
+    [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
     [Inject] public required IUserService UserService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
@@ -114,8 +113,7 @@ public partial class UserSettingsPage : IBrowserViewportObserver, IAsyncDisposab
 #if DEBUG
 
         yield break;
-#endif
-
+#else
         if (pw.Length < 8)
             yield return "Password must be at least of length 8";
         if (!Regex.IsMatch(pw, @"[A-Z]"))
@@ -124,6 +122,7 @@ public partial class UserSettingsPage : IBrowserViewportObserver, IAsyncDisposab
             yield return "Password must contain at least one lowercase letter";
         if (!Regex.IsMatch(pw, @"[0-9]"))
             yield return "Password must contain at least one digit";
+#endif
     }
     private async Task UpgradePricingPlan()
     {
@@ -173,6 +172,7 @@ public partial class UserSettingsPage : IBrowserViewportObserver, IAsyncDisposab
     private async Task ChangePasswordAsync()
     {
         if (_loggedUser is null) return;
+        if (_passwordForm is null) return;
         if (_passwordField is null) return;
         if (string.IsNullOrEmpty(_confirmPassword)) return;
 

@@ -130,7 +130,7 @@ public partial class AssetsPerAccountOverviewCard
         {
             try
             {
-                return await AssetsHttpContext.GetEndAssetsPerAccount(_user.UserId, DefaultCurrency.PLN, StartDateTime, EndDateTime);
+                return await AssetsHttpContext.GetEndAssetsPerAccount(_user.UserId, DefaultCurrency.PLN, EndDateTime);
             }
             catch (Exception ex)
             {
