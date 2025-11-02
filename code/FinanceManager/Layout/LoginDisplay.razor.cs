@@ -9,7 +9,6 @@ namespace FinanceManager.WebUi.Layout;
 public partial class LoginDisplay : IDisposable
 {
     private UserSession? _userSession = null;
-    private bool _open;
     private string _label = "";
     private PricingLevel _pricingLabel;
 

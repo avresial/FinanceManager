@@ -102,6 +102,7 @@ public class StockAccountControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.IsType<bool>(okResult.Value);
         Assert.True((bool)okResult.Value);
     }
 }

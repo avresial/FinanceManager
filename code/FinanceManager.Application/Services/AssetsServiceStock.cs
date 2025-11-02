@@ -13,11 +13,12 @@ internal class AssetsServiceStock(IFinancialAccountRepository financialAccountRe
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end)
     {
         Dictionary<DateTime, decimal> prices = [];
-        TimeSpan step = new(1, 0, 0, 0);
         await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, start, end).Where(x => x.ContainsAssets))
         {
-            foreach (var date in prices.Keys)
+            for (DateTime date = end; date >= start; date = date.AddDays(-1))
             {
+                if (!prices.ContainsKey(date)) prices.Add(date, 0);
+
                 foreach (var ticker in account.GetStoredTickers())
                 {
                     var entry = account.GetThisOrNextOlder(date, ticker);

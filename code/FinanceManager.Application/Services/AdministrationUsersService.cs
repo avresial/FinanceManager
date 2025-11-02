@@ -5,12 +5,10 @@ using FinanceManager.Domain.Entities.User;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
-using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Services;
 public class AdministrationUsersService(IFinancialAccountRepository financialAccountRepository, IUserRepository userRepository,
-    IActiveUsersRepository activeUsersRepository, IUserPlanVerifier userPlanVerifier,
-    ILogger<AdministrationUsersService> logger) : IAdministrationUsersService
+    IActiveUsersRepository activeUsersRepository, IUserPlanVerifier userPlanVerifier) : IAdministrationUsersService
 {
 
     public Task<int> GetAccountsCount() => financialAccountRepository.GetAccountsCount();

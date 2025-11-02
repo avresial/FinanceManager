@@ -180,6 +180,7 @@ public class BankAccountControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.IsType<bool>(okResult.Value);
         Assert.True((bool)okResult.Value);
     }
 
@@ -198,6 +199,7 @@ public class BankAccountControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.IsType<bool>(okResult.Value);
         Assert.True((bool)okResult.Value);
     }
 

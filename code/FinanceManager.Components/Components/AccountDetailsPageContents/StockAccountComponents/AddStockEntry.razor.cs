@@ -12,16 +12,16 @@ using MudBlazor.Utilities;
 namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockAccountComponents;
 public partial class AddStockEntry
 {
-    private async Task<IEnumerable<string>> SearchTicker(string value, CancellationToken token)
+    private Task<IEnumerable<string>> SearchTicker(string value, CancellationToken token)
     {
-        if (string.IsNullOrEmpty(value)) return Tickers;
+        if (string.IsNullOrEmpty(value)) return Task.FromResult(Tickers.AsEnumerable());
 
-        return Tickers.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+        return Task.FromResult(Tickers.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase)));
     }
 
     private Currency _currency = DefaultCurrency.PLN;
     private bool success;
-    private string[] errors = { };
+    private string[] errors = [];
     private MudForm? form;
 
     private List<string> InvestmentType = Enum.GetValues(typeof(InvestmentType)).Cast<InvestmentType>().Select(x => x.ToString()).ToList();

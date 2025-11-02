@@ -7,7 +7,7 @@ public class StockPriceDto
     public int Id { get; set; }
     public string Ticker { get; set; } = string.Empty;
     public decimal PricePerUnit { get; set; }
-    public Currency Currency { get; set; }
+    public Currency? Currency { get; set; }
     public DateTime Date { get; set; }
     public bool Verified { get; set; }
 
@@ -30,7 +30,7 @@ public class StockPriceDto
     {
         Ticker = Ticker,
         PricePerUnit = PricePerUnit,
-        Currency = Currency,
+        Currency = Currency!,
         Date = Date
     };
 };

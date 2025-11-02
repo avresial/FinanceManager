@@ -1,10 +1,11 @@
 ﻿using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.Entities;
+using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpContexts;
 
-public class StockPriceHttpContext(HttpClient httpClient)
+public class StockPriceHttpContext(HttpClient httpClient, ILogger<StockPriceHttpContext> logger)
 {
     public async Task AddStockPrice(string ticker, decimal pricePerUnit, Currency currency, DateTime date)
     {
@@ -43,7 +44,7 @@ public class StockPriceHttpContext(HttpClient httpClient)
         }
         catch (Exception ex)
         {
-
+            logger.LogError(ex, ex.Message);
         }
 
         return [];
@@ -63,10 +64,10 @@ public class StockPriceHttpContext(HttpClient httpClient)
         try
         {
             return await httpClient.GetFromJsonAsync<TickerCurrency>($"{httpClient.BaseAddress}api/StockPrice/get-ticker-currency/?ticker={ticker.ToUpper()}");
-
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, ex.Message);
             return null;
         }
     }

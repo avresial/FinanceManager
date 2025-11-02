@@ -14,8 +14,8 @@ namespace FinanceManager.UnitTests.Application.Services;
 
 public class MoneyFlowServiceTests
 {
-    private readonly DateTime _startDate = new(2020, 1, 1);
-    private readonly DateTime _endDate = new(2020, 1, 31);
+    private readonly DateTime _startDate = new(DateTime.UtcNow.Year - 1, 1, 1);
+    private readonly DateTime _endDate = DateTime.UtcNow;
 
     private readonly MoneyFlowService _moneyFlowService;
     private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
@@ -43,8 +43,8 @@ public class MoneyFlowServiceTests
         investmentAccount1.Add(new StockAccountEntry(1, 2, _endDate, 10, 10, "testStock2", InvestmentType.Stock));
 
         _investmentAccountAccounts = [investmentAccount1];
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<StockAccount>(1, _startDate, _endDate))
-                                      .Returns(_investmentAccountAccounts.ToAsyncEnumerable());
+        //_financialAccountRepositoryMock.Setup(x => x.GetAccounts<StockAccount>(1, _startDate, _endDate))
+        //                              .Returns(_investmentAccountAccounts.ToAsyncEnumerable());
 
         _stockRepository.Setup(x => x.GetThisOrNextOlder("testStock1", It.IsAny<DateTime>()))
                         .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "testStock1", PricePerUnit = 2 });
@@ -70,10 +70,10 @@ public class MoneyFlowServiceTests
     {
         // Arrange
         var userId = 1;
-        DateTime date = new(2020, 12, 31);
+        DateTime date = _startDate.AddDays(-1);
         List<BankAccount> bankAccounts = [new(userId, 1, "Bank Account 1", [new(1, 1, date, 1000, 0)])];
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, date.Date, date)).Returns(bankAccounts.ToAsyncEnumerable());
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, date.Date, date)).Returns(_investmentAccountAccounts.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(bankAccounts.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(_investmentAccountAccounts.ToAsyncEnumerable());
 
         // Act
         var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
@@ -87,13 +87,11 @@ public class MoneyFlowServiceTests
     {
         // Arrange
         var userId = 1;
-        DateTime start = new(2023, 1, 1);
-        DateTime end = new(2023, 12, 31);
         List<BankAccount> bankAccounts =
         [
             new (userId, 1, "Bank Account 1",
             [
-                new(1, 1, end, 1000, 0)
+                new(1, 1, _endDate, 1000, 0)
             ])
         ];
 
@@ -101,10 +99,10 @@ public class MoneyFlowServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(_investmentAccountAccounts.ToAsyncEnumerable());
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, start, end);
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, _startDate, _endDate);
 
         // Assert
         Assert.NotEmpty(result);
-        Assert.Equal(1000, result[end]);
+        Assert.Equal(1000, result[_endDate]);
     }
 }

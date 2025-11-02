@@ -12,7 +12,7 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
         .ToDictionaryAsync(x => x.AccountId, x => typeof(BankAccount))
         .AsTask();
 
-    public async Task<int> GetLastAccountId() => throw new NotImplementedException();
+    public Task<int> GetLastAccountId() => throw new NotImplementedException();
     public async Task<int> GetAccountsCount()
     {
         int bankAccountsCount = await bankAccountAccountRepository.GetAccountsCount();
@@ -44,7 +44,7 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
         };
     }
 
-    public async Task<bool> AccountExists(int id) => throw new NotImplementedException();
+    public Task<bool> AccountExists(int id) => throw new NotImplementedException();
 
     public async Task<T?> GetAccount<T>(int userId, int accountId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
     {
@@ -150,14 +150,8 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
     {
         throw new NotImplementedException();
     }
-    public async Task UpdateAccount<T>(T account) where T : BasicAccountInformation
-    {
-        throw new NotImplementedException();
-    }
-    public async Task RemoveAccount(int id)
-    {
-        throw new NotImplementedException();
-    }
+    public Task UpdateAccount<T>(T account) where T : BasicAccountInformation => throw new NotImplementedException();
+    public Task RemoveAccount(int id) => throw new NotImplementedException();
 
     public async Task<T?> GetNextYounger<T>(int accountId, DateTime date) where T : FinancialEntryBase => await bankAccountEntryRepository.GetNextYounger(accountId, date) as T;
     public async Task AddEntry<T>(T bankAccountEntry, int id) where T : FinancialEntryBase
@@ -196,9 +190,9 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
                 break;
         }
     }
-    public async Task Clear() => throw new NotImplementedException();
-    private async Task<object?> FindAccount(int id) => throw new NotImplementedException();
-    private async Task<T?> FindAccount<T>(int id) where T : BasicAccountInformation => throw new NotImplementedException();
+    public Task Clear() => throw new NotImplementedException();
+    private Task<object?> FindAccount(int id) => throw new NotImplementedException();
+    private Task<T?> FindAccount<T>(int id) where T : BasicAccountInformation => throw new NotImplementedException();
 
 
     private async Task AddStockAccountEntry(int id, string ticker, InvestmentType investmentType, decimal balanceChange, DateTime? postingDate = null)

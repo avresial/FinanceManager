@@ -28,7 +28,6 @@
                     </MudForm>
                 </MudItem>
             </MudGrid>
-        @* <MudDivider Class="my-3" /> *@
         </MudItem>
 
         <MudItem xs="12">
@@ -61,22 +60,16 @@
     private MudForm? _nameForm;
     private FinancialLabel _labelData = new FinancialLabel() { Name = "Name me"};
 
-    private bool _isLoadingPage;
     private bool _success;
 
     [Inject] public required FinancialLabelHttpContext FinancialLabelHttpContext { get; set; }
 
     [Parameter] public required int LabelId { get; set; }
 
-    protected override async Task OnParametersSetAsync()
-    {
-        _isLoadingPage = true;
-
-        _isLoadingPage = false;
-    }
     private async Task UpdateNameAsync()
     {
         if (_labelData is null) return;
+        if (_nameForm is null) return;
 
         await _nameForm.Validate();
         if (_nameForm.IsValid)

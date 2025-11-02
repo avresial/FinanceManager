@@ -17,7 +17,7 @@ internal class AssetsServiceBank(IFinancialAccountRepository financialAccountRep
         if (start == new DateTime()) return [];
 
         Dictionary<DateTime, decimal> prices = [];
-        TimeSpan step = new(1, 0, 0, 0);
+        TimeSpan step = TimeSpan.FromDays(1);
 
         await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end).Where(x => x.ContainsAssets))
         {

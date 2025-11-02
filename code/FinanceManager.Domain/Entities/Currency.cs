@@ -3,8 +3,8 @@
 public class Currency
 {
     public int Id { get; set; }
-    public string ShortName { get; set; }
-    public string Symbol { get; set; }
+    public string ShortName { get; set; } = string.Empty;
+    public string Symbol { get; set; } = string.Empty;
 
     public Currency()
     {

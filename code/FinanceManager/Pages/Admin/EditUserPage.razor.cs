@@ -17,19 +17,19 @@ public partial class EditUserPage
     private bool _isLoadingPage;
     private bool _success;
     private string _selectedPlan = $"{PricingLevel.Free}";
-    private string _selectedUserRole;
+    private string? _selectedUserRole;
     private string? _confirmPassword { get; set; }
-    private string? _deleteConfirmation;
     private MudForm? _passwordForm;
     private MudTextField<string>? _passwordField;
-    private List<string> _plans = new() { $"{PricingLevel.Free}", $"{PricingLevel.Basic}", $"{PricingLevel.Premium}" };
-    private List<string> _roles = new() { $"{UserRole.User}", $"{UserRole.Admin}" };
+    private List<string> _plans = [$"{PricingLevel.Free}", $"{PricingLevel.Basic}", $"{PricingLevel.Premium}"];
+    private List<string> _roles = [$"{UserRole.User}", $"{UserRole.Admin}"];
     private RecordCapacity? _recordCapacity;
 
     [Parameter] public required int UserId { get; set; }
 
     [Inject] public required IUserService UserService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required ILogger<EditUserPage> Logger { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -99,6 +99,7 @@ public partial class EditUserPage
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, ex.Message);
             _errors.Insert(0, "Failed to change role.");
             return;
         }
@@ -114,6 +115,7 @@ public partial class EditUserPage
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, ex.Message);
             _errors.Insert(0, "Failed to change plan.");
             return;
         }

@@ -12,8 +12,7 @@ namespace FinanceManager.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class UserController(IUserRepository userRepository, IUserPlanVerifier userPlanVerifier, PricingProvider pricingProvider,
-    ILogger<UserController> logger) : ControllerBase
+public class UserController(IUserRepository userRepository, IUserPlanVerifier userPlanVerifier, ILogger<UserController> logger) : ControllerBase
 {
 
     [AllowAnonymous]
