@@ -25,10 +25,10 @@ jobs:
           dotnet-version: '9.0' # Change this to match your SDK version
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore ./code
 
       - name: Clean the solution
-        run: dotnet clean
+        run: dotnet clean ./code
 
       - name: Build the solution
         run: dotnet build ./code --no-restore --configuration Release
