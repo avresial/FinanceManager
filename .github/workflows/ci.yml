@@ -18,27 +18,25 @@ jobs:
       - name: Build
         run: dotnet build ./code --configuration Release --no-restore
 
-      # - name: Run tests (with coverage)
-      #   run: dotnet test ./code --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
-     
-      - name: Testing code
-        run: |
-          echo "## ❔ Test results" >> $GITHUB_STEP_SUMMARY
-          dotnet test ./code --configuration Release -v minimal --no-build --logger GitHubActions '/p:CollectCoverage=true;CoverletOutputFormat="json,lcov,cobertura";MergeWith=${{github.workspace}}/coverage.json;CoverletOutput=${{github.workspace}}/coverage' tests/Sonos.Base.Tests -- RunConfiguration.CollectSourceInformation=true
-          dotnet test ./code --configuration Release -v minimal --no-build --logger GitHubActions '/p:CollectCoverage=true;CoverletOutputFormat="json,lcov,cobertura";MergeWith=${{github.workspace}}/coverage.json;CoverletOutput=${{github.workspace}}/coverage' tests/Sonos.Base.Events.Http.Tests -- RunConfiguration.CollectSourceInformation=true          
+      - name: Run tests (with coverage)
+        run: dotnet test ./code --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
       - name: Install ReportGenerator
         run: dotnet tool install -g dotnet-reportgenerator-globaltool
 
-      - name: Create Single Coverage Report file with ReportGenerator
-        run: reportgenerator "-reports:coverlet\*.cobertura" "-targetdir:coverlet\report" -reporttypes:Cobertura
+      # - name: Create Single Coverage Report file with ReportGenerator
+      #   run: reportgenerator "-reports:coverlet\*.cobertura" "-targetdir:coverlet\report" -reporttypes:Cobertura
 
-
-      - name: Generate Coverage Markdown Report
-        uses: clearlyip/code-coverage-report-action@v4
-        id: code_coverage_report_action
+      # - name: Generate Coverage Markdown Report
+      #   uses: clearlyip/code-coverage-report-action@v4
+      #   id: code_coverage_report_action
+      #   with:
+      #       filename: 'coverlet\report\Cobertura.xml'
+      - name: Publish code coverage results
+        uses: actions/upload-artifact@v3
         with:
-            filename: 'coverlet\report\Cobertura.xml'
+            name: code-coverage-report
+            path: '**/coverage.cobertura.xml'
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
