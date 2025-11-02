@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
 	<PropertyGroup>
 		<TargetFramework>net9.0</TargetFramework>
@@ -8,6 +8,10 @@
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<Compile Include="..\GlobalUsings.cs" Link="GlobalUsings.cs" />
+	</ItemGroup>
+	
 	<ItemGroup>
 		<InternalsVisibleTo Include="FinanceManager.IntegrationTests" />
 		<InternalsVisibleTo Include="FinanceManager.UnitTests" />

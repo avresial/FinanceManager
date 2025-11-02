@@ -11,7 +11,9 @@
 		<InternalsVisibleTo Include="FinanceManager.IntegrationTests" />
 		<InternalsVisibleTo Include="FinanceManager.UnitTests" />
 	</ItemGroup>
-
+	<ItemGroup>
+		<Compile Include="..\GlobalUsings.cs" Link="GlobalUsings.cs" />
+	</ItemGroup>
 	<ItemGroup>
 		<SupportedPlatform Include="browser" />
 	</ItemGroup>
