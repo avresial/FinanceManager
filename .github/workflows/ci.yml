@@ -18,11 +18,11 @@ jobs:
       - name: Build
         run: dotnet build ./code --configuration Release --no-restore
 
-      - name: Run tests (with coverage)
-        run: dotnet test ./code --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
+      # - name: Run tests (with coverage)
+      #   run: dotnet test ./code --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
-      - name: Install ReportGenerator
-        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+      # - name: Install ReportGenerator
+      #   run: dotnet tool install -g dotnet-reportgenerator-globaltool
 
       # - name: Create Single Coverage Report file with ReportGenerator
       #   run: reportgenerator "-reports:coverlet\*.cobertura" "-targetdir:coverlet\report" -reporttypes:Cobertura
@@ -32,23 +32,34 @@ jobs:
       #   id: code_coverage_report_action
       #   with:
       #       filename: 'coverlet\report\Cobertura.xml'
-      - name: Publish code coverage results
-        uses: actions/upload-artifact@v3
-        with:
-            name: code-coverage-report
-            path: '**/coverage.cobertura.xml'
+      # - name: Publish code coverage results
+      #   uses: codecov/upload-artifact@v3
+      #   with:
+      #       name: code-coverage-report
+      #       path: '**/coverage.cobertura.xml'
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #       directory: ./coverlet/report/
+      #       fail_ci_if_error: false
+      #       files: Cobertura.xml
+      #       flags: unittests
+      #       name: FluxDigital.Extensions
+      #       token: ${{ secrets.CODECOV_TOKEN }}
+      #       slug: fluxdigital/FluxDigital.Extensions
+      #       verbose: true
+
+      - name: Run tests
+        run: dotnet test ./code --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
         with:
-            directory: ./coverlet/report/
-            fail_ci_if_error: false
-            files: Cobertura.xml
-            flags: unittests
-            name: FluxDigital.Extensions
-            token: ${{ secrets.CODECOV_TOKEN }}
-            slug: fluxdigital/FluxDigital.Extensions
-            verbose: true
+          name: 'Test Results'
+          path: 'TestResults/*.trx'
+          reporter: dotnet-trx
 
       - name: Verify formatting
         run: dotnet format ./code --verify-no-changes
