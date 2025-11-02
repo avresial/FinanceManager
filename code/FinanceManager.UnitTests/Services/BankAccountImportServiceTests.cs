@@ -3,8 +3,10 @@ using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -24,7 +26,7 @@ public class BankAccountImportServiceTests
         _mockBankAccountEntryRepository = new Mock<IAccountEntryRepository<BankAccountEntry>>();
 
         _mockUserRepository = new Mock<IUserRepository>();
-        var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = Domain.Enums.PricingLevel.Premium, CreationDate = DateTime.UtcNow };
+        var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = PricingLevel.Premium, CreationDate = DateTime.UtcNow };
         _mockUserRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
 
         // create a real UserPlanVerifier so its CanAddMoreEntries method can be used in test
@@ -44,7 +46,7 @@ public class BankAccountImportServiceTests
         _mockBankAccountRepository.Setup(x => x.Get(accountId)).ReturnsAsync(account);
 
         // Ensure user plan allows importing by returning no accounts / zero used entries
-        _mockBankAccountRepository.Setup(x => x.GetAvailableAccounts(userId)).Returns(new List<Domain.ValueObjects.AvailableAccount>().ToAsyncEnumerable());
+        _mockBankAccountRepository.Setup(x => x.GetAvailableAccounts(userId)).Returns(new List<AvailableAccount>().ToAsyncEnumerable());
 
         List<BankEntryImport> domainEntries =
         [

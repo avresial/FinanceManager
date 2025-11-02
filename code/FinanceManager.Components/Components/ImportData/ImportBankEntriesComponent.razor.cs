@@ -75,7 +75,6 @@ public partial class ImportBankEntriesComponent : ComponentBase
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<ImportBankEntriesComponent> Logger { get; set; }
     [Inject] public required BankAccountHttpContext BankAccountHttpContext { get; set; }
-    [Inject] public required DuplicateEntryResolverHttpContext DuplicateEntryResolverHttpContext { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -297,7 +296,6 @@ public partial class ImportBankEntriesComponent : ComponentBase
                         _warnings.Add($"Conflicts to resolve {exactMatchesDays}.");
                 }
 
-                await DuplicateEntryResolverHttpContext.Scan(AccountId);
             }
             catch (Exception ex)
             {

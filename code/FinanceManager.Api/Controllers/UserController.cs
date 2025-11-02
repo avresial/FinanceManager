@@ -56,7 +56,7 @@ public class UserController(IUserRepository userRepository, IUserPlanVerifier us
         {
             var result = new RecordCapacity()
             {
-                TotalCapacity = pricingProvider.GetMaxAllowedEntries(user.PricingLevel),
+                TotalCapacity = PricingProvider.GetMaxAllowedEntries(user.PricingLevel),
                 UsedCapacity = await userPlanVerifier.GetUsedRecordsCapacity(userId)
             };
             if (result is not null) return Ok(result);

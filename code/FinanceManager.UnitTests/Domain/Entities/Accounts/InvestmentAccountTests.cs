@@ -3,16 +3,11 @@ using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
 
-namespace FinanceManager.UnitTests.Entities.Accounts;
+namespace FinanceManager.UnitTests.Domain.Entities.Accounts;
 
 public class InvestmentAccountTests
 {
-    private readonly StockAccount _investmentAccount;
-    public InvestmentAccountTests()
-    {
-        _investmentAccount = new(1, 1, "TestAccount");
-    }
-
+    private readonly StockAccount _investmentAccount = new(1, 1, "TestAccount");
 
     [Fact]
     public void AddEntries_SingleTicker()

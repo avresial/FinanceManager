@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography;
+using System.Text;
 
 namespace FinanceManager.Application.Providers;
 
@@ -6,12 +7,9 @@ public static class PasswordEncryptionProvider
 {
     public static string EncryptPassword(string inputString)
     {
-        byte[] data = System.Text.Encoding.ASCII.GetBytes(inputString);
-        var hashAlgorithm = SHA256.Create();
+        var data = Encoding.ASCII.GetBytes(inputString);
+        var hashedData = SHA256.HashData(data);
 
-        data = hashAlgorithm.ComputeHash(data);
-        string hash = System.Text.Encoding.ASCII.GetString(data);
-
-        return hash;
+        return Encoding.ASCII.GetString(hashedData);
     }
 }

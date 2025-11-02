@@ -10,7 +10,6 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
     IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
     IUserPlanVerifier userPlanVerifier, ILogger<BankAccountImportService> logger) : IBankAccountImportService
 {
-
     public async Task<ImportResult> ImportEntries(int userId, int accountId, IEnumerable<BankEntryImport> entries)
     {
         ArgumentNullException.ThrowIfNull(entries);

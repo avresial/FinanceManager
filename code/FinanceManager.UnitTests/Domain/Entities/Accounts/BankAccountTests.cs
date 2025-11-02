@@ -1,15 +1,11 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 
-namespace FinanceManager.UnitTests.Entities.Accounts;
+namespace FinanceManager.UnitTests.Domain.Entities.Accounts;
 
 public class BankAccountTests
 {
-    private BankAccount _bankAccount;
-    public BankAccountTests()
-    {
-        _bankAccount = new(1, 1, "Test account", Domain.Enums.AccountLabel.Other);
-    }
+    private readonly BankAccount _bankAccount = new(1, 1, "Test account", FinanceManager.Domain.Enums.AccountLabel.Other);
 
     [Fact]
     public void UpdateEntry_ChangesPostingDateAndDescription()

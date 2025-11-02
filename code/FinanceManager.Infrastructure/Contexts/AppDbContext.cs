@@ -14,7 +14,6 @@ public class AppDbContext : DbContext
     public DbSet<StockAccountEntry> StockEntries { get; set; }
     public DbSet<StockPriceDto> StockPrices { get; set; }
     public DbSet<NewVisits> NewVisits { get; set; }
-    public DbSet<DuplicateEntry> DuplicateEntries { get; set; }
     public DbSet<FinancialLabel> FinancialLabels { get; set; }
 
 
@@ -33,7 +32,6 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new StockAccountEntryConfiguration());
         modelBuilder.ApplyConfiguration(new StockPriceDtoConfiguration());
         modelBuilder.ApplyConfiguration(new UserDtoConfiguration());
-        modelBuilder.ApplyConfiguration(new DuplicateEntryConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }

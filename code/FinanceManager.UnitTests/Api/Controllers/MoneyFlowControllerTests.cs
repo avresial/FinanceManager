@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using System.Security.Claims;
-namespace FinanceManager.UnitTests.Controllers;
+namespace FinanceManager.UnitTests.Api.Controllers;
 
 public class MoneyFlowControllerTests
 {
@@ -36,7 +36,7 @@ public class MoneyFlowControllerTests
     {
         // Arrange
         DateTime date = new(2000, 1, 1);
-        _mockmoneyFlowService.Setup(repo => repo.GetNetWorth(testUserId, DefaultCurrency.PLN, date)).ReturnsAsync((decimal)1);
+        _mockmoneyFlowService.Setup(repo => repo.GetNetWorth(testUserId, DefaultCurrency.PLN, date)).ReturnsAsync(1);
 
         // Act
         var result = await _controller.GetNetWorth(testUserId, DefaultCurrency.PLN.Id, date);

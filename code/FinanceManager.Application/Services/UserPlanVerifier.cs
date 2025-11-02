@@ -26,7 +26,7 @@ public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRep
 
         int totalEntries = await GetUsedRecordsCapacity(userId);
 
-        return totalEntries + entriesCount <= pricingProvider.GetMaxAllowedEntries(user.PricingLevel);
+        return totalEntries + entriesCount <= PricingProvider.GetMaxAllowedEntries(user.PricingLevel);
     }
 
     public async Task<bool> CanAddMoreAccounts(int userId)
@@ -37,6 +37,6 @@ public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRep
         var accountsCount = await bankAccountRepository.GetAvailableAccounts(userId)
             .CountAsync();
 
-        return accountsCount < pricingProvider.GetMaxAccountCount(user.PricingLevel);
+        return accountsCount < PricingProvider.GetMaxAccountCount(user.PricingLevel);
     }
 }

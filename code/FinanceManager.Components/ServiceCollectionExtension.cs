@@ -23,8 +23,8 @@ public static class ServiceCollectionExtension
                 .AddScoped<AccountDataSynchronizationService>()
                 .AddScoped<IUserService, UserService>()
                 .AddScoped<IFinancialAccountService, FinancialAccountService>()
-                .AddScoped<DuplicateEntryResolverHttpContext>()
                 ;
+
         return services;
     }
 }

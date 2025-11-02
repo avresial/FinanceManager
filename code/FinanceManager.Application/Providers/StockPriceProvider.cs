@@ -11,16 +11,16 @@ public class StockPriceProvider(IStockPriceRepository stockRepository, ICurrency
     private readonly ICurrencyExchangeService _currencyExchangeService = currencyExchangeService ?? throw new ArgumentNullException(nameof(currencyExchangeService));
     private readonly IMemoryCache _cache = cache ?? throw new ArgumentNullException(nameof(cache));
 
-    public async Task<decimal> GetPricePerUnitAsync(string ticker, Currency targetCurrency, DateTime asOf)
+    public Task<decimal> GetPricePerUnitAsync(string ticker, Currency targetCurrency, DateTime asOf)
     {
         if (string.IsNullOrWhiteSpace(ticker)) throw new ArgumentException("{ticker}", nameof(ticker));
 
         var key = ticker.Trim().ToUpperInvariant();
 
         if (_cache.TryGetValue(key, out decimal cached))
-            return cached;
+            return Task.FromResult(cached);
 
-        var pricePerUnit = await _cache.GetOrCreateAsync(key, async entry =>
+        return _cache.GetOrCreateAsync(key, async entry =>
         {
             entry.SlidingExpiration = TimeSpan.FromMinutes(5);
 
@@ -31,7 +31,5 @@ public class StockPriceProvider(IStockPriceRepository stockRepository, ICurrency
 
             return price;
         });
-
-        return pricePerUnit;
     }
 }

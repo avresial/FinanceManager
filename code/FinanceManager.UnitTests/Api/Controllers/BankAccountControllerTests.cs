@@ -5,6 +5,7 @@ using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
@@ -14,7 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 using Moq;
 using System.Security.Claims;
 
-namespace FinanceManager.UnitTests.Controllers;
+namespace FinanceManager.UnitTests.Api.Controllers;
 
 public class BankAccountControllerTests
 {
@@ -33,7 +34,7 @@ public class BankAccountControllerTests
         _mockBankAccountEntryRepository = new();
 
         _userRepository = new Mock<IUserRepository>();
-        var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = Domain.Enums.PricingLevel.Premium, CreationDate = DateTime.UtcNow };
+        var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = PricingLevel.Premium, CreationDate = DateTime.UtcNow };
         _userRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
 
         _userPlanVerifier = new Mock<IUserPlanVerifier>();

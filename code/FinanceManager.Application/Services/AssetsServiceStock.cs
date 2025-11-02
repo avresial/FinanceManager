@@ -54,17 +54,16 @@ internal class AssetsServiceStock(IFinancialAccountRepository financialAccountRe
     {
         await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Where(x => x.ContainsAssets))
         {
-            NameValueResult result = new(account.Name, 0);
-
+            decimal value = 0;
             foreach (var ticker in account.GetStoredTickers())
             {
                 var pricePerUnit = await stockPriceProvider.GetPricePerUnitAsync(ticker, currency, asOfDate);
                 var latestEntry = account.Get(asOfDate).First(x => x.Ticker == ticker);
 
-                result.Value += latestEntry.Value * pricePerUnit;
+                value += latestEntry.Value * pricePerUnit;
             }
 
-            yield return result;
+            yield return new(account.Name, value);
         }
     }
 

@@ -1,14 +1,10 @@
 ﻿using FinanceManager.Domain.Entities.Accounts;
 
-namespace FinanceManager.UnitTests.Entities.Accounts;
+namespace FinanceManager.UnitTests.Domain.Entities.Accounts;
 
 public class FinancialAccountTests
 {
-    private readonly FinancialAccountBase<FinancialEntryBase> _financialAccount;
-    public FinancialAccountTests()
-    {
-        _financialAccount = new(1, 1, "Test account");
-    }
+    private readonly FinancialAccountBase<FinancialEntryBase> _financialAccount = new(1, 1, "Test account");
 
     [Fact]
     public void AddData_AddsNotOrderedData()
@@ -26,7 +22,7 @@ public class FinancialAccountTests
         Assert.Equal(10, _financialAccount.Entries.Last().Value);
     }
     [Fact]
-    public async Task AddEntries_FromYoungersToOldest_SingleTickers()
+    public void AddEntries_FromYoungersToOldest_SingleTickers()
     {
         // Arrange
         _financialAccount.Add(new FinancialEntryBase(1, 1, new(2000, 1, 30), 10, 10));

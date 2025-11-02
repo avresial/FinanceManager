@@ -71,6 +71,9 @@ internal class AssetsServiceBank(IFinancialAccountRepository financialAccountRep
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
     {
+
+        financialAccountRepository.GetAccounts<BankAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Select(x => x.AccountType).Distinct();
+
         Dictionary<AccountLabel, NameValueResult> accountLabelResults = [];
 
         await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Where(x => x.ContainsAssets))

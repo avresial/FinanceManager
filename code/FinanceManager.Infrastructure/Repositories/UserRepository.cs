@@ -71,19 +71,17 @@ public class UserRepository : IUserRepository
 
         return userDto.ToUser();
     }
-    public async Task<IEnumerable<User>> GetUsers(int recordIndex, int recordsCount)
-    {
-        return await _dbContext.Users.Skip(recordIndex).Take(recordsCount)
-                .Select(x => x.ToUser())
-                .ToListAsync();
-    }
-    public async Task<IEnumerable<User>> GetUsers(DateTime startDate, DateTime endDate)
-    {
-        return await _dbContext.Users
-            .Where(x => x.CreationDate >= startDate && x.CreationDate <= endDate)
-            .Select(x => x.ToUser())
-            .ToListAsync();
-    }
+    public IAsyncEnumerable<User> GetUsers(int recordIndex, int recordsCount) => _dbContext.Users
+        .Skip(recordIndex)
+        .Take(recordsCount)
+        .Select(x => x.ToUser())
+        .ToAsyncEnumerable();
+
+    public IAsyncEnumerable<User> GetUsers(DateTime startDate, DateTime endDate) => _dbContext.Users
+        .Where(x => x.CreationDate >= startDate && x.CreationDate <= endDate)
+        .Select(x => x.ToUser())
+        .ToAsyncEnumerable();
+
     public Task<int> GetUsersCount() => _dbContext.Users.CountAsync();
 
     public async Task<bool> RemoveUser(int userId)
