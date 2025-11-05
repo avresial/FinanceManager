@@ -11,7 +11,8 @@ public interface IAccountEntryRepository<T>
     Task<T?> GetOldest(int accountId);
     Task<int> GetCount(int accountId);
 
-    Task<bool> Add(T entry);
+    Task RecalculateValues(int accountId, int entryId);
+    Task<bool> Add(T entry, bool recalculate = true);
     Task<bool> AddLabel(int entryId, int labelId);
     Task<bool> Update(T entry);
     Task<bool> Delete(int accountId, int entryId);

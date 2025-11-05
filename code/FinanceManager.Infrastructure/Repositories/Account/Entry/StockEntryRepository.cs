@@ -7,14 +7,15 @@ namespace FinanceManager.Infrastructure.Repositories.Account.Entry;
 
 public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepository<StockAccountEntry>
 {
-    public async Task<bool> Add(StockAccountEntry entry)
+    public async Task<bool> Add(StockAccountEntry entry, bool recalculate = true)
     {
         StockAccountEntry newBankAccountEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange, entry.Ticker, entry.InvestmentType);
 
         context.StockEntries.Add(newBankAccountEntry);
         await context.SaveChangesAsync();
 
-        await RecalculateValues(newBankAccountEntry.AccountId, newBankAccountEntry.EntryId);
+        if (recalculate)
+            await RecalculateValues(newBankAccountEntry.AccountId, newBankAccountEntry.EntryId);
 
         return true;
     }
@@ -159,9 +160,7 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
         return true;
     }
 
-
-
-    private async Task RecalculateValues(int accountId, int entryId)
+    public async Task RecalculateValues(int accountId, int entryId)
     {
         var entry = await context.StockEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (entry is null) return;

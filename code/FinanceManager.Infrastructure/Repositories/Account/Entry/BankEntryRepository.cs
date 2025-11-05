@@ -7,7 +7,7 @@ namespace FinanceManager.Infrastructure.Repositories.Account.Entry;
 
 public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository<BankAccountEntry>
 {
-    public async Task<bool> Add(BankAccountEntry entry)
+    public async Task<bool> Add(BankAccountEntry entry, bool recalculate)
     {
         BankAccountEntry newBankAccountEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange)
         {
@@ -17,7 +17,8 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
 
         context.BankEntries.Add(newBankAccountEntry);
         await context.SaveChangesAsync();
-        await RecalculateValues(newBankAccountEntry.AccountId, newBankAccountEntry.EntryId);
+        if (recalculate)
+            await RecalculateValues(newBankAccountEntry.AccountId, newBankAccountEntry.EntryId);
         return true;
     }
 
@@ -116,7 +117,7 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
         return true;
     }
 
-    private async Task RecalculateValues(int accountId, int entryId)
+    public async Task RecalculateValues(int accountId, int entryId)
     {
         var entry = await context.BankEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (entry is null) return;
@@ -151,13 +152,6 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
         }
         await context.SaveChangesAsync();
     }
-
-    private int GetHighestEntry() => context.BankEntries
-            .ToList()
-            .Select(x => x.EntryId)
-            .DefaultIfEmpty(0)
-            .Max();
-
     public async Task<bool> AddLabel(int entryId, int labelId)
     {
         var entry = await context.BankEntries.FirstOrDefaultAsync(e => e.EntryId == entryId);

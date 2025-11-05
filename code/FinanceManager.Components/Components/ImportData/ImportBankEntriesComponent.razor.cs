@@ -277,7 +277,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
                 throw new Exception("Failed to read data for import.");
 
             var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, Headers, Data);
-            var entries = exportResult.Select(x => new BankEntryImportRecordDto(x.PostingDate.ToUniversalTime(), x.ValueChange)).ToList();
+            var entries = exportResult.Select(x => new BankEntryImportRecordDto(x.PostingDate, x.ValueChange)).ToList();
 
             try
             {
@@ -431,7 +431,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
             if (!decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var valueChange))
                 throw new Exception($"Could not parse value change: '{value}'");
 
-            yield return (date, valueChange);
+            yield return (new(date.Ticks, DateTimeKind.Utc), valueChange);
         }
     }
 }

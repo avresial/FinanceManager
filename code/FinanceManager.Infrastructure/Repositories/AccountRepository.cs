@@ -56,17 +56,12 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
 
     public async Task<T?> GetAccount<T>(int userId, int accountId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
     {
-
-
         switch (typeof(T))
         {
             case Type t when t == typeof(BankAccount):
-                if (!await bankAccountAccountRepository.GetAvailableAccounts(userId).AnyAsync(x => x.AccountId == accountId))
-                    throw new Exception($"User {userId} does not have account {accountId}");
-
                 var resultAccount = await bankAccountAccountRepository.Get(accountId);
                 if (resultAccount is null) return null;
-
+                if (resultAccount.UserId != userId) throw new Exception($"User {userId} does not have account {accountId}");
                 var entries = await bankAccountEntryRepository.Get(resultAccount.AccountId, dateStart, dateEnd).ToListAsync();
 
                 var nextOlderEntry = await bankAccountEntryRepository.GetNextOlder(resultAccount.AccountId, dateStart);
@@ -109,12 +104,12 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
         switch (typeof(T))
         {
             case Type t when t == typeof(BankAccount):
-                await foreach (var bankAccount in bankAccountAccountRepository.GetAvailableAccounts(userId))
+                foreach (var bankAccount in await bankAccountAccountRepository.GetAvailableAccounts(userId).ToListAsync())
                     yield return (await GetAccount<T>(userId, bankAccount.AccountId, dateStart, dateEnd))!;
                 break;
 
             case Type t when t == typeof(StockAccount):
-                await foreach (var stockAccount in stockAccountRepository.GetAvailableAccounts(userId))
+                foreach (var stockAccount in await stockAccountRepository.GetAvailableAccounts(userId).ToListAsync())
                     yield return (await GetAccount<T>(userId, stockAccount.AccountId, dateStart, dateEnd))!;
                 break;
         }

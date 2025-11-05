@@ -13,7 +13,7 @@ public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRep
     {
         int totalEntries = 0;
 
-        await foreach (var account in bankAccountRepository.GetAvailableAccounts(userId))
+        foreach (var account in await bankAccountRepository.GetAvailableAccounts(userId).ToListAsync())
             totalEntries += await bankAccountEntryRepository.GetCount(account.AccountId);
 
         return await Task.FromResult(totalEntries);

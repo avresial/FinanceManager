@@ -55,7 +55,7 @@ public class BankAccountImportServiceTests
         ];
 
         _mockBankAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(new List<BankAccountEntry>().ToAsyncEnumerable());
-        _mockBankAccountEntryRepository.Setup(x => x.Add(It.IsAny<BankAccountEntry>())).ReturnsAsync(true);
+        _mockBankAccountEntryRepository.Setup(x => x.Add(It.IsAny<BankAccountEntry>(), It.IsAny<bool>())).ReturnsAsync(true);
 
         // Act
         var result = await _service.ImportEntries(userId, accountId, domainEntries);

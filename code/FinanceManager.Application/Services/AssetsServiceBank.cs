@@ -24,7 +24,7 @@ internal class AssetsServiceBank(IFinancialAccountRepository financialAccountRep
             var entry = account.GetThisOrNextOlder(end);
             if (entry is null || entry.Value <= 0) continue;
 
-            decimal previousValue = entry.Value;
+            decimal previousValue = 0;
 
             for (DateTime date = start; date <= end; date = date.Add(step))
             {

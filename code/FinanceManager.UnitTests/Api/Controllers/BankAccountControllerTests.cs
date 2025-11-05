@@ -154,7 +154,7 @@ public class BankAccountControllerTests
             Description = addEntry.Description,
         };
 
-        _mockBankAccountEntryRepository.Setup(repo => repo.Add(It.IsAny<BankAccountEntry>())).ReturnsAsync(true);
+        _mockBankAccountEntryRepository.Setup(repo => repo.Add(It.IsAny<BankAccountEntry>(), It.IsAny<bool>())).ReturnsAsync(true);
 
         _userPlanVerifier.Setup(x => x.CanAddMoreEntries(1, 1)).ReturnsAsync(true);
 
@@ -224,7 +224,7 @@ public class BankAccountControllerTests
         // Make repository Add succeed for each entry
 
         _mockImportService.Setup(x => x.ImportEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<BankEntryImport>>())).ReturnsAsync(new ImportResult(1, entries.Count, 0, [], []));
-        _mockBankAccountEntryRepository.Setup(repo => repo.Add(It.IsAny<BankAccountEntry>())).ReturnsAsync(true);
+        _mockBankAccountEntryRepository.Setup(repo => repo.Add(It.IsAny<BankAccountEntry>(), It.IsAny<bool>())).ReturnsAsync(true);
 
         // Act
         var result = await _controller.ImportBankEntries(importDto);

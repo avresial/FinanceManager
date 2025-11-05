@@ -6,7 +6,6 @@ using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
-using FinanceManager.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,9 +38,9 @@ public static class ServiceCollectionExtension
                 .AddScoped<IFinancialLabelsRepository, FinancialLabelsRepository>()
                 .AddScoped<ICurrencyRepository, CurrencyRepository>()
 
-                .AddHostedService<DatabaseInitializer>()
-                .AddHostedService<AdminAccountSeederBackgroundService>()
-                .AddHostedService<GuestAccountSeederBackgroundService>()
+                //.AddHostedService<DatabaseInitializer>()
+                //.AddHostedService<AdminAccountSeederBackgroundService>()
+                //.AddHostedService<GuestAccountSeederBackgroundService>()
                 ;
 
         return services;
