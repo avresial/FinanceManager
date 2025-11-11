@@ -1,11 +1,13 @@
 ﻿using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceManager.Api.Controllers;
 
 [Route("api/[controller]")]
+[Authorize]
 [ApiController]
 public class AssetsController(IAssetsService assetsService, ICurrencyRepository currencyRepository) : ControllerBase
 {

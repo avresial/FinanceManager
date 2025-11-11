@@ -25,6 +25,9 @@ builder.Services
     .AddControllers();
 
 
+builder.Services.Configure<JwtAuthOptions>(builder.Configuration.GetSection("JwtConfig"));
+
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ApiCorsPolicy",
@@ -55,6 +58,7 @@ builder.Services.AddCors(options =>
         ValidateIssuerSigningKey = true,
     };
 });
+
 builder.Services.AddMemoryCache();
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenGenerator, JwtTokenGenerator>();

@@ -31,6 +31,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\FinanceManager.Api\FinanceManager.Api.csproj" />
+		<ProjectReference Include="..\FinanceManager.Components\FinanceManager.Components.csproj" />
 	</ItemGroup>
 
 </Project>

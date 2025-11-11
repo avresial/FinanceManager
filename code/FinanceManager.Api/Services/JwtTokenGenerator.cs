@@ -1,22 +1,22 @@
 ﻿using FinanceManager.Application.Commands.Login;
 using FinanceManager.Domain.Enums;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using static FinanceManager.Api.Services.JwtTokenGenerator;
 
 namespace FinanceManager.Api.Services;
 
-public class JwtTokenGenerator(IConfiguration configuration)
+public partial class JwtTokenGenerator(IOptions<JwtAuthOptions> jwtOptions)
 {
     public LoginResponseModel? GenerateToken(string userName, int userId, UserRole userRole)
     {
         if (string.IsNullOrEmpty(userName)) return null;
 
-        // Check user validity with database
-
-        var tokenValidityInMins = configuration.GetValue<int>("JwtConfig:TokenValidityMins");
-        var tokenExpiryTimeStamp = DateTime.UtcNow.AddMinutes(tokenValidityInMins);
+        //var tokenValidityInMins = configuration.GetValue<int>("JwtConfig:TokenValidityMins");
+        var tokenExpiryTimeStamp = DateTime.UtcNow.AddMinutes(jwtOptions.Value.TokenValidityMins);
 
         var tokenDescriptor = new SecurityTokenDescriptor()
         {
@@ -29,9 +29,9 @@ public class JwtTokenGenerator(IConfiguration configuration)
             ]),
 
             Expires = tokenExpiryTimeStamp,
-            Issuer = configuration["JwtConfig:Issuer"],
-            Audience = configuration["JwtConfig:Audience"],
-            SigningCredentials = new(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JwtConfig:Key"]!)),
+            Issuer = jwtOptions.Value.Issuer,
+            Audience = jwtOptions.Value.Audience,
+            SigningCredentials = new(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Value.Key)),
             SecurityAlgorithms.HmacSha512Signature),
         };
 
@@ -45,7 +45,7 @@ public class JwtTokenGenerator(IConfiguration configuration)
             UserName = userName,
             UserId = userId,
             UserRole = userRole,
-            ExpiresIn = tokenValidityInMins
+            ExpiresIn = jwtOptions.Value.TokenValidityMins
         };
     }
 }

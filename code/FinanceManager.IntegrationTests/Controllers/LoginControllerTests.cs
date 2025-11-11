@@ -37,7 +37,6 @@ public class LoginControllerTests(OptionsProvider optionsProvider) : ControllerT
     {
         // arrange
         LoginRequestModel request = new(_testUserName, "password");
-
         // act
         var response = await Client.PostAsJsonAsync("api/Login", request, cancellationToken: TestContext.Current.CancellationToken);
 
