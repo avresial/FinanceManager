@@ -16,4 +16,6 @@ public class BankAccountEntry(int accountId, int entryId, DateTime postingDate, 
     {
         Description = this.Description,
     };
+
+    public override string ToString() => $"PostingDate: {PostingDate}, EntryId: {EntryId}, Value: {Value}, ValueChange: {ValueChange}";
 }

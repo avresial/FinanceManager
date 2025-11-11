@@ -1,5 +1,4 @@
 using FinanceManager.Components.HttpContexts;
-using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
@@ -11,7 +10,7 @@ using Xunit;
 namespace FinanceManager.IntegrationTests.Controllers;
 
 [Collection("api")]
-public class AssetsControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
+public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private TestDatabase? _testDatabase;
     private DateTime _nowUtc;
@@ -29,12 +28,10 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
             services.Remove(descriptor);
 
         services.AddSingleton(_testDatabase!.Context);
-
     }
 
     private async Task SeedWithTestBankAccount(string accountName = "Test Bank Account")
     {
-
         if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.Name == accountName))
             return;
 
@@ -45,37 +42,40 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
             UserId = 1,
             AccountId = 1,
             Name = accountName,
-            AccountLabel = AccountLabel.Cash,
+            AccountLabel = AccountLabel.Loan,
             AccountType = AccountType.Bank
         };
 
         _testDatabase!.Context.Accounts.Add(test);
         await _testDatabase.Context.SaveChangesAsync();
+        int days = 100;
+        _value = (2 + days) * _valueChange * -1;
 
-        for (DateTime i = DateTime.UtcNow.AddMonths(-24).Date; i <= DateTime.UtcNow; i = i.AddDays(1))
+        for (DateTime i = DateTime.UtcNow.AddDays(-days).Date; i <= DateTime.UtcNow; i = i.AddDays(1))
             _testDatabase!.Context.BankEntries.Add(new BankAccountEntry(test.AccountId, 0, i, _value += _valueChange, _valueChange));
 
         await _testDatabase.Context.SaveChangesAsync();
     }
 
     [Fact]
-    public async Task IsAnyAccountWithAssets_ReturnsTrue()
+    public async Task IsAnyAccountWithLiabilities_ReturnsTrue()
     {
         await SeedWithTestBankAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new AssetsHttpContext(Client).IsAnyAccountWithAssets(1);
+        var result = await new LiabilitiesHttpContext(Client).IsAnyAccountWithLiabilities(1);
 
         Assert.True(result);
     }
 
     [Fact]
-    public async Task GetEndAssetsPerAccount_ReturnsList()
+    public async Task GetEndLiabilitiesPerAccount_ReturnsList()
     {
         await SeedWithTestBankAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new AssetsHttpContext(Client).GetEndAssetsPerAccount(1, DefaultCurrency.USD, _nowUtc);
+        var result = await new LiabilitiesHttpContext(Client).GetEndLiabilitiesPerAccount(1, _nowUtc.AddDays(-1), _nowUtc)
+            .ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Single(result);
@@ -84,31 +84,32 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     }
 
     [Fact]
-    public async Task GetEndAssetsPerType_ReturnsList()
+    public async Task GetEndLiabilitiesPerType_ReturnsList()
     {
         await SeedWithTestBankAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new AssetsHttpContext(Client).GetEndAssetsPerType(1, DefaultCurrency.USD, _nowUtc);
+        var result = await new LiabilitiesHttpContext(Client).GetEndLiabilitiesPerType(1, _nowUtc.AddDays(-1), _nowUtc)
+            .ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Single(result);
-        Assert.Equal(AccountLabel.Cash.ToString(), result[0].Name);
+        Assert.Equal(AccountLabel.Loan.ToString(), result[0].Name);
         Assert.Equal(_value, result[0].Value);
     }
 
     [Fact]
-    public async Task GetAssetsTimeSeries_ReturnsList()
+    public async Task GetLiabilitiesTimeSeries_ReturnsList()
     {
         await SeedWithTestBankAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new AssetsHttpContext(Client).GetAssetsTimeSeries(1, DefaultCurrency.USD, _nowUtc.AddDays(-2), _nowUtc);
+        var result = await new LiabilitiesHttpContext(Client).GetLiabilitiesTimeSeries(1, _nowUtc.AddDays(-100), _nowUtc)
+            .ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-
-        Assert.All(result, item => Assert.True(item.Value > 0));
+        Assert.All(result, item => Assert.True(item.Value < 0));
     }
 
     public void Dispose()

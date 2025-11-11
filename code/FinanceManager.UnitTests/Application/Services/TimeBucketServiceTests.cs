@@ -235,4 +235,19 @@ public class TimeBucketServiceTests
         Assert.Equal(DateTime.Parse("2023-01-01"), result[0].Date);
         Assert.Equal(new List<int> { 10 }, result[0].Objects);
     }
+
+    [Fact]
+    public void Get_With365DataPoints_AutoSelectsAndGroupsCorrectly()
+    {
+        // Arrange: 365 data points with values 0, 10, 20, ..., 3640
+        var data = new List<(DateTime, int)>();
+        for (int i = 0; i < 365; i++)
+            data.Add((DateTime.Parse("2023-01-01").AddDays(i), i * 10));
+
+        // Act
+        var result = TimeBucketService.Get(data).ToList();
+
+        // Assert: All results should have values greater than 0
+        Assert.All(result, r => Assert.True(r.Objects.Last() > 0));
+    }
 }
