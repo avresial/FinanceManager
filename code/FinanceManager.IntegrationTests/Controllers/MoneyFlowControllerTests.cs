@@ -129,7 +129,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         var result = await new MoneyFlowHttpContext(Client).GetLabelsValue(1, _nowUtc.AddDays(-days), _nowUtc);
 
         Assert.NotNull(result);
-        Assert.Equal(days * _valueChange, result.First().Value);
+        Assert.Equal((1 + days) * _valueChange, result.First().Value);
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
 
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Equal(days * _valueChange, result.First().Salary);
+        Assert.Equal((1 + days) * _valueChange, result.First().Salary);
     }
 
     public void Dispose()
