@@ -1,6 +1,6 @@
 ﻿namespace FinanceManager.Domain.Entities;
 
-public class Currency
+public record Currency
 {
     public int Id { get; set; }
     public string ShortName { get; set; } = string.Empty;

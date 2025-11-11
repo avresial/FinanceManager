@@ -7,15 +7,19 @@ using Microsoft.AspNetCore.Mvc;
 namespace FinanceManager.Api.Controllers;
 [Route("api/[controller]")]
 [ApiController]
-public class StockPriceController(IStockPriceRepository stockPriceRepository, ICurrencyExchangeService currencyExchangeService) : ControllerBase
+public class StockPriceController(IStockPriceRepository stockPriceRepository, ICurrencyExchangeService currencyExchangeService, ICurrencyRepository currencyRepository) : ControllerBase
 {
 
     [Authorize]
     [HttpPost("add-stock-price")]
-    public async Task<IActionResult> AddStockPrice([FromQuery] string ticker, [FromQuery] decimal pricePerUnit, [FromQuery] Currency currency, [FromQuery] DateTime date)
+    public async Task<IActionResult> AddStockPrice([FromQuery] string ticker, [FromQuery] decimal pricePerUnit, [FromQuery] int currencyId, [FromQuery] DateTime date)
     {
         if (string.IsNullOrWhiteSpace(ticker) || pricePerUnit <= 0 || date == default)
             return BadRequest("Invalid input parameters.");
+
+        var currency = await currencyRepository.GetCurrency(currencyId);
+        if (currency is null)
+            return NotFound("Currency not found.");
 
         var stockPrice = await stockPriceRepository.Add(ticker.ToUpper(), pricePerUnit, currency, date);
         return Ok(stockPrice);
@@ -23,20 +27,28 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
 
     [Authorize]
     [HttpPost("update-stock-price")]
-    public async Task<IActionResult> UpdateStockPrice([FromQuery] string ticker, [FromQuery] decimal pricePerUnit, [FromQuery] Currency currency, [FromQuery] DateTime date)
+    public async Task<IActionResult> UpdateStockPrice([FromQuery] string ticker, [FromQuery] decimal pricePerUnit, [FromQuery] int currencyId, [FromQuery] DateTime date)
     {
         if (string.IsNullOrWhiteSpace(ticker) || pricePerUnit <= 0 || date == default)
             return BadRequest("Invalid input parameters.");
+
+        var currency = await currencyRepository.GetCurrency(currencyId);
+        if (currency is null)
+            return NotFound("Currency not found.");
 
         var stockPrice = await stockPriceRepository.Update(ticker.ToUpper(), pricePerUnit, currency, date);
         return Ok(stockPrice);
     }
 
     [HttpGet("get-stock-price")]
-    public async Task<IActionResult> GetStockPrice(string ticker, Currency currency, DateTime date)
+    public async Task<IActionResult> GetStockPrice([FromQuery] string ticker, [FromQuery] int currencyId, [FromQuery] DateTime date)
     {
         if (string.IsNullOrWhiteSpace(ticker) || date == default)
             return BadRequest("Invalid input parameters.");
+
+        var currency = await currencyRepository.GetCurrency(currencyId);
+        if (currency is null)
+            return NotFound("Currency not found.");
 
         var stockPrice = await stockPriceRepository.GetThisOrNextOlder(ticker, date);
 
@@ -56,7 +68,7 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
 
 
     [HttpGet("get-stock-prices")]
-    public async Task<IActionResult> GetStockPrices(string ticker, DateTime start, DateTime end, long step)
+    public async Task<IActionResult> GetStockPrices([FromQuery] string ticker, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long step = default)
     {
         if (string.IsNullOrWhiteSpace(ticker) || start == default || end == default || step == default)
             return BadRequest("Invalid input parameters.");

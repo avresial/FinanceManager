@@ -30,7 +30,7 @@ public partial class StockPricesComponent
                 utcDate = utcDate.ToUniversalTime();
             if (string.IsNullOrEmpty(SelectedCurrency)) return;
 
-            await StockPriceHttpContext.GetStockPrice(Ticker, new(0, SelectedCurrency, ""), Date.Value).ContinueWith(task =>
+            await StockPriceHttpContext.GetStockPrice(Ticker, 1, Date.Value).ContinueWith(task =>
             {
                 if (task.IsCompletedSuccessfully)
                 {
@@ -76,7 +76,7 @@ public partial class StockPricesComponent
 
         try
         {
-            await StockPriceHttpContext.AddStockPrice(Ticker, PricePerUnit, new(0, SelectedCurrency, ""), Date.Value);
+            await StockPriceHttpContext.AddStockPrice(Ticker, PricePerUnit, 1, Date.Value);
             await GetStockPriceAsync();
         }
         catch (Exception ex)
@@ -95,7 +95,7 @@ public partial class StockPricesComponent
 
         try
         {
-            await StockPriceHttpContext.UpdateStockPrice(Ticker, PricePerUnit, new(0, SelectedCurrency, ""), Date.Value);
+            await StockPriceHttpContext.UpdateStockPrice(Ticker, PricePerUnit, 1, Date.Value);
 
             await GetStockPriceAsync();
         }

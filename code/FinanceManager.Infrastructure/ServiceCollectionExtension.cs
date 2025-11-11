@@ -34,7 +34,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IStockAccountEntryRepository<StockAccountEntry>, StockEntryRepository>()
                 .AddScoped<IAccountRepository<StockAccount>, StockAccountRepository>()
                 .AddScoped<IBankAccountRepository<BankAccount>, BankAccountRepository>()
-                .AddScoped<NewVisitsRepository>()
+                .AddScoped<INewVisitsRepository, NewVisitsRepository>()
                 .AddScoped<IFinancialLabelsRepository, FinancialLabelsRepository>()
                 .AddScoped<ICurrencyRepository, CurrencyRepository>()
 

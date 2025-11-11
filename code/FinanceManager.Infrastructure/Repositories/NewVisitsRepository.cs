@@ -1,8 +1,9 @@
-﻿using FinanceManager.Infrastructure.Contexts;
+﻿using FinanceManager.Domain.Repositories;
+using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories;
-public class NewVisitsRepository(AppDbContext context)
+public class NewVisitsRepository(AppDbContext context) : INewVisitsRepository
 {
     public async Task<int> GetVisitAsync(DateTime visitDate)
     {

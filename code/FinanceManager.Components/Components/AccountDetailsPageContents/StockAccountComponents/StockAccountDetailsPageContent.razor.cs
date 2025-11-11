@@ -70,7 +70,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             {
                 if (_prices.ContainsKey(entry)) continue;
 
-                var price = await stockPriceHttpContext.GetStockPrice(entry.Ticker, DefaultCurrency.PLN, entry.PostingDate);
+                var price = await stockPriceHttpContext.GetStockPrice(entry.Ticker, DefaultCurrency.PLN.Id, entry.PostingDate);
                 if (price is null) continue;
 
                 _prices.Add(entry, price);
@@ -184,7 +184,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             ChartData.Clear();
 
             if (Account is null || Account.Entries is null) return;
-            Dictionary<DateOnly, decimal> pricesDaily = await Account.GetDailyPrice((ticker, date) => stockPriceHttpContext.GetStockPrice(ticker, _currency, date));
+            Dictionary<DateOnly, decimal> pricesDaily = await Account.GetDailyPrice((ticker, date) => stockPriceHttpContext.GetStockPrice(ticker, _currency.Id, date));
 
             var result = pricesDaily.Select(x => new TimeSeriesModel() { DateTime = x.Key.ToDateTime(new TimeOnly()), Value = x.Value }).ToList();
             var timeBucket = TimeBucketService.Get(result.Select(x => (x.DateTime, x.Value)));

@@ -58,7 +58,7 @@ public partial class AddStockEntry
             if (!numericField.Label.ToLower().Contains("change")) return;
         }
 
-        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, DefaultCurrency.PLN, PostingDate.Value);
+        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, DefaultCurrency.PLN.Id, PostingDate.Value);
         if (pricePerUnit is null) return;
 
         PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;

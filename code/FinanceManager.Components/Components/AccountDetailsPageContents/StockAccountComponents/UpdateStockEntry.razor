@@ -152,7 +152,7 @@
     {
         if (SelectedPostingDate is null) return;
 
-        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, DefaultCurrency.PLN, SelectedPostingDate.Value.Date.ToUniversalTime());
+        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, DefaultCurrency.PLN.Id, SelectedPostingDate.Value.Date.ToUniversalTime());
         if (pricePerUnit is null) return;
 
         PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;

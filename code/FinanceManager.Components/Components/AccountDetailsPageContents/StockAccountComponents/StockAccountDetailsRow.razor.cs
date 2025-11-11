@@ -26,7 +26,7 @@ public partial class StockAccountDetailsRow
     {
         try
         {
-            var price = await stockPriceHttpContext.GetStockPrice(InvestmentEntry.Ticker, currency, InvestmentEntry.PostingDate);
+            var price = await stockPriceHttpContext.GetStockPrice(InvestmentEntry.Ticker, currency.Id, InvestmentEntry.PostingDate);
             if (price is null)
             {
                 _price = null;

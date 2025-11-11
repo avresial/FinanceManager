@@ -1,4 +1,4 @@
-﻿using FinanceManager.Infrastructure.Repositories;
+﻿using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,7 +6,7 @@ namespace FinanceManager.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class NewVisitorsController(NewVisitsRepository newVisitsRepository) : ControllerBase
+public class NewVisitorsController(INewVisitsRepository newVisitsRepository) : ControllerBase
 {
 
     [AllowAnonymous]
