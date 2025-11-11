@@ -1,0 +1,134 @@
+using FinanceManager.Application.Commands.Account;
+using FinanceManager.Components.HttpContexts;
+using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Enums;
+using FinanceManager.Infrastructure.Contexts;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+
+namespace FinanceManager.IntegrationTests.Controllers;
+
+[Collection("api")]
+public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
+{
+    private TestDatabase? _testDatabase;
+
+    protected override void ConfigureServices(IServiceCollection services)
+    {
+        _testDatabase = new TestDatabase();
+
+        // remove any registration for AppDbContext
+        var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+        if (descriptor != null)
+            services.Remove(descriptor);
+
+        services.AddSingleton(_testDatabase!.Context);
+    }
+
+    private async Task SeedWithTestFinancialLabel(string name = "Test Label")
+    {
+        if (await _testDatabase!.Context.FinancialLabels.AnyAsync(x => x.Name == name))
+            return;
+
+        _testDatabase!.Context.FinancialLabels.Add(new FinancialLabel { Name = name });
+        await _testDatabase.Context.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task GetCount_ReturnsCount()
+    {
+        await SeedWithTestFinancialLabel();
+        Authorize("TestUser", 1, UserRole.User);
+
+        var result = await new FinancialLabelHttpContext(Client).GetCount(TestContext.Current.CancellationToken);
+
+        Assert.True(result > 0);
+    }
+
+    [Fact]
+    public async Task Get_ReturnsLabel()
+    {
+        await SeedWithTestFinancialLabel();
+        Authorize("TestUser", 1, UserRole.User);
+
+        var labels = await new FinancialLabelHttpContext(Client).Get(0, 10, TestContext.Current.CancellationToken);
+        var label = labels.FirstOrDefault();
+
+        Assert.NotNull(label);
+        var result = await new FinancialLabelHttpContext(Client).Get(label.Id, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal(label.Id, result.Id);
+    }
+
+    [Fact]
+    public async Task GetByIndexAndCount_ReturnsList()
+    {
+        await SeedWithTestFinancialLabel();
+        Authorize("TestUser", 1, UserRole.User);
+
+        var result = await new FinancialLabelHttpContext(Client).Get(0, 10, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+    }
+
+    [Fact]
+    public async Task Add_AddsLabel()
+    {
+        Authorize("TestUser", 1, UserRole.User);
+
+        var addResult = await new FinancialLabelHttpContext(Client).Add(new AddFinancialLabel("New Label"), TestContext.Current.CancellationToken);
+        var existing = await new FinancialLabelHttpContext(Client).Get(0, 10, TestContext.Current.CancellationToken);
+
+        Assert.True(addResult);
+        Assert.Contains(existing, l => l.Name == "New Label");
+    }
+
+    [Fact]
+    public async Task UpdateName_UpdatesLabel()
+    {
+        Authorize("TestUser", 1, UserRole.User);
+
+        await new FinancialLabelHttpContext(Client).Add(new AddFinancialLabel("New Label"), TestContext.Current.CancellationToken);
+
+        var labels = await new FinancialLabelHttpContext(Client).Get(0, 10, TestContext.Current.CancellationToken);
+        var label = labels.FirstOrDefault();
+
+        Assert.NotNull(label);
+        var updateResult = await new FinancialLabelHttpContext(Client).UpdateName(label.Id, "Updated Label", TestContext.Current.CancellationToken);
+
+        Assert.True(updateResult);
+
+        var updatedlabels = await new FinancialLabelHttpContext(Client).Get(0, 10, TestContext.Current.CancellationToken);
+        Assert.Equal("Updated Label", updatedlabels.First().Name);
+    }
+
+    [Fact]
+    public async Task Delete_DeletesLabel()
+    {
+        Authorize("TestUser", 1, UserRole.User);
+
+        await new FinancialLabelHttpContext(Client).Add(new AddFinancialLabel("New Label"), TestContext.Current.CancellationToken);
+        var labels = await new FinancialLabelHttpContext(Client).Get(0, 10, TestContext.Current.CancellationToken);
+        var label = labels.FirstOrDefault();
+
+        Assert.NotNull(label);
+        var deleteResult = await new FinancialLabelHttpContext(Client).Delete(label.Id, TestContext.Current.CancellationToken);
+
+        Assert.True(deleteResult);
+
+        var finalLabels = await new FinancialLabelHttpContext(Client).Get(0, 10, TestContext.Current.CancellationToken);
+        Assert.Empty(finalLabels);
+    }
+
+    public void Dispose()
+    {
+        if (_testDatabase is null)
+            return;
+
+        _testDatabase.Dispose();
+        _testDatabase = null;
+    }
+}
