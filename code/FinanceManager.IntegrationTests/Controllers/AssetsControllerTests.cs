@@ -4,6 +4,7 @@ using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -20,6 +21,13 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
 
     protected override void ConfigureServices(IServiceCollection services)
     {
+        if (services.Any(s => s.ImplementationType == typeof(AdminAccountSeederBackgroundService)))
+            services.Remove(services.Single(s => s.ImplementationType == typeof(AdminAccountSeederBackgroundService)));
+        if (services.Any(s => s.ImplementationType == typeof(DatabaseInitializer)))
+            services.Remove(services.Single(s => s.ImplementationType == typeof(DatabaseInitializer)));
+        if (services.Any(s => s.ImplementationType == typeof(GuestAccountSeederBackgroundService)))
+            services.Remove(services.Single(s => s.ImplementationType == typeof(GuestAccountSeederBackgroundService)));
+
         _nowUtc = DateTime.UtcNow;
         _testDatabase = new TestDatabase();
 

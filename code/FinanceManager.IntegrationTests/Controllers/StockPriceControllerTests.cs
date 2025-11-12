@@ -15,6 +15,7 @@ namespace FinanceManager.IntegrationTests.Controllers;
 public class StockPriceControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private TestDatabase? _testDatabase;
+    Mock<ICurrencyExchangeService> _currencyExchangeMock = new();
 
     protected override void ConfigureServices(IServiceCollection services)
     {
@@ -27,11 +28,10 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
 
         services.AddSingleton(_testDatabase!.Context);
 
-        var currencyExchangeMock = new Mock<ICurrencyExchangeService>();
-        currencyExchangeMock.Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
+        _currencyExchangeMock.Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
             .ReturnsAsync(1.1m);
 
-        services.AddSingleton(currencyExchangeMock.Object);
+        services.AddSingleton(_currencyExchangeMock.Object);
     }
 
     private async Task SeedWithTestStockPrice(string ticker = "AAPL", decimal price = 100, Currency? currency = null, DateTime date = default)
@@ -69,6 +69,9 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
     [Fact]
     public async Task UpdateStockPrice_UpdatesPrice()
     {
+        _currencyExchangeMock.Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
+         .ReturnsAsync(1);
+
         await SeedWithTestStockPrice("AAPL", 100);
         Authorize("TestUser", 1, UserRole.User);
 
@@ -82,6 +85,9 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
     [Fact]
     public async Task GetStockPrice_ReturnsPrice()
     {
+        _currencyExchangeMock.Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
+         .ReturnsAsync(1);
+
         await SeedWithTestStockPrice();
         // No auth needed
 
@@ -119,12 +125,14 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
     [Fact]
     public async Task GetLatestMissingStockPrice_ReturnsDate()
     {
-        await SeedWithTestStockPrice("AAPL", 100, DefaultCurrency.USD, DateTime.UtcNow.AddDays(-2));
+        var uteNow = DateTime.UtcNow;
+        await SeedWithTestStockPrice("AAPL", 100, DefaultCurrency.USD, uteNow.AddDays(-2).Date);
         // No auth
 
         var result = await new StockPriceHttpContext(Client, null!).GetLatestMissingStockPrice("AAPL");
 
         Assert.NotNull(result);
+        Assert.Equal(uteNow.Date, result);
     }
 
     [Fact]
@@ -137,7 +145,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
 
         Assert.NotNull(result);
         Assert.Equal("AAPL", result.Ticker);
-        Assert.Equal(DefaultCurrency.PLN, result.Currency);
+        Assert.Equal(DefaultCurrency.PLN.Symbol, result.Currency.Symbol);
     }
 
     public void Dispose()
