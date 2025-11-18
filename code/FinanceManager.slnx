@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/Presentation/">
+    <Project Path="AppHost/AppHost.csproj" />
+    <Project Path="FinanceManager.Api/FinanceManager.Api.csproj" />
+    <Project Path="FinanceManager.Components/FinanceManager.Components.csproj" />
+    <Project Path="FinanceManager/FinanceManager.WebUi.csproj" />
+    <Project Path="ServiceDefaults/ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/SolutionElements/">
+    <File Path="../.github/workflows/ci.yml" />
+    <File Path="../Migrations.md" />
+    <File Path="../README.md" />
+    <File Path=".editorconfig" />
+    <File Path=".github/copilot-instructions.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="GlobalUsings.cs" />
+  </Folder>
+  <Project Path="FinanceManager.Application/FinanceManager.Application.csproj" />
+  <Project Path="FinanceManager.Domain/FinanceManager.Domain.csproj" />
+  <Project Path="FinanceManager.Infrastructure/FinanceManager.Infrastructure.csproj" />
+  <Project Path="FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj" />
+  <Project Path="FinanceManager.UnitTests/FinanceManager.UnitTests.csproj" />
+</Solution>
