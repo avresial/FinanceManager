@@ -7,7 +7,7 @@ namespace FinanceManager.Components.Components.ImportData;
 
 public partial class BankEntryConflictResolver
 {
-    [Inject] public required BankAccountHttpClient BankAccountHttpClient { get; set; }
+    [Inject] public required BankAccountImportHttpClient BankAccountImportHttpClient { get; set; }
     [Inject] public required ILogger<BankEntryConflictResolver> Logger { get; set; }
 
     [Parameter] public required IReadOnlyCollection<ImportConflict> Conflicts { get; set; }
@@ -59,7 +59,7 @@ public partial class BankEntryConflictResolver
                                         .Select(c => new ResolvedImportConflict(c.AccountId, true, c.ImportEntry, false, c.ExistingEntry?.EntryId))
                                         .ToList();
 
-            await BankAccountHttpClient.ResolveImportConflictsAsync(resolvedImports);
+            await BankAccountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
         }
         catch (Exception ex)
         {
