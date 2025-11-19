@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using MudBlazor;
 
 namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAccountComponents;
+
 public partial class AddBankEntry : ComponentBase
 {
 
@@ -34,14 +35,14 @@ public partial class AddBankEntry : ComponentBase
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILogger<AddBankEntry> Logger { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
-    [Inject] public required FinancialLabelHttpContext FinancialLabelHttpContext { get; set; }
+    [Inject] public required FinancialLabelHttpClient FinancialLabelHttpClient { get; set; }
 
 
     protected override async Task OnInitializedAsync()
     {
-        var allLabelsCount = await FinancialLabelHttpContext.GetCount();
+        var allLabelsCount = await FinancialLabelHttpClient.GetCount();
 
-        _possibleLabels = (await FinancialLabelHttpContext.Get(0, allLabelsCount)).ToList();
+        _possibleLabels = (await FinancialLabelHttpClient.Get(0, allLabelsCount)).ToList();
     }
     protected override void OnParametersSet()
     {

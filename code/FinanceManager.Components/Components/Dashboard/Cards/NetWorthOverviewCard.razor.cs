@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -16,7 +16,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
         [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
         [Inject] public required ILogger<NetWorthOverviewCard> Logger { get; set; }
-        [Inject] public required MoneyFlowHttpContext MoneyFlowHttpContext { get; set; }
+        [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
         [Inject] public required ISettingsService SettingsService { get; set; }
         [Inject] public required ILoginService LoginService { get; set; }
 
@@ -34,7 +34,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
             try
             {
-                result = await MoneyFlowHttpContext.GetNetWorth(user.UserId, DefaultCurrency.PLN, EndDateTime);
+                result = await MoneyFlowHttpClient.GetNetWorth(user.UserId, DefaultCurrency.PLN, EndDateTime);
             }
             catch (Exception ex)
             {

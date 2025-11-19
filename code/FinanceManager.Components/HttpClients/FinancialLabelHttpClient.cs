@@ -2,8 +2,9 @@
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using System.Net.Http.Json;
 
-namespace FinanceManager.Components.HttpContexts;
-public class FinancialLabelHttpContext(HttpClient httpClient)
+namespace FinanceManager.Components.HttpClients;
+
+public class FinancialLabelHttpClient(HttpClient httpClient)
 {
     public Task<int> GetCount(CancellationToken cancellationToken = default) =>
         httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/FinancialLabel/get-count", cancellationToken);

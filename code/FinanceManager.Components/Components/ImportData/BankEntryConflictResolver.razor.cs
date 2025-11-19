@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Imports;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -7,7 +7,7 @@ namespace FinanceManager.Components.Components.ImportData;
 
 public partial class BankEntryConflictResolver
 {
-    [Inject] public required BankAccountHttpContext BankAccountHttpContext { get; set; }
+    [Inject] public required BankAccountHttpClient BankAccountHttpClient { get; set; }
     [Inject] public required ILogger<BankEntryConflictResolver> Logger { get; set; }
 
     [Parameter] public required IReadOnlyCollection<ImportConflict> Conflicts { get; set; }
@@ -59,7 +59,7 @@ public partial class BankEntryConflictResolver
                                         .Select(c => new ResolvedImportConflict(c.AccountId, true, c.ImportEntry, false, c.ExistingEntry?.EntryId))
                                         .ToList();
 
-            await BankAccountHttpContext.ResolveImportConflictsAsync(resolvedImports);
+            await BankAccountHttpClient.ResolveImportConflictsAsync(resolvedImports);
         }
         catch (Exception ex)
         {

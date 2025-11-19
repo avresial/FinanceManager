@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
@@ -72,7 +72,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         await SeedWithTestBankAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new AssetsHttpContext(Client).IsAnyAccountWithAssets(1);
+        var result = await new AssetsHttpClient(Client).IsAnyAccountWithAssets(1);
 
         Assert.True(result);
     }
@@ -83,7 +83,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         await SeedWithTestBankAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new AssetsHttpContext(Client).GetEndAssetsPerAccount(1, DefaultCurrency.USD, _nowUtc);
+        var result = await new AssetsHttpClient(Client).GetEndAssetsPerAccount(1, DefaultCurrency.USD, _nowUtc);
 
         Assert.NotNull(result);
         Assert.Single(result);
@@ -97,7 +97,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         await SeedWithTestBankAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new AssetsHttpContext(Client).GetEndAssetsPerType(1, DefaultCurrency.USD, _nowUtc);
+        var result = await new AssetsHttpClient(Client).GetEndAssetsPerType(1, DefaultCurrency.USD, _nowUtc);
 
         Assert.NotNull(result);
         Assert.Single(result);
@@ -111,7 +111,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         await SeedWithTestBankAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new AssetsHttpContext(Client).GetAssetsTimeSeries(1, DefaultCurrency.USD, _nowUtc.AddDays(-2), _nowUtc);
+        var result = await new AssetsHttpClient(Client).GetAssetsTimeSeries(1, DefaultCurrency.USD, _nowUtc.AddDays(-2), _nowUtc);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result);

@@ -1,14 +1,14 @@
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Accounts.Entries;
-using FinanceManager.Domain.ValueObjects;
 using FinanceManager.Domain.Entities.Imports;
+using FinanceManager.Domain.ValueObjects;
 using FinanceManager.Infrastructure.Dtos;
 using System.Net.Http.Json;
 
-namespace FinanceManager.Components.HttpContexts;
+namespace FinanceManager.Components.HttpClients;
 
-public class BankAccountHttpContext(HttpClient httpClient)
+public class BankAccountHttpClient(HttpClient httpClient)
 {
     public async Task<IEnumerable<AvailableAccount>> GetAvailableAccountsAsync()
     {

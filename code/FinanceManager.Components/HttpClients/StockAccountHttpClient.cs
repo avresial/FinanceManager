@@ -5,9 +5,9 @@ using FinanceManager.Domain.ValueObjects;
 using FinanceManager.Infrastructure.Dtos;
 using System.Net.Http.Json;
 
-namespace FinanceManager.Components.HttpContexts;
+namespace FinanceManager.Components.HttpClients;
 
-public class StockAccountHttpContext(HttpClient httpClient)
+public class StockAccountHttpClient(HttpClient httpClient)
 {
     public async Task<IEnumerable<AvailableAccount>> GetAvailableAccountsAsync()
     {

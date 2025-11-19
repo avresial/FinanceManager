@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Imports;
@@ -74,7 +74,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<ImportBankEntriesComponent> Logger { get; set; }
-    [Inject] public required BankAccountHttpContext BankAccountHttpContext { get; set; }
+    [Inject] public required BankAccountHttpClient BankAccountHttpClient { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -281,7 +281,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
 
             try
             {
-                _importResult = await BankAccountHttpContext.ImportBankEntriesAsync(new(AccountId, entries));
+                _importResult = await BankAccountHttpClient.ImportBankEntriesAsync(new(AccountId, entries));
 
                 if (_importResult is not null && _importResult.Imported != 0)
                     _summaryInfos.Add($"Imported {_importResult.Imported} entries.");

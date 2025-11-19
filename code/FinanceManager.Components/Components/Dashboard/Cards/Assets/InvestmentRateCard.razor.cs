@@ -1,8 +1,8 @@
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
-using FinanceManager.Components.HttpContexts;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards.Assets;
 
@@ -17,7 +17,7 @@ public partial class InvestmentRateCard
 
 
     [Inject] public required ILogger<InvestmentRateCard> Logger { get; set; }
-    [Inject] public required MoneyFlowHttpContext MoneyFlowHttpContext { get; set; }
+    [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
     protected override async Task OnParametersSetAsync()
@@ -32,7 +32,7 @@ public partial class InvestmentRateCard
 
             try
             {
-                _investmentRates = await MoneyFlowHttpContext.GetInvestmentRate(user.UserId, StartDateTime, EndDateTime).ToListAsync();
+                _investmentRates = await MoneyFlowHttpClient.GetInvestmentRate(user.UserId, StartDateTime, EndDateTime).ToListAsync();
             }
             catch (Exception ex)
             {

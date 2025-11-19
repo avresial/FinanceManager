@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
@@ -63,7 +63,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
         await SeedWithTestBankAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new LiabilitiesHttpContext(Client).IsAnyAccountWithLiabilities(1);
+        var result = await new LiabilitiesHttpClient(Client).IsAnyAccountWithLiabilities(1);
 
         Assert.True(result);
     }
@@ -74,7 +74,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
         await SeedWithTestBankAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new LiabilitiesHttpContext(Client).GetEndLiabilitiesPerAccount(1, _nowUtc.AddDays(-1), _nowUtc)
+        var result = await new LiabilitiesHttpClient(Client).GetEndLiabilitiesPerAccount(1, _nowUtc.AddDays(-1), _nowUtc)
             .ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
@@ -89,7 +89,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
         await SeedWithTestBankAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new LiabilitiesHttpContext(Client).GetEndLiabilitiesPerType(1, _nowUtc.AddDays(-1), _nowUtc)
+        var result = await new LiabilitiesHttpClient(Client).GetEndLiabilitiesPerType(1, _nowUtc.AddDays(-1), _nowUtc)
             .ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
@@ -104,7 +104,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
         await SeedWithTestBankAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new LiabilitiesHttpContext(Client).GetLiabilitiesTimeSeries(1, _nowUtc.AddDays(-100), _nowUtc)
+        var result = await new LiabilitiesHttpClient(Client).GetLiabilitiesTimeSeries(1, _nowUtc.AddDays(-100), _nowUtc)
             .ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);

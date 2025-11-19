@@ -1,5 +1,5 @@
 using FinanceManager.Application.Commands.Account;
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
@@ -41,7 +41,7 @@ public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : Co
         await SeedWithTestFinancialLabel();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new FinancialLabelHttpContext(Client).GetCount(TestContext.Current.CancellationToken);
+        var result = await new FinancialLabelHttpClient(Client).GetCount(TestContext.Current.CancellationToken);
 
         Assert.True(result > 0);
     }
@@ -52,11 +52,11 @@ public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : Co
         await SeedWithTestFinancialLabel();
         Authorize("TestUser", 1, UserRole.User);
 
-        var labels = await new FinancialLabelHttpContext(Client).Get(0, 10, TestContext.Current.CancellationToken);
+        var labels = await new FinancialLabelHttpClient(Client).Get(0, 10, TestContext.Current.CancellationToken);
         var label = labels.FirstOrDefault();
 
         Assert.NotNull(label);
-        var result = await new FinancialLabelHttpContext(Client).Get(label.Id, TestContext.Current.CancellationToken);
+        var result = await new FinancialLabelHttpClient(Client).Get(label.Id, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal(label.Id, result.Id);
@@ -68,7 +68,7 @@ public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : Co
         await SeedWithTestFinancialLabel();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new FinancialLabelHttpContext(Client).Get(0, 10, TestContext.Current.CancellationToken);
+        var result = await new FinancialLabelHttpClient(Client).Get(0, 10, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result);
@@ -79,8 +79,8 @@ public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : Co
     {
         Authorize("TestUser", 1, UserRole.User);
 
-        var addResult = await new FinancialLabelHttpContext(Client).Add(new AddFinancialLabel("New Label"), TestContext.Current.CancellationToken);
-        var existing = await new FinancialLabelHttpContext(Client).Get(0, 10, TestContext.Current.CancellationToken);
+        var addResult = await new FinancialLabelHttpClient(Client).Add(new AddFinancialLabel("New Label"), TestContext.Current.CancellationToken);
+        var existing = await new FinancialLabelHttpClient(Client).Get(0, 10, TestContext.Current.CancellationToken);
 
         Assert.True(addResult);
         Assert.Contains(existing, l => l.Name == "New Label");
@@ -91,17 +91,17 @@ public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : Co
     {
         Authorize("TestUser", 1, UserRole.User);
 
-        await new FinancialLabelHttpContext(Client).Add(new AddFinancialLabel("New Label"), TestContext.Current.CancellationToken);
+        await new FinancialLabelHttpClient(Client).Add(new AddFinancialLabel("New Label"), TestContext.Current.CancellationToken);
 
-        var labels = await new FinancialLabelHttpContext(Client).Get(0, 10, TestContext.Current.CancellationToken);
+        var labels = await new FinancialLabelHttpClient(Client).Get(0, 10, TestContext.Current.CancellationToken);
         var label = labels.FirstOrDefault();
 
         Assert.NotNull(label);
-        var updateResult = await new FinancialLabelHttpContext(Client).UpdateName(label.Id, "Updated Label", TestContext.Current.CancellationToken);
+        var updateResult = await new FinancialLabelHttpClient(Client).UpdateName(label.Id, "Updated Label", TestContext.Current.CancellationToken);
 
         Assert.True(updateResult);
 
-        var updatedlabels = await new FinancialLabelHttpContext(Client).Get(0, 10, TestContext.Current.CancellationToken);
+        var updatedlabels = await new FinancialLabelHttpClient(Client).Get(0, 10, TestContext.Current.CancellationToken);
         Assert.Equal("Updated Label", updatedlabels.First().Name);
     }
 
@@ -110,16 +110,16 @@ public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : Co
     {
         Authorize("TestUser", 1, UserRole.User);
 
-        await new FinancialLabelHttpContext(Client).Add(new AddFinancialLabel("New Label"), TestContext.Current.CancellationToken);
-        var labels = await new FinancialLabelHttpContext(Client).Get(0, 10, TestContext.Current.CancellationToken);
+        await new FinancialLabelHttpClient(Client).Add(new AddFinancialLabel("New Label"), TestContext.Current.CancellationToken);
+        var labels = await new FinancialLabelHttpClient(Client).Get(0, 10, TestContext.Current.CancellationToken);
         var label = labels.FirstOrDefault();
 
         Assert.NotNull(label);
-        var deleteResult = await new FinancialLabelHttpContext(Client).Delete(label.Id, TestContext.Current.CancellationToken);
+        var deleteResult = await new FinancialLabelHttpClient(Client).Delete(label.Id, TestContext.Current.CancellationToken);
 
         Assert.True(deleteResult);
 
-        var finalLabels = await new FinancialLabelHttpContext(Client).Get(0, 10, TestContext.Current.CancellationToken);
+        var finalLabels = await new FinancialLabelHttpClient(Client).Get(0, 10, TestContext.Current.CancellationToken);
         Assert.Empty(finalLabels);
     }
 

@@ -1,14 +1,10 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Application.Commands.User;
+using FinanceManager.Domain.Entities.Login;
 using System.Net.Http.Json;
 
-namespace FinanceManager.Components.HttpContexts;
+namespace FinanceManager.Components.HttpClients;
 
-public class UserHttpContext(HttpClient httpClient)
+public class UserHttpClient(HttpClient httpClient)
 {
     public async Task<bool> AddUser(AddUser addUser)
     {

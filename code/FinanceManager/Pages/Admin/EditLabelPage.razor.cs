@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -17,7 +17,7 @@ public partial class EditLabelPage
     private bool _success;
     public string? NameField { get; set; }
 
-    [Inject] public required FinancialLabelHttpContext FinancialLabelHttpContext { get; set; }
+    [Inject] public required FinancialLabelHttpClient FinancialLabelHttpClient { get; set; }
 
     [Parameter] public required int LabelId { get; set; }
 
@@ -27,7 +27,7 @@ public partial class EditLabelPage
 
         try
         {
-            _labelData = await FinancialLabelHttpContext.Get(LabelId);
+            _labelData = await FinancialLabelHttpClient.Get(LabelId);
             if (_labelData is null)
             {
                 _errors.Add("Label not found.");
@@ -52,7 +52,7 @@ public partial class EditLabelPage
         await _nameForm.Validate();
         if (_nameForm.IsValid)
         {
-            var result = await FinancialLabelHttpContext.UpdateName(_labelData.Id, NameField);
+            var result = await FinancialLabelHttpClient.UpdateName(_labelData.Id, NameField);
             if (!result)
             {
                 _errors.Insert(0, "Failed to change name.");

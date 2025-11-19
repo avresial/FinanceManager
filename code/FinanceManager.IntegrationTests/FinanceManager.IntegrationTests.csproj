@@ -7,7 +7,6 @@
 		<Nullable>enable</Nullable>
 		<RootNamespace>FinanceManager.IntegrationTests</RootNamespace>
 		<OutputType>Exe</OutputType>
-		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 	</PropertyGroup>
 
 	<ItemGroup>

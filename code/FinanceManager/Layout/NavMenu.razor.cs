@@ -1,4 +1,4 @@
-﻿using FinanceManager.Components.HttpContexts;
+﻿using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Login;
@@ -15,8 +15,8 @@ public partial class NavMenu : ComponentBase
     private bool _displayLiabilitiesLink = false;
 
     [Parameter] public bool DrawerIsOpen { get; set; }
-    [Inject] public required AssetsHttpContext AssetsHttpContext { get; set; }
-    [Inject] public required LiabilitiesHttpContext LiabilitiesHttpContext { get; set; }
+    [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
+    [Inject] public required LiabilitiesHttpClient LiabilitiesHttpClient { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -101,7 +101,7 @@ public partial class NavMenu : ComponentBase
         }
         try
         {
-            _displayAssetsLink = await AssetsHttpContext.IsAnyAccountWithAssets(user.UserId);
+            _displayAssetsLink = await AssetsHttpClient.IsAnyAccountWithAssets(user.UserId);
         }
         catch (HttpRequestException ex)
         {
@@ -114,7 +114,7 @@ public partial class NavMenu : ComponentBase
         }
         try
         {
-            _displayLiabilitiesLink = await LiabilitiesHttpContext.IsAnyAccountWithLiabilities(user.UserId);
+            _displayLiabilitiesLink = await LiabilitiesHttpClient.IsAnyAccountWithLiabilities(user.UserId);
         }
         catch (HttpRequestException)
         {

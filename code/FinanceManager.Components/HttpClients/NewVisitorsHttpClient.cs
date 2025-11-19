@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
 
-namespace FinanceManager.Components.HttpContexts;
+namespace FinanceManager.Components.HttpClients;
 
-public class NewVisitorsHttpContext(HttpClient httpClient)
+public class NewVisitorsHttpClient(HttpClient httpClient)
 {
     public async Task AddVisit()
     {

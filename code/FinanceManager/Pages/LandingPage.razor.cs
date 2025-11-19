@@ -1,5 +1,5 @@
 using Blazored.LocalStorage;
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
@@ -10,7 +10,7 @@ public partial class LandingPage
     private MudTheme _theme = new();
 
     [Inject] public required ILocalStorageService LocalStorageService { get; set; }
-    [Inject] public required NewVisitorsHttpContext NewVisitorsHttpContext { get; set; }
+    [Inject] public required NewVisitorsHttpClient NewVisitorsHttpClient { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -18,7 +18,7 @@ public partial class LandingPage
              await LocalStorageService.GetItemAsync<bool>("isThisFirstVisit"))
         {
             await LocalStorageService.SetItemAsync("isThisFirstVisit", false);
-            await NewVisitorsHttpContext.AddVisit();
+            await NewVisitorsHttpClient.AddVisit();
         }
     }
 

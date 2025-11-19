@@ -3,9 +3,9 @@ using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
 using System.Net.Http.Json;
 
-namespace FinanceManager.Components.HttpContexts;
+namespace FinanceManager.Components.HttpClients;
 
-public class AssetsHttpContext(HttpClient httpClient)
+public class AssetsHttpClient(HttpClient httpClient)
 {
     public async Task<bool> IsAnyAccountWithAssets(int userId)
     {
