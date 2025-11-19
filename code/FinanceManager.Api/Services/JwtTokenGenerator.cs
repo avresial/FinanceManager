@@ -5,17 +5,15 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using static FinanceManager.Api.Services.JwtTokenGenerator;
 
 namespace FinanceManager.Api.Services;
 
 public partial class JwtTokenGenerator(IOptions<JwtAuthOptions> jwtOptions)
 {
-    public LoginResponseModel? GenerateToken(string userName, int userId, UserRole userRole)
+    public LoginResponseModel GenerateToken(string userName, int userId, UserRole userRole)
     {
-        if (string.IsNullOrEmpty(userName)) return null;
+        ArgumentNullException.ThrowIfNull(userName);
 
-        //var tokenValidityInMins = configuration.GetValue<int>("JwtConfig:TokenValidityMins");
         var tokenExpiryTimeStamp = DateTime.UtcNow.AddMinutes(jwtOptions.Value.TokenValidityMins);
 
         var tokenDescriptor = new SecurityTokenDescriptor()

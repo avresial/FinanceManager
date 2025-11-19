@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceManager.Api.Controllers;
+
 [Route("api/[controller]")]
 [ApiController]
 public class StockPriceController(IStockPriceRepository stockPriceRepository, ICurrencyExchangeService currencyExchangeService, ICurrencyRepository currencyRepository) : ControllerBase
@@ -18,8 +19,7 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
             return BadRequest("Invalid input parameters.");
 
         var currency = await currencyRepository.GetCurrency(currencyId);
-        if (currency is null)
-            return NotFound("Currency not found.");
+        if (currency is null) return NotFound("Currency not found.");
 
         var stockPrice = await stockPriceRepository.Add(ticker.ToUpper(), pricePerUnit, currency, date);
         return Ok(stockPrice);
@@ -33,8 +33,7 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
             return BadRequest("Invalid input parameters.");
 
         var currency = await currencyRepository.GetCurrency(currencyId);
-        if (currency is null)
-            return NotFound("Currency not found.");
+        if (currency is null) return NotFound("Currency not found.");
 
         var stockPrice = await stockPriceRepository.Update(ticker.ToUpper(), pricePerUnit, currency, date);
         return Ok(stockPrice);
@@ -81,7 +80,6 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
             if (stockPrice is null) continue;
             stockPrices.Add(stockPrice);
         }
-
 
         if (!stockPrices.Any()) return NotFound("Stock prices not found.");
 

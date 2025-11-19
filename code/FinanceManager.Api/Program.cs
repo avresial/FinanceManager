@@ -66,6 +66,7 @@ builder.Services.AddScoped<JwtTokenGenerator, JwtTokenGenerator>();
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
+    //app.UseDeveloperExceptionPage();
     app.MapOpenApi();
 
     app.MapScalarApiReference(options =>
@@ -76,6 +77,13 @@ if (app.Environment.IsDevelopment())
         });
     });
 }
+//else
+//{
+//    app.UseExceptionHandler();
+//    app.UseHsts();
+//}
+//app.UseStatusCodePages();
+
 
 app.UseHttpsRedirection();
 

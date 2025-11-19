@@ -1,5 +1,6 @@
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.User;
+using System.Diagnostics;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;
@@ -62,8 +63,9 @@ public class AdministrationUsersHttpClient(HttpClient httpClient)
         {
             return await httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/AdministrationUsers/GetUsersCount");
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.WriteLine(ex.ToString());
             return 0;
         }
     }

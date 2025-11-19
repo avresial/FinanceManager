@@ -105,10 +105,9 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
         // Arrange
         await SeedTestUsers(10);
         Authorize("AdminUser", 1, UserRole.Admin);
-        var context = new AdministrationUsersHttpClient(Client);
 
         // Act
-        var result = await context.GetNewUsersDaily();
+        var result = await new AdministrationUsersHttpClient(Client).GetNewUsersDaily();
 
         // Assert
         Assert.NotNull(result);

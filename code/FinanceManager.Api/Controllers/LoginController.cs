@@ -29,13 +29,13 @@ public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepositor
 
         var user = await userRepository.GetUser(requestModel.userName, requestModel.password);
 
-        if (user is null) return BadRequest();
+        if (user is null) return Forbid();
 
         var token = jwtTokenGenerator.GenerateToken(requestModel.userName, user.UserId, user.UserRole);
 
         try
         {
-            if (token is not null) await activeUsersRepository.Add(token.UserId, DateOnly.FromDateTime(DateTime.UtcNow));
+            await activeUsersRepository.Add(token.UserId, DateOnly.FromDateTime(DateTime.UtcNow));
         }
         catch (Exception ex)
         {

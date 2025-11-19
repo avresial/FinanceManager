@@ -87,7 +87,7 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
     {
         // arrange
         await SeedUser();
-        Authorize(_testUserName, _testUserId, UserRole.User);
+        Authorize(_testUserName, _testUserId, UserRole.Admin);
         var userClient = new UserHttpClient(Client);
 
         // act
@@ -126,7 +126,7 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
     {
         // arrange
         await SeedUser();
-        Authorize(_testUserName, _testUserId, UserRole.User);
+        Authorize(_testUserName, _testUserId, UserRole.Admin);
         Assert.NotNull(_testDatabase);
         var userClient = new UserHttpClient(Client);
         var originalPricing = (await _testDatabase!.Context.Users
@@ -151,11 +151,10 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
     {
         // arrange
         await SeedUser();
-        Authorize(_testUserName, _testUserId, UserRole.User);
-        var userClient = new UserHttpClient(Client);
+        Authorize(_testUserName, _testUserId, UserRole.Admin);
 
         // act
-        var result = await userClient.Delete(_testUserId);
+        var result = await new UserHttpClient(Client).Delete(_testUserId);
 
         // assert
         Assert.True(result);
