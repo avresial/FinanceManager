@@ -167,7 +167,6 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         Assert.True(result);
         
         // verify entry was deleted from database
-        Assert.NotNull(_testDatabase);
         var dbEntry = await _testDatabase!.Context.BankEntries
             .FirstOrDefaultAsync(e => e.AccountId == _testAccountId && e.EntryId == entryId, TestContext.Current.CancellationToken);
         Assert.Null(dbEntry);
@@ -199,7 +198,6 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         Assert.True(result);
         
         // verify entry was updated in database
-        Assert.NotNull(_testDatabase);
         var dbEntry = await _testDatabase!.Context.BankEntries
             .FirstOrDefaultAsync(e => e.AccountId == _testAccountId && e.EntryId == entryId, TestContext.Current.CancellationToken);
         Assert.NotNull(dbEntry);
