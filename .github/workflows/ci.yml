@@ -56,11 +56,8 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore ./code
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: ./code
+      - name: Build solution
+        run: dotnet build ./code --no-restore --configuration Release
 
       - name: Run unit tests
         run: dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --no-build --configuration Release --logger "trx;LogFileName=unit-test-results.trx" --results-directory TestResults
@@ -89,11 +86,8 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore ./code
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: ./code
+      - name: Build solution
+        run: dotnet build ./code --no-restore --configuration Release
 
       - name: Run integration tests
         run: dotnet test ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --no-build --configuration Release --logger "trx;LogFileName=integration-test-results.trx" --results-directory TestResults
