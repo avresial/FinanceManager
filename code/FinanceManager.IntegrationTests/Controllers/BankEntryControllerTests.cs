@@ -148,6 +148,18 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
 
         // assert
         Assert.True(result);
+        
+        // verify entry was added by checking it exists in the database
+        // The repository creates the entry with a new ID (not the one we specified)
+        // so we need to find it by other properties
+        var dbEntry = await _testDatabase!.Context.BankEntries
+            .FirstOrDefaultAsync(e => e.AccountId == _testAccountId && 
+                                     e.PostingDate == addEntry.PostingDate &&
+                                     e.Description == addEntry.Description, 
+                                     TestContext.Current.CancellationToken);
+        Assert.NotNull(dbEntry);
+        Assert.Equal(addEntry.ValueChange, dbEntry.ValueChange);
+        Assert.Equal(addEntry.Description, dbEntry.Description);
     }
 
     [Fact]
