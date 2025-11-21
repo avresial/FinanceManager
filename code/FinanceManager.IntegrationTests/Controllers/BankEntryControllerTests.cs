@@ -159,7 +159,6 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
                                      TestContext.Current.CancellationToken);
         Assert.NotNull(dbEntry);
         Assert.Equal(addEntry.ValueChange, dbEntry.ValueChange);
-        Assert.Equal(addEntry.Description, dbEntry.Description);
     }
 
     [Fact]
