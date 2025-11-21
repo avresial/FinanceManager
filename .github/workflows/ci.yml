@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  build-test:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -33,13 +33,75 @@ jobs:
       - name: Build the solution
         run: dotnet build ./code --no-restore --configuration Release
 
-      - name: Run tests
-        run: dotnet test ./code --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: ./code/**/bin/Release/**/*
+          retention-days: 1
 
-      - name: Publish test results
+  unit-tests:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0'
+
+      - name: Restore dependencies
+        run: dotnet restore ./code
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: ./code
+
+      - name: Run unit tests
+        run: dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --no-build --configuration Release --logger "trx;LogFileName=unit-test-results.trx" --results-directory TestResults
+
+      - name: Publish unit test results
         uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: 'Test Results'
-          path: 'TestResults/*.trx'
+          name: 'Unit Test Results'
+          path: 'TestResults/unit-test-results.trx'
+          reporter: dotnet-trx
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0'
+
+      - name: Restore dependencies
+        run: dotnet restore ./code
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: ./code
+
+      - name: Run integration tests
+        run: dotnet test ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --no-build --configuration Release --logger "trx;LogFileName=integration-test-results.trx" --results-directory TestResults
+
+      - name: Publish integration test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: 'Integration Test Results'
+          path: 'TestResults/integration-test-results.trx'
           reporter: dotnet-trx
