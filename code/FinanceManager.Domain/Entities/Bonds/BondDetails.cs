@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Entities.Currencies;
 using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.Entities.Bonds;
@@ -11,7 +12,7 @@ public class BondDetails
     public DateOnly StartEmissionDate { get; set; }
     public DateOnly EndEmissionDate { get; set; }
     public BondType Type { get; set; } = BondType.InflationBond;
-
+    public Currency Currency { get; set; } = DefaultCurrency.PLN;
     public List<BondCalculationMethod> CalculationMethods { get; set; } = [];
 
     public BondDetails()
@@ -20,13 +21,14 @@ public class BondDetails
 
     [JsonConstructor]
     public BondDetails(string name, string issuer, DateOnly startEmissionDate, DateOnly endEmissionDate,
-        List<BondCalculationMethod> calculationMethods, BondType type = BondType.InflationBond)
+        List<BondCalculationMethod> calculationMethods, Currency? currency = null, BondType type = BondType.InflationBond)
     {
         Name = name;
         Issuer = issuer;
         StartEmissionDate = startEmissionDate;
         EndEmissionDate = endEmissionDate;
         Type = type;
+        Currency = currency ?? DefaultCurrency.PLN;
 
         var methodsWithBackRefs = calculationMethods
             .Select(m => m with { BondDetails = this })

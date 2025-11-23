@@ -66,11 +66,11 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     [HttpPut("Update")]
     public async Task<IActionResult> Update(UpdateAccount updateAccount)
     {
-        var account = await stockAccountRepository.Get(updateAccount.accountId);
+        var account = await stockAccountRepository.Get(updateAccount.AccountId);
         if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User))
             return Forbid("User ID does not match the account owner.");
 
-        var result = await stockAccountRepository.Update(updateAccount.accountId, updateAccount.accountName);
+        var result = await stockAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName);
         return Ok(result);
     }
 

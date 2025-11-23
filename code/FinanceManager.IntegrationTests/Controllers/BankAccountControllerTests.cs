@@ -164,7 +164,7 @@ public class BankAccountControllerTests(OptionsProvider optionsProvider) : Contr
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new BankAccountHttpClient(Client);
         var updatedName = "Updated Account Name";
-        var updateCmd = new UpdateAccount(_testAccountId, updatedName);
+        UpdateAccount updateCmd = new (_testAccountId, updatedName, AccountLabel.Cash);
 
         // act
         var result = await client.UpdateAccountAsync(updateCmd);

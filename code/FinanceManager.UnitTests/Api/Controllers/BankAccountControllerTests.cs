@@ -138,10 +138,10 @@ public class BankAccountControllerTests
     {
         // Arrange
         var userId = 1;
-        UpdateAccount updateAccount = new(1, "Updated Account");
-        BankAccount account = new(userId, updateAccount.accountId, "Test Account");
-        _mockBankAccountRepository.Setup(repo => repo.Get(updateAccount.accountId)).ReturnsAsync(account);
-        _mockBankAccountRepository.Setup(repo => repo.Update(updateAccount.accountId, updateAccount.accountName)).ReturnsAsync(true);
+        UpdateAccount updateAccount = new(1, "Updated Account", AccountLabel.Cash);
+        BankAccount account = new(userId, updateAccount.AccountId, "Test Account");
+        _mockBankAccountRepository.Setup(repo => repo.Get(updateAccount.AccountId)).ReturnsAsync(account);
+        _mockBankAccountRepository.Setup(repo => repo.Update(updateAccount.AccountId, updateAccount.AccountName)).ReturnsAsync(true);
 
         // Act
         var result = await _controller.Update(updateAccount);

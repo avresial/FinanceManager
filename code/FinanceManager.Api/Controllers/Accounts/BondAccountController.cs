@@ -1,7 +1,7 @@
-﻿using FinanceManager.Api.Helpers;
+using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Authorization;
@@ -12,14 +12,14 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
-public class BankAccountController(IBankAccountRepository<BankAccount> bankAccountRepository,
-    IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, IUserPlanVerifier userPlanVerifier) : ControllerBase
+public class BondAccountController(IAccountRepository<BondAccount> bondAccountRepository,
+    IAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository, IUserPlanVerifier userPlanVerifier) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get()
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
-        var accounts = await bankAccountRepository.GetAvailableAccounts(userId).ToListAsync();
+        var accounts = await bondAccountRepository.GetAvailableAccounts(userId).ToListAsync();
 
         return accounts.Count == 0 ? NotFound() : Ok(accounts);
     }
@@ -27,7 +27,7 @@ public class BankAccountController(IBankAccountRepository<BankAccount> bankAccou
     [HttpGet("{accountId:int}")]
     public async Task<IActionResult> Get(int accountId)
     {
-        var account = await bankAccountRepository.Get(accountId);
+        var account = await bondAccountRepository.Get(accountId);
         if (account == null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
@@ -37,46 +37,46 @@ public class BankAccountController(IBankAccountRepository<BankAccount> bankAccou
     [HttpGet("{accountId:int}&{startDate:DateTime}&{endDate:DateTime}")]
     public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate)
     {
-        var account = await bankAccountRepository.Get(accountId);
+        var account = await bondAccountRepository.Get(accountId);
 
         if (account == null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
-        var entries = bankAccountEntryRepository.Get(accountId, startDate, endDate);
-        var olderEntry = await bankAccountEntryRepository.GetNextOlder(accountId, startDate);
-        var youngerEntry = await bankAccountEntryRepository.GetNextYounger(accountId, endDate);
+        var entries = bondAccountEntryRepository.Get(accountId, startDate, endDate);
+        var olderEntry = await bondAccountEntryRepository.GetNextOlder(accountId, startDate);
+        var youngerEntry = await bondAccountEntryRepository.GetNextYounger(accountId, endDate);
 
         return Ok(account.ToDto(olderEntry, youngerEntry, await entries.ToListAsync()));
     }
 
     [HttpPost]
-    public async Task<IActionResult> Add(AddAccount addAccount)
+    public async Task<IActionResult> Add(AddBondAccount addAccount)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
 
         if (!await userPlanVerifier.CanAddMoreAccounts(userId))
             return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
-        return Ok(await bankAccountRepository.Add(userId, addAccount.accountName));
+        return Ok(await bondAccountRepository.Add(userId, addAccount.accountName));
     }
 
     [HttpPut]
     public async Task<IActionResult> Update(UpdateAccount updateAccount)
     {
-        var account = await bankAccountRepository.Get(updateAccount.AccountId);
+        var account = await bondAccountRepository.Get(updateAccount.AccountId);
 
         if (account == null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return BadRequest();
-var test =await bankAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType );
-        return Ok(test);
+
+        return Ok(await bondAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName));
     }
 
     [HttpDelete("{accountId:int}")]
     public async Task<IActionResult> Delete(int accountId)
     {
-        var account = await bankAccountRepository.Get(accountId);
+        var account = await bondAccountRepository.Get(accountId);
         if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return BadRequest();
 
-        await bankAccountEntryRepository.Delete(accountId);
-        return Ok(await bankAccountRepository.Delete(accountId));
+        await bondAccountEntryRepository.Delete(accountId);
+        return Ok(await bondAccountRepository.Delete(accountId));
     }
 }

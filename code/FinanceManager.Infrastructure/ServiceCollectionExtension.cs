@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Cash;
+﻿using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories;
@@ -34,8 +35,11 @@ public static class ServiceCollectionExtension
                 .AddScoped<IUserRepository, UserRepository>()
                 .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()
                 .AddScoped<IAccountEntryRepository<BankAccountEntry>, BankEntryRepository>()
+                .AddScoped<IAccountEntryRepository<BankAccountEntry>, BankEntryRepository>()
+                .AddScoped<IAccountEntryRepository<BondAccountEntry>, BondEntryRepository>()
                 .AddScoped<IStockAccountEntryRepository<StockAccountEntry>, StockEntryRepository>()
                 .AddScoped<IAccountRepository<StockAccount>, StockAccountRepository>()
+                .AddScoped<IAccountRepository<BondAccount>, BondAccountRepository>()
                 .AddScoped<IBankAccountRepository<BankAccount>, BankAccountRepository>()
                 .AddScoped<INewVisitsRepository, NewVisitsRepository>()
                 .AddScoped<IFinancialLabelsRepository, FinancialLabelsRepository>()

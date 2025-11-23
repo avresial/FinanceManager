@@ -16,6 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<FinancialAccountBaseDto> Accounts { get; set; }
     public DbSet<BankAccountEntry> BankEntries { get; set; }
     public DbSet<StockAccountEntry> StockEntries { get; set; }
+    public DbSet<BondAccountEntry> BondEntries { get; set; }
     public DbSet<StockPriceDto> StockPrices { get; set; }
     public DbSet<NewVisits> NewVisits { get; set; }
     public DbSet<FinancialLabel> FinancialLabels { get; set; }
@@ -26,6 +27,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new ActiveUserConfiguration());
         modelBuilder.ApplyConfiguration(new FinancialAccountBaseDtoConfiguration());
         modelBuilder.ApplyConfiguration(new BankAccountEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new BondAccountEntryConfiguration());
         modelBuilder.ApplyConfiguration(new NewVisitsConfiguration());
         modelBuilder.ApplyConfiguration(new StockAccountEntryConfiguration());
         modelBuilder.ApplyConfiguration(new StockPriceDtoConfiguration());

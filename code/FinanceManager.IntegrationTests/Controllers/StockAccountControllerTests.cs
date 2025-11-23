@@ -153,7 +153,7 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new StockAccountHttpClient(Client);
         var updatedName = "Updated Stock Account Name";
-        var updateCmd = new UpdateAccount(_testAccountId, updatedName);
+        var updateCmd = new UpdateAccount(_testAccountId, updatedName, AccountLabel.Stock);
 
         // act
         var result = await client.UpdateAccountAsync(updateCmd);
