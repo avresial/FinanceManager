@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Domain.Entities;
+﻿namespace FinanceManager.Domain.Entities.Currencies;
 public static class DefaultCurrency
 {
     public static Currency PLN => new(0, "PLN", "zł");

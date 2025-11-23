@@ -1,6 +1,7 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Contexts;

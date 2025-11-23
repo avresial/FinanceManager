@@ -1,6 +1,8 @@
-﻿using FinanceManager.Domain.Entities;
-using FinanceManager.Domain.Entities.Accounts;
+﻿using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.Entities.Shared.Accounts;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;

@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;

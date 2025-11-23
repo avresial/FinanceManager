@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Domain.Extensions;
 
-namespace FinanceManager.Domain.Entities.Accounts;
+namespace FinanceManager.Domain.Entities.Shared.Accounts;
 
 public class FinancialAccountBase<T> : BasicAccountInformation where T : FinancialEntryBase
 {

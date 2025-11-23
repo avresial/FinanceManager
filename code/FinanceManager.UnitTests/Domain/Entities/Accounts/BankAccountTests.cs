@@ -1,5 +1,4 @@
-﻿using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Cash;
 
 namespace FinanceManager.UnitTests.Domain.Entities.Accounts;
 

@@ -1,4 +1,6 @@
-﻿namespace FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Cash;
+
+namespace FinanceManager.Domain.Entities.Shared.Accounts;
 public class FinancialLabel
 {
     public int Id { get; set; }

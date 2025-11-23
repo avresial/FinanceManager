@@ -1,7 +1,6 @@
 ﻿using FinanceManager.Application.Providers;
-using FinanceManager.Domain.Entities;
-using FinanceManager.Domain.Entities.Login;
-using FinanceManager.Domain.Entities.User;
+using FinanceManager.Domain.Entities.Shared;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;

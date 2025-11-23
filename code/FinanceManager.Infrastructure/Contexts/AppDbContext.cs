@@ -1,5 +1,7 @@
-﻿using FinanceManager.Domain.Entities;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Shared.Accounts;
+using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Infrastructure.Contexts.Configurations;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;

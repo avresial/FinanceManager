@@ -1,6 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Accounts.Entries;
-
-namespace FinanceManager.Domain.Entities.Accounts;
+﻿
+namespace FinanceManager.Domain.Entities.Shared.Accounts;
 
 public class FinancialEntryBase(int accountId, int entryId, DateTime postingDate, decimal value, decimal valueChange)
 {

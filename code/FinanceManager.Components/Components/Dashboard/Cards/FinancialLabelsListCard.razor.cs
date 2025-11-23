@@ -1,6 +1,6 @@
 using FinanceManager.Components.Components.Models;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;

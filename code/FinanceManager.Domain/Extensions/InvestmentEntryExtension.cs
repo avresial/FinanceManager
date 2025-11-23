@@ -1,5 +1,5 @@
-﻿using FinanceManager.Domain.Entities;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
 
 namespace FinanceManager.Domain.Extensions;

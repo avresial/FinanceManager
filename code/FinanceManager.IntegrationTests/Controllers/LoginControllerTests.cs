@@ -1,5 +1,5 @@
 using FinanceManager.Application.Commands.Login;
-using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.DependencyInjection;

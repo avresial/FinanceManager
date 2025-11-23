@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -16,7 +16,7 @@ public partial class UserSettingsPage : IBrowserViewportObserver, IAsyncDisposab
     private readonly List<string> _info = [];
 
     private UserSession? _loggedUser;
-    private Domain.Entities.Login.User? _userData;
+    private Domain.Entities.Users.User? _userData;
 
     private bool _isLoadingPage;
     private bool _success;

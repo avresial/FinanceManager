@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Domain.Entities.Accounts;
+﻿namespace FinanceManager.Domain.Entities.Shared.Accounts;
 
 public class BasicAccountInformation
 {

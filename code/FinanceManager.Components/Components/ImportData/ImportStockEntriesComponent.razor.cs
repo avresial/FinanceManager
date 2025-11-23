@@ -1,7 +1,7 @@
 using CsvHelper;
 using CsvHelper.Configuration;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Readers;
 using Microsoft.AspNetCore.Components;

@@ -2,7 +2,6 @@
 @attribute [Authorize(Roles = "Admin")]
 @layout AdminLayout
 
-@using FinanceManager.Domain.Entities.Login
 @using FinanceManager.Domain.Enums
 @using FinanceManager.Domain.Services
 @using FinanceManager.WebUi.Pages.User
@@ -103,7 +102,5 @@ else if (_isLoadingPage)
 }
 else
 {
-
     <MudAlert Severity="Severity.Error">User of id @UserId could not be found.</MudAlert>
 }
-

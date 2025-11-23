@@ -1,7 +1,7 @@
 ﻿using FinanceManager.Application.Commands.User;
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
-using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;

@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Domain.Enums;
 
-namespace FinanceManager.Domain.Entities.Accounts.Entries;
+namespace FinanceManager.Domain.Entities.Stocks;
 
 public record AddInvestmentEntryDto : AddFinancialEntryBaseDto
 {

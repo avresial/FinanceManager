@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Domain.Entities.Login;
+﻿namespace FinanceManager.Domain.Entities.Users;
 public class RecordCapacity
 {
     public int UsedCapacity { get; set; }

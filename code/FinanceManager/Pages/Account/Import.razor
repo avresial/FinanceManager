@@ -1,6 +1,7 @@
 ﻿@page "/Import/{AccountId:int}"
-@using FinanceManager.Domain.Entities.Accounts
 @using FinanceManager.Components.Components.ImportData
+@using FinanceManager.Domain.Entities.Cash
+@using FinanceManager.Domain.Entities.Stocks
 
 @if (accountType is null)
 {
@@ -18,7 +19,6 @@ else
         else if (accountType == typeof(BankAccount))
         {
             <ImportBankEntriesComponent AccountId="@AccountId" />
-            @* <RefactoredImportBankEntriesComponent AccountId="@AccountId" /> *@
         }
         else if (accountType == typeof(StockAccount))
         {

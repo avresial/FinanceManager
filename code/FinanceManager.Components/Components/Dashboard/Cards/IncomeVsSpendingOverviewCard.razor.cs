@@ -1,11 +1,11 @@
 using FinanceManager.Components.Components.Charts;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Entities.Currencies;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards;
 

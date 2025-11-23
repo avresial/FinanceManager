@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Infrastructure.Dtos;
 
 namespace FinanceManager.Infrastructure.Extensions;

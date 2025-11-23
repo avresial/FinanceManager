@@ -1,4 +1,6 @@
-﻿namespace FinanceManager.Domain.Entities;
+﻿using FinanceManager.Domain.Entities.Currencies;
+
+namespace FinanceManager.Domain.Entities.Stocks;
 
 public class StockPrice
 {

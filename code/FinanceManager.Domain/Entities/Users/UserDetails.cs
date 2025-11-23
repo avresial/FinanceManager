@@ -1,7 +1,6 @@
-﻿using FinanceManager.Domain.Entities.Login;
-using FinanceManager.Domain.Enums;
+﻿using FinanceManager.Domain.Enums;
 
-namespace FinanceManager.Domain.Entities.User;
+namespace FinanceManager.Domain.Entities.Users;
 public class UserDetails
 {
     public int UserId { get; set; }

@@ -1,7 +1,6 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Application.Services;
@@ -9,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
+using FinanceManager.Domain.Entities.Cash;
 
 namespace FinanceManager.IntegrationTests.Controllers;
 

@@ -1,8 +1,9 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities;
-using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Extensions;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;

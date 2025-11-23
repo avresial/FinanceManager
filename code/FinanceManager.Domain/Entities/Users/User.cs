@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Domain.Enums;
 
-namespace FinanceManager.Domain.Entities.Login;
+namespace FinanceManager.Domain.Entities.Users;
 
 public class User
 {

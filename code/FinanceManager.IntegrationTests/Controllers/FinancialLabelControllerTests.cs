@@ -1,6 +1,6 @@
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;

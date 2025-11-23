@@ -1,4 +1,6 @@
-﻿namespace FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Shared.Accounts;
+
+namespace FinanceManager.Domain.Entities.Cash;
 
 public class BankAccountEntry(int accountId, int entryId, DateTime postingDate, decimal value, decimal valueChange)
     : FinancialEntryBase(accountId, entryId, postingDate, value, valueChange)

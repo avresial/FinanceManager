@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Domain.Entities;
+﻿namespace FinanceManager.Domain.Entities.Currencies;
 
 public record Currency
 {

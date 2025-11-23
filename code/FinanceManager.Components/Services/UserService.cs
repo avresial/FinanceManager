@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Application.Commands.User;
 using FinanceManager.Components.Helpers;
-using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Logging;

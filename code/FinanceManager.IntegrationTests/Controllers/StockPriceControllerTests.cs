@@ -1,5 +1,5 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Contexts;

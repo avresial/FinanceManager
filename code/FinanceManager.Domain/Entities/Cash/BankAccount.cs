@@ -1,10 +1,10 @@
-﻿using FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
 
-namespace FinanceManager.Domain.Entities.Accounts;
+namespace FinanceManager.Domain.Entities.Cash;
 
 public class BankAccount : FinancialAccountBase<BankAccountEntry>
 {

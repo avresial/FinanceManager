@@ -1,5 +1,5 @@
 ﻿using FinanceManager.Api.Controllers;
-using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Repositories;
