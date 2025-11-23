@@ -39,7 +39,7 @@ public class MoneyFlowControllerTests
         _mockmoneyFlowService.Setup(repo => repo.GetNetWorth(testUserId, DefaultCurrency.PLN, date)).ReturnsAsync(1);
 
         // Act
-        var result = await _controller.GetNetWorth(testUserId, DefaultCurrency.PLN.Id, date);
+        var result = await _controller.GetNetWorth(testUserId, DefaultCurrency.PLN.Id, date, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -59,7 +59,7 @@ public class MoneyFlowControllerTests
         _mockmoneyFlowService.Setup(repo => repo.GetNetWorth(testUserId, DefaultCurrency.PLN, startDate, endDate)).ReturnsAsync(netWorth);
 
         // Act
-        var result = await _controller.GetNetWorth(testUserId, DefaultCurrency.PLN.Id, startDate, endDate);
+        var result = await _controller.GetNetWorth(testUserId, DefaultCurrency.PLN.Id, startDate, endDate, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -76,7 +76,7 @@ public class MoneyFlowControllerTests
         _mockmoneyFlowService.Setup(repo => repo.GetIncome(testUserId, DefaultCurrency.PLN, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
-        var result = await _controller.GetIncome(testUserId, DefaultCurrency.PLN.Id, startDate, endDate);
+        var result = await _controller.GetIncome(testUserId, DefaultCurrency.PLN.Id, startDate, endDate,null, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -93,7 +93,7 @@ public class MoneyFlowControllerTests
         _mockmoneyFlowService.Setup(repo => repo.GetSpending(testUserId, DefaultCurrency.PLN, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
-        var result = await _controller.GetSpending(testUserId, DefaultCurrency.PLN.Id, startDate, endDate);
+        var result = await _controller.GetSpending(testUserId, DefaultCurrency.PLN.Id, startDate, endDate,null, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);

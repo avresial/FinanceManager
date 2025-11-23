@@ -15,12 +15,12 @@ public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepositor
 
     [AllowAnonymous]
     [HttpPost(Name = "Login")]
-    public async Task<IActionResult> Login(LoginRequestModel requestModel)
+    public async Task<IActionResult> Login(LoginRequestModel requestModel, CancellationToken cancellationToken = default)
     {
         try
         {
             if (requestModel.userName == "guest")
-                await guestAccountSeeder.SeedNewData(DateTime.UtcNow.AddMonths(-3), DateTime.UtcNow);
+                await guestAccountSeeder.Seed(cancellationToken);
         }
         catch (Exception ex)
         {

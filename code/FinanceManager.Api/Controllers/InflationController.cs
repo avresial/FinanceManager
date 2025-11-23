@@ -21,9 +21,9 @@ public class InflationController(IInflationDataProvider inflationDataProvider) :
     /// <param name="date">Date in YYYY-MM-DD format</param>
     /// <returns>Inflation rate as a percentage</returns>
     [HttpGet("{currencyId}/{date}")]
-    public async Task<ActionResult<decimal>> GetInflationRate(int currencyId, DateOnly date)
+    public async Task<ActionResult<decimal>> GetInflationRate(int currencyId, DateOnly date, CancellationToken cancellationToken = default)
     {
-        var rate = await inflationDataProvider.GetInflationRateAsync(currencyId, date);
+        var rate = await inflationDataProvider.GetInflationRateAsync(currencyId, date, cancellationToken);
         
         if (rate is null)
             return NotFound($"No inflation data found for currency {currencyId} on {date}");
@@ -42,9 +42,10 @@ public class InflationController(IInflationDataProvider inflationDataProvider) :
     public async Task<ActionResult> GetInflationRates(
         int currencyId,
         [FromQuery] DateOnly from,
-        [FromQuery] DateOnly to)
+        [FromQuery] DateOnly to,
+        CancellationToken cancellationToken = default)
     {
-        var rates = await inflationDataProvider.GetInflationRatesAsync(currencyId, from, to);
+        var rates = await inflationDataProvider.GetInflationRatesAsync(currencyId, from, to, cancellationToken);
         return Ok(rates);
     }
 }

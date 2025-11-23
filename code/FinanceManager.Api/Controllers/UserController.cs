@@ -17,7 +17,7 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
     [AllowAnonymous]
     [HttpPost]
     [Route("Add")]
-    public async Task<IActionResult> Add(AddUser addUserCommand)
+    public async Task<IActionResult> Add(AddUser addUserCommand, CancellationToken cancellationToken = default)
     {
         var existingUser = await userRepository.GetUser(addUserCommand.userName);
         if (existingUser is not null) return BadRequest();
@@ -31,7 +31,7 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
     [Authorize]
     [HttpGet]
     [Route("Get/{userId:int}")]
-    public async Task<IActionResult> Get(int userId)
+    public async Task<IActionResult> Get(int userId, CancellationToken cancellationToken = default)
     {
         var result = await userRepository.GetUser(userId);
         return result is not null ? Ok(result) : NotFound();
@@ -41,7 +41,7 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
     [Authorize(Roles = "Admin")]
     [HttpGet]
     [Route("GetRecordCapacity/{userId:int}")]
-    public async Task<IActionResult> GetRecordCapacity(int userId)
+    public async Task<IActionResult> GetRecordCapacity(int userId, CancellationToken cancellationToken = default)
     {
         var user = await userRepository.GetUser(userId);
         if (user is null) return NotFound();
@@ -57,12 +57,12 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
     [Authorize(Roles = "Admin, User")]
     [HttpDelete]
     [Route("Delete/{userId:int}")]
-    public async Task<IActionResult> Delete(int userId) => Ok(await usersService.DeleteUser(userId));
+    public async Task<IActionResult> Delete(int userId, CancellationToken cancellationToken = default) => Ok(await usersService.DeleteUser(userId));
 
     [Authorize(Roles = "Admin, User")]
     [HttpPut]
     [Route("UpdatePassword")]
-    public async Task<IActionResult> UpdatePassword(UpdatePassword updatePassword)
+    public async Task<IActionResult> UpdatePassword(UpdatePassword updatePassword, CancellationToken cancellationToken = default)
     {
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(updatePassword.Password);
         var result = await userRepository.UpdatePassword(updatePassword.UserId, encryptedPassword);
@@ -72,7 +72,7 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
     [Authorize(Roles = "Admin")]
     [HttpPut]
     [Route("UpdatePricingPlan")]
-    public async Task<IActionResult> UpdatePricingPlan(UpdatePricingPlan updatePricingPlan)
+    public async Task<IActionResult> UpdatePricingPlan(UpdatePricingPlan updatePricingPlan, CancellationToken cancellationToken = default)
     {
         var result = await userRepository.UpdatePricingPlan(updatePricingPlan.UserId, updatePricingPlan.PricingLevel);
         return result ? Ok(result) : NotFound();

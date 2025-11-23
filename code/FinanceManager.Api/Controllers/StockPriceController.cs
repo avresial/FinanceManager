@@ -14,7 +14,7 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
 
     [Authorize]
     [HttpPost("add-stock-price")]
-    public async Task<IActionResult> AddStockPrice([FromQuery] string ticker, [FromQuery] decimal pricePerUnit, [FromQuery] int currencyId, [FromQuery] DateTime date)
+    public async Task<IActionResult> AddStockPrice([FromQuery] string ticker, [FromQuery] decimal pricePerUnit, [FromQuery] int currencyId, [FromQuery] DateTime date, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(ticker) || pricePerUnit <= 0 || date == default)
             return BadRequest("Invalid input parameters.");
@@ -28,7 +28,7 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
 
     [Authorize]
     [HttpPost("update-stock-price")]
-    public async Task<IActionResult> UpdateStockPrice([FromQuery] string ticker, [FromQuery] decimal pricePerUnit, [FromQuery] int currencyId, [FromQuery] DateTime date)
+    public async Task<IActionResult> UpdateStockPrice([FromQuery] string ticker, [FromQuery] decimal pricePerUnit, [FromQuery] int currencyId, [FromQuery] DateTime date, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(ticker) || pricePerUnit <= 0 || date == default)
             return BadRequest("Invalid input parameters.");
@@ -41,7 +41,7 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
     }
 
     [HttpGet("get-stock-price")]
-    public async Task<IActionResult> GetStockPrice([FromQuery] string ticker, [FromQuery] int currencyId, [FromQuery] DateTime date)
+    public async Task<IActionResult> GetStockPrice([FromQuery] string ticker, [FromQuery] int currencyId, [FromQuery] DateTime date, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(ticker) || date == default)
             return BadRequest("Invalid input parameters.");
@@ -68,7 +68,7 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
 
 
     [HttpGet("get-stock-prices")]
-    public async Task<IActionResult> GetStockPrices([FromQuery] string ticker, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long step = default)
+    public async Task<IActionResult> GetStockPrices([FromQuery] string ticker, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long step = default, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(ticker) || start == default || end == default || step == default)
             return BadRequest("Invalid input parameters.");
@@ -88,7 +88,7 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
     }
 
     [HttpGet("get-latest-missing-stock-price")]
-    public async Task<IActionResult> GetLatestMissingStockPrice(string ticker)
+    public async Task<IActionResult> GetLatestMissingStockPrice(string ticker, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(ticker))
             return BadRequest("Invalid input parameters.");
@@ -101,7 +101,7 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
     }
 
     [HttpGet("get-ticker-currency")]
-    public async Task<IActionResult> GetTickerCurrency(string ticker)
+    public async Task<IActionResult> GetTickerCurrency(string ticker, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(ticker))
             return BadRequest("Invalid input parameters.");

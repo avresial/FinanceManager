@@ -11,7 +11,7 @@ public class NewVisitorsController(INewVisitsRepository newVisitsRepository) : C
 
     [AllowAnonymous]
     [HttpPut(Name = "AddNewVisitor")]
-    public async Task<IActionResult> AddNewVisitor()
+    public async Task<IActionResult> AddNewVisitor(CancellationToken cancellationToken = default)
     {
         if (await newVisitsRepository.AddVisitAsync(DateTime.UtcNow))
             return Ok(new { message = "Visit recorded successfully" });
@@ -21,5 +21,5 @@ public class NewVisitorsController(INewVisitsRepository newVisitsRepository) : C
 
     [Authorize]
     [HttpGet("GetNewVisitor/{dateTime:DateTime}")]
-    public async Task<IActionResult> GetNewVisitor(DateTime dateTime) => Ok(await newVisitsRepository.GetVisitAsync(dateTime));
+    public async Task<IActionResult> GetNewVisitor(DateTime dateTime, CancellationToken cancellationToken = default) => Ok(await newVisitsRepository.GetVisitAsync(dateTime));
 }
