@@ -1,5 +1,6 @@
 ```
 dotnet tool install dotnet-ef -g
+dotnet tool update --global dotnet-ef
 
 dotnet ef migrations add init -s code\FinanceManager.Api\FinanceManager.Api.csproj
 

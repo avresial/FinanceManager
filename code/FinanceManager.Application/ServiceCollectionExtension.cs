@@ -29,6 +29,7 @@ public static class ServiceCollectionExtension
 
                 .AddScoped<ILiabilitiesService, LiabilitiesService>()
                 .AddScoped<PricingProvider>()
+                .AddScoped<GuestAccountSeeder>()
                 .AddScoped<ISeeder,GuestAccountSeeder>()
                 .AddScoped<ISeeder,AdminAccountSeeder>()
                 .AddScoped<ISeeder,BondDetailsSeeder>()

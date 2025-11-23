@@ -8,6 +8,7 @@ using FinanceManager.Infrastructure.Providers;
 using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
+using FinanceManager.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,8 +43,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IBondDetailsRepository, BondDetailsRepository>()
                 .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()
 
-                //.AddHostedService<DatabaseInitializer>()
-                .AddHostedService<Services.HostedSeederService>()
+                .AddHostedService<DatabaseInitializer>()
                 ;
 
         return services;

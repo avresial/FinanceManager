@@ -6,6 +6,7 @@ using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -25,7 +26,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     {
         _nowUtc = DateTime.UtcNow.Date;
         _testDatabase = new TestDatabase();
-
+            
         // remove any registration for AppDbContext
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
         if (descriptor != null)

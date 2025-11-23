@@ -1,6 +1,9 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.ValueObjects;
+using FinanceManager.Infrastructure.Contexts;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 using Xunit;
@@ -8,8 +11,20 @@ using Xunit;
 namespace FinanceManager.IntegrationTests.Controllers;
 
 [Collection("api")]
-public class InflationControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
+public class InflationControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
+    private TestDatabase? _testDatabase;
+
+    protected override void ConfigureServices(IServiceCollection services)
+    {
+        _testDatabase = new TestDatabase();
+
+        var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+        if (descriptor != null)
+            services.Remove(descriptor);
+
+        services.AddSingleton(_testDatabase!.Context);
+    }
     [Fact]
     public async Task GetInflationRate_WithValidData_ReturnsInflationRate()
     {
@@ -96,5 +111,14 @@ public class InflationControllerTests(OptionsProvider optionsProvider) : Control
             async () => await client.GetInflationRateAsync(currencyId, date, TestContext.Current.CancellationToken)
         );
         Assert.Contains("401", exception.Message);
+    }
+
+    public void Dispose()
+    {
+        if (_testDatabase is null)
+            return;
+
+        _testDatabase.Dispose();
+        _testDatabase = null;
     }
 }
