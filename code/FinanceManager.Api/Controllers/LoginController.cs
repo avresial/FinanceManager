@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Api.Services;
 using FinanceManager.Application.Commands.Login;
-using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

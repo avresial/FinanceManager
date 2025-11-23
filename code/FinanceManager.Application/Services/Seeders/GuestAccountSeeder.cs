@@ -7,13 +7,21 @@ using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.Services.Seeders;
 
 public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, IFinancialLabelsRepository financialLabelsRepository,
     IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository, IUserRepository userRepository, IConfiguration configuration,
-    ILogger<GuestAccountSeeder> logger)
+    ILogger<GuestAccountSeeder> logger):ISeeder
 {
     private int _guestUserId = 1;
+
+    public async Task Seed(CancellationToken cancellationToken = default)
+    {
+        var start = DateTime.Now.AddMonths(-6);
+        var end = DateTime.Now;
+        await AddGuestUser();
+        await SeedNewData(start, end);
+    }
 
     public async Task AddGuestUser()
     {

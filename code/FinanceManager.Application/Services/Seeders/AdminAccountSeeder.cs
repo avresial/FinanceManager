@@ -2,13 +2,14 @@
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 
-namespace FinanceManager.Application.Services;
-public class AdminAccountSeeder(IUserRepository userRepository)
+namespace FinanceManager.Application.Services.Seeders;
+
+public class AdminAccountSeeder(IUserRepository userRepository) : ISeeder
 {
     private const string _defaultAdminUserName = "admin";
     private const string _defaultAdminPassword = "admin";
 
-    public async Task Seed()
+    public async Task Seed(CancellationToken cancellationToken = default)
     {
         var existingAdmin = await userRepository.GetUser(_defaultAdminUserName);
         if (existingAdmin is not null) return;

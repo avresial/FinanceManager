@@ -43,8 +43,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()
 
                 //.AddHostedService<DatabaseInitializer>()
-                //.AddHostedService<AdminAccountSeederBackgroundService>()
-                //.AddHostedService<GuestAccountSeederBackgroundService>()
+                .AddHostedService<Services.HostedSeederService>()
                 ;
 
         return services;

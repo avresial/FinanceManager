@@ -21,12 +21,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
 
     protected override void ConfigureServices(IServiceCollection services)
     {
-        if (services.Any(s => s.ImplementationType == typeof(AdminAccountSeederBackgroundService)))
-            services.Remove(services.Single(s => s.ImplementationType == typeof(AdminAccountSeederBackgroundService)));
-        if (services.Any(s => s.ImplementationType == typeof(DatabaseInitializer)))
-            services.Remove(services.Single(s => s.ImplementationType == typeof(DatabaseInitializer)));
-        if (services.Any(s => s.ImplementationType == typeof(GuestAccountSeederBackgroundService)))
-            services.Remove(services.Single(s => s.ImplementationType == typeof(GuestAccountSeederBackgroundService)));
+        // Legacy individual seeder hosted services removed; no need to unregister.
 
         _nowUtc = DateTime.UtcNow;
         _testDatabase = new TestDatabase();
