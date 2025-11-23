@@ -1,13 +1,14 @@
 ﻿using FinanceManager.Domain.Entities.Cash;
-using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
+using FinanceManager.Domain.Entities.Shared.Accounts; 
 using FinanceManager.Infrastructure.Contexts.Configurations;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
+using FinanceManager.Domain.Entities.Bonds;
 
 namespace FinanceManager.Infrastructure.Contexts;
-public class AppDbContext : DbContext
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<ActiveUser> ActiveUsers { get; set; }
     public DbSet<UserDto> Users { get; set; }
@@ -17,13 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<StockPriceDto> StockPrices { get; set; }
     public DbSet<NewVisits> NewVisits { get; set; }
     public DbSet<FinancialLabel> FinancialLabels { get; set; }
-
-
-    public AppDbContext(DbContextOptions<AppDbContext> options)
-        : base(options)
-    {
-
-    }
+    public DbSet<BondDetails> Bonds { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

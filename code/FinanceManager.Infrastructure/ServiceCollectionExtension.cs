@@ -39,6 +39,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<INewVisitsRepository, NewVisitsRepository>()
                 .AddScoped<IFinancialLabelsRepository, FinancialLabelsRepository>()
                 .AddScoped<ICurrencyRepository, CurrencyRepository>()
+                .AddScoped<IBondDetailsRepository, BondDetailsRepository>()
                 .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()
 
                 //.AddHostedService<DatabaseInitializer>()

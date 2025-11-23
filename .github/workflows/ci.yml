@@ -1,10 +1,9 @@
 ﻿name: .NET Core CI
 
-on: [push, pull_request]
-  # push:
-  #   branches: [ main ]
-  # pull_request:
-  #   branches: [ main ]
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
 
 permissions:
   checks: write

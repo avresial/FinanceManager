@@ -1,10 +1,11 @@
 using FinanceManager.Domain.Enums;
 
-namespace FinanceManager.Domain.Entities;
+namespace FinanceManager.Domain.Entities.Bonds;
 
 public record BondDetails
 {
     public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
     public string Issuer { get; set; } = string.Empty;
     public DateOnly StartEmissionDate { get; set; }
     public DateOnly EndEmissionDate { get; set; }
