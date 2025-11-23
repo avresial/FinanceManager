@@ -1,5 +1,5 @@
 using FinanceManager.Components.Components.Models;
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
@@ -14,7 +14,7 @@ public partial class FinancialLabelsListCard
     public List<NameValueResult> _data = [];
 
     [Inject] public required ISettingsService SettingsService { get; set; }
-    [Inject] public required MoneyFlowHttpContext MoneyFlowHttpContext { get; set; }
+    [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
     [Parameter] public string Height { get; set; } = "300px";
@@ -31,7 +31,7 @@ public partial class FinancialLabelsListCard
         try
         {
             if (userId is not null)
-                _data = await MoneyFlowHttpContext.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime);
+                _data = await MoneyFlowHttpClient.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime);
         }
         finally
         {
@@ -48,7 +48,7 @@ public partial class FinancialLabelsListCard
         try
         {
             if (userId is not null)
-                _data = await MoneyFlowHttpContext.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime);
+                _data = await MoneyFlowHttpClient.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime);
         }
         finally
         {

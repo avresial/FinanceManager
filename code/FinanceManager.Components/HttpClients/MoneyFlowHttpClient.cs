@@ -2,9 +2,9 @@ using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using System.Net.Http.Json;
 
-namespace FinanceManager.Components.HttpContexts;
+namespace FinanceManager.Components.HttpClients;
 
-public class MoneyFlowHttpContext(HttpClient httpClient)
+public class MoneyFlowHttpClient(HttpClient httpClient)
 {
     public async Task<List<TimeSeriesModel>> GetBalance(int userId, Currency currency, DateTime start, DateTime end)
     {

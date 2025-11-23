@@ -1,6 +1,6 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
@@ -25,7 +25,7 @@ public partial class AssetsPerAccountOverviewCard
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
     [Inject] public required ILogger<AssetsPerAccountOverviewCard> Logger { get; set; }
-    [Inject] public required AssetsHttpContext AssetsHttpContext { get; set; }
+    [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
@@ -130,7 +130,7 @@ public partial class AssetsPerAccountOverviewCard
         {
             try
             {
-                return await AssetsHttpContext.GetEndAssetsPerAccount(_user.UserId, DefaultCurrency.PLN, EndDateTime);
+                return await AssetsHttpClient.GetEndAssetsPerAccount(_user.UserId, DefaultCurrency.PLN, EndDateTime);
             }
             catch (Exception ex)
             {

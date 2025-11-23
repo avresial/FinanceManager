@@ -1,10 +1,11 @@
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.User;
+using System.Diagnostics;
 using System.Net.Http.Json;
 
-namespace FinanceManager.Components.HttpContexts;
+namespace FinanceManager.Components.HttpClients;
 
-public class AdministrationUsersHttpContext(HttpClient httpClient)
+public class AdministrationUsersHttpClient(HttpClient httpClient)
 {
     public async Task<List<ChartEntryModel>> GetNewUsersDaily()
     {
@@ -62,8 +63,9 @@ public class AdministrationUsersHttpContext(HttpClient httpClient)
         {
             return await httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/AdministrationUsers/GetUsersCount");
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.WriteLine(ex.ToString());
             return 0;
         }
     }

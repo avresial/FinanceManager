@@ -1,6 +1,6 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
@@ -59,8 +59,8 @@ public partial class InvestmentTypeTimeSeriesCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<InvestmentTypeTimeSeriesCard> Logger { get; set; }
-    [Inject] public required StockPriceHttpContext StockPriceHttpContext { get; set; }
-    [Inject] public required AssetsHttpContext AssetsHttpContext { get; set; }
+    [Inject] public required StockPriceHttpClient StockPriceHttpClient { get; set; }
+    [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
 
 
     protected override async Task OnInitializedAsync()
@@ -95,7 +95,7 @@ public partial class InvestmentTypeTimeSeriesCard
         List<TimeSeriesModel> result = [];
         try
         {
-            result = await AssetsHttpContext.GetAssetsTimeSeries(user.UserId, DefaultCurrency.PLN, StartDateTime, EndDateTime);
+            result = await AssetsHttpClient.GetAssetsTimeSeries(user.UserId, DefaultCurrency.PLN, StartDateTime, EndDateTime);
         }
         catch (Exception ex)
         {

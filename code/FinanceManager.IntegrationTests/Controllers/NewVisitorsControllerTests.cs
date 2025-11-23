@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,10 +28,10 @@ public class NewVisitorsControllerTests(OptionsProvider optionsProvider) : Contr
     {
         Authorize("Test user", 1, Domain.Enums.UserRole.User);
         // No auth needed for AddNewVisitor
-        await new NewVisitorsHttpContext(Client).AddVisit();
+        await new NewVisitorsHttpClient(Client).AddVisit();
 
         // Verify by checking the database or getting the visit
-        var count = await new NewVisitorsHttpContext(Client).GetVisit(DateTime.UtcNow);
+        var count = await new NewVisitorsHttpClient(Client).GetVisit(DateTime.UtcNow);
         Assert.Equal(1, count);
     }
 

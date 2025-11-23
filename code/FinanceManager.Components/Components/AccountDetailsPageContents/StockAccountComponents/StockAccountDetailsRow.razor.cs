@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
@@ -20,13 +20,13 @@ public partial class StockAccountDetailsRow
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
-    [Inject] public required StockPriceHttpContext stockPriceHttpContext { get; set; }
+    [Inject] public required StockPriceHttpClient StockPriceHttpClient { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
         try
         {
-            var price = await stockPriceHttpContext.GetStockPrice(InvestmentEntry.Ticker, currency.Id, InvestmentEntry.PostingDate);
+            var price = await StockPriceHttpClient.GetStockPrice(InvestmentEntry.Ticker, currency.Id, InvestmentEntry.PostingDate);
             if (price is null)
             {
                 _price = null;

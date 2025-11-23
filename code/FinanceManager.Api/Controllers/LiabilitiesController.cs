@@ -9,22 +9,20 @@ namespace FinanceManager.Api.Controllers;
 [ApiController]
 public class LiabilitiesController(ILiabilitiesService liabilitiesService) : ControllerBase
 {
-    private readonly ILiabilitiesService _liabilitiesService = liabilitiesService;
-
     [HttpGet("IsAnyAccountWithLiabilities/{userId:int}")]
     public async Task<IActionResult> IsAnyAccountWithLiabilities(int userId) =>
-        Ok(await _liabilitiesService.IsAnyAccountWithLiabilities(userId));
+        Ok(await liabilitiesService.IsAnyAccountWithLiabilities(userId));
 
     [HttpGet("GetEndLiabilitiesPerAccount/{userId:int}/{start:DateTime}/{end:DateTime}")]
     public async Task<IActionResult> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end) =>
-        Ok(await _liabilitiesService.GetEndLiabilitiesPerAccount(userId, start, end).ToListAsync());
+        Ok(await liabilitiesService.GetEndLiabilitiesPerAccount(userId, start, end).ToListAsync());
 
     [HttpGet("GetEndLiabilitiesPerType/{userId:int}/{start:DateTime}/{end:DateTime}")]
     public async Task<IActionResult> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end) =>
-        Ok(await _liabilitiesService.GetEndLiabilitiesPerType(userId, start, end).ToListAsync());
+        Ok(await liabilitiesService.GetEndLiabilitiesPerType(userId, start, end).ToListAsync());
 
     [HttpGet("GetLiabilitiesTimeSeries/{userId:int}/{start:DateTime}/{end:DateTime}")]
     public async Task<IActionResult> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end) =>
-        Ok(await _liabilitiesService.GetLiabilitiesTimeSeries(userId, start, end).ToListAsync());
+        Ok(await liabilitiesService.GetLiabilitiesTimeSeries(userId, start, end).ToListAsync());
 
 }

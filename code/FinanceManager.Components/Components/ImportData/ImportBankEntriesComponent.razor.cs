@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Accounts;
 using FinanceManager.Domain.Entities.Imports;
@@ -74,7 +74,8 @@ public partial class ImportBankEntriesComponent : ComponentBase
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<ImportBankEntriesComponent> Logger { get; set; }
-    [Inject] public required BankAccountHttpContext BankAccountHttpContext { get; set; }
+    [Inject] public required BankAccountImportHttpClient BankAccountImportHttpClient { get; set; }
+    [Inject] public required BankAccountHttpClient BankAccountHttpClient { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -273,7 +274,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
             if (string.IsNullOrEmpty(_selectedValueChangeHeader))
                 throw new Exception("Value change header is not selected.");
 
-            var (Headers, Data) = await ImportBankModelReader.Read(_uploadedContent, _delimiter, CancellationToken.None) ??
+            var (Headers, Data) = await ImportBankModelReader.Read(_uploadedContent!, _delimiter, CancellationToken.None) ??
                 throw new Exception("Failed to read data for import.");
 
             var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, Headers, Data);
@@ -281,7 +282,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
 
             try
             {
-                _importResult = await BankAccountHttpContext.ImportBankEntriesAsync(new(AccountId, entries));
+                _importResult = await BankAccountImportHttpClient.ImportBankEntriesAsync(new(AccountId, entries));
 
                 if (_importResult is not null && _importResult.Imported != 0)
                     _summaryInfos.Add($"Imported {_importResult.Imported} entries.");

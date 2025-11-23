@@ -3,9 +3,9 @@ using FinanceManager.Domain.Entities;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
-namespace FinanceManager.Components.HttpContexts;
+namespace FinanceManager.Components.HttpClients;
 
-public class StockPriceHttpContext(HttpClient httpClient, ILogger<StockPriceHttpContext> logger)
+public class StockPriceHttpClient(HttpClient httpClient, ILogger<StockPriceHttpClient> logger)
 {
     public async Task AddStockPrice(string ticker, decimal pricePerUnit, int currencyId, DateTime date)
     {

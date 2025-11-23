@@ -1,6 +1,6 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Login;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
@@ -24,7 +24,7 @@ public partial class LiabilitiesPerAccountOverviewCard
 
 
     [Inject] public required ILogger<LiabilitiesPerAccountOverviewCard> Logger { get; set; }
-    [Inject] public required LiabilitiesHttpContext LiabilitiesHttpContext { get; set; }
+    [Inject] public required LiabilitiesHttpClient LiabilitiesHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
@@ -120,7 +120,7 @@ public partial class LiabilitiesPerAccountOverviewCard
         {
             try
             {
-                Data.AddRange(await LiabilitiesHttpContext.GetEndLiabilitiesPerAccount(_user.UserId, StartDateTime, EndDateTime).ToListAsync());
+                Data.AddRange(await LiabilitiesHttpClient.GetEndLiabilitiesPerAccount(_user.UserId, StartDateTime, EndDateTime).ToListAsync());
             }
             catch (Exception ex)
             {

@@ -10,9 +10,6 @@
 @using MudBlazor.Utilities
 @using static MudBlazor.CategoryTypes
 
-@inject ISettingsService settingsService
-@inject StockPriceHttpContext stockPriceHttpContext
-
 <MudForm @ref="form" FieldChanged=OnFieldChanged>
     <MudContainer MaxWidth="MaxWidth.Medium" onchange="">
         <MudGrid Justify="Justify.Center">
@@ -50,14 +47,14 @@
 </MudForm>
 
 @code {
+
     private int? loadedEntryId = null;
     private Currency _currency = DefaultCurrency.PLN;
     private MudForm? form;
 
-    List<string> InvestmentType = Enum.GetValues(typeof(InvestmentType)).Cast<InvestmentType>().Select(x => x.ToString()).ToList();
+    private List<string> InvestmentType = Enum.GetValues(typeof(InvestmentType)).Cast<InvestmentType>().Select(x => x.ToString()).ToList();
 
-    [Required]
-    private DateTime? SelectedPostingDate = DateTime.Today;
+    [Required] private DateTime? SelectedPostingDate = DateTime.Today;
     private TimeSpan? Time = new TimeSpan(01, 00, 00);
     public string ExpenseType { get; set; } = FinanceManager.Domain.Enums.InvestmentType.Stock.ToString();
     public string Ticker { get; set; } = string.Empty;
@@ -68,6 +65,8 @@
     [Parameter] public required StockAccount InvestmentAccount { get; set; }
     [Parameter] public required StockAccountEntry InvestmentEntry { get; set; }
 
+    [Inject] public required ISettingsService _settingsService { get; set; }
+    [Inject] public required StockPriceHttpClient _StockPriceHttpClient { get; set; }
     [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
 
     protected async Task OnFieldChanged(FormFieldChangedEventArgs args)
@@ -95,7 +94,7 @@
         if (loadedEntryId.HasValue && loadedEntryId.Value == InvestmentEntry.EntryId) return;
         loadedEntryId = InvestmentEntry.EntryId;
 
-        _currency = settingsService.GetCurrency();
+        _currency = _settingsService.GetCurrency();
         SelectedPostingDate = InvestmentEntry.PostingDate.ToLocalTime();
         Time = new TimeSpan(SelectedPostingDate.Value.Hour, SelectedPostingDate.Value.Minute, SelectedPostingDate.Value.Second);
         ExpenseType = InvestmentEntry.InvestmentType.ToString();
@@ -117,6 +116,7 @@
 
         DateTime date = SelectedPostingDate.Value.ToUniversalTime();
         InvestmentType investmentType = FinanceManager.Domain.Enums.InvestmentType.Stock;
+
         try
         {
             investmentType = (InvestmentType)Enum.Parse(typeof(InvestmentType), ExpenseType);
@@ -147,12 +147,12 @@
         if (ActionCompleted is not null)
             await ActionCompleted();
     }
-    
+
     private async Task UpdatePricePerUnit()
     {
         if (SelectedPostingDate is null) return;
 
-        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, DefaultCurrency.PLN.Id, SelectedPostingDate.Value.Date.ToUniversalTime());
+        var pricePerUnit = await _StockPriceHttpClient.GetStockPrice(Ticker, DefaultCurrency.PLN.Id, SelectedPostingDate.Value.Date.ToUniversalTime());
         if (pricePerUnit is null) return;
 
         PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;

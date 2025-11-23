@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using FinanceManager.Domain.Enums;
@@ -76,7 +76,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         await SeedWithTestBankAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new MoneyFlowHttpContext(Client).GetNetWorth(1, DefaultCurrency.USD, _nowUtc);
+        var result = await new MoneyFlowHttpClient(Client).GetNetWorth(1, DefaultCurrency.USD, _nowUtc);
 
         Assert.NotNull(result);
         Assert.Equal(_value, result);
@@ -88,7 +88,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         await SeedWithTestBankAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new MoneyFlowHttpContext(Client).GetNetWorth(1, DefaultCurrency.USD, _nowUtc.AddDays(-7), _nowUtc);
+        var result = await new MoneyFlowHttpClient(Client).GetNetWorth(1, DefaultCurrency.USD, _nowUtc.AddDays(-7), _nowUtc);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result);
@@ -101,7 +101,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         Authorize("TestUser", 1, UserRole.User);
         int days = 7;
 
-        var result = await new MoneyFlowHttpContext(Client).GetIncome(1, DefaultCurrency.USD, _nowUtc.AddDays(-days), _nowUtc);
+        var result = await new MoneyFlowHttpClient(Client).GetIncome(1, DefaultCurrency.USD, _nowUtc.AddDays(-days), _nowUtc);
 
         Assert.NotNull(result);
         Assert.All(result, x => Assert.Equal(_valueChange, x.Value));
@@ -113,7 +113,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         await SeedWithTestBankAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new MoneyFlowHttpContext(Client).GetSpending(1, DefaultCurrency.USD, _nowUtc.AddDays(-7), _nowUtc);
+        var result = await new MoneyFlowHttpClient(Client).GetSpending(1, DefaultCurrency.USD, _nowUtc.AddDays(-7), _nowUtc);
 
         Assert.NotNull(result);
         Assert.Equal(0, result.Sum(x => x.Value));
@@ -126,7 +126,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         Authorize("TestUser", 1, UserRole.User);
         int days = 7;
 
-        var result = await new MoneyFlowHttpContext(Client).GetLabelsValue(1, _nowUtc.AddDays(-days), _nowUtc);
+        var result = await new MoneyFlowHttpClient(Client).GetLabelsValue(1, _nowUtc.AddDays(-days), _nowUtc);
 
         Assert.NotNull(result);
         Assert.Equal((1 + days) * _valueChange, result.First().Value);
@@ -139,7 +139,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         Authorize("TestUser", 1, UserRole.User);
         int days = 7;
 
-        var result = await new MoneyFlowHttpContext(Client).GetInvestmentRate(1, _nowUtc.AddDays(-days), _nowUtc).ToListAsync(TestContext.Current.CancellationToken);
+        var result = await new MoneyFlowHttpClient(Client).GetInvestmentRate(1, _nowUtc.AddDays(-days), _nowUtc).ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result);

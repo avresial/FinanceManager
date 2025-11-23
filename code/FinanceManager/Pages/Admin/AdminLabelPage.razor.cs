@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Accounts.Entries;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -17,14 +17,14 @@ public partial class AdminLabelPage
     public MudTable<FinancialLabel>? Table { get; set; }
     public int SelectedPage { get; set; } = 1;
 
-    [Inject] public required FinancialLabelHttpContext FinancialLabelHttpContext { get; set; }
+    [Inject] public required FinancialLabelHttpClient FinancialLabelHttpClient { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            _labelsCount = await FinancialLabelHttpContext.GetCount();
+            _labelsCount = await FinancialLabelHttpClient.GetCount();
             if (_labelsCount == 0)
             {
                 NavigationManager.NavigateTo("Admin/AddLabel");
@@ -40,7 +40,7 @@ public partial class AdminLabelPage
 
         try
         {
-            _elements = await FinancialLabelHttpContext.Get(0, _elementsPerPage);
+            _elements = await FinancialLabelHttpClient.Get(0, _elementsPerPage);
         }
         catch (Exception)
         {
@@ -58,7 +58,7 @@ public partial class AdminLabelPage
     {
         try
         {
-            _elements = (await FinancialLabelHttpContext.Get((i - 1) * _elementsPerPage, _elementsPerPage)).Take(_elementsPerPage).ToList();
+            _elements = (await FinancialLabelHttpClient.Get((i - 1) * _elementsPerPage, _elementsPerPage)).Take(_elementsPerPage).ToList();
         }
         catch (Exception)
         {
@@ -69,13 +69,13 @@ public partial class AdminLabelPage
 
     private async Task RemoveLabel(int labelId)
     {
-        var result = await FinancialLabelHttpContext.Delete(labelId);
+        var result = await FinancialLabelHttpClient.Delete(labelId);
         if (!result)
         {
             _errors.Add($"Failed to delete label {labelId}");
             return;
         }
 
-        _elements = await FinancialLabelHttpContext.Get((SelectedPage - 1) * _elementsPerPage, _elementsPerPage);
+        _elements = await FinancialLabelHttpClient.Get((SelectedPage - 1) * _elementsPerPage, _elementsPerPage);
     }
 }

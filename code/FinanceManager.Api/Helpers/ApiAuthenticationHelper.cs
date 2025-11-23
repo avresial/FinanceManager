@@ -4,13 +4,11 @@ namespace FinanceManager.Api.Helpers;
 
 public static class ApiAuthenticationHelper
 {
-    public static int? GetUserId(ClaimsPrincipal? user)
+    public static int GetUserId(ClaimsPrincipal user)
     {
-        if (user is null) return null;
-        var userIdValue = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+        if (!user.Claims.Any(x => x.Type == ClaimTypes.NameIdentifier))
+            throw new InvalidOperationException($"No {ClaimTypes.NameIdentifier} in users ClaimsPrincipal.");
 
-        if (userIdValue is null) return null;
-
-        return int.Parse(userIdValue);
+        return int.Parse(user.Claims.Single(c => c.Type == ClaimTypes.NameIdentifier).Value);
     }
 }

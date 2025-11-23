@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
@@ -10,6 +10,7 @@ using MudBlazor;
 using MudBlazor.Utilities;
 
 namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockAccountComponents;
+
 public partial class AddStockEntry
 {
     private Task<IEnumerable<string>> SearchTicker(string value, CancellationToken token)
@@ -40,7 +41,7 @@ public partial class AddStockEntry
 
     [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
-    [Inject] public required StockPriceHttpContext stockPriceHttpContext { get; set; }
+    [Inject] public required StockPriceHttpClient StockPriceHttpClient { get; set; }
 
     protected async Task OnFieldChanged(FormFieldChangedEventArgs args)
     {
@@ -58,7 +59,7 @@ public partial class AddStockEntry
             if (!numericField.Label.ToLower().Contains("change")) return;
         }
 
-        var pricePerUnit = await stockPriceHttpContext.GetStockPrice(Ticker, DefaultCurrency.PLN.Id, PostingDate.Value);
+        var pricePerUnit = await StockPriceHttpClient.GetStockPrice(Ticker, DefaultCurrency.PLN.Id, PostingDate.Value);
         if (pricePerUnit is null) return;
 
         PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;

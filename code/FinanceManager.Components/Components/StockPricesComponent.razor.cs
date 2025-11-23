@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -19,7 +19,7 @@ public partial class StockPricesComponent
     [Parameter] public DateTime? Date { get; set; }
     [Parameter] public string Ticker { get; set; } = string.Empty;
 
-    [Inject] private StockPriceHttpContext StockPriceHttpContext { get; set; } = default!;
+    [Inject] private StockPriceHttpClient StockPriceHttpClient { get; set; } = default!;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -30,7 +30,7 @@ public partial class StockPricesComponent
                 utcDate = utcDate.ToUniversalTime();
             if (string.IsNullOrEmpty(SelectedCurrency)) return;
 
-            await StockPriceHttpContext.GetStockPrice(Ticker, 1, Date.Value).ContinueWith(task =>
+            await StockPriceHttpClient.GetStockPrice(Ticker, 1, Date.Value).ContinueWith(task =>
             {
                 if (task.IsCompletedSuccessfully)
                 {
@@ -76,7 +76,7 @@ public partial class StockPricesComponent
 
         try
         {
-            await StockPriceHttpContext.AddStockPrice(Ticker, PricePerUnit, 1, Date.Value);
+            await StockPriceHttpClient.AddStockPrice(Ticker, PricePerUnit, 1, Date.Value);
             await GetStockPriceAsync();
         }
         catch (Exception ex)
@@ -95,7 +95,7 @@ public partial class StockPricesComponent
 
         try
         {
-            await StockPriceHttpContext.UpdateStockPrice(Ticker, PricePerUnit, 1, Date.Value);
+            await StockPriceHttpClient.UpdateStockPrice(Ticker, PricePerUnit, 1, Date.Value);
 
             await GetStockPriceAsync();
         }
@@ -117,8 +117,8 @@ public partial class StockPricesComponent
         {
             // TODO new endpoint should be added- Get and GetThisOrNextOlder !
             // GetStockPrices functions as GetThisOrNextOlder so finding missing stock does not work properly
-            _stockPrices = [.. await StockPriceHttpContext.GetStockPrices(Ticker, DateRange.Start.Value, DateRange.End.Value, timeSpan)];
-            var tickerCurrency = await StockPriceHttpContext.GetTickerCurrency(Ticker);
+            _stockPrices = [.. await StockPriceHttpClient.GetStockPrices(Ticker, DateRange.Start.Value, DateRange.End.Value, timeSpan)];
+            var tickerCurrency = await StockPriceHttpClient.GetTickerCurrency(Ticker);
 
             if (tickerCurrency is not null)
             {
@@ -143,7 +143,7 @@ public partial class StockPricesComponent
     {
         try
         {
-            MissingDate = await StockPriceHttpContext.GetLatestMissingStockPrice(Ticker);
+            MissingDate = await StockPriceHttpClient.GetLatestMissingStockPrice(Ticker);
             Date = MissingDate;
         }
         catch (Exception ex)

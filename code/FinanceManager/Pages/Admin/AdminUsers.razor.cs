@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.User;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -15,7 +15,7 @@ public partial class AdminUsers
     private readonly List<string> _errors = [];
     private IEnumerable<UserDetails> _elements = [];
 
-    [Inject] required public AdministrationUsersHttpContext AdministrationUsersHttpContext { get; set; }
+    [Inject] required public AdministrationUsersHttpClient AdministrationUsersHttpClient { get; set; }
     [Inject] required public IUserService UserService { get; set; }
 
     public int SelectedPage { get; set; } = 1;
@@ -23,13 +23,13 @@ public partial class AdminUsers
 
     protected override async Task OnInitializedAsync()
     {
-        _usersCount = await AdministrationUsersHttpContext.GetUsersCount();
-        _elements = await AdministrationUsersHttpContext.GetUsers(0, _recordsPerPage);
+        _usersCount = await AdministrationUsersHttpClient.GetUsersCount();
+        _elements = await AdministrationUsersHttpClient.GetUsers(0, _recordsPerPage);
         _pagesCount = (int)Math.Ceiling((double)_usersCount / _recordsPerPage);
     }
 
     private async Task PageChanged(int i) =>
-        _elements = await AdministrationUsersHttpContext.GetUsers((i - 1) * _recordsPerPage, _recordsPerPage);
+        _elements = await AdministrationUsersHttpClient.GetUsers((i - 1) * _recordsPerPage, _recordsPerPage);
 
 
     private async Task RemoveUser(int userId)
@@ -41,8 +41,8 @@ public partial class AdminUsers
             return;
         }
 
-        _usersCount = await AdministrationUsersHttpContext.GetUsersCount();
+        _usersCount = await AdministrationUsersHttpClient.GetUsersCount();
 
-        _elements = await AdministrationUsersHttpContext.GetUsers((SelectedPage - 1) * _recordsPerPage, _recordsPerPage);
+        _elements = await AdministrationUsersHttpClient.GetUsers((SelectedPage - 1) * _recordsPerPage, _recordsPerPage);
     }
 }

@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
@@ -58,10 +58,10 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
     {
         Authorize("TestUser", 1, UserRole.User);
 
-        await new StockPriceHttpContext(Client, null!).AddStockPrice("AAPL", 150, 1, DateTime.UtcNow);
+        await new StockPriceHttpClient(Client, null!).AddStockPrice("AAPL", 150, 1, DateTime.UtcNow);
 
         // Verify by getting it
-        var result = await new StockPriceHttpContext(Client, null!).GetStockPrice("AAPL", 1, DateTime.UtcNow);
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice("AAPL", 1, DateTime.UtcNow);
         Assert.NotNull(result);
         Assert.Equal(150, result.PricePerUnit);
     }
@@ -75,9 +75,9 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         await SeedWithTestStockPrice("AAPL", 100);
         Authorize("TestUser", 1, UserRole.User);
 
-        await new StockPriceHttpContext(Client, null!).UpdateStockPrice("AAPL", 200, 0, DateTime.UtcNow);
+        await new StockPriceHttpClient(Client, null!).UpdateStockPrice("AAPL", 200, 0, DateTime.UtcNow);
 
-        var result = await new StockPriceHttpContext(Client, null!).GetStockPrice("AAPL", 0, DateTime.UtcNow);
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice("AAPL", 0, DateTime.UtcNow);
         Assert.NotNull(result);
         Assert.Equal(200, result.PricePerUnit);
     }
@@ -91,7 +91,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         await SeedWithTestStockPrice();
         // No auth needed
 
-        var result = await new StockPriceHttpContext(Client, null!).GetStockPrice("AAPL", 0, DateTime.UtcNow);
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice("AAPL", 0, DateTime.UtcNow);
 
         Assert.NotNull(result);
         Assert.Equal("AAPL", result.Ticker);
@@ -104,7 +104,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         await SeedWithTestStockPrice();
         // Mock returns 1.1, so 100 * 1.1 = 110
 
-        var result = await new StockPriceHttpContext(Client, null!).GetStockPrice("AAPL", 1, DateTime.UtcNow);
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice("AAPL", 1, DateTime.UtcNow);
 
         Assert.NotNull(result);
         Assert.Equal(110, result.PricePerUnit);
@@ -116,7 +116,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         await SeedWithTestStockPrice();
         // No auth
 
-        var result = await new StockPriceHttpContext(Client, null!).GetStockPrices("AAPL", DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1), TimeSpan.FromDays(1));
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrices("AAPL", DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1), TimeSpan.FromDays(1));
 
         Assert.NotNull(result);
         Assert.NotEmpty(result);
@@ -129,7 +129,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         await SeedWithTestStockPrice("AAPL", 100, DefaultCurrency.USD, uteNow.AddDays(-2).Date);
         // No auth
 
-        var result = await new StockPriceHttpContext(Client, null!).GetLatestMissingStockPrice("AAPL");
+        var result = await new StockPriceHttpClient(Client, null!).GetLatestMissingStockPrice("AAPL");
 
         Assert.NotNull(result);
         Assert.Equal(uteNow.Date, result);
@@ -141,7 +141,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         await SeedWithTestStockPrice();
         // No auth
 
-        var result = await new StockPriceHttpContext(Client, null!).GetTickerCurrency("AAPL");
+        var result = await new StockPriceHttpClient(Client, null!).GetTickerCurrency("AAPL");
 
         Assert.NotNull(result);
         Assert.Equal("AAPL", result.Ticker);

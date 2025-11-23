@@ -1,9 +1,9 @@
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using System.Net.Http.Json;
 
-namespace FinanceManager.Components.HttpContexts;
+namespace FinanceManager.Components.HttpClients;
 
-public class LiabilitiesHttpContext(HttpClient httpClient)
+public class LiabilitiesHttpClient(HttpClient httpClient)
 {
     public async IAsyncEnumerable<NameValueResult> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end)
     {

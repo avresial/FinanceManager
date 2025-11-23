@@ -10,9 +10,10 @@ permissions:
   checks: write
   pull-requests: write
   contents: read
+  security-events: write
 
 jobs:
-  build-test:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -33,13 +34,117 @@ jobs:
       - name: Build the solution
         run: dotnet build ./code --no-restore --configuration Release
 
-      - name: Run tests
-        run: dotnet test ./code --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
+  code-quality:
+    runs-on: ubuntu-latest
+    needs: build
 
-      - name: Publish test results
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0'
+
+      - name: Restore dependencies
+        run: dotnet restore ./code
+
+      - name: Check code formatting
+        run: dotnet format ./code --verify-no-changes --verbosity diagnostic
+        continue-on-error: true
+
+      - name: Build with code analysis
+        run: dotnet build ./code --no-restore --configuration Release /p:EnforceCodeStyleInBuild=true
+        continue-on-error: true
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0'
+
+      - name: Restore dependencies
+        run: dotnet restore ./code
+
+      - name: Check for vulnerable packages
+        run: dotnet list ./code package --vulnerable --include-transitive
+        continue-on-error: true
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+
+      - name: Build for CodeQL
+        run: dotnet build ./code --no-restore --configuration Release
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0'
+
+      - name: Restore dependencies
+        run: dotnet restore ./code
+
+      - name: Build solution
+        run: dotnet build ./code --no-restore --configuration Release
+
+      - name: Run unit tests with coverage
+        run: dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --no-build --configuration Release --logger "trx;LogFileName=unit-test-results.trx" --results-directory TestResults --collect:"XPlat Code Coverage"
+
+      - name: Publish unit test results
         uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: 'Test Results'
-          path: 'TestResults/*.trx'
+          name: 'Unit Test Results'
+          path: 'TestResults/unit-test-results.trx'
+          reporter: dotnet-trx
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0'
+
+      - name: Restore dependencies
+        run: dotnet restore ./code
+
+      - name: Build solution
+        run: dotnet build ./code --no-restore --configuration Release
+
+      - name: Run integration tests with coverage
+        run: dotnet test ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --no-build --configuration Release --logger "trx;LogFileName=integration-test-results.trx" --results-directory TestResults --collect:"XPlat Code Coverage"
+
+      - name: Publish integration test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: 'Integration Test Results'
+          path: 'TestResults/integration-test-results.trx'
           reporter: dotnet-trx

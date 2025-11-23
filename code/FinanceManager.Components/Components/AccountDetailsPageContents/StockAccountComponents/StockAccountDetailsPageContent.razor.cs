@@ -1,5 +1,5 @@
 using FinanceManager.Application.Services;
-using FinanceManager.Components.HttpContexts;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Accounts;
@@ -43,7 +43,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
         [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
         [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
-        [Inject] public required StockPriceHttpContext stockPriceHttpContext { get; set; }
+        [Inject] public required StockPriceHttpClient StockPriceHttpClient { get; set; }
         [Inject] public required ISettingsService settingsService { get; set; }
         [Inject] public required ILoginService loginService { get; set; }
 
@@ -70,7 +70,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             {
                 if (_prices.ContainsKey(entry)) continue;
 
-                var price = await stockPriceHttpContext.GetStockPrice(entry.Ticker, DefaultCurrency.PLN.Id, entry.PostingDate);
+                var price = await StockPriceHttpClient.GetStockPrice(entry.Ticker, DefaultCurrency.PLN.Id, entry.PostingDate);
                 if (price is null) continue;
 
                 _prices.Add(entry, price);
@@ -184,7 +184,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
             ChartData.Clear();
 
             if (Account is null || Account.Entries is null) return;
-            Dictionary<DateOnly, decimal> pricesDaily = await Account.GetDailyPrice((ticker, date) => stockPriceHttpContext.GetStockPrice(ticker, _currency.Id, date));
+            Dictionary<DateOnly, decimal> pricesDaily = await Account.GetDailyPrice((ticker, date) => StockPriceHttpClient.GetStockPrice(ticker, _currency.Id, date));
 
             var result = pricesDaily.Select(x => new TimeSeriesModel() { DateTime = x.Key.ToDateTime(new TimeOnly()), Value = x.Value }).ToList();
             var timeBucket = TimeBucketService.Get(result.Select(x => (x.DateTime, x.Value)));
