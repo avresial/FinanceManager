@@ -16,9 +16,12 @@ public class StockAccountHttpClient(HttpClient httpClient)
         return result ?? [];
     }
 
-    public Task<StockAccount?> GetAccountAsync(int accountId)
+    public async Task<StockAccount?> GetAccountAsync(int accountId)
     {
-        return httpClient.GetFromJsonAsync<StockAccount>($"{httpClient.BaseAddress}api/StockAccount/{accountId}");
+        var result = await httpClient.GetFromJsonAsync<StockAccountDto>($"{httpClient.BaseAddress}api/StockAccount/{accountId}");
+        if (result is null) return null;
+
+        return new StockAccount(result.UserId, result.AccountId, result.Name, []);
     }
 
     public async Task<StockAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate)

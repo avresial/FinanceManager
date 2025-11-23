@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace FinanceManager.Components.Services;
 
 public class FinancialAccountService(BankAccountHttpClient bankAccountHttpClient, BankEntryHttpClient bankEntryHttpClient,
-    StockAccountHttpClient stockAccountHttpClient, ILogger<FinancialAccountService> logger) : IFinancialAccountService
+    StockAccountHttpClient stockAccountHttpClient, StockEntryHttpClient stockEntryHttpClient, ILogger<FinancialAccountService> logger) : IFinancialAccountService
 {
     public async Task<bool> AccountExists(int id)
     {
@@ -58,7 +58,7 @@ public class FinancialAccountService(BankAccountHttpClient bankAccountHttpClient
 
             foreach (var item in data)
                 if (item is StockAccountEntry stockEntry)
-                    await stockAccountHttpClient.AddEntryAsync(new(stockEntry));
+                    await stockEntryHttpClient.AddEntryAsync(new(stockEntry));
         }
     }
     public async Task AddEntry<T>(T accountEntry) where T : FinancialEntryBase
@@ -71,7 +71,7 @@ public class FinancialAccountService(BankAccountHttpClient bankAccountHttpClient
                 break;
 
             case StockAccountEntry stockAccountEntry:
-                if (!await stockAccountHttpClient.AddEntryAsync(new(stockAccountEntry)))
+                if (!await stockEntryHttpClient.AddEntryAsync(new(stockAccountEntry)))
                     throw new Exception("Adding entry failed");
                 break;
 
@@ -123,7 +123,7 @@ public class FinancialAccountService(BankAccountHttpClient bankAccountHttpClient
             return await bankEntryHttpClient.GetYoungestEntryDate(accountId);
 
         if ((await stockAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
-            return await stockAccountHttpClient.GetYoungestEntryDate(accountId);
+            return await stockEntryHttpClient.GetYoungestEntryDate(accountId);
 
         return null;
     }
@@ -133,7 +133,7 @@ public class FinancialAccountService(BankAccountHttpClient bankAccountHttpClient
             return await bankEntryHttpClient.GetOldestEntryDate(accountId);
 
         if ((await stockAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
-            return await stockAccountHttpClient.GetOldestEntryDate(accountId);
+            return await stockEntryHttpClient.GetOldestEntryDate(accountId);
 
         return null;
     }
@@ -162,7 +162,7 @@ public class FinancialAccountService(BankAccountHttpClient bankAccountHttpClient
             await bankEntryHttpClient.DeleteEntryAsync(accountId, entryId);
 
         if (await AccountExists<StockAccount>(accountId))
-            await stockAccountHttpClient.DeleteEntryAsync(accountId, entryId);
+            await stockEntryHttpClient.DeleteEntryAsync(accountId, entryId);
     }
     public async Task UpdateAccount<T>(T account) where T : BasicAccountInformation
     {
@@ -189,7 +189,7 @@ public class FinancialAccountService(BankAccountHttpClient bankAccountHttpClient
                 stockAccountEntry.PostingDate, stockAccountEntry.Value, stockAccountEntry.ValueChange, stockAccountEntry.Ticker,
                 stockAccountEntry.InvestmentType, labels);
 
-            await stockAccountHttpClient.UpdateEntryAsync(updateStockAccountEntry);
+            await stockEntryHttpClient.UpdateEntryAsync(updateStockAccountEntry);
         }
     }
 }
