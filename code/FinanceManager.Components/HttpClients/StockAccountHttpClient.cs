@@ -37,31 +37,11 @@ public class StockAccountHttpClient(HttpClient httpClient)
             nextOlder, nextYounger);
     }
 
-    public async Task<DateTime?> GetOldestEntryDate(int accountId)
-    {
-        var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/StockAccount/GetOldestEntryDate/{accountId}");
-        if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
-        return await response.Content.ReadFromJsonAsync<DateTime?>();
-    }
-
-    public async Task<DateTime?> GetYoungestEntryDate(int accountId)
-    {
-        var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/StockAccount/GetYoungestEntryDate/{accountId}");
-        if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
-        return await response.Content.ReadFromJsonAsync<DateTime?>();
-    }
-
     public async Task<int?> AddAccountAsync(AddAccount addAccount)
     {
         var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/StockAccount/Add", addAccount);
         if (response.IsSuccessStatusCode) return await response.Content.ReadFromJsonAsync<int?>();
         throw new Exception(await response.Content.ReadAsStringAsync());
-    }
-
-    public async Task<bool> AddEntryAsync(AddStockAccountEntry addEntry)
-    {
-        var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/StockAccount/AddEntry", addEntry);
-        return response.IsSuccessStatusCode;
     }
 
     public async Task<bool> UpdateAccountAsync(UpdateAccount updateAccount)
@@ -73,17 +53,5 @@ public class StockAccountHttpClient(HttpClient httpClient)
     public async Task<bool> DeleteAccountAsync(int accountId)
     {
         return await httpClient.DeleteFromJsonAsync<bool>($"{httpClient.BaseAddress}api/StockAccount/Delete/{accountId}");
-    }
-
-    public async Task<bool> DeleteEntryAsync(int accountId, int entryId)
-    {
-        var response = await httpClient.DeleteAsync($"{httpClient.BaseAddress}api/StockAccount/DeleteEntry/{accountId}/{entryId}");
-        return response.IsSuccessStatusCode;
-    }
-
-    public async Task<bool> UpdateEntryAsync(UpdateStockAccountEntry entry)
-    {
-        var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/StockAccount/UpdateEntry", entry);
-        return response.IsSuccessStatusCode;
     }
 }
