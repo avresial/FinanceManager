@@ -29,6 +29,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new StockAccountEntryConfiguration());
         modelBuilder.ApplyConfiguration(new StockPriceDtoConfiguration());
         modelBuilder.ApplyConfiguration(new UserDtoConfiguration());
+        modelBuilder.ApplyConfiguration(new BondDetailsConfiguration());
+        modelBuilder.ApplyConfiguration(new BondCalculationMethodConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }

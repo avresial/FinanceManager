@@ -11,16 +11,30 @@ public record BondDetails
     public DateOnly EndEmissionDate { get; set; }
     public BondType Type { get; set; } = BondType.InflationBond;
 
+    private readonly List<BondCalculationMethod> _calculationMethods = [];
+    public IReadOnlyCollection<BondCalculationMethod> CalculationMethods => _calculationMethods.AsReadOnly();
+
     public BondDetails()
     {
     }
 
-    public BondDetails(int id, string issuer, DateOnly startEmissionDate, DateOnly endEmissionDate, BondType type = BondType.InflationBond)
+    public BondDetails(string name, string issuer, DateOnly startEmissionDate, DateOnly endEmissionDate,
+        IList<BondCalculationMethod> calculationMethods, BondType type = BondType.InflationBond)
     {
-        Id = id;
+        Name = name;
         Issuer = issuer;
         StartEmissionDate = startEmissionDate;
         EndEmissionDate = endEmissionDate;
         Type = type;
+
+        if (calculationMethods == null || calculationMethods.Count == 0)
+            throw new InvalidOperationException(nameof(calculationMethods));
+
+        var methodsWithBackRefs = calculationMethods
+            .Select(m => m with { BondDetails = this })
+            .ToList();
+
+        _calculationMethods.Clear();
+        _calculationMethods.AddRange(methodsWithBackRefs);
     }
 }
