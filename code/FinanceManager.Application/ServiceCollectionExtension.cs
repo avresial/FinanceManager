@@ -40,6 +40,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<HttpClient>()
                 .AddScoped<IBankAccountImportService, BankAccountImportService>()
                 .AddScoped<IStockPriceProvider, StockPriceProvider>()
+                .AddScoped<IBondService, BondService>()
             ;
 
         return services;

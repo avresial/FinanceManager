@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.Entities.Bonds;
 
-public record BondDetails
+public class BondDetails
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;

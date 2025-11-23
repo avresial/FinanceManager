@@ -1,3 +1,4 @@
+using FinanceManager.Application.Commands.Bonds;
 using FinanceManager.Domain.Entities.Bonds;
 using System.Net.Http.Json;
 
@@ -28,16 +29,17 @@ public class BondDetailsHttpClient(HttpClient httpClient)
         return await response.Content.ReadFromJsonAsync<BondDetails>(cancellationToken: cancellationToken);
     }
 
-    public async Task<bool> Update(int id, BondDetails bond, CancellationToken cancellationToken = default)
+    public async Task<bool> Update(UpdateBondDetails updateBondDetails, CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/BondDetails/{id}", bond, cancellationToken);
+            var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/BondDetails", updateBondDetails, cancellationToken);
             response.EnsureSuccessStatusCode();
             return true;
         }
-        catch
+        catch(Exception ex)
         {
+            Console.WriteLine($"Error updating bond details: {ex.Message}");
             return false;
         }
     }
@@ -47,6 +49,34 @@ public class BondDetailsHttpClient(HttpClient httpClient)
         try
         {
             var response = await httpClient.DeleteAsync($"{httpClient.BaseAddress}api/BondDetails/{id}", cancellationToken);
+            response.EnsureSuccessStatusCode();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> AddCalculationMethod(int bondDetailsId, BondCalculationMethod calculationMethod, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/BondDetails/{bondDetailsId}/calculation-methods", calculationMethod, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> RemoveCalculationMethod(int bondDetailsId, int calculationMethodId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.DeleteAsync($"{httpClient.BaseAddress}api/BondDetails/{bondDetailsId}/calculation-methods/{calculationMethodId}", cancellationToken);
             response.EnsureSuccessStatusCode();
             return true;
         }

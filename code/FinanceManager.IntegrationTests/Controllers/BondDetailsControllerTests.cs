@@ -1,3 +1,4 @@
+using FinanceManager.Application.Commands.Bonds;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Enums;
@@ -165,8 +166,8 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
         var added = await client.Add(bond, TestContext.Current.CancellationToken);
 
         // Act
-        var updated = added! with { Name = "Updated Name", Issuer = "Updated Issuer" };
-        var updateResult = await client.Update(added.Id, updated, TestContext.Current.CancellationToken);
+        var updateCommand = new UpdateBondDetails(added!.Id, "Updated Name", "Updated Issuer");
+        var updateResult = await client.Update(updateCommand, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(updateResult);
@@ -199,6 +200,73 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
         Assert.True(deleteResult);
         var allBonds = await client.GetAll(TestContext.Current.CancellationToken);
         Assert.DoesNotContain(allBonds, b => b.Id == added.Id);
+    }
+
+    [Fact]
+    public async Task AddCalculationMethod_AddsMethodToBond()
+    {
+        // Arrange
+        Authorize("TestUser", 1, UserRole.Admin);
+        var client = new BondDetailsHttpClient(Client);
+        var bond = new BondDetails("Test Bond", "Test Issuer", new DateOnly(2024, 1, 1), new DateOnly(2028, 1, 1),
+            [
+                new() {
+                    DateOperator = DateOperator.UntilDate,
+                    DateValue = "2028-01-01",
+                    Rate = 5.0m
+                }
+            ]);
+        var added = await client.Add(bond, TestContext.Current.CancellationToken);
+
+        var newMethod = new BondCalculationMethod
+        {
+            DateOperator = DateOperator.UntilDate,
+            DateValue = "2029-01-01",
+            Rate = 6.0m
+        };
+
+        // Act
+        var result = await client.AddCalculationMethod(added!.Id, newMethod, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result);
+        var retrieved = await client.GetById(added.Id, TestContext.Current.CancellationToken);
+        Assert.NotNull(retrieved);
+        Assert.Equal(2, retrieved.CalculationMethods.Count);
+        Assert.Contains(retrieved.CalculationMethods, m => m.DateValue == "2029-01-01" && m.Rate == 6.0m);
+    }
+
+    [Fact]
+    public async Task RemoveCalculationMethod_RemovesMethodFromBond()
+    {
+        // Arrange
+        Authorize("TestUser", 1, UserRole.Admin);
+        var client = new BondDetailsHttpClient(Client);
+        var bond = new BondDetails("Test Bond", "Test Issuer", new DateOnly(2024, 1, 1), new DateOnly(2028, 1, 1),
+            [
+                new() {
+                    DateOperator = DateOperator.UntilDate,
+                    DateValue = "2028-01-01",
+                    Rate = 5.0m
+                },
+                new() {
+                    DateOperator = DateOperator.UntilDate,
+                    DateValue = "2029-01-01",
+                    Rate = 6.0m
+                }
+            ]);
+        var added = await client.Add(bond, TestContext.Current.CancellationToken);
+        var methodToRemove = added!.CalculationMethods.First();
+
+        // Act
+        var result = await client.RemoveCalculationMethod(added.Id, methodToRemove.Id, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result);
+        var retrieved = await client.GetById(added.Id, TestContext.Current.CancellationToken);
+        Assert.NotNull(retrieved);
+        Assert.Single(retrieved.CalculationMethods);
+        Assert.DoesNotContain(retrieved.CalculationMethods, m => m.Id == methodToRemove.Id);
     }
 
     public void Dispose()

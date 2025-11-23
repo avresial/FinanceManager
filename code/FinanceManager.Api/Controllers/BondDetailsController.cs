@@ -1,5 +1,7 @@
+using FinanceManager.Application.Commands.Bonds;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,7 +10,7 @@ namespace FinanceManager.Api.Controllers;
 [Route("api/[controller]")]
 [Authorize(Roles = "Admin")]
 [ApiController]
-public class BondDetailsController(IBondDetailsRepository bondDetailsRepository) : ControllerBase
+public class BondDetailsController(IBondDetailsRepository bondDetailsRepository, IBondService bondService) : ControllerBase
 {
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id, CancellationToken cancellationToken)
@@ -34,11 +36,15 @@ public class BondDetailsController(IBondDetailsRepository bondDetailsRepository)
         return CreatedAtAction(nameof(GetById), new { id }, bond);
     }
 
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] BondDetails bond, CancellationToken cancellationToken)
+    [HttpPut]
+    public async Task<IActionResult> Update([FromBody] UpdateBondDetails updateBondDetails, CancellationToken cancellationToken)
     {
-        if (id != bond.Id)
-            return BadRequest("ID mismatch");
+        var bond = await bondDetailsRepository.GetByIdAsync(updateBondDetails.Id, cancellationToken);
+        if (bond == null)
+            return NotFound();
+
+        bond.Name = updateBondDetails.NameToUpdate;
+        bond.Issuer = updateBondDetails.IssuerToUpdate;
 
         if (!await bondDetailsRepository.UpdateAsync(bond, cancellationToken))
             return NotFound();
@@ -50,6 +56,24 @@ public class BondDetailsController(IBondDetailsRepository bondDetailsRepository)
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         if (!await bondDetailsRepository.DeleteAsync(id, cancellationToken))
+            return NotFound();
+
+        return NoContent();
+    }
+
+    [HttpPost("{bondDetailsId:int}/calculation-methods")]
+    public async Task<IActionResult> AddCalculationMethod(int bondDetailsId, [FromBody] BondCalculationMethod calculationMethod, CancellationToken cancellationToken)
+    {
+        if (!await bondService.AddCalculationMethodAsync(bondDetailsId, calculationMethod, cancellationToken))
+            return NotFound();
+
+        return NoContent();
+    }
+
+    [HttpDelete("{bondDetailsId:int}/calculation-methods/{calculationMethodId:int}")]
+    public async Task<IActionResult> RemoveCalculationMethod(int bondDetailsId, int calculationMethodId, CancellationToken cancellationToken)
+    {
+        if (!await bondService.RemoveCalculationMethodAsync(bondDetailsId, calculationMethodId, cancellationToken))
             return NotFound();
 
         return NoContent();
