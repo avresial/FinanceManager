@@ -11,7 +11,7 @@ namespace FinanceManager.Application.Services.Seeders;
 
 public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, IFinancialLabelsRepository financialLabelsRepository,
     IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository, IUserRepository userRepository, IConfiguration configuration,
-    ILogger<GuestAccountSeeder> logger):ISeeder
+    ILogger<GuestAccountSeeder> logger) : ISeeder
 {
     private int _guestUserId = 1;
 

@@ -4,6 +4,7 @@ using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories;
+
 public class ActiveUsersRepository(AppDbContext context) : IActiveUsersRepository
 {
     public async Task Add(int userId, DateOnly dateOnly)

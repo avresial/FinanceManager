@@ -7,6 +7,7 @@ using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Services;
+
 internal class AssetsServiceBank(IFinancialAccountRepository financialAccountRepository) : IAssetsServiceTyped
 {
     public bool IsOfType<T>() => typeof(T) == typeof(BankAccount);

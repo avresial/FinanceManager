@@ -5,12 +5,12 @@ using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Services.Seeders;
 
-public class BondDetailsSeeder(IBondDetailsRepository bondDetailsRepository, ILogger<BondDetailsSeeder> logger):ISeeder
+public class BondDetailsSeeder(IBondDetailsRepository bondDetailsRepository, ILogger<BondDetailsSeeder> logger) : ISeeder
 {
     public async Task Seed(CancellationToken cancellationToken = default)
     {
         var existingBonds = await bondDetailsRepository.GetAllAsync(cancellationToken).ToListAsync(cancellationToken);
-        
+
         if (existingBonds.Count >= 2)
         {
             logger.LogInformation("BondDetails already seeded with {Count} bonds. Skipping.", existingBonds.Count);

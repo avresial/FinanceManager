@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Infrastructure.Services;
+
 internal class DatabaseInitializer(IServiceProvider serviceProvider, ILogger<DatabaseInitializer> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken = default)
@@ -15,7 +16,7 @@ internal class DatabaseInitializer(IServiceProvider serviceProvider, ILogger<Dat
         using var scope = serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        if (dbContext.Database.IsRelational()) 
+        if (dbContext.Database.IsRelational())
             await dbContext.Database.MigrateAsync(cancellationToken);
         logger.LogInformation("Database migrations applied");
 

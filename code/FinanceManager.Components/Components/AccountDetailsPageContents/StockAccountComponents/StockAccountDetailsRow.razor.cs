@@ -6,6 +6,7 @@ using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockAccountComponents;
+
 public partial class StockAccountDetailsRow
 {
     private decimal? _price = null;

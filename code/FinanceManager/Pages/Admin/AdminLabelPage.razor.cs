@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
 namespace FinanceManager.WebUi.Pages.Admin;
+
 public partial class AdminLabelPage
 {
     private bool _isLoading = true;

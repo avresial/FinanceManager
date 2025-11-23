@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.IntegrationTests;
+
 internal sealed class TestDatabase : IDisposable
 {
     public AppDbContext Context { get; }

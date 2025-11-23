@@ -6,6 +6,7 @@ using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards;
+
 public partial class FinancialLabelsListCard
 {
     private bool _isLoading;

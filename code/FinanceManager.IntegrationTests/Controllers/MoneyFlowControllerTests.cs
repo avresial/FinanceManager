@@ -26,7 +26,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     {
         _nowUtc = DateTime.UtcNow.Date;
         _testDatabase = new TestDatabase();
-            
+
         // remove any registration for AppDbContext
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
         if (descriptor != null)

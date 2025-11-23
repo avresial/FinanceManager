@@ -13,4 +13,3 @@ public record AddInvestmentEntryDto : AddFinancialEntryBaseDto
         InvestmentType = investmentType;
     }
 }
-

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
 namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAccountComponents;
+
 public partial class UpdateBankEntry
 {
 

@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using Xunit;
 
 namespace FinanceManager.IntegrationTests.Controllers;
+
 [Collection("api")]
 public abstract class ControllerTests : IClassFixture<OptionsProvider>
 {

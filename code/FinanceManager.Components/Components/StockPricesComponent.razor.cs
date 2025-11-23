@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
 namespace FinanceManager.Components.Components;
+
 public partial class StockPricesComponent
 {
     private List<StockPrice> _stockPrices = [];

@@ -1,14 +1,14 @@
 using FinanceManager.Application.Commands.Account;
+using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
-using FinanceManager.Application.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
-using FinanceManager.Domain.Entities.Cash;
 
 namespace FinanceManager.IntegrationTests.Controllers;
 
@@ -148,14 +148,14 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
 
         // assert
         Assert.True(result);
-        
+
         // verify entry was added by checking it exists in the database
         // The repository creates the entry with a new ID (not the one we specified)
         // so we need to find it by other properties
         var dbEntry = await _testDatabase!.Context.BankEntries
-            .FirstOrDefaultAsync(e => e.AccountId == _testAccountId && 
+            .FirstOrDefaultAsync(e => e.AccountId == _testAccountId &&
                                      e.PostingDate == addEntry.PostingDate &&
-                                     e.Description == addEntry.Description, 
+                                     e.Description == addEntry.Description,
                                      TestContext.Current.CancellationToken);
         Assert.NotNull(dbEntry);
         Assert.Equal(addEntry.ValueChange, dbEntry.ValueChange);
@@ -176,7 +176,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
 
         // assert
         Assert.True(result);
-        
+
         // verify entry was deleted from database
         var dbEntry = await _testDatabase!.Context.BankEntries
             .FirstOrDefaultAsync(e => e.AccountId == _testAccountId && e.EntryId == entryId, TestContext.Current.CancellationToken);
@@ -197,7 +197,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         // Retrieve the entry first to update it
         var entry = await client.GetEntry(_testAccountId, entryId);
         Assert.NotNull(entry);
-        
+
         // Update the entry
         entry.Description = "Updated description";
         entry.ValueChange = 300m;
@@ -207,7 +207,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
 
         // assert
         Assert.True(result);
-        
+
         // verify entry was updated in database
         var dbEntry = await _testDatabase!.Context.BankEntries
             .FirstOrDefaultAsync(e => e.AccountId == _testAccountId && e.EntryId == entryId, TestContext.Current.CancellationToken);

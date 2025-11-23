@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 
 namespace FinanceManager.Application.Services;
+
 public static class TimeBucketService
 {
     public static IEnumerable<(DateTime Date, List<T> Objects)> Get<T>(IEnumerable<(DateTime Date, T Object)> dataToGroup, TimeBucket timeBucket) =>

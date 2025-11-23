@@ -2,6 +2,7 @@
 using FinanceManager.Domain.Entities.Users;
 
 namespace FinanceManager.Domain.Services;
+
 public interface IAdministrationUsersService
 {
     Task<int> GetAccountsCount();

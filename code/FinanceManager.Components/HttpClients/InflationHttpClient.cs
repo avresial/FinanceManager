@@ -8,10 +8,10 @@ public class InflationHttpClient(HttpClient httpClient)
     public async Task<InflationRate?> GetInflationRateAsync(int currencyId, DateOnly date, CancellationToken cancellationToken = default)
     {
         var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/Inflation/{currencyId}/{date}", cancellationToken);
-        
+
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             return null;
-        
+
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<InflationRate>(cancellationToken: cancellationToken);
     }
@@ -20,7 +20,7 @@ public class InflationHttpClient(HttpClient httpClient)
     {
         var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/Inflation/{currencyId}/range?from={from}&to={to}", cancellationToken);
         response.EnsureSuccessStatusCode();
-        
+
         var result = await response.Content.ReadFromJsonAsync<IEnumerable<InflationRate>>(cancellationToken: cancellationToken);
         return result ?? [];
     }

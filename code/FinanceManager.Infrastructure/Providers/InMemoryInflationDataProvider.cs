@@ -25,7 +25,7 @@ public class InMemoryInflationDataProvider : IInflationDataProvider
         new(1, new DateOnly(2020, 10, 1), 3.1m),
         new(1, new DateOnly(2020, 11, 1), 3.0m),
         new(1, new DateOnly(2020, 12, 1), 2.4m),
-        
+
         new(1, new DateOnly(2021, 1, 1), 2.7m),
         new(1, new DateOnly(2021, 2, 1), 2.4m),
         new(1, new DateOnly(2021, 3, 1), 3.2m),
@@ -38,7 +38,7 @@ public class InMemoryInflationDataProvider : IInflationDataProvider
         new(1, new DateOnly(2021, 10, 1), 6.8m),
         new(1, new DateOnly(2021, 11, 1), 7.8m),
         new(1, new DateOnly(2021, 12, 1), 8.6m),
-        
+
         new(1, new DateOnly(2022, 1, 1), 9.4m),
         new(1, new DateOnly(2022, 2, 1), 8.5m),
         new(1, new DateOnly(2022, 3, 1), 11.0m),
@@ -51,7 +51,7 @@ public class InMemoryInflationDataProvider : IInflationDataProvider
         new(1, new DateOnly(2022, 10, 1), 17.9m),
         new(1, new DateOnly(2022, 11, 1), 17.5m),
         new(1, new DateOnly(2022, 12, 1), 16.6m),
-        
+
         new(1, new DateOnly(2023, 1, 1), 16.6m),
         new(1, new DateOnly(2023, 2, 1), 18.4m),
         new(1, new DateOnly(2023, 3, 1), 17.9m),
@@ -64,7 +64,7 @@ public class InMemoryInflationDataProvider : IInflationDataProvider
         new(1, new DateOnly(2023, 10, 1), 6.5m),
         new(1, new DateOnly(2023, 11, 1), 6.6m),
         new(1, new DateOnly(2023, 12, 1), 6.2m),
-        
+
         new(1, new DateOnly(2024, 1, 1), 3.9m),
         new(1, new DateOnly(2024, 2, 1), 2.8m),
         new(1, new DateOnly(2024, 3, 1), 2.0m),
@@ -76,7 +76,7 @@ public class InMemoryInflationDataProvider : IInflationDataProvider
         new(1, new DateOnly(2024, 9, 1), 4.9m),
         new(1, new DateOnly(2024, 10, 1), 5.0m),
         new(1, new DateOnly(2024, 11, 1), 4.7m),
-        
+
         new(1, new DateOnly(2025, 1, 1), 4.8m),
         new(1, new DateOnly(2025, 2, 1), 5.1m),
         new(1, new DateOnly(2025, 3, 1), 5.0m),
@@ -91,22 +91,22 @@ public class InMemoryInflationDataProvider : IInflationDataProvider
 
     public Task<InflationRate?> GetInflationRateAsync(int currencyId, DateOnly date, CancellationToken cancellationToken = default)
     {
-        var rate = _inflationRates.FirstOrDefault(r => 
-            r.CurrencyId == currencyId && 
+        var rate = _inflationRates.FirstOrDefault(r =>
+            r.CurrencyId == currencyId &&
             r.Date == date);
-        
+
         return Task.FromResult(rate);
     }
 
     public Task<IEnumerable<InflationRate>> GetInflationRatesAsync(int currencyId, DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
     {
         var rates = _inflationRates
-            .Where(r => 
+            .Where(r =>
                 r.CurrencyId == currencyId &&
-                r.Date >= from && 
+                r.Date >= from &&
                 r.Date <= to)
             .OrderBy(r => r.Date);
-        
+
         return Task.FromResult(rates.AsEnumerable());
     }
 }

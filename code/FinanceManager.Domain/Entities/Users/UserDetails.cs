@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Domain.Enums;
 
 namespace FinanceManager.Domain.Entities.Users;
+
 public class UserDetails
 {
     public int UserId { get; set; }

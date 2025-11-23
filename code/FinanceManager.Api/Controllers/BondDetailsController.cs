@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace FinanceManager.Api.Controllers;
 
 [Route("api/[controller]")]
-[Authorize (Roles = "Admin")]
+[Authorize(Roles = "Admin")]
 [ApiController]
 public class BondDetailsController(IBondDetailsRepository bondDetailsRepository) : ControllerBase
 {
@@ -15,16 +15,16 @@ public class BondDetailsController(IBondDetailsRepository bondDetailsRepository)
     {
         var bond = await bondDetailsRepository.GetByIdAsync(id, cancellationToken);
         if (bond == null) return NotFound();
-        
+
         return Ok(bond);
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll(CancellationToken cancellationToken)=>
+    public async Task<IActionResult> GetAll(CancellationToken cancellationToken) =>
      Ok(await bondDetailsRepository.GetAllAsync(cancellationToken).ToListAsync(cancellationToken: cancellationToken));
 
     [HttpGet("by-issuer/{issuer}")]
-    public async Task<IActionResult> GetByIssuer(string issuer, CancellationToken cancellationToken)=>
+    public async Task<IActionResult> GetByIssuer(string issuer, CancellationToken cancellationToken) =>
      Ok(await bondDetailsRepository.GetByIssuerAsync(issuer, cancellationToken));
 
     [HttpPost]

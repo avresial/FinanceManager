@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace FinanceManager.IntegrationTests;
+
 internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<Program>
 {
     public HttpClient Client { get; }

@@ -1,4 +1,5 @@
 ﻿namespace FinanceManager.Domain.Entities.Users;
+
 public class NewVisits
 {
     public int Id { get; set; }

@@ -4,6 +4,7 @@ using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories;
+
 internal class FinancialLabelsRepository(AppDbContext context) : IFinancialLabelsRepository
 {
     public async Task<bool> Add(string name)

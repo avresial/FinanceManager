@@ -31,15 +31,13 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
         Authorize("TestUser", 1, UserRole.Admin);
         var client = new BondDetailsHttpClient(Client);
         BondDetails bond = new("Test Bond", "Test Issuer", new DateOnly(2024, 1, 1), new DateOnly(2028, 1, 1),
-            new List<BondCalculationMethod>
-            {
-                new BondCalculationMethod
-                {
+            [
+                new() {
                     DateOperator = DateOperator.UntilDate,
                     DateValue = "2028-01-01",
                     Rate = 5.0m
                 }
-            });
+            ]);
 
         // Act
         var result = await client.Add(bond, TestContext.Current.CancellationToken);

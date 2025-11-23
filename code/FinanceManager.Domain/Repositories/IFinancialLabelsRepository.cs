@@ -2,6 +2,7 @@
 using FinanceManager.Domain.Entities.Shared.Accounts;
 
 namespace FinanceManager.Domain.Repositories;
+
 public interface IFinancialLabelsRepository
 {
     Task<int> GetCount();

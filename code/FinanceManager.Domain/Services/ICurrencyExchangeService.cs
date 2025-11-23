@@ -2,6 +2,7 @@
 using FinanceManager.Domain.Entities.Stocks;
 
 namespace FinanceManager.Domain.Services;
+
 public interface ICurrencyExchangeService
 {
     Task<decimal?> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date);

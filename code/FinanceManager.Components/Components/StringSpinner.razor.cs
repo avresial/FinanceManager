@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Components;
+
 public partial class StringSpinner : IDisposable
 {
     private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();

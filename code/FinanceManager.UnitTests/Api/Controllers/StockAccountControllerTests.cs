@@ -9,6 +9,7 @@ using Moq;
 using System.Security.Claims;
 
 namespace FinanceManager.UnitTests.Api.Controllers;
+
 public class StockAccountControllerTests
 {
     private readonly Mock<IAccountRepository<StockAccount>> _mockStockAccountRepository;

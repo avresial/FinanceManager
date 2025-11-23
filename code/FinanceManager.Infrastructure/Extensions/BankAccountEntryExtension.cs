@@ -3,6 +3,7 @@ using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Infrastructure.Dtos;
 
 namespace FinanceManager.Infrastructure.Extensions;
+
 public static class BankAccountEntryExtension
 {
     public static BankAccountEntryDto ToDto(this BankAccountEntry bankAccountEntry) => new()

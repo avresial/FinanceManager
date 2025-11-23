@@ -1,4 +1,5 @@
 ﻿namespace FinanceManager.Domain.Repositories.Account;
+
 public interface IAccountEntryRepository<T>
 {
     IAsyncEnumerable<T> Get(int accountId, DateTime startDate, DateTime endDate);

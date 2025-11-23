@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Domain.Entities.Imports;
 
 namespace FinanceManager.Application.Services;
+
 public interface IBankAccountImportService
 {
     Task ApplyResolvedConflicts(IEnumerable<ResolvedImportConflict> resolvedConflicts);

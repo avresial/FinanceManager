@@ -8,6 +8,7 @@ using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Services;
+
 public class MoneyFlowService(IFinancialAccountRepository financialAccountRepository, IFinancialLabelsRepository financialLabelsRepository, IStockPriceProvider stockPriceProvider) : IMoneyFlowService
 {
     public async Task<decimal?> GetNetWorth(int userId, Currency currency, DateTime date)

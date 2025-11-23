@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
 namespace FinanceManager.WebUi.Pages.Admin;
+
 public partial class EditUserPage
 {
     private readonly List<string> _errors = [];

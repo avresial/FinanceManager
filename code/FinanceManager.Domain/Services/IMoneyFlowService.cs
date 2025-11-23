@@ -2,6 +2,7 @@
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 
 namespace FinanceManager.Domain.Services;
+
 public interface IMoneyFlowService
 {
     Task<decimal?> GetNetWorth(int userId, Currency currency, DateTime date);

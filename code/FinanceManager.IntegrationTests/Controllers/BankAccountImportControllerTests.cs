@@ -1,14 +1,14 @@
+using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
-using FinanceManager.Application.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
-using FinanceManager.Domain.Entities.Cash;
 
 namespace FinanceManager.IntegrationTests.Controllers;
 
@@ -76,7 +76,7 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
             new(DateTime.UtcNow.Date.AddDays(-2).AddHours(10), 100m),
             new(DateTime.UtcNow.Date.AddDays(-1).AddHours(9), -50m)
         };
-        BankDataImportDto dto = new (_testAccountId, entries);
+        BankDataImportDto dto = new(_testAccountId, entries);
 
         // act
         var result = await new BankAccountImportHttpClient(Client).ImportBankEntriesAsync(dto);
@@ -136,7 +136,7 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
         var existingEntry = importResult.Conflicts[1].ExistingEntry;
         Assert.NotNull(existingEntry);
 
-        var resolution = new ResolvedImportConflict(_testAccountId, importIsPicked: false, importData: null, 
+        var resolution = new ResolvedImportConflict(_testAccountId, importIsPicked: false, importData: null,
         existingIsPicked: true, existingId: existingEntry!.EntryId);
 
         // act

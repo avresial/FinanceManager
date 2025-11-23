@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities;
+
 public partial class LiabilitiesPerAccountOverviewCard
 {
     private Currency _currency = DefaultCurrency.PLN;

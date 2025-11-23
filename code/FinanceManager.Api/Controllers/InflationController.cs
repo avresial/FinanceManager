@@ -24,10 +24,10 @@ public class InflationController(IInflationDataProvider inflationDataProvider) :
     public async Task<ActionResult<decimal>> GetInflationRate(int currencyId, DateOnly date, CancellationToken cancellationToken = default)
     {
         var rate = await inflationDataProvider.GetInflationRateAsync(currencyId, date, cancellationToken);
-        
+
         if (rate is null)
             return NotFound($"No inflation data found for currency {currencyId} on {date}");
-        
+
         return Ok(rate);
     }
 
