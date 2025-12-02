@@ -141,7 +141,7 @@ public class BankAccountControllerTests
         UpdateAccount updateAccount = new(1, "Updated Account", AccountLabel.Cash);
         BankAccount account = new(userId, updateAccount.AccountId, "Test Account");
         _mockBankAccountRepository.Setup(repo => repo.Get(updateAccount.AccountId)).ReturnsAsync(account);
-        _mockBankAccountRepository.Setup(repo => repo.Update(updateAccount.AccountId, updateAccount.AccountName)).ReturnsAsync(true);
+        _mockBankAccountRepository.Setup(repo => repo.Update(updateAccount.AccountId, updateAccount.AccountName, AccountLabel.Cash)).ReturnsAsync(true);
 
         // Act
         var result = await _controller.Update(updateAccount);

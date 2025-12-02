@@ -54,7 +54,7 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
         await foreach (var accounts in financialAccountService.GetAccounts<BankAccount>(userId, start, end).GroupBy(x => x.AccountType))
         {
             NameValueResult? result = null;
-            await foreach (var account in accounts)
+            foreach (var account in accounts)
             {
                 if (account is null || account.Entries is null) continue;
                 var entry = account.Entries.FirstOrDefault();

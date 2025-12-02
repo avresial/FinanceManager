@@ -66,8 +66,7 @@ public class BankAccountController(IBankAccountRepository<BankAccount> bankAccou
         var account = await bankAccountRepository.Get(updateAccount.AccountId);
 
         if (account == null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return BadRequest();
-var test =await bankAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType );
-        return Ok(test);
+        return Ok(await bankAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType));
     }
 
     [HttpDelete("{accountId:int}")]
