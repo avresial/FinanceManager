@@ -2,7 +2,6 @@ using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -54,7 +53,7 @@ public class BondEntryController(
         if (!await userPlanVerifier.CanAddMoreEntries(ApiAuthenticationHelper.GetUserId(User)))
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
-        return Ok(await bondAccountEntryRepository.Add(new(addEntry.AccountId, addEntry.EntryId, 
+        return Ok(await bondAccountEntryRepository.Add(new(addEntry.AccountId, addEntry.EntryId,
         addEntry.PostingDate, addEntry.Value, addEntry.ValueChange, addEntry.BondDetailsId)));
     }
 
@@ -72,7 +71,7 @@ public class BondEntryController(
     {
         var account = await bondAccountRepository.Get(updateEntry.AccountId);
         if (account == null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
-        
+
         var entryToUpdate = await bondAccountEntryRepository.Get(updateEntry.AccountId, updateEntry.EntryId);
         if (entryToUpdate == null) return NotFound();
 

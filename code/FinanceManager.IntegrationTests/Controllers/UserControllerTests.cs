@@ -164,5 +164,6 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
     {
         _testDatabase?.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

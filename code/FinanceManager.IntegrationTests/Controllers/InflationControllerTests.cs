@@ -120,5 +120,6 @@ public class InflationControllerTests(OptionsProvider optionsProvider) : Control
 
         _testDatabase.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

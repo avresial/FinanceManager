@@ -121,5 +121,6 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
 
         _testDatabase.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

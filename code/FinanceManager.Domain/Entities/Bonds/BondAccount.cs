@@ -1,16 +1,14 @@
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;
-using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.Entities.Bonds;
 
 public class BondAccount : FinancialAccountBase<BondAccountEntry>
 {
-    public readonly BondAccountEntry? NextOlderEntry = null;
-    public readonly BondAccountEntry? NextYoungerEntry = null;
+    public BondAccountEntry? NextOlderEntry { get; set; }
+    public BondAccountEntry? NextYoungerEntry { get; set; }
     public AccountLabel AccountType { get; set; }
 
-    [JsonConstructor]
     public BondAccount(int userId, int accountId, string name, IEnumerable<BondAccountEntry>? entries = null, AccountLabel accountType = AccountLabel.Other,
         BondAccountEntry? nextOlderEntry = null, BondAccountEntry? nextYoungerEntry = null) : base(userId, accountId, name)
     {

@@ -155,5 +155,6 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
 
         _testDatabase.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

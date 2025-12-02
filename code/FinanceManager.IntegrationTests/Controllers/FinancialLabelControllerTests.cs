@@ -130,5 +130,6 @@ public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : Co
 
         _testDatabase.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

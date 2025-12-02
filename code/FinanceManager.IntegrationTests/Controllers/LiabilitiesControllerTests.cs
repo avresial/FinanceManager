@@ -119,5 +119,6 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
 
         _testDatabase.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

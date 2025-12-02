@@ -164,7 +164,7 @@ public class BankAccountControllerTests(OptionsProvider optionsProvider) : Contr
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new BankAccountHttpClient(Client);
         var updatedName = "Updated Account Name";
-        UpdateAccount updateCmd = new (_testAccountId, updatedName, AccountLabel.Cash);
+        UpdateAccount updateCmd = new(_testAccountId, updatedName, AccountLabel.Cash);
 
         // act
         var result = await client.UpdateAccountAsync(updateCmd);
@@ -236,5 +236,6 @@ public class BankAccountControllerTests(OptionsProvider optionsProvider) : Contr
     {
         _testDatabase?.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

@@ -14,5 +14,6 @@ internal sealed class TestDatabase : IDisposable
     {
         Context.Database.EnsureDeleted();
         Context.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

@@ -187,5 +187,6 @@ public class StockEntryControllerTests(OptionsProvider optionsProvider) : Contro
     {
         _testDatabase?.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

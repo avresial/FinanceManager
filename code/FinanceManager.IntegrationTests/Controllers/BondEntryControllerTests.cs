@@ -1,7 +1,7 @@
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
@@ -13,10 +13,10 @@ using Xunit;
 namespace FinanceManager.IntegrationTests.Controllers;
 
 [Collection("api")]
-public class BankEntryControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
+public class BondEntryControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private const int _testUserId = 88;
-    private const int _testAccountId = 456;
+    private const int _testAccountId = 789;
     private TestDatabase? _testDatabase;
 
     protected override void ConfigureServices(IServiceCollection services)
@@ -44,21 +44,17 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         {
             AccountId = _testAccountId,
             UserId = _testUserId,
-            Name = "Test Bank Account",
+            Name = "Test Bond Account",
             AccountLabel = AccountLabel.Other,
-            AccountType = AccountType.Bank
+            AccountType = AccountType.Bond
         });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
-    private async Task SeedEntry(int entryId, DateTime postingDate, decimal value, decimal valueChange, string description = "Test entry")
+    private async Task SeedEntry(int entryId, DateTime postingDate, decimal value, decimal valueChange, int bondDetailsId = 1)
     {
         if (_testDatabase is null) return;
-        _testDatabase.Context.BankEntries.Add(new BankAccountEntry(_testAccountId, entryId, postingDate, value, valueChange)
-        {
-            Description = description,
-            Labels = []
-        });
+        _testDatabase.Context.BondEntries.Add(new BondAccountEntry(_testAccountId, entryId, postingDate, value, valueChange, bondDetailsId));
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
@@ -69,11 +65,12 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         await SeedAccount();
         var entryId = 1;
         var postingDate = DateTime.UtcNow.Date.AddDays(-5);
-        var value = 100m;
+        var value = 1000m;
         var valueChange = 50m;
-        await SeedEntry(entryId, postingDate, value, valueChange);
+        var bondDetailsId = 101;
+        await SeedEntry(entryId, postingDate, value, valueChange, bondDetailsId);
         Authorize("user", _testUserId, UserRole.User);
-        var client = new BankEntryHttpClient(Client);
+        var client = new BondEntryHttpClient(Client);
 
         // act
         var result = await client.GetEntry(_testAccountId, entryId);
@@ -85,6 +82,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         Assert.Equal(postingDate, result.PostingDate);
         Assert.Equal(value, result.Value);
         Assert.Equal(valueChange, result.ValueChange);
+        Assert.Equal(bondDetailsId, result.BondDetailsId);
     }
 
     [Fact]
@@ -94,10 +92,10 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         await SeedAccount();
         var oldDate = DateTime.UtcNow.Date.AddDays(-10);
         var youngDate = DateTime.UtcNow.Date.AddDays(-1);
-        await SeedEntry(1, oldDate, 100m, 50m);
-        await SeedEntry(2, youngDate, 200m, 100m);
+        await SeedEntry(1, oldDate, 1000m, 50m);
+        await SeedEntry(2, youngDate, 2000m, 100m);
         Authorize("user", _testUserId, UserRole.User);
-        var client = new BankEntryHttpClient(Client);
+        var client = new BondEntryHttpClient(Client);
 
         // act
         var result = await client.GetYoungestEntryDate(_testAccountId);
@@ -114,10 +112,10 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         await SeedAccount();
         var oldDate = DateTime.UtcNow.Date.AddDays(-20);
         var recentDate = DateTime.UtcNow.Date.AddDays(-5);
-        await SeedEntry(1, oldDate, 100m, 50m);
-        await SeedEntry(2, recentDate, 200m, 100m);
+        await SeedEntry(1, oldDate, 1000m, 50m);
+        await SeedEntry(2, recentDate, 2000m, 100m);
         Authorize("user", _testUserId, UserRole.User);
-        var client = new BankEntryHttpClient(Client);
+        var client = new BondEntryHttpClient(Client);
 
         // act
         var result = await client.GetOldestEntryDate(_testAccountId);
@@ -133,14 +131,14 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         // arrange
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
-        var client = new BankEntryHttpClient(Client);
-        var addEntry = new AddBankAccountEntry(
+        var client = new BondEntryHttpClient(Client);
+        var addEntry = new AddBondAccountEntry(
             _testAccountId,
-            100,  // Use a unique entry ID that won't conflict
+            100,
             DateTime.UtcNow.Date.AddDays(-3),
-            500m,
+            5000m,
             250m,
-            "New test entry"
+            202
         );
 
         // act
@@ -150,12 +148,10 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         Assert.True(result);
 
         // verify entry was added by checking it exists in the database
-        // The repository creates the entry with a new ID (not the one we specified)
-        // so we need to find it by other properties
-        var dbEntry = await _testDatabase!.Context.BankEntries
+        var dbEntry = await _testDatabase!.Context.BondEntries
             .FirstOrDefaultAsync(e => e.AccountId == _testAccountId &&
                                      e.PostingDate == addEntry.PostingDate &&
-                                     e.Description == addEntry.Description,
+                                     e.BondDetailsId == addEntry.BondDetailsId,
                                      TestContext.Current.CancellationToken);
         Assert.NotNull(dbEntry);
         Assert.Equal(addEntry.ValueChange, dbEntry.ValueChange);
@@ -167,9 +163,9 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         // arrange
         await SeedAccount();
         var entryId = 5;
-        await SeedEntry(entryId, DateTime.UtcNow.Date.AddDays(-7), 300m, 150m);
+        await SeedEntry(entryId, DateTime.UtcNow.Date.AddDays(-7), 3000m, 150m);
         Authorize("user", _testUserId, UserRole.User);
-        var client = new BankEntryHttpClient(Client);
+        var client = new BondEntryHttpClient(Client);
 
         // act
         var result = await client.DeleteEntryAsync(_testAccountId, entryId);
@@ -178,7 +174,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         Assert.True(result);
 
         // verify entry was deleted from database
-        var dbEntry = await _testDatabase!.Context.BankEntries
+        var dbEntry = await _testDatabase!.Context.BondEntries
             .FirstOrDefaultAsync(e => e.AccountId == _testAccountId && e.EntryId == entryId, TestContext.Current.CancellationToken);
         Assert.Null(dbEntry);
     }
@@ -190,29 +186,33 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         await SeedAccount();
         var entryId = 7;
         var originalDate = DateTime.UtcNow.Date.AddDays(-10);
-        await SeedEntry(entryId, originalDate, 400m, 200m, "Original description");
+        await SeedEntry(entryId, originalDate, 4000m, 200m, 303);
         Authorize("user", _testUserId, UserRole.User);
-        var client = new BankEntryHttpClient(Client);
+        var client = new BondEntryHttpClient(Client);
 
-        // Retrieve the entry first to update it
         var entry = await client.GetEntry(_testAccountId, entryId);
         Assert.NotNull(entry);
 
-        // Update the entry
-        entry.Description = "Updated description";
-        entry.ValueChange = 300m;
+        var updateEntry = new UpdateBondAccountEntry(
+            entry.AccountId,
+            entry.EntryId,
+            entry.PostingDate,
+            entry.Value,
+            300m, // Updated ValueChange
+            404 // Updated BondDetailsId
+        );
 
         // act
-        var result = await client.UpdateEntryAsync(entry);
+        var result = await client.UpdateEntryAsync(updateEntry);
 
         // assert
         Assert.True(result);
 
         // verify entry was updated in database
-        var dbEntry = await _testDatabase!.Context.BankEntries
+        var dbEntry = await _testDatabase!.Context.BondEntries
             .FirstOrDefaultAsync(e => e.AccountId == _testAccountId && e.EntryId == entryId, TestContext.Current.CancellationToken);
         Assert.NotNull(dbEntry);
-        Assert.Equal("Updated description", dbEntry.Description);
+        Assert.Equal(404, dbEntry.BondDetailsId);
         Assert.Equal(300m, dbEntry.ValueChange);
     }
 

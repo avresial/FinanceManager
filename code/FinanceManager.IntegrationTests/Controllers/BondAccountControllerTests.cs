@@ -1,7 +1,7 @@
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
@@ -13,11 +13,11 @@ using Xunit;
 namespace FinanceManager.IntegrationTests.Controllers;
 
 [Collection("api")]
-public class StockAccountControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
+public class BondAccountControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
-    private const int _testUserId = 89;
-    private const int _testAccountId = 789;
-    private const string _testAccountName = "Test Stock Account";
+    private const int _testUserId = 91;
+    private const int _testAccountId = 791;
+    private const string _testAccountName = "Test Bond Account";
     private TestDatabase? _testDatabase;
 
     protected override void ConfigureServices(IServiceCollection services)
@@ -39,30 +39,32 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
 
     private async Task SeedAccount()
     {
-        if (_testDatabase is null) return;
-        if (await _testDatabase.Context.Accounts.AnyAsync(a => a.AccountId == _testAccountId, TestContext.Current.CancellationToken)) return;
-        _testDatabase.Context.Accounts.Add(new FinancialAccountBaseDto
+        var db = _testDatabase;
+        if (db is null) return;
+        if (await db.Context.Accounts.AnyAsync(a => a.AccountId == _testAccountId, TestContext.Current.CancellationToken)) return;
+        db.Context.Accounts.Add(new FinancialAccountBaseDto
         {
             AccountId = _testAccountId,
             UserId = _testUserId,
             Name = _testAccountName,
-            AccountLabel = AccountLabel.Stock,
-            AccountType = AccountType.Stock
+            AccountLabel = AccountLabel.Other,
+            AccountType = AccountType.Bond
         });
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        await db.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     private async Task SeedAccountWithEntries()
     {
         await SeedAccount();
-        if (_testDatabase is null) return;
+        var db = _testDatabase;
+        if (db is null) return;
 
-        var entry1 = new StockAccountEntry(_testAccountId, 1, DateTime.UtcNow.Date.AddDays(-10), 10000m, 10000m, "AAPL", InvestmentType.Stock);
-        var entry2 = new StockAccountEntry(_testAccountId, 2, DateTime.UtcNow.Date.AddDays(-5), 10500m, 500m, "AAPL", InvestmentType.Stock);
-        var entry3 = new StockAccountEntry(_testAccountId, 3, DateTime.UtcNow.Date.AddDays(-2), 11000m, 500m, "AAPL", InvestmentType.Stock);
+        var entry1 = new BondAccountEntry(_testAccountId, 1, DateTime.UtcNow.Date.AddDays(-10), 10000m, 10000m, 101);
+        var entry2 = new BondAccountEntry(_testAccountId, 2, DateTime.UtcNow.Date.AddDays(-5), 10500m, 500m, 101);
+        var entry3 = new BondAccountEntry(_testAccountId, 3, DateTime.UtcNow.Date.AddDays(-2), 11000m, 500m, 101);
 
-        _testDatabase.Context.StockEntries.AddRange(entry1, entry2, entry3);
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        db.Context.BondEntries.AddRange(entry1, entry2, entry3);
+        await db.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -71,7 +73,7 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
         // arrange
         await SeedAccount();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new StockAccountHttpClient(Client);
+        var client = new BondAccountHttpClient(Client);
 
         // act
         var accounts = await client.GetAvailableAccountsAsync();
@@ -88,7 +90,7 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
         // arrange
         await SeedAccount();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new StockAccountHttpClient(Client);
+        var client = new BondAccountHttpClient(Client);
 
         // act
         var account = await client.GetAccountAsync(_testAccountId);
@@ -106,7 +108,7 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
         // arrange
         await SeedAccountWithEntries();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new StockAccountHttpClient(Client);
+        var client = new BondAccountHttpClient(Client);
         var startDate = DateTime.UtcNow.Date.AddDays(-15);
         var endDate = DateTime.UtcNow.Date;
 
@@ -118,7 +120,7 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
         Assert.Equal(_testAccountId, account!.AccountId);
         Assert.NotEmpty(account.Entries);
         Assert.Equal(3, account.Entries.Count);
-        Assert.Contains(account.Entries, e => e.Ticker == "AAPL");
+        Assert.Contains(account.Entries, e => e.BondDetailsId == 101);
     }
 
     [Fact]
@@ -126,8 +128,8 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
     {
         // arrange
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new StockAccountHttpClient(Client);
-        var newAccountCmd = new AddAccount("New Investment Account");
+        var client = new BondAccountHttpClient(Client);
+        var newAccountCmd = new AddBondAccount("New Bond Account");
 
         // act
         var newAccountId = await client.AddAccountAsync(newAccountCmd);
@@ -141,7 +143,7 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
         var accountInDb = await _testDatabase!.Context.Accounts
             .FirstOrDefaultAsync(a => a.AccountId == newAccountId.Value, TestContext.Current.CancellationToken);
         Assert.NotNull(accountInDb);
-        Assert.Equal("New Investment Account", accountInDb!.Name);
+        Assert.Equal("New Bond Account", accountInDb!.Name);
         Assert.Equal(_testUserId, accountInDb.UserId);
     }
 
@@ -151,9 +153,9 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
         // arrange
         await SeedAccount();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new StockAccountHttpClient(Client);
-        var updatedName = "Updated Stock Account Name";
-        var updateCmd = new UpdateAccount(_testAccountId, updatedName, AccountLabel.Stock);
+        var client = new BondAccountHttpClient(Client);
+        var updatedName = "Updated Bond Account Name";
+        var updateCmd = new UpdateAccount(_testAccountId, updatedName, AccountLabel.Other);
 
         // act
         var result = await client.UpdateAccountAsync(updateCmd);
@@ -175,7 +177,7 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
         // arrange
         await SeedAccountWithEntries();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new StockAccountHttpClient(Client);
+        var client = new BondAccountHttpClient(Client);
 
         // act
         var result = await client.DeleteAccountAsync(_testAccountId);
@@ -190,7 +192,7 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
         Assert.Null(accountInDb);
 
         // verify entries removed from database
-        var entriesInDb = await _testDatabase.Context.StockEntries
+        var entriesInDb = await _testDatabase.Context.BondEntries
             .Where(e => e.AccountId == _testAccountId)
             .ToListAsync(TestContext.Current.CancellationToken);
         Assert.Empty(entriesInDb);

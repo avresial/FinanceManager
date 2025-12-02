@@ -37,7 +37,7 @@ public class BondDetailsHttpClient(HttpClient httpClient)
             response.EnsureSuccessStatusCode();
             return true;
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Console.WriteLine($"Error updating bond details: {ex.Message}");
             return false;
