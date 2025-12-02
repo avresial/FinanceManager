@@ -55,12 +55,12 @@ public static class ImportBankModelReader
 
         csv.ReadHeader();
         var headerRecord = csv.HeaderRecord;
-        if (headerRecord == null || headerRecord.Length == 0)
+        if (headerRecord is null || headerRecord.Length == 0)
             return null;
 
         var headers = headerRecord.Select(h => CleanData(h?.Trim() ?? string.Empty)).ToList();
 
-        List<List<string>> allParsedRows = new();
+        List<List<string>> allParsedRows = [];
 
         while (await csv.ReadAsync().ConfigureAwait(false))
         {

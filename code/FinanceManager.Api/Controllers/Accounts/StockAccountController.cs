@@ -30,7 +30,7 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     public async Task<IActionResult> Get(int accountId)
     {
         var account = await stockAccountRepository.Get(accountId);
-        if (account == null) return NoContent();
+        if (account is null) return NoContent();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User))
             return Forbid("User does not own this account.");
 
@@ -43,7 +43,7 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
         var userId = ApiAuthenticationHelper.GetUserId(User);
 
         var account = await stockAccountRepository.Get(accountId);
-        if (account == null) return NotFound();
+        if (account is null) return NotFound();
         if (account.UserId != userId) return Forbid("User ID does not match the account owner.");
 
         var entries = await stockAccountEntryRepository.Get(accountId, startDate, endDate).ToListAsync();
@@ -79,7 +79,7 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     public async Task<IActionResult> Delete(int accountId)
     {
         var account = await stockAccountRepository.Get(accountId);
-        if (account == null) return NotFound("Account not found.");
+        if (account is null) return NotFound("Account not found.");
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User))
             return Forbid("User does not own this account.");
 

@@ -26,7 +26,7 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
     public async Task<bool> Delete(int accountId, int entryId)
     {
         var entryToDelete = await context.BankEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
-        if (entryToDelete == null) return false;
+        if (entryToDelete is null) return false;
         context.BankEntries.Remove(entryToDelete);
         await context.SaveChangesAsync();
         await RecalculateValues(entryToDelete.AccountId, entryToDelete.PostingDate);

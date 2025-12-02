@@ -6,8 +6,8 @@ namespace FinanceManager.Domain.Entities.Stocks;
 
 public class StockAccount : FinancialAccountBase<StockAccountEntry>
 {
-    public readonly Dictionary<string, StockAccountEntry> NextOlderEntries = new();
-    public readonly Dictionary<string, StockAccountEntry> NextYoungerEntries = new();
+    public readonly Dictionary<string, StockAccountEntry> NextOlderEntries = [];
+    public readonly Dictionary<string, StockAccountEntry> NextYoungerEntries = [];
 
     public StockAccount(int userId, int accountId, string name, IEnumerable<StockAccountEntry> entries, Dictionary<string, StockAccountEntry>? nextOlderEntries = null,
         Dictionary<string, StockAccountEntry>? nextYoungerEntries = null)
@@ -41,7 +41,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
 
         DateOnly index = DateOnly.FromDateTime(Start.Value.Date);
 
-        Dictionary<string, decimal> lastTickerValue = new Dictionary<string, decimal>();
+        Dictionary<string, decimal> lastTickerValue = [];
 
         while (index <= DateOnly.FromDateTime(End.Value))
         {
@@ -135,7 +135,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
     }
     public override void UpdateEntry(StockAccountEntry entry, bool recalculateValues = true)
     {
-        Entries ??= new List<StockAccountEntry>();
+        Entries ??= [];
 
         var entryToUpdate = Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
         if (entryToUpdate is null) return;
@@ -173,13 +173,13 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
     private new void RecalculateEntryValues(int? startingIndex)
     {
         if (Entries is null) return;
-        int startIndex = startingIndex.HasValue ? startingIndex.Value : Entries.Count() - 1;
+        int startIndex = startingIndex ?? Entries.Count - 1;
 
+        StockAccountEntry? previousIterationEntry = null;
         for (int i = startIndex; i >= 0; i--)
         {
-            if (Entries.Count() < i) continue;
+            if (Entries.Count < i) continue;
 
-            StockAccountEntry? previousIterationEntry = null; // could be stored in local dictionary to improve speed
             var previousElements = Entries.GetNextOlder(Entries[i].PostingDate, Entries[i].Ticker);
             if (previousElements is not null && previousElements.Any())
                 previousIterationEntry = previousElements.FirstOrDefault();

@@ -59,7 +59,7 @@ internal class BondAccountRepository(AppDbContext context) : IAccountRepository<
     public async Task<bool> Update(int accountId, string accountName)
     {
         var bondAccount = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bond);
-        if (bondAccount == null) return false;
+        if (bondAccount is null) return false;
         bondAccount.Name = accountName;
         await context.SaveChangesAsync();
         return true;

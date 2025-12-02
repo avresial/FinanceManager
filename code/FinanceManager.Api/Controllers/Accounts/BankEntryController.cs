@@ -21,7 +21,7 @@ public class BankEntryController(
     public async Task<IActionResult> GetEntry([FromQuery] int accountId, [FromQuery] int entryId)
     {
         var entry = await bankAccountEntryRepository.Get(accountId, entryId);
-        if (entry == null) return NotFound();
+        if (entry is null) return NotFound();
         return Ok(entry);
     }
 
@@ -29,7 +29,7 @@ public class BankEntryController(
     public async Task<IActionResult> GetYoungestEntryDate(int accountId)
     {
         var account = await bankAccountRepository.Get(accountId);
-        if (account == null) return NotFound();
+        if (account is null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
         var entry = await bankAccountEntryRepository.GetYoungest(accountId);
@@ -41,7 +41,7 @@ public class BankEntryController(
     public async Task<IActionResult> GetOldestEntryDate(int accountId)
     {
         var account = await bankAccountRepository.Get(accountId);
-        if (account == null) return NotFound();
+        if (account is null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
         var entry = await bankAccountEntryRepository.GetOldest(accountId);
@@ -73,7 +73,7 @@ public class BankEntryController(
     public async Task<IActionResult> UpdateEntry(UpdateBankAccountEntry updateEntry)
     {
         var account = await bankAccountRepository.Get(updateEntry.AccountId);
-        if (account == null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
         var newEntry = new BankAccountEntry(updateEntry.AccountId, updateEntry.EntryId, updateEntry.PostingDate, updateEntry.Value,
             updateEntry.ValueChange)

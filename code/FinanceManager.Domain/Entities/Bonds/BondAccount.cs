@@ -13,7 +13,7 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         BondAccountEntry? nextOlderEntry = null, BondAccountEntry? nextYoungerEntry = null) : base(userId, accountId, name)
     {
         this.UserId = userId;
-        Entries = entries is null ? ([]) : entries.ToList();
+        Entries = entries is null ? [] : [.. entries];
         AccountType = accountType;
         NextOlderEntry = nextOlderEntry;
         NextYoungerEntry = nextYoungerEntry;
@@ -24,4 +24,8 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         AccountType = accountType;
         Entries = [];
     }
+    // public async Task<Dictionary<DateOnly, decimal>> GetDailyPrice(BondDetails bondDetails)
+    // {
+
+    // }
 }

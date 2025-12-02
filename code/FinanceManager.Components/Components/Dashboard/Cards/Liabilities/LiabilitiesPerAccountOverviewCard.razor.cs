@@ -52,8 +52,8 @@ public partial class LiabilitiesPerAccountOverviewCard
             Type = XAxisType.Category
 
         },
-        Yaxis = new List<YAxis>()
-        {
+        Yaxis =
+        [
 
             new YAxis
             {
@@ -65,7 +65,7 @@ public partial class LiabilitiesPerAccountOverviewCard
                 SeriesName = "NetValue",
                 DecimalsInFloat = 0,
             }
-        },
+        ],
         Legend = new Legend()
         {
             Position = LegendPosition.Bottom,
@@ -73,7 +73,7 @@ public partial class LiabilitiesPerAccountOverviewCard
         Colors = ColorsProvider.GetColors()
     };
 
-    public List<NameValueResult> Data { get; set; } = new List<NameValueResult>();
+    public List<NameValueResult> Data { get; set; } = [];
 
 
     protected override async Task OnInitializedAsync()

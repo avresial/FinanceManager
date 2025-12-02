@@ -22,13 +22,13 @@ namespace FinanceManager.Components.Components.ImportData
             HasHeaderRecord = true,
         };
 
-        private List<ImportStockModel> importStockModels = new();
-        private List<ImportStockExtendedModel> importStockExtendedModels = new();
+        private List<ImportStockModel> importStockModels = [];
+        private List<ImportStockExtendedModel> importStockExtendedModels = [];
 
-        public List<IBrowserFile> LoadedFiles = new();
-        private List<string> _erorrs = new();
-        private List<string> _warnings = new();
-        private List<string> _summaryInfos = new();
+        public List<IBrowserFile> LoadedFiles = [];
+        private List<string> _erorrs = [];
+        private List<string> _warnings = [];
+        private List<string> _summaryInfos = [];
 
         private int _stepIndex;
         private bool _datasetCointainsAdditionalInformation = false;

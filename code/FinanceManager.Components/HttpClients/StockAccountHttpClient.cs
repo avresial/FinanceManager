@@ -28,10 +28,10 @@ public class StockAccountHttpClient(HttpClient httpClient)
         var result = await httpClient.GetFromJsonAsync<StockAccountDto>($"{httpClient.BaseAddress}api/StockAccount/{accountId}&{startDate:O}&{endDate:O}");
         if (result is null) return null;
 
-        Dictionary<string, StockAccountEntry> nextOlder = result.NextOlderEntries is null ? new Dictionary<string, StockAccountEntry>() :
+        Dictionary<string, StockAccountEntry> nextOlder = result.NextOlderEntries is null ? [] :
             result.NextOlderEntries.ToDictionary(x => x.Key, x => x.Value.ToStockAccountEntry());
 
-        Dictionary<string, StockAccountEntry> nextYounger = result.NextYoungerEntries is null ? new Dictionary<string, StockAccountEntry>() :
+        Dictionary<string, StockAccountEntry> nextYounger = result.NextYoungerEntries is null ? [] :
             result.NextYoungerEntries.ToDictionary(x => x.Key, x => x.Value.ToStockAccountEntry());
 
         return new(result.UserId, result.AccountId, result.Name, result.Entries

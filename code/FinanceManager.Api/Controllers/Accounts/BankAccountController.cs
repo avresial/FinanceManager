@@ -28,7 +28,7 @@ public class BankAccountController(IBankAccountRepository<BankAccount> bankAccou
     public async Task<IActionResult> Get(int accountId)
     {
         var account = await bankAccountRepository.Get(accountId);
-        if (account == null) return NotFound();
+        if (account is null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
         return Ok(account);
@@ -39,7 +39,7 @@ public class BankAccountController(IBankAccountRepository<BankAccount> bankAccou
     {
         var account = await bankAccountRepository.Get(accountId);
 
-        if (account == null) return NotFound();
+        if (account is null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
         var entries = bankAccountEntryRepository.Get(accountId, startDate, endDate);
@@ -65,7 +65,7 @@ public class BankAccountController(IBankAccountRepository<BankAccount> bankAccou
     {
         var account = await bankAccountRepository.Get(updateAccount.AccountId);
 
-        if (account == null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return BadRequest();
+        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return BadRequest();
         return Ok(await bankAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType));
     }
 

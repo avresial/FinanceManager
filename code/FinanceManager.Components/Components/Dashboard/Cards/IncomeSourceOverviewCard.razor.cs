@@ -19,14 +19,14 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
         private ApexChartOptions<IncomeSourceOverviewEntry> options = new();
 
-        public List<IncomeSourceOverviewEntry> ChartData { get; set; } = new List<IncomeSourceOverviewEntry>()
-        {
+        public List<IncomeSourceOverviewEntry> ChartData { get; set; } =
+        [
             new IncomeSourceOverviewEntry()
             {
                 Source = "Sallary",
                 Value = 0
             },
-        };
+        ];
 
         public decimal Total;
 
@@ -67,19 +67,20 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
 
             };
 
-            options.Yaxis = new List<YAxis>();
-
-            options.Yaxis.Add(new YAxis
-            {
-                AxisTicks = new AxisTicks()
+            options.Yaxis =
+            [
+                new YAxis
                 {
-                    Show = false
-                },
-                Show = false,
-                SeriesName = "income",
-                DecimalsInFloat = 0,
+                    AxisTicks = new AxisTicks()
+                    {
+                        Show = false
+                    },
+                    Show = false,
+                    SeriesName = "income",
+                    DecimalsInFloat = 0,
 
-            });
+                },
+            ];
 
             options.Tooltip = new ApexCharts.Tooltip
             {

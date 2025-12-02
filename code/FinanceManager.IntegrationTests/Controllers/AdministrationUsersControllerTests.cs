@@ -173,7 +173,7 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
         var result = await context.GetTotalTrackedMoney();
 
         // Assert
-        Assert.True(result == null || result >= 0);
+        Assert.True(result is null || result >= 0);
     }
 
     [Fact]

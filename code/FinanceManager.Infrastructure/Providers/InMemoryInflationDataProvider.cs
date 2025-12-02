@@ -10,8 +10,8 @@ namespace FinanceManager.Infrastructure.Providers;
 /// </summary>
 public class InMemoryInflationDataProvider : IInflationDataProvider
 {
-    private readonly List<InflationRate> _inflationRates = new()
-    {
+    private readonly List<InflationRate> _inflationRates =
+    [
         // PLN (CurrencyId = 1) - Polish Zloty inflation rates
         new(1, new DateOnly(2020, 1, 1), 4.4m),
         new(1, new DateOnly(2020, 2, 1), 4.7m),
@@ -87,7 +87,7 @@ public class InMemoryInflationDataProvider : IInflationDataProvider
         new(1, new DateOnly(2025, 8, 1), 4.3m),
         new(1, new DateOnly(2025, 9, 1), 4.3m),
         new(1, new DateOnly(2025, 10, 1), 4.2m),
-    };
+    ];
 
     public Task<InflationRate?> GetInflationRateAsync(int currencyId, DateOnly date, CancellationToken cancellationToken = default)
     {

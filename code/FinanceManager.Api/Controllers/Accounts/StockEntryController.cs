@@ -19,7 +19,7 @@ public class StockEntryController(
     {
         var account = await stockAccountRepository.Get(accountId);
 
-        if (account == null) return NotFound();
+        if (account is null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
         var entry = await stockAccountEntryRepository.GetYoungest(accountId);
@@ -34,7 +34,7 @@ public class StockEntryController(
     {
         var account = await stockAccountRepository.Get(accountId);
 
-        if (account == null) return NotFound();
+        if (account is null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
         var entry = await stockAccountEntryRepository.GetOldest(accountId);
@@ -62,7 +62,7 @@ public class StockEntryController(
     public async Task<IActionResult> Update(UpdateStockAccountEntry updateCommand)
     {
         var account = await stockAccountRepository.Get(updateCommand.AccountId);
-        if (account == null || account.UserId != ApiAuthenticationHelper.GetUserId(User))
+        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User))
             return Forbid("User ID does not match the account owner.");
 
         var entryToUpdate = await stockAccountEntryRepository.Get(updateCommand.AccountId, updateCommand.EntryId);

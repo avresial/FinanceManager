@@ -25,7 +25,7 @@ public partial class UserSettingsPage : IBrowserViewportObserver, IAsyncDisposab
     private string? _deleteConfirmation;
     private MudForm? _passwordForm;
     private MudTextField<string>? _passwordField;
-    private List<string> _plans = new() { $"{PricingLevel.Free}", $"{PricingLevel.Basic}", $"{PricingLevel.Premium}" };
+    private List<string> _plans = [$"{PricingLevel.Free}", $"{PricingLevel.Basic}", $"{PricingLevel.Premium}"];
     private RecordCapacity? _recordCapacity;
 
 

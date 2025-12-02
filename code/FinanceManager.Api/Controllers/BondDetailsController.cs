@@ -16,7 +16,7 @@ public class BondDetailsController(IBondDetailsRepository bondDetailsRepository,
     public async Task<IActionResult> GetById(int id, CancellationToken cancellationToken)
     {
         var bond = await bondDetailsRepository.GetByIdAsync(id, cancellationToken);
-        if (bond == null) return NotFound();
+        if (bond is null) return NotFound();
 
         return Ok(bond);
     }
@@ -40,7 +40,7 @@ public class BondDetailsController(IBondDetailsRepository bondDetailsRepository,
     public async Task<IActionResult> Update([FromBody] UpdateBondDetails updateBondDetails, CancellationToken cancellationToken)
     {
         var bond = await bondDetailsRepository.GetByIdAsync(updateBondDetails.Id, cancellationToken);
-        if (bond == null)
+        if (bond is null)
             return NotFound();
 
         bond.Name = updateBondDetails.NameToUpdate;

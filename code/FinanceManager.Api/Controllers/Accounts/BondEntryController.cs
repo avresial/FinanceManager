@@ -20,7 +20,7 @@ public class BondEntryController(
     public async Task<IActionResult> GetEntry([FromQuery] int accountId, [FromQuery] int entryId)
     {
         var entry = await bondAccountEntryRepository.Get(accountId, entryId);
-        if (entry == null) return NotFound();
+        if (entry is null) return NotFound();
         return Ok(entry);
     }
 
@@ -28,7 +28,7 @@ public class BondEntryController(
     public async Task<IActionResult> GetYoungestEntryDate(int accountId)
     {
         var account = await bondAccountRepository.Get(accountId);
-        if (account == null) return NotFound();
+        if (account is null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
         var entry = await bondAccountEntryRepository.GetYoungest(accountId);
@@ -40,7 +40,7 @@ public class BondEntryController(
     public async Task<IActionResult> GetOldestEntryDate(int accountId)
     {
         var account = await bondAccountRepository.Get(accountId);
-        if (account == null) return NotFound();
+        if (account is null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
         var entry = await bondAccountEntryRepository.GetOldest(accountId);
@@ -70,10 +70,10 @@ public class BondEntryController(
     public async Task<IActionResult> UpdateEntry(UpdateBondAccountEntry updateEntry)
     {
         var account = await bondAccountRepository.Get(updateEntry.AccountId);
-        if (account == null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
         var entryToUpdate = await bondAccountEntryRepository.Get(updateEntry.AccountId, updateEntry.EntryId);
-        if (entryToUpdate == null) return NotFound();
+        if (entryToUpdate is null) return NotFound();
 
         entryToUpdate.BondDetailsId = updateEntry.BondDetailsId;
         entryToUpdate.Value = updateEntry.Value;

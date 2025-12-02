@@ -25,7 +25,7 @@ public class BondEntryRepository(AppDbContext context) : IAccountEntryRepository
     public async Task<bool> Delete(int accountId, int entryId)
     {
         var entryToDelete = await context.BondEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
-        if (entryToDelete == null) return false;
+        if (entryToDelete is null) return false;
         context.BondEntries.Remove(entryToDelete);
         await context.SaveChangesAsync();
         await RecalculateValues(entryToDelete.AccountId, entryToDelete.PostingDate);

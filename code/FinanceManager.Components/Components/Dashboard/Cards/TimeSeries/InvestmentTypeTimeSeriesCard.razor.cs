@@ -38,19 +38,19 @@ public partial class InvestmentTypeTimeSeriesCard
                 Show = false
             },
         },
-        Yaxis = new List<YAxis>()
-        {
+        Yaxis =
+        [
             new YAxis
             {
                 Show = false,
                 SeriesName = "Vaue",
                 DecimalsInFloat = 0,
             }
-        },
-        Colors = new List<string>
-        {
+        ],
+        Colors =
+        [
            ColorsProvider.GetColors().First()
-        }
+        ]
     };
 
     [Parameter] public DateTime StartDateTime { get; set; }

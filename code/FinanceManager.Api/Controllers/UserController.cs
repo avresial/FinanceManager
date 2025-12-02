@@ -53,7 +53,6 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
         });
     }
 
-
     [Authorize(Roles = "Admin, User")]
     [HttpDelete]
     [Route("Delete/{userId:int}")]

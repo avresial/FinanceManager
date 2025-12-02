@@ -9,7 +9,7 @@ public class BondService(IBondDetailsRepository bondDetailsRepository) : IBondSe
     public async Task<bool> AddCalculationMethodAsync(int bondDetailsId, BondCalculationMethod calculationMethod, CancellationToken cancellationToken = default)
     {
         var bond = await bondDetailsRepository.GetByIdAsync(bondDetailsId, cancellationToken);
-        if (bond == null)
+        if (bond is null)
             return false;
 
         var methodWithBackRef = calculationMethod with { BondDetails = bond };
@@ -21,11 +21,11 @@ public class BondService(IBondDetailsRepository bondDetailsRepository) : IBondSe
     public async Task<bool> RemoveCalculationMethodAsync(int bondDetailsId, int calculationMethodId, CancellationToken cancellationToken = default)
     {
         var bond = await bondDetailsRepository.GetByIdAsync(bondDetailsId, cancellationToken);
-        if (bond == null)
+        if (bond is null)
             return false;
 
         var method = bond.CalculationMethods.FirstOrDefault(m => m.Id == calculationMethodId);
-        if (method == null)
+        if (method is null)
             return false;
 
         bond.CalculationMethods.Remove(method);
