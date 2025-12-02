@@ -14,6 +14,7 @@ public class BondDetails
     public BondType Type { get; set; } = BondType.InflationBond;
     public Currency Currency { get; set; } = DefaultCurrency.PLN;
     public List<BondCalculationMethod> CalculationMethods { get; set; } = [];
+    public static Capitalization Capitalization => Capitalization.Annual;
 
     public BondDetails()
     {
@@ -37,4 +38,6 @@ public class BondDetails
         CalculationMethods.Clear();
         CalculationMethods.AddRange(methodsWithBackRefs);
     }
+
+    public bool IsActiveAt(DateOnly date) => date >= StartEmissionDate && date <= EndEmissionDate;
 }

@@ -56,7 +56,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
                 decimal price = entry.Value;
                 var stockPrice = await getStockPrice(entry.Ticker, index.ToDateTime(new TimeOnly(), DateTimeKind.Utc));
                 if (stockPrice is not null)
-                    price = entry.Value * (stockPrice).PricePerUnit;
+                    price = entry.Value * stockPrice.PricePerUnit;
 
                 if (!lastTickerValue.ContainsKey(entry.Ticker))
                     lastTickerValue.Add(entry.Ticker, price);
