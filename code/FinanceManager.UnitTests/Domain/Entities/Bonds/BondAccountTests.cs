@@ -91,8 +91,8 @@ public class BondAccountTests
         var result = await account.GetDailyPrice([bondDetails]);
 
         // Assert
-        Assert.Equal(4, result.Count);
-        Assert.Equal(100.01m, result[DateOnly.FromDateTime(postingDate)]);
-        Assert.Equal(100.04m, result[DateOnly.FromDateTime(endDate.AddDays(-1))], 2);
+        Assert.Equal(5, result.Count);
+        Assert.Equal(100.01m, result[DateOnly.FromDateTime(postingDate.AddDays(1))]);
+        Assert.Equal(100.04m, result[DateOnly.FromDateTime(endDate)], 2);
     }
 }

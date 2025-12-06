@@ -5,11 +5,11 @@ namespace FinanceManager.Domain.Repositories;
 
 public interface IFinancialLabelsRepository
 {
-    Task<int> GetCount();
-    IAsyncEnumerable<FinancialLabel> GetLabels();
-    IAsyncEnumerable<FinancialLabel> GetLabelsByAccountId(int userId);
-    Task<FinancialLabel> GetLabelsById(int id);
-    Task<bool> Add(string name);
-    Task<bool> Delete(int id);
-    Task<bool> UpdateName(int id, string name);
+    Task<int> GetCount(CancellationToken cancellationToken = default);
+    IAsyncEnumerable<FinancialLabel> GetLabels(CancellationToken cancellationToken = default);
+    IAsyncEnumerable<FinancialLabel> GetLabelsByAccountId(int userId, CancellationToken cancellationToken = default);
+    Task<FinancialLabel> GetLabelsById(int id, CancellationToken cancellationToken = default);
+    Task<bool> Add(string name, CancellationToken cancellationToken = default);
+    Task<bool> Delete(int id, CancellationToken cancellationToken = default);
+    Task<bool> UpdateName(int id, string name, CancellationToken cancellationToken = default);
 }

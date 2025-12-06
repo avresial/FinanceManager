@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Shared.Accounts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -14,9 +15,8 @@ public class BankAccountEntryConfiguration : IEntityTypeConfiguration<BankAccoun
             .ValueGeneratedOnAdd();
 
         builder.HasMany(e => e.Labels)
-            .WithMany(e => e.Entries);
-        //.HasForeignKey(l => l.Id)
-        //.OnDelete(DeleteBehavior.SetNull);
+                .WithMany()
+                .UsingEntity(j => j.ToTable("BankAccountEntryFinancialLabel"));
 
         builder.Property(e => e.Value)
             .HasPrecision(18, 2);

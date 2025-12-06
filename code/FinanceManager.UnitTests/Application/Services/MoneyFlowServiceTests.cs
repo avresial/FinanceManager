@@ -149,7 +149,7 @@ public class MoneyFlowServiceTests
         // Arrange
         var userId = 1;
         var label = new FinancialLabel { Id = 1, Name = "Salary" };
-        _financialLabelsRepositoryMock.Setup(repo => repo.GetLabels()).Returns(new[] { label }.ToAsyncEnumerable());
+        _financialLabelsRepositoryMock.Setup(repo => repo.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { label }.ToAsyncEnumerable());
 
         var account = new BankAccount(userId, 1, "Bank Account 1", AccountLabel.Cash);
         account.Add(new BankAccountEntry(1, 1, _startDate, 500, 500) { Labels = [label] });
@@ -170,7 +170,7 @@ public class MoneyFlowServiceTests
         // Arrange
         var userId = 1;
         var salaryLabel = new FinancialLabel { Id = 1, Name = "Salary" };
-        _financialLabelsRepositoryMock.Setup(repo => repo.GetLabels()).Returns(new[] { salaryLabel }.ToAsyncEnumerable());
+        _financialLabelsRepositoryMock.Setup(repo => repo.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { salaryLabel }.ToAsyncEnumerable());
 
         var bankAccount = new BankAccount(userId, 1, "Bank Account 1", AccountLabel.Cash);
         bankAccount.Add(new BankAccountEntry(1, 1, _startDate, 1000, 1000) { Labels = [salaryLabel] }, false);

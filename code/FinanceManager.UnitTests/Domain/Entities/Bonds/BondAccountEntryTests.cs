@@ -70,17 +70,9 @@ public class BondAccountEntryTests
         var result = entry.GetPrice(targetDate, bondDetails);
 
         // Assert
-        // Daily rate = 0.0365 / 365 = 0.0001
-        // Day 1 (2023-01-01): 
-        //   change = 100 * 0.0001 = 0.01
-        //   current = 100.01
-        //   capitalization check: (0 % 365 == 0) -> capital = 100.01
-        // Day 2 (2023-01-02):
-        //   change = 100.01 * 0.0001 = 0.010001
-        //   current = 100.01 + 0.010001 = 100.020001
 
         Assert.Equal(2, result.Count);
-        Assert.Equal(100.01m, result[DateOnly.FromDateTime(postingDate)]);
-        Assert.Equal(100.02m, result[DateOnly.FromDateTime(postingDate.AddDays(1))], 2);
+        Assert.Equal(100m, result[DateOnly.FromDateTime(postingDate)]);
+        Assert.Equal(100.01m, result[DateOnly.FromDateTime(postingDate.AddDays(1))]);
     }
 }

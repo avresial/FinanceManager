@@ -28,11 +28,12 @@ public class BondAccountEntry(int accountId, int entryId, DateTime postingDate, 
         switch (capitalization)
         {
             case Capitalization.Annual:
-                Dictionary<DateOnly, decimal> result = new();
+                Dictionary<DateOnly, decimal> result = [];
                 decimal capital = Value;
                 decimal current = capital;
                 var postingDate = DateOnly.FromDateTime(PostingDate);
-                for (var i = postingDate; i < date; i = i.AddDays(1))
+                result[postingDate] = current;
+                for (var i = postingDate.AddDays(1); i <= date; i = i.AddDays(1))
                 {
                     var calculation = bondDetails.CalculationMethods.FirstOrDefault(cm => cm.IsActiveAt(date));
                     if (calculation is null) continue;
@@ -49,5 +50,6 @@ public class BondAccountEntry(int accountId, int entryId, DateTime postingDate, 
         }
     }
 
-    public override string ToString() => $"PostingDate: {PostingDate}, EntryId: {EntryId}, Value: {Value}, ValueChange: {ValueChange}, BondDetailsId: {BondDetailsId}";
+    public override string ToString() =>
+    $"PostingDate: {PostingDate}, EntryId: {EntryId}, Value: {Value}, ValueChange: {ValueChange}, BondDetailsId: {BondDetailsId}";
 }
