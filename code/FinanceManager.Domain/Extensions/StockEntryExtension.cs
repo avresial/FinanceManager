@@ -4,7 +4,7 @@ using FinanceManager.Domain.Enums;
 
 namespace FinanceManager.Domain.Extensions;
 
-public static class InvestmentEntryExtension
+public static class StockEntryExtension
 {
     public static async Task<List<(DateTime, decimal)>> GetAssets(this IEnumerable<StockAccountEntry> accountEntries,
         DateTime start, DateTime end, Currency currency, Func<string, Currency, DateTime, Task<decimal>> getStockPrice)

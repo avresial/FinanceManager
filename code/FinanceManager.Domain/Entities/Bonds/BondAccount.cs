@@ -6,18 +6,19 @@ namespace FinanceManager.Domain.Entities.Bonds;
 
 public class BondAccount : FinancialAccountBase<BondAccountEntry>
 {
-    public BondAccountEntry? NextOlderEntry { get; set; }
-    public BondAccountEntry? NextYoungerEntry { get; set; }
+    public readonly Dictionary<int, BondAccountEntry> NextOlderEntries = [];
+    public readonly Dictionary<int, BondAccountEntry> NextYoungerEntries = [];
+
     public AccountLabel AccountType { get; set; }
 
     public BondAccount(int userId, int accountId, string name, IEnumerable<BondAccountEntry>? entries = null, AccountLabel accountType = AccountLabel.Other,
-        BondAccountEntry? nextOlderEntry = null, BondAccountEntry? nextYoungerEntry = null) : base(userId, accountId, name)
+        Dictionary<int, BondAccountEntry>? nextOlderEntries = null, Dictionary<int, BondAccountEntry>? nextYoungerEntries = null) : base(userId, accountId, name)
     {
         UserId = userId;
         Entries = entries is null ? [] : [.. entries];
         AccountType = accountType;
-        NextOlderEntry = nextOlderEntry;
-        NextYoungerEntry = nextYoungerEntry;
+        NextOlderEntries = nextOlderEntries ?? [];
+        NextYoungerEntries = nextYoungerEntries ?? [];
     }
 
     public BondAccount(int userId, int id, string name, AccountLabel accountType) : base(userId, id, name)
@@ -25,7 +26,7 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         AccountType = accountType;
         Entries = [];
     }
-    public async Task<Dictionary<DateOnly, decimal>> GetDailyPrice(List<BondDetails> bondDetails)
+    public Dictionary<DateOnly, decimal> GetDailyPrice(List<BondDetails> bondDetails)
     {
         var result = new Dictionary<DateOnly, decimal>();
         if (Entries is null || Start is null || End is null) return result;
@@ -37,7 +38,7 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         List<Dictionary<DateOnly, decimal>> pricesPerDetail = [];
         foreach (var id in detailsIds)
         {
-            var entry = GetThisOrNextOlder(index.ToDateTime(TimeOnly.MinValue));
+            var entry = GetThisOrNextOlder(index.ToDateTime(TimeOnly.MinValue), id);
             if (entry is null) return result;
 
             pricesPerDetail.Add(entry.GetPrice(DateOnly.FromDateTime(End.Value), bondDetails.Single(bd => bd.Id == entry.BondDetailsId)));
@@ -54,14 +55,22 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         return result;
     }
 
-    public BondAccountEntry? GetThisOrNextOlder(DateTime date)
+    public BondAccountEntry? GetThisOrNextOlder(DateTime date, int bondDetailsId)
     {
         if (Entries is null) return default;
-        var result = Entries.GetThisOrNextOlder(date);
+        var result = Entries.GetThisOrNextOlder(date, bondDetailsId);
 
         if (result is not null) return result;
+        if (!NextOlderEntries.ContainsKey(bondDetailsId)) return default;
 
-        return NextOlderEntry;
+        return NextOlderEntries[bondDetailsId];
+    }
+
+    public List<int> GetStoredBondsIds()
+    {
+        if (Entries is null) return [];
+
+        return Entries.DistinctBy(x => x.BondDetailsId).Select(x => x.BondDetailsId).ToList();
     }
 
 }

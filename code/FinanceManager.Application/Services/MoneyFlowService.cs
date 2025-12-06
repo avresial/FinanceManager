@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Cash;
+﻿using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Entities.Shared.Accounts;
@@ -23,6 +24,17 @@ IStockPriceProvider stockPriceProvider) : IMoneyFlowService
             if (newestEntry is null) continue;
 
             result += newestEntry.Value;
+        }
+
+        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, date.Date, date))
+        {
+            foreach (var detailsId in account.GetStoredBondsIds())
+            {
+                var newestEntry = account.GetThisOrNextOlder(date, detailsId);
+                if (newestEntry is null) continue;
+
+                result += newestEntry.Value;
+            }
         }
 
         await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, date.Date, date))

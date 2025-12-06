@@ -6,13 +6,13 @@ namespace FinanceManager.Infrastructure.Extensions;
 public static class BondAccountExtension
 {
     public static BondAccountDto ToDto(this BondAccount account,
-        BondAccountEntry? nextOlderEntry = null,
-        BondAccountEntry? nextYoungerEntry = null,
+        Dictionary<int, BondAccountEntry>? nextOlderEntries = null,
+        Dictionary<int, BondAccountEntry>? nextYoungerEntries = null,
         IEnumerable<BondAccountEntry>? entries = null)
     {
         var effectiveEntries = entries ?? account.Get();
-        var older = nextOlderEntry ?? account.NextOlderEntry;
-        var younger = nextYoungerEntry ?? account.NextYoungerEntry;
+        var older = nextOlderEntries ?? account.NextOlderEntries;
+        var younger = nextYoungerEntries ?? account.NextYoungerEntries;
 
         return new BondAccountDto
         {
@@ -20,8 +20,8 @@ public static class BondAccountExtension
             UserId = account.UserId,
             Name = account.Name,
             AccountLabel = account.AccountType,
-            NextOlderEntry = older?.ToDto(),
-            NextYoungerEntry = younger?.ToDto(),
+            NextOlderEntries = older?.ToDto(),
+            NextYoungerEntries = younger?.ToDto(),
             Entries = effectiveEntries.Select(e => e.ToDto()).ToList()
         };
     }

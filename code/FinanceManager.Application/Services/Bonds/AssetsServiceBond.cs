@@ -2,13 +2,14 @@ using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 using System;
 
 namespace FinanceManager.Application.Services.Bonds;
 
-public class AssetsServiceBond(IFinancialAccountRepository financialAccountRepository) : IAssetsServiceTyped
+public class AssetsServiceBond(IFinancialAccountRepository financialAccountRepository, IBondDetailsRepository bondDetailsRepository) : IAssetsServiceTyped
 {
     public bool IsOfType<T>() => typeof(T) == typeof(BondAccount);
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end)
@@ -18,22 +19,41 @@ public class AssetsServiceBond(IFinancialAccountRepository financialAccountRepos
 
         Dictionary<DateTime, decimal> prices = [];
         TimeSpan step = TimeSpan.FromDays(1);
-
-        await foreach (BondAccount? account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end).Where(x => x.ContainsAssets))
+        List<BondDetails> bondDetails = await bondDetailsRepository.GetAllAsync().ToListAsync();
+        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end).Where(x => x.ContainsAssets))
         {
+            foreach (var price in account.GetDailyPrice(bondDetails))
+            {
+                if (!prices.ContainsKey(price.Key.ToDateTime(TimeOnly.MinValue)))
+                    prices.Add(price.Key.ToDateTime(TimeOnly.MinValue), price.Value);
+                else
+                    prices[price.Key.ToDateTime(TimeOnly.MinValue)] += price.Value;
+            }
         }
-        return [];
+
+        return prices.Select(x => new TimeSeriesModel(x.Key, x.Value)).ToList();
     }
 
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end, InvestmentType investmentType)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
-        List<(DateTime Date, decimal Value)> assets = [];
+        if (start == new DateTime()) return [];
 
+        Dictionary<DateTime, decimal> prices = [];
+        TimeSpan step = TimeSpan.FromDays(1);
+        List<BondDetails> bondDetails = await bondDetailsRepository.GetAllAsync().ToListAsync();
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end).Where(x => x.ContainsAssets && x.AccountType.ToString() == investmentType.ToString()))
-            ;
-        // assets.AddRange(account.Entries.GetAssets(start, end));
-        return [];
+        {
+            foreach (var price in account.GetDailyPrice(bondDetails))
+            {
+                if (!prices.ContainsKey(price.Key.ToDateTime(TimeOnly.MinValue)))
+                    prices.Add(price.Key.ToDateTime(TimeOnly.MinValue), price.Value);
+                else
+                    prices[price.Key.ToDateTime(TimeOnly.MinValue)] += price.Value;
+            }
+        }
+
+        return prices.Select(x => new TimeSeriesModel(x.Key, x.Value)).ToList();
     }
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
@@ -44,24 +64,18 @@ public class AssetsServiceBond(IFinancialAccountRepository financialAccountRepos
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
     {
-        financialAccountRepository.GetAccounts<BondAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Select(x => x.AccountType).Distinct();
-
-        Dictionary<AccountLabel, NameValueResult> accountLabelResults = [];
-
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Where(x => x.ContainsAssets))
         {
-            var entry = account.Entries.Count != 0 ? account.Entries.FirstOrDefault() : account.NextOlderEntry;
-            if (entry is null || entry.Value <= 0) continue;
+            decimal value = 0;
+            foreach (var bondDetailsId in account.GetStoredBondsIds())
+            {
+                var latestEntry = account.Get(asOfDate).First(x => x.BondDetailsId == bondDetailsId);
 
-            var existingResult = accountLabelResults.ContainsKey(account.AccountType) ? accountLabelResults[account.AccountType] : null;
-            if (existingResult is null)
-                accountLabelResults.Add(account.AccountType, new(account.AccountType.ToString(), entry.Value));
-            else
-                existingResult.Value += entry.Value;
+                value += latestEntry.Value;
+            }
+
+            yield return new(account.Name, value);
         }
-
-        foreach (var value in accountLabelResults.Values)
-            yield return value;
     }
 
     public Task<bool> IsAnyAccountWithAssets(int userId)
