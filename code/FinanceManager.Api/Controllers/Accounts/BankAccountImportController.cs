@@ -12,10 +12,13 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
+[Tags("Bank Imports")]
 public class BankAccountImportController(IBankAccountImportService importService, IBankAccountRepository<BankAccount> bankAccountRepository)
     : ControllerBase
 {
     [HttpPost("ImportBankEntries")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(object))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ImportBankEntries([FromBody] BankDataImportDto importDto)
     {
         if (importDto is null) return BadRequest("No import data provided.");
@@ -26,6 +29,9 @@ public class BankAccountImportController(IBankAccountImportService importService
     }
 
     [HttpPost("ResolveImportConflicts")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ResolveImportConflicts([FromBody] IEnumerable<ResolvedImportConflict> resolvedConflicts)
     {
         if (resolvedConflicts is null) return BadRequest("No resolved conflicts provided.");

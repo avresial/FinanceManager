@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Providers;
+using FinanceManager.Domain.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,6 +12,7 @@ namespace FinanceManager.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
+[Tags("Financial Data")]
 public class InflationController(IInflationDataProvider inflationDataProvider) : ControllerBase
 {
 
@@ -21,6 +23,8 @@ public class InflationController(IInflationDataProvider inflationDataProvider) :
     /// <param name="date">Date in YYYY-MM-DD format</param>
     /// <returns>Inflation rate as a percentage</returns>
     [HttpGet("{currencyId}/{date}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(decimal))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<decimal>> GetInflationRate(int currencyId, DateOnly date, CancellationToken cancellationToken = default)
     {
         var rate = await inflationDataProvider.GetInflationRateAsync(currencyId, date, cancellationToken);
@@ -39,6 +43,7 @@ public class InflationController(IInflationDataProvider inflationDataProvider) :
     /// <param name="to">End date in YYYY-MM-DD format</param>
     /// <returns>List of inflation rates</returns>
     [HttpGet("{currencyId}/range")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InflationRate>))]
     public async Task<ActionResult> GetInflationRates(
         int currencyId,
         [FromQuery] DateOnly from,

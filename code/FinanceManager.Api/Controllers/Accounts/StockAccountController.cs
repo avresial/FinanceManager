@@ -12,11 +12,14 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
+[Tags("Stock Accounts")]
 public class StockAccountController(IAccountRepository<StockAccount> stockAccountRepository,
     IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository) : ControllerBase
 {
 
     [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<StockAccountDto>))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get()
     {
         var accounts = await stockAccountRepository.GetAvailableAccounts(ApiAuthenticationHelper.GetUserId(User))
@@ -27,6 +30,9 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     }
 
     [HttpGet("{accountId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockAccountDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get(int accountId)
     {
         var account = await stockAccountRepository.Get(accountId);
@@ -38,6 +44,9 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     }
 
     [HttpGet("{accountId:int}&{startDate:DateTime}&{endDate:DateTime}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockAccountDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
@@ -60,10 +69,14 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     }
 
     [HttpPost("Add")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Add(AddAccount addAccount) =>
         Ok(await stockAccountRepository.Add(ApiAuthenticationHelper.GetUserId(User), addAccount.accountName));
 
     [HttpPut("Update")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Update(UpdateAccount updateAccount)
     {
         var account = await stockAccountRepository.Get(updateAccount.AccountId);
@@ -76,6 +89,8 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
 
 
     [HttpDelete("Delete/{accountId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Delete(int accountId)
     {
         var account = await stockAccountRepository.Get(accountId);
