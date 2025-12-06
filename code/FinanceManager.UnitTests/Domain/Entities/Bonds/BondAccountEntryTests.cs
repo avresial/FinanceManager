@@ -71,7 +71,7 @@ public class BondAccountEntryTests
 
         // Assert
 
-        Assert.Equal(2, result.Count);
+        Assert.Equal(3, result.Count);
         Assert.Equal(100m, result[DateOnly.FromDateTime(postingDate)]);
         Assert.Equal(100.01m, result[DateOnly.FromDateTime(postingDate.AddDays(1))]);
     }

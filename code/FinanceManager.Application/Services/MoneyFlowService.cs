@@ -9,7 +9,8 @@ using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Services;
 
-public class MoneyFlowService(IFinancialAccountRepository financialAccountRepository, IFinancialLabelsRepository financialLabelsRepository, IStockPriceProvider stockPriceProvider) : IMoneyFlowService
+public class MoneyFlowService(IFinancialAccountRepository financialAccountRepository, IFinancialLabelsRepository financialLabelsRepository,
+IStockPriceProvider stockPriceProvider) : IMoneyFlowService
 {
     public async Task<decimal?> GetNetWorth(int userId, Currency currency, DateTime date)
     {
@@ -52,59 +53,6 @@ public class MoneyFlowService(IFinancialAccountRepository financialAccountReposi
             result.Add(date, netWorth.Value);
         }
         return result;
-    }
-    public async Task<List<TimeSeriesModel>> GetIncome(int userId, Currency currency, DateTime start, DateTime end)
-    {
-        TimeSpan timeSeriesStep = new(1, 0, 0, 0);
-
-        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
-
-        Dictionary<DateTime, decimal> result = [];
-
-        await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
-        {
-            for (var date = end; date >= start; date = date.Add(-timeSeriesStep))
-            {
-                if (!result.ContainsKey(date)) result.Add(date, 0);
-
-                if (account.Entries is null) continue;
-                var entries = account.Get(date);
-
-                foreach (var entry in entries.Where(x => x.ValueChange > 0 && x.PostingDate.Date == date.Date).Select(x => x as FinancialEntryBase))
-                    result[date] += entry.ValueChange;
-            }
-        }
-
-        return TimeBucketService.Get(result.Select(x => (x.Key, x.Value))).Select(x => new TimeSeriesModel(x.Date, x.Objects.Sum(x => x))).ToList();
-    }
-    public async Task<List<TimeSeriesModel>> GetSpending(int userId, Currency currency, DateTime start, DateTime end)
-    {
-        TimeSpan timeSeriesStep = new(1, 0, 0, 0);
-        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
-
-        Dictionary<DateTime, decimal> result = [];
-        await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
-        {
-            for (var date = end; date >= start; date = date.Add(-timeSeriesStep))
-            {
-                if (!result.ContainsKey(date)) result.Add(date, 0);
-
-                if (account.Entries is null) continue;
-                var entries = account.Get(date);
-
-                foreach (var entry in entries.Where(x => x.ValueChange < 0 && x.PostingDate.Date == date.Date).Select(x => x as FinancialEntryBase))
-                    result[date] += entry.ValueChange;
-            }
-        }
-
-        return TimeBucketService.Get(result.Select(x => (x.Key, x.Value)))
-            .Select(x => new TimeSeriesModel(x.Date, x.Objects.Sum(x => x)))
-            .ToList();
-    }
-    public Task<List<TimeSeriesModel>> GetBalance(int userId, Currency currency, DateTime start, DateTime end)
-    {
-        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
-        throw new NotImplementedException();
     }
     public async Task<List<NameValueResult>> GetLabelsValue(int userId, DateTime start, DateTime end)
     {

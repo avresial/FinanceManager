@@ -6,7 +6,7 @@ using FinanceManager.Domain.Extensions;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.Services.Banks;
 
 internal class AssetsServiceBank(IFinancialAccountRepository financialAccountRepository) : IAssetsServiceTyped
 {
@@ -72,7 +72,6 @@ internal class AssetsServiceBank(IFinancialAccountRepository financialAccountRep
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
     {
-
         financialAccountRepository.GetAccounts<BankAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Select(x => x.AccountType).Distinct();
 
         Dictionary<AccountLabel, NameValueResult> accountLabelResults = [];

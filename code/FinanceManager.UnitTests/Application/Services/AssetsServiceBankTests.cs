@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Banks;
 using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Enums;

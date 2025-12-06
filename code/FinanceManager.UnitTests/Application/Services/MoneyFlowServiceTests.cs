@@ -107,43 +107,6 @@ public class MoneyFlowServiceTests
     }
 
     [Fact]
-    public async Task GetIncome_ReturnsIncomeTimeSeries()
-    {
-        // Arrange
-        var userId = 1;
-        var account = new BankAccount(userId, 1, "Bank Account 1", AccountLabel.Cash);
-        account.Add(new BankAccountEntry(1, 1, _startDate, 100, 100)); // Positive value change for income
-
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(new[] { account }.ToAsyncEnumerable());
-
-        // Act
-        var result = await _moneyFlowService.GetIncome(userId, DefaultCurrency.PLN, _startDate, _endDate);
-
-        // Assert
-        Assert.NotEmpty(result);
-        Assert.Contains(result, ts => ts.Value > 0);
-    }
-
-    [Fact]
-    public async Task GetSpending_ReturnsSpendingTimeSeries()
-    {
-        // Arrange
-        var userId = 1;
-        var account = new BankAccount(userId, 1, "Bank Account 1", AccountLabel.Cash);
-        account.Add(new BankAccountEntry(1, 1, _startDate, -50, -50)); // Negative value change for spending
-
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(new[] { account }.ToAsyncEnumerable());
-
-        // Act
-        var result = await _moneyFlowService.GetSpending(userId, DefaultCurrency.PLN, _startDate, _endDate);
-
-        // Assert
-        Assert.NotEmpty(result);
-        Assert.Contains(result, ts => ts.Value < 0);
-    }
-
-
-    [Fact]
     public async Task GetLabelsValue_ReturnsLabelsValue()
     {
         // Arrange

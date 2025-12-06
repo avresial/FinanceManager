@@ -1,5 +1,4 @@
-﻿using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
+﻿using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -11,7 +10,7 @@ namespace FinanceManager.Api.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Financial Analysis")]
-public class MoneyFlowController(IMoneyFlowService moneyFlowService, ICurrencyRepository currencyRepository) : ControllerBase
+public class MoneyFlowController(IMoneyFlowService moneyFlowService, IBalanceService balanceService, ICurrencyRepository currencyRepository) : ControllerBase
 {
     [HttpGet("GetNetWorth/{userId:int}/{currencyId:int}/{date:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(decimal))]
@@ -26,12 +25,17 @@ public class MoneyFlowController(IMoneyFlowService moneyFlowService, ICurrencyRe
     [HttpGet("GetIncome/{userId:int}/{currencyId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TimeSeriesModel>))]
     public async Task<IActionResult> GetIncome(int userId, int currencyId, DateTime start, DateTime end, long? step = null, CancellationToken cancellationToken = default) =>
-        Ok(await moneyFlowService.GetIncome(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), start, end));
+        Ok(await balanceService.GetIncome(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), start, end));
 
     [HttpGet("GetSpending/{userId:int}/{currencyId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TimeSeriesModel>))]
     public async Task<IActionResult> GetSpending(int userId, int currencyId, DateTime start, DateTime end, long? step = null, CancellationToken cancellationToken = default) =>
-        Ok(await moneyFlowService.GetSpending(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), start, end));
+        Ok(await balanceService.GetSpending(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), start, end));
+
+    [HttpGet("GetBalance/{userId:int}/{currencyId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TimeSeriesModel>))]
+    public async Task<IActionResult> GetBalance(int userId, int currencyId, DateTime start, DateTime end, long? step = null, CancellationToken cancellationToken = default) =>
+        Ok(await balanceService.GetBalance(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), start, end));
 
     [HttpGet("GetLabelsValue")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(NameValueResult))]
