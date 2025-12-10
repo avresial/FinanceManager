@@ -1,4 +1,3 @@
-using FinanceManager.Application.Commands.Account;
 
 namespace FinanceManager.Application.Commands.Account;
 
