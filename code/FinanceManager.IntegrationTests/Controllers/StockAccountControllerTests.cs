@@ -196,8 +196,9 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
         Assert.Empty(entriesInDb);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         _testDatabase?.Dispose();
         _testDatabase = null;
         GC.SuppressFinalize(this);

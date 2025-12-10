@@ -148,8 +148,9 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         Assert.Equal((1 + days) * _valueChange, result.First().Salary);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         if (_testDatabase is null)
             return;
 

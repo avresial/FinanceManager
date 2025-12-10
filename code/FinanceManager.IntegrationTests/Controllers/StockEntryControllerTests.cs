@@ -183,8 +183,9 @@ public class StockEntryControllerTests(OptionsProvider optionsProvider) : Contro
         Assert.Equal(2, remainingEntries.Count);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         _testDatabase?.Dispose();
         _testDatabase = null;
         GC.SuppressFinalize(this);

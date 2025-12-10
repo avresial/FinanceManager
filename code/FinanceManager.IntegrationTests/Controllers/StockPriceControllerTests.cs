@@ -148,8 +148,9 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         Assert.Equal(DefaultCurrency.PLN.Symbol, result.Currency.Symbol);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         if (_testDatabase is null)
             return;
 

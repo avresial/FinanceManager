@@ -114,8 +114,9 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         Assert.All(result, item => Assert.True(item.Value > 0));
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         if (_testDatabase is null)
             return;
 

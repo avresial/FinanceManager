@@ -150,8 +150,9 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
         Assert.Equal(existingValue, result.ValueChange);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         _testDatabase?.Dispose();
         _testDatabase = null;
         GC.SuppressFinalize(this);

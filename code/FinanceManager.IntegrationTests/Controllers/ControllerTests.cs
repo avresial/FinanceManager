@@ -9,7 +9,7 @@ using Xunit;
 namespace FinanceManager.IntegrationTests.Controllers;
 
 [Collection("api")]
-public abstract class ControllerTests : IClassFixture<OptionsProvider>
+public abstract class ControllerTests : IClassFixture<OptionsProvider>, IDisposable
 {
     private readonly JwtTokenGenerator? _jwtTokenGenerator;
     protected HttpClient Client { get; }
@@ -26,6 +26,11 @@ public abstract class ControllerTests : IClassFixture<OptionsProvider>
         return jwt;
     }
 
+    protected void ClearAuthorization()
+    {
+        Client.DefaultRequestHeaders.Authorization = null;
+    }
+
     public ControllerTests(OptionsProvider optionsProvider)
     {
         var authOptions = optionsProvider.Get<JwtAuthOptions>("JwtConfig");
@@ -36,5 +41,10 @@ public abstract class ControllerTests : IClassFixture<OptionsProvider>
 
     protected virtual void ConfigureServices(IServiceCollection services)
     {
+    }
+
+    public virtual void Dispose()
+    {
+        ClearAuthorization();
     }
 }

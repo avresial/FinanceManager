@@ -112,8 +112,9 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
         Assert.All(result, item => Assert.True(item.Value < 0));
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         if (_testDatabase is null)
             return;
 

@@ -269,8 +269,9 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
         Assert.DoesNotContain(retrieved.CalculationMethods, m => m.Id == methodToRemove.Id);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         if (_testDatabase is null)
             return;
 

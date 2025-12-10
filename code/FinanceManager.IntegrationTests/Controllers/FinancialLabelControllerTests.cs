@@ -145,8 +145,9 @@ public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : Co
         Assert.Single(result);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         if (_testDatabase is null)
             return;
 

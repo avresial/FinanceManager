@@ -283,8 +283,9 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
         Assert.Empty(result);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         if (_testDatabase is null)
             return;
 

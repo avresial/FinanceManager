@@ -113,8 +113,10 @@ public class InflationControllerTests(OptionsProvider optionsProvider) : Control
         Assert.Contains("401", exception.Message);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
+
         if (_testDatabase is null)
             return;
 
