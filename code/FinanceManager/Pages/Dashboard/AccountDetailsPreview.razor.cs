@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.Accounts;
+﻿using FinanceManager.Domain.Entities.Cash;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.WebUi.Pages.Dashboard;

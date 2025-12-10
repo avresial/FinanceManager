@@ -1,5 +1,6 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
@@ -172,7 +173,7 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
         var result = await context.GetTotalTrackedMoney();
 
         // Assert
-        Assert.True(result == null || result >= 0);
+        Assert.True(result is null || result >= 0);
     }
 
     [Fact]
@@ -282,12 +283,14 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
         Assert.Empty(result);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         if (_testDatabase is null)
             return;
 
         _testDatabase.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

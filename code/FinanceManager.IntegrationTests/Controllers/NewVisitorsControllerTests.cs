@@ -35,12 +35,14 @@ public class NewVisitorsControllerTests(OptionsProvider optionsProvider) : Contr
         Assert.Equal(1, count);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         if (_testDatabase is null)
             return;
 
         _testDatabase.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

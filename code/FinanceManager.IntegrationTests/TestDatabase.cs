@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.IntegrationTests;
+
 internal sealed class TestDatabase : IDisposable
 {
     public AppDbContext Context { get; }
@@ -13,5 +14,6 @@ internal sealed class TestDatabase : IDisposable
     {
         Context.Database.EnsureDeleted();
         Context.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

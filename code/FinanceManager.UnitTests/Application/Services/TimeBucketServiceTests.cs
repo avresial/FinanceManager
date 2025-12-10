@@ -233,7 +233,7 @@ public class TimeBucketServiceTests
         // Assert
         Assert.Single(result);
         Assert.Equal(DateTime.Parse("2023-01-01"), result[0].Date);
-        Assert.Equal(new List<int> { 10 }, result[0].Objects);
+        Assert.Equal([10], result[0].Objects);
     }
 
     [Fact]

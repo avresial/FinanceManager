@@ -1,7 +1,7 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
@@ -38,19 +38,19 @@ public partial class InvestmentTypeTimeSeriesCard
                 Show = false
             },
         },
-        Yaxis = new List<YAxis>()
-        {
+        Yaxis =
+        [
             new YAxis
             {
                 Show = false,
                 SeriesName = "Vaue",
                 DecimalsInFloat = 0,
             }
-        },
-        Colors = new List<string>
-        {
+        ],
+        Colors =
+        [
            ColorsProvider.GetColors().First()
-        }
+        ]
     };
 
     [Parameter] public DateTime StartDateTime { get; set; }

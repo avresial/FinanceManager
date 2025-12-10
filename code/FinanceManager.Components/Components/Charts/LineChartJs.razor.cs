@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
 namespace FinanceManager.Components.Components.Charts;
+
 public partial class LineChartJs : ComponentBase, IAsyncDisposable
 {
     private IJSObjectReference? _chartInstance;

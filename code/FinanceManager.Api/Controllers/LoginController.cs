@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Api.Services;
 using FinanceManager.Application.Commands.Login;
-using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,18 +9,21 @@ namespace FinanceManager.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Tags("Authentication")]
 public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepository userRepository, IActiveUsersRepository activeUsersRepository,
     GuestAccountSeeder guestAccountSeeder, ILogger<LoginController> logger) : ControllerBase
 {
 
     [AllowAnonymous]
     [HttpPost(Name = "Login")]
-    public async Task<IActionResult> Login(LoginRequestModel requestModel)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(LoginResponseModel))]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Login(LoginRequestModel requestModel, CancellationToken cancellationToken = default)
     {
         try
         {
             if (requestModel.userName == "guest")
-                await guestAccountSeeder.SeedNewData(DateTime.UtcNow.AddMonths(-3), DateTime.UtcNow);
+                await guestAccountSeeder.Seed(cancellationToken);
         }
         catch (Exception ex)
         {

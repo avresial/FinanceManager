@@ -1,5 +1,5 @@
 ﻿using FinanceManager.Components.Helpers;
-using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Entities.Stocks;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 

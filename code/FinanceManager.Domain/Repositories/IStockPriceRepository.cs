@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities;
+﻿using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.Stocks;
 
 namespace FinanceManager.Domain.Repositories;
 

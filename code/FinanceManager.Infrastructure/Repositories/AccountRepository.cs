@@ -1,12 +1,17 @@
-﻿using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Shared.Accounts;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories.Account;
 
 namespace FinanceManager.Infrastructure.Repositories;
 
 public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAccountRepository, IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
-    IAccountRepository<StockAccount> stockAccountRepository, IStockAccountEntryRepository<StockAccountEntry> stockEntryRepository) : IFinancialAccountRepository
+    IAccountRepository<StockAccount> stockAccountRepository, IStockAccountEntryRepository<StockAccountEntry> stockEntryRepository,
+    IAccountRepository<BondAccount> bondAccountRepository
+     //  IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository
+     ) : IFinancialAccountRepository
 {
     public async Task<Dictionary<int, Type>> GetAvailableAccounts(int userId)
     {
@@ -111,6 +116,10 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
             case Type t when t == typeof(StockAccount):
                 foreach (var stockAccount in await stockAccountRepository.GetAvailableAccounts(userId).ToListAsync())
                     yield return (await GetAccount<T>(userId, stockAccount.AccountId, dateStart, dateEnd))!;
+                break;
+            case Type t when t == typeof(BondAccount):
+                foreach (var bondAccount in await bondAccountRepository.GetAvailableAccounts(userId).ToListAsync())
+                    yield return (await GetAccount<T>(userId, bondAccount.AccountId, dateStart, dateEnd))!;
                 break;
         }
     }

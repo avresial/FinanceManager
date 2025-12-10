@@ -1,5 +1,5 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
@@ -112,12 +112,14 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
         Assert.All(result, item => Assert.True(item.Value < 0));
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         if (_testDatabase is null)
             return;
 
         _testDatabase.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

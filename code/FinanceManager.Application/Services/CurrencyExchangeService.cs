@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities;
+﻿using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;

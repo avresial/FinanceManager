@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -188,12 +188,8 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
 
         if (entry is null || label is null) return false;
 
-        //if (entry.LabelBankEntries.Any(l => l.FinancialLabelId == labelId)) return false;
-
-
         await context.SaveChangesAsync();
 
         return true;
-
     }
 }

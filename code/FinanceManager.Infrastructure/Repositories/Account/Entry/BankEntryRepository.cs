@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +26,7 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
     public async Task<bool> Delete(int accountId, int entryId)
     {
         var entryToDelete = await context.BankEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
-        if (entryToDelete == null) return false;
+        if (entryToDelete is null) return false;
         context.BankEntries.Remove(entryToDelete);
         await context.SaveChangesAsync();
         await RecalculateValues(entryToDelete.AccountId, entryToDelete.PostingDate);

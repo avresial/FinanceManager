@@ -1,9 +1,10 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Shared.Accounts;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
 namespace FinanceManager.WebUi.Pages.Admin;
+
 public partial class AdminLabelPage
 {
     private bool _isLoading = true;

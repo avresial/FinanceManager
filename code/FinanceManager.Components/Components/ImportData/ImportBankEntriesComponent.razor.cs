@@ -1,6 +1,6 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Dtos;

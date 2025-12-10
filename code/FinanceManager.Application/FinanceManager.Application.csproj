@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>net9.0</TargetFramework>
@@ -18,14 +18,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
-		<PackageReference Include="Blazored.SessionStorage" Version="2.4.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.10" />
-		<PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.10" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-		<PackageReference Include="System.Linq.Async" Version="6.0.3" />
+		<PackageReference Include="Blazored.LocalStorage" />
+		<PackageReference Include="Blazored.SessionStorage" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" />
+		<PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+		<PackageReference Include="Newtonsoft.Json" />
+		<PackageReference Include="System.Linq.Async" />
 	</ItemGroup>
 
 	<ItemGroup>

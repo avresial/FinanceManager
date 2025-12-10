@@ -1,7 +1,7 @@
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
@@ -183,9 +183,11 @@ public class StockEntryControllerTests(OptionsProvider optionsProvider) : Contro
         Assert.Equal(2, remainingEntries.Count);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         _testDatabase?.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

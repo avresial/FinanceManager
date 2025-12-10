@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Cash;
 
 namespace FinanceManager.Infrastructure.Dtos;
 

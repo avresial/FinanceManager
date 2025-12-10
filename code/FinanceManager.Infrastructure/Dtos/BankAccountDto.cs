@@ -6,4 +6,3 @@ public class BankAccountDto : FinancialAccountBaseDto
     public BankAccountEntryDto? NextYoungerEntry { get; set; }
     public IEnumerable<BankAccountEntryDto> Entries { get; set; } = [];
 };
-

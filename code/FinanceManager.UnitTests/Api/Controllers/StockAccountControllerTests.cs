@@ -1,7 +1,6 @@
 using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.Commands.Account;
-using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
 using Microsoft.AspNetCore.Http;
@@ -10,6 +9,7 @@ using Moq;
 using System.Security.Claims;
 
 namespace FinanceManager.UnitTests.Api.Controllers;
+
 public class StockAccountControllerTests
 {
     private readonly Mock<IAccountRepository<StockAccount>> _mockStockAccountRepository;

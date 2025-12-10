@@ -1,10 +1,12 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -146,12 +148,14 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         Assert.Equal((1 + days) * _valueChange, result.First().Salary);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         if (_testDatabase is null)
             return;
 
         _testDatabase.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

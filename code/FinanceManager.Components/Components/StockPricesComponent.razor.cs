@@ -1,9 +1,11 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.Stocks;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
 namespace FinanceManager.Components.Components;
+
 public partial class StockPricesComponent
 {
     private List<StockPrice> _stockPrices = [];
