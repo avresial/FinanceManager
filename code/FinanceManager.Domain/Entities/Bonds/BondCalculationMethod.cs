@@ -1,5 +1,4 @@
 using FinanceManager.Domain.Enums;
-using System.Data.SqlTypes;
 using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.Entities.Bonds;
