@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories.Account.Entry;
 
-public class BondEntryRepository(AppDbContext context) : IAccountEntryRepository<BondAccountEntry>
+public class BondEntryRepository(AppDbContext context) : IBondAccountEntryRepository<BondAccountEntry>
 {
     public async Task<bool> Add(BondAccountEntry entry, bool recalculate)
     {
@@ -163,5 +163,55 @@ public class BondEntryRepository(AppDbContext context) : IAccountEntryRepository
         await context.SaveChangesAsync();
 
         return true;
+    }
+
+    async Task<Dictionary<int, BondAccountEntry>> IBondAccountEntryRepository<BondAccountEntry>.GetNextOlder(int accountId, DateTime date)
+    {
+        Dictionary<int, BondAccountEntry> result = [];
+
+        var bondDetailsIds = await context.BondEntries
+                                .Where(e => e.AccountId == accountId)
+                                .Select(m => m.BondDetailsId)
+                                .Distinct()
+                                .ToListAsync();
+
+        foreach (var bondDetailsId in bondDetailsIds)
+        {
+            var nextOlder = await context.BondEntries
+                   .Where(e => e.BondDetailsId == bondDetailsId && e.AccountId == accountId && e.PostingDate < date)
+                   .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId)
+                   .FirstOrDefaultAsync();
+
+            if (nextOlder is null) continue;
+
+            result.Add(bondDetailsId, nextOlder);
+        }
+
+        return result;
+    }
+
+    async Task<Dictionary<int, BondAccountEntry>> IBondAccountEntryRepository<BondAccountEntry>.GetNextYounger(int accountId, DateTime date)
+    {
+        Dictionary<int, BondAccountEntry> result = [];
+
+        var bondDetailsIds = await context.BondEntries
+                                .Where(e => e.AccountId == accountId)
+                                .Select(m => m.BondDetailsId)
+                                .Distinct()
+                                .ToListAsync();
+
+        foreach (var bondDetailsId in bondDetailsIds)
+        {
+            var nextYounger = await context.BondEntries
+                   .Where(e => e.BondDetailsId == bondDetailsId && e.AccountId == accountId && e.PostingDate > date)
+                   .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId)
+                   .LastOrDefaultAsync();
+
+            if (nextYounger is null) continue;
+
+            result.Add(bondDetailsId, nextYounger);
+        }
+
+        return result;
     }
 }

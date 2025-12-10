@@ -15,7 +15,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Tags("Bond Accounts")]
 public class BondAccountController(IAccountRepository<BondAccount> bondAccountRepository,
-    IAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository, IUserPlanVerifier userPlanVerifier) : ControllerBase
+    IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository, IUserPlanVerifier userPlanVerifier) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<BondAccountDto>))]
@@ -41,7 +41,7 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
         return Ok(account);
     }
 
-    [HttpGet("{accountId:int}&{startDate:DateTime}&{endDate:DateTime}")]
+    [HttpGet("{accountId:int}/{startDate:DateTime}/{endDate:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BondAccountDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -53,10 +53,10 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
         var entries = bondAccountEntryRepository.Get(accountId, startDate, endDate);
-        var olderEntry = await bondAccountEntryRepository.GetNextOlder(accountId, startDate);
-        var youngerEntry = await bondAccountEntryRepository.GetNextYounger(accountId, endDate);
+        var nextOlderEntries = await bondAccountEntryRepository.GetNextOlder(accountId, startDate);
+        var nextYoungerEntries = await bondAccountEntryRepository.GetNextYounger(accountId, startDate);
 
-        return Ok(account.ToDto(olderEntry, youngerEntry, await entries.ToListAsync()));
+        return Ok(account.ToDto(nextOlderEntries, nextYoungerEntries, await entries.ToListAsync()));
     }
 
     [HttpPost]

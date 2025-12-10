@@ -25,7 +25,7 @@ IStockPriceProvider stockPriceProvider) : IMoneyFlowService
 
             result += newestEntry.Value;
         }
-
+;
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, date.Date, date))
         {
             foreach (var detailsId in account.GetStoredBondsIds())

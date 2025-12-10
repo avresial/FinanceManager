@@ -18,32 +18,26 @@ public class BondAccountHttpClient(HttpClient httpClient)
 
     public async Task<BondAccount?> GetAccountAsync(int accountId)
     {
-        var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/BondAccount/{accountId}");
-        if (!response.IsSuccessStatusCode) return null;
-
-        var result = await response.Content.ReadFromJsonAsync<BondAccountDto>();
+        var result = await httpClient.GetFromJsonAsync<BondAccountDto>($"{httpClient.BaseAddress}api/BondAccount/{accountId}");
         if (result is null) return null;
 
-        return new BondAccount(result.UserId, result.AccountId, result.Name,
-            result.Entries.Select(x => x.ToBondAccountEntry()),
-            result.AccountLabel,
-            result.NextOlderEntry?.ToBondAccountEntry(),
-            result.NextYoungerEntry?.ToBondAccountEntry());
+        return new BondAccount(result.UserId, result.AccountId, result.Name, [], result.AccountLabel);
     }
 
     public async Task<BondAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate)
     {
-        var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/BondAccount/{accountId}&{startDate:O}&{endDate:O}");
-        if (!response.IsSuccessStatusCode) return null;
-
-        var result = await response.Content.ReadFromJsonAsync<BondAccountDto>();
+        var result = await httpClient.GetFromJsonAsync<BondAccountDto>($"{httpClient.BaseAddress}api/BondAccount/{accountId}/{startDate:O}/{endDate:O}");
         if (result is null) return null;
 
-        return new BondAccount(result.UserId, result.AccountId, result.Name,
-            result.Entries.Select(x => x.ToBondAccountEntry()),
-            result.AccountLabel,
-            result.NextOlderEntry?.ToBondAccountEntry(),
-            result.NextYoungerEntry?.ToBondAccountEntry());
+        Dictionary<int, BondAccountEntry> nextOlder = result.NextOlderEntries is null ? [] :
+            result.NextOlderEntries.ToDictionary(x => x.Key, x => x.Value.ToBondAccountEntry());
+
+        Dictionary<int, BondAccountEntry> nextYounger = result.NextYoungerEntries is null ? [] :
+            result.NextYoungerEntries.ToDictionary(x => x.Key, x => x.Value.ToBondAccountEntry());
+
+        return new(result.UserId, result.AccountId, result.Name, result.Entries
+            .Select(x => new BondAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.BondDetailsId) { Labels = x.Labels }),
+            result.AccountLabel, nextOlder, nextYounger);
     }
 
     public async Task<int?> AddAccountAsync(AddBondAccount addAccount)

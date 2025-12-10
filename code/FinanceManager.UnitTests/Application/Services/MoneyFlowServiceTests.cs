@@ -1,5 +1,6 @@
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
@@ -72,8 +73,10 @@ public class MoneyFlowServiceTests
         var userId = 1;
         DateTime date = _startDate.AddDays(-1);
         List<BankAccount> bankAccounts = [new(userId, 1, "Bank Account 1", [new(1, 1, date, 1000, 0)])];
+        List<BondAccount> bondAccounts = [];
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(bankAccounts.ToAsyncEnumerable());
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(_investmentAccountAccounts.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(bondAccounts.ToAsyncEnumerable());
 
         // Act
         var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
@@ -94,8 +97,10 @@ public class MoneyFlowServiceTests
                 new(1, 1, _endDate, 1000, 0)
             ])
         ];
+        List<BondAccount> bondAccounts = [];
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(bankAccounts.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(bondAccounts.ToAsyncEnumerable());
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(_investmentAccountAccounts.ToAsyncEnumerable());
 
         // Act

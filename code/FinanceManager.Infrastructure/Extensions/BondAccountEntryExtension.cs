@@ -16,4 +16,15 @@ public static class BondAccountEntryExtension
         PostingDate = bondAccountEntry.PostingDate,
         Labels = [.. bondAccountEntry.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id })]
     };
+
+    public static BondAccountEntry ToBondAccountEntry(this BondAccountEntryDto bondAccountEntryDto) => new(
+        bondAccountEntryDto.AccountId,
+        bondAccountEntryDto.EntryId,
+        bondAccountEntryDto.PostingDate,
+        bondAccountEntryDto.Value,
+        bondAccountEntryDto.ValueChange,
+        bondAccountEntryDto.BondDetailsId)
+    {
+        Labels = bondAccountEntryDto.Labels
+    };
 }

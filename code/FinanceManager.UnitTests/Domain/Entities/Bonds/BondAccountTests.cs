@@ -88,7 +88,7 @@ public class BondAccountTests
         { Id = 1 };
 
         // Act
-        var result = await account.GetDailyPrice([bondDetails]);
+        var result = account.GetDailyPrice([bondDetails]);
 
         // Assert
         Assert.Equal(5, result.Count);

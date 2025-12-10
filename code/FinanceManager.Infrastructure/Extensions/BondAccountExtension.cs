@@ -20,8 +20,8 @@ public static class BondAccountExtension
             UserId = account.UserId,
             Name = account.Name,
             AccountLabel = account.AccountType,
-            NextOlderEntries = older?.ToDto(),
-            NextYoungerEntries = younger?.ToDto(),
+            NextOlderEntries = older?.ToDictionary(x => x.Key, x => x.Value.ToDto()),
+            NextYoungerEntries = younger?.ToDictionary(x => x.Key, x => x.Value.ToDto()),
             Entries = effectiveEntries.Select(e => e.ToDto()).ToList()
         };
     }

@@ -188,12 +188,8 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
 
         if (entry is null || label is null) return false;
 
-        //if (entry.LabelBankEntries.Any(l => l.FinancialLabelId == labelId)) return false;
-
-
         await context.SaveChangesAsync();
 
         return true;
-
     }
 }
