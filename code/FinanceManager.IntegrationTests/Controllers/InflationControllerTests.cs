@@ -1,9 +1,7 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.ValueObjects;
 using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Providers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
@@ -26,7 +24,6 @@ public class InflationControllerTests(OptionsProvider optionsProvider) : Control
             services.Remove(descriptor);
 
         services.AddSingleton(_testDatabase!.Context);
-        services.AddSingleton<IInflationDataProvider, InMemoryInflationDataProvider>();
     }
     [Fact]
     public async Task GetInflationRate_WithValidData_ReturnsInflationRate()
@@ -106,15 +103,14 @@ public class InflationControllerTests(OptionsProvider optionsProvider) : Control
     {
         // Arrange - No authorization
         ClearAuthorization();
-        var client = new InflationHttpClient(Client);
         var currencyId = 1;
         var date = new DateOnly(2023, 1, 1);
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<HttpRequestException>(
-            async () => await client.GetInflationRateAsync(currencyId, date, TestContext.Current.CancellationToken)
-        );
-        Assert.Contains("401", exception.Message);
+        // Act
+        var response = await Client.GetAsync($"api/Inflation/{currencyId}/{date}", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     public override void Dispose()
