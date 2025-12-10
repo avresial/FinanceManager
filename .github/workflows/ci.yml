@@ -134,8 +134,11 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore ./code
 
-      - name: Build solution
-        run: dotnet build ./code --no-restore --configuration Release
+      - name: Clean integration test project
+        run: dotnet clean ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --configuration Release
+
+      - name: Build solution with deterministic output
+        run: dotnet build ./code --no-restore --configuration Release --no-incremental /p:Deterministic=true
 
       - name: Run integration tests with coverage
         run: dotnet test ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --no-build --configuration Release --logger "trx;LogFileName=integration-test-results.trx" --results-directory TestResults --collect:"XPlat Code Coverage"
