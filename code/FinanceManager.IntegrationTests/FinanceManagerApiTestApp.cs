@@ -36,5 +36,6 @@ internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<Program>
 
             builder.UseEnvironment("test");
         }).CreateClient();
+        Client.BaseAddress = new Uri("http://localhost/");
     }
 }
