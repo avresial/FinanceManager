@@ -1,11 +1,8 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.ValueObjects;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using System.Net;
-using System.Net.Http.Json;
 using Xunit;
 
 namespace FinanceManager.IntegrationTests.Controllers;
