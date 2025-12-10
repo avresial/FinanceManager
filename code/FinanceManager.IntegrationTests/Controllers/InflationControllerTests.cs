@@ -102,12 +102,13 @@ public class InflationControllerTests(OptionsProvider optionsProvider) : Control
         ClearAuthorization();
         var currencyId = 1;
         var date = new DateOnly(2023, 1, 1);
+        var client = new InflationHttpClient(Client);
 
-        // Act
-        var response = await Client.GetAsync($"api/Inflation/{currencyId}/{date}", TestContext.Current.CancellationToken);
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(async () =>
+            await client.GetInflationRateAsync(currencyId, date, TestContext.Current.CancellationToken));
 
-        // Assert
-        Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Contains("401", exception.Message);
     }
 
     public override void Dispose()
