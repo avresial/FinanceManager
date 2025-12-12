@@ -7,7 +7,7 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: 'FinanceManagerApi'
-  AZURE_WEBAPP_PACKAGE_PATH: './FinanceManager.Api/publish'
+  AZURE_WEBAPP_PACKAGE_PATH: './code/FinanceManager.Api/publish'
   DOTNET_VERSION: '9.x'
   SOLUTION_PATH: './code/FinanceManager.slx'
   API_PROJECT_PATH: './code/FinanceManager.Api/FinanceManager.Api.csproj'
