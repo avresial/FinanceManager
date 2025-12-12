@@ -44,7 +44,7 @@ jobs:
           name: build-output
           path: |
             code/**/bin/Release/**
-            code/**/obj/Release/**
+            code/**/obj/**
           retention-days: 1
 
   code-quality:
