@@ -5,6 +5,14 @@ on:
     branches: [ main, develop ]
   pull_request:
 
+env:
+  AZURE_WEBAPP_NAME: 'FinanceManagerApi'
+  AZURE_WEBAPP_PACKAGE_PATH: './FinanceManager.Api/publish'
+  DOTNET_VERSION: '9.x'
+  SOLUTION_PATH: './code/FinanceManager.slx'
+  API_PROJECT_PATH: './code/FinanceManager.Api/FinanceManager.Api.csproj'
+  PUBLISH_DIR: './code/FinanceManager.Api/publish'
+
 permissions:
   checks: write
   pull-requests: write
@@ -22,16 +30,22 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
         run: dotnet restore ./code
 
-      - name: Clean the solution
-        run: dotnet clean ./code
-
       - name: Build the solution
         run: dotnet build ./code --no-restore --configuration Release
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            code/**/bin/Release/**
+            code/**/obj/Release/**
+          retention-days: 1
 
   code-quality:
     runs-on: ubuntu-latest
@@ -44,7 +58,13 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: code
 
       - name: Restore dependencies
         run: dotnet restore ./code
@@ -68,7 +88,13 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: code
 
       - name: Restore dependencies
         run: dotnet restore ./code
@@ -91,6 +117,8 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     needs: build
+    env:
+      FINANCE_MANAGER_DB_KEY: ${{ secrets.FINANCE_MANAGER_DB_KEY }}
 
     steps:
       - name: Checkout code
@@ -99,13 +127,16 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: code
 
       - name: Restore dependencies
         run: dotnet restore ./code
-
-      - name: Build solution
-        run: dotnet build ./code --no-restore --configuration Release
 
       - name: Run unit tests with coverage
         run: dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --no-build --configuration Release --logger "trx;LogFileName=unit-test-results.trx" --results-directory TestResults --collect:"XPlat Code Coverage"
@@ -120,7 +151,10 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
-    needs: unit-tests
+    needs: [build, unit-tests]
+    env:
+      FINANCE_MANAGER_DB_KEY: ${{ secrets.FINANCE_MANAGER_DB_KEY }}
+      UseInMemoryDatabase: true
 
     steps:
       - name: Checkout code
@@ -129,16 +163,16 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: code
 
       - name: Restore dependencies
         run: dotnet restore ./code
-
-      - name: Clean integration test project
-        run: dotnet clean ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --configuration Release
-
-      - name: Build solution with deterministic output
-        run: dotnet build ./code --no-restore --configuration Release --no-incremental /p:Deterministic=true
 
       - name: Run integration tests with coverage
         run: dotnet test ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --no-build --configuration Release --logger "trx;LogFileName=integration-test-results.trx" --results-directory TestResults --collect:"XPlat Code Coverage"
@@ -150,3 +184,56 @@ jobs:
           name: 'Integration Test Results'
           path: 'TestResults/integration-test-results.trx'
           reporter: dotnet-trx
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [integration-tests, code-quality, security-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' 
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: code
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.API_PROJECT_PATH }}
+
+      - name: Publish API
+        run: dotnet publish ${{ env.API_PROJECT_PATH }} --configuration Release --output ${{ env.PUBLISH_DIR }} --no-build
+
+      - name: Upload publish artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: finance-manager-api
+          path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+          retention-days: 30
+
+  deploy:
+    name: Deploy to azure Web App
+    runs-on: ubuntu-latest
+    needs: publish
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Download publish artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: finance-manager-api
+          path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}

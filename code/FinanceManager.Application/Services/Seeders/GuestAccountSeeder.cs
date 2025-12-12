@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Cash;
+﻿using FinanceManager.Application.Providers;
+using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
@@ -30,7 +31,7 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
         if (configuration is null) throw new Exception("Configuration is null, user can not be created.");
         logger.LogTrace("Creating new guest user.");
 
-        await userRepository.AddUser(configuration["DefaultUser:Login"]!, configuration["DefaultUser:Password"]!, PricingLevel.Basic, UserRole.User);
+        await userRepository.AddUser(configuration["DefaultUser:Login"]!, PasswordEncryptionProvider.EncryptPassword(configuration["DefaultUser:Password"]!), PricingLevel.Basic, UserRole.User);
         var guestUser = await userRepository.GetUser(configuration["DefaultUser:Login"]!) ?? throw new Exception("Failed to create guest user");
         logger.LogTrace("New guest user was created with id {Id}", guestUser.UserId);
 

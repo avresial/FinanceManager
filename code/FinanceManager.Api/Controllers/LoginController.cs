@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Api.Services;
 using FinanceManager.Application.Commands.Login;
+using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
@@ -29,8 +30,8 @@ public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepositor
         {
             logger.LogError(ex, "Error occurred while seeding guest account data");
         }
-
-        var user = await userRepository.GetUser(requestModel.userName, requestModel.password);
+        var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(requestModel.password);
+        var user = await userRepository.GetUser(requestModel.userName, encryptedPassword);
 
         if (user is null) return Forbid();
 
