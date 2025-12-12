@@ -16,9 +16,24 @@ internal class DatabaseInitializer(IServiceProvider serviceProvider, ILogger<Dat
         using var scope = serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        if (dbContext.Database.IsRelational())
-            await dbContext.Database.MigrateAsync(cancellationToken);
-        logger.LogInformation("Database migrations applied");
+        var isRelational = dbContext.Database.IsRelational();
+        if (isRelational)
+        {
+            try
+            {
+                await dbContext.Database.MigrateAsync(cancellationToken);
+                logger.LogInformation("Database migrations applied");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Database migration failed. Skipping seeding.");
+                return;
+            }
+        }
+        else
+        {
+            logger.LogInformation("Relational database not configured. Skipping migrations.");
+        }
 
         logger.LogInformation("Starting data seeding");
         foreach (var seeder in scope.ServiceProvider.GetServices<ISeeder>())

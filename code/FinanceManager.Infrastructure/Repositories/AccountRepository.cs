@@ -262,7 +262,7 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
         decimal repaidAmount = 0;
 
         int index = 0;
-        while (repaidAmount < -startingBalance && startDay.Date <= DateTime.Now.Date)
+        while (repaidAmount < -startingBalance && startDay.Date <= DateTime.UtcNow.Date)
         {
             decimal balanceChange = (decimal)(Random.Shared.Next(0, 300) + Math.Round(Random.Shared.NextDouble(), 2));
             repaidAmount += balanceChange;

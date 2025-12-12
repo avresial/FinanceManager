@@ -202,7 +202,7 @@ public class TimeBucketServiceTests
     public void Get_WithTimeBucket_ThrowsForInvalidBucket()
     {
         // Arrange
-        var data = new[] { (DateTime.Now, 10) };
+        var data = new[] { (DateTime.UtcNow, 10) };
 
         // Act & Assert
         Assert.Throws<NotImplementedException>(() => TimeBucketService.Get(data, (TimeBucket)999));

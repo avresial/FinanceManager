@@ -62,7 +62,7 @@ public class UserLocalStorageRepository(ILocalStorageService localStorageService
             Id = userDtos.Any() ? userDtos.Max(x => x.Id) + 1 : 0,
             PricingLevel = pricingLevel,
             UserRole = userRole,
-            CreationDate = DateTime.Now,
+            CreationDate = DateTime.UtcNow,
         });
 
         try

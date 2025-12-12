@@ -17,7 +17,7 @@ public class UserRepository(AppDbContext context) : IUserRepository
             Password = password,
             PricingLevel = pricingLevel,
             UserRole = userRole,
-            CreationDate = DateTime.Now,
+            CreationDate = DateTime.UtcNow,
         });
 
         await context.SaveChangesAsync();

@@ -17,8 +17,8 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
 
     public async Task Seed(CancellationToken cancellationToken = default)
     {
-        var start = DateTime.Now.AddMonths(-6);
-        var end = DateTime.Now;
+        var start = DateTime.UtcNow.AddMonths(-6);
+        var end = DateTime.UtcNow;
         await AddGuestUser();
         await SeedNewData(start, end);
     }

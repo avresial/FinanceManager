@@ -62,8 +62,22 @@ public static class ServiceCollectionExtension
         }
         else
         {
-            services.AddDbContext<AppDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"),
-                b => b.MigrationsAssembly("FinanceManager.Api")));
+            var databaseProvider = Configuration.GetValue("DatabaseProvider", "SqlServer") ?? "SqlServer";
+
+            services.AddDbContext<AppDbContext>(options =>
+            {
+                var connectionString = Configuration.GetConnectionString("DefaultConnection");
+
+                if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) ||
+                    databaseProvider.Equals("Supabase", StringComparison.OrdinalIgnoreCase))
+                {
+                    options.UseNpgsql(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
+                }
+                else
+                {
+                    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
+                }
+            });
         }
         return services;
     }
