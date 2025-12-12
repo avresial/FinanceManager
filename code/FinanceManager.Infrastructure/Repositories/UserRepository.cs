@@ -58,6 +58,13 @@ public class UserRepository(AppDbContext context) : IUserRepository
 
     public Task<int> GetUsersCount() => context.Users.CountAsync();
 
+    public IAsyncEnumerable<int> GetUsersIds(int recordIndex, int recordsCount) => context.Users
+        .OrderBy(x => x.Id)
+        .Skip(recordIndex)
+        .Take(recordsCount)
+        .Select(x => x.Id)
+        .ToAsyncEnumerable();
+
     public async Task<bool> RemoveUser(int userId)
     {
         var userToRemove = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);

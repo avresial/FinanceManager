@@ -45,7 +45,7 @@ public class AdministrationUsersController(IAdministrationUsersService administr
     public async Task<IActionResult> GetUsers(int recordIndex, int recordsCount)
     {
         if (recordIndex < 0 || recordsCount <= 0) return BadRequest("Invalid pagination parameters");
-
-        return Ok(await administrationUsersService.GetUsers(recordIndex, recordsCount).ToListAsync());
+        var result = administrationUsersService.GetUsers(recordIndex, recordsCount);
+        return Ok(await result.ToListAsync());
     }
 }

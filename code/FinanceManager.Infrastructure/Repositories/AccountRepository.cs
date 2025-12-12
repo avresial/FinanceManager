@@ -132,11 +132,11 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
                 var bankAccountId = await bankAccountAccountRepository.Add(bankAccount.UserId, bankAccount.Name, bankAccount.AccountType);
 
                 if (bankAccount is not null && bankAccount.Entries is not null)
-                    foreach (var entry in bankAccount.Entries)
+                    await bankAccountEntryRepository.Add(bankAccount.Entries.Select(x =>
                     {
-                        entry.AccountId = bankAccountId ?? 0; // Ensure the entry has the correct account ID
-                        await bankAccountEntryRepository.Add(entry);
-                    }
+                        x.AccountId = bankAccountId ?? 0;
+                        return x;
+                    }));
 
                 return bankAccountId;
 
@@ -145,11 +145,11 @@ public class AccountRepository(IBankAccountRepository<BankAccount> bankAccountAc
                 var stockAccountId = await stockAccountRepository.Add(account.UserId, account.Name);
 
                 if (stockAccount is not null && stockAccount.Entries is not null)
-                    foreach (var entry in stockAccount.Entries)
+                    await stockEntryRepository.Add(stockAccount.Entries.Select(x =>
                     {
-                        entry.AccountId = stockAccountId ?? 0; // Ensure the entry has the correct account ID
-                        await stockEntryRepository.Add(entry);
-                    }
+                        x.AccountId = stockAccountId ?? 0;
+                        return x;
+                    }));
 
                 return stockAccountId;
         }

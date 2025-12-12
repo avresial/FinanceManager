@@ -14,17 +14,17 @@ public class ActiveUsersRepository(AppDbContext context) : IActiveUsersRepositor
         await context.ActiveUsers.AddAsync(new ActiveUser()
         {
             UserId = userId,
-            LoginTime = dateOnly.ToDateTime(TimeOnly.MinValue),
+            LoginTime = dateOnly.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
         });
 
         await context.SaveChangesAsync();
     }
 
     public Task<ActiveUser?> Get(int userId, DateOnly dateOnly) =>
-        context.ActiveUsers.FirstOrDefaultAsync(x => x.UserId == userId && x.LoginTime.Date == dateOnly.ToDateTime(TimeOnly.MinValue));
+        context.ActiveUsers.FirstOrDefaultAsync(x => x.UserId == userId && x.LoginTime.Date == dateOnly.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
 
     public Task<int> GetActiveUsersCount(DateOnly dateOnly) =>
-        context.ActiveUsers.CountAsync(x => x.LoginTime.Date == dateOnly.ToDateTime(TimeOnly.MinValue));
+        context.ActiveUsers.CountAsync(x => x.LoginTime.Date == dateOnly.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
 
     public async Task<IEnumerable<(DateOnly, int)>> GetActiveUsersCount(DateOnly dateStart, DateOnly dateEnd)
     {

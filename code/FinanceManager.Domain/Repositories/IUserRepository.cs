@@ -11,6 +11,7 @@ public interface IUserRepository
     Task<User?> GetUser(int id);
     IAsyncEnumerable<User> GetUsers(DateTime startDate, DateTime endDate);
     IAsyncEnumerable<User> GetUsers(int recordIndex, int recordsCount);
+    IAsyncEnumerable<int> GetUsersIds(int recordIndex, int recordsCount);
     Task<bool> UpdatePassword(int userId, string password);
     Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel);
     Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole);

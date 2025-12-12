@@ -106,4 +106,5 @@ public class UserLocalStorageRepository(ILocalStorageService localStorageService
     public Task<int> GetUsersCount() => throw new NotImplementedException();
     public IAsyncEnumerable<User> GetUsers(DateTime startDate, DateTime endDate) => throw new NotImplementedException();
     public IAsyncEnumerable<User> GetUsers(int recordIndex, int recordsCount) => throw new NotImplementedException();
+    public IAsyncEnumerable<int> GetUsersIds(int recordIndex, int recordsCount) => throw new NotImplementedException();
 }

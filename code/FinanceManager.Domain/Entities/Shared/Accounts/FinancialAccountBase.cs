@@ -95,7 +95,7 @@ public class FinancialAccountBase<T> : BasicAccountInformation where T : Financi
     public IEnumerable<T> GetYearly() => throw new NotImplementedException();
     public IEnumerable<T> GetExpenses() => throw new NotImplementedException();
     public IEnumerable<T> GetEarnings() => throw new NotImplementedException();
-    public void RecalculateEntryValues(int? startingIndex)
+    public virtual void RecalculateEntryValues(int? startingIndex)
     {
         if (Entries.Count == 0) return;
 

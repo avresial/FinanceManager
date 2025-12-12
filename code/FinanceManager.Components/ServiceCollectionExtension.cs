@@ -10,9 +10,19 @@ public static class ServiceCollectionExtension
     public static IServiceCollection AddUIComponents(this IServiceCollection services)
     {
         services.AddScoped<ILoginService, LoginService>()
+
                 .AddScoped<StockPriceHttpClient>()
-                .AddScoped<BankAccountHttpClient>()
                 .AddScoped<StockAccountHttpClient>()
+                .AddScoped<StockEntryHttpClient>()
+
+                .AddScoped<BankAccountHttpClient>()
+                .AddScoped<BankAccountImportHttpClient>()
+                .AddScoped<BankEntryHttpClient>()
+
+                .AddScoped<BondAccountHttpClient>()
+                .AddScoped<BondEntryHttpClient>()
+                .AddScoped<BondDetailsHttpClient>()
+
                 .AddScoped<MoneyFlowHttpClient>()
                 .AddScoped<AssetsHttpClient>()
                 .AddScoped<LiabilitiesHttpClient>()

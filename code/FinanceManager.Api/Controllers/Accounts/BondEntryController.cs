@@ -66,7 +66,7 @@ public class BondEntryController(
         if (!await userPlanVerifier.CanAddMoreEntries(ApiAuthenticationHelper.GetUserId(User)))
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
-        return Ok(await bondAccountEntryRepository.Add(new(addEntry.AccountId, addEntry.EntryId,
+        return Ok(await bondAccountEntryRepository.Add(new BondAccountEntry(addEntry.AccountId, addEntry.EntryId,
         addEntry.PostingDate, addEntry.Value, addEntry.ValueChange, addEntry.BondDetailsId)));
     }
 

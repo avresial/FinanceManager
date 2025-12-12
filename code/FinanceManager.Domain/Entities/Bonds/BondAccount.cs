@@ -38,7 +38,7 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         List<Dictionary<DateOnly, decimal>> pricesPerDetail = [];
         foreach (var id in detailsIds)
         {
-            var entry = GetThisOrNextOlder(index.ToDateTime(TimeOnly.MinValue), id);
+            var entry = GetThisOrNextOlder(index.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), id);
             if (entry is null) return result;
 
             pricesPerDetail.Add(entry.GetPrice(DateOnly.FromDateTime(End.Value), bondDetails.Single(bd => bd.Id == entry.BondDetailsId)));
