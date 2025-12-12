@@ -1,4 +1,5 @@
 ﻿namespace FinanceManager.Domain.Repositories.Account;
+
 public interface IAccountEntryRepository<T>
 {
     IAsyncEnumerable<T> Get(int accountId, DateTime startDate, DateTime endDate);
@@ -13,6 +14,7 @@ public interface IAccountEntryRepository<T>
 
     Task RecalculateValues(int accountId, int entryId);
     Task<bool> Add(T entry, bool recalculate = true);
+    Task<bool> Add(IEnumerable<T> entries, bool recalculate = true);
     Task<bool> AddLabel(int entryId, int labelId);
     Task<bool> Update(T entry);
     Task<bool> Delete(int accountId, int entryId);

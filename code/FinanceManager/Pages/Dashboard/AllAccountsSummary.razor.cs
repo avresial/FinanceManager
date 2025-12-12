@@ -1,6 +1,5 @@
 ﻿using FinanceManager.Components.ViewModels;
-using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Enums;
 using Microsoft.AspNetCore.Components;
 

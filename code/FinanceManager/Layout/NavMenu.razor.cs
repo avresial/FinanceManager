@@ -1,7 +1,8 @@
 ﻿using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 

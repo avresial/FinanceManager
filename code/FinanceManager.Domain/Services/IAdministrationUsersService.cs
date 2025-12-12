@@ -1,7 +1,8 @@
-﻿using FinanceManager.Domain.Entities;
-using FinanceManager.Domain.Entities.User;
+﻿using FinanceManager.Domain.Entities.Shared;
+using FinanceManager.Domain.Entities.Users;
 
 namespace FinanceManager.Domain.Services;
+
 public interface IAdministrationUsersService
 {
     Task<int> GetAccountsCount();

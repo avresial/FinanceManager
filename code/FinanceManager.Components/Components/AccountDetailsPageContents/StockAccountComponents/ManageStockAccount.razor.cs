@@ -1,5 +1,5 @@
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Accounts;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;

@@ -1,5 +1,8 @@
 ﻿using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Banks;
+using FinanceManager.Application.Services.Bonds;
+using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,8 +23,10 @@ public static class ServiceCollectionExtension
     {
         services.AddScoped<ISettingsService, SettingsService>()
                 .AddScoped<IMoneyFlowService, MoneyFlowService>()
+                .AddScoped<IBalanceService, BalanceService>()
 
                 .AddScoped<IAssetsServiceTyped, AssetsServiceBank>()
+                .AddScoped<IAssetsServiceTyped, AssetsServiceBond>()
                 .AddScoped<IAssetsServiceTyped, AssetsServiceStock>()
                 .AddScoped<IAssetsService, AssetsService>()
                 .AddScoped<UsersService>()
@@ -29,13 +34,17 @@ public static class ServiceCollectionExtension
                 .AddScoped<ILiabilitiesService, LiabilitiesService>()
                 .AddScoped<PricingProvider>()
                 .AddScoped<GuestAccountSeeder>()
-                .AddScoped<AdminAccountSeeder>()
+                .AddScoped<ISeeder, GuestAccountSeeder>()
+                .AddScoped<ISeeder, AdminAccountSeeder>()
+                .AddScoped<ISeeder, BondDetailsSeeder>()
+                .AddScoped<ISeeder, FinancialLabelSeeder>()
                 .AddScoped<IUserPlanVerifier, UserPlanVerifier>()
                 .AddScoped<IAdministrationUsersService, AdministrationUsersService>()
                 .AddScoped<ICurrencyExchangeService, CurrencyExchangeService>()
                 .AddScoped<HttpClient>()
                 .AddScoped<IBankAccountImportService, BankAccountImportService>()
                 .AddScoped<IStockPriceProvider, StockPriceProvider>()
+                .AddScoped<IBondService, BondService>()
             ;
 
         return services;

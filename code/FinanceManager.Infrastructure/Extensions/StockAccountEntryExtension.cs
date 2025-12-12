@@ -1,7 +1,8 @@
-﻿using FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Infrastructure.Dtos;
 
 namespace FinanceManager.Infrastructure.Extensions;
+
 public static class StockAccountEntryExtension
 {
     public static StockAccountEntryDto ToDto(this StockAccountEntry stockAccountEntry) => new()

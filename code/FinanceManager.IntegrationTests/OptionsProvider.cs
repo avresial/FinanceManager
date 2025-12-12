@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 
 namespace FinanceManager.IntegrationTests;
+
 public sealed class OptionsProvider
 {
     private readonly IConfigurationRoot _configuration;

@@ -1,6 +1,6 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
@@ -21,12 +21,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
 
     protected override void ConfigureServices(IServiceCollection services)
     {
-        if (services.Any(s => s.ImplementationType == typeof(AdminAccountSeederBackgroundService)))
-            services.Remove(services.Single(s => s.ImplementationType == typeof(AdminAccountSeederBackgroundService)));
-        if (services.Any(s => s.ImplementationType == typeof(DatabaseInitializer)))
-            services.Remove(services.Single(s => s.ImplementationType == typeof(DatabaseInitializer)));
-        if (services.Any(s => s.ImplementationType == typeof(GuestAccountSeederBackgroundService)))
-            services.Remove(services.Single(s => s.ImplementationType == typeof(GuestAccountSeederBackgroundService)));
+        // Legacy individual seeder hosted services removed; no need to unregister.
 
         _nowUtc = DateTime.UtcNow;
         _testDatabase = new TestDatabase();
@@ -119,12 +114,14 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         Assert.All(result, item => Assert.True(item.Value > 0));
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         if (_testDatabase is null)
             return;
 
         _testDatabase.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

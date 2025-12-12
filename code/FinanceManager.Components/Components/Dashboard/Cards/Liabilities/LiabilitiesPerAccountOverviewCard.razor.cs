@@ -1,15 +1,16 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities;
-using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities;
+
 public partial class LiabilitiesPerAccountOverviewCard
 {
     private Currency _currency = DefaultCurrency.PLN;
@@ -51,8 +52,8 @@ public partial class LiabilitiesPerAccountOverviewCard
             Type = XAxisType.Category
 
         },
-        Yaxis = new List<YAxis>()
-        {
+        Yaxis =
+        [
 
             new YAxis
             {
@@ -64,7 +65,7 @@ public partial class LiabilitiesPerAccountOverviewCard
                 SeriesName = "NetValue",
                 DecimalsInFloat = 0,
             }
-        },
+        ],
         Legend = new Legend()
         {
             Position = LegendPosition.Bottom,
@@ -72,7 +73,7 @@ public partial class LiabilitiesPerAccountOverviewCard
         Colors = ColorsProvider.GetColors()
     };
 
-    public List<NameValueResult> Data { get; set; } = new List<NameValueResult>();
+    public List<NameValueResult> Data { get; set; } = [];
 
 
     protected override async Task OnInitializedAsync()

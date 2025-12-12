@@ -1,9 +1,10 @@
-﻿using FinanceManager.Domain.Entities;
+﻿using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories;
+
 public class ActiveUsersRepository(AppDbContext context) : IActiveUsersRepository
 {
     public async Task Add(int userId, DateOnly dateOnly)
@@ -13,17 +14,17 @@ public class ActiveUsersRepository(AppDbContext context) : IActiveUsersRepositor
         await context.ActiveUsers.AddAsync(new ActiveUser()
         {
             UserId = userId,
-            LoginTime = dateOnly.ToDateTime(TimeOnly.MinValue),
+            LoginTime = dateOnly.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
         });
 
         await context.SaveChangesAsync();
     }
 
     public Task<ActiveUser?> Get(int userId, DateOnly dateOnly) =>
-        context.ActiveUsers.FirstOrDefaultAsync(x => x.UserId == userId && x.LoginTime.Date == dateOnly.ToDateTime(TimeOnly.MinValue));
+        context.ActiveUsers.FirstOrDefaultAsync(x => x.UserId == userId && x.LoginTime.Date == dateOnly.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
 
     public Task<int> GetActiveUsersCount(DateOnly dateOnly) =>
-        context.ActiveUsers.CountAsync(x => x.LoginTime.Date == dateOnly.ToDateTime(TimeOnly.MinValue));
+        context.ActiveUsers.CountAsync(x => x.LoginTime.Date == dateOnly.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
 
     public async Task<IEnumerable<(DateOnly, int)>> GetActiveUsersCount(DateOnly dateStart, DateOnly dateEnd)
     {

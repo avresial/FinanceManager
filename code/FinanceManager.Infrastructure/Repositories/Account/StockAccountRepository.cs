@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.Accounts;
+﻿using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
@@ -56,7 +56,7 @@ internal class StockAccountRepository(AppDbContext context) : IAccountRepository
     public async Task<bool> Update(int accountId, string accountName)
     {
         var stockAccount = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Stock);
-        if (stockAccount == null) return false;
+        if (stockAccount is null) return false;
         stockAccount.Name = accountName;
         await context.SaveChangesAsync();
         return true;

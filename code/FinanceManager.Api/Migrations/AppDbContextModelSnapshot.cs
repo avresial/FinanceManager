@@ -3,8 +3,8 @@ using System;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -18,165 +18,267 @@ namespace FinanceManager.Api.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "9.0.10")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("BankAccountEntryFinancialLabel", b =>
                 {
-                    b.Property<int>("EntriesEntryId")
-                        .HasColumnType("int");
+                    b.Property<int>("BankAccountEntryEntryId")
+                        .HasColumnType("integer");
 
                     b.Property<int>("LabelsId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    b.HasKey("EntriesEntryId", "LabelsId");
+                    b.HasKey("BankAccountEntryEntryId", "LabelsId");
 
                     b.HasIndex("LabelsId");
 
-                    b.ToTable("BankAccountEntryFinancialLabel");
+                    b.ToTable("BankAccountEntryFinancialLabel", (string)null);
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Accounts.Entries.BankAccountEntry", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondAccountEntry", b =>
                 {
                     b.Property<int>("EntryId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("EntryId"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("EntryId"));
 
                     b.Property<int>("AccountId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("BondDetailsId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("PostingDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("Value")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<decimal>("ValueChange")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("EntryId");
+
+                    b.ToTable("BondEntries");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondCalculationMethod", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BondDetailsId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DateOperator")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DateValue")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<decimal>("Rate")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BondDetailsId");
+
+                    b.ToTable("BondCalculationMethod");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondDetails", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CurrencyId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("EndEmissionDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Issuer")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateOnly>("StartEmissionDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CurrencyId");
+
+                    b.ToTable("Bonds");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Cash.BankAccountEntry", b =>
+                {
+                    b.Property<int>("EntryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("EntryId"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("PostingDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("Value")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("ValueChange")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.HasKey("EntryId");
 
                     b.ToTable("BankEntries");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Accounts.Entries.FinancialLabel", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Currencies.Currency", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("StockAccountEntryEntryId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StockAccountEntryEntryId");
-
-                    b.ToTable("FinancialLabels");
-                });
-
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Accounts.Entries.StockAccountEntry", b =>
-                {
-                    b.Property<int>("EntryId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("EntryId"));
-
-                    b.Property<int>("AccountId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("InvestmentType")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("PostingDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Ticker")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("Value")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.Property<decimal>("ValueChange")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
-                    b.HasKey("EntryId");
-
-                    b.ToTable("StockEntries");
-                });
-
-            modelBuilder.Entity("FinanceManager.Domain.Entities.ActiveUser", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("LoginTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ActiveUsers");
-                });
-
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Currency", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ShortName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Symbol")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
                     b.ToTable("Currency");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.NewVisits", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BondAccountEntryEntryId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("StockAccountEntryEntryId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BondAccountEntryEntryId");
+
+                    b.HasIndex("StockAccountEntryEntryId");
+
+                    b.ToTable("FinancialLabels");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Stocks.StockAccountEntry", b =>
+                {
+                    b.Property<int>("EntryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("EntryId"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("InvestmentType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("PostingDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Ticker")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Value")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("numeric(18,8)");
+
+                    b.Property<decimal>("ValueChange")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("numeric(18,8)");
+
+                    b.HasKey("EntryId");
+
+                    b.ToTable("StockEntries");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Users.ActiveUser", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("LoginTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ActiveUsers");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Users.NewVisits", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("DateTime")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VisitsCount")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -187,22 +289,22 @@ namespace FinanceManager.Api.Migrations
                 {
                     b.Property<int>("AccountId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AccountId"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("AccountId"));
 
                     b.Property<int>("AccountLabel")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("AccountType")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int>("UserId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("AccountId");
 
@@ -213,26 +315,26 @@ namespace FinanceManager.Api.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("CurrencyId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("Date")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("PricePerUnit")
                         .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                        .HasColumnType("numeric(18,8)");
 
                     b.Property<string>("Ticker")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("Verified")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 
@@ -245,26 +347,26 @@ namespace FinanceManager.Api.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Login")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Password")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int>("PricingLevel")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("UserRole")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -273,36 +375,72 @@ namespace FinanceManager.Api.Migrations
 
             modelBuilder.Entity("BankAccountEntryFinancialLabel", b =>
                 {
-                    b.HasOne("FinanceManager.Domain.Entities.Accounts.Entries.BankAccountEntry", null)
+                    b.HasOne("FinanceManager.Domain.Entities.Cash.BankAccountEntry", null)
                         .WithMany()
-                        .HasForeignKey("EntriesEntryId")
+                        .HasForeignKey("BankAccountEntryEntryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("FinanceManager.Domain.Entities.Accounts.Entries.FinancialLabel", null)
+                    b.HasOne("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabel", null)
                         .WithMany()
                         .HasForeignKey("LabelsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Accounts.Entries.FinancialLabel", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondCalculationMethod", b =>
                 {
-                    b.HasOne("FinanceManager.Domain.Entities.Accounts.Entries.StockAccountEntry", null)
+                    b.HasOne("FinanceManager.Domain.Entities.Bonds.BondDetails", "BondDetails")
+                        .WithMany("CalculationMethods")
+                        .HasForeignKey("BondDetailsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BondDetails");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondDetails", b =>
+                {
+                    b.HasOne("FinanceManager.Domain.Entities.Currencies.Currency", "Currency")
+                        .WithMany()
+                        .HasForeignKey("CurrencyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Currency");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabel", b =>
+                {
+                    b.HasOne("FinanceManager.Domain.Entities.Bonds.BondAccountEntry", null)
+                        .WithMany("Labels")
+                        .HasForeignKey("BondAccountEntryEntryId");
+
+                    b.HasOne("FinanceManager.Domain.Entities.Stocks.StockAccountEntry", null)
                         .WithMany("Labels")
                         .HasForeignKey("StockAccountEntryEntryId");
                 });
 
             modelBuilder.Entity("FinanceManager.Infrastructure.Dtos.StockPriceDto", b =>
                 {
-                    b.HasOne("FinanceManager.Domain.Entities.Currency", "Currency")
+                    b.HasOne("FinanceManager.Domain.Entities.Currencies.Currency", "Currency")
                         .WithMany()
                         .HasForeignKey("CurrencyId");
 
                     b.Navigation("Currency");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Accounts.Entries.StockAccountEntry", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondAccountEntry", b =>
+                {
+                    b.Navigation("Labels");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondDetails", b =>
+                {
+                    b.Navigation("CalculationMethods");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Stocks.StockAccountEntry", b =>
                 {
                     b.Navigation("Labels");
                 });

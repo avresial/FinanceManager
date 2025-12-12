@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Cash;
 
 namespace FinanceManager.Domain.Extensions;
 
@@ -6,7 +6,7 @@ public static class BankAccountEntryExtension
 {
     public static List<(DateTime, decimal)> GetAssets(this List<BankAccountEntry> bankAccountEntries, DateTime start, DateTime end)
     {
-        List<(DateTime, decimal)> result = new();
+        List<(DateTime, decimal)> result = [];
         if (bankAccountEntries is null || !bankAccountEntries.Any()) return result;
 
         for (DateTime i = end; i >= start; i = i.AddDays(-1))

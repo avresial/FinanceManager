@@ -1,17 +1,18 @@
-using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
 namespace FinanceManager.WebUi.Pages.Admin;
+
 public partial class EditUserPage
 {
     private readonly List<string> _errors = [];
     private readonly List<string> _warnings = [];
     private readonly List<string> _info = [];
 
-    private Domain.Entities.Login.User? _userData;
+    private Domain.Entities.Users.User? _userData;
 
     private bool _isLoadingPage;
     private bool _success;

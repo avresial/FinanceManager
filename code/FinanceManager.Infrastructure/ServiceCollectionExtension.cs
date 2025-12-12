@@ -1,11 +1,15 @@
-﻿using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Contexts;
+using FinanceManager.Infrastructure.Providers;
 using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
+using FinanceManager.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,32 +35,49 @@ public static class ServiceCollectionExtension
                 .AddScoped<IUserRepository, UserRepository>()
                 .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()
                 .AddScoped<IAccountEntryRepository<BankAccountEntry>, BankEntryRepository>()
+                .AddScoped<IAccountEntryRepository<BondAccountEntry>, BondEntryRepository>()
+                .AddScoped<IBondAccountEntryRepository<BondAccountEntry>, BondEntryRepository>()
                 .AddScoped<IStockAccountEntryRepository<StockAccountEntry>, StockEntryRepository>()
                 .AddScoped<IAccountRepository<StockAccount>, StockAccountRepository>()
+                .AddScoped<IAccountRepository<BondAccount>, BondAccountRepository>()
                 .AddScoped<IBankAccountRepository<BankAccount>, BankAccountRepository>()
                 .AddScoped<INewVisitsRepository, NewVisitsRepository>()
                 .AddScoped<IFinancialLabelsRepository, FinancialLabelsRepository>()
                 .AddScoped<ICurrencyRepository, CurrencyRepository>()
+                .AddScoped<IBondDetailsRepository, BondDetailsRepository>()
+                .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()
 
-                //.AddHostedService<DatabaseInitializer>()
-                //.AddHostedService<AdminAccountSeederBackgroundService>()
-                //.AddHostedService<GuestAccountSeederBackgroundService>()
+                .AddHostedService<DatabaseInitializer>()
                 ;
 
         return services;
     }
 
-    public static IServiceCollection AddDatabase(this IServiceCollection services, IConfigurationManager Configuration)
+    public static IServiceCollection AddDatabase(this IServiceCollection services, IConfigurationManager configuration)
     {
-        if (Configuration.GetValue("UseInMemoryDatabase", false))
+        if (configuration.GetValue("UseInMemoryDatabase", false))
         {
             services.AddDbContext<AppDbContext>(options =>
                 options.UseInMemoryDatabase(databaseName: "Db"));
         }
         else
         {
-            services.AddDbContext<AppDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"),
-                b => b.MigrationsAssembly("FinanceManager.Api")));
+            var databaseProvider = configuration.GetValue("DatabaseProvider", "SqlServer") ?? "SqlServer";
+
+            services.AddDbContext<AppDbContext>(options =>
+            {
+                var connectionString = configuration.GetValue<string>("FINANCE_MANAGER_DB_KEY");
+
+                if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) ||
+                    databaseProvider.Equals("Supabase", StringComparison.OrdinalIgnoreCase))
+                {
+                    options.UseNpgsql(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
+                }
+                else
+                {
+                    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
+                }
+            });
         }
         return services;
     }

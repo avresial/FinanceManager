@@ -1,5 +1,5 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Contexts;
@@ -148,12 +148,14 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         Assert.Equal(DefaultCurrency.PLN.Symbol, result.Currency.Symbol);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         if (_testDatabase is null)
             return;
 
         _testDatabase.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

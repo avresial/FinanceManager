@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Accounts.Entries;
+﻿using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -21,11 +22,33 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
             await RecalculateValues(newBankAccountEntry.AccountId, newBankAccountEntry.EntryId);
         return true;
     }
+    public async Task<bool> Add(IEnumerable<BankAccountEntry> entries, bool recalculate = true)
+    {
+        BankAccountEntry? firstEntry = null;
+
+        foreach (var entry in entries)
+        {
+            BankAccountEntry newEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange)
+            {
+                Description = entry.Description,
+                Labels = entry.Labels,
+            };
+
+            if (firstEntry is null) firstEntry = newEntry;
+
+            context.BankEntries.Add(newEntry);
+        }
+
+        await context.SaveChangesAsync();
+        if (recalculate && firstEntry is not null)
+            await RecalculateValues(firstEntry.AccountId, firstEntry.EntryId);
+        return true;
+    }
 
     public async Task<bool> Delete(int accountId, int entryId)
     {
         var entryToDelete = await context.BankEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
-        if (entryToDelete == null) return false;
+        if (entryToDelete is null) return false;
         context.BankEntries.Remove(entryToDelete);
         await context.SaveChangesAsync();
         await RecalculateValues(entryToDelete.AccountId, entryToDelete.PostingDate);
@@ -163,4 +186,6 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
 
         return true;
     }
+
+
 }

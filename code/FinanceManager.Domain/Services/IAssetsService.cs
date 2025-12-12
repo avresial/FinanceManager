@@ -1,8 +1,9 @@
-﻿using FinanceManager.Domain.Entities;
+﻿using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
 
 namespace FinanceManager.Domain.Services;
+
 public interface IAssetsService
 {
     Task<bool> IsAnyAccountWithAssets(int userId);

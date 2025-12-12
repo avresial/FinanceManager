@@ -1,7 +1,8 @@
 ﻿using FinanceManager.Application.Commands.Account;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Shared.Accounts;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
@@ -170,7 +171,7 @@ public class FinancialAccountService(BankAccountHttpClient bankAccountHttpClient
             await bankAccountHttpClient.UpdateAccountAsync(new(bankAccount.AccountId, bankAccount.Name, bankAccount.AccountType));
 
         if (account is StockAccount)
-            await stockAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name));
+            await stockAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.Enums.AccountLabel.Stock));
     }
     public async Task UpdateEntry<T>(T accountEntry) where T : FinancialEntryBase
     {

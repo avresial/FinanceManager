@@ -1,7 +1,6 @@
 ﻿using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
-using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Extensions;
@@ -13,11 +12,14 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
+[Tags("Stock Accounts")]
 public class StockAccountController(IAccountRepository<StockAccount> stockAccountRepository,
     IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository) : ControllerBase
 {
 
     [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<StockAccountDto>))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get()
     {
         var accounts = await stockAccountRepository.GetAvailableAccounts(ApiAuthenticationHelper.GetUserId(User))
@@ -28,10 +30,13 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     }
 
     [HttpGet("{accountId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockAccountDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get(int accountId)
     {
         var account = await stockAccountRepository.Get(accountId);
-        if (account == null) return NoContent();
+        if (account is null) return NoContent();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User))
             return Forbid("User does not own this account.");
 
@@ -39,12 +44,15 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     }
 
     [HttpGet("{accountId:int}&{startDate:DateTime}&{endDate:DateTime}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockAccountDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
 
         var account = await stockAccountRepository.Get(accountId);
-        if (account == null) return NotFound();
+        if (account is null) return NotFound();
         if (account.UserId != userId) return Forbid("User ID does not match the account owner.");
 
         var entries = await stockAccountEntryRepository.Get(accountId, startDate, endDate).ToListAsync();
@@ -61,26 +69,32 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     }
 
     [HttpPost("Add")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Add(AddAccount addAccount) =>
         Ok(await stockAccountRepository.Add(ApiAuthenticationHelper.GetUserId(User), addAccount.accountName));
 
     [HttpPut("Update")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Update(UpdateAccount updateAccount)
     {
-        var account = await stockAccountRepository.Get(updateAccount.accountId);
+        var account = await stockAccountRepository.Get(updateAccount.AccountId);
         if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User))
             return Forbid("User ID does not match the account owner.");
 
-        var result = await stockAccountRepository.Update(updateAccount.accountId, updateAccount.accountName);
+        var result = await stockAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName);
         return Ok(result);
     }
 
 
     [HttpDelete("Delete/{accountId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Delete(int accountId)
     {
         var account = await stockAccountRepository.Get(accountId);
-        if (account == null) return NotFound("Account not found.");
+        if (account is null) return NotFound("Account not found.");
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User))
             return Forbid("User does not own this account.");
 

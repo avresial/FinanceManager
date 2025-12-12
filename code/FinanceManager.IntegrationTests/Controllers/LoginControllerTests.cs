@@ -1,5 +1,6 @@
 using FinanceManager.Application.Commands.Login;
-using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Application.Providers;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,11 +13,12 @@ namespace FinanceManager.IntegrationTests.Controllers;
 public class LoginControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
     private static readonly string _testUserName = "testUser";
+    private static readonly string _testPassword = "password";
 
     protected override void ConfigureServices(IServiceCollection services)
     {
         var userRepoMock = new Mock<IUserRepository>();
-        userRepoMock.Setup(x => x.GetUser(_testUserName, "password"))
+        userRepoMock.Setup(x => x.GetUser(_testUserName, PasswordEncryptionProvider.EncryptPassword(PasswordEncryptionProvider.EncryptPassword(_testPassword))))
             .ReturnsAsync(new User
             {
                 UserId = 99,
@@ -36,14 +38,14 @@ public class LoginControllerTests(OptionsProvider optionsProvider) : ControllerT
     public async Task Login_ReturnsToken_ForValidCredentials()
     {
         // arrange
-        LoginRequestModel request = new(_testUserName, "password");
+        LoginRequestModel request = new(_testUserName, PasswordEncryptionProvider.EncryptPassword(_testPassword));
+
         // act
         var response = await Client.PostAsJsonAsync("api/Login", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // assert
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<LoginResponseModel>(cancellationToken: TestContext.Current.CancellationToken);
-
 
         Assert.NotNull(body);
         Assert.Equal(_testUserName, body.UserName);

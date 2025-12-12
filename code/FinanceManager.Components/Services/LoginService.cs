@@ -3,7 +3,7 @@ using Blazored.SessionStorage;
 using FinanceManager.Application.Commands.Login;
 using FinanceManager.Application.Providers;
 using FinanceManager.Components.Helpers;
-using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;

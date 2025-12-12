@@ -1,7 +1,7 @@
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Accounts.Entries;
+using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
@@ -164,7 +164,7 @@ public class BankAccountControllerTests(OptionsProvider optionsProvider) : Contr
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new BankAccountHttpClient(Client);
         var updatedName = "Updated Account Name";
-        var updateCmd = new UpdateAccount(_testAccountId, updatedName);
+        UpdateAccount updateCmd = new(_testAccountId, updatedName, AccountLabel.Cash);
 
         // act
         var result = await client.UpdateAccountAsync(updateCmd);
@@ -232,9 +232,11 @@ public class BankAccountControllerTests(OptionsProvider optionsProvider) : Contr
         Assert.Empty(entriesInDb);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         _testDatabase?.Dispose();
         _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

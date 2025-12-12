@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.Accounts;
+﻿using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
@@ -63,7 +63,7 @@ internal class BankAccountRepository(AppDbContext context) : IBankAccountReposit
     public async Task<bool> Update(int accountId, string accountName)
     {
         var bankAccount = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bank);
-        if (bankAccount == null) return false;
+        if (bankAccount is null) return false;
         bankAccount.Name = accountName;
         await context.SaveChangesAsync();
         return true;
@@ -71,7 +71,7 @@ internal class BankAccountRepository(AppDbContext context) : IBankAccountReposit
     public async Task<bool> Update(int accountId, string accountName, AccountLabel accountType)
     {
         var bankAccount = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bank);
-        if (bankAccount == null) return false;
+        if (bankAccount is null) return false;
         bankAccount.Name = accountName;
         bankAccount.AccountLabel = accountType;
         await context.SaveChangesAsync();

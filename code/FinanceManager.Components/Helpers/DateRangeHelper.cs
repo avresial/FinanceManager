@@ -1,4 +1,5 @@
 ﻿namespace FinanceManager.Components.Helpers;
+
 public static class DateRangeHelper
 {
     public static (DateTime Start, DateTime End) GetCurrentMonthRange()

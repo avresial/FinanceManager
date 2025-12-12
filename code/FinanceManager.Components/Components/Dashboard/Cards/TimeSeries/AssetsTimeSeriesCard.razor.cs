@@ -1,9 +1,9 @@
-using FinanceManager.Domain.Entities;
+using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
-using FinanceManager.Components.HttpClients;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards.TimeSeries;
 

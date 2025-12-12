@@ -1,11 +1,10 @@
 using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities;
-using FinanceManager.Domain.Entities.Accounts;
-using FinanceManager.Domain.Entities.Accounts.Entries;
-using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -29,7 +28,7 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         private Currency _currency = DefaultCurrency.PLN;
         private UserSession? _user;
 
-        private Dictionary<StockAccountEntry, StockPrice> _prices = new();
+        private Dictionary<StockAccountEntry, StockPrice> _prices = [];
         private List<string> _stocks = [];
 
 
@@ -44,8 +43,8 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
         [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
         [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
         [Inject] public required StockPriceHttpClient StockPriceHttpClient { get; set; }
-        [Inject] public required ISettingsService settingsService { get; set; }
-        [Inject] public required ILoginService loginService { get; set; }
+        [Inject] public required ISettingsService SettingsService { get; set; }
+        [Inject] public required ILoginService LoginService { get; set; }
 
         public async Task ShowOverlay()
         {
@@ -134,10 +133,10 @@ namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockA
 
         protected override async Task OnInitializedAsync()
         {
-            _user = await loginService.GetLoggedUser();
+            _user = await LoginService.GetLoggedUser();
             if (_user is null) return;
             _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-            _currency = settingsService.GetCurrency();
+            _currency = SettingsService.GetCurrency();
 
             await UpdateEntries();
 

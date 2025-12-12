@@ -1,5 +1,5 @@
 ﻿using Blazored.LocalStorage;
-using FinanceManager.Domain.Entities.Login;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Dtos;
@@ -62,7 +62,7 @@ public class UserLocalStorageRepository(ILocalStorageService localStorageService
             Id = userDtos.Any() ? userDtos.Max(x => x.Id) + 1 : 0,
             PricingLevel = pricingLevel,
             UserRole = userRole,
-            CreationDate = DateTime.Now,
+            CreationDate = DateTime.UtcNow,
         });
 
         try
@@ -106,4 +106,5 @@ public class UserLocalStorageRepository(ILocalStorageService localStorageService
     public Task<int> GetUsersCount() => throw new NotImplementedException();
     public IAsyncEnumerable<User> GetUsers(DateTime startDate, DateTime endDate) => throw new NotImplementedException();
     public IAsyncEnumerable<User> GetUsers(int recordIndex, int recordsCount) => throw new NotImplementedException();
+    public IAsyncEnumerable<int> GetUsersIds(int recordIndex, int recordsCount) => throw new NotImplementedException();
 }
