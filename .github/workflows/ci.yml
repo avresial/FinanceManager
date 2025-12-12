@@ -202,6 +202,9 @@ jobs:
           name: build-output
           path: code
 
+      - name: Restore dependencies
+        run: dotnet restore ./code
+
       - name: Publish API
         run: dotnet publish ${{ env.API_PROJECT_PATH }} --configuration Release --output ${{ env.PUBLISH_DIR }} --no-build
 
