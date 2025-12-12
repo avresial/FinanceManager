@@ -1,4 +1,4 @@
-﻿name: .NET Core CI
+﻿name: Finance Manager API CI CD
 
 on:
   push:
@@ -138,9 +138,6 @@ jobs:
       - name: Restore execute permissions
         run: chmod +x -R ./code/**/bin/Release/net9.0/*
 
-      - name: Restore dependencies
-        run: dotnet restore ./code
-
       - name: Run unit tests with coverage
         run: dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --no-build --configuration Release --logger "trx;LogFileName=unit-test-results.trx" --results-directory TestResults --collect:"XPlat Code Coverage"
 
@@ -177,9 +174,6 @@ jobs:
       - name: Restore execute permissions
         run: chmod +x -R ./code/**/bin/Release/net9.0/*
 
-      - name: Restore dependencies
-        run: dotnet restore ./code
-
       - name: Run integration tests with coverage
         run: dotnet test ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --no-build --configuration Release --logger "trx;LogFileName=integration-test-results.trx" --results-directory TestResults --collect:"XPlat Code Coverage"
 
@@ -210,9 +204,6 @@ jobs:
         with:
           name: build-output
           path: code
-
-      - name: Restore dependencies
-        run: dotnet restore ${{ env.API_PROJECT_PATH }}
 
       - name: Publish API
         run: dotnet publish ${{ env.API_PROJECT_PATH }} --configuration Release --output ${{ env.PUBLISH_DIR }} --no-build
