@@ -53,20 +53,20 @@ public static class ServiceCollectionExtension
         return services;
     }
 
-    public static IServiceCollection AddDatabase(this IServiceCollection services, IConfigurationManager Configuration)
+    public static IServiceCollection AddDatabase(this IServiceCollection services, IConfigurationManager configuration)
     {
-        if (Configuration.GetValue("UseInMemoryDatabase", false))
+        if (configuration.GetValue("UseInMemoryDatabase", false))
         {
             services.AddDbContext<AppDbContext>(options =>
                 options.UseInMemoryDatabase(databaseName: "Db"));
         }
         else
         {
-            var databaseProvider = Configuration.GetValue("DatabaseProvider", "SqlServer") ?? "SqlServer";
+            var databaseProvider = configuration.GetValue("DatabaseProvider", "SqlServer") ?? "SqlServer";
 
             services.AddDbContext<AppDbContext>(options =>
             {
-                var connectionString = Configuration.GetConnectionString("DefaultConnection");
+                var connectionString = configuration.GetValue<string>("FINANCE_MANAGER_DB_KEY");
 
                 if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) ||
                     databaseProvider.Equals("Supabase", StringComparison.OrdinalIgnoreCase))
