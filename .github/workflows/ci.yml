@@ -146,7 +146,7 @@ jobs:
         if: always()
         with:
           name: 'Unit Test Results'
-          path: '${{ github.workspace }}/TestResults/unit-test-results.trx'
+          path: '${{ github.workspace }}/TestResults/**/unit-test-results.trx'
           reporter: dotnet-trx
 
   integration-tests:
@@ -182,7 +182,7 @@ jobs:
         if: always()
         with:
           name: 'Integration Test Results'
-          path: '${{ github.workspace }}/TestResults/integration-test-results.trx'
+          path: '${{ github.workspace }}/TestResults/**/integration-test-results.trx'
           reporter: dotnet-trx
 
   publish:
