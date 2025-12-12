@@ -9,17 +9,37 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
 {
     public async Task<bool> Add(StockAccountEntry entry, bool recalculate = true)
     {
-        StockAccountEntry newBankAccountEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange, entry.Ticker, entry.InvestmentType);
+        StockAccountEntry newEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange, entry.Ticker, entry.InvestmentType);
 
-        context.StockEntries.Add(newBankAccountEntry);
+        context.StockEntries.Add(newEntry);
         await context.SaveChangesAsync();
 
         if (recalculate)
-            await RecalculateValues(newBankAccountEntry.AccountId, newBankAccountEntry.EntryId);
+            await RecalculateValues(newEntry.AccountId, newEntry.EntryId);
 
         return true;
     }
+    public async Task<bool> Add(IEnumerable<StockAccountEntry> entries, bool recalculate = true)
+    {
+        StockAccountEntry? firstEntry = null;
 
+        foreach (var entry in entries)
+        {
+            var newEntry = new StockAccountEntry(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange, entry.Ticker, entry.InvestmentType)
+            {
+                Labels = entry.Labels,
+            };
+
+            if (firstEntry is null) firstEntry = newEntry;
+            context.StockEntries.Add(newEntry);
+        }
+
+        await context.SaveChangesAsync();
+        if (recalculate && firstEntry is not null)
+            await RecalculateValues(firstEntry.AccountId, firstEntry.EntryId);
+
+        return true;
+    }
     public async Task<bool> Delete(int accountId, int entryId)
     {
         var entry = await context.StockEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
@@ -192,4 +212,6 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
 
         return true;
     }
+
+
 }

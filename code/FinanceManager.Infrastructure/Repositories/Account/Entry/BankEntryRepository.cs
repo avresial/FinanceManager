@@ -22,6 +22,28 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
             await RecalculateValues(newBankAccountEntry.AccountId, newBankAccountEntry.EntryId);
         return true;
     }
+    public async Task<bool> Add(IEnumerable<BankAccountEntry> entries, bool recalculate = true)
+    {
+        BankAccountEntry? firstEntry = null;
+
+        foreach (var entry in entries)
+        {
+            BankAccountEntry newEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange)
+            {
+                Description = entry.Description,
+                Labels = entry.Labels,
+            };
+
+            if (firstEntry is null) firstEntry = newEntry;
+
+            context.BankEntries.Add(newEntry);
+        }
+
+        await context.SaveChangesAsync();
+        if (recalculate && firstEntry is not null)
+            await RecalculateValues(firstEntry.AccountId, firstEntry.EntryId);
+        return true;
+    }
 
     public async Task<bool> Delete(int accountId, int entryId)
     {
@@ -164,4 +186,6 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
 
         return true;
     }
+
+
 }

@@ -15,6 +15,6 @@ public class AdminAccountSeeder(IUserRepository userRepository) : ISeeder
         if (existingAdmin is not null) return;
 
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(_defaultAdminPassword);
-        await userRepository.AddUser(_defaultAdminUserName, encryptedPassword, PricingLevel.Free, UserRole.Admin);
+        await userRepository.AddUser(_defaultAdminUserName, PasswordEncryptionProvider.EncryptPassword(encryptedPassword), PricingLevel.Free, UserRole.Admin);
     }
 }

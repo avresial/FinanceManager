@@ -17,7 +17,7 @@ public class UserRepository(AppDbContext context) : IUserRepository
             Password = password,
             PricingLevel = pricingLevel,
             UserRole = userRole,
-            CreationDate = DateTime.Now,
+            CreationDate = DateTime.UtcNow,
         });
 
         await context.SaveChangesAsync();
@@ -57,6 +57,13 @@ public class UserRepository(AppDbContext context) : IUserRepository
         .ToAsyncEnumerable();
 
     public Task<int> GetUsersCount() => context.Users.CountAsync();
+
+    public IAsyncEnumerable<int> GetUsersIds(int recordIndex, int recordsCount) => context.Users
+        .OrderBy(x => x.Id)
+        .Skip(recordIndex)
+        .Take(recordsCount)
+        .Select(x => x.Id)
+        .ToAsyncEnumerable();
 
     public async Task<bool> RemoveUser(int userId)
     {

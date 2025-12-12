@@ -40,7 +40,7 @@ public class BondAccountEntry(int accountId, int entryId, DateTime postingDate, 
                     decimal change = capital * calculation.Rate / 365;
                     current += change;
 
-                    if ((i.ToDateTime(TimeOnly.MinValue) - postingDate.ToDateTime(TimeOnly.MinValue)).Days % 365 == 0)
+                    if ((i.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) - postingDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).Days % 365 == 0)
                         capital = current;
                     result[i] = current;
                 }

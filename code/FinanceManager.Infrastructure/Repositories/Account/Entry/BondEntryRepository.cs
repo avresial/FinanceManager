@@ -21,6 +21,27 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             await RecalculateValues(newEntry.AccountId, newEntry.EntryId);
         return true;
     }
+    public async Task<bool> Add(IEnumerable<BondAccountEntry> entries, bool recalculate = true)
+    {
+        BondAccountEntry? firstEntry = null;
+
+        foreach (var entry in entries)
+        {
+            var newEntry = new BondAccountEntry(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange, entry.BondDetailsId)
+            {
+                Labels = entry.Labels,
+            };
+
+            if (firstEntry is null) firstEntry = newEntry;
+            context.BondEntries.Add(newEntry);
+        }
+
+        await context.SaveChangesAsync();
+        if (recalculate && firstEntry is not null)
+            await RecalculateValues(firstEntry.AccountId, firstEntry.EntryId);
+
+        return true;
+    }
 
     public async Task<bool> Delete(int accountId, int entryId)
     {
@@ -214,4 +235,6 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
         return result;
     }
+
+
 }

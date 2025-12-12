@@ -53,17 +53,31 @@ public static class ServiceCollectionExtension
         return services;
     }
 
-    public static IServiceCollection AddDatabase(this IServiceCollection services, IConfigurationManager Configuration)
+    public static IServiceCollection AddDatabase(this IServiceCollection services, IConfigurationManager configuration)
     {
-        if (Configuration.GetValue("UseInMemoryDatabase", false))
+        if (configuration.GetValue("UseInMemoryDatabase", false))
         {
             services.AddDbContext<AppDbContext>(options =>
                 options.UseInMemoryDatabase(databaseName: "Db"));
         }
         else
         {
-            services.AddDbContext<AppDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"),
-                b => b.MigrationsAssembly("FinanceManager.Api")));
+            var databaseProvider = configuration.GetValue("DatabaseProvider", "SqlServer") ?? "SqlServer";
+
+            services.AddDbContext<AppDbContext>(options =>
+            {
+                var connectionString = configuration.GetValue<string>("FINANCE_MANAGER_DB_KEY");
+
+                if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) ||
+                    databaseProvider.Equals("Supabase", StringComparison.OrdinalIgnoreCase))
+                {
+                    options.UseNpgsql(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
+                }
+                else
+                {
+                    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
+                }
+            });
         }
         return services;
     }

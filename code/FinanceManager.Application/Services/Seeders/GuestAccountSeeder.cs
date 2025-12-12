@@ -1,6 +1,8 @@
-﻿using FinanceManager.Domain.Entities.Cash;
+﻿using FinanceManager.Application.Providers;
+using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
@@ -13,100 +15,94 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
     IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository, IUserRepository userRepository, IConfiguration configuration,
     ILogger<GuestAccountSeeder> logger) : ISeeder
 {
-    private int _guestUserId = 1;
-
     public async Task Seed(CancellationToken cancellationToken = default)
     {
-        var start = DateTime.Now.AddMonths(-6);
-        var end = DateTime.Now;
-        await AddGuestUser();
-        await SeedNewData(start, end);
-    }
+        var start = DateTime.UtcNow.AddMonths(-6);
+        var end = DateTime.UtcNow;
 
-    public async Task AddGuestUser()
-    {
-        if (configuration is null) return;
-
-        await userRepository.AddUser(configuration["DefaultUser:Login"]!, configuration["DefaultUser:Password"]!, PricingLevel.Basic, UserRole.User);
-    }
-
-
-    public async Task SeedNewData(DateTime start, DateTime end)
-    {
         var guestUser = await userRepository.GetUser(configuration["DefaultUser:Login"]!);
+        guestUser ??= await AddGuestUser();
 
-        if (guestUser is null)
-        {
-            await AddGuestUser();
-            guestUser = await userRepository.GetUser(configuration["DefaultUser:Login"]!);
-
-            if (guestUser is null) throw new Exception("Failed to create guest user");
-
-            logger.LogInformation("New guest user was created with id {Id}", guestUser.UserId);
-        }
-
-        if (guestUser is null) throw new Exception("Guest account does not exist");
-
-        _guestUserId = guestUser.UserId;
-
-        try
-        {
-            await AddBankAccount(start, end);
-            await AddLoanAccount(start, end);
-            await AddStockAccount(start, end);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, ex.Message);
-        }
+        await SeedNewData(guestUser, start, end);
     }
 
-    private async Task AddStockAccount(DateTime start, DateTime end)
+    public async Task<User> AddGuestUser()
     {
-        var stockAccount = await GetNewStockAccount("Stock 1", AccountLabel.Stock);
+        if (configuration is null) throw new Exception("Configuration is null, user can not be created.");
+        logger.LogTrace("Creating new guest user.");
 
-        for (var date = start; date <= end; date = date.AddDays(1))
-            stockAccount.Add(GetNewStockAccountEntry(_guestUserId, 0, date, -90, 100, "RandomTicker"), false);
-        stockAccount.RecalculateEntryValues(0);
-        await accountRepository.AddAccount(stockAccount);
+        await userRepository.AddUser(configuration["DefaultUser:Login"]!, PasswordEncryptionProvider.EncryptPassword(configuration["DefaultUser:Password"]!), PricingLevel.Basic, UserRole.User);
+        var guestUser = await userRepository.GetUser(configuration["DefaultUser:Login"]!) ?? throw new Exception("Failed to create guest user");
+        logger.LogTrace("New guest user was created with id {Id}", guestUser.UserId);
+
+        return guestUser;
     }
 
-    private async Task AddBankAccount(DateTime start, DateTime end)
+
+    public async Task SeedNewData(User user, DateTime start, DateTime end)
+    {
+        logger.LogTrace("Seeding data.");
+        if (!await bankAccountRepository.GetAvailableAccounts(user.UserId).AnyAsync())
+        {
+            logger.LogTrace("Seeding bank accounts.");
+            await AddBankAccount(user.UserId, start, end);
+            logger.LogTrace("Seeding loan accounts.");
+            await AddLoanAccount(user.UserId, start, end);
+        }
+
+        logger.LogTrace("Seeding stock accounts.");
+        if (!await stockAccountRepository.GetAvailableAccounts(user.UserId).AnyAsync())
+            await AddStockAccount(user.UserId, start, end);
+
+        logger.LogTrace("Seeding finished.");
+    }
+    private async Task AddBankAccount(int userId, DateTime start, DateTime end)
     {
         var labels = await GetRandomLabels().ToListAsync();
 
-        var bankAccount = await GetNewBankAccount("Cash 1", AccountLabel.Cash);
+        var newAccount = await GetNewBankAccount(userId, "Cash 1", AccountLabel.Cash);
         for (var date = start; date <= end; date = date.AddDays(1))
-            bankAccount.AddEntry(GetNewBankAccountEntry(date, -90, 100, labels), false);
-        bankAccount.RecalculateEntryValues(0);
-        await accountRepository.AddAccount(bankAccount);
+            newAccount.AddEntry(GetNewBankAccountEntry(date, -90, 100, labels), false);
+        newAccount.RecalculateEntryValues(newAccount.Entries.Count - 1);
+        await accountRepository.AddAccount(newAccount);
     }
 
-    private async Task AddLoanAccount(DateTime start, DateTime end)
+    private async Task AddLoanAccount(int userId, DateTime start, DateTime end)
     {
         var labels = await GetRandomLabels().ToListAsync();
 
-        var loanAccount = await GetNewBankAccount("Loan 1", AccountLabel.Loan);
+        var newAccount = await GetNewBankAccount(userId, "Loan 1", AccountLabel.Loan);
         var days = (int)((end - start).TotalDays);
-        loanAccount.AddEntry(GetNewBankAccountEntry(start, days * -100 - 1000, days * -100, labels), false);
+        newAccount.AddEntry(GetNewBankAccountEntry(start, days * -100 - 1000, days * -100, labels), false);
         for (DateTime date = start.AddDays(1); date <= end; date = date.AddDays(1))
-            loanAccount.AddEntry(GetNewBankAccountEntry(date, 10, 100, labels), false);
-        loanAccount.RecalculateEntryValues(0);
-        await accountRepository.AddAccount(loanAccount);
+            newAccount.AddEntry(GetNewBankAccountEntry(date, 10, 100, labels), false);
+        newAccount.RecalculateEntryValues(newAccount.Entries.Count - 1);
+        await accountRepository.AddAccount(newAccount);
     }
-    public async Task<StockAccount> GetNewStockAccount(string accountName, AccountLabel accountType)
+
+    private async Task AddStockAccount(int userId, DateTime start, DateTime end)
+    {
+        var newAccount = await GetNewStockAccount(userId, "Stock 1", AccountLabel.Stock);
+
+        for (var date = start; date <= end; date = date.AddDays(1))
+            newAccount.Add(GetNewStockAccountEntry(userId, 0, date, -90, 100, "RandomTicker"), false);
+        newAccount.RecalculateEntryValues(newAccount.Entries.Count - 1);
+        await accountRepository.AddAccount(newAccount);
+    }
+
+    public async Task<StockAccount> GetNewStockAccount(int userId, string accountName, AccountLabel accountType)
     {
         var accountId = (await GetMaxId()) + 1;
-        return new(_guestUserId, accountId is null ? 0 : accountId.Value, accountName);
+        return new(userId, accountId is null ? 0 : accountId.Value, accountName);
     }
     public static StockAccountEntry GetNewStockAccountEntry(int accountId, int entryId, DateTime date, int minValue, int maxValue,
         string ticker, InvestmentType investmentType = InvestmentType.Stock) =>
          new(accountId, entryId, date, 0, Random.Shared.Next(minValue, maxValue), ticker, investmentType);
 
-    public async Task<BankAccount> GetNewBankAccount(string accountName, AccountLabel accountType)
+    public async Task<BankAccount> GetNewBankAccount(int userId, string accountName, AccountLabel accountType)
     {
         var accountId = (await GetMaxId()) + 1;
-        return new(_guestUserId, accountId is null ? 0 : accountId.Value, accountName, accountType);
+        return new(userId, accountId is null ? 0 : accountId.Value, accountName, accountType);
     }
     public AddBankEntryDto GetNewBankAccountEntry(DateTime date, int minValue, int maxValue, List<FinancialLabel> labels,
         string description = "") =>

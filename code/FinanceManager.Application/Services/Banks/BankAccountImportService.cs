@@ -103,7 +103,7 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
                 if (resolvedConflict.ImportData is not null)
                 {
                     var importData = resolvedConflict.ImportData;
-                    await bankAccountEntryRepository.Add(new(resolvedConflict.AccountId, 0, importData.PostingDate, importData.ValueChange, importData.ValueChange)
+                    await bankAccountEntryRepository.Add(new BankAccountEntry(resolvedConflict.AccountId, 0, importData.PostingDate, importData.ValueChange, importData.ValueChange)
                     {
                         Description = string.Empty,
                         Labels = []

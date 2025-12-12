@@ -170,7 +170,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
         RecalculateEntryValues(index - 1);
     }
 
-    private new void RecalculateEntryValues(int? startingIndex)
+    public override void RecalculateEntryValues(int? startingIndex)
     {
         if (Entries is null) return;
         int startIndex = startingIndex ?? Entries.Count - 1;

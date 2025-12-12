@@ -5,7 +5,6 @@ using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
-using System;
 
 namespace FinanceManager.Application.Services.Bonds;
 
@@ -24,10 +23,10 @@ public class AssetsServiceBond(IFinancialAccountRepository financialAccountRepos
         {
             foreach (var price in account.GetDailyPrice(bondDetails))
             {
-                if (!prices.ContainsKey(price.Key.ToDateTime(TimeOnly.MinValue)))
-                    prices.Add(price.Key.ToDateTime(TimeOnly.MinValue), price.Value);
+                if (!prices.ContainsKey(price.Key.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)))
+                    prices.Add(price.Key.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), price.Value);
                 else
-                    prices[price.Key.ToDateTime(TimeOnly.MinValue)] += price.Value;
+                    prices[price.Key.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)] += price.Value;
             }
         }
 
@@ -46,10 +45,10 @@ public class AssetsServiceBond(IFinancialAccountRepository financialAccountRepos
         {
             foreach (var price in account.GetDailyPrice(bondDetails))
             {
-                if (!prices.ContainsKey(price.Key.ToDateTime(TimeOnly.MinValue)))
-                    prices.Add(price.Key.ToDateTime(TimeOnly.MinValue), price.Value);
+                if (!prices.ContainsKey(price.Key.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)))
+                    prices.Add(price.Key.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), price.Value);
                 else
-                    prices[price.Key.ToDateTime(TimeOnly.MinValue)] += price.Value;
+                    prices[price.Key.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)] += price.Value;
             }
         }
 
