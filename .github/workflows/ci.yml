@@ -139,14 +139,14 @@ jobs:
         run: chmod +x -R ./code/**/bin/Release/net9.0/*
 
       - name: Run unit tests with coverage
-        run: dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --no-build --configuration Release --logger "trx;LogFileName=unit-test-results.trx" --results-directory TestResults --collect:"XPlat Code Coverage"
+        run: dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --no-build --configuration Release --logger "trx;LogFileName=unit-test-results.trx" --results-directory ${{ github.workspace }}/TestResults --collect:"XPlat Code Coverage"
 
       - name: Publish unit test results
         uses: dorny/test-reporter@v1
         if: always()
         with:
           name: 'Unit Test Results'
-          path: 'TestResults/unit-test-results.trx'
+          path: '${{ github.workspace }}/TestResults/unit-test-results.trx'
           reporter: dotnet-trx
 
   integration-tests:
@@ -175,14 +175,14 @@ jobs:
         run: chmod +x -R ./code/**/bin/Release/net9.0/*
 
       - name: Run integration tests with coverage
-        run: dotnet test ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --no-build --configuration Release --logger "trx;LogFileName=integration-test-results.trx" --results-directory TestResults --collect:"XPlat Code Coverage"
+        run: dotnet test ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --no-build --configuration Release --logger "trx;LogFileName=integration-test-results.trx" --results-directory ${{ github.workspace }}/TestResults --collect:"XPlat Code Coverage"
 
       - name: Publish integration test results
         uses: dorny/test-reporter@v1
         if: always()
         with:
           name: 'Integration Test Results'
-          path: 'TestResults/integration-test-results.trx'
+          path: '${{ github.workspace }}/TestResults/integration-test-results.trx'
           reporter: dotnet-trx
 
   publish:
