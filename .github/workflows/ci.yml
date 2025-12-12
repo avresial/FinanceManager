@@ -165,17 +165,14 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-output
-          path: code
+      - name: Restore dependencies
+        run: dotnet restore ./code
 
-      - name: Restore execute permissions
-        run: chmod +x -R ./code/**/bin/Release/net9.0/*
+      - name: Build solution
+        run: dotnet build ./code --configuration Release
 
       - name: Run integration tests with coverage
-        run: dotnet test ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --no-build --configuration Release --logger "trx;LogFileName=integration-test-results.trx" --results-directory ${{ github.workspace }}/TestResults --collect:"XPlat Code Coverage"
+        run: dotnet test ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --configuration Release --logger "trx;LogFileName=integration-test-results.trx" --results-directory ${{ github.workspace }}/TestResults --collect:"XPlat Code Coverage"
 
       - name: Publish integration test results
         uses: dorny/test-reporter@v1
