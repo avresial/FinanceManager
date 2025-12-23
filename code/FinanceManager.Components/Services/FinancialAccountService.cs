@@ -109,12 +109,25 @@ public class FinancialAccountService(BankAccountHttpClient bankAccountHttpClient
     public async Task<Dictionary<int, Type>> GetAvailableAccounts()
     {
         Dictionary<int, Type> result = [];
+        try
+        {
+            foreach (var account in await bankAccountHttpClient.GetAvailableAccountsAsync())
+                result.Add(account.AccountId, typeof(BankAccount));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError("Error while fetching bank accounts: {Message}", ex.Message);
+        }
 
-        foreach (var account in await bankAccountHttpClient.GetAvailableAccountsAsync())
-            result.Add(account.AccountId, typeof(BankAccount));
-
-        foreach (var account in await stockAccountHttpClient.GetAvailableAccountsAsync())
-            result.Add(account.AccountId, typeof(StockAccount));
+        try
+        {
+            foreach (var account in await stockAccountHttpClient.GetAvailableAccountsAsync())
+                result.Add(account.AccountId, typeof(StockAccount));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError("Error while fetching stock accounts: {Message}", ex.Message);
+        }
 
         return result;
     }

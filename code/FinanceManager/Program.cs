@@ -21,7 +21,8 @@ builder.Services.AddBlazoredSessionStorage();
 
 #if (DEBUG)
 {
-    builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:5001/") });
+    //builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:5001/") });
+    builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://financemanagerapi-fchjdaheebf7gkhf.polandcentral-01.azurewebsites.net/") });
 }
 #else
 { 
