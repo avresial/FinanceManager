@@ -18,7 +18,7 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
     private const int _testUserId = 77;
     private const int _testAccountId = 123;
     private TestDatabase? _testDatabase;
-
+    private readonly DateTime _utcNow = DateTime.UtcNow;
     protected override void ConfigureServices(IServiceCollection services)
     {
         // Replace DbContext with in-memory test context
@@ -64,21 +64,20 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
     }
 
     [Fact]
-    public async Task ImportBankEntries_ReturnsImportedResult_NoConflicts()
+    public async Task ImportBankEntries_TwoImportZeroExisting_NoConflicts()
     {
         // arrange
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
 
-        var entries = new List<BankEntryImportRecordDto>
-        {
-            new(DateTime.UtcNow.Date.AddDays(-2).AddHours(10), 100m),
-            new(DateTime.UtcNow.Date.AddDays(-1).AddHours(9), -50m)
-        };
-        BankDataImportDto dto = new(_testAccountId, entries);
+        List<BankEntryImportRecordDto> entries =
+        [
+            new(_utcNow.Date.AddDays(-2).AddHours(10), 100m),
+            new(_utcNow.Date.AddDays(-1).AddHours(9), -50m)
+        ];
 
         // act
-        var result = await new BankAccountImportHttpClient(Client).ImportBankEntriesAsync(dto);
+        var result = await new BankAccountImportHttpClient(Client).ImportBankEntriesAsync(new(_testAccountId, entries));
 
         // assert
         Assert.NotNull(result);
@@ -96,7 +95,7 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
         var client = new BankAccountImportHttpClient(Client);
-        var conflictDate = DateTime.UtcNow.Date.AddDays(-3).AddHours(12);
+        var conflictDate = _utcNow.Date.AddDays(-3).AddHours(12);
         var conflictValue = 25m;
         await SeedExistingEntryExactMatch(conflictDate, conflictValue);
         List<BankEntryImportRecordDto> entries =
@@ -119,24 +118,20 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
     }
 
     [Fact]
-    public async Task ImportBankEntries_ShouldNotBeExactMatch_ReturnsConflict()
+    public async Task ImportBankEntries_OneExactMatchOneExistingConflict_ReturnsConflicts()
     {
         // arrange
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
         var client = new BankAccountImportHttpClient(Client);
-        var conflictDate = DateTime.UtcNow.Date.AddDays(-3).AddHours(12);
+        var conflictDate = _utcNow.Date.AddDays(-3).AddHours(12);
         var conflictValue = 25m;
         await SeedExistingEntryExactMatch(conflictDate, conflictValue);
         await SeedExistingEntryExactMatch(conflictDate, conflictValue);
-        List<BankEntryImportRecordDto> entries =
-        [
-            new(conflictDate, conflictValue)
-        ];
-        var dto = new BankDataImportDto(_testAccountId, entries);
+        List<BankEntryImportRecordDto> entries = [new(conflictDate, conflictValue)];
 
         // act
-        var result = await client.ImportBankEntriesAsync(dto);
+        var result = await client.ImportBankEntriesAsync(new(_testAccountId, entries));
 
         // assert
         Assert.NotNull(result);
@@ -149,13 +144,38 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
     }
 
     [Fact]
-    public async Task ResolveImportConflicts_PickingExistingEntry_ReturnsOk()
+    public async Task ImportBankEntries_OneExactMatchOneImportConflict_ReturnsConflicts()
+    {
+        // arrange
+        await SeedAccount();
+        Authorize("user", _testUserId, UserRole.User);
+        var client = new BankAccountImportHttpClient(Client);
+        var conflictDate = _utcNow.Date.AddDays(-3).AddHours(12);
+        var conflictValue = 25m;
+        await SeedExistingEntryExactMatch(conflictDate, conflictValue);
+        List<BankEntryImportRecordDto> entries = [new(conflictDate, conflictValue), new(conflictDate, conflictValue)];
+
+        // act
+        var result = await client.ImportBankEntriesAsync(new(_testAccountId, entries));
+
+        // assert
+        Assert.NotNull(result);
+        Assert.Equal(0, result!.Imported); // exact match day skipped for import
+        Assert.Equal(0, result.Failed);
+        Assert.Equal(2, result.Conflicts.Count);
+        var conflict = result.Conflicts.First();
+        Assert.Equal(1, result.Conflicts.Count(x => x.IsExactMatch));
+        Assert.Equal(conflictDate, conflict.DateTime);
+    }
+
+    [Fact]
+    public async Task ResolveImportConflicts_PickingExisting_ReturnsOk()
     {
         // arrange create conflict
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
         var client = new BankAccountImportHttpClient(Client);
-        var existingDate = DateTime.UtcNow.Date.AddDays(-4).AddHours(8);
+        var existingDate = _utcNow.Date.AddDays(-4).AddHours(8);
         var existingValue = 10m;
         var importValue = 5m;
         await SeedExistingEntryExactMatch(existingDate, existingValue);
@@ -177,6 +197,36 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
         Assert.NotNull(_testDatabase);
         var result = await _testDatabase!.Context.BankEntries.FirstAsync(e => e.AccountId == _testAccountId && e.PostingDate == existingDate, TestContext.Current.CancellationToken);
         Assert.Equal(existingValue, result.ValueChange);
+    }
+
+    [Fact]
+    public async Task ResolveImportConflicts_PickingImport_ReturnsOk()
+    {
+        // arrange create conflict
+        await SeedAccount();
+        Authorize("user", _testUserId, UserRole.User);
+        var client = new BankAccountImportHttpClient(Client);
+        var existingDate = _utcNow.Date.AddDays(-4).AddHours(8);
+        var existingValue = 10m;
+        var importValue = 5m;
+        await SeedExistingEntryExactMatch(existingDate, existingValue);
+        var importResult = await client.ImportBankEntriesAsync(new(_testAccountId, [new(existingDate, importValue)]));
+        Assert.NotNull(importResult);
+        var existingEntry = importResult.Conflicts[1].ExistingEntry;
+        Assert.NotNull(existingEntry);
+
+        var resolution = new ResolvedImportConflict(_testAccountId, importIsPicked: true, importData: new BankEntryImport(existingDate, importValue),
+        existingIsPicked: false, existingId: existingEntry!.EntryId);
+
+        // act
+        var resolveResult = await client.ResolveImportConflictsAsync([resolution]);
+
+        // assert
+        Assert.True(resolveResult);
+        // ensure still exactly one entry in DB matching existing
+        Assert.NotNull(_testDatabase);
+        var result = await _testDatabase!.Context.BankEntries.SingleAsync(e => e.AccountId == _testAccountId && e.PostingDate == existingDate, TestContext.Current.CancellationToken);
+        Assert.Equal(importValue, result.ValueChange);
     }
 
     public override void Dispose()

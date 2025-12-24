@@ -93,21 +93,15 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
 
         foreach (var resolvedConflict in resolvedConflicts)
         {
-            if (resolvedConflict.ExistingIsPicked) continue;
-
             try
             {
-                if (resolvedConflict.ExistingId is int existingId)
+                if (!resolvedConflict.LeaveExisting && resolvedConflict.ExistingId is int existingId)
                     await bankAccountEntryRepository.Delete(resolvedConflict.AccountId, existingId);
 
-                if (resolvedConflict.ImportData is not null)
+                if (resolvedConflict.AddImported && resolvedConflict.ImportData is not null)
                 {
                     var importData = resolvedConflict.ImportData;
-                    await bankAccountEntryRepository.Add(new BankAccountEntry(resolvedConflict.AccountId, 0, importData.PostingDate, importData.ValueChange, importData.ValueChange)
-                    {
-                        Description = string.Empty,
-                        Labels = []
-                    });
+                    await bankAccountEntryRepository.Add(resolvedConflict.ToEntry());
                 }
             }
             catch (Exception ex)

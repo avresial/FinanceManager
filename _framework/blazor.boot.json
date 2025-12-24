@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "FinanceManager.WebUi",
   "resources": {
-    "hash": "sha256-ANiLUGUo4Xm413LtRSbhvGculK3EgLvEo0DKTKBl6wo=",
+    "hash": "sha256-ppXmQboDe+sCGxXPNVG90hyjbwE/IbvT/4FyMu+XWgo=",
     "fingerprinting": {
       "Azure.Core.92q6rqqhly.wasm": "Azure.Core.wasm",
       "Azure.Identity.b6ekoqlu3w.wasm": "Azure.Identity.wasm",
@@ -177,11 +177,11 @@
       "System.t4d4s3f398.wasm": "System.wasm",
       "netstandard.ih3zmgty1z.wasm": "netstandard.wasm",
       "System.Private.CoreLib.84e1m5hqxy.wasm": "System.Private.CoreLib.wasm",
-      "FinanceManager.Application.gkwvao2imj.wasm": "FinanceManager.Application.wasm",
-      "FinanceManager.Components.7w1clesobx.wasm": "FinanceManager.Components.wasm",
-      "FinanceManager.Domain.n9bn893153.wasm": "FinanceManager.Domain.wasm",
-      "FinanceManager.Infrastructure.vc514d1sfm.wasm": "FinanceManager.Infrastructure.wasm",
-      "FinanceManager.WebUi.0d2t0vk7zt.wasm": "FinanceManager.WebUi.wasm",
+      "FinanceManager.Application.7ze0aqhxaf.wasm": "FinanceManager.Application.wasm",
+      "FinanceManager.Components.tzncexobj8.wasm": "FinanceManager.Components.wasm",
+      "FinanceManager.Domain.a92xcl1mk6.wasm": "FinanceManager.Domain.wasm",
+      "FinanceManager.Infrastructure.6nh4mpy5fi.wasm": "FinanceManager.Infrastructure.wasm",
+      "FinanceManager.WebUi.n0jjcdkslo.wasm": "FinanceManager.WebUi.wasm",
       "dotnet.native.szd26hcvro.js": "dotnet.native.js",
       "dotnet.native.kx7hdkn5eu.wasm": "dotnet.native.wasm",
       "dotnet.js": "dotnet.js",
@@ -446,11 +446,11 @@
       "System.Xml.XmlSerializer.4nnk82u3rq.wasm": "sha256-UFt9PJIfF9Cp44Nl11/hZSBC8R52F/hE1pL/Ctfkhfk=",
       "System.t4d4s3f398.wasm": "sha256-fVP2BxRRKpBA0PmBbKxmO45bXDrAXVn1GthlDclLbeU=",
       "netstandard.ih3zmgty1z.wasm": "sha256-ZmJ96nwFc/4sQejdWmF6asJis95/FvR7KREhZnnEKfU=",
-      "FinanceManager.Application.gkwvao2imj.wasm": "sha256-oADXyg1S+6txnGOUZMv6drqXDP3/WDjxpLf3vWpQGi4=",
-      "FinanceManager.Components.7w1clesobx.wasm": "sha256-aX69YwD8wRiSNOq/ORNlXJepF59gz6qDXvGpOtOGpf4=",
-      "FinanceManager.Domain.n9bn893153.wasm": "sha256-NSuGaceLeXq7nZ7hLJkIgJCMcKEes28jGGtS/NTL4SA=",
-      "FinanceManager.Infrastructure.vc514d1sfm.wasm": "sha256-oUa5EnGbrIHRAS93LuDXtCkBK6WoDiQCD6HuLb8E7/8=",
-      "FinanceManager.WebUi.0d2t0vk7zt.wasm": "sha256-zHKpi7XbOXPDgnNjLO3I2q+eaIsm21TciJuqrv5wP40="
+      "FinanceManager.Application.7ze0aqhxaf.wasm": "sha256-LXL+89g1fSG3yOR2WAH714VgpC4lj9NlaVrijGvPF/s=",
+      "FinanceManager.Components.tzncexobj8.wasm": "sha256-h8nHQG+VG0rslE+wnGviMh8+x0MVz6JnTfkRPJMyDsQ=",
+      "FinanceManager.Domain.a92xcl1mk6.wasm": "sha256-UuZwctrgDmTr9H9tX5UDBmoFWjHbVxsnql4mOONvrYI=",
+      "FinanceManager.Infrastructure.6nh4mpy5fi.wasm": "sha256-Umx/DqlNzwYdHpAp8IXzES1O0o76DRliJK7zY5y3Zbs=",
+      "FinanceManager.WebUi.n0jjcdkslo.wasm": "sha256-+fiyiESslWKQyGVWbKBT7lA8g1frvrw2Lluf5pbRSY8="
     },
     "satelliteResources": {
       "cs": {
