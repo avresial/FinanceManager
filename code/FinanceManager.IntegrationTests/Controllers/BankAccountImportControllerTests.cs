@@ -55,7 +55,6 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
     private async Task SeedExistingEntryExactMatch(DateTime postingDate, decimal valueChange)
     {
         if (_testDatabase is null) return;
-        if (await _testDatabase.Context.BankEntries.AnyAsync(e => e.AccountId == _testAccountId && e.PostingDate == postingDate && e.ValueChange == valueChange, TestContext.Current.CancellationToken)) return;
         _testDatabase.Context.BankEntries.Add(new BankAccountEntry(_testAccountId, 0, postingDate, valueChange, valueChange)
         {
             Description = string.Empty,
@@ -100,10 +99,10 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
         var conflictDate = DateTime.UtcNow.Date.AddDays(-3).AddHours(12);
         var conflictValue = 25m;
         await SeedExistingEntryExactMatch(conflictDate, conflictValue);
-        var entries = new List<BankEntryImportRecordDto>
-        {
+        List<BankEntryImportRecordDto> entries =
+        [
             new(conflictDate, conflictValue)
-        };
+        ];
         var dto = new BankDataImportDto(_testAccountId, entries);
 
         // act
@@ -116,6 +115,36 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
         Assert.Single(result.Conflicts);
         var conflict = result.Conflicts.First();
         Assert.True(conflict.IsExactMatch);
+        Assert.Equal(conflictDate, conflict.DateTime);
+    }
+
+    [Fact]
+    public async Task ImportBankEntries_ShouldNotBeExactMatch_ReturnsConflict()
+    {
+        // arrange
+        await SeedAccount();
+        Authorize("user", _testUserId, UserRole.User);
+        var client = new BankAccountImportHttpClient(Client);
+        var conflictDate = DateTime.UtcNow.Date.AddDays(-3).AddHours(12);
+        var conflictValue = 25m;
+        await SeedExistingEntryExactMatch(conflictDate, conflictValue);
+        await SeedExistingEntryExactMatch(conflictDate, conflictValue);
+        List<BankEntryImportRecordDto> entries =
+        [
+            new(conflictDate, conflictValue)
+        ];
+        var dto = new BankDataImportDto(_testAccountId, entries);
+
+        // act
+        var result = await client.ImportBankEntriesAsync(dto);
+
+        // assert
+        Assert.NotNull(result);
+        Assert.Equal(0, result!.Imported); // exact match day skipped for import
+        Assert.Equal(0, result.Failed);
+        Assert.Equal(2, result.Conflicts.Count);
+        var conflict = result.Conflicts.First();
+        Assert.Equal(1, result.Conflicts.Count(x => x.IsExactMatch));
         Assert.Equal(conflictDate, conflict.DateTime);
     }
 
