@@ -1,3 +1,6 @@
+using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Shared.Accounts;
+
 namespace FinanceManager.Domain.Entities.Imports;
 
 public class ResolvedImportConflict
@@ -11,19 +14,30 @@ public class ResolvedImportConflict
             throw new Exception("Cannot pick both import entry and existing entry or neither.");
 
         AccountId = accountId;
-        ImportIsPicked = importIsPicked;
+        AddImported = importIsPicked;
         ImportData = importData;
-        ExistingIsPicked = existingIsPicked;
+        LeaveExisting = existingIsPicked;
         ExistingId = existingId;
     }
 
     public int AccountId { get; set; }
 
     // Import side
-    public bool ImportIsPicked { get; set; }
+    public bool AddImported { get; set; }
     public BankEntryImport? ImportData { get; set; }
 
     // Existing entry side
-    public bool ExistingIsPicked { get; set; }
+    public bool LeaveExisting { get; set; }
     public int? ExistingId { get; set; }
+
+    public BankAccountEntry ToEntry(string description = "", ICollection<FinancialLabel>? labels = null)
+    {
+        return ImportData is null
+            ? throw new ArgumentNullException($"{nameof(ImportData)} is null")
+            : new(AccountId, 0, ImportData.PostingDate, ImportData.ValueChange, ImportData.ValueChange)
+            {
+                Description = description,
+                Labels = labels ?? []
+            };
+    }
 }

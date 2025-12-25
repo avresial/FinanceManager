@@ -61,12 +61,11 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddMemoryCache();
 builder.Services.AddAuthorization();
-builder.Services.AddScoped<JwtTokenGenerator, JwtTokenGenerator>();
+builder.Services.AddScoped<JwtTokenGenerator>();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
-    //app.UseDeveloperExceptionPage();
     app.MapOpenApi();
 
     app.MapScalarApiReference(options =>
@@ -77,13 +76,6 @@ if (app.Environment.IsDevelopment())
         });
     });
 }
-//else
-//{
-//    app.UseExceptionHandler();
-//    app.UseHsts();
-//}
-//app.UseStatusCodePages();
-
 
 app.UseHttpsRedirection();
 
