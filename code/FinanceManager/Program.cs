@@ -18,19 +18,9 @@ builder.Services.AddMudServices();
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddBlazoredSessionStorage();
 
+var apiBaseAddress = builder.Configuration["Api:BaseAddress"] ?? throw new InvalidOperationException("API base address is not configured.");
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
 
-#if (DEBUG)
-{
-    //builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:5001/") });
-    builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://financemanagerapi-fchjdaheebf7gkhf.polandcentral-01.azurewebsites.net/") });
-}
-#else
-{ 
-    builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://financemanagerapi-fchjdaheebf7gkhf.polandcentral-01.azurewebsites.net/") });
-}
-#endif
-
-//builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:7060/") });
 builder.Services.AddApplication().AddInfrastructureFrontend().AddUIComponents();
 
 await builder.Build().RunAsync();

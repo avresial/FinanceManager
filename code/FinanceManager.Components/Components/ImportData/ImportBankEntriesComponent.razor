@@ -207,7 +207,7 @@
 
                             @if (_importResult is not null && _importResult.Conflicts.Any())
                             {
-                                <BankEntryConflictResolver Conflicts=_importResult.Conflicts AccountName=AccountName />
+                                <BankEntryConflictResolver Conflicts=_importResult.Conflicts AccountName=@AccountName />
                             }
 
                         </MudStack>

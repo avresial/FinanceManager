@@ -121,7 +121,7 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
             {
                 List<int> counts = [sameExisting.Count, import.Count()];
                 for (int i = 0; i < counts.Min(); i++)
-                    yield return (import.First(), sameExisting.First());
+                    yield return (import.ToArray()[i], sameExisting.ToArray()[i]);
             }
         }
     }
@@ -130,12 +130,13 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
     {
         foreach (var import in imports.GroupBy(x => (Date: x.PostingDate, ValuceChange: x.ValueChange)))
         {
+            var importItemList = import.ToList();
             var sameExistingCount = existing.Count(e => e.PostingDate == import.Key.Date && e.ValueChange == import.Key.ValuceChange);
 
-            if (import.Count() > sameExistingCount && import.Count() != 0)
+            if (importItemList.Count > sameExistingCount && importItemList.Count != 0)
             {
-                for (int i = 0; i < import.Count() - sameExistingCount; i++)
-                    yield return new ImportConflict(accountId, import.First(), null, "Import not found in existing");
+                for (int i = 0; i < importItemList.Count - sameExistingCount; i++)
+                    yield return new ImportConflict(accountId, importItemList.First(), null, "Import not found in existing");
             }
         }
     }
@@ -144,13 +145,14 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
     {
         foreach (var existingItem in existing.GroupBy(x => (Date: x.PostingDate, ValuceChange: x.ValueChange)))
         {
+            var existingItemList = existingItem.ToList();
             var sameImportsCount = imports.Count(e => e.PostingDate == existingItem.Key.Date && e.ValueChange == existingItem.Key.ValuceChange);
 
-            if (existingItem.Count() > sameImportsCount && existingItem.Count() != 0)
-            {
-                for (int i = 0; i < existingItem.Count() - sameImportsCount; i++)
-                    yield return new ImportConflict(accountId, null, existingItem.First(), "Existing not fount in import");
-            }
+            if (existingItemList.Count <= sameImportsCount || existingItemList.Count == 0)
+                continue;
+
+            for (int i = sameImportsCount; i < existingItemList.Count; i++)
+                yield return new ImportConflict(accountId, null, existingItemList[i], "Existing not fount in import");
         }
     }
 }
