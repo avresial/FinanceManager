@@ -14,6 +14,7 @@ public partial class BankEntryConflictResolver
     [Parameter] public required bool SkipExactMatches { get; set; } = true;
     [Parameter] public required string AccountName { get; set; }
 
+    private bool _isLoading = false;
     private int AccountId { get; set; }
     private DateTime? _selectedDay = null;
     private List<ImportConflict> _selectedConflicts = [];
@@ -21,55 +22,76 @@ public partial class BankEntryConflictResolver
 
     protected override void OnInitialized()
     {
-        base.OnParametersSet();
-
-        _conflictsByDay.Clear();
-        _selectedDay = null;
-        _selectedConflicts = [];
-
-        _conflictsByDay = Conflicts
-            .Where(c => c.ImportEntry is not null || c.ExistingEntry is not null)
-            .GroupBy(c => (c.ImportEntry?.PostingDate ?? c.ExistingEntry!.PostingDate).Date)
-            .OrderBy(g => g.Key)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        if (SkipExactMatches)
+        _isLoading = true;
+        try
         {
-            var keysToRemove = _conflictsByDay.Where(x => x.Value.All(y => y.IsExactMatch))
-                                    .Select(x => x.Key)
-                                    .ToList();
+            base.OnParametersSet();
 
-            foreach (var key in keysToRemove)
-                _conflictsByDay.Remove(key);
+            _conflictsByDay.Clear();
+            _selectedDay = null;
+            _selectedConflicts = [];
+
+            _conflictsByDay = Conflicts
+                .Where(c => c.ImportEntry is not null || c.ExistingEntry is not null)
+                .GroupBy(c => (c.ImportEntry?.PostingDate ?? c.ExistingEntry!.PostingDate).Date)
+                .OrderBy(g => g.Key)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            if (SkipExactMatches)
+            {
+                var keysToRemove = _conflictsByDay.Where(x => x.Value.All(y => y.IsExactMatch))
+                                        .Select(x => x.Key)
+                                        .ToList();
+
+                foreach (var key in keysToRemove)
+                    _conflictsByDay.Remove(key);
+            }
+
+            if (_conflictsByDay.Count != 0)
+            {
+                _selectedDay = _conflictsByDay.Keys.OrderBy(k => k).First();
+                _selectedConflicts = _selectedDay.HasValue ? _conflictsByDay[_selectedDay.Value] : [];
+                AccountId = Conflicts.First().AccountId;
+            }
         }
-
-        if (_conflictsByDay.Count != 0)
+        catch (Exception ex)
         {
-            _selectedDay = _conflictsByDay.Keys.OrderBy(k => k).First();
-            _selectedConflicts = _selectedDay.HasValue ? _conflictsByDay[_selectedDay.Value] : [];
-            AccountId = Conflicts.First().AccountId;
+            Logger.LogError(ex, "Error initializing BankEntryConflictResolver for account {AccountId}", AccountId);
         }
+        _isLoading = false;
     }
 
     private async Task OnPickImported()
     {
+        _isLoading = true;
         try
         {
-            var resolvedImports = _selectedConflicts
-                                        .Select(c => new ResolvedImportConflict(c.AccountId, true, c.ImportEntry, false, c.ExistingEntry?.EntryId))
+            var resolvedImports = _selectedConflicts.Select(c => new ResolvedImportConflict(c.AccountId, true, c.ImportEntry, false, c.ExistingEntry?.EntryId))
                                         .ToList();
 
             await BankAccountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
+            RemoveSelectedDayAndAdvance();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error resolving import conflicts for account {AccountId}", AccountId);
         }
-
-        RemoveSelectedDayAndAdvance();
+        _isLoading = false;
     }
 
-    private void OnPickExisting() => RemoveSelectedDayAndAdvance();
+    private void OnPickExisting()
+    {
+        _isLoading = true;
+        try
+        {
+            RemoveSelectedDayAndAdvance();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error resolving import conflicts for account {AccountId}", AccountId);
+        }
+        _isLoading = false;
+    }
 
     private void RemoveSelectedDayAndAdvance()
     {

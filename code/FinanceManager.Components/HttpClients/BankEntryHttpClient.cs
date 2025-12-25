@@ -8,23 +8,42 @@ public class BankEntryHttpClient(HttpClient httpClient)
 {
     public async Task<BankAccountEntry?> GetEntry(int accountId, int entryId)
     {
-        var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/BankEntry?accountId={accountId}&entryId={entryId}");
-        if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
-        return await response.Content.ReadFromJsonAsync<BankAccountEntry?>();
+        try
+        {
+            var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/BankEntry?accountId={accountId}&entryId={entryId}");
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+            return await response.Content.ReadFromJsonAsync<BankAccountEntry?>();
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     public async Task<DateTime?> GetOldestEntryDate(int accountId)
     {
-        var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/BankEntry/Oldest/{accountId}");
-        if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
-        return await response.Content.ReadFromJsonAsync<DateTime?>();
+        try
+        {
+            var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/BankEntry/Oldest/{accountId}");
+            return await response.Content.ReadFromJsonAsync<DateTime?>();
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     public async Task<DateTime?> GetYoungestEntryDate(int accountId)
     {
-        var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/BankEntry/Youngest/{accountId}");
-        if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
-        return await response.Content.ReadFromJsonAsync<DateTime?>();
+        try
+        {
+            var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/BankEntry/Youngest/{accountId}");
+            return await response.Content.ReadFromJsonAsync<DateTime?>();
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     public async Task<bool> AddEntryAsync(AddBankAccountEntry addEntry)

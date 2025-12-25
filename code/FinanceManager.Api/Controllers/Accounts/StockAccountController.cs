@@ -2,6 +2,7 @@
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.ValueObjects;
 using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Authorization;
@@ -20,13 +21,14 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<StockAccountDto>))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Get()
+    public async Task<ActionResult<List<AvailableAccount>>> Get()
     {
         var accounts = await stockAccountRepository.GetAvailableAccounts(ApiAuthenticationHelper.GetUserId(User))
             .ToListAsync();
+
         if (accounts.Count == 0) return NotFound();
 
-        return Ok(accounts);
+        return Ok(accounts ?? []);
     }
 
     [HttpGet("{accountId:int}")]
