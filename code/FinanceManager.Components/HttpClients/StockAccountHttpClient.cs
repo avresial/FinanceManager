@@ -1,4 +1,3 @@
-using Azure;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.ValueObjects;
@@ -9,19 +8,11 @@ namespace FinanceManager.Components.HttpClients;
 
 public class StockAccountHttpClient(HttpClient httpClient)
 {
-    public async Task<List<AvailableAccount>> GetAvailableAccountsAsync()
+    public async Task<IEnumerable<AvailableAccount>> GetAvailableAccountsAsync()
     {
-        try
-        {
-            var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/StockAccount");
-            var result = await response.Content.ReadFromJsonAsync<List<AvailableAccount>>();
-            return result ?? [];
-        }
-        catch (Exception)
-        {
-        }
-
-        return [];
+        var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/StockAccount");
+        var result = await response.Content.ReadFromJsonAsync<IEnumerable<AvailableAccount>>();
+        return result ?? [];
     }
 
     public async Task<StockAccount?> GetAccountAsync(int accountId)
@@ -61,6 +52,8 @@ public class StockAccountHttpClient(HttpClient httpClient)
         return response.IsSuccessStatusCode;
     }
 
-    public Task<bool> DeleteAccountAsync(int accountId) =>
-        httpClient.DeleteFromJsonAsync<bool>($"{httpClient.BaseAddress}api/StockAccount/Delete/{accountId}");
+    public async Task<bool> DeleteAccountAsync(int accountId)
+    {
+        return await httpClient.DeleteFromJsonAsync<bool>($"{httpClient.BaseAddress}api/StockAccount/Delete/{accountId}");
+    }
 }

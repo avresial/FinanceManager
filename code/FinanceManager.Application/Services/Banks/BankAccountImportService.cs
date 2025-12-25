@@ -3,7 +3,7 @@ using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Application.Services.Banks;
+namespace FinanceManager.Application.Services;
 
 public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAccountRepository,
     IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
@@ -39,9 +39,9 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
 
             if (importsThisDay.Count == 0) continue;
 
-            var exactMatches = GetExactMatches(importsThisDay, existingThisDay).ToList();
-            var importsOnlyConflicts = GetImportsWhichAreMissingFromExisting(accountId, importsThisDay, existingThisDay).ToList();
-            var existingOnlyConflicts = GetExistingWhichAreMissingFromImports(accountId, existingThisDay, importsThisDay).ToList();
+            var exactMatches = GetExactMatches(importsThisDay, existingThisDay);
+            var importsOnlyConflicts = GetNoExistingDataConflicts(accountId, importsThisDay, existingThisDay);
+            var existingOnlyConflicts = GetNoImportMatchingDataConflicts(accountId, existingThisDay, importsThisDay);
 
             if (exactMatches.Count != 0 || existingOnlyConflicts.Count != 0)
             {
@@ -93,15 +93,21 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
 
         foreach (var resolvedConflict in resolvedConflicts)
         {
+            if (resolvedConflict.ExistingIsPicked) continue;
+
             try
             {
-                if (!resolvedConflict.LeaveExisting && resolvedConflict.ExistingId is int existingId)
+                if (resolvedConflict.ExistingId is int existingId)
                     await bankAccountEntryRepository.Delete(resolvedConflict.AccountId, existingId);
 
-                if (resolvedConflict.AddImported && resolvedConflict.ImportData is not null)
+                if (resolvedConflict.ImportData is not null)
                 {
                     var importData = resolvedConflict.ImportData;
-                    await bankAccountEntryRepository.Add(resolvedConflict.ToEntry());
+                    await bankAccountEntryRepository.Add(new BankAccountEntry(resolvedConflict.AccountId, 0, importData.PostingDate, importData.ValueChange, importData.ValueChange)
+                    {
+                        Description = string.Empty,
+                        Labels = []
+                    });
                 }
             }
             catch (Exception ex)
@@ -111,48 +117,22 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
         }
     }
 
-    private static IEnumerable<(BankEntryImport Import, BankAccountEntry Existing)> GetExactMatches(List<BankEntryImport> imports, List<BankAccountEntry> existing)
-    {
-        foreach (var import in imports.GroupBy(x => (Date: x.PostingDate, ValuceChange: x.ValueChange)))
-        {
-            var sameExisting = existing.Where(e => e.PostingDate == import.Key.Date && e.ValueChange == import.Key.ValuceChange).ToList();
+    private static List<(BankEntryImport Import, BankAccountEntry Existing)> GetExactMatches(List<BankEntryImport> importsThisDay, List<BankAccountEntry> existingThisDay) =>
+    (from imp in importsThisDay
+     let match = existingThisDay.FirstOrDefault(e => e.PostingDate == imp.PostingDate && e.ValueChange == imp.ValueChange)
+     where match is not null
+     select (Import: imp, Existing: match)).ToList();
 
-            if (sameExisting.Count != 0 && import.Any())
-            {
-                List<int> counts = [sameExisting.Count, import.Count()];
-                for (int i = 0; i < counts.Min(); i++)
-                    yield return (import.ToArray()[i], sameExisting.ToArray()[i]);
-            }
-        }
-    }
 
-    private static IEnumerable<ImportConflict> GetImportsWhichAreMissingFromExisting(int accountId, IEnumerable<BankEntryImport> imports, IEnumerable<BankAccountEntry> existing)
-    {
-        foreach (var import in imports.GroupBy(x => (Date: x.PostingDate, ValuceChange: x.ValueChange)))
-        {
-            var importItemList = import.ToList();
-            var sameExistingCount = existing.Count(e => e.PostingDate == import.Key.Date && e.ValueChange == import.Key.ValuceChange);
+    private static List<ImportConflict> GetNoExistingDataConflicts(int accountId, IEnumerable<BankEntryImport> imports, IEnumerable<BankAccountEntry> existing) =>
+    (from imp in imports
+     where !existing.Any(e => e.PostingDate == imp.PostingDate && e.ValueChange == imp.ValueChange)
+     select new ImportConflict(accountId, imp, null, "No existing matching data")).ToList();
 
-            if (importItemList.Count > sameExistingCount && importItemList.Count != 0)
-            {
-                for (int i = 0; i < importItemList.Count - sameExistingCount; i++)
-                    yield return new ImportConflict(accountId, importItemList.First(), null, "Import not found in existing");
-            }
-        }
-    }
 
-    private static IEnumerable<ImportConflict> GetExistingWhichAreMissingFromImports(int accountId, IEnumerable<BankAccountEntry> existing, IEnumerable<BankEntryImport> imports)
-    {
-        foreach (var existingItem in existing.GroupBy(x => (Date: x.PostingDate, ValuceChange: x.ValueChange)))
-        {
-            var existingItemList = existingItem.ToList();
-            var sameImportsCount = imports.Count(e => e.PostingDate == existingItem.Key.Date && e.ValueChange == existingItem.Key.ValuceChange);
+    private static List<ImportConflict> GetNoImportMatchingDataConflicts(int accountId, IEnumerable<BankAccountEntry> existing, IEnumerable<BankEntryImport> imports) =>
+    (from e in existing
+     where !imports.Any(imp => imp.PostingDate == e.PostingDate && imp.ValueChange == e.ValueChange)
+     select new ImportConflict(accountId, null, e, "No import matching data")).ToList();
 
-            if (existingItemList.Count <= sameImportsCount || existingItemList.Count == 0)
-                continue;
-
-            for (int i = sameImportsCount; i < existingItemList.Count; i++)
-                yield return new ImportConflict(accountId, null, existingItemList[i], "Existing not fount in import");
-        }
-    }
 }
