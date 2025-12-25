@@ -1,13 +1,7 @@
 @using FinanceManager.Domain.Entities.Imports
 @using MudBlazor
 
-@if (_isLoading)
-{
-    <div style="display: flex; justify-content: center; align-items: center; min-height: 200px;">
-        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-    </div>
-}
-else if (_conflictsByDay.Any() == true)
+@if (_conflictsByDay.Any() == true)
 {
     <MudText Typo="Typo.h5">@_conflictsByDay.Count() conflicts require resolving</MudText>
 
@@ -54,11 +48,11 @@ else if (_conflictsByDay.Any() == true)
         </MudItem>
 
         <MudItem xs="6">
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnPickImported" Disabled="_isLoading">pick imported</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnPickImported">pick imported</MudButton>
         </MudItem>
         
         <MudItem xs="6">
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnPickExisting" Disabled="_isLoading">pick existing</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnPickExisting">pick existing</MudButton>
         </MudItem>
     </MudGrid>
 }

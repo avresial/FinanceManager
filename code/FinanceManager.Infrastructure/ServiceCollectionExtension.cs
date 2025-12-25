@@ -67,8 +67,6 @@ public static class ServiceCollectionExtension
             services.AddDbContext<AppDbContext>(options =>
             {
                 var connectionString = configuration.GetValue<string>("FINANCE_MANAGER_DB_KEY");
-                if (configuration.GetSection("ConnectionStrings").Exists())
-                    connectionString = configuration.GetSection("ConnectionStrings").GetValue<string>("testDB");
 
                 if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) ||
                     databaseProvider.Equals("Supabase", StringComparison.OrdinalIgnoreCase))

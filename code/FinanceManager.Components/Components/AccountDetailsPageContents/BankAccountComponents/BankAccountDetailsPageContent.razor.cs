@@ -7,7 +7,6 @@ using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Logging;
 using MudBlazor;
 
 namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAccountComponents;
@@ -23,6 +22,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
     private DateTime? _youngestEntryDate;
 
     private bool _addEntryVisibility;
+    private List<ChartJsLineDataPoint> chartData = [];
     private List<BankAccountEntry>? _top5;
     private List<BankAccountEntry>? _bottom5;
     private Currency _currency = DefaultCurrency.PLN;
@@ -38,9 +38,8 @@ public partial class BankAccountDetailsPageContent : ComponentBase
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
-    [Inject] public required ISettingsService SettingsService { get; set; }
-    [Inject] public required ILoginService LoginService { get; set; }
-    [Inject] public required ILogger<BankAccountDetailsPageContent> Logger { get; set; }
+    [Inject] public required ISettingsService settingsService { get; set; }
+    [Inject] public required ILoginService loginService { get; set; }
 
     public async Task ShowOverlay()
     {
@@ -115,7 +114,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
     protected override async Task OnParametersSetAsync()
     {
         IsLoading = true;
-        _user = await LoginService.GetLoggedUser();
+        _user = await loginService.GetLoggedUser();
         if (_user is null) return;
 
         _loadedAllData = false;
@@ -128,8 +127,9 @@ public partial class BankAccountDetailsPageContent : ComponentBase
         try
         {
             var accounts = await FinancialAccountService.GetAvailableAccounts();
-            if (accounts.TryGetValue(AccountId, out Type? accountType))
+            if (accounts.ContainsKey(AccountId))
             {
+                var accountType = accounts[AccountId];
                 if (accountType == typeof(BankAccount))
                 {
                     await UpdateDates();
@@ -145,14 +145,15 @@ public partial class BankAccountDetailsPageContent : ComponentBase
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
-            Logger.LogError(ex, "Error while loading bank account details for account ID {AccountId}", AccountId);
         }
+
+        await Task.CompletedTask;
     }
     private async Task UpdateChartData()
     {
         ChartData.Clear();
-        if (Account is null || Account.Entries is null) return;
         List<TimeSeriesModel> chartData = [];
+        if (Account is null || Account.Entries is null) return;
 
         decimal previousValue = 0;
 

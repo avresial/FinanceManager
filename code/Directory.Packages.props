@@ -5,7 +5,6 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.0.2" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.1.0" />
     <PackageVersion Include="Blazor-ApexCharts" Version="6.0.2" />
     <PackageVersion Include="Blazored.LocalStorage" Version="4.5.0" />
     <PackageVersion Include="Blazored.SessionStorage" Version="2.4.0" />
