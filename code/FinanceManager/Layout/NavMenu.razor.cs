@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
@@ -10,8 +11,6 @@ namespace FinanceManager.WebUi.Layout;
 
 public partial class NavMenu : ComponentBase
 {
-    private bool _collapseNavMenu = true;
-    private string? NavMenuCssClass => _collapseNavMenu ? "collapse" : null;
     private bool _displayAssetsLink = false;
     private bool _displayLiabilitiesLink = false;
 
@@ -40,14 +39,7 @@ public partial class NavMenu : ComponentBase
         }
     }
 
-    private void ToggleNavMenu()
-    {
-        _collapseNavMenu = !_collapseNavMenu;
-    }
-    private async void AccountDataSynchronizationService_AccountsChanged()
-    {
-        await UpdateAccounts();
-    }
+    private async void AccountDataSynchronizationService_AccountsChanged() => await UpdateAccounts();
     private async Task UpdateAccounts()
     {
         UserSession? user = null;
@@ -83,23 +75,27 @@ public partial class NavMenu : ComponentBase
                     if (existingAccount is not null)
                         name = existingAccount.Name;
                 }
+                else if (account.Value == typeof(BondAccount))
+                {
+                    var existingAccount = await FinancialAccountService.GetAccount<BondAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
+                    if (existingAccount is not null)
+                        name = existingAccount.Name;
+                }
                 else
                 {
-                    Logger.LogError($"account type {account.Value.Name} can not be handled, Account id {account.Key}");
+                    Logger.LogError("account type {account.Name} can not be handled, Account id {account.Key}", account.Value.Name, account.Key);
                     continue;
                 }
 
-                if (!Accounts.ContainsKey(account.Key))
-                    Accounts.Add(account.Key, name);
+                Accounts.TryAdd(account.Key, name);
             }
-
-
         }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
             Logger.LogError(ex, "Error while getting available accounts");
         }
+
         try
         {
             _displayAssetsLink = await AssetsHttpClient.IsAnyAccountWithAssets(user.UserId);
@@ -113,6 +109,7 @@ public partial class NavMenu : ComponentBase
             Logger.LogError(ex, "Error while checking if any account with assets");
             ErrorMessage = ex.Message;
         }
+
         try
         {
             _displayLiabilitiesLink = await LiabilitiesHttpClient.IsAnyAccountWithLiabilities(user.UserId);
