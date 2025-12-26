@@ -1,7 +1,6 @@
 using FinanceManager.Components.Components.SharedComponents;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -17,7 +16,6 @@ public partial class ManageBondAccount
     private BondAccount? _bondAccount = null;
 
     public string AccountName { get; set; } = string.Empty;
-    public AccountLabel AccountType { get; set; }
 
     [Parameter] public required int AccountId { get; set; }
 
@@ -40,7 +38,6 @@ public partial class ManageBondAccount
             if (_bondAccount is null) return;
 
             AccountName = _bondAccount.Name;
-            AccountType = _bondAccount.AccountType;
         }
         catch (Exception ex)
         {
@@ -66,7 +63,7 @@ public partial class ManageBondAccount
 
             if (_bondAccount is null) return;
 
-            BondAccount updatedAccount = new BondAccount(_bondAccount.UserId, _bondAccount.AccountId, AccountName, AccountType);
+            BondAccount updatedAccount = new(_bondAccount.UserId, _bondAccount.AccountId, AccountName);
             await FinancalAccountService.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");

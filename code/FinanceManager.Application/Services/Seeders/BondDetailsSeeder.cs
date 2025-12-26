@@ -9,7 +9,8 @@ public class BondDetailsSeeder(IBondDetailsRepository bondDetailsRepository, ILo
 {
     public async Task Seed(CancellationToken cancellationToken = default)
     {
-        var existingBonds = await bondDetailsRepository.GetAllAsync(cancellationToken).ToListAsync(cancellationToken);
+        var existingBonds = await bondDetailsRepository.GetAllAsync(cancellationToken)
+            .ToListAsync(cancellationToken);
 
         if (existingBonds.Count >= 2)
         {
@@ -24,16 +25,34 @@ public class BondDetailsSeeder(IBondDetailsRepository bondDetailsRepository, ILo
                 Name = "EDO0728",
                 Issuer = "Ministry of Finance - Poland",
                 StartEmissionDate = new DateOnly(2024, 7, 1),
-                EndEmissionDate = new DateOnly(2028, 7, 1),
-                Type = BondType.InflationBond
+                EndEmissionDate = new DateOnly(2034, 7, 1),
+                Type = BondType.InflationBond,
+                CalculationMethods =
+                [
+                    new ()
+                    {
+                        DateOperator = DateOperator.UntilDate,
+                        DateValue = "2034-07-01",
+                        Rate = 0.025m
+                    }
+                ]
             },
             new BondDetails
             {
                 Name = "EDO0428",
                 Issuer = "Ministry of Finance - Poland",
                 StartEmissionDate = new DateOnly(2024, 4, 1),
-                EndEmissionDate = new DateOnly(2028, 4, 1),
-                Type = BondType.InflationBond
+                EndEmissionDate = new DateOnly(2034, 4, 1),
+                Type = BondType.InflationBond,
+                CalculationMethods =
+                [
+                    new ()
+                    {
+                        DateOperator = DateOperator.UntilDate,
+                        DateValue = "2034-04-01",
+                        Rate = 0.025m
+                    }
+                ]
             }
         };
 

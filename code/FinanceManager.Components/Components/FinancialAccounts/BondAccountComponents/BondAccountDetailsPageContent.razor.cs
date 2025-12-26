@@ -202,9 +202,9 @@ public partial class BondAccountDetailsPageContent : ComponentBase
         ChartData.Clear();
 
         if (Account is null || Account.Entries is null) return;
-        Dictionary<DateOnly, decimal> pricesDaily = Account.GetDailyPrice(_bondDetails);
+        Dictionary<DateOnly, decimal> pricesDaily = Account.GetDailyPrice(DateOnly.FromDateTime(_dateStart), DateOnly.FromDateTime(_dateEnd), _bondDetails);
 
-        var result = pricesDaily.Select(x => new TimeSeriesModel() { DateTime = x.Key.ToDateTime(new TimeOnly()), Value = x.Value }).ToList();
+        var result = pricesDaily.Select(x => new TimeSeriesModel() { DateTime = x.Key.ToDateTime(new TimeOnly()), Value = x.Value }).OrderBy(x => x.DateTime).ToList();
         if (result.Count != 0)
         {
             var timeBucket = TimeBucketService.Get(result.Select(x => (x.DateTime, x.Value)));
