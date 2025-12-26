@@ -1,21 +1,20 @@
-
 using FinanceManager.Components.Components.SharedComponents;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents;
 
-public partial class ManageBankAccount
+public partial class ManageBondAccount
 {
     private MudForm? _form;
     private bool _success;
     private string[] _errors = [];
-    private BankAccount? _bankAccount = null;
+    private BondAccount? _bondAccount = null;
 
     public string AccountName { get; set; } = string.Empty;
     public AccountLabel AccountType { get; set; }
@@ -26,7 +25,7 @@ public partial class ManageBankAccount
     [Inject] public required NavigationManager Navigation { get; set; }
     [Inject] public required IDialogService DialogService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
-    [Inject] public required ILogger<ManageBankAccount> Logger { get; set; }
+    [Inject] public required ILogger<ManageBondAccount> Logger { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
     protected override async Task OnParametersSetAsync()
@@ -36,16 +35,16 @@ public partial class ManageBankAccount
             var user = await LoginService.GetLoggedUser();
             if (user is null) return;
 
-            _bankAccount = await FinancalAccountService.GetAccount<BankAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            _bondAccount = await FinancalAccountService.GetAccount<BondAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
-            if (_bankAccount is null) return;
+            if (_bondAccount is null) return;
 
-            AccountName = _bankAccount.Name;
-            AccountType = _bankAccount.AccountType;
+            AccountName = _bondAccount.Name;
+            AccountType = _bondAccount.AccountType;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error loading bank account with ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error loading bond account with ID {AccountId}", AccountId);
         }
     }
 
@@ -58,23 +57,23 @@ public partial class ManageBankAccount
             await _form.Validate();
 
             if (!_form.IsValid) return;
-            if (_bankAccount is null) return;
+            if (_bondAccount is null) return;
             if (string.IsNullOrEmpty(AccountName))
             {
                 _errors = [$"AccountName can not be empty"];
                 return;
             }
 
-            if (_bankAccount is null) return;
+            if (_bondAccount is null) return;
 
-            BankAccount updatedAccount = new BankAccount(_bankAccount.UserId, _bankAccount.AccountId, AccountName, AccountType);
+            BondAccount updatedAccount = new BondAccount(_bondAccount.UserId, _bondAccount.AccountId, AccountName, AccountType);
             await FinancalAccountService.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error updating bank account with ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error updating bond account with ID {AccountId}", AccountId);
         }
     }
 
@@ -96,7 +95,7 @@ public partial class ManageBankAccount
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error removing bank account with ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error removing bond account with ID {AccountId}", AccountId);
         }
     }
 }

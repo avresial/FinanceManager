@@ -241,25 +241,23 @@ public class FinancialAccountService(BankAccountHttpClient bankAccountHttpClient
     {
         if (await AccountExists<BankAccount>(accountId))
             await bankEntryHttpClient.DeleteEntryAsync(accountId, entryId);
-
-        if (await AccountExists<StockAccount>(accountId))
+        else if (await AccountExists<StockAccount>(accountId))
             await stockEntryHttpClient.DeleteEntryAsync(accountId, entryId);
-
-        if (await AccountExists<BondAccount>(accountId))
+        else if (await AccountExists<BondAccount>(accountId))
             await bondEntryHttpClient.DeleteEntryAsync(accountId, entryId);
 
-        throw new InvalidOperationException($"Account {accountId}, entryId {entryId} not found.");
+        else throw new InvalidOperationException($"Account {accountId}, entryId {entryId} not found.");
     }
-    public async Task UpdateAccount<T>(T account) where T : BasicAccountInformation
+    public Task UpdateAccount<T>(T account) where T : BasicAccountInformation
     {
         if (account is BankAccount bankAccount)
-            await bankAccountHttpClient.UpdateAccountAsync(new(bankAccount.AccountId, bankAccount.Name, bankAccount.AccountType));
+            return bankAccountHttpClient.UpdateAccountAsync(new(bankAccount.AccountId, bankAccount.Name, bankAccount.AccountType));
 
         if (account is StockAccount)
-            await stockAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.Enums.AccountLabel.Stock));
+            return stockAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.Enums.AccountLabel.Stock));
 
         if (account is BondAccount)
-            await bondAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.Enums.AccountLabel.Bond));
+            return bondAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.Enums.AccountLabel.Bond));
 
         throw new NotSupportedException($"Account {account.GetType()} type not supported for getting start date.");
     }

@@ -22,10 +22,7 @@ public partial class BankAccountDetailsRow
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILogger<BankAccountDetailsRow> Logger { get; set; }
 
-    protected override void OnParametersSet()
-    {
-        _currency = SettingsService.GetCurrency();
-    }
+    protected override void OnParametersSet() => _currency = SettingsService.GetCurrency();
 
     public async Task Confirm()
     {
@@ -46,18 +43,10 @@ public partial class BankAccountDetailsRow
         await InvokeAsync(StateHasChanged);
     }
 
-    public async Task Cancel()
-    {
-        _updateEntryVisibility = false;
-        _removeEntryVisibility = false;
-        await InvokeAsync(StateHasChanged);
-    }
-
     public async Task HideOverlay()
     {
         _updateEntryVisibility = false;
         _removeEntryVisibility = false;
-        //await AccountDataSynchronizationService.AccountChanged();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -71,5 +60,4 @@ public partial class BankAccountDetailsRow
         _removeEntryVisibility = true;
         await Task.CompletedTask;
     }
-
 }

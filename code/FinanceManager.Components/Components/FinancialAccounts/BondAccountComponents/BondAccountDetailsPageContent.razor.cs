@@ -92,13 +92,11 @@ public partial class BondAccountDetailsPageContent : ComponentBase
 
         if (Account.Entries is null) return;
 
-        List<(BondAccountEntry, decimal)> orderedByPrice = [];
-        foreach (var entry in Account.Entries)
-        {
-            orderedByPrice.Add(new(entry, entry.ValueChange));
-        }
+        var orderedByPrice = Account.Entries
+            .OrderByDescending(x => x.ValueChange)
+            .Select(x => (x, x.ValueChange))
+            .ToList();
 
-        orderedByPrice = orderedByPrice.OrderByDescending(x => x.Item2).ToList();
         _top5 = orderedByPrice.Take(5).ToList();
         _bottom5 = orderedByPrice.Skip(Account.Entries.Count - 5).Take(5).OrderBy(x => x.Item2).ToList();
     }
@@ -106,8 +104,6 @@ public partial class BondAccountDetailsPageContent : ComponentBase
     {
         try
         {
-
-
             if (Account is null || Account.Start is null) return;
             if (_user is null) return;
 
@@ -209,12 +205,15 @@ public partial class BondAccountDetailsPageContent : ComponentBase
         Dictionary<DateOnly, decimal> pricesDaily = Account.GetDailyPrice(_bondDetails);
 
         var result = pricesDaily.Select(x => new TimeSeriesModel() { DateTime = x.Key.ToDateTime(new TimeOnly()), Value = x.Value }).ToList();
-        var timeBucket = TimeBucketService.Get(result.Select(x => (x.DateTime, x.Value)));
-        ChartData.AddRange(timeBucket.Select(x => new TimeSeriesModel()
+        if (result.Count != 0)
         {
-            DateTime = x.Date,
-            Value = x.Objects.Last(),
-        }));
+            var timeBucket = TimeBucketService.Get(result.Select(x => (x.DateTime, x.Value)));
+            ChartData.AddRange(timeBucket.Select(x => new TimeSeriesModel()
+            {
+                DateTime = x.Date,
+                Value = x.Objects.Last(),
+            }));
+        }
     }
     private async Task UpdateDates()
     {

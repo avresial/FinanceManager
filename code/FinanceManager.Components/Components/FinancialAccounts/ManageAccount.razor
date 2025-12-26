@@ -1,5 +1,7 @@
 ﻿@page "/ManageAccount/{AccountId:int}"
+@using FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents
 @using FinanceManager.Components.Services
+@using FinanceManager.Domain.Entities.Bonds
 @using FinanceManager.Domain.Entities.Cash
 @using FinanceManager.Domain.Entities.Stocks
 @using FinanceManager.Domain.Repositories
@@ -8,7 +10,7 @@
 @using FinanceManager.Domain.Repositories.Account
 
 
-@if (accountType is null)
+@if (AccountType is null)
 {
     <DisplaySpinner />
 }
@@ -21,18 +23,22 @@ else
                 @ErrorMessage
             </div>
         }
-        else if (accountType == typeof(BankAccount))
+        else if (AccountType == typeof(BankAccount))
         {
             <ManageBankAccount AccountId="@AccountId" />
         }
-        else if (accountType == typeof(StockAccount))
+        else if (AccountType == typeof(StockAccount))
         {
             <ManageStockAccount AccountId="@AccountId" />
+        }
+        else if (AccountType == typeof(BondAccount))
+        {
+            <ManageBondAccount AccountId="@AccountId" />
         }
         else
         {
             <div class="alert alert-danger" role="alert">
-                @accountType type is not supported.
+                @AccountType type is not supported.
             </div>
         }
     </div>
@@ -41,27 +47,43 @@ else
 
 @code {
     public ElementReference MyElementReference;
-    public Type? accountType = null;
+    public Type? AccountType = null;
 
-    [Parameter]
-    public required int AccountId { get; set; }
+    [Parameter] public required int AccountId { get; set; }
 
-    [Inject]
-    public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required ILogger<ManageAccount> Logger { get; set; }
 
     public string ErrorMessage { get; set; } = string.Empty;
 
 
     protected override async Task OnInitializedAsync()
     {
-        await UpdateEntries();
+        try
+        {
+            await UpdateEntries();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing ManageAccount component");
+            ErrorMessage = "An error occurred while loading the account information.";
+        }
     }
 
     protected override async Task OnParametersSetAsync()
     {
-        MyElementReference = default;
-        accountType = null;
-        await UpdateEntries();
+        try
+        {
+            MyElementReference = default;
+            AccountType = null;
+            await UpdateEntries();
+        }
+        catch ( Exception ex)
+        {
+            Logger.LogError(ex, "Error updating entries in ManageAccount component");
+            ErrorMessage = "An error occurred while updating the account information.";
+        }
+       
     }
     private async Task UpdateEntries()
     {
@@ -69,11 +91,12 @@ else
         {
             var accounts = await FinancalAccountService.GetAvailableAccounts();
             if (accounts.ContainsKey(AccountId))
-                accountType = accounts[AccountId];
+                AccountType = accounts[AccountId];
 
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Error fetching available accounts in ManageAccount component");
             ErrorMessage = ex.Message;
         }
     }

@@ -11,9 +11,9 @@ public partial class StockAccountDetailsRow
 {
     private decimal? _price = null;
     private bool _expanded = false;
-    private bool RemoveEntryVisibility;
-    private bool UpdateEntryVisibility;
-    internal Currency currency = DefaultCurrency.PLN;
+    private bool _removeEntryVisibility;
+    private bool _updateEntryVisibility;
+    internal Currency _currency = DefaultCurrency.PLN;
 
     [Parameter] public required StockAccount InvestmentAccount { get; set; }
     [Parameter] public required StockAccountEntry InvestmentEntry { get; set; }
@@ -26,14 +26,14 @@ public partial class StockAccountDetailsRow
     {
         try
         {
-            var price = await StockPriceHttpClient.GetStockPrice(InvestmentEntry.Ticker, currency.Id, InvestmentEntry.PostingDate);
+            var price = await StockPriceHttpClient.GetStockPrice(InvestmentEntry.Ticker, _currency.Id, InvestmentEntry.PostingDate);
             if (price is null)
             {
                 _price = null;
             }
             else
             {
-                currency = price.Currency;
+                _currency = price.Currency;
                 _price = price.PricePerUnit * InvestmentEntry.Value;
             }
         }
@@ -46,45 +46,36 @@ public partial class StockAccountDetailsRow
 
     protected override void OnParametersSet()
     {
-        currency = SettingsService.GetCurrency();
-
+        _currency = SettingsService.GetCurrency();
         base.OnParametersSet();
     }
 
     public async Task Confirm()
     {
-        UpdateEntryVisibility = false;
-        RemoveEntryVisibility = false;
+        _updateEntryVisibility = false;
+        _removeEntryVisibility = false;
         _expanded = false;
-        await InvokeAsync(StateHasChanged);
 
         InvestmentAccount.Remove(InvestmentEntry.EntryId);
         await FinancialAccountService.RemoveEntry(InvestmentEntry.EntryId, InvestmentAccount.AccountId);
-    }
-
-    public async Task Cancel()
-    {
-        UpdateEntryVisibility = false;
-        RemoveEntryVisibility = false;
         await InvokeAsync(StateHasChanged);
     }
 
     public async Task HideOverlay()
     {
-        UpdateEntryVisibility = false;
-        RemoveEntryVisibility = false;
+        _updateEntryVisibility = false;
+        _removeEntryVisibility = false;
         await InvokeAsync(StateHasChanged);
     }
 
     public async Task ShowEditOverlay()
     {
-        UpdateEntryVisibility = true;
+        _updateEntryVisibility = true;
         await Task.CompletedTask;
     }
     public async Task ShowRemoveOverlay()
     {
-        RemoveEntryVisibility = true;
+        _removeEntryVisibility = true;
         await Task.CompletedTask;
     }
-
 }

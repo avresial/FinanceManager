@@ -25,6 +25,18 @@
             <div class="col-4">
                 <div class="row text-muted mb-1">
                     <div style="font-size:0.8rem !important">
+                        Balance
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        @BondAccountEntry.Value @_currency
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
                         Change
                     </div>
                 </div>
@@ -124,16 +136,12 @@
 
 <MudOverlay @bind-Visible=_updateEntryVisibility DarkBackground="true">
     <MudPaper Class="p-5">
-        @* <UpdateBondEntry BondAccount=BondAccount BondAccountEntry="BondAccountEntry" ActionCompleted="HideOverlay" /> *@
-        <MudText>Update Bond Entry not implemented yet</MudText>
-        <MudButton OnClick="HideOverlay">Close</MudButton>
+        <UpdateBondEntry BondAccount=BondAccount BondAccountEntry="BondAccountEntry" ActionCompleted="HideOverlay" />
     </MudPaper>
 </MudOverlay>
 
 <MudOverlay @bind-Visible=_removeEntryVisibility DarkBackground="true">
     <MudPaper Class="p-5">
-        @* <RemoveBondEntry BondAccountName=@BondAccount.Name BondAccountEntry="BondAccountEntry" Cancel="HideOverlay" Confirm="Confirm" /> *@
-        <MudText>Remove Bond Entry not implemented yet</MudText>
-        <MudButton OnClick="HideOverlay">Close</MudButton>
+        <RemoveBondEntry BondAccountName=@BondAccount.Name BondAccountEntry="BondAccountEntry" Cancel="HideOverlay" Confirm="Confirm" />
     </MudPaper>
 </MudOverlay>

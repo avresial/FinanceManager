@@ -1,27 +1,29 @@
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents;
 
 public partial class BondAccountDetailsRow : ComponentBase
 {
-    [Parameter] public required BondAccountEntry BondAccountEntry { get; set; }
-    [Parameter] public required BondAccount BondAccount { get; set; }
-    [Parameter] public BondDetails? BondDetails { get; set; }
-
-    [Inject] public required ISettingsService SettingsService { get; set; }
-
     private bool _expanded;
     private bool _updateEntryVisibility;
     private bool _removeEntryVisibility;
     private Currency _currency = DefaultCurrency.PLN;
 
-    protected override void OnInitialized()
-    {
-        _currency = SettingsService.GetCurrency();
-    }
+    [Parameter] public required BondAccountEntry BondAccountEntry { get; set; }
+    [Parameter] public required BondAccount BondAccount { get; set; }
+    [Parameter] public BondDetails? BondDetails { get; set; }
+
+    [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
+    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
+    [Inject] public required ILogger<BondAccountDetailsRow> Logger { get; set; }
+
+    protected override void OnInitialized() => _currency = SettingsService.GetCurrency();
 
     public void ShowEditOverlay()
     {
@@ -33,15 +35,26 @@ public partial class BondAccountDetailsRow : ComponentBase
         _removeEntryVisibility = true;
         StateHasChanged();
     }
-    public void HideOverlay()
+    public async Task HideOverlay()
     {
         _updateEntryVisibility = false;
         _removeEntryVisibility = false;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
-    public void Confirm()
+    public async Task Confirm()
     {
-        // Logic to remove entry
-        HideOverlay();
+        try
+        {
+            await FinancialAccountService.RemoveEntry(BondAccountEntry.EntryId, BondAccount.AccountId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while removing entry");
+        }
+
+        await AccountDataSynchronizationService.AccountChanged();
+        await HideOverlay();
+
+        await InvokeAsync(StateHasChanged);
     }
 }

@@ -1,12 +1,13 @@
-﻿@using FinanceManager.Domain.Enums
-@if (StocktAccount is not null)
+@using FinanceManager.Domain.Enums
+
+@if (_bondAccount is not null)
 {
     <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
         <MudContainer MaxWidth="MaxWidth.Medium">
             <MudGrid Justify="Justify.Center">
                 <MudItem xs="12" sm="12" md="12">
                     <MudText Typo="Typo.h4">Update</MudText>
-                    <MudText Typo="Typo.subtitle1">@StocktAccount.Name</MudText>
+                    <MudText Typo="Typo.subtitle1">@_bondAccount.Name</MudText>
                 </MudItem>
                 @if (_errors.Any())
                 {
@@ -17,10 +18,17 @@
                         }
                     </MudItem>
                 }
-                <MudItem xs="12">
+                <MudItem xs="8">
                     <MudTextField @bind-Value="AccountName" T="string" Label="Account name" Variant="Variant.Text" />
                 </MudItem>
-
+                <MudItem xs="4">
+                    <MudSelect @bind-Value="AccountType" Label="Type">
+                        @foreach (var type in Enum.GetValues(typeof(AccountLabel)).Cast<AccountLabel>())
+                        {
+                            <MudSelectItem Value="type">@type</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
                 <MudItem xs="12">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update</MudButton>
                     <MudButton Variant="Variant.Filled" Color="Color.Error" DropShadow="false" OnClick=Remove>Delete</MudButton>

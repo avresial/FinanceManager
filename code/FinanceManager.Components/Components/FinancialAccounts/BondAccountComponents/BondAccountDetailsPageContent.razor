@@ -10,8 +10,7 @@
     </h3>
 
     <div class="col-12 mb-4" style="min-height:150px;">
-        <LineChartJs
-            Series="@([ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()])" />
+        <LineChartJs Series="@([ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()])" />
     </div>
 
     <div class="container mt-3">
@@ -31,9 +30,7 @@
 
                     <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
                         <MudPaper Class="p-5">
-                            @* <AddBondEntry BondAccount=Account ActionCompleted="HideOverlay" /> *@
-                                <MudText>Add Bond Entry not implemented yet</MudText>
-                            <MudButton OnClick="HideOverlay">Close</MudButton>
+                            <AddBondEntry BondAccount=Account ActionCompleted="HideOverlay" />
                         </MudPaper>
                     </MudOverlay>
                 </div>
@@ -187,12 +184,11 @@
 }
 else if (Account is not null && (Account.Entries is null || !Account.Entries.Any()))
 {
-    @* <AddBondEntry BondAccount=Account ActionCompleted="HideOverlay">
+    <AddBondEntry BondAccount=Account ActionCompleted="HideOverlay">
         <CustomButton>
             <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.AccountId}")"> Import</MudButton>
         </CustomButton>
-    </AddBondEntry> *@
-        <MudText>No entries found. Add Bond Entry not implemented yet.</MudText>
+    </AddBondEntry>
     <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.AccountId}")"> Import
     </MudButton>
 }

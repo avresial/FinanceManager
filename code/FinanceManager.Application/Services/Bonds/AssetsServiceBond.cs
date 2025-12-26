@@ -68,7 +68,9 @@ public class AssetsServiceBond(IFinancialAccountRepository financialAccountRepos
             decimal value = 0;
             foreach (var bondDetailsId in account.GetStoredBondsIds())
             {
-                var latestEntry = account.Get(asOfDate).First(x => x.BondDetailsId == bondDetailsId);
+                var latestEntry = account.Get(asOfDate)
+                    .FirstOrDefault(x => x.BondDetailsId == bondDetailsId);
+                if (latestEntry is null) continue;
 
                 value += latestEntry.Value;
             }

@@ -1,6 +1,8 @@
 ﻿@page "/Import/{AccountId:int}"
 @using FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents
+@using FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents
 @using FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents
+@using FinanceManager.Domain.Entities.Bonds
 @using FinanceManager.Domain.Entities.Cash
 @using FinanceManager.Domain.Entities.Stocks
 
@@ -24,6 +26,10 @@ else
         else if (accountType == typeof(StockAccount))
         {
             <ImportStockEntriesComponent AccountId="@AccountId" />
+        }
+        else if (accountType == typeof(BondAccount))
+        {
+            <ImportBondEntriesComponent AccountId="@AccountId" />
         }
         else
         {
