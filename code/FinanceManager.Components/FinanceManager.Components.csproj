@@ -15,6 +15,7 @@
 		<PackageReference Include="Blazor-ApexCharts" />
 		<PackageReference Include="CsvHelper" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" />
 		<PackageReference Include="MudBlazor" />
 		<PackageReference Include="Newtonsoft.Json" />
 	</ItemGroup>

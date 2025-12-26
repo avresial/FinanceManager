@@ -1,8 +1,10 @@
-﻿@using FinanceManager.Components.Components.Charts
+﻿@using FinanceManager.Components.Components.SharedComponents.Charts
 @using FinanceManager.Components.Components.Dashboard
 
-<MudText Typo="Typo.h3" Class="mx-2" style="position: absolute; z-index: 50; display: inline-block;">@Ticker.ToUpper()</MudText>
-<LineChartJs Series="@([_stockPrices.Select(x => new ChartJsLineDataPoint(x.Date.ToLocalTime(), x.PricePerUnit)).ToList()])" />
+<MudText Typo="Typo.h3" Class="mx-2" style="position: absolute; z-index: 50; display: inline-block;">@Ticker.ToUpper()
+</MudText>
+<LineChartJs
+    Series="@([_stockPrices.Select(x => new ChartJsLineDataPoint(x.Date.ToLocalTime(), x.PricePerUnit)).ToList()])" />
 
 <DashboardDatePicker StockStyle DateChanged=DateChanged InitialDateRange=DateRange />
 
@@ -21,16 +23,20 @@
 
         <MudItem xs="12">
             <MudGrid>
-                <MudItem  xs="12" sm="6">
+                <MudItem xs="12" sm="6">
                     <div class="d-flex flex-grow-1 gap-4">
                         @if (_existingCurrency is null)
                         {
-                            <MudAutocomplete @bind-Value="SelectedCurrency" Label="Currency" Variant="Variant.Text" SearchFunc="Search" Class="flex-grow-0" Disabled=@(string.IsNullOrEmpty(Ticker)) />
-                            <MudTextField Immediate @bind-Value="PricePerUnit" Label="Price per unit" Variant="Variant.Text" Class="flex-grow-1" Disabled=@(string.IsNullOrEmpty(Ticker)) />
+                            <MudAutocomplete @bind-Value="SelectedCurrency" Label="Currency" Variant="Variant.Text"
+                                SearchFunc="Search" Class="flex-grow-0" Disabled=@(string.IsNullOrEmpty(Ticker)) />
+                            <MudTextField Immediate @bind-Value="PricePerUnit" Label="Price per unit" Variant="Variant.Text"
+                                Class="flex-grow-1" Disabled=@(string.IsNullOrEmpty(Ticker)) />
                         }
                         else
                         {
-                            <MudTextField Immediate @bind-Value="PricePerUnit" Adornment="Adornment.Start" AdornmentText="@_existingCurrency.ShortName" Label="Price per unit" Variant="Variant.Text" Class="flex-grow-1" Disabled=@(string.IsNullOrEmpty(Ticker)) />
+                            <MudTextField Immediate @bind-Value="PricePerUnit" Adornment="Adornment.Start"
+                                AdornmentText="@_existingCurrency.ShortName" Label="Price per unit" Variant="Variant.Text"
+                                Class="flex-grow-1" Disabled=@(string.IsNullOrEmpty(Ticker)) />
                         }
 
                     </div>
@@ -42,11 +48,13 @@
                 <MudItem xs="12">
                     @if (!_stockPriceExists)
                     {
-                        <MudButton @onclick=AddNewStock Variant="Variant.Filled" Color="Color.Primary" Disabled=@(string.IsNullOrEmpty(Ticker) || PricePerUnit <= 0)>Add</MudButton>
+                        <MudButton @onclick=AddNewStock Variant="Variant.Filled" Color="Color.Primary"
+                            Disabled=@(string.IsNullOrEmpty(Ticker) || PricePerUnit <= 0)>Add</MudButton>
                     }
                     else
                     {
-                        <MudButton @onclick=UpdateStockPrice Variant="Variant.Filled" Color="Color.Primary" Disabled=@(string.IsNullOrEmpty(Ticker))>Update</MudButton>
+                        <MudButton @onclick=UpdateStockPrice Variant="Variant.Filled" Color="Color.Primary"
+                            Disabled=@(string.IsNullOrEmpty(Ticker))>Update</MudButton>
                     }
                 </MudItem>
             </MudGrid>

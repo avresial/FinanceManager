@@ -1,5 +1,5 @@
 ﻿@using ApexCharts
-@using FinanceManager.Components.Components.Charts
+@using FinanceManager.Components.Components.SharedComponents.Charts
 @using FinanceManager.Domain.Entities.MoneyFlowModels;
 
 @if (Account is not null && Account.Entries is not null && (IsLoading || Account.Entries.Any()))
@@ -9,7 +9,8 @@
     </h3>
 
     <div class="col-12 mb-4" style="min-height:150px;">
-        <LineChartJs Series="@([ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()])" />
+        <LineChartJs
+            Series="@([ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()])" />
     </div>
 
     <div class="container mt-3">
@@ -17,13 +18,15 @@
             <div class="col-xs-12 col-lg-2">
 
                 <div class="row">
-                    <MudButton Variant="Variant.Text" Class="col-12" href="@($"Import/{Account.AccountId}")">Import</MudButton>
+                    <MudButton Variant="Variant.Text" Class="col-12" href="@($"Import/{Account.AccountId}")">Import
+                    </MudButton>
                     <MudButton Variant="Variant.Text" Class="col-12" Disabled>Export</MudButton>
-                    <MudButton Variant="Variant.Text" Class="col-12" href="@($"ManageAccount/{Account.AccountId}")">Manage</MudButton>
+                    <MudButton Variant="Variant.Text" Class="col-12" href="@($"ManageAccount/{Account.AccountId}")">Manage
+                    </MudButton>
                 </div>
                 <div class="row">
-                    <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick=ShowOverlay
-                            Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:2;" />
+                    <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add"
+                        OnClick=ShowOverlay Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:2;" />
 
                     <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
                         <MudPaper Class="p-5">
@@ -46,7 +49,8 @@
                     @if (_isLoadingMore)
                     {
                         <MudStack Justify="Justify.Center" Row>
-                            <MudProgressCircular Color="MudBlazor.Color.Primary" Size="MudBlazor.Size.Small" Indeterminate Class="my-3" />
+                            <MudProgressCircular Color="MudBlazor.Color.Primary" Size="MudBlazor.Size.Small" Indeterminate
+                                Class="my-3" />
                         </MudStack>
                     }
                     else if (!_loadedAllData && !IsLoading)
@@ -75,7 +79,8 @@
                                 </div>
                                 <div class="col-6 text-end">
                                     <div class="row mb-1 text-success">
-                                        <div class="test-end">@_balanceChange @_currency <i class="fs-5 bi bi-arrow-up-right"></i></div>
+                                        <div class="test-end">@_balanceChange @_currency <i
+                                                class="fs-5 bi bi-arrow-up-right"></i></div>
                                     </div>
                                 </div>
                             </div>
@@ -92,7 +97,8 @@
                                 </div>
                                 <div class="col-6 text-end">
                                     <div class="row mb-1 text-danger">
-                                        <div class="test-end">@_balanceChange @_currency <i class="fs-5 bi bi-arrow-down-right"></i></div>
+                                        <div class="test-end">@_balanceChange @_currency <i
+                                                class="fs-5 bi bi-arrow-down-right"></i></div>
                                     </div>
                                 </div>
                             </div>
@@ -185,7 +191,8 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
 {
     <AddBankEntry BankAccount=Account ActionCompleted="HideOverlay">
         <CustomButton>
-            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.AccountId}")"> Import</MudButton>
+            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.AccountId}")">
+                Import</MudButton>
         </CustomButton>
     </AddBankEntry>
 }

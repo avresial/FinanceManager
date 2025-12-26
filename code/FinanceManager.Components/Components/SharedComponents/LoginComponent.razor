@@ -1,7 +1,7 @@
 ﻿@using Blazored.LocalStorage
 @using Blazored.SessionStorage
 @using FinanceManager.Domain.Repositories
-@using FinanceManager.Components.ViewModels
+@using FinanceManager.Components.Models
 @using FinanceManager.Domain.Repositories.Account
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
@@ -20,8 +20,10 @@
                     }
                 }
                 <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
-                    <MudTextField @bind-Value="_loginModel.Login" T="string" Label="Login" Variant="Variant.Outlined" Immediate Required Class="mt-5" />
-                    <MudTextField @bind-Value="_loginModel.Password" T="string" Label="Password" Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
+                    <MudTextField @bind-Value="_loginModel.Login" T="string" Label="Login" Variant="Variant.Outlined"
+                        Immediate Required Class="mt-5" />
+                    <MudTextField @bind-Value="_loginModel.Password" T="string" Label="Password"
+                        Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
 
                     <MudButton Class="my-2" Variant="Variant.Filled" Color="Color.Primary" type="submit" @onclick=Login>
                         <MudText Typo="Typo.h5">Login</MudText>

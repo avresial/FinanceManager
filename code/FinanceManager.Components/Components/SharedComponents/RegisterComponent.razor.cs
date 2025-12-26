@@ -1,6 +1,6 @@
 using Blazored.LocalStorage;
 using FinanceManager.Application.Providers;
-using FinanceManager.Components.ViewModels;
+using FinanceManager.Components.Models;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
