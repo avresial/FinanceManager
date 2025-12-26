@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents;
 
 public partial class BankAccountDetailsPageContent : ComponentBase
 {

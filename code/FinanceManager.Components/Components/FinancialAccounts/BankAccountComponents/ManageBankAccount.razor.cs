@@ -1,4 +1,5 @@
 
+using FinanceManager.Components.Components.SharedComponents;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Enums;
@@ -6,7 +7,7 @@ using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAccountComponents
+namespace FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents
 {
     public partial class ManageBankAccount
     {

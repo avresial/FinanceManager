@@ -5,7 +5,7 @@ using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 
-namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents;
 
 public partial class StockAccountDetailsRow
 {

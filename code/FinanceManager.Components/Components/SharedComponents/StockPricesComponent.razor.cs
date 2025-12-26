@@ -4,7 +4,7 @@ using FinanceManager.Domain.Entities.Stocks;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components;
+namespace FinanceManager.Components.Components.SharedComponents;
 
 public partial class StockPricesComponent
 {

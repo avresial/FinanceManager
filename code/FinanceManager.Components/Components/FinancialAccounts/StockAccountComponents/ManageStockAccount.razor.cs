@@ -1,10 +1,11 @@
+using FinanceManager.Components.Components.SharedComponents;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockAccountComponents
+namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents
 {
     public partial class ManageStockAccount : ComponentBase
     {

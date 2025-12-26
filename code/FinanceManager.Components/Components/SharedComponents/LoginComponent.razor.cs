@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components
+namespace FinanceManager.Components.Components.SharedComponents
 {
     public partial class LoginComponent
     {

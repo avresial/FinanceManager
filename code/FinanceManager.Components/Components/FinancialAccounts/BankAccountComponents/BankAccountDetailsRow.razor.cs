@@ -5,7 +5,7 @@ using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Components.Components.AccountDetailsPageContents.BankAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents;
 
 public partial class BankAccountDetailsRow
 {

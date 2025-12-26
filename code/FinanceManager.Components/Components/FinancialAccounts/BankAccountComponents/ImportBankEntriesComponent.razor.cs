@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 using MudBlazor;
 using System.Globalization;
 
-namespace FinanceManager.Components.Components.ImportData;
+namespace FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents;
 
 public partial class ImportBankEntriesComponent : ComponentBase
 {

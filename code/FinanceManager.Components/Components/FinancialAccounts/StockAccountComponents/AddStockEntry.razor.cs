@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using MudBlazor.Utilities;
 
-namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents;
 
 public partial class AddStockEntry
 {

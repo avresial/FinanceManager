@@ -30,10 +30,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Content Update="Components\AccountDetailsPageContents\StockAccountComponents\UpdateStockEntry.razor">
+		<Content Update="Components\FinancialAccounts\StockAccountComponents\UpdateStockEntry.razor">
 			<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
 		</Content>
-		<Content Update="Components\AccountDetailsPageContents\BankAccountComponents\UpdateBankEntry.razor">
+		<Content Update="Components\FinancialAccounts\BankAccountComponents\UpdateBankEntry.razor">
 			<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
 		</Content>
 		<InternalsVisibleTo Include="FinanceManager.IntegrationTests" />

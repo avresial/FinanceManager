@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Components.Components;
+namespace FinanceManager.Components.Components.SharedComponents;
 
 public partial class StringSpinner : IDisposable
 {

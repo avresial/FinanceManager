@@ -9,7 +9,7 @@ using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.AccountDetailsPageContents.StockAccountComponents
+namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents
 {
     public partial class StockAccountDetailsPageContent : ComponentBase
     {

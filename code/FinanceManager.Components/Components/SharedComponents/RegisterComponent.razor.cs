@@ -6,7 +6,7 @@ using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components;
+namespace FinanceManager.Components.Components.SharedComponents;
 
 public partial class RegisterComponent
 {

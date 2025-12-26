@@ -3,7 +3,7 @@ using FinanceManager.Domain.Entities.Imports;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Components.Components.ImportData;
+namespace FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents;
 
 public partial class BankEntryConflictResolver
 {

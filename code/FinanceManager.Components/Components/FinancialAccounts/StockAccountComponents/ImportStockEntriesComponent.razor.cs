@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Components.Forms;
 using MudBlazor;
 using System.Globalization;
 
-namespace FinanceManager.Components.Components.ImportData
+namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents
 {
     public partial class ImportStockEntriesComponent
     {
