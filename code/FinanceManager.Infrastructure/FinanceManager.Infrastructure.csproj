@@ -21,6 +21,12 @@
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+
+		<PackageReference Include="System.Security.Cryptography.Xml" />
+
+		<PackageReference Include="System.Security.Permissions" />
+
+		<PackageReference Include="System.Windows.Extensions" />
 	</ItemGroup>
 
 	<ItemGroup>

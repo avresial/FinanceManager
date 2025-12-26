@@ -18,10 +18,10 @@
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" />
 		<PackageReference Include="MudBlazor" />
 		<PackageReference Include="Newtonsoft.Json" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\FinanceManager.Infrastructure\FinanceManager.Infrastructure.csproj" />
+		<PackageReference Include="System.Configuration.ConfigurationManager" />
+		<PackageReference Include="System.Security.Cryptography.Xml" />
+		<PackageReference Include="System.Security.Permissions" />
+		<PackageReference Include="System.Windows.Extensions" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -33,6 +33,10 @@
 		</Content>
 		<InternalsVisibleTo Include="FinanceManager.IntegrationTests" />
 		<InternalsVisibleTo Include="FinanceManager.UnitTests" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\FinanceManager.Infrastructure\FinanceManager.Infrastructure.csproj" />
 	</ItemGroup>
 
 </Project>
