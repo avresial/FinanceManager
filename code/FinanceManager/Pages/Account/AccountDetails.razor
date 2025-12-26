@@ -1,8 +1,10 @@
 ﻿@page "/AccountDetails/{AccountId:int}"
 @using FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents
 @using FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents
+@using FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents
 @using FinanceManager.Domain.Entities.Cash
 @using FinanceManager.Domain.Entities.Stocks
+@using FinanceManager.Domain.Entities.Bonds
 
 @if (accountType is null)
 {
@@ -24,6 +26,10 @@ else
         else if (accountType == typeof(StockAccount))
         {
             <StockAccountDetailsPageContent AccountId="@AccountId" />
+        }
+        else if (accountType == typeof(BondAccount))
+        {
+            <BondAccountDetailsPageContent AccountId="@AccountId" />
         }
         else
         {
