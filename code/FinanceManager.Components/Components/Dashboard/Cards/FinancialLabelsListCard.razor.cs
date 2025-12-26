@@ -55,6 +55,4 @@ public partial class FinancialLabelsListCard
             _isLoading = false;
         }
     }
-
-
 }
