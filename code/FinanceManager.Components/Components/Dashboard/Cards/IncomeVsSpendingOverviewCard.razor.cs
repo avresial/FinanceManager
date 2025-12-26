@@ -1,4 +1,4 @@
-using FinanceManager.Components.Components.Charts;
+using FinanceManager.Components.Components.SharedComponents.Charts;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;

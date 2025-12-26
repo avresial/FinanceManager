@@ -1,6 +1,5 @@
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Enums;
-using Xunit;
 
 namespace FinanceManager.UnitTests.Domain.Entities.Bonds;
 
@@ -63,8 +62,8 @@ public class BondAccountTests
         var postingDate = new DateTime(2023, 1, 1);
         var endDate = postingDate.AddDays(4); // Jan 5
 
-        var entry1 = new BondAccountEntry(1, 1, postingDate, 100m, 100m, 1);
-        var entry2 = new BondAccountEntry(1, 2, endDate, 100m, 0m, 1); // Extends End to Jan 5
+        var entry1 = new BondAccountEntry(1, 1, postingDate, 0, 100m, 1);
+        var entry2 = new BondAccountEntry(1, 2, endDate, 0, 100m, 1); // Extends End to Jan 5
 
         var account = new BondAccount(1, 1, "Test Account", AccountLabel.Other);
         account.Add(entry1);
@@ -88,11 +87,11 @@ public class BondAccountTests
         { Id = 1 };
 
         // Act
-        var result = account.GetDailyPrice([bondDetails]);
+        var result = account.GetDailyPrice(DateOnly.FromDateTime(postingDate), DateOnly.FromDateTime(endDate), [bondDetails]);
 
         // Assert
         Assert.Equal(5, result.Count);
         Assert.Equal(100.01m, result[DateOnly.FromDateTime(postingDate.AddDays(1))]);
-        Assert.Equal(100.04m, result[DateOnly.FromDateTime(endDate)], 2);
+        Assert.Equal(200.04m, result[DateOnly.FromDateTime(endDate)], 2);
     }
 }

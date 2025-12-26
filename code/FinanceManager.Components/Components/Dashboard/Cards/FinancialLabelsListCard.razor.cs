@@ -1,4 +1,3 @@
-using FinanceManager.Components.Components.Models;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
@@ -56,6 +55,4 @@ public partial class FinancialLabelsListCard
             _isLoading = false;
         }
     }
-
-
 }

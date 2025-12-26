@@ -21,7 +21,7 @@ public class AssetsServiceBond(IFinancialAccountRepository financialAccountRepos
         List<BondDetails> bondDetails = await bondDetailsRepository.GetAllAsync().ToListAsync();
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end).Where(x => x.ContainsAssets))
         {
-            foreach (var price in account.GetDailyPrice(bondDetails))
+            foreach (var price in account.GetDailyPrice(DateOnly.FromDateTime(start), DateOnly.FromDateTime(end), bondDetails))
             {
                 if (!prices.ContainsKey(price.Key.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)))
                     prices.Add(price.Key.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), price.Value);
@@ -43,7 +43,7 @@ public class AssetsServiceBond(IFinancialAccountRepository financialAccountRepos
         List<BondDetails> bondDetails = await bondDetailsRepository.GetAllAsync().ToListAsync();
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end).Where(x => x.ContainsAssets && x.AccountType.ToString() == investmentType.ToString()))
         {
-            foreach (var price in account.GetDailyPrice(bondDetails))
+            foreach (var price in account.GetDailyPrice(DateOnly.FromDateTime(start), DateOnly.FromDateTime(end), bondDetails))
             {
                 if (!prices.ContainsKey(price.Key.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)))
                     prices.Add(price.Key.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), price.Value);
@@ -68,7 +68,9 @@ public class AssetsServiceBond(IFinancialAccountRepository financialAccountRepos
             decimal value = 0;
             foreach (var bondDetailsId in account.GetStoredBondsIds())
             {
-                var latestEntry = account.Get(asOfDate).First(x => x.BondDetailsId == bondDetailsId);
+                var latestEntry = account.Get(asOfDate)
+                    .FirstOrDefault(x => x.BondDetailsId == bondDetailsId);
+                if (latestEntry is null) continue;
 
                 value += latestEntry.Value;
             }

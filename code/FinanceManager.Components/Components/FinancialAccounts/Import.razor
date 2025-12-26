@@ -1,0 +1,41 @@
+﻿@page "/Import/{AccountId:int}"
+@using FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents
+@using FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents
+@using FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents
+@using FinanceManager.Domain.Entities.Bonds
+@using FinanceManager.Domain.Entities.Cash
+@using FinanceManager.Domain.Entities.Stocks
+
+@if (accountType is null)
+{
+    <DisplaySpinner />
+}
+else
+{
+    <div class="container-fluid px-0" @ref=MyElementReference>
+        @if (ErrorMessage != string.Empty)
+        {
+            <div class="alert alert-warning" role="alert">
+                @ErrorMessage
+            </div>
+        }
+        else if (accountType == typeof(BankAccount))
+        {
+            <ImportBankEntriesComponent AccountId="@AccountId" />
+        }
+        else if (accountType == typeof(StockAccount))
+        {
+            <ImportStockEntriesComponent AccountId="@AccountId" />
+        }
+        else if (accountType == typeof(BondAccount))
+        {
+            <ImportBondEntriesComponent AccountId="@AccountId" />
+        }
+        else
+        {
+            <div class="alert alert-danger" role="alert">
+                @accountType type is not supported.
+            </div>
+        }
+    </div>
+}
