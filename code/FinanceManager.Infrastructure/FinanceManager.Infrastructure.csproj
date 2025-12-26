@@ -1,5 +1,5 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	
 	<ItemGroup>
 		<InternalsVisibleTo Include="FinanceManager.IntegrationTests" />
 		<InternalsVisibleTo Include="FinanceManager.UnitTests" />
@@ -22,15 +22,15 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 
+		<PackageReference Include="System.Memory.Data" />
 		<PackageReference Include="System.Security.Cryptography.Xml" />
-
 		<PackageReference Include="System.Security.Permissions" />
-
 		<PackageReference Include="System.Windows.Extensions" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\FinanceManager.Application\FinanceManager.Application.csproj" />
+	  <ProjectReference Include="..\FinanceManager.Application\FinanceManager.Application.csproj" />
+	  <ProjectReference Include="..\FinanceManager.Domain\FinanceManager.Domain.csproj" />
 	</ItemGroup>
 
 </Project>

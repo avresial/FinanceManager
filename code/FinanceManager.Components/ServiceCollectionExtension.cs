@@ -1,6 +1,8 @@
 ﻿using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
+using FinanceManager.Infrastructure.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FinanceManager.Components;
@@ -33,7 +35,8 @@ public static class ServiceCollectionExtension
                 .AddScoped<AccountDataSynchronizationService>()
                 .AddScoped<IUserService, UserService>()
                 .AddScoped<IFinancialAccountService, FinancialAccountService>()
-                ;
+                .AddScoped<IUserRepository, UserLocalStorageRepository>();
+        ;
 
         return services;
     }

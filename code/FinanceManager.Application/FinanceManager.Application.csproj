@@ -11,8 +11,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Blazored.LocalStorage" />
-		<PackageReference Include="Blazored.SessionStorage" />
+	
 		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" />
 		<PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />

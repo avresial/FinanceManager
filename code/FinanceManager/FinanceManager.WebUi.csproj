@@ -2,8 +2,7 @@
 
 	<PropertyGroup>
 		<ApplicationIcon>wwwroot\favicon.ico</ApplicationIcon>
-		<PublishTrimmed>false</PublishTrimmed>
-	</PropertyGroup>
+		</PropertyGroup>
 
 	<ItemGroup>
 		<Compile Include="..\GlobalUsings.cs" Link="GlobalUsings.cs" />

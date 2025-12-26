@@ -153,7 +153,7 @@
                                     No bank synchronization
                                 </MudListItem>
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
-                                    @Application.Providers.PricingProvider.GetMaxAllowedEntries(Domain.Enums.PricingLevel.Free) transactions
+                                    @PricingProvider.GetMaxAllowedEntries(Domain.Enums.PricingLevel.Free) transactions
                                 </MudListItem>
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
                                     Up to @PricingProvider.GetMaxAccountCount(Domain.Enums.PricingLevel.Free) accounts

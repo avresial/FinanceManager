@@ -2,7 +2,6 @@ using Blazored.LocalStorage;
 using Blazored.SessionStorage;
 using FinanceManager.Application;
 using FinanceManager.Components;
-using FinanceManager.Infrastructure;
 using FinanceManager.WebUi;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -21,6 +20,6 @@ builder.Services.AddBlazoredSessionStorage();
 var apiBaseAddress = builder.Configuration["Api:BaseAddress"] ?? throw new InvalidOperationException("API base address is not configured.");
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
 
-builder.Services.AddApplication().AddInfrastructureFrontend().AddUIComponents();
+builder.Services.AddApplication().AddUIComponents();
 
 await builder.Build().RunAsync();

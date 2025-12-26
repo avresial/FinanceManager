@@ -1,4 +1,3 @@
-using Azure;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.ValueObjects;

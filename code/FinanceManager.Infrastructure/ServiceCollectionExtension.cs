@@ -19,13 +19,6 @@ namespace FinanceManager.Infrastructure;
 
 public static class ServiceCollectionExtension
 {
-    public static IServiceCollection AddInfrastructureFrontend(this IServiceCollection services)
-    {
-        services.AddScoped<IUserRepository, UserLocalStorageRepository>();
-
-        return services;
-    }
-
     public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
     {
 
