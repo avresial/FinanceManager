@@ -1,4 +1,4 @@
-html, body {
+/*html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
@@ -34,6 +34,11 @@ a, .btn-link {
 
 .validation-message {
     color: red;
+}
+*/
+
+a:hover {
+    color: inherit; /* takes color from parent element */
 }
 
 #blazor-error-ui {
