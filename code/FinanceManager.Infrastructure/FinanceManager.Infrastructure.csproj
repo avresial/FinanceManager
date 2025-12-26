@@ -1,11 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFramework>net9.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-	</PropertyGroup>
-
 	<ItemGroup>
 		<InternalsVisibleTo Include="FinanceManager.IntegrationTests" />
 		<InternalsVisibleTo Include="FinanceManager.UnitTests" />
@@ -27,6 +21,12 @@
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+
+		<PackageReference Include="System.Security.Cryptography.Xml" />
+
+		<PackageReference Include="System.Security.Permissions" />
+
+		<PackageReference Include="System.Windows.Extensions" />
 	</ItemGroup>
 
 	<ItemGroup>

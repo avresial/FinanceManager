@@ -1,0 +1,108 @@
+﻿@page "/Admin/EditUser/{UserId:int}"
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+
+@using FinanceManager.Domain.Enums
+@using FinanceManager.Domain.Services
+@using FinanceManager.Components.Components.User
+@using Microsoft.AspNetCore.Authorization
+@using System.Text.RegularExpressions
+
+@if (_userData is not null)
+{
+
+    <MudGrid Spacing="6">
+        <MudItem xs="12">
+            <MudText Typo="Typo.h3">
+                @_userData.Login.ToUpper()
+            </MudText>
+        </MudItem>
+        <MudItem xs="12">
+            <MudText Typo="Typo.h6">Change Password</MudText>
+            <MudForm @ref="_passwordForm" @bind-IsValid="@_success" Spacing="3">
+
+                <MudTextField T="string" Label="Password" HelperText="Choose a strong password" @ref="_passwordField"
+                    InputType="InputType.Password" Validation="@(new Func<string, IEnumerable<string>>(PasswordStrength))"
+                    Required RequiredError="Password is required!" />
+
+                <MudTextField T="string" @bind-Value="_confirmPassword" Immediate Required Label="Password"
+                    HelperText="Repeat the password" InputType="InputType.Password"
+                    Validation="@(new Func<string, string?>(PasswordMatch))" />
+
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-4" OnClick="ChangePasswordAsync"
+                    Disabled="@(!_success)">Update Password</MudButton>
+            </MudForm>
+
+            <MudDivider Class="my-3" />
+        </MudItem>
+
+        @if (_userData.UserRole != UserRole.Admin)
+        {
+            <MudItem xs="12">
+                <MudText Typo="Typo.h6">Change pricing plan</MudText>
+                <MudGrid>
+                    <MudItem xs="8">
+                        <MudSelect T="string" Label="Select Plan" @bind-Value="_selectedPlan">
+                            @foreach (var plan in _plans)
+                            {
+                                <MudSelectItem Value="@plan">@plan</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="4">
+                        <MudButton @onclick=UpgradePricingPlan Variant="Variant.Text" Color="Color.Primary" Class="mt-4"
+                            FullWidth Disabled=@(_userData?.PricingLevel.ToString() == _selectedPlan )>Upgrade Plan</MudButton>
+                    </MudItem>
+                </MudGrid>
+                <MudDivider Class="my-3" />
+            </MudItem>
+        }
+
+        <MudItem xs="12">
+            <MudText Typo="Typo.h6">Change role</MudText>
+            <MudGrid>
+                <MudItem xs="8">
+                    <MudSelect T="string" Label="Select role" @bind-Value="_selectedUserRole">
+                        @foreach (var plan in _roles)
+                        {
+                            <MudSelectItem Value="@plan">@plan</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="4">
+                    <MudButton @onclick=ChangeUserRole Variant="Variant.Text" Color="Color.Primary" Class="mt-4" FullWidth
+                        Disabled=@(_userData?.UserRole.ToString() == _selectedUserRole )>Change role</MudButton>
+                </MudItem>
+            </MudGrid>
+            <MudDivider Class="my-3" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudStack Spacing="2">
+
+                @foreach (var message in _errors)
+                {
+                    <MudAlert Severity="Severity.Error">@message</MudAlert>
+                }
+
+                @foreach (var message in _warnings)
+                {
+                    <MudAlert Severity="Severity.Warning">@message</MudAlert>
+                }
+
+                @foreach (var message in _info)
+                {
+                    <MudAlert Severity="Severity.Info">@message</MudAlert>
+                }
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+}
+else if (_isLoadingPage)
+{
+
+}
+else
+{
+    <MudAlert Severity="Severity.Error">User of id @UserId could not be found.</MudAlert>
+}

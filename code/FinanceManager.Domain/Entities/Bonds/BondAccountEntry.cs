@@ -24,12 +24,14 @@ public class BondAccountEntry(int accountId, int entryId, DateTime postingDate, 
 
     public Dictionary<DateOnly, decimal> GetPrice(DateOnly date, BondDetails bondDetails)
     {
+        if (bondDetails.CalculationMethods.Count == 0) throw new InvalidOperationException($"{nameof(BondDetails.CalculationMethods)} can't be empty");
+
         var capitalization = BondDetails.Capitalization;
         switch (capitalization)
         {
             case Capitalization.Annual:
                 Dictionary<DateOnly, decimal> result = [];
-                decimal capital = Value;
+                decimal capital = ValueChange;
                 decimal current = capital;
                 var postingDate = DateOnly.FromDateTime(PostingDate);
                 result[postingDate] = current;
@@ -37,7 +39,7 @@ public class BondAccountEntry(int accountId, int entryId, DateTime postingDate, 
                 {
                     var calculation = bondDetails.CalculationMethods.FirstOrDefault(cm => cm.IsActiveAt(date));
                     if (calculation is null) continue;
-                    decimal change = capital * calculation.Rate / 365;
+                    decimal change = Math.Round(capital * calculation.Rate / 365, 5);
                     current += change;
 
                     if ((i.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) - postingDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).Days % 365 == 0)

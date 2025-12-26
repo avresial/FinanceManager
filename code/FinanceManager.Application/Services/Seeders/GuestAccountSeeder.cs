@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Application.Providers;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Cash;
-using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
@@ -12,7 +12,8 @@ using Microsoft.Extensions.Logging;
 namespace FinanceManager.Application.Services.Seeders;
 
 public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, IFinancialLabelsRepository financialLabelsRepository,
-    IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository, IUserRepository userRepository, IConfiguration configuration,
+    IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository, IAccountRepository<BondAccount> bondAccountRepository,
+    IUserRepository userRepository, IConfiguration configuration,
     ILogger<GuestAccountSeeder> logger) : ISeeder
 {
     public async Task Seed(CancellationToken cancellationToken = default)
@@ -44,88 +45,22 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
         logger.LogTrace("Seeding data.");
         if (!await bankAccountRepository.GetAvailableAccounts(user.UserId).AnyAsync())
         {
+            var labels = await BankAccountSeeder.GetRandomLabels(financialLabelsRepository).ToListAsync();
             logger.LogTrace("Seeding bank accounts.");
-            await AddBankAccount(user.UserId, start, end);
+            await accountRepository.AddBankAccount(user.UserId, AccountLabel.Cash, labels, start, end);
+
             logger.LogTrace("Seeding loan accounts.");
-            await AddLoanAccount(user.UserId, start, end);
+            await accountRepository.AddBankAccount(user.UserId, AccountLabel.Loan, labels, start, end);
         }
 
         logger.LogTrace("Seeding stock accounts.");
         if (!await stockAccountRepository.GetAvailableAccounts(user.UserId).AnyAsync())
-            await AddStockAccount(user.UserId, start, end);
+            await accountRepository.AddStockAccount(user.UserId, start, end);
+
+        logger.LogTrace("Seeding bond accounts.");
+        if (!await bondAccountRepository.GetAvailableAccounts(user.UserId).AnyAsync())
+            await accountRepository.AddBondAccount(user.UserId, start, end);
 
         logger.LogTrace("Seeding finished.");
-    }
-    private async Task AddBankAccount(int userId, DateTime start, DateTime end)
-    {
-        var labels = await GetRandomLabels().ToListAsync();
-
-        var newAccount = await GetNewBankAccount(userId, "Cash 1", AccountLabel.Cash);
-        for (var date = start; date <= end; date = date.AddDays(1))
-            newAccount.AddEntry(GetNewBankAccountEntry(date, -90, 100, labels), false);
-        newAccount.RecalculateEntryValues(newAccount.Entries.Count - 1);
-        await accountRepository.AddAccount(newAccount);
-    }
-
-    private async Task AddLoanAccount(int userId, DateTime start, DateTime end)
-    {
-        var labels = await GetRandomLabels().ToListAsync();
-
-        var newAccount = await GetNewBankAccount(userId, "Loan 1", AccountLabel.Loan);
-        var days = (int)((end - start).TotalDays);
-        newAccount.AddEntry(GetNewBankAccountEntry(start, days * -100 - 1000, days * -100, labels), false);
-        for (DateTime date = start.AddDays(1); date <= end; date = date.AddDays(1))
-            newAccount.AddEntry(GetNewBankAccountEntry(date, 10, 100, labels), false);
-        newAccount.RecalculateEntryValues(newAccount.Entries.Count - 1);
-        await accountRepository.AddAccount(newAccount);
-    }
-
-    private async Task AddStockAccount(int userId, DateTime start, DateTime end)
-    {
-        var newAccount = await GetNewStockAccount(userId, "Stock 1", AccountLabel.Stock);
-
-        for (var date = start; date <= end; date = date.AddDays(1))
-            newAccount.Add(GetNewStockAccountEntry(userId, 0, date, -90, 100, "RandomTicker"), false);
-        newAccount.RecalculateEntryValues(newAccount.Entries.Count - 1);
-        await accountRepository.AddAccount(newAccount);
-    }
-
-    public async Task<StockAccount> GetNewStockAccount(int userId, string accountName, AccountLabel accountType)
-    {
-        var accountId = (await GetMaxId()) + 1;
-        return new(userId, accountId is null ? 0 : accountId.Value, accountName);
-    }
-    public static StockAccountEntry GetNewStockAccountEntry(int accountId, int entryId, DateTime date, int minValue, int maxValue,
-        string ticker, InvestmentType investmentType = InvestmentType.Stock) =>
-         new(accountId, entryId, date, 0, Random.Shared.Next(minValue, maxValue), ticker, investmentType);
-
-    public async Task<BankAccount> GetNewBankAccount(int userId, string accountName, AccountLabel accountType)
-    {
-        var accountId = (await GetMaxId()) + 1;
-        return new(userId, accountId is null ? 0 : accountId.Value, accountName, accountType);
-    }
-    public AddBankEntryDto GetNewBankAccountEntry(DateTime date, int minValue, int maxValue, List<FinancialLabel> labels,
-        string description = "") =>
-     new(date, Random.Shared.Next(minValue, maxValue), description, labels);
-
-    private async IAsyncEnumerable<FinancialLabel> GetRandomLabels()
-    {
-        await foreach (var label in financialLabelsRepository.GetLabels())
-            if (Random.Shared.Next(0, 100) < 40)
-                yield return label;
-    }
-    public async Task<int?> GetMaxId() // helper method
-    {
-        var stockAccountsLastId = await stockAccountRepository.GetLastAccountId();
-        var bankAccountsLastId = await bankAccountRepository.GetLastAccountId();
-
-        List<int> ids = [];
-        if (stockAccountsLastId is not null)
-            ids.Add(stockAccountsLastId.Value);
-
-        if (bankAccountsLastId is not null)
-            ids.Add(bankAccountsLastId.Value);
-
-        return ids.Count != 0 ? ids.Max() : null;
     }
 }

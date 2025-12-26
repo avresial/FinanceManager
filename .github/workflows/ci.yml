@@ -8,7 +8,7 @@ on:
 env:
   AZURE_WEBAPP_NAME: 'FinanceManagerApi'
   AZURE_WEBAPP_PACKAGE_PATH: './code/FinanceManager.Api/publish'
-  DOTNET_VERSION: '9.x'
+  DOTNET_VERSION: '10.x'
   SOLUTION_PATH: './code/FinanceManager.slx'
   API_PROJECT_PATH: './code/FinanceManager.Api/FinanceManager.Api.csproj'
   PUBLISH_DIR: './code/FinanceManager.Api/publish'
@@ -136,7 +136,7 @@ jobs:
           path: code
 
       - name: Restore execute permissions
-        run: chmod +x -R ./code/**/bin/Release/net9.0/*
+        run: chmod +x -R ./code/**/bin/Release/net10.0/*
 
       - name: Run unit tests with coverage
         run: dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --no-build --configuration Release --logger "trx;LogFileName=unit-test-results.trx" --results-directory ${{ github.workspace }}/TestResults --collect:"XPlat Code Coverage"

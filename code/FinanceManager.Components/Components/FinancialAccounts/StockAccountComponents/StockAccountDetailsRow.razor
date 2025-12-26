@@ -1,0 +1,144 @@
+﻿@using FinanceManager.Components.Helpers
+@using FinanceManager.Domain.Entities
+@using FinanceManager.Domain.Repositories;
+@using FinanceManager.Domain.Repositories.Account
+@using FinanceManager.Domain.Entities.Stocks;
+
+<MudExpansionPanel @bind-Expanded=_expanded>
+    <TitleContent>
+        <div class="row">
+            <div class="col-3">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        Ticker
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        @InvestmentEntry.Ticker
+                    </div>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        Value
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        @InvestmentEntry.Value.ToString("G29")
+                    </div>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        Change
+                    </div>
+                </div>
+                <div class="row">
+                    @if (InvestmentEntry.ValueChange > 0)
+                    {
+                        <div class="text-success">
+                            @InvestmentEntry.ValueChange.ToString("G29")
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-danger">
+                            @InvestmentEntry.ValueChange.ToString("G29")
+                        </div>
+                    }
+
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        Posting date
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        @InvestmentEntry.PostingDate.ToLocalTime().ToString("yyyy-MM-dd")
+                    </div>
+                </div>
+            </div>
+        </div>
+    </TitleContent>
+
+    <ChildContent>
+        @if (_expanded)
+        {
+            <div class="row">
+                <div class="col-12 mt-4">
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="row text-muted">
+                                <div style="font-size:0.8rem !important">
+                                    Investment type
+                                </div>
+                            </div>
+                            <div class="row mb-1">
+                                <div>
+                                    @InvestmentEntry.InvestmentType
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="row text-muted">
+                                <div style="font-size:0.8rem !important">
+                                    Posting date
+                                </div>
+                            </div>
+                            <div class="row mb-1">
+                                <div>
+                                    @InvestmentEntry.PostingDate.ToLocalTime()
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            @if (_price.HasValue)
+                            {
+                                <div class="row text-muted">
+                                    <div style="font-size:0.8rem !important">
+                                        Price
+                                    </div>
+                                </div>
+                                <div class="row mb-1">
+                                    <div>
+                                        @($"{_price.Value.ToString("0.00")} {_currency}")
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <MudButton Color=Color.Warning Variant="Variant.Text" Href=@($"StockPrices/{InvestmentEntry.Ticker}/{InvestmentEntry.PostingDate.ToRfc3339()}")>
+                                    Add ticker price
+                                </MudButton>
+                            }
+                        </div>
+                    </div>
+                    <div class="row">
+                        <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
+                        <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove</MudButton>
+                    </div>
+                </div>
+            </div>
+        }
+    </ChildContent>
+</MudExpansionPanel>
+
+<MudOverlay @bind-Visible=_updateEntryVisibility DarkBackground="true">
+    <MudPaper Class="p-5">
+        <UpdateStockEntry InvestmentAccount=InvestmentAccount InvestmentEntry="InvestmentEntry" ActionCompleted="HideOverlay" />
+    </MudPaper>
+</MudOverlay>
+
+<MudOverlay @bind-Visible=_removeEntryVisibility DarkBackground="true">
+    <MudPaper Class="p-5">
+        <RemoveStockEntry InvestmentAccountName=@InvestmentAccount.Name InvestmentEntry="InvestmentEntry" Cancel="HideOverlay" Confirm="Confirm" />
+    </MudPaper>
+</MudOverlay>
+

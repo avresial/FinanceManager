@@ -26,25 +26,20 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         AccountType = accountType;
         Entries = [];
     }
-    public Dictionary<DateOnly, decimal> GetDailyPrice(List<BondDetails> bondDetails)
+    public Dictionary<DateOnly, decimal> GetDailyPrice(DateOnly start, DateOnly end, List<BondDetails> bondDetails)
     {
         var result = new Dictionary<DateOnly, decimal>();
-        if (Entries is null || Start is null || End is null) return result;
+        if (Entries is null || start > end) return result;
 
-        DateOnly index = DateOnly.FromDateTime(Start.Value.Date);
         var detailsIds = Entries.Select(e => e.BondDetailsId).Distinct().ToList();
         if (!detailsIds.All(id => bondDetails.Any(bd => bd.Id == id)))
             throw new ArgumentException("Not all BondDetails are provided for the entries in this account.");
+
         List<Dictionary<DateOnly, decimal>> pricesPerDetail = [];
-        foreach (var id in detailsIds)
-        {
-            var entry = GetThisOrNextOlder(index.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), id);
-            if (entry is null) return result;
+        foreach (var entry in Entries.Where(x => x.PostingDate <= end.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)))
+            pricesPerDetail.Add(entry.GetPrice(end, bondDetails.Single(bd => bd.Id == entry.BondDetailsId)));
 
-            pricesPerDetail.Add(entry.GetPrice(DateOnly.FromDateTime(End.Value), bondDetails.Single(bd => bd.Id == entry.BondDetailsId)));
-        }
-
-        foreach (var price in pricesPerDetail.SelectMany(dict => dict))
+        foreach (var price in pricesPerDetail.SelectMany(dict => dict).OrderBy(x => x.Key))
         {
             if (result.ContainsKey(price.Key))
                 result[price.Key] += price.Value;

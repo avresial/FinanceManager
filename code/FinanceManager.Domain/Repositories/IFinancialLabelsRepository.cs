@@ -1,5 +1,4 @@
-﻿using FinanceManager.Domain.Entities.Cash;
-using FinanceManager.Domain.Entities.Shared.Accounts;
+﻿using FinanceManager.Domain.Entities.Shared.Accounts;
 
 namespace FinanceManager.Domain.Repositories;
 

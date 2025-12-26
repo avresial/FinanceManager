@@ -1,5 +1,5 @@
 ﻿<CascadingAuthenticationState>
-    <Router AppAssembly="@typeof(App).Assembly">
+    <Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="new[] { typeof(Home).Assembly }">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
@@ -53,8 +53,6 @@
             AppbarBackground = Colors.Gray.Darken4,
             DrawerBackground = Colors.Gray.Darken4,
             Surface = Colors.Gray.Darken3,
-           
-            
         },
     };
 }
