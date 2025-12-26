@@ -1,0 +1,147 @@
+@using FinanceManager.Domain.Entities.Bonds;
+
+<MudExpansionPanel @bind-Expanded=_expanded>
+    <TitleContent>
+        <div class="row">
+            <div class="col-4">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        Bond
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        @if (BondDetails is not null)
+                        {
+                            @BondDetails.Name
+                        }
+                        else
+                        {
+                            @("Unknown Bond")
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        Balance
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        @BondAccountEntry.Value @_currency
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        Change
+                    </div>
+                </div>
+                <div class="row">
+                    @if (BondAccountEntry.ValueChange > 0)
+                    {
+                        <div class="text-success">
+                            @BondAccountEntry.ValueChange @_currency
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-danger">
+                            @BondAccountEntry.ValueChange @_currency
+                        </div>
+                    }
+
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="row text-muted mb-1">
+                    <div style="font-size:0.8rem !important">
+                        Posting date
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        @BondAccountEntry.PostingDate.ToString("yyyy-MM-dd")
+                    </div>
+                </div>
+            </div>
+        </div>
+    </TitleContent>
+
+    <ChildContent>
+        @if (_expanded)
+        {
+            <div class="row">
+                <div class="col-12 mt-4">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="row text-muted">
+                                <div style="font-size:0.8rem !important">
+                                    Posting date
+                                </div>
+                            </div>
+                            <div class="row mb-1">
+                                <div>
+                                    @BondAccountEntry.PostingDate
+                                </div>
+                            </div>
+                        </div>
+                        
+                        @if (BondAccountEntry.Labels is not null && BondAccountEntry.Labels.Any())
+                        {
+                            <div class="col-6">
+                                <div class="row text-muted">
+                                    <div style="font-size:0.8rem !important">
+                                        Labels
+                                    </div>
+                                </div>
+                                <div class="row mb-1">
+                                    <div>
+                                        @foreach (var item in BondAccountEntry.Labels)
+                                        {
+                                            <MudChip T="string">@item.Name</MudChip>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        @if (BondDetails is not null)
+                        {
+                            <div class="col-12">
+                                <div class="row text-muted">
+                                    <div style="font-size:0.8rem !important">
+                                        Issuer
+                                    </div>
+                                </div>
+                                <div class="row mb-1">
+                                    <div>
+                                        @BondDetails.Issuer
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="row">
+                        <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
+                        <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove</MudButton>
+                    </div>
+                </div>
+            </div>
+        }
+    </ChildContent>
+</MudExpansionPanel>
+
+<MudOverlay @bind-Visible=_updateEntryVisibility DarkBackground="true">
+    <MudPaper Class="p-5">
+        <UpdateBondEntry BondAccount=BondAccount BondAccountEntry="BondAccountEntry" ActionCompleted="HideOverlay" />
+    </MudPaper>
+</MudOverlay>
+
+<MudOverlay @bind-Visible=_removeEntryVisibility DarkBackground="true">
+    <MudPaper Class="p-5">
+        <RemoveBondEntry BondAccountName=@BondAccount.Name BondAccountEntry="BondAccountEntry" Cancel="HideOverlay" Confirm="Confirm" />
+    </MudPaper>
+</MudOverlay>

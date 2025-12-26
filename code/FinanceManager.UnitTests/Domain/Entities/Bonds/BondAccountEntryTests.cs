@@ -1,5 +1,4 @@
 using FinanceManager.Domain.Entities.Bonds;
-using Xunit;
 
 namespace FinanceManager.UnitTests.Domain.Entities.Bonds;
 
@@ -46,7 +45,7 @@ public class BondAccountEntryTests
     {
         // Arrange
         var postingDate = new DateTime(2023, 1, 1);
-        var entry = new BondAccountEntry(1, 1, postingDate, 100m, 0m, 1);
+        var entry = new BondAccountEntry(1, 1, postingDate, 100m, 100m, 1);
 
         var calculationMethod = new BondCalculationMethod
         {
