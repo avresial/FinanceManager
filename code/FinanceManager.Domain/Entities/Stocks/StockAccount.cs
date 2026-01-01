@@ -99,7 +99,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
             return currentMaxId.Value + 1;
         return 0;
     }
-    public void Add(AddInvestmentEntryDto entry, bool recalculateValues = true) =>
+    public void Add(AddStockEntryDto entry, bool recalculateValues = true) =>
         Add(new StockAccountEntry(AccountId, -1, entry.PostingDate, -1, entry.ValueChange, entry.Ticker, entry.InvestmentType), recalculateValues);
 
     public override void Add(IEnumerable<StockAccountEntry> entries, bool recalculateValues = true)

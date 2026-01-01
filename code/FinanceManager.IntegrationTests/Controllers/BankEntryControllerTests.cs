@@ -134,7 +134,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
         var client = new BankEntryHttpClient(Client);
-        var addEntry = new AddBankAccountEntry(
+        var addEntry = new AddCashAccountEntry(
             _testAccountId,
             100,  // Use a unique entry ID that won't conflict
             DateTime.UtcNow.Date.AddDays(-3),

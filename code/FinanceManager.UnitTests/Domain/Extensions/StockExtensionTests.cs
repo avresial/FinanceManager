@@ -4,7 +4,7 @@ using FinanceManager.Domain.Extensions;
 
 namespace FinanceManager.UnitTests.Domain.Extensions;
 
-public class InvestmentEntryExtensionTests
+public class StockExtensionTests
 {
     [Fact]
     public void GetPrevious()
