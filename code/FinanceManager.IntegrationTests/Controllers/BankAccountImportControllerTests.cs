@@ -47,7 +47,7 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
             UserId = _testUserId,
             Name = "Test Bank Account",
             AccountLabel = AccountLabel.Other,
-            AccountType = AccountType.Bank
+            AccountType = AccountType.Currency
         });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
@@ -70,7 +70,7 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
 
-        List<BankEntryImportRecordDto> entries =
+        List<CurrencyEntryImportRecordDto> entries =
         [
             new(_utcNow.Date.AddDays(-2).AddHours(10), 100m),
             new(_utcNow.Date.AddDays(-1).AddHours(9), -50m)
@@ -98,7 +98,7 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
         var conflictDate = _utcNow.Date.AddDays(-3).AddHours(12);
         var conflictValue = 25m;
         await SeedExistingEntryExactMatch(conflictDate, conflictValue);
-        List<BankEntryImportRecordDto> entries =
+        List<CurrencyEntryImportRecordDto> entries =
         [
             new(conflictDate, conflictValue)
         ];
@@ -128,7 +128,7 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
         var conflictValue = 25m;
         await SeedExistingEntryExactMatch(conflictDate, conflictValue);
         await SeedExistingEntryExactMatch(conflictDate, conflictValue);
-        List<BankEntryImportRecordDto> entries = [new(conflictDate, conflictValue)];
+        List<CurrencyEntryImportRecordDto> entries = [new(conflictDate, conflictValue)];
 
         // act
         var result = await client.ImportBankEntriesAsync(new(_testAccountId, entries));
@@ -153,7 +153,7 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
         var conflictDate = _utcNow.Date.AddDays(-3).AddHours(12);
         var conflictValue = 25m;
         await SeedExistingEntryExactMatch(conflictDate, conflictValue);
-        List<BankEntryImportRecordDto> entries = [new(conflictDate, conflictValue), new(conflictDate, conflictValue)];
+        List<CurrencyEntryImportRecordDto> entries = [new(conflictDate, conflictValue), new(conflictDate, conflictValue)];
 
         // act
         var result = await client.ImportBankEntriesAsync(new(_testAccountId, entries));
@@ -215,7 +215,7 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
         var existingEntry = importResult.Conflicts[1].ExistingEntry;
         Assert.NotNull(existingEntry);
 
-        var resolution = new ResolvedImportConflict(_testAccountId, importIsPicked: true, importData: new BankEntryImport(existingDate, importValue),
+        var resolution = new ResolvedImportConflict(_testAccountId, importIsPicked: true, importData: new CurrencyEntryImport(existingDate, importValue),
         existingIsPicked: false, existingId: existingEntry!.EntryId);
 
         // act

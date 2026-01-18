@@ -1,8 +1,8 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Extensions;
 using FinanceManager.Domain.Services;
@@ -100,10 +100,10 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             if (_chart is not null) await _chart.UpdateSeriesAsync(true);
             await Task.Run(async () =>
             {
-                IEnumerable<BankAccount> bankAccounts = [];
+                IEnumerable<CurrencyAccount> bankAccounts = [];
                 try
                 {
-                    bankAccounts = (await FinancalAccountService.GetAccounts<BankAccount>(user.UserId, StartDateTime, DateTime.Now))
+                    bankAccounts = (await FinancalAccountService.GetAccounts<CurrencyAccount>(user.UserId, StartDateTime, DateTime.Now))
                    .Where(x => x.Entries is not null && x.Entries.Any());
                 }
                 catch (Exception ex)

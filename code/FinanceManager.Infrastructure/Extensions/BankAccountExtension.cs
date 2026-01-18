@@ -1,5 +1,5 @@
-using FinanceManager.Domain.Entities.Cash;
-using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 
 namespace FinanceManager.Infrastructure.Extensions;
 
@@ -12,16 +12,16 @@ public static class BankAccountExtension
     /// <param name="nextOlderEntry">Optional older entry (falls back to account.NextOlderEntry if null).</param>
     /// <param name="nextYoungerEntry">Optional younger entry (falls back to account.NextYoungerEntry if null).</param>
     /// <param name="entries">Optional explicit entries collection (falls back to account.Get()).</param>
-    public static BankAccountDto ToDto(this BankAccount account,
-        BankAccountEntry? nextOlderEntry = null,
-        BankAccountEntry? nextYoungerEntry = null,
-        IEnumerable<BankAccountEntry>? entries = null)
+    public static CurrencyAccountDto ToDto(this CurrencyAccount account,
+        CurrencyAccountEntry? nextOlderEntry = null,
+        CurrencyAccountEntry? nextYoungerEntry = null,
+        IEnumerable<CurrencyAccountEntry>? entries = null)
     {
         var effectiveEntries = entries ?? account.Get();
         var older = nextOlderEntry ?? account.NextOlderEntry;
         var younger = nextYoungerEntry ?? account.NextYoungerEntry;
 
-        return new BankAccountDto
+        return new CurrencyAccountDto
         {
             AccountId = account.AccountId,
             UserId = account.UserId,

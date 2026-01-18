@@ -4,6 +4,7 @@
 @using FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents
 @using FinanceManager.Domain.Entities.Bonds
 @using FinanceManager.Domain.Entities.Cash
+@using FinanceManager.Domain.Entities.FinancialAccounts.Currency
 @using FinanceManager.Domain.Entities.Stocks
 
 @if (accountType is null)
@@ -19,7 +20,7 @@ else
                 @ErrorMessage
             </div>
         }
-        else if (accountType == typeof(BankAccount))
+        else if (accountType == typeof(CurrencyAccount))
         {
             <ImportBankEntriesComponent AccountId="@AccountId" />
         }

@@ -1,5 +1,5 @@
 ﻿using FinanceManager.Components.Models;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Enums;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -8,7 +8,7 @@ namespace FinanceManager.Components.Components.Dashboard;
 
 public partial class AllAccountsSummary : ComponentBase
 {
-    [Parameter] public List<BankAccount> Accounts { get; set; } = [];
+    [Parameter] public List<CurrencyAccount> Accounts { get; set; } = [];
     [Inject] public ILogger<AllAccountsSummary>? Logger { get; set; }
     public List<ExpenseTypeSummary> SpendingByCategory { get; set; } = [];
     public List<Tuple<string, decimal>> WealthByCategory { get; set; } = [];
@@ -19,8 +19,8 @@ public partial class AllAccountsSummary : ComponentBase
         InitializeSpendingByCategory();
     }
 
-    public Dictionary<AccountLabel, List<BankAccountEntry>> ExpensesTypesAgregate { get; set; } = [];
-    public Dictionary<string, List<BankAccountEntry>> ExpensesCathegoriesAgregate { get; set; } = [];
+    public Dictionary<AccountLabel, List<CurrencyAccountEntry>> ExpensesTypesAgregate { get; set; } = [];
+    public Dictionary<string, List<CurrencyAccountEntry>> ExpensesCathegoriesAgregate { get; set; } = [];
 
     void InitializeWealthByCategory()
     {

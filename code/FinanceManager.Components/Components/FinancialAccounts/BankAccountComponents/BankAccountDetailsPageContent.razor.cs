@@ -1,8 +1,8 @@
 using FinanceManager.Application.Services;
 using FinanceManager.Components.Components.SharedComponents.Charts;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Services;
@@ -23,14 +23,14 @@ public partial class BankAccountDetailsPageContent : ComponentBase
     private DateTime? _youngestEntryDate;
 
     private bool _addEntryVisibility;
-    private List<BankAccountEntry>? _top5;
-    private List<BankAccountEntry>? _bottom5;
+    private List<CurrencyAccountEntry>? _top5;
+    private List<CurrencyAccountEntry>? _bottom5;
     private Currency _currency = DefaultCurrency.PLN;
     private UserSession? _user;
 
 
     public bool IsLoading = false;
-    public BankAccount? Account { get; set; }
+    public CurrencyAccount? Account { get; set; }
     public string ErrorMessage { get; set; } = string.Empty;
     public List<TimeSeriesModel> ChartData { get; set; } = [];
 
@@ -89,14 +89,14 @@ public partial class BankAccountDetailsPageContent : ComponentBase
         int entriesCountBeforeUpdate = 0;
         if (Account.Entries is not null) entriesCountBeforeUpdate = Account.Entries.Count();
 
-        Account = await FinancialAccountService.GetAccount<BankAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
+        Account = await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
 
         if (Account is not null && Account.Entries is not null && Account.Entries.Count == entriesCountBeforeUpdate)
         {
             if (Account.NextOlderEntry is not null)
             {
                 _dateStart = Account.NextOlderEntry.PostingDate;
-                Account = await FinancialAccountService.GetAccount<BankAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
+                Account = await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
             }
         }
         await UpdateChartData();
@@ -130,12 +130,12 @@ public partial class BankAccountDetailsPageContent : ComponentBase
             var accounts = await FinancialAccountService.GetAvailableAccounts();
             if (accounts.TryGetValue(AccountId, out Type? accountType))
             {
-                if (accountType == typeof(BankAccount))
+                if (accountType == typeof(CurrencyAccount))
                 {
                     await UpdateDates();
                     if (_user is not null)
                     {
-                        Account = await FinancialAccountService.GetAccount<BankAccount>(_user.UserId, AccountId, _dateStart, DateTime.UtcNow);
+                        Account = await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, _dateStart, DateTime.UtcNow);
                         if (Account is not null && Account.Entries is not null)
                             await UpdateInfo();
                     }
@@ -162,7 +162,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
             var entries = Account.Entries.Where(x => x.PostingDate.Date == date.Date).ToList();
             if (date == _dateStart && entries.Count == 0 && Account.NextOlderEntry is not null && _user is not null)
             {
-                var olderAccount = (await FinancialAccountService.GetAccount<BankAccount>(_user.UserId, AccountId, Account.NextOlderEntry.PostingDate,
+                var olderAccount = (await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, Account.NextOlderEntry.PostingDate,
                     Account.NextOlderEntry.PostingDate.Date.AddDays(1).AddTicks(-1)));
 
                 if (olderAccount is not null)

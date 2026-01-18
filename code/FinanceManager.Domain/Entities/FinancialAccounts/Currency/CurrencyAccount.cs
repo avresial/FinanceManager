@@ -4,17 +4,17 @@ using FinanceManager.Domain.Extensions;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
 
-namespace FinanceManager.Domain.Entities.Cash;
+namespace FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 
-public class BankAccount : FinancialAccountBase<BankAccountEntry>
+public class CurrencyAccount : FinancialAccountBase<CurrencyAccountEntry>
 {
-    public readonly BankAccountEntry? NextOlderEntry = null;
-    public readonly BankAccountEntry? NextYoungerEntry = null;
+    public readonly CurrencyAccountEntry? NextOlderEntry = null;
+    public readonly CurrencyAccountEntry? NextYoungerEntry = null;
     public AccountLabel AccountType { get; set; }
 
     [JsonConstructorAttribute]
-    public BankAccount(int userId, int accountId, string name, IEnumerable<BankAccountEntry>? entries = null, AccountLabel accountType = AccountLabel.Other,
-        BankAccountEntry? nextOlderEntry = null, BankAccountEntry? nextYoungerEntry = null) : base(userId, accountId, name)
+    public CurrencyAccount(int userId, int accountId, string name, IEnumerable<CurrencyAccountEntry>? entries = null, AccountLabel accountType = AccountLabel.Other,
+        CurrencyAccountEntry? nextOlderEntry = null, CurrencyAccountEntry? nextYoungerEntry = null) : base(userId, accountId, name)
     {
         this.UserId = userId;
         Entries = entries is null ? ([]) : entries.ToList();
@@ -22,13 +22,13 @@ public class BankAccount : FinancialAccountBase<BankAccountEntry>
         NextOlderEntry = nextOlderEntry;
         NextYoungerEntry = nextYoungerEntry;
     }
-    public BankAccount(int userId, int id, string name, AccountLabel accountType) : base(userId, id, name)
+    public CurrencyAccount(int userId, int id, string name, AccountLabel accountType) : base(userId, id, name)
     {
         AccountType = accountType;
         Entries = [];
     }
 
-    public BankAccountEntry? GetThisOrNextOlder(DateTime date)
+    public CurrencyAccountEntry? GetThisOrNextOlder(DateTime date)
     {
         if (Entries is null) return default;
         var result = Entries.GetThisOrNextOlder(date);
@@ -37,7 +37,7 @@ public class BankAccount : FinancialAccountBase<BankAccountEntry>
 
         return NextOlderEntry;
     }
-    public void AddEntry(AddBankEntryDto entry, bool recalculateValues = true)
+    public void AddEntry(AddCurrencyEntryDto entry, bool recalculateValues = true)
     {
         var alreadyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.ValueChange == entry.ValueChange);
         if (alreadyExistingEntry is not null)
@@ -53,7 +53,7 @@ public class BankAccount : FinancialAccountBase<BankAccountEntry>
         if (previousEntry is not null)
             index = Entries.IndexOf(previousEntry);
 
-        var newEntry = new BankAccountEntry(AccountId, GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange)
+        var newEntry = new CurrencyAccountEntry(AccountId, GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange)
         {
             Description = entry.Description,
             Labels = entry.Labels
@@ -74,7 +74,7 @@ public class BankAccount : FinancialAccountBase<BankAccountEntry>
         if (recalculateValues)
             RecalculateEntryValues(index);
     }
-    public override void UpdateEntry(BankAccountEntry entry, bool recalculateValues = true)
+    public override void UpdateEntry(CurrencyAccountEntry entry, bool recalculateValues = true)
     {
         Entries ??= [];
 

@@ -1,7 +1,7 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -29,7 +29,7 @@ public partial class AddBankEntry : ComponentBase
     private List<FinancialLabel> _possibleLabels = [];
     [Parameter] public RenderFragment? CustomButton { get; set; }
     [Parameter] public Func<Task>? ActionCompleted { get; set; }
-    [Parameter] public required BankAccount BankAccount { get; set; }
+    [Parameter] public required CurrencyAccount BankAccount { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
@@ -78,7 +78,7 @@ public partial class AddBankEntry : ComponentBase
         DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes,
             _time.Value.Seconds);
 
-        BankAccountEntry bankAccountEntry = new(BankAccount.AccountId, -1, date, -1, BalanceChange.Value)
+        CurrencyAccountEntry bankAccountEntry = new(BankAccount.AccountId, -1, date, -1, BalanceChange.Value)
         {
             Description = Description,
             Labels = GetLabels().ToList()

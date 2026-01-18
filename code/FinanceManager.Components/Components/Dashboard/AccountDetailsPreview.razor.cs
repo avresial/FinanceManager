@@ -1,11 +1,11 @@
-﻿using FinanceManager.Domain.Entities.Cash;
+﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Components.Components.Dashboard;
 
 public partial class AccountDetailsPreview : ComponentBase
 {
-    [Parameter] public required BankAccount BankAccountModel { get; set; }
+    [Parameter] public required CurrencyAccount BankAccountModel { get; set; }
 
     public string GetFirstBalance()
     {

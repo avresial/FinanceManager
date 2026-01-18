@@ -1,12 +1,12 @@
-﻿using FinanceManager.Domain.Entities.Cash;
+﻿using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.Shared.Accounts;
-using FinanceManager.Infrastructure.Dtos;
 
 namespace FinanceManager.Infrastructure.Extensions;
 
 public static class BankAccountEntryExtension
 {
-    public static BankAccountEntryDto ToDto(this BankAccountEntry bankAccountEntry) => new()
+    public static CurrencyAccountEntryDto ToDto(this CurrencyAccountEntry bankAccountEntry) => new()
     {
         AccountId = bankAccountEntry.AccountId,
         EntryId = bankAccountEntry.EntryId,

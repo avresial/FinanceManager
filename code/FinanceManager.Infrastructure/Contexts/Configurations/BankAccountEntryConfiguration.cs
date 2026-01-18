@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -6,9 +6,9 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace FinanceManager.Infrastructure.Contexts.Configurations;
 
-public class BankAccountEntryConfiguration : IEntityTypeConfiguration<BankAccountEntry>
+public class BankAccountEntryConfiguration : IEntityTypeConfiguration<CurrencyAccountEntry>
 {
-    public void Configure(EntityTypeBuilder<BankAccountEntry> builder)
+    public void Configure(EntityTypeBuilder<CurrencyAccountEntry> builder)
     {
         builder.HasKey(e => e.EntryId);
         builder.Property(e => e.EntryId)

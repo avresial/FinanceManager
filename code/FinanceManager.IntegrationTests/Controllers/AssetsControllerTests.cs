@@ -49,7 +49,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
             AccountId = 1,
             Name = accountName,
             AccountLabel = AccountLabel.Cash,
-            AccountType = AccountType.Bank
+            AccountType = AccountType.Currency
         };
 
         _testDatabase!.Context.Accounts.Add(test);

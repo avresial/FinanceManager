@@ -1,12 +1,12 @@
+using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Imports;
-using FinanceManager.Infrastructure.Dtos;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;
 
 public class BankAccountImportHttpClient(HttpClient httpClient)
 {
-    public async Task<ImportResult?> ImportBankEntriesAsync(BankDataImportDto importDto)
+    public async Task<ImportResult?> ImportBankEntriesAsync(CurrencyDataImportDto importDto)
     {
         var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/BankAccountImport/ImportBankEntries", importDto);
         if (!response.IsSuccessStatusCode) throw new Exception(await response.Content.ReadAsStringAsync());

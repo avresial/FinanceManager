@@ -1,5 +1,6 @@
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories.Account;
 using Moq;
@@ -17,10 +18,10 @@ public class LiabilitiesServiceTests
     public async Task IsAnyAccountWithLiabilities_ReturnsTrue_WhenAccountHasNegativeValue()
     {
         // Arrange
-        var account = new BankAccount(1, 1, "loan", AccountLabel.Loan);
-        account.Add(new BankAccountEntry(1, 1, DateTime.UtcNow, -100, -100));
+        var account = new CurrencyAccount(1, 1, "loan", AccountLabel.Loan);
+        account.Add(new CurrencyAccountEntry(1, 1, DateTime.UtcNow, -100, -100));
 
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
         .Returns(new[] { account }.ToAsyncEnumerable());
 
         // Act
@@ -34,10 +35,10 @@ public class LiabilitiesServiceTests
     public async Task GetEndLiabilitiesPerAccount_YieldsLiabilities_ForNegativeValueAccounts()
     {
         // Arrange
-        var account = new BankAccount(1, 1, "loan", AccountLabel.Loan);
-        account.Add(new BankAccountEntry(1, 1, DateTime.UtcNow, -200, -200));
+        var account = new CurrencyAccount(1, 1, "loan", AccountLabel.Loan);
+        account.Add(new CurrencyAccountEntry(1, 1, DateTime.UtcNow, -200, -200));
 
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
         .Returns(new[] { account }.ToAsyncEnumerable());
 
         // Act
@@ -54,13 +55,13 @@ public class LiabilitiesServiceTests
     public async Task GetEndLiabilitiesPerType_AggregatesByType_ForNegativeValues()
     {
         // Arrange
-        var account1 = new BankAccount(1, 1, "loan1", AccountLabel.Loan);
-        account1.Add(new BankAccountEntry(1, 1, DateTime.UtcNow, -100, -100));
+        var account1 = new CurrencyAccount(1, 1, "loan1", AccountLabel.Loan);
+        account1.Add(new CurrencyAccountEntry(1, 1, DateTime.UtcNow, -100, -100));
 
-        var account2 = new BankAccount(1, 2, "loan2", AccountLabel.Loan);
-        account2.Add(new BankAccountEntry(1, 1, DateTime.UtcNow, -50, -50));
+        var account2 = new CurrencyAccount(1, 2, "loan2", AccountLabel.Loan);
+        account2.Add(new CurrencyAccountEntry(1, 1, DateTime.UtcNow, -50, -50));
 
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
         .Returns(new[] { account1, account2 }.ToAsyncEnumerable());
 
         // Act
@@ -77,10 +78,10 @@ public class LiabilitiesServiceTests
     public async Task GetLiabilitiesTimeSeries_YieldsTimeSeries_ForNegativeValues()
     {
         // Arrange
-        var account = new BankAccount(1, 1, "loan", AccountLabel.Loan);
-        account.Add(new BankAccountEntry(1, 1, DateTime.UtcNow, -100, -100));
+        var account = new CurrencyAccount(1, 1, "loan", AccountLabel.Loan);
+        account.Add(new CurrencyAccountEntry(1, 1, DateTime.UtcNow, -100, -100));
 
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
         .Returns(new[] { account }.ToAsyncEnumerable());
 
         // Act

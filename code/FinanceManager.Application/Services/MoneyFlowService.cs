@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Stocks;
@@ -18,7 +18,7 @@ IStockPriceProvider stockPriceProvider) : IMoneyFlowService
         if (date > DateTime.UtcNow) date = DateTime.UtcNow;
         decimal result = 0;
 
-        await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, date.Date, date))
+        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, date.Date, date))
         {
             var newestEntry = account.GetThisOrNextOlder(date);
             if (newestEntry is null) continue;
@@ -73,7 +73,7 @@ IStockPriceProvider stockPriceProvider) : IMoneyFlowService
         var labels = await financialLabelsRepository.GetLabels().ToListAsync();
 
         var result = labels.ToDictionary(x => x.Id, x => new NameValueResult() { Name = x.Name, Value = 0 });
-        await foreach (BankAccount account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
+        await foreach (CurrencyAccount account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) continue;
             if (account.Entries is null || !account.Entries.Any()) continue;
@@ -100,7 +100,7 @@ IStockPriceProvider stockPriceProvider) : IMoneyFlowService
         Currency currency = DefaultCurrency.PLN; // TODO: use user currency settings
 
         decimal salary = 0;
-        await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
+        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
             salary += account.Entries.Where(x => x.Labels is not null && x.Labels.Any(y => y.Id == salaryLabel.Id)).Sum(x => x.ValueChange);
 
         if (salary == 0) yield break;

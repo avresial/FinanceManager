@@ -1,7 +1,7 @@
 
 using FinanceManager.Components.Components.SharedComponents;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -15,7 +15,7 @@ public partial class ManageBankAccount
     private MudForm? _form;
     private bool _success;
     private string[] _errors = [];
-    private BankAccount? _bankAccount = null;
+    private CurrencyAccount? _bankAccount = null;
 
     public string AccountName { get; set; } = string.Empty;
     public AccountLabel AccountType { get; set; }
@@ -36,7 +36,7 @@ public partial class ManageBankAccount
             var user = await LoginService.GetLoggedUser();
             if (user is null) return;
 
-            _bankAccount = await FinancalAccountService.GetAccount<BankAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            _bankAccount = await FinancalAccountService.GetAccount<CurrencyAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
             if (_bankAccount is null) return;
 
@@ -67,7 +67,7 @@ public partial class ManageBankAccount
 
             if (_bankAccount is null) return;
 
-            BankAccount updatedAccount = new BankAccount(_bankAccount.UserId, _bankAccount.AccountId, AccountName, AccountType);
+            CurrencyAccount updatedAccount = new CurrencyAccount(_bankAccount.UserId, _bankAccount.AccountId, AccountName, AccountType);
             await FinancalAccountService.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");

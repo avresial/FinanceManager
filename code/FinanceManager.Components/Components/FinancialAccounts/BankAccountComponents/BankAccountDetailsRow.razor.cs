@@ -1,6 +1,6 @@
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -14,8 +14,8 @@ public partial class BankAccountDetailsRow
     private bool _updateEntryVisibility;
     internal Currency _currency = DefaultCurrency.PLN;
 
-    [Parameter] public required BankAccount BankAccount { get; set; }
-    [Parameter] public required BankAccountEntry BankAccountEntry { get; set; }
+    [Parameter] public required CurrencyAccount BankAccount { get; set; }
+    [Parameter] public required CurrencyAccountEntry BankAccountEntry { get; set; }
 
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }

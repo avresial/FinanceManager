@@ -1,8 +1,8 @@
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 
 namespace FinanceManager.Domain.Entities.Imports;
 
-public record ImportConflict(int AccountId, BankEntryImport? ImportEntry, BankAccountEntry? ExistingEntry, string Reason)
+public record ImportConflict(int AccountId, CurrencyEntryImport? ImportEntry, CurrencyAccountEntry? ExistingEntry, string Reason)
 {
     public bool IsExactMatch =>
         ImportEntry is not null && ExistingEntry is not null &&

@@ -1,23 +1,23 @@
-﻿using FinanceManager.Domain.Entities.Cash;
+﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 
 namespace FinanceManager.UnitTests.Domain.Entities.Accounts;
 
 public class BankAccountTests
 {
-    private readonly BankAccount _bankAccount = new(1, 1, "Test account", FinanceManager.Domain.Enums.AccountLabel.Other);
+    private readonly CurrencyAccount _bankAccount = new(1, 1, "Test account", FinanceManager.Domain.Enums.AccountLabel.Other);
 
     [Fact]
     public void UpdateEntry_ChangesPostingDateAndDescription()
     {
         // Arrange
-        _bankAccount.Add(new BankAccountEntry(1, 1, new(2000, 1, 29), 30, 10));
-        _bankAccount.Add(new BankAccountEntry(1, 2, new(2000, 1, 30), 40, 10) { Description = "Test0" });
-        _bankAccount.Add(new BankAccountEntry(1, 3, new(2000, 1, 28), 20, 10));
-        _bankAccount.Add(new BankAccountEntry(1, 4, new(2000, 1, 26), 10, 10));
+        _bankAccount.Add(new CurrencyAccountEntry(1, 1, new(2000, 1, 29), 30, 10));
+        _bankAccount.Add(new CurrencyAccountEntry(1, 2, new(2000, 1, 30), 40, 10) { Description = "Test0" });
+        _bankAccount.Add(new CurrencyAccountEntry(1, 3, new(2000, 1, 28), 20, 10));
+        _bankAccount.Add(new CurrencyAccountEntry(1, 4, new(2000, 1, 26), 10, 10));
 
         // Act
         var entryToChange = _bankAccount.Get(new(2000, 1, 30)).First();
-        BankAccountEntry change = new(entryToChange.AccountId, entryToChange.EntryId, new(2000, 1, 27), entryToChange.Value, entryToChange.ValueChange)
+        CurrencyAccountEntry change = new(entryToChange.AccountId, entryToChange.EntryId, new(2000, 1, 27), entryToChange.Value, entryToChange.ValueChange)
         { Description = "Test1" };
         _bankAccount.UpdateEntry(change, true);
 
@@ -34,7 +34,7 @@ public class BankAccountTests
     {
         // Arrange
         // Act
-        _bankAccount.Add(new BankAccountEntry(1, 1, new(2000, 1, 1), 0, 10));
+        _bankAccount.Add(new CurrencyAccountEntry(1, 1, new(2000, 1, 1), 0, 10));
 
         // Assert
         Assert.NotNull(_bankAccount.Entries);
@@ -47,7 +47,7 @@ public class BankAccountTests
     {
         // Arrange
         // Act
-        _bankAccount.Add(new BankAccountEntry(1, 1, new(2000, 1, 1), 0, 10));
+        _bankAccount.Add(new CurrencyAccountEntry(1, 1, new(2000, 1, 1), 0, 10));
 
         // Assert
         Assert.NotNull(_bankAccount.Entries);

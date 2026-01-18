@@ -43,7 +43,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
             AccountId = 1,
             Name = accountName,
             AccountLabel = AccountLabel.Loan,
-            AccountType = AccountType.Bank
+            AccountType = AccountType.Currency
         };
 
         _testDatabase!.Context.Accounts.Add(test);

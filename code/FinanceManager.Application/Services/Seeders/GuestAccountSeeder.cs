@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Application.Providers;
 using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace FinanceManager.Application.Services.Seeders;
 
 public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, IFinancialLabelsRepository financialLabelsRepository,
-    IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository, IAccountRepository<BondAccount> bondAccountRepository,
+    IAccountRepository<StockAccount> stockAccountRepository, ICurrencyAccountRepository<CurrencyAccount> bankAccountRepository, IAccountRepository<BondAccount> bondAccountRepository,
     IUserRepository userRepository, IConfiguration configuration,
     ILogger<GuestAccountSeeder> logger) : ISeeder
 {

@@ -1,6 +1,6 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Dtos;
@@ -84,7 +84,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
             var user = await LoginService.GetLoggedUser();
             if (user is null) throw new Exception("User is null");
 
-            var existingAccount = await FinancialAccountService.GetAccount<BankAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            var existingAccount = await FinancialAccountService.GetAccount<CurrencyAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
             if (existingAccount is not null)
                 AccountName = existingAccount.Name;
         }
@@ -278,7 +278,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
                 throw new Exception("Failed to read data for import.");
 
             var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, Headers, Data);
-            var entries = exportResult.Select(x => new BankEntryImportRecordDto(x.PostingDate, x.ValueChange)).ToList();
+            var entries = exportResult.Select(x => new CurrencyEntryImportRecordDto(x.PostingDate, x.ValueChange)).ToList();
 
             try
             {

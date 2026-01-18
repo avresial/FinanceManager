@@ -1,15 +1,15 @@
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Services.Banks;
 
-public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAccountRepository,
-    IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
+public class BankAccountImportService(ICurrencyAccountRepository<CurrencyAccount> bankAccountRepository,
+    IAccountEntryRepository<CurrencyAccountEntry> bankAccountEntryRepository,
     IUserPlanVerifier userPlanVerifier, ILogger<BankAccountImportService> logger) : IBankAccountImportService
 {
-    public async Task<ImportResult> ImportEntries(int userId, int accountId, IEnumerable<BankEntryImport> entries)
+    public async Task<ImportResult> ImportEntries(int userId, int accountId, IEnumerable<CurrencyEntryImport> entries)
     {
         ArgumentNullException.ThrowIfNull(entries);
 
@@ -59,7 +59,7 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
                     if (imp.PostingDate.Kind != DateTimeKind.Utc)
                         throw new Exception($"Date kind of this entry posting date: {imp.PostingDate}, value change: {imp.ValueChange} is not UTC - {imp.PostingDate.Kind}");
 
-                    BankAccountEntry newEntry = new(accountId, 0, imp.PostingDate, imp.ValueChange, imp.ValueChange)
+                    CurrencyAccountEntry newEntry = new(accountId, 0, imp.PostingDate, imp.ValueChange, imp.ValueChange)
                     {
                         Description = string.Empty,
                         Labels = []
@@ -111,7 +111,7 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
         }
     }
 
-    private static IEnumerable<(BankEntryImport Import, BankAccountEntry Existing)> GetExactMatches(List<BankEntryImport> imports, List<BankAccountEntry> existing)
+    private static IEnumerable<(CurrencyEntryImport Import, CurrencyAccountEntry Existing)> GetExactMatches(List<CurrencyEntryImport> imports, List<CurrencyAccountEntry> existing)
     {
         foreach (var import in imports.GroupBy(x => (Date: x.PostingDate, ValuceChange: x.ValueChange)))
         {
@@ -126,7 +126,7 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
         }
     }
 
-    private static IEnumerable<ImportConflict> GetImportsWhichAreMissingFromExisting(int accountId, IEnumerable<BankEntryImport> imports, IEnumerable<BankAccountEntry> existing)
+    private static IEnumerable<ImportConflict> GetImportsWhichAreMissingFromExisting(int accountId, IEnumerable<CurrencyEntryImport> imports, IEnumerable<CurrencyAccountEntry> existing)
     {
         foreach (var import in imports.GroupBy(x => (Date: x.PostingDate, ValuceChange: x.ValueChange)))
         {
@@ -141,7 +141,7 @@ public class BankAccountImportService(IBankAccountRepository<BankAccount> bankAc
         }
     }
 
-    private static IEnumerable<ImportConflict> GetExistingWhichAreMissingFromImports(int accountId, IEnumerable<BankAccountEntry> existing, IEnumerable<BankEntryImport> imports)
+    private static IEnumerable<ImportConflict> GetExistingWhichAreMissingFromImports(int accountId, IEnumerable<CurrencyAccountEntry> existing, IEnumerable<CurrencyEntryImport> imports)
     {
         foreach (var existingItem in existing.GroupBy(x => (Date: x.PostingDate, ValuceChange: x.ValueChange)))
         {

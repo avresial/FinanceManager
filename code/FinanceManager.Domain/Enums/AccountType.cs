@@ -2,7 +2,7 @@
 
 public enum AccountType
 {
-    Bank,
+    Currency,
     Stock,
     Bond,
 }

@@ -66,10 +66,10 @@ public static class FinancialEntryBaseExtension
             int entryId = entriesForStepMonth.Last().EntryId;
             int accountId = entriesForStepMonth.Last().AccountId;
 
-            FinancialEntryBase bankAccountEntry = new(accountId, entryId, stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2),
+            FinancialEntryBase currencyAccountEntry = new(accountId, entryId, stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2),
                 Math.Round(entriesForStepMonth.Sum(x => x.ValueChange), 2));
 
-            result.Add(bankAccountEntry);
+            result.Add(currencyAccountEntry);
             stepDate = stepDate.AddMonths(1);
         }
 
@@ -98,10 +98,10 @@ public static class FinancialEntryBaseExtension
             }
             int entryId = entriesForStepMonth.Last().EntryId;
             int accountId = entriesForStepMonth.Last().AccountId;
-            FinancialEntryBase bankAccountEntry = new(accountId, entryId, stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2),
+            FinancialEntryBase currencyAccountEntry = new(accountId, entryId, stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2),
                 Math.Round(entriesForStepMonth.Sum(x => x.ValueChange), 2));
 
-            result.Add(bankAccountEntry);
+            result.Add(currencyAccountEntry);
             stepDate = stepDate.AddDays(7);
         }
 

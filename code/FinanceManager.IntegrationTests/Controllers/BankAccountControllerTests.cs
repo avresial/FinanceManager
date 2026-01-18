@@ -47,7 +47,7 @@ public class BankAccountControllerTests(OptionsProvider optionsProvider) : Contr
             UserId = _testUserId,
             Name = _testAccountName,
             AccountLabel = AccountLabel.Cash,
-            AccountType = AccountType.Bank
+            AccountType = AccountType.Currency
         });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }

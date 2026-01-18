@@ -1,5 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Cash;
-using FinanceManager.Domain.Entities.Currencies;
+﻿using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
@@ -10,7 +10,7 @@ namespace FinanceManager.Application.Services.Banks;
 
 internal class AssetsServiceBank(IFinancialAccountRepository financialAccountRepository) : IAssetsServiceTyped
 {
-    public bool IsOfType<T>() => typeof(T) == typeof(BankAccount);
+    public bool IsOfType<T>() => typeof(T) == typeof(CurrencyAccount);
 
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end)
     {
@@ -20,7 +20,7 @@ internal class AssetsServiceBank(IFinancialAccountRepository financialAccountRep
         Dictionary<DateTime, decimal> prices = [];
         TimeSpan step = TimeSpan.FromDays(1);
 
-        await foreach (BankAccount? account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end).Where(x => x.ContainsAssets))
+        await foreach (CurrencyAccount? account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end).Where(x => x.ContainsAssets))
         {
             var entry = account.GetThisOrNextOlder(end);
             if (entry is null || entry.Value <= 0) continue;
@@ -51,7 +51,7 @@ internal class AssetsServiceBank(IFinancialAccountRepository financialAccountRep
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         List<(DateTime Date, decimal Value)> assets = [];
 
-        await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end).Where(x => x.ContainsAssets && x.AccountType.ToString() == investmentType.ToString()))
+        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end).Where(x => x.ContainsAssets && x.AccountType.ToString() == investmentType.ToString()))
             assets.AddRange(account.Entries.GetAssets(start, end));
 
         List<TimeSeriesModel> result = [];
@@ -66,17 +66,17 @@ internal class AssetsServiceBank(IFinancialAccountRepository financialAccountRep
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
     {
-        await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Where(x => x.ContainsAssets))
+        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Where(x => x.ContainsAssets))
             yield return new(account.Name, account.Entries.First().Value);
     }
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
     {
-        financialAccountRepository.GetAccounts<BankAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Select(x => x.AccountType).Distinct();
+        financialAccountRepository.GetAccounts<CurrencyAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Select(x => x.AccountType).Distinct();
 
         Dictionary<AccountLabel, NameValueResult> accountLabelResults = [];
 
-        await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Where(x => x.ContainsAssets))
+        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Where(x => x.ContainsAssets))
         {
             var entry = account.Entries.Count != 0 ? account.Entries.FirstOrDefault() : account.NextOlderEntry;
             if (entry is null || entry.Value <= 0) continue;
@@ -96,6 +96,6 @@ internal class AssetsServiceBank(IFinancialAccountRepository financialAccountRep
     {
         var end = DateTime.UtcNow;
 
-        return financialAccountRepository.GetAccounts<BankAccount>(userId, end.AddDays(-1), end).AnyAsync(x => x.ContainsAssets).AsTask();
+        return financialAccountRepository.GetAccounts<CurrencyAccount>(userId, end.AddDays(-1), end).AnyAsync(x => x.ContainsAssets).AsTask();
     }
 }

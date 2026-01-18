@@ -1,10 +1,10 @@
 using FinanceManager.Api.Helpers;
-using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Commands.Account;
+using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Infrastructure.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,12 +15,12 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Tags("Bank Entries")]
 public class BankEntryController(
-    IBankAccountRepository<BankAccount> bankAccountRepository,
-    IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
+    ICurrencyAccountRepository<CurrencyAccount> bankAccountRepository,
+    IAccountEntryRepository<CurrencyAccountEntry> bankAccountEntryRepository,
     IUserPlanVerifier userPlanVerifier) : ControllerBase
 {
     [HttpGet]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BankAccountEntryDto))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountEntryDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetEntry([FromQuery] int accountId, [FromQuery] int entryId)
     {
@@ -60,14 +60,14 @@ public class BankEntryController(
     }
 
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BankAccountEntryDto))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountEntryDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> AddEntry(AddBankAccountEntry addEntry)
+    public async Task<IActionResult> AddEntry(AddCurrencyAccountEntry addEntry)
     {
         if (!await userPlanVerifier.CanAddMoreEntries(ApiAuthenticationHelper.GetUserId(User)))
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
-        return Ok(await bankAccountEntryRepository.Add(new BankAccountEntry(addEntry.AccountId, addEntry.EntryId, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
+        return Ok(await bankAccountEntryRepository.Add(new CurrencyAccountEntry(addEntry.AccountId, addEntry.EntryId, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
         {
             Description = addEntry.Description,
         }));
@@ -85,14 +85,14 @@ public class BankEntryController(
     }
 
     [HttpPut]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BankAccountEntryDto))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountEntryDto))]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> UpdateEntry(UpdateBankAccountEntry updateEntry)
+    public async Task<IActionResult> UpdateEntry(UpdateCurrencyAccountEntry updateEntry)
     {
         var account = await bankAccountRepository.Get(updateEntry.AccountId);
         if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
-        var newEntry = new BankAccountEntry(updateEntry.AccountId, updateEntry.EntryId, updateEntry.PostingDate, updateEntry.Value,
+        var newEntry = new CurrencyAccountEntry(updateEntry.AccountId, updateEntry.EntryId, updateEntry.PostingDate, updateEntry.Value,
             updateEntry.ValueChange)
         {
             Description = updateEntry.Description

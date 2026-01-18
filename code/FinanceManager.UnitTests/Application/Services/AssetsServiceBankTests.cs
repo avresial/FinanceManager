@@ -1,6 +1,7 @@
 using FinanceManager.Application.Services.Banks;
 using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories.Account;
 using Moq;
@@ -20,10 +21,10 @@ public class AssetsServiceBankTests
     public async Task IsAnyAccountWithAssets_ReturnsTrue_WhenRepositoryHasAccountWithAssets()
     {
         // arrange
-        var account = new BankAccount(1, 1, "acct-a", AccountLabel.Cash);
-        account.Add(new BankAccountEntry(1, 1, _end, 10, 0), false);
+        var account = new CurrencyAccount(1, 1, "acct-a", AccountLabel.Cash);
+        account.Add(new CurrencyAccountEntry(1, 1, _end, 10, 0), false);
 
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
         .Returns(new[] { account }.ToAsyncEnumerable());
 
         // act
@@ -37,10 +38,10 @@ public class AssetsServiceBankTests
     public async Task GetEndAssetsPerAccount_YieldsValues_FromRepository()
     {
         // arrange
-        var account = new BankAccount(1, 1, "bank-a", AccountLabel.Cash);
-        account.Add(new BankAccountEntry(1, 1, _end, 15, 0), false);
+        var account = new CurrencyAccount(1, 1, "bank-a", AccountLabel.Cash);
+        account.Add(new CurrencyAccountEntry(1, 1, _end, 15, 0), false);
 
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
         .Returns(new[] { account }.ToAsyncEnumerable());
 
         // act
@@ -56,13 +57,13 @@ public class AssetsServiceBankTests
     public async Task GetEndAssetsPerType_AggregatesByAccountType()
     {
         // arrange
-        var account1 = new BankAccount(1, 1, "bank-a", AccountLabel.Cash);
-        account1.Add(new BankAccountEntry(1, 1, _end, 10, 0), false);
+        var account1 = new CurrencyAccount(1, 1, "bank-a", AccountLabel.Cash);
+        account1.Add(new CurrencyAccountEntry(1, 1, _end, 10, 0), false);
 
-        var account2 = new BankAccount(1, 2, "bank-b", AccountLabel.Cash);
-        account2.Add(new BankAccountEntry(1, 1, _end, 5, 0), false);
+        var account2 = new CurrencyAccount(1, 2, "bank-b", AccountLabel.Cash);
+        account2.Add(new CurrencyAccountEntry(1, 1, _end, 5, 0), false);
 
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
         .Returns(new[] { account1, account2 }.ToAsyncEnumerable());
 
         // act
@@ -78,11 +79,11 @@ public class AssetsServiceBankTests
     public async Task GetAssetsTimeSeries_ReturnsTimeSeriesAcrossRange()
     {
         // arrange
-        var account = new BankAccount(1, 1, "bank-a", AccountLabel.Cash);
-        account.Add(new BankAccountEntry(1, 1, _start, 10, 0), false);
-        account.Add(new BankAccountEntry(1, 2, _end, 0, 20));
+        var account = new CurrencyAccount(1, 1, "bank-a", AccountLabel.Cash);
+        account.Add(new CurrencyAccountEntry(1, 1, _start, 10, 0), false);
+        account.Add(new CurrencyAccountEntry(1, 2, _end, 0, 20));
 
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BankAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
         .Returns(new[] { account }.ToAsyncEnumerable());
 
         // act

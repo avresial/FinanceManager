@@ -1,9 +1,9 @@
 ﻿using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,11 +14,11 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Bank Accounts")]
-public class BankAccountController(IBankAccountRepository<BankAccount> bankAccountRepository,
-    IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository, IUserPlanVerifier userPlanVerifier) : ControllerBase
+public class BankAccountController(ICurrencyAccountRepository<CurrencyAccount> bankAccountRepository,
+    IAccountEntryRepository<CurrencyAccountEntry> bankAccountEntryRepository, IUserPlanVerifier userPlanVerifier) : ControllerBase
 {
     [HttpGet]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<BankAccountDto>))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<CurrencyAccountDto>))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get()
     {
@@ -29,7 +29,7 @@ public class BankAccountController(IBankAccountRepository<BankAccount> bankAccou
     }
 
     [HttpGet("{accountId:int}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BankAccountDto))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get(int accountId)
@@ -42,7 +42,7 @@ public class BankAccountController(IBankAccountRepository<BankAccount> bankAccou
     }
 
     [HttpGet("{accountId:int}&{startDate:DateTime}&{endDate:DateTime}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BankAccountDto))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate)

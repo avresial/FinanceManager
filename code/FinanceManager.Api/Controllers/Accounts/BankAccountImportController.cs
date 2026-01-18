@@ -1,9 +1,9 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Services;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Infrastructure.Dtos; // added for BankDataImportDto
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,17 +13,17 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Bank Imports")]
-public class BankAccountImportController(IBankAccountImportService importService, IBankAccountRepository<BankAccount> bankAccountRepository)
+public class BankAccountImportController(IBankAccountImportService importService, ICurrencyAccountRepository<CurrencyAccount> bankAccountRepository)
     : ControllerBase
 {
     [HttpPost("ImportBankEntries")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(object))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> ImportBankEntries([FromBody] BankDataImportDto importDto)
+    public async Task<IActionResult> ImportBankEntries([FromBody] CurrencyDataImportDto importDto)
     {
         if (importDto is null) return BadRequest("No import data provided.");
         var userId = ApiAuthenticationHelper.GetUserId(User);
-        var domainEntries = importDto.Entries.Select(e => new BankEntryImport(e.PostingDate, e.ValueChange));
+        var domainEntries = importDto.Entries.Select(e => new CurrencyEntryImport(e.PostingDate, e.ValueChange));
         var domainResult = await importService.ImportEntries(userId, importDto.AccountId, domainEntries);
         return Ok(domainResult);
     }

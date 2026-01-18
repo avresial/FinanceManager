@@ -1,5 +1,5 @@
-using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories.Account;
@@ -35,7 +35,7 @@ public class BalanceService(IFinancialAccountRepository financialAccountReposito
 
         Dictionary<DateTime, decimal> result = [];
 
-        await foreach (var account in financialAccountRepository.GetAccounts<BankAccount>(userId, start, end))
+        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
         {
             if (account?.Entries is null) continue;
 

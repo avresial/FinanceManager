@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.Cash;
+﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
@@ -9,7 +9,7 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
 {
     public async Task<bool> IsAnyAccountWithLiabilities(int userId)
     {
-        var bankAccounts = financialAccountService.GetAccounts<BankAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow);
+        var bankAccounts = financialAccountService.GetAccounts<CurrencyAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow);
         await foreach (var bankAccount in bankAccounts)
         {
             if (bankAccount.Entries is not null && bankAccount.Entries.Count > 0)
@@ -28,7 +28,7 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
     }
     public async IAsyncEnumerable<NameValueResult> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end)
     {
-        await foreach (BankAccount account in financialAccountService.GetAccounts<BankAccount>(userId, start, end))
+        await foreach (CurrencyAccount account in financialAccountService.GetAccounts<CurrencyAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) continue;
             var entry = account.Entries.FirstOrDefault();
@@ -51,7 +51,7 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
     }
     public async IAsyncEnumerable<NameValueResult> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
     {
-        await foreach (var accounts in financialAccountService.GetAccounts<BankAccount>(userId, start, end).GroupBy(x => x.AccountType))
+        await foreach (var accounts in financialAccountService.GetAccounts<CurrencyAccount>(userId, start, end).GroupBy(x => x.AccountType))
         {
             NameValueResult? result = null;
             foreach (var account in accounts)
@@ -93,7 +93,7 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
         Dictionary<DateTime, decimal> prices = [];
         TimeSpan step = new(1, 0, 0, 0);
 
-        await foreach (var account in financialAccountService.GetAccounts<BankAccount>(userId, start, end))
+        await foreach (var account in financialAccountService.GetAccounts<CurrencyAccount>(userId, start, end))
         {
             if (account is null || account.Entries is null) continue;
 

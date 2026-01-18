@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.Cash;
+﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
@@ -10,18 +10,18 @@ internal static class BankAccountSeeder
 {
     internal static async Task AddBankAccount(this IFinancialAccountRepository accountRepository, int userId, AccountLabel accountLabel, List<FinancialLabel> labels, DateTime start, DateTime end)
     {
-        BankAccount newAccount = new(userId, 0, $"{accountLabel} 1", accountLabel);
+        CurrencyAccount newAccount = new(userId, 0, $"{accountLabel} 1", accountLabel);
         var days = (int)(end - start).TotalDays;
         if (accountLabel == AccountLabel.Loan)
         {
-            newAccount.AddEntry(new AddBankEntryDto(start, Random.Shared.Next(days * -100, days * -100), "", labels), false);
+            newAccount.AddEntry(new AddCurrencyEntryDto(start, Random.Shared.Next(days * -100, days * -100), "", labels), false);
             for (DateTime date = start.AddDays(1); date <= end; date = date.AddDays(1))
-                newAccount.AddEntry(new AddBankEntryDto(date, Random.Shared.Next(10, 100), "", labels), false);
+                newAccount.AddEntry(new AddCurrencyEntryDto(date, Random.Shared.Next(10, 100), "", labels), false);
         }
         else
         {
             for (var date = start; date <= end; date = date.AddDays(1))
-                newAccount.AddEntry(new AddBankEntryDto(date, Random.Shared.Next(-90, 100), "", labels), false);
+                newAccount.AddEntry(new AddCurrencyEntryDto(date, Random.Shared.Next(-90, 100), "", labels), false);
         }
         newAccount.RecalculateEntryValues(newAccount.Entries.Count - 1);
         await accountRepository.AddAccount(newAccount);

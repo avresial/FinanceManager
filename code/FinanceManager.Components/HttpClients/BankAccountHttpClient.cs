@@ -1,7 +1,7 @@
 using FinanceManager.Application.Commands.Account;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.ValueObjects;
-using FinanceManager.Infrastructure.Dtos;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;
@@ -15,21 +15,21 @@ public class BankAccountHttpClient(HttpClient httpClient)
         return result ?? [];
     }
 
-    public Task<BankAccount?> GetAccountAsync(int accountId) =>
-        httpClient.GetFromJsonAsync<BankAccount>($"{httpClient.BaseAddress}api/BankAccount/{accountId}");
+    public Task<CurrencyAccount?> GetAccountAsync(int accountId) =>
+        httpClient.GetFromJsonAsync<CurrencyAccount>($"{httpClient.BaseAddress}api/BankAccount/{accountId}");
 
-    public async Task<BankAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate)
+    public async Task<CurrencyAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate)
     {
-        var result = await httpClient.GetFromJsonAsync<BankAccountDto>($"{httpClient.BaseAddress}api/BankAccount/{accountId}&{startDate:O}&{endDate:O}");
+        var result = await httpClient.GetFromJsonAsync<CurrencyAccountDto>($"{httpClient.BaseAddress}api/BankAccount/{accountId}&{startDate:O}&{endDate:O}");
         if (result is null) return null;
 
-        BankAccountEntry? nextOlderEntry = result.NextOlderEntry is null ? null : new(result.NextOlderEntry.AccountId, result.NextOlderEntry.EntryId,
+        CurrencyAccountEntry? nextOlderEntry = result.NextOlderEntry is null ? null : new(result.NextOlderEntry.AccountId, result.NextOlderEntry.EntryId,
             result.NextOlderEntry.PostingDate, result.NextOlderEntry.Value, result.NextOlderEntry.ValueChange);
 
-        BankAccountEntry? nextYoungerEntry = result.NextYoungerEntry is null ? null : new(result.NextYoungerEntry.AccountId, result.NextYoungerEntry.EntryId,
+        CurrencyAccountEntry? nextYoungerEntry = result.NextYoungerEntry is null ? null : new(result.NextYoungerEntry.AccountId, result.NextYoungerEntry.EntryId,
             result.NextYoungerEntry.PostingDate, result.NextYoungerEntry.Value, result.NextYoungerEntry.ValueChange);
 
-        return new(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new BankAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange)
+        return new(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new CurrencyAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange)
         {
             Description = x.Description,
             Labels = x.Labels

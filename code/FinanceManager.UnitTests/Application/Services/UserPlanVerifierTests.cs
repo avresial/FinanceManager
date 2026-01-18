@@ -1,6 +1,6 @@
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
@@ -12,8 +12,8 @@ namespace FinanceManager.UnitTests.Application.Services;
 
 public class UserPlanVerifierTests
 {
-    private readonly Mock<IBankAccountRepository<BankAccount>> _bankAccountRepositoryMock = new();
-    private readonly Mock<IAccountEntryRepository<BankAccountEntry>> _accountEntryRepositoryMock = new();
+    private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _bankAccountRepositoryMock = new();
+    private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _accountEntryRepositoryMock = new();
     private readonly Mock<IUserRepository> _userRepositoryMock = new();
     private readonly UserPlanVerifier _userPlanVerifier;
 

@@ -1,7 +1,7 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -28,8 +28,8 @@ public partial class UpdateBankEntry
     private List<FinancialLabel> _possibleLabels = [];
 
     [Parameter] public Func<Task>? ActionCompleted { get; set; }
-    [Parameter] public required BankAccount BankAccount { get; set; }
-    [Parameter] public required BankAccountEntry BankAccountEntry { get; set; }
+    [Parameter] public required CurrencyAccount BankAccount { get; set; }
+    [Parameter] public required CurrencyAccountEntry BankAccountEntry { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
@@ -67,7 +67,7 @@ public partial class UpdateBankEntry
         if (!_time.HasValue) return;
 
         DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes, _time.Value.Seconds);
-        BankAccountEntry bankAccountEntry = new(BankAccountEntry.AccountId, BankAccountEntry.EntryId, date, -1, _balanceChange.Value)
+        CurrencyAccountEntry bankAccountEntry = new(BankAccountEntry.AccountId, BankAccountEntry.EntryId, date, -1, _balanceChange.Value)
         {
             Description = this._description is null ? string.Empty : this._description,
             Labels = GetLabels().ToList()
