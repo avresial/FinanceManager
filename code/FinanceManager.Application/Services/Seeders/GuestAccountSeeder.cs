@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Application.Providers;
 using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
@@ -12,7 +12,8 @@ using Microsoft.Extensions.Logging;
 namespace FinanceManager.Application.Services.Seeders;
 
 public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, IFinancialLabelsRepository financialLabelsRepository,
-    IAccountRepository<StockAccount> stockAccountRepository, IBankAccountRepository<BankAccount> bankAccountRepository, IAccountRepository<BondAccount> bondAccountRepository,
+    IAccountRepository<StockAccount> stockAccountRepository, ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
+    IAccountRepository<BondAccount> bondAccountRepository,
     IUserRepository userRepository, IConfiguration configuration,
     ILogger<GuestAccountSeeder> logger) : ISeeder
 {
@@ -43,14 +44,14 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
     public async Task SeedNewData(User user, DateTime start, DateTime end)
     {
         logger.LogTrace("Seeding data.");
-        if (!await bankAccountRepository.GetAvailableAccounts(user.UserId).AnyAsync())
+        if (!await currencyAccountRepository.GetAvailableAccounts(user.UserId).AnyAsync())
         {
-            var labels = await BankAccountSeeder.GetRandomLabels(financialLabelsRepository).ToListAsync();
-            logger.LogTrace("Seeding bank accounts.");
-            await accountRepository.AddBankAccount(user.UserId, AccountLabel.Cash, labels, start, end);
+            var labels = await CurrencyAccountSeeder.GetRandomLabels(financialLabelsRepository).ToListAsync();
+            logger.LogTrace("Seeding currency accounts.");
+            await accountRepository.AddAccount(user.UserId, AccountLabel.Cash, labels, start, end);
 
             logger.LogTrace("Seeding loan accounts.");
-            await accountRepository.AddBankAccount(user.UserId, AccountLabel.Loan, labels, start, end);
+            await accountRepository.AddAccount(user.UserId, AccountLabel.Loan, labels, start, end);
         }
 
         logger.LogTrace("Seeding stock accounts.");

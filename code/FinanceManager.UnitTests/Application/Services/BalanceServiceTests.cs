@@ -1,6 +1,6 @@
 using FinanceManager.Application.Services;
-using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories.Account;
 using Moq;
@@ -24,10 +24,10 @@ public class BalanceServiceTests
     public async Task GetIncome_ReturnsIncomeTimeSeries()
     {
         var userId = 1;
-        var account = new BankAccount(userId, 1, "Bank Account 1", AccountLabel.Cash);
-        account.Add(new BankAccountEntry(1, 1, _startDate, 100, 100));
+        var account = new CurrencyAccount(userId, 1, "Currency Account 1", AccountLabel.Cash);
+        account.Add(new CurrencyAccountEntry(1, 1, _startDate, 100, 100));
 
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
 
         var result = await _balanceService.GetIncome(userId, DefaultCurrency.PLN, _startDate, _endDate);
@@ -40,10 +40,10 @@ public class BalanceServiceTests
     public async Task GetSpending_ReturnsSpendingTimeSeries()
     {
         var userId = 1;
-        var account = new BankAccount(userId, 1, "Bank Account 1", AccountLabel.Cash);
-        account.Add(new BankAccountEntry(1, 1, _startDate, -50, -50));
+        var account = new CurrencyAccount(userId, 1, "Currency Account 1", AccountLabel.Cash);
+        account.Add(new CurrencyAccountEntry(1, 1, _startDate, -50, -50));
 
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
 
         var result = await _balanceService.GetSpending(userId, DefaultCurrency.PLN, _startDate, _endDate);
@@ -56,11 +56,11 @@ public class BalanceServiceTests
     public async Task GetBalance_ReturnsNetTimeSeries()
     {
         var userId = 1;
-        var account = new BankAccount(userId, 1, "Bank Account 1", AccountLabel.Cash);
-        account.Add(new BankAccountEntry(1, 1, _startDate, 100, 100));
-        account.Add(new BankAccountEntry(1, 2, _startDate, -40, -40));
+        var account = new CurrencyAccount(userId, 1, "Currency Account 1", AccountLabel.Cash);
+        account.Add(new CurrencyAccountEntry(1, 1, _startDate, 100, 100));
+        account.Add(new CurrencyAccountEntry(1, 2, _startDate, -40, -40));
 
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BankAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
 
         var result = await _balanceService.GetBalance(userId, DefaultCurrency.PLN, _startDate, _startDate);

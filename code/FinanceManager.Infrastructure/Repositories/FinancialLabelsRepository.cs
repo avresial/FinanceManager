@@ -24,7 +24,7 @@ internal class FinancialLabelsRepository(AppDbContext context) : IFinancialLabel
     public Task<int> GetCount(CancellationToken cancellationToken = default) => context.FinancialLabels.CountAsync(cancellationToken);
     public IAsyncEnumerable<FinancialLabel> GetLabels(CancellationToken cancellationToken = default) => context.FinancialLabels.ToAsyncEnumerable();
 
-    public IAsyncEnumerable<FinancialLabel> GetLabelsByAccountId(int accountId, CancellationToken cancellationToken = default) => context.BankEntries.Where(x => x.AccountId == accountId)
+    public IAsyncEnumerable<FinancialLabel> GetLabelsByAccountId(int accountId, CancellationToken cancellationToken = default) => context.CurrencyEntries.Where(x => x.AccountId == accountId)
         .SelectMany(x => x.Labels)
         .Distinct()
         .ToAsyncEnumerable();

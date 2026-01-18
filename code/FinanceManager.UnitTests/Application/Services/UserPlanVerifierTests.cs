@@ -1,6 +1,6 @@
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
@@ -12,12 +12,12 @@ namespace FinanceManager.UnitTests.Application.Services;
 
 public class UserPlanVerifierTests
 {
-    private readonly Mock<IBankAccountRepository<BankAccount>> _bankAccountRepositoryMock = new();
-    private readonly Mock<IAccountEntryRepository<BankAccountEntry>> _accountEntryRepositoryMock = new();
+    private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _currencyAccountRepositoryMock = new();
+    private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _accountEntryRepositoryMock = new();
     private readonly Mock<IUserRepository> _userRepositoryMock = new();
     private readonly UserPlanVerifier _userPlanVerifier;
 
-    public UserPlanVerifierTests() => _userPlanVerifier = new(_bankAccountRepositoryMock.Object, _accountEntryRepositoryMock.Object, _userRepositoryMock.Object);
+    public UserPlanVerifierTests() => _userPlanVerifier = new(_currencyAccountRepositoryMock.Object, _accountEntryRepositoryMock.Object, _userRepositoryMock.Object);
 
     [Fact]
     public async Task GetUsedRecordsCapacity_ReturnsTotalEntriesAcrossAccounts()
@@ -27,7 +27,7 @@ public class UserPlanVerifierTests
         var account1 = new AvailableAccount(1, "Account1");
         var account2 = new AvailableAccount(2, "Account2");
 
-        _bankAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
+        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
         .Returns(new[] { account1, account2 }.ToAsyncEnumerable());
 
         _accountEntryRepositoryMock.Setup(repo => repo.GetCount(1)).ReturnsAsync(10);
@@ -53,7 +53,7 @@ public class UserPlanVerifierTests
         _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
 
         var account = new AvailableAccount(1, "Account1");
-        _bankAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
+        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
         .Returns(new[] { account }.ToAsyncEnumerable());
         _accountEntryRepositoryMock.Setup(repo => repo.GetCount(1)).ReturnsAsync(5);
 
@@ -76,7 +76,7 @@ public class UserPlanVerifierTests
 
         _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
 
-        _bankAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
+        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
         .Returns(new[] { new AvailableAccount(1, "Account1") }.ToAsyncEnumerable());
 
         // Act
@@ -99,7 +99,7 @@ public class UserPlanVerifierTests
         _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
 
         var account = new AvailableAccount(1, "Account1");
-        _bankAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
+        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
         .Returns(new[] { account }.ToAsyncEnumerable());
         _accountEntryRepositoryMock.Setup(repo => repo.GetCount(1)).ReturnsAsync(PricingProvider.GetMaxAllowedEntries(user.PricingLevel) + 1);
 
@@ -124,7 +124,7 @@ public class UserPlanVerifierTests
 
         var limit = PricingProvider.GetMaxAccountCount(user.PricingLevel);
         var accounts = Enumerable.Range(1, limit).Select(i => new AvailableAccount(i, $"Account{i}")).ToArray();
-        _bankAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
+        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
         .Returns(accounts.ToAsyncEnumerable());
 
         // Act

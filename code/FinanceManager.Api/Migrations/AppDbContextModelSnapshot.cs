@@ -17,24 +17,24 @@ namespace FinanceManager.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.10")
+                .HasAnnotation("ProductVersion", "10.0.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("BankAccountEntryFinancialLabel", b =>
+            modelBuilder.Entity("CurrencyAccountEntryFinancialLabel", b =>
                 {
-                    b.Property<int>("BankAccountEntryEntryId")
+                    b.Property<int>("CurrencyAccountEntryEntryId")
                         .HasColumnType("integer");
 
                     b.Property<int>("LabelsId")
                         .HasColumnType("integer");
 
-                    b.HasKey("BankAccountEntryEntryId", "LabelsId");
+                    b.HasKey("CurrencyAccountEntryEntryId", "LabelsId");
 
                     b.HasIndex("LabelsId");
 
-                    b.ToTable("BankAccountEntryFinancialLabel", (string)null);
+                    b.ToTable("CurrencyAccountEntryFinancialLabel", (string)null);
                 });
 
             modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondAccountEntry", b =>
@@ -134,7 +134,28 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("Bonds");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Cash.BankAccountEntry", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Currencies.Currency", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ShortName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Symbol")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Currency");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.FinancialAccounts.Currencies.CurrencyAccountEntry", b =>
                 {
                     b.Property<int>("EntryId")
                         .ValueGeneratedOnAdd()
@@ -162,28 +183,7 @@ namespace FinanceManager.Api.Migrations
 
                     b.HasKey("EntryId");
 
-                    b.ToTable("BankEntries");
-                });
-
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Currencies.Currency", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ShortName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Currency");
+                    b.ToTable("CurrencyEntries");
                 });
 
             modelBuilder.Entity("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabel", b =>
@@ -373,11 +373,11 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("BankAccountEntryFinancialLabel", b =>
+            modelBuilder.Entity("CurrencyAccountEntryFinancialLabel", b =>
                 {
-                    b.HasOne("FinanceManager.Domain.Entities.Cash.BankAccountEntry", null)
+                    b.HasOne("FinanceManager.Domain.Entities.FinancialAccounts.Currencies.CurrencyAccountEntry", null)
                         .WithMany()
-                        .HasForeignKey("BankAccountEntryEntryId")
+                        .HasForeignKey("CurrencyAccountEntryEntryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

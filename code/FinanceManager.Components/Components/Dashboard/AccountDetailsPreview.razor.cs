@@ -1,19 +1,19 @@
-﻿using FinanceManager.Domain.Entities.Cash;
+﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Components.Components.Dashboard;
 
 public partial class AccountDetailsPreview : ComponentBase
 {
-    [Parameter] public required BankAccount BankAccountModel { get; set; }
+    [Parameter] public required CurrencyAccount CurrencyAccountModel { get; set; }
 
     public string GetFirstBalance()
     {
 
-        if (BankAccountModel.Entries is null || !BankAccountModel.Entries.Any())
+        if (CurrencyAccountModel.Entries is null || !CurrencyAccountModel.Entries.Any())
             return "";
 
-        var firstEntry = BankAccountModel.Entries.FirstOrDefault();
+        var firstEntry = CurrencyAccountModel.Entries.FirstOrDefault();
         if (firstEntry is null)
             return "";
 
@@ -22,10 +22,10 @@ public partial class AccountDetailsPreview : ComponentBase
     public string GetLastBalance()
     {
 
-        if (BankAccountModel.Entries is null || !BankAccountModel.Entries.Any())
+        if (CurrencyAccountModel.Entries is null || !CurrencyAccountModel.Entries.Any())
             return "";
 
-        var lastEntry = BankAccountModel.Entries.LastOrDefault();
+        var lastEntry = CurrencyAccountModel.Entries.LastOrDefault();
         if (lastEntry is null)
             return "";
 
@@ -35,14 +35,14 @@ public partial class AccountDetailsPreview : ComponentBase
     public string GetBalanceChange()
     {
 
-        if (BankAccountModel.Entries is null || !BankAccountModel.Entries.Any())
+        if (CurrencyAccountModel.Entries is null || !CurrencyAccountModel.Entries.Any())
             return "";
 
-        var lastEntry = BankAccountModel.Entries.LastOrDefault();
+        var lastEntry = CurrencyAccountModel.Entries.LastOrDefault();
         if (lastEntry is null)
             return "";
 
-        var firstEntry = BankAccountModel.Entries.FirstOrDefault();
+        var firstEntry = CurrencyAccountModel.Entries.FirstOrDefault();
         if (firstEntry is null)
             return "";
         return Math.Round((lastEntry.Value - firstEntry.Value), 2).ToString();
@@ -51,10 +51,10 @@ public partial class AccountDetailsPreview : ComponentBase
     public string GetFirstPostingDate()
     {
 
-        if (BankAccountModel.Entries is null || !BankAccountModel.Entries.Any())
+        if (CurrencyAccountModel.Entries is null || !CurrencyAccountModel.Entries.Any())
             return "";
 
-        var firstEntry = BankAccountModel.Entries.FirstOrDefault();
+        var firstEntry = CurrencyAccountModel.Entries.FirstOrDefault();
         if (firstEntry is null)
             return "";
 
@@ -63,11 +63,10 @@ public partial class AccountDetailsPreview : ComponentBase
 
     public string GetLastPostingDate()
     {
-
-        if (BankAccountModel.Entries is null || !BankAccountModel.Entries.Any())
+        if (CurrencyAccountModel.Entries is null || !CurrencyAccountModel.Entries.Any())
             return "";
 
-        var lastEntry = BankAccountModel.Entries.LastOrDefault();
+        var lastEntry = CurrencyAccountModel.Entries.LastOrDefault();
         if (lastEntry is null)
             return "";
 

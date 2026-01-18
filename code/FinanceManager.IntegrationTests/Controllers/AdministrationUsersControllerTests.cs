@@ -62,7 +62,7 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
                 UserId = 1,
                 Name = $"Test Account {i}",
                 AccountLabel = AccountLabel.Cash,
-                AccountType = AccountType.Bank
+                AccountType = AccountType.Currency
             });
         }
 

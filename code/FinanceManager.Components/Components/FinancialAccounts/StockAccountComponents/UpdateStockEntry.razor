@@ -126,12 +126,12 @@
             Console.WriteLine(ex);
         }
 
-        StockAccountEntry bankAccountEntry = new(InvestmentEntry.AccountId, InvestmentEntry.EntryId, date, -1, BalanceChange.Value, Ticker, investmentType);
+        StockAccountEntry currencyAccountEntry = new(InvestmentEntry.AccountId, InvestmentEntry.EntryId, date, -1, BalanceChange.Value, Ticker, investmentType);
 
         try
         {
-            InvestmentAccount.UpdateEntry(bankAccountEntry);
-            await FinancalAccountService.UpdateEntry(bankAccountEntry);
+            InvestmentAccount.UpdateEntry(currencyAccountEntry);
+            await FinancalAccountService.UpdateEntry(currencyAccountEntry);
         }
         catch (Exception ex)
         {

@@ -1,7 +1,7 @@
 ﻿using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Services;
@@ -64,9 +64,9 @@ public partial class NavMenu : ComponentBase
             foreach (var account in availableAccounts)
             {
                 var name = string.Empty;
-                if (account.Value == typeof(BankAccount))
+                if (account.Value == typeof(CurrencyAccount))
                 {
-                    var existingAccount = await FinancialAccountService.GetAccount<BankAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
+                    var existingAccount = await FinancialAccountService.GetAccount<CurrencyAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
                     if (existingAccount is not null)
                         name = existingAccount.Name;
                 }

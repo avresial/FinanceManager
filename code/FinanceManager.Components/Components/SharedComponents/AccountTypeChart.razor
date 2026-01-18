@@ -1,15 +1,15 @@
 ﻿@using ApexCharts
 @using FinanceManager.Domain.Entities
-@using FinanceManager.Domain.Entities.Cash
+@using FinanceManager.Domain.Entities.FinancialAccounts.Currencies
 @using FinanceManager.Domain.Enums
 
 
-<ApexChart @ref="chart" TItem="BankAccountEntry"
+<ApexChart @ref="chart" TItem="CurrencyAccountEntry"
 Title="@Title" XAxisType="XAxisType.Datetime" Height="300">
 
 	@foreach (var serie in DataDictionary)
 	{
-		<ApexPointSeries TItem="BankAccountEntry"
+		<ApexPointSeries TItem="CurrencyAccountEntry"
 		Items="serie.Value"
 		Name="@serie.Key.ToString()"
 		XValue="@(e => e.PostingDate)"
@@ -20,10 +20,10 @@ Title="@Title" XAxisType="XAxisType.Datetime" Height="300">
 </ApexChart>
 
 @code {
-	private ApexChart<BankAccountEntry>? chart;
+	private ApexChart<CurrencyAccountEntry>? chart;
 
 	[Parameter]
-	public Dictionary<AccountLabel, List<BankAccountEntry>> DataDictionary { get; set; } = new Dictionary<AccountLabel, List<BankAccountEntry>>();
+	public Dictionary<AccountLabel, List<CurrencyAccountEntry>> DataDictionary { get; set; } = new Dictionary<AccountLabel, List<CurrencyAccountEntry>>();
 
 	[Parameter]
 	public string Title { get; set; } = string.Empty;

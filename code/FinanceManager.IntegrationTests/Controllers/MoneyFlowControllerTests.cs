@@ -1,12 +1,11 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
-using FinanceManager.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -42,7 +41,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         services.AddSingleton(currencyRepoMock.Object);
     }
 
-    private async Task SeedWithTestBankAccount(string accountName = "Test Bank Account")
+    private async Task SeedWithTestCurrencyAccount(string accountName = "Test Currency Account")
     {
         if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.Name == accountName))
             return;
@@ -57,14 +56,14 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
             AccountId = 1,
             Name = accountName,
             AccountLabel = AccountLabel.Cash,
-            AccountType = AccountType.Bank
+            AccountType = AccountType.Currency
         };
 
         _testDatabase!.Context.Accounts.Add(test);
         await _testDatabase.Context.SaveChangesAsync();
 
         for (DateTime i = _nowUtc.AddMonths(-2).Date; i <= _nowUtc; i = i.AddDays(1))
-            _testDatabase!.Context.BankEntries.Add(new BankAccountEntry(test.AccountId, 0, i, _value += _valueChange, _valueChange)
+            _testDatabase!.Context.CurrencyEntries.Add(new CurrencyAccountEntry(test.AccountId, 0, i, _value += _valueChange, _valueChange)
             {
                 Labels = [salary]
             });
@@ -75,7 +74,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     [Fact]
     public async Task GetNetWorth_SingleDate_ReturnsValue()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new MoneyFlowHttpClient(Client).GetNetWorth(1, DefaultCurrency.USD, _nowUtc);
@@ -87,7 +86,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     [Fact]
     public async Task GetNetWorth_Range_ReturnsDictionary()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new MoneyFlowHttpClient(Client).GetNetWorth(1, DefaultCurrency.USD, _nowUtc.AddDays(-7), _nowUtc);
@@ -99,7 +98,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     [Fact]
     public async Task GetIncome_ReturnsList()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
         int days = 7;
 
@@ -112,7 +111,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     [Fact]
     public async Task GetSpending_ReturnsList()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new MoneyFlowHttpClient(Client).GetSpending(1, DefaultCurrency.USD, _nowUtc.AddDays(-7), _nowUtc);
@@ -124,7 +123,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     [Fact]
     public async Task GetLabelsValue_ReturnsList()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
         int days = 7;
 
@@ -137,7 +136,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     [Fact]
     public async Task GetInvestmentRate_ReturnsList()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
         int days = 7;
 

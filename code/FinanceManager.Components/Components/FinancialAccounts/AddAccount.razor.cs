@@ -9,7 +9,7 @@ namespace FinanceManager.Components.Components.FinancialAccounts;
 public partial class AddAccount : ComponentBase
 {
     private string _accountName { get; set; } = string.Empty;
-    private string _selectedAccountType = "Bank account";
+    private string _selectedAccountType = "Currency account";
 
     private int? _addedAccountId = null;
     private bool _success;
@@ -17,12 +17,12 @@ public partial class AddAccount : ComponentBase
 
     private readonly string[] _accountTypes =
     {
-        "Bank account", "Stock account"
+        "Currency account", "Stock account"
     };
 
     [Inject] public required ILogger<AddAccount> Logger { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
-    [Inject] public required BankAccountHttpClient BankAccountHttpClient { get; set; }
+    [Inject] public required CurrencyAccountHttpClient CurrencyAccountHttpClient { get; set; }
     [Inject] public required StockAccountHttpClient StockAccountHttpClient { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -33,8 +33,8 @@ public partial class AddAccount : ComponentBase
         {
             switch (_selectedAccountType)
             {
-                case "Bank account":
-                    _addedAccountId = await BankAccountHttpClient.AddAccountAsync(new Application.Commands.Account.AddAccount(_accountName));
+                case "Currency account":
+                    _addedAccountId = await CurrencyAccountHttpClient.AddAccountAsync(new Application.Commands.Account.AddAccount(_accountName));
                     break;
 
                 case "Stock account":
@@ -46,7 +46,7 @@ public partial class AddAccount : ComponentBase
         {
             _addedAccountId = null;
             _errors = [ex.Message];
-            Logger.LogError(ex, "Error while adding bank account");
+            Logger.LogError(ex, "Error while adding currency account");
         }
 
 
