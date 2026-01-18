@@ -2,12 +2,12 @@
 
 namespace FinanceManager.Domain.Entities.Stocks;
 
-public record AddStockEntryDto : AddStockEntryBaseDto
+public record AddInvestmentEntryDto : AddFinancialEntryBaseDto
 {
     public string Ticker { get; }
     public InvestmentType InvestmentType { get; }
 
-    public AddStockEntryDto(DateTime postingDate, decimal valueChange, string ticker, InvestmentType investmentType) : base(postingDate, valueChange)
+    public AddInvestmentEntryDto(DateTime postingDate, decimal valueChange, string ticker, InvestmentType investmentType) : base(postingDate, valueChange)
     {
         Ticker = ticker;
         InvestmentType = investmentType;

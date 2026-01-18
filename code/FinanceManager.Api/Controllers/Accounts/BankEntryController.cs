@@ -1,7 +1,6 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
-using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories.Account;
@@ -63,7 +62,7 @@ public class BankEntryController(
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BankAccountEntryDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> AddEntry(AddCashAccountEntry addEntry)
+    public async Task<IActionResult> AddEntry(AddBankAccountEntry addEntry)
     {
         if (!await userPlanVerifier.CanAddMoreEntries(ApiAuthenticationHelper.GetUserId(User)))
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");

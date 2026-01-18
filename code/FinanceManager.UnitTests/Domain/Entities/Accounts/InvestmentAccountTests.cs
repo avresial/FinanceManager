@@ -4,7 +4,7 @@ using FinanceManager.Domain.Extensions;
 
 namespace FinanceManager.UnitTests.Domain.Entities.Accounts;
 
-public class StockAccountTests
+public class InvestmentAccountTests
 {
     private readonly StockAccount _investmentAccount = new(1, 1, "TestAccount");
 

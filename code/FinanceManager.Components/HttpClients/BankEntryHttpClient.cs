@@ -46,7 +46,7 @@ public class BankEntryHttpClient(HttpClient httpClient)
         }
     }
 
-    public async Task<bool> AddEntryAsync(AddCashAccountEntry addEntry)
+    public async Task<bool> AddEntryAsync(AddBankAccountEntry addEntry)
     {
         var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/BankEntry", addEntry);
         if (response.IsSuccessStatusCode) return true;
