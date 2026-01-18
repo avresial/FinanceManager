@@ -75,7 +75,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<ImportBankEntriesComponent> Logger { get; set; }
     [Inject] public required CurrencyAccountImportHttpClient BankAccountImportHttpClient { get; set; }
-    [Inject] public required BankAccountHttpClient BankAccountHttpClient { get; set; }
+    [Inject] public required CurrencyAccountHttpClient BankAccountHttpClient { get; set; }
 
     protected override async Task OnInitializedAsync()
     {

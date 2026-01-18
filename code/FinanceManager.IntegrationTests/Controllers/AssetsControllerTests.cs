@@ -34,7 +34,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
 
     }
 
-    private async Task SeedWithTestBankAccount(string accountName = "Test Bank Account")
+    private async Task SeedWithTestCurrencyAccount(string accountName = "Test Currency Account")
     {
 
         if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.Name == accountName))
@@ -63,7 +63,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     [Fact]
     public async Task IsAnyAccountWithAssets_ReturnsTrue()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new AssetsHttpClient(Client).IsAnyAccountWithAssets(1);
@@ -74,21 +74,21 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     [Fact]
     public async Task GetEndAssetsPerAccount_ReturnsList()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new AssetsHttpClient(Client).GetEndAssetsPerAccount(1, DefaultCurrency.USD, _nowUtc);
 
         Assert.NotNull(result);
         Assert.Single(result);
-        Assert.Equal("Test Bank Account", result[0].Name);
+        Assert.Equal("Test Currency Account", result[0].Name);
         Assert.Equal(_value, result[0].Value);
     }
 
     [Fact]
     public async Task GetEndAssetsPerType_ReturnsList()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new AssetsHttpClient(Client).GetEndAssetsPerType(1, DefaultCurrency.USD, _nowUtc);
@@ -102,7 +102,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     [Fact]
     public async Task GetAssetsTimeSeries_ReturnsList()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new AssetsHttpClient(Client).GetAssetsTimeSeries(1, DefaultCurrency.USD, _nowUtc.AddDays(-2), _nowUtc);

@@ -13,7 +13,7 @@ using Xunit;
 namespace FinanceManager.IntegrationTests.Controllers;
 
 [Collection("api")]
-public class BankAccountControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
+public class CurrencyAccountControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private const int _testUserId = 88;
     private const int _testAccountId = 456;
@@ -83,7 +83,7 @@ public class BankAccountControllerTests(OptionsProvider optionsProvider) : Contr
         // arrange
         await SeedAccount();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new BankAccountHttpClient(Client);
+        var client = new CurrencyAccountHttpClient(Client);
 
         // act
         var accounts = await client.GetAvailableAccountsAsync();
@@ -101,8 +101,8 @@ public class BankAccountControllerTests(OptionsProvider optionsProvider) : Contr
         await SeedAccount();
         Authorize("testuser", _testUserId, UserRole.User);
 
-        // act - use raw HTTP client to avoid deserialization complexity of BankAccount
-        var response = await Client.GetAsync($"{Client.BaseAddress}api/BankAccount/{_testAccountId}", TestContext.Current.CancellationToken);
+        // act - use raw HTTP client to avoid deserialization complexity of CurrencyAccount
+        var response = await Client.GetAsync($"{Client.BaseAddress}api/CurrencyAccount/{_testAccountId}", TestContext.Current.CancellationToken);
 
         // assert
         Assert.True(response.IsSuccessStatusCode);
@@ -117,7 +117,7 @@ public class BankAccountControllerTests(OptionsProvider optionsProvider) : Contr
         // arrange
         await SeedAccountWithEntries();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new BankAccountHttpClient(Client);
+        var client = new CurrencyAccountHttpClient(Client);
         var startDate = DateTime.UtcNow.Date.AddDays(-15);
         var endDate = DateTime.UtcNow.Date;
 
@@ -137,7 +137,7 @@ public class BankAccountControllerTests(OptionsProvider optionsProvider) : Contr
     {
         // arrange
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new BankAccountHttpClient(Client);
+        var client = new CurrencyAccountHttpClient(Client);
         var newAccountCmd = new AddAccount("New Savings Account");
 
         // act
@@ -162,7 +162,7 @@ public class BankAccountControllerTests(OptionsProvider optionsProvider) : Contr
         // arrange
         await SeedAccount();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new BankAccountHttpClient(Client);
+        var client = new CurrencyAccountHttpClient(Client);
         var updatedName = "Updated Account Name";
         UpdateAccount updateCmd = new(_testAccountId, updatedName, AccountLabel.Cash);
 
@@ -186,7 +186,7 @@ public class BankAccountControllerTests(OptionsProvider optionsProvider) : Contr
         // arrange
         await SeedAccount();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new BankAccountHttpClient(Client);
+        var client = new CurrencyAccountHttpClient(Client);
         var updatedName = "Stock Account";
         var updateCmd = new UpdateAccount(_testAccountId, updatedName, AccountLabel.Stock);
 
@@ -211,7 +211,7 @@ public class BankAccountControllerTests(OptionsProvider optionsProvider) : Contr
         // arrange
         await SeedAccountWithEntries();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new BankAccountHttpClient(Client);
+        var client = new CurrencyAccountHttpClient(Client);
 
         // act
         var result = await client.DeleteAccountAsync(_testAccountId);

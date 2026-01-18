@@ -4,7 +4,7 @@ using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;
 
-public class BankEntryHttpClient(HttpClient httpClient)
+public class CurrencyEntryHttpClient(HttpClient httpClient)
 {
     public async Task<CurrencyAccountEntry?> GetEntry(int accountId, int entryId)
     {

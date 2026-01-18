@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Services;
 
-public class FinancialAccountService(BankAccountHttpClient bankAccountHttpClient, BankEntryHttpClient bankEntryHttpClient,
+public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpClient, CurrencyEntryHttpClient bankEntryHttpClient,
     StockAccountHttpClient stockAccountHttpClient, StockEntryHttpClient stockEntryHttpClient,
     BondAccountHttpClient bondAccountHttpClient, BondEntryHttpClient bondEntryHttpClient,
     ILogger<FinancialAccountService> logger) : IFinancialAccountService

@@ -30,7 +30,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
         services.AddSingleton(_testDatabase!.Context);
     }
 
-    private async Task SeedWithTestBankAccount(string accountName = "Test Bank Account")
+    private async Task SeedWithTestCurrencyAccount(string accountName = "Test Currency Account")
     {
         if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.Name == accountName))
             return;
@@ -60,7 +60,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
     [Fact]
     public async Task IsAnyAccountWithLiabilities_ReturnsTrue()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new LiabilitiesHttpClient(Client).IsAnyAccountWithLiabilities(1);
@@ -71,7 +71,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
     [Fact]
     public async Task GetEndLiabilitiesPerAccount_ReturnsList()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new LiabilitiesHttpClient(Client).GetEndLiabilitiesPerAccount(1, _nowUtc.AddDays(-1), _nowUtc)
@@ -79,14 +79,14 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
 
         Assert.NotNull(result);
         Assert.Single(result);
-        Assert.Equal("Test Bank Account", result[0].Name);
+        Assert.Equal("Test Currency Account", result[0].Name);
         Assert.Equal(_value, result[0].Value);
     }
 
     [Fact]
     public async Task GetEndLiabilitiesPerType_ReturnsList()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new LiabilitiesHttpClient(Client).GetEndLiabilitiesPerType(1, _nowUtc.AddDays(-1), _nowUtc)
@@ -101,7 +101,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
     [Fact]
     public async Task GetLiabilitiesTimeSeries_ReturnsList()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new LiabilitiesHttpClient(Client).GetLiabilitiesTimeSeries(1, _nowUtc.AddDays(-100), _nowUtc)

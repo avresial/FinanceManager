@@ -14,7 +14,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Bank Accounts")]
-public class BankAccountController(ICurrencyAccountRepository<CurrencyAccount> bankAccountRepository,
+public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccount> bankAccountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> bankAccountEntryRepository, IUserPlanVerifier userPlanVerifier) : ControllerBase
 {
     [HttpGet]

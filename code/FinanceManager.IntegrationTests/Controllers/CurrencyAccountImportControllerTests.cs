@@ -14,7 +14,7 @@ using Xunit;
 namespace FinanceManager.IntegrationTests.Controllers;
 
 [Collection("api")]
-public class BankAccountImportControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
+public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private const int _testUserId = 77;
     private const int _testAccountId = 123;
@@ -46,7 +46,7 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
         {
             AccountId = _testAccountId,
             UserId = _testUserId,
-            Name = "Test Bank Account",
+            Name = "Test Currency Account",
             AccountLabel = AccountLabel.Other,
             AccountType = AccountType.Currency
         });
@@ -65,7 +65,7 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
     }
 
     [Fact]
-    public async Task ImportBankEntries_TwoImportZeroExisting_NoConflicts()
+    public async Task ImportCurrencyEntries_TwoImportZeroExisting_NoConflicts()
     {
         // arrange
         await SeedAccount();
@@ -90,7 +90,7 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
     }
 
     [Fact]
-    public async Task ImportBankEntries_WithExactMatch_ReturnsConflict()
+    public async Task ImportCurrencyEntries_WithExactMatch_ReturnsConflict()
     {
         // arrange
         await SeedAccount();
@@ -119,7 +119,7 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
     }
 
     [Fact]
-    public async Task ImportBankEntries_OneExactMatchOneExistingConflict_ReturnsConflicts()
+    public async Task ImportCurrencyEntries_OneExactMatchOneExistingConflict_ReturnsConflicts()
     {
         // arrange
         await SeedAccount();
@@ -145,7 +145,7 @@ public class BankAccountImportControllerTests(OptionsProvider optionsProvider) :
     }
 
     [Fact]
-    public async Task ImportBankEntries_OneExactMatchOneImportConflict_ReturnsConflicts()
+    public async Task ImportCurrencyEntries_OneExactMatchOneImportConflict_ReturnsConflicts()
     {
         // arrange
         await SeedAccount();

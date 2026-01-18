@@ -6,7 +6,7 @@ using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;
 
-public class BankAccountHttpClient(HttpClient httpClient)
+public class CurrencyAccountHttpClient(HttpClient httpClient)
 {
     public async Task<IEnumerable<AvailableAccount>> GetAvailableAccountsAsync()
     {

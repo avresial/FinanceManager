@@ -13,7 +13,7 @@ using Xunit;
 namespace FinanceManager.IntegrationTests.Controllers;
 
 [Collection("api")]
-public class BankEntryControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
+public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private const int _testUserId = 88;
     private const int _testAccountId = 456;
@@ -44,7 +44,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         {
             AccountId = _testAccountId,
             UserId = _testUserId,
-            Name = "Test Bank Account",
+            Name = "Test Currency Account",
             AccountLabel = AccountLabel.Other,
             AccountType = AccountType.Currency
         });
@@ -73,7 +73,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         var valueChange = 50m;
         await SeedEntry(entryId, postingDate, value, valueChange);
         Authorize("user", _testUserId, UserRole.User);
-        var client = new BankEntryHttpClient(Client);
+        var client = new CurrencyEntryHttpClient(Client);
 
         // act
         var result = await client.GetEntry(_testAccountId, entryId);
@@ -97,7 +97,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         await SeedEntry(1, oldDate, 100m, 50m);
         await SeedEntry(2, youngDate, 200m, 100m);
         Authorize("user", _testUserId, UserRole.User);
-        var client = new BankEntryHttpClient(Client);
+        var client = new CurrencyEntryHttpClient(Client);
 
         // act
         var result = await client.GetYoungestEntryDate(_testAccountId);
@@ -117,7 +117,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         await SeedEntry(1, oldDate, 100m, 50m);
         await SeedEntry(2, recentDate, 200m, 100m);
         Authorize("user", _testUserId, UserRole.User);
-        var client = new BankEntryHttpClient(Client);
+        var client = new CurrencyEntryHttpClient(Client);
 
         // act
         var result = await client.GetOldestEntryDate(_testAccountId);
@@ -133,7 +133,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         // arrange
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
-        var client = new BankEntryHttpClient(Client);
+        var client = new CurrencyEntryHttpClient(Client);
         var addEntry = new AddCurrencyAccountEntry(
             _testAccountId,
             100,  // Use a unique entry ID that won't conflict
@@ -169,7 +169,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         var entryId = 5;
         await SeedEntry(entryId, DateTime.UtcNow.Date.AddDays(-7), 300m, 150m);
         Authorize("user", _testUserId, UserRole.User);
-        var client = new BankEntryHttpClient(Client);
+        var client = new CurrencyEntryHttpClient(Client);
 
         // act
         var result = await client.DeleteEntryAsync(_testAccountId, entryId);
@@ -192,7 +192,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         var originalDate = DateTime.UtcNow.Date.AddDays(-10);
         await SeedEntry(entryId, originalDate, 400m, 200m, "Original description");
         Authorize("user", _testUserId, UserRole.User);
-        var client = new BankEntryHttpClient(Client);
+        var client = new CurrencyEntryHttpClient(Client);
 
         // Retrieve the entry first to update it
         var entry = await client.GetEntry(_testAccountId, entryId);

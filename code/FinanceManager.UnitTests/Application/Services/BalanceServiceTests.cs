@@ -24,7 +24,7 @@ public class BalanceServiceTests
     public async Task GetIncome_ReturnsIncomeTimeSeries()
     {
         var userId = 1;
-        var account = new CurrencyAccount(userId, 1, "Bank Account 1", AccountLabel.Cash);
+        var account = new CurrencyAccount(userId, 1, "Currency Account 1", AccountLabel.Cash);
         account.Add(new CurrencyAccountEntry(1, 1, _startDate, 100, 100));
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
@@ -40,7 +40,7 @@ public class BalanceServiceTests
     public async Task GetSpending_ReturnsSpendingTimeSeries()
     {
         var userId = 1;
-        var account = new CurrencyAccount(userId, 1, "Bank Account 1", AccountLabel.Cash);
+        var account = new CurrencyAccount(userId, 1, "Currency Account 1", AccountLabel.Cash);
         account.Add(new CurrencyAccountEntry(1, 1, _startDate, -50, -50));
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
@@ -56,7 +56,7 @@ public class BalanceServiceTests
     public async Task GetBalance_ReturnsNetTimeSeries()
     {
         var userId = 1;
-        var account = new CurrencyAccount(userId, 1, "Bank Account 1", AccountLabel.Cash);
+        var account = new CurrencyAccount(userId, 1, "Currency Account 1", AccountLabel.Cash);
         account.Add(new CurrencyAccountEntry(1, 1, _startDate, 100, 100));
         account.Add(new CurrencyAccountEntry(1, 2, _startDate, -40, -40));
 

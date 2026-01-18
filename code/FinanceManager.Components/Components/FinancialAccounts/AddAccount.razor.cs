@@ -22,7 +22,7 @@ public partial class AddAccount : ComponentBase
 
     [Inject] public required ILogger<AddAccount> Logger { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
-    [Inject] public required BankAccountHttpClient BankAccountHttpClient { get; set; }
+    [Inject] public required CurrencyAccountHttpClient BankAccountHttpClient { get; set; }
     [Inject] public required StockAccountHttpClient StockAccountHttpClient { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }

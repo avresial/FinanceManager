@@ -15,22 +15,22 @@ using System.Security.Claims;
 
 namespace FinanceManager.UnitTests.Api.Controllers;
 
-public class BankAccountControllerTests
+public class CurrencyAccountControllerTests
 {
-    private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _mockBankAccountRepository = new();
-    private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _mockBankAccountEntryRepository = new();
+    private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _mockAccountRepository = new();
+    private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _mockAccountEntryRepository = new();
 
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IUserPlanVerifier> _userPlanVerifier = new();
 
-    private readonly BankAccountController _controller;
+    private readonly CurrencyAccountController _controller;
 
-    public BankAccountControllerTests()
+    public CurrencyAccountControllerTests()
     {
         var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = PricingLevel.Premium, CreationDate = DateTime.UtcNow };
         _userRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
 
-        _controller = new(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier.Object);
+        _controller = new(_mockAccountRepository.Object, _mockAccountEntryRepository.Object, _userPlanVerifier.Object);
 
         // Mock user identity
         var userClaims = new ClaimsPrincipal(new ClaimsIdentity(
@@ -50,7 +50,7 @@ public class BankAccountControllerTests
         // Arrange
         var userId = 1;
         List<AvailableAccount> accounts = [new(1, "Test Account")];
-        _mockBankAccountRepository.Setup(repo => repo.GetAvailableAccounts(userId)).Returns(accounts.ToAsyncEnumerable());
+        _mockAccountRepository.Setup(repo => repo.GetAvailableAccounts(userId)).Returns(accounts.ToAsyncEnumerable());
 
         // Act
         var result = await _controller.Get();
@@ -68,7 +68,7 @@ public class BankAccountControllerTests
         var userId = 1;
         var accountId = 1;
         CurrencyAccount account = new(userId, accountId, "Test Account");
-        _mockBankAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
+        _mockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
 
         // Act
         var result = await _controller.Get(accountId);
@@ -91,14 +91,14 @@ public class BankAccountControllerTests
         var userId = 1;
         var accountId = 1;
         CurrencyAccount account = new(userId, accountId, "Test Account");
-        CurrencyAccountEntry bankAccountEntry = new(accountId, 1, olderThanLoadedDate, 1, 0);
+        CurrencyAccountEntry accountEntry = new(accountId, 1, olderThanLoadedDate, 1, 0);
 
-        _mockBankAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
-        _mockBankAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns(new List<CurrencyAccountEntry>().ToAsyncEnumerable());
-        _mockBankAccountEntryRepository.Setup(repo => repo.GetNextOlder(accountId, startDate))
+        _mockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
+        _mockAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns(new List<CurrencyAccountEntry>().ToAsyncEnumerable());
+        _mockAccountEntryRepository.Setup(repo => repo.GetNextOlder(accountId, startDate))
             .ReturnsAsync(new CurrencyAccountEntry(accountId, 1, olderThanLoadedDate, 1, 0));
 
-        _mockBankAccountEntryRepository.Setup(repo => repo.GetNextYounger(accountId, endDate))
+        _mockAccountEntryRepository.Setup(repo => repo.GetNextYounger(accountId, endDate))
             .ReturnsAsync(new CurrencyAccountEntry(accountId, 1, youngerThanLoadedDate, 1, 0));
 
         // Act
@@ -122,7 +122,7 @@ public class BankAccountControllerTests
         var userId = 1;
         AddAccount addAccount = new("New Account");
         var newAccountId = 1;
-        _mockBankAccountRepository.Setup(repo => repo.Add(userId, addAccount.accountName)).ReturnsAsync(newAccountId);
+        _mockAccountRepository.Setup(repo => repo.Add(userId, addAccount.accountName)).ReturnsAsync(newAccountId);
         _userPlanVerifier.Setup(x => x.CanAddMoreAccounts(userId)).ReturnsAsync(true);
 
         // Act
@@ -140,8 +140,8 @@ public class BankAccountControllerTests
         var userId = 1;
         UpdateAccount updateAccount = new(1, "Updated Account", AccountLabel.Cash);
         CurrencyAccount account = new(userId, updateAccount.AccountId, "Test Account");
-        _mockBankAccountRepository.Setup(repo => repo.Get(updateAccount.AccountId)).ReturnsAsync(account);
-        _mockBankAccountRepository.Setup(repo => repo.Update(updateAccount.AccountId, updateAccount.AccountName, AccountLabel.Cash)).ReturnsAsync(true);
+        _mockAccountRepository.Setup(repo => repo.Get(updateAccount.AccountId)).ReturnsAsync(account);
+        _mockAccountRepository.Setup(repo => repo.Update(updateAccount.AccountId, updateAccount.AccountName, AccountLabel.Cash)).ReturnsAsync(true);
 
         // Act
         var result = await _controller.Update(updateAccount);
@@ -159,8 +159,8 @@ public class BankAccountControllerTests
         var userId = 1;
         DeleteAccount deleteAccount = new(1);
         CurrencyAccount account = new(userId, deleteAccount.accountId, "Test Account");
-        _mockBankAccountRepository.Setup(repo => repo.Get(deleteAccount.accountId)).ReturnsAsync(account);
-        _mockBankAccountRepository.Setup(repo => repo.Delete(deleteAccount.accountId)).ReturnsAsync(true);
+        _mockAccountRepository.Setup(repo => repo.Get(deleteAccount.accountId)).ReturnsAsync(account);
+        _mockAccountRepository.Setup(repo => repo.Delete(deleteAccount.accountId)).ReturnsAsync(true);
 
         // Act
         var result = await _controller.Delete(deleteAccount.accountId);

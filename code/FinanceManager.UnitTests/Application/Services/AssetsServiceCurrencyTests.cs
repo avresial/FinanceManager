@@ -7,14 +7,14 @@ using Moq;
 
 namespace FinanceManager.UnitTests.Application.Services;
 
-public class AssetsServiceBankTests
+public class AssetsServiceCurrencyTests
 {
     private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
     private readonly DateTime _start = new(DateTime.UtcNow.Year, 1, 1);
     private readonly DateTime _end = new(DateTime.UtcNow.Year, 1, 31);
-    private readonly AssetsServiceCurrency _assetsServiceBank;
+    private readonly AssetsServiceCurrency _assetsServiceCurrency;
 
-    public AssetsServiceBankTests() => _assetsServiceBank = new(_financialAccountRepositoryMock.Object);
+    public AssetsServiceCurrencyTests() => _assetsServiceCurrency = new(_financialAccountRepositoryMock.Object);
 
     [Fact]
     public async Task IsAnyAccountWithAssets_ReturnsTrue_WhenRepositoryHasAccountWithAssets()
@@ -27,7 +27,7 @@ public class AssetsServiceBankTests
         .Returns(new[] { account }.ToAsyncEnumerable());
 
         // act
-        var result = await _assetsServiceBank.IsAnyAccountWithAssets(1);
+        var result = await _assetsServiceCurrency.IsAnyAccountWithAssets(1);
 
         // assert
         Assert.True(result);
@@ -37,18 +37,18 @@ public class AssetsServiceBankTests
     public async Task GetEndAssetsPerAccount_YieldsValues_FromRepository()
     {
         // arrange
-        var account = new CurrencyAccount(1, 1, "bank-a", AccountLabel.Cash);
+        var account = new CurrencyAccount(1, 1, "currency-a", AccountLabel.Cash);
         account.Add(new CurrencyAccountEntry(1, 1, _end, 15, 0), false);
 
         _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
         .Returns(new[] { account }.ToAsyncEnumerable());
 
         // act
-        var list = await _assetsServiceBank.GetEndAssetsPerAccount(1, new Currency(0, "PLN", "PLN"), _end).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var list = await _assetsServiceCurrency.GetEndAssetsPerAccount(1, new Currency(0, "PLN", "PLN"), _end).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // assert
         Assert.Single(list);
-        Assert.Equal("bank-a", list[0].Name);
+        Assert.Equal("currency-a", list[0].Name);
         Assert.Equal(15m, list[0].Value);
     }
 
@@ -56,17 +56,17 @@ public class AssetsServiceBankTests
     public async Task GetEndAssetsPerType_AggregatesByAccountType()
     {
         // arrange
-        var account1 = new CurrencyAccount(1, 1, "bank-a", AccountLabel.Cash);
+        var account1 = new CurrencyAccount(1, 1, "currency-a", AccountLabel.Cash);
         account1.Add(new CurrencyAccountEntry(1, 1, _end, 10, 0), false);
 
-        var account2 = new CurrencyAccount(1, 2, "bank-b", AccountLabel.Cash);
+        var account2 = new CurrencyAccount(1, 2, "currency-b", AccountLabel.Cash);
         account2.Add(new CurrencyAccountEntry(1, 1, _end, 5, 0), false);
 
         _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
         .Returns(new[] { account1, account2 }.ToAsyncEnumerable());
 
         // act
-        var results = await _assetsServiceBank.GetEndAssetsPerType(1, new Currency(0, "PLN", "PLN"), _end).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var results = await _assetsServiceCurrency.GetEndAssetsPerType(1, new Currency(0, "PLN", "PLN"), _end).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // assert
         Assert.Single(results);
@@ -78,7 +78,7 @@ public class AssetsServiceBankTests
     public async Task GetAssetsTimeSeries_ReturnsTimeSeriesAcrossRange()
     {
         // arrange
-        var account = new CurrencyAccount(1, 1, "bank-a", AccountLabel.Cash);
+        var account = new CurrencyAccount(1, 1, "currency-a", AccountLabel.Cash);
         account.Add(new CurrencyAccountEntry(1, 1, _start, 10, 0), false);
         account.Add(new CurrencyAccountEntry(1, 2, _end, 0, 20));
 
@@ -86,7 +86,7 @@ public class AssetsServiceBankTests
         .Returns(new[] { account }.ToAsyncEnumerable());
 
         // act
-        var series = await _assetsServiceBank.GetAssetsTimeSeries(1, new Currency(0, "PLN", "PLN"), _start, _end);
+        var series = await _assetsServiceCurrency.GetAssetsTimeSeries(1, new Currency(0, "PLN", "PLN"), _start, _end);
 
         // assert
         Assert.NotEmpty(series);
