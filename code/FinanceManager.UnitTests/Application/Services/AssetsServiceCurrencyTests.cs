@@ -10,8 +10,8 @@ namespace FinanceManager.UnitTests.Application.Services;
 public class AssetsServiceCurrencyTests
 {
     private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
-    private readonly DateTime _start = new(DateTime.UtcNow.Year, 1, 1);
-    private readonly DateTime _end = new(DateTime.UtcNow.Year, 1, 31);
+    private readonly DateTime _start = new(DateTime.UtcNow.Year - 1, 1, 1);
+    private readonly DateTime _end = new(DateTime.UtcNow.Year - 1, 1, 31);
     private readonly AssetsServiceCurrency _assetsServiceCurrency;
 
     public AssetsServiceCurrencyTests() => _assetsServiceCurrency = new(_financialAccountRepositoryMock.Object);
