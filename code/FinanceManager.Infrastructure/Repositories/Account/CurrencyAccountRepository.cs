@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
@@ -8,10 +8,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories.Account;
 
-internal class BankAccountRepository(AppDbContext context) : ICurrencyAccountRepository<CurrencyAccount>
+internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccountRepository<CurrencyAccount>
 {
 
-    public async Task<int> GetAccountsCount() => await context.Accounts.CountAsync();
+    public Task<int> GetAccountsCount() => context.Accounts.CountAsync();
 
     public async Task<int?> GetLastAccountId()
     {
@@ -20,7 +20,7 @@ internal class BankAccountRepository(AppDbContext context) : ICurrencyAccountRep
 
         return null;
     }
-    public async Task<int?> Add(int userId, string accountName) => await Add(userId, accountName, AccountLabel.Other);
+    public Task<int?> Add(int userId, string accountName) => Add(userId, accountName, AccountLabel.Other);
     public async Task<int?> Add(int userId, string accountName, AccountLabel accountLabel)
     {
         var result = context.Accounts.Add(new FinancialAccountBaseDto
@@ -62,18 +62,18 @@ internal class BankAccountRepository(AppDbContext context) : ICurrencyAccountRep
 
     public async Task<bool> Update(int accountId, string accountName)
     {
-        var bankAccount = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
-        if (bankAccount is null) return false;
-        bankAccount.Name = accountName;
+        var account = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
+        if (account is null) return false;
+        account.Name = accountName;
         await context.SaveChangesAsync();
         return true;
     }
     public async Task<bool> Update(int accountId, string accountName, AccountLabel accountType)
     {
-        var bankAccount = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
-        if (bankAccount is null) return false;
-        bankAccount.Name = accountName;
-        bankAccount.AccountLabel = accountType;
+        var account = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
+        if (account is null) return false;
+        account.Name = accountName;
+        account.AccountLabel = accountType;
         await context.SaveChangesAsync();
         return true;
     }

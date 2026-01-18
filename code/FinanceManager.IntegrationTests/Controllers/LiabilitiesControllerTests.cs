@@ -1,5 +1,5 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
@@ -52,7 +52,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
         _value = (2 + days) * _valueChange * -1;
 
         for (DateTime i = DateTime.UtcNow.AddDays(-days).Date; i <= DateTime.UtcNow; i = i.AddDays(1))
-            _testDatabase!.Context.BankEntries.Add(new BankAccountEntry(test.AccountId, 0, i, _value += _valueChange, _valueChange));
+            _testDatabase!.Context.CurrencyEntries.Add(new CurrencyAccountEntry(test.AccountId, 0, i, _value += _valueChange, _valueChange));
 
         await _testDatabase.Context.SaveChangesAsync();
     }

@@ -1,12 +1,11 @@
-using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
-using FinanceManager.Domain.Entities.Shared.Accounts;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace FinanceManager.Infrastructure.Contexts.Configurations;
 
-public class BankAccountEntryConfiguration : IEntityTypeConfiguration<CurrencyAccountEntry>
+public class CurrencyAccountEntryConfiguration : IEntityTypeConfiguration<CurrencyAccountEntry>
 {
     public void Configure(EntityTypeBuilder<CurrencyAccountEntry> builder)
     {
@@ -16,7 +15,7 @@ public class BankAccountEntryConfiguration : IEntityTypeConfiguration<CurrencyAc
 
         builder.HasMany(e => e.Labels)
                 .WithMany()
-                .UsingEntity(j => j.ToTable("BankAccountEntryFinancialLabel"));
+                .UsingEntity(j => j.ToTable("CurrencyAccountEntryFinancialLabel"));
 
         builder.Property(e => e.Value)
             .HasPrecision(18, 2);

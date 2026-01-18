@@ -1,13 +1,13 @@
-using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Application.Services.Banks;
+namespace FinanceManager.Application.Services.Currencies;
 
-public class BankAccountImportService(ICurrencyAccountRepository<CurrencyAccount> bankAccountRepository,
-    IAccountEntryRepository<CurrencyAccountEntry> bankAccountEntryRepository,
-    IUserPlanVerifier userPlanVerifier, ILogger<BankAccountImportService> logger) : IBankAccountImportService
+public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
+    IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,
+    IUserPlanVerifier userPlanVerifier, ILogger<CurrencyAccountImportService> logger) : ICurrencyAccountImportService
 {
     public async Task<ImportResult> ImportEntries(int userId, int accountId, IEnumerable<CurrencyEntryImport> entries)
     {
@@ -20,7 +20,7 @@ public class BankAccountImportService(ICurrencyAccountRepository<CurrencyAccount
         if (!await userPlanVerifier.CanAddMoreEntries(userId, entryList.Count))
             throw new InvalidOperationException("Plan does not allow importing this many entries.");
 
-        var account = await bankAccountRepository.Get(accountId);
+        var account = await currencyAccountRepository.Get(accountId);
         if (account is null || account.UserId != userId) throw new InvalidOperationException("Account not found or access denied.");
 
         var minDay = entryList.Min(x => x.PostingDate).Date;
@@ -31,7 +31,7 @@ public class BankAccountImportService(ICurrencyAccountRepository<CurrencyAccount
         var errors = new List<string>();
         var conflicts = new List<ImportConflict>();
 
-        var existingAll = await bankAccountEntryRepository.Get(accountId, minDay.AddDays(-1), maxDay.AddDays(1)).ToListAsync();
+        var existingAll = await currencyAccountEntryRepository.Get(accountId, minDay.AddDays(-1), maxDay.AddDays(1)).ToListAsync();
         for (var day = maxDay; day >= minDay; day = day.AddDays(-1))
         {
             var importsThisDay = entryList.Where(x => x.PostingDate.Date == day).ToList();
@@ -65,7 +65,7 @@ public class BankAccountImportService(ICurrencyAccountRepository<CurrencyAccount
                         Labels = []
                     };
 
-                    if (await bankAccountEntryRepository.Add(newEntry, day == minDay))
+                    if (await currencyAccountEntryRepository.Add(newEntry, day == minDay))
                     {
                         imported++;
                         existingAll.Add(newEntry);
@@ -96,12 +96,12 @@ public class BankAccountImportService(ICurrencyAccountRepository<CurrencyAccount
             try
             {
                 if (!resolvedConflict.LeaveExisting && resolvedConflict.ExistingId is int existingId)
-                    await bankAccountEntryRepository.Delete(resolvedConflict.AccountId, existingId);
+                    await currencyAccountEntryRepository.Delete(resolvedConflict.AccountId, existingId);
 
                 if (resolvedConflict.AddImported && resolvedConflict.ImportData is not null)
                 {
                     var importData = resolvedConflict.ImportData;
-                    await bankAccountEntryRepository.Add(resolvedConflict.ToEntry());
+                    await currencyAccountEntryRepository.Add(resolvedConflict.ToEntry());
                 }
             }
             catch (Exception ex)

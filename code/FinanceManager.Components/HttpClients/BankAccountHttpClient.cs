@@ -1,6 +1,6 @@
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.ValueObjects;
 using System.Net.Http.Json;
 

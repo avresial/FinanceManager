@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Infrastructure.Dtos;
 
 namespace FinanceManager.Domain.Dtos;

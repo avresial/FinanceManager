@@ -1,7 +1,7 @@
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
@@ -57,23 +57,23 @@ public class BankAccountControllerTests(OptionsProvider optionsProvider) : Contr
         await SeedAccount();
         if (_testDatabase is null) return;
 
-        var entry1 = new BankAccountEntry(_testAccountId, 1, DateTime.UtcNow.Date.AddDays(-10), 1000m, 1000m)
+        var entry1 = new CurrencyAccountEntry(_testAccountId, 1, DateTime.UtcNow.Date.AddDays(-10), 1000m, 1000m)
         {
             Description = "Initial deposit",
             Labels = []
         };
-        var entry2 = new BankAccountEntry(_testAccountId, 2, DateTime.UtcNow.Date.AddDays(-5), 900m, -100m)
+        var entry2 = new CurrencyAccountEntry(_testAccountId, 2, DateTime.UtcNow.Date.AddDays(-5), 900m, -100m)
         {
             Description = "Withdrawal",
             Labels = []
         };
-        var entry3 = new BankAccountEntry(_testAccountId, 3, DateTime.UtcNow.Date.AddDays(-2), 1200m, 300m)
+        var entry3 = new CurrencyAccountEntry(_testAccountId, 3, DateTime.UtcNow.Date.AddDays(-2), 1200m, 300m)
         {
             Description = "Deposit",
             Labels = []
         };
 
-        _testDatabase.Context.BankEntries.AddRange(entry1, entry2, entry3);
+        _testDatabase.Context.CurrencyEntries.AddRange(entry1, entry2, entry3);
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
@@ -226,7 +226,7 @@ public class BankAccountControllerTests(OptionsProvider optionsProvider) : Contr
         Assert.Null(accountInDb);
 
         // verify entries removed from database
-        var entriesInDb = await _testDatabase.Context.BankEntries
+        var entriesInDb = await _testDatabase.Context.CurrencyEntries
             .Where(e => e.AccountId == _testAccountId)
             .ToListAsync(TestContext.Current.CancellationToken);
         Assert.Empty(entriesInDb);

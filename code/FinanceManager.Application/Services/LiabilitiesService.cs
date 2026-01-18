@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
@@ -9,16 +9,16 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
 {
     public async Task<bool> IsAnyAccountWithLiabilities(int userId)
     {
-        var bankAccounts = financialAccountService.GetAccounts<CurrencyAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow);
-        await foreach (var bankAccount in bankAccounts)
+        var currencyAccounts = financialAccountService.GetAccounts<CurrencyAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow);
+        await foreach (var currencyAccount in currencyAccounts)
         {
-            if (bankAccount.Entries is not null && bankAccount.Entries.Count > 0)
+            if (currencyAccount.Entries is not null && currencyAccount.Entries.Count > 0)
             {
-                var youngestEntry = bankAccount.Entries.FirstOrDefault();
+                var youngestEntry = currencyAccount.Entries.FirstOrDefault();
                 if (youngestEntry is not null && youngestEntry.Value < 0)
                     return true;
             }
-            else if (bankAccount.NextOlderEntry is not null && bankAccount.NextOlderEntry.Value < 0)
+            else if (currencyAccount.NextOlderEntry is not null && currencyAccount.NextOlderEntry.Value < 0)
             {
                 return true;
             }

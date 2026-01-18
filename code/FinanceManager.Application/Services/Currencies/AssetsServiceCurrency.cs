@@ -1,14 +1,14 @@
 ﻿using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
-namespace FinanceManager.Application.Services.Banks;
+namespace FinanceManager.Application.Services.Currencies;
 
-internal class AssetsServiceBank(IFinancialAccountRepository financialAccountRepository) : IAssetsServiceTyped
+internal class AssetsServiceCurrency(IFinancialAccountRepository financialAccountRepository) : IAssetsServiceTyped
 {
     public bool IsOfType<T>() => typeof(T) == typeof(CurrencyAccount);
 

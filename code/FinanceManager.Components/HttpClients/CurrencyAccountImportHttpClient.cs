@@ -4,9 +4,9 @@ using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;
 
-public class BankAccountImportHttpClient(HttpClient httpClient)
+public class CurrencyAccountImportHttpClient(HttpClient httpClient)
 {
-    public async Task<ImportResult?> ImportBankEntriesAsync(CurrencyDataImportDto importDto)
+    public async Task<ImportResult?> ImportCurrencyEntriesAsync(CurrencyDataImportDto importDto)
     {
         var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/BankAccountImport/ImportBankEntries", importDto);
         if (!response.IsSuccessStatusCode) throw new Exception(await response.Content.ReadAsStringAsync());

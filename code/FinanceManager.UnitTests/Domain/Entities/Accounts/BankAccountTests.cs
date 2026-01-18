@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 
 namespace FinanceManager.UnitTests.Domain.Entities.Accounts;
 

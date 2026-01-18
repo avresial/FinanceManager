@@ -7,7 +7,7 @@ namespace FinanceManager.Components.Components.FinancialAccounts.BankAccountComp
 
 public partial class BankEntryConflictResolver
 {
-    [Inject] public required BankAccountImportHttpClient BankAccountImportHttpClient { get; set; }
+    [Inject] public required CurrencyAccountImportHttpClient BankAccountImportHttpClient { get; set; }
     [Inject] public required ILogger<BankEntryConflictResolver> Logger { get; set; }
 
     [Parameter] public required IReadOnlyCollection<ImportConflict> Conflicts { get; set; }

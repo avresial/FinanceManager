@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Domain.Entities.Shared.Accounts;
 
-namespace FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+namespace FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 
 public class CurrencyAccountEntry(int accountId, int entryId, DateTime postingDate, decimal value, decimal valueChange)
     : FinancialEntryBase(accountId, entryId, postingDate, value, valueChange)

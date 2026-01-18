@@ -18,7 +18,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<StockEntryHttpClient>()
 
                 .AddScoped<BankAccountHttpClient>()
-                .AddScoped<BankAccountImportHttpClient>()
+                .AddScoped<CurrencyAccountImportHttpClient>()
                 .AddScoped<BankEntryHttpClient>()
 
                 .AddScoped<BondAccountHttpClient>()

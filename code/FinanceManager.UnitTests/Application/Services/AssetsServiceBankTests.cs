@@ -1,7 +1,6 @@
-using FinanceManager.Application.Services.Banks;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Application.Services.Currencies;
 using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories.Account;
 using Moq;
@@ -13,7 +12,7 @@ public class AssetsServiceBankTests
     private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
     private readonly DateTime _start = new(DateTime.UtcNow.Year, 1, 1);
     private readonly DateTime _end = new(DateTime.UtcNow.Year, 1, 31);
-    private readonly AssetsServiceBank _assetsServiceBank;
+    private readonly AssetsServiceCurrency _assetsServiceBank;
 
     public AssetsServiceBankTests() => _assetsServiceBank = new(_financialAccountRepositoryMock.Object);
 

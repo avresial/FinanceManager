@@ -1,12 +1,12 @@
 using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 
 namespace FinanceManager.Infrastructure.Extensions;
 
-public static class BankAccountExtension
+public static class CurrencyAccountExtension
 {
     /// <summary>
-    /// Maps a BankAccount domain entity (optionally with overridden entry data) to a BankAccountDto.
+    /// Maps a CurrencyAccount domain entity (optionally with overridden entry data) to a CurrencyAccountDto.
     /// </summary>
     /// <param name="account">Source account.</param>
     /// <param name="nextOlderEntry">Optional older entry (falls back to account.NextOlderEntry if null).</param>

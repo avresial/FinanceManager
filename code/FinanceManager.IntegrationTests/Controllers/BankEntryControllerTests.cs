@@ -1,7 +1,7 @@
-using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Commands.Account;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
@@ -54,7 +54,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
     private async Task SeedEntry(int entryId, DateTime postingDate, decimal value, decimal valueChange, string description = "Test entry")
     {
         if (_testDatabase is null) return;
-        _testDatabase.Context.BankEntries.Add(new BankAccountEntry(_testAccountId, entryId, postingDate, value, valueChange)
+        _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(_testAccountId, entryId, postingDate, value, valueChange)
         {
             Description = description,
             Labels = []
@@ -134,7 +134,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
         var client = new BankEntryHttpClient(Client);
-        var addEntry = new AddBankAccountEntry(
+        var addEntry = new AddCurrencyAccountEntry(
             _testAccountId,
             100,  // Use a unique entry ID that won't conflict
             DateTime.UtcNow.Date.AddDays(-3),
@@ -152,7 +152,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         // verify entry was added by checking it exists in the database
         // The repository creates the entry with a new ID (not the one we specified)
         // so we need to find it by other properties
-        var dbEntry = await _testDatabase!.Context.BankEntries
+        var dbEntry = await _testDatabase!.Context.CurrencyEntries
             .FirstOrDefaultAsync(e => e.AccountId == _testAccountId &&
                                      e.PostingDate == addEntry.PostingDate &&
                                      e.Description == addEntry.Description,
@@ -178,7 +178,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         Assert.True(result);
 
         // verify entry was deleted from database
-        var dbEntry = await _testDatabase!.Context.BankEntries
+        var dbEntry = await _testDatabase!.Context.CurrencyEntries
             .FirstOrDefaultAsync(e => e.AccountId == _testAccountId && e.EntryId == entryId, TestContext.Current.CancellationToken);
         Assert.Null(dbEntry);
     }
@@ -209,7 +209,7 @@ public class BankEntryControllerTests(OptionsProvider optionsProvider) : Control
         Assert.True(result);
 
         // verify entry was updated in database
-        var dbEntry = await _testDatabase!.Context.BankEntries
+        var dbEntry = await _testDatabase!.Context.CurrencyEntries
             .FirstOrDefaultAsync(e => e.AccountId == _testAccountId && e.EntryId == entryId, TestContext.Current.CancellationToken);
         Assert.NotNull(dbEntry);
         Assert.Equal("Updated description", dbEntry.Description);

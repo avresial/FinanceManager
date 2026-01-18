@@ -1,6 +1,6 @@
 using FinanceManager.Application.Services;
-using FinanceManager.Application.Services.Banks;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+using FinanceManager.Application.Services.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
@@ -18,7 +18,7 @@ public class BankAccountImportServiceTests
     private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _mockBankAccountEntryRepository;
     private readonly Mock<IUserRepository> _mockUserRepository;
     private readonly UserPlanVerifier _userPlanVerifier;
-    private readonly BankAccountImportService _service;
+    private readonly CurrencyAccountImportService _service;
 
     public BankAccountImportServiceTests()
     {
@@ -32,8 +32,8 @@ public class BankAccountImportServiceTests
         // create a real UserPlanVerifier so its CanAddMoreEntries method can be used in test
         _userPlanVerifier = new UserPlanVerifier(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _mockUserRepository.Object);
 
-        var mockLogger = new Mock<ILogger<BankAccountImportService>>();
-        _service = new BankAccountImportService(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier, mockLogger.Object);
+        var mockLogger = new Mock<ILogger<CurrencyAccountImportService>>();
+        _service = new CurrencyAccountImportService(_mockBankAccountRepository.Object, _mockBankAccountEntryRepository.Object, _userPlanVerifier, mockLogger.Object);
     }
 
     [Fact]

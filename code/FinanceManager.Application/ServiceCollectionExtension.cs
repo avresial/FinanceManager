@@ -1,7 +1,7 @@
 ﻿using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
-using FinanceManager.Application.Services.Banks;
 using FinanceManager.Application.Services.Bonds;
+using FinanceManager.Application.Services.Currencies;
 using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -25,7 +25,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IMoneyFlowService, MoneyFlowService>()
                 .AddScoped<IBalanceService, BalanceService>()
 
-                .AddScoped<IAssetsServiceTyped, AssetsServiceBank>()
+                .AddScoped<IAssetsServiceTyped, AssetsServiceCurrency>()
                 .AddScoped<IAssetsServiceTyped, AssetsServiceBond>()
                 .AddScoped<IAssetsServiceTyped, AssetsServiceStock>()
                 .AddScoped<IAssetsService, AssetsService>()
@@ -42,7 +42,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IAdministrationUsersService, AdministrationUsersService>()
                 .AddScoped<ICurrencyExchangeService, CurrencyExchangeService>()
                 .AddScoped<HttpClient>()
-                .AddScoped<IBankAccountImportService, BankAccountImportService>()
+                .AddScoped<ICurrencyAccountImportService, CurrencyAccountImportService>()
                 .AddScoped<IStockPriceProvider, StockPriceProvider>()
                 .AddScoped<IBondService, BondService>()
             ;

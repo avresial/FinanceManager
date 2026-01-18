@@ -2,7 +2,7 @@ using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.AspNetCore.Authorization;

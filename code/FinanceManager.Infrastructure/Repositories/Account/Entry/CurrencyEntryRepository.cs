@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Contexts;
@@ -6,20 +6,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories.Account.Entry;
 
-public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository<CurrencyAccountEntry>
+public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryRepository<CurrencyAccountEntry>
 {
     public async Task<bool> Add(CurrencyAccountEntry entry, bool recalculate)
     {
-        CurrencyAccountEntry newBankAccountEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange)
+        CurrencyAccountEntry newAccountEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange)
         {
             Description = entry.Description,
             Labels = entry.Labels,
         };
 
-        context.BankEntries.Add(newBankAccountEntry);
+        context.CurrencyEntries.Add(newAccountEntry);
         await context.SaveChangesAsync();
         if (recalculate)
-            await RecalculateValues(newBankAccountEntry.AccountId, newBankAccountEntry.EntryId);
+            await RecalculateValues(newAccountEntry.AccountId, newAccountEntry.EntryId);
         return true;
     }
     public async Task<bool> Add(IEnumerable<CurrencyAccountEntry> entries, bool recalculate = true)
@@ -36,7 +36,7 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
 
             if (firstEntry is null) firstEntry = newEntry;
 
-            context.BankEntries.Add(newEntry);
+            context.CurrencyEntries.Add(newEntry);
         }
 
         await context.SaveChangesAsync();
@@ -47,9 +47,9 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
 
     public async Task<bool> Delete(int accountId, int entryId)
     {
-        var entryToDelete = await context.BankEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
+        var entryToDelete = await context.CurrencyEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (entryToDelete is null) return false;
-        context.BankEntries.Remove(entryToDelete);
+        context.CurrencyEntries.Remove(entryToDelete);
         await context.SaveChangesAsync();
         await RecalculateValues(entryToDelete.AccountId, entryToDelete.PostingDate);
 
@@ -58,69 +58,69 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
 
     public async Task<bool> Delete(int accountId)
     {
-        var entriesToRemove = await context.BankEntries.Where(e => e.AccountId == accountId).ToListAsync();
-        context.BankEntries.RemoveRange(entriesToRemove);
+        var entriesToRemove = await context.CurrencyEntries.Where(e => e.AccountId == accountId).ToListAsync();
+        context.CurrencyEntries.RemoveRange(entriesToRemove);
         await context.SaveChangesAsync();
         return true;
     }
 
-    public IAsyncEnumerable<CurrencyAccountEntry> Get(int accountId, DateTime startDate, DateTime endDate) => context.BankEntries
+    public IAsyncEnumerable<CurrencyAccountEntry> Get(int accountId, DateTime startDate, DateTime endDate) => context.CurrencyEntries
             .Where(x => x.AccountId == accountId && x.PostingDate >= startDate && x.PostingDate <= endDate)
             .Include(x => x.Labels)
             .OrderByDescending(x => x.PostingDate)
             .ThenByDescending(x => x.EntryId)
             .AsAsyncEnumerable();
 
-    public async Task<CurrencyAccountEntry?> Get(int accountId, int entryId) => await context.BankEntries
+    public async Task<CurrencyAccountEntry?> Get(int accountId, int entryId) => await context.CurrencyEntries
             .FirstOrDefaultAsync(x => x.AccountId == accountId && x.EntryId == entryId);
 
-    public async Task<int> GetCount(int accountId) => await context.BankEntries.CountAsync(x => x.AccountId == accountId);
+    public async Task<int> GetCount(int accountId) => await context.CurrencyEntries.CountAsync(x => x.AccountId == accountId);
 
     public async Task<CurrencyAccountEntry?> GetNextOlder(int accountId, int entryId)
     {
-        var existingEntry = await context.BankEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
+        var existingEntry = await context.CurrencyEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (existingEntry is null) return default;
 
-        return await context.BankEntries
+        return await context.CurrencyEntries
             .Where(x => x.AccountId == accountId && x.PostingDate < existingEntry.PostingDate)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .FirstOrDefaultAsync();
     }
 
-    public async Task<CurrencyAccountEntry?> GetNextOlder(int accountId, DateTime date) => await context.BankEntries
+    public async Task<CurrencyAccountEntry?> GetNextOlder(int accountId, DateTime date) => await context.CurrencyEntries
              .Where(x => x.AccountId == accountId && x.PostingDate < date)
              .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
              .FirstOrDefaultAsync();
 
     public async Task<CurrencyAccountEntry?> GetNextYounger(int accountId, int entryId)
     {
-        var existingEntry = await context.BankEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
+        var existingEntry = await context.CurrencyEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (existingEntry is null) return default;
 
-        return await context.BankEntries
+        return await context.CurrencyEntries
             .Where(x => x.AccountId == accountId && x.PostingDate > existingEntry.PostingDate)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .LastOrDefaultAsync();
     }
 
-    public async Task<CurrencyAccountEntry?> GetNextYounger(int accountId, DateTime date) => await context.BankEntries
+    public async Task<CurrencyAccountEntry?> GetNextYounger(int accountId, DateTime date) => await context.CurrencyEntries
             .Where(x => x.AccountId == accountId && x.PostingDate > date)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .LastOrDefaultAsync();
 
-    public async Task<CurrencyAccountEntry?> GetOldest(int accountId) => await context.BankEntries
+    public async Task<CurrencyAccountEntry?> GetOldest(int accountId) => await context.CurrencyEntries
             .Where(x => x.AccountId == accountId)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .LastOrDefaultAsync();
 
-    public async Task<CurrencyAccountEntry?> GetYoungest(int accountId) => await context.BankEntries
+    public async Task<CurrencyAccountEntry?> GetYoungest(int accountId) => await context.CurrencyEntries
             .Where(x => x.AccountId == accountId)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .FirstOrDefaultAsync();
 
     public async Task<bool> Update(CurrencyAccountEntry entry)
     {
-        var existingEntry = await context.BankEntries.Include(x => x.Labels).FirstOrDefaultAsync(e => e.AccountId == entry.AccountId && e.EntryId == entry.EntryId);
+        var existingEntry = await context.CurrencyEntries.Include(x => x.Labels).FirstOrDefaultAsync(e => e.AccountId == entry.AccountId && e.EntryId == entry.EntryId);
         if (existingEntry is null) return false;
 
         List<FinancialLabel> newLabels = [];
@@ -142,7 +142,7 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
 
     public async Task RecalculateValues(int accountId, int entryId)
     {
-        var entry = await context.BankEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
+        var entry = await context.CurrencyEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (entry is null) return;
 
         var previousEntry = await GetNextOlder(accountId, entry.PostingDate);
@@ -177,7 +177,7 @@ public class BankEntryRepository(AppDbContext context) : IAccountEntryRepository
     }
     public async Task<bool> AddLabel(int entryId, int labelId)
     {
-        var entry = await context.BankEntries.FirstOrDefaultAsync(e => e.EntryId == entryId);
+        var entry = await context.CurrencyEntries.FirstOrDefaultAsync(e => e.EntryId == entryId);
         var label = await context.FinancialLabels.FirstOrDefaultAsync(l => l.Id == labelId);
 
         if (entry is null || label is null) return false;

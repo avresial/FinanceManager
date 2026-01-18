@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
@@ -6,9 +6,10 @@ using FinanceManager.Domain.Repositories.Account;
 
 namespace FinanceManager.Application.Services.Seeders;
 
-internal static class BankAccountSeeder
+internal static class CurrencyAccountSeeder
 {
-    internal static async Task AddBankAccount(this IFinancialAccountRepository accountRepository, int userId, AccountLabel accountLabel, List<FinancialLabel> labels, DateTime start, DateTime end)
+    internal static async Task AddAccount(this IFinancialAccountRepository accountRepository, int userId, AccountLabel accountLabel, List<FinancialLabel> labels,
+        DateTime start, DateTime end)
     {
         CurrencyAccount newAccount = new(userId, 0, $"{accountLabel} 1", accountLabel);
         var days = (int)(end - start).TotalDays;

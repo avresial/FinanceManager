@@ -1,7 +1,7 @@
 using FinanceManager.Api.Helpers;
-using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Currencies;
 using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.AspNetCore.Authorization;
@@ -13,7 +13,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Bank Imports")]
-public class BankAccountImportController(IBankAccountImportService importService, ICurrencyAccountRepository<CurrencyAccount> bankAccountRepository)
+public class BankAccountImportController(ICurrencyAccountImportService importService, ICurrencyAccountRepository<CurrencyAccount> bankAccountRepository)
     : ControllerBase
 {
     [HttpPost("ImportBankEntries")]

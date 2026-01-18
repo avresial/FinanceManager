@@ -1,5 +1,5 @@
 ﻿using FinanceManager.Domain.Entities.Shared.Accounts;
 
-namespace FinanceManager.Domain.Entities.FinancialAccounts.Currency;
+namespace FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 
 public record AddCurrencyEntryDto(DateTime PostingDate, decimal ValueChange, string Description, List<FinancialLabel> Labels);
