@@ -3,12 +3,12 @@ using FinanceManager.Domain.Entities.Imports;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents;
 
-public partial class BankEntryConflictResolver
+public partial class CurrencyEntryConflictResolver
 {
-    [Inject] public required CurrencyAccountImportHttpClient BankAccountImportHttpClient { get; set; }
-    [Inject] public required ILogger<BankEntryConflictResolver> Logger { get; set; }
+    [Inject] public required CurrencyAccountImportHttpClient accountImportHttpClient { get; set; }
+    [Inject] public required ILogger<CurrencyEntryConflictResolver> Logger { get; set; }
 
     [Parameter] public required IReadOnlyCollection<ImportConflict> Conflicts { get; set; }
     [Parameter] public required bool SkipExactMatches { get; set; } = true;
@@ -56,7 +56,7 @@ public partial class BankEntryConflictResolver
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error initializing BankEntryConflictResolver for account {AccountId}", AccountId);
+            Logger.LogError(ex, "Error initializing {CurrencyEntryConflictResolver} for account {AccountId}", nameof(CurrencyEntryConflictResolver), AccountId);
         }
         _isLoading = false;
     }
@@ -69,7 +69,7 @@ public partial class BankEntryConflictResolver
             var resolvedImports = _selectedConflicts.Select(c => new ResolvedImportConflict(c.AccountId, true, c.ImportEntry, false, c.ExistingEntry?.EntryId))
                                         .ToList();
 
-            await BankAccountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
+            await accountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
             RemoveSelectedDayAndAdvance();
         }
         catch (Exception ex)

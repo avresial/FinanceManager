@@ -8,7 +8,7 @@
         <MudGrid Justify="Justify.Center">
             <MudItem xs="12" sm="12" md="12">
                 <MudText Typo="Typo.h4">Add new entry</MudText>
-                <MudText Typo="Typo.subtitle1">@BankAccount.Name</MudText>
+                <MudText Typo="Typo.subtitle1">@CurrencyAccount.Name</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudDatePicker Label="Posting date" @bind-Date="_postingDate" Validation="@(new NotInFutureAttribute())" />

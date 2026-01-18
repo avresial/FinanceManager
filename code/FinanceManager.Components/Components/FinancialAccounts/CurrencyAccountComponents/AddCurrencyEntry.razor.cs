@@ -3,37 +3,39 @@ using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
+using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents;
 
-public partial class UpdateBankEntry
+public partial class AddCurrencyEntry : ComponentBase
 {
-
-    private int? _loadedEntryId = null;
     private Currency _currency = DefaultCurrency.PLN;
     private bool _success;
     private string[] _errors = [];
     private MudForm? _form;
 
     private DateTime? _postingDate = DateTime.Today;
-    private TimeSpan? _time { get; set; } = new TimeSpan(01, 00, 00);
+    private TimeSpan? _time = new TimeSpan(01, 00, 00);
 
-    private string? _description = string.Empty;
-    private decimal? _balanceChange = 0;
+    public string Description { get; set; } = string.Empty;
+    public decimal? BalanceChange { get; set; } = null;
 
     private string _labelValue = "Nothing selected";
     private IEnumerable<string> _selectedLabels = [];
     private List<FinancialLabel> _possibleLabels = [];
-
+    [Parameter] public RenderFragment? CustomButton { get; set; }
     [Parameter] public Func<Task>? ActionCompleted { get; set; }
-    [Parameter] public required CurrencyAccount BankAccount { get; set; }
-    [Parameter] public required CurrencyAccountEntry BankAccountEntry { get; set; }
+    [Parameter] public required CurrencyAccount CurrencyAccount { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
+    [Inject] public required ILogger<AddCurrencyEntry> Logger { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required FinancialLabelHttpClient FinancialLabelHttpClient { get; set; }
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -41,56 +43,61 @@ public partial class UpdateBankEntry
 
         _possibleLabels = (await FinancialLabelHttpClient.Get(0, allLabelsCount)).ToList();
     }
-
     protected override void OnParametersSet()
     {
-        if (_loadedEntryId.HasValue && _loadedEntryId.Value == BankAccountEntry.EntryId) return;
-        _loadedEntryId = BankAccountEntry.EntryId;
-
-        _currency = settingsService.GetCurrency();
-        _postingDate = BankAccountEntry.PostingDate;
-        _time = new TimeSpan(BankAccountEntry.PostingDate.Hour, BankAccountEntry.PostingDate.Minute, BankAccountEntry.PostingDate.Second);
-        _description = BankAccountEntry.Description;
-        _balanceChange = BankAccountEntry.ValueChange;
-
-        _selectedLabels = BankAccountEntry.Labels?.Select(x => x.Name.ToString()).ToList() ?? [];
+        _currency = SettingsService.GetCurrency();
     }
 
-    public async Task Update()
+    public async Task Add()
     {
-        if (_form is null) return;
+        if (_form is null)
+        {
+            _errors = ["Form initialization error. Please try again."];
+            return;
+        }
+
         await _form.Validate();
 
-        if (!_form.IsValid) return;
-        if (!_balanceChange.HasValue) return;
-        if (!_postingDate.HasValue) return;
-        if (!_time.HasValue) return;
-
-        DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes, _time.Value.Seconds);
-        CurrencyAccountEntry bankAccountEntry = new(BankAccountEntry.AccountId, BankAccountEntry.EntryId, date, -1, _balanceChange.Value)
+        if (!_form.IsValid)
         {
-            Description = this._description is null ? string.Empty : this._description,
+            _errors = ["Please correct the validation errors before submitting."];
+            return;
+        }
+        if (!BalanceChange.HasValue)
+        {
+            _errors = ["Balance change is required."];
+            return;
+        }
+        if (!_postingDate.HasValue || !_time.HasValue)
+        {
+            _errors = ["Date and time are required."];
+            return;
+        }
+
+        DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes,
+            _time.Value.Seconds);
+
+        CurrencyAccountEntry accountEntry = new(CurrencyAccount.AccountId, -1, date, -1, BalanceChange.Value)
+        {
+            Description = Description,
             Labels = GetLabels().ToList()
         };
-
         try
         {
-            await FinancialAccountService.UpdateEntry(bankAccountEntry);
+            await FinancialAccountService.AddEntry(accountEntry);
         }
         catch (Exception ex)
         {
-            _errors = [ex.ToString()];
+            Logger.LogError(ex, "Error adding entry");
+            _errors = [ex.Message];
         }
-
         if (_errors.Length == 0)
         {
-            await AccountDataSynchronizationService.AccountChanged();
-
+            _ = AccountDataSynchronizationService.AccountChanged();
             if (ActionCompleted is not null)
                 await ActionCompleted();
         }
     }
-
     public IEnumerable<FinancialLabel> GetLabels()
     {
         if (_selectedLabels is null || _selectedLabels.Count() == 0) yield break;
@@ -107,5 +114,4 @@ public partial class UpdateBankEntry
         if (ActionCompleted is not null)
             await ActionCompleted();
     }
-
 }

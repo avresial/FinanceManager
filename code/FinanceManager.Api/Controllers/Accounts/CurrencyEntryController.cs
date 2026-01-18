@@ -13,10 +13,10 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
-[Tags("Bank Entries")]
-public class BankEntryController(
-    ICurrencyAccountRepository<CurrencyAccount> bankAccountRepository,
-    IAccountEntryRepository<CurrencyAccountEntry> bankAccountEntryRepository,
+[Tags("Currency Entries")]
+public class CurrencyEntryController(
+    ICurrencyAccountRepository<CurrencyAccount> accountRepository,
+    IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
     IUserPlanVerifier userPlanVerifier) : ControllerBase
 {
     [HttpGet]
@@ -24,7 +24,7 @@ public class BankEntryController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetEntry([FromQuery] int accountId, [FromQuery] int entryId)
     {
-        var entry = await bankAccountEntryRepository.Get(accountId, entryId);
+        var entry = await accountEntryRepository.Get(accountId, entryId);
         if (entry is null) return NotFound();
         return Ok(entry);
     }
@@ -35,11 +35,11 @@ public class BankEntryController(
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetYoungestEntryDate(int accountId)
     {
-        var account = await bankAccountRepository.Get(accountId);
+        var account = await accountRepository.Get(accountId);
         if (account is null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
-        var entry = await bankAccountEntryRepository.GetYoungest(accountId);
+        var entry = await accountEntryRepository.GetYoungest(accountId);
         if (entry is null) return NotFound();
         return Ok(entry.PostingDate);
     }
@@ -51,11 +51,11 @@ public class BankEntryController(
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetOldestEntryDate(int accountId)
     {
-        var account = await bankAccountRepository.Get(accountId);
+        var account = await accountRepository.Get(accountId);
         if (account is null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
-        var entry = await bankAccountEntryRepository.GetOldest(accountId);
+        var entry = await accountEntryRepository.GetOldest(accountId);
         return entry is null ? NoContent() : Ok(entry.PostingDate);
     }
 
@@ -67,7 +67,7 @@ public class BankEntryController(
         if (!await userPlanVerifier.CanAddMoreEntries(ApiAuthenticationHelper.GetUserId(User)))
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
-        return Ok(await bankAccountEntryRepository.Add(new CurrencyAccountEntry(addEntry.AccountId, addEntry.EntryId, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
+        return Ok(await accountEntryRepository.Add(new CurrencyAccountEntry(addEntry.AccountId, addEntry.EntryId, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
         {
             Description = addEntry.Description,
         }));
@@ -78,10 +78,10 @@ public class BankEntryController(
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> DeleteEntry(int accountId, int entryId)
     {
-        var account = await bankAccountRepository.Get(accountId);
+        var account = await accountRepository.Get(accountId);
         if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
-        return Ok(await bankAccountEntryRepository.Delete(accountId, entryId));
+        return Ok(await accountEntryRepository.Delete(accountId, entryId));
     }
 
     [HttpPut]
@@ -89,7 +89,7 @@ public class BankEntryController(
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> UpdateEntry(UpdateCurrencyAccountEntry updateEntry)
     {
-        var account = await bankAccountRepository.Get(updateEntry.AccountId);
+        var account = await accountRepository.Get(updateEntry.AccountId);
         if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
         var newEntry = new CurrencyAccountEntry(updateEntry.AccountId, updateEntry.EntryId, updateEntry.PostingDate, updateEntry.Value,
@@ -103,6 +103,6 @@ public class BankEntryController(
         else
             newEntry.Labels = updateEntry.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id }).ToList();
 
-        return Ok(await bankAccountEntryRepository.Update(newEntry));
+        return Ok(await accountEntryRepository.Update(newEntry));
     }
 }

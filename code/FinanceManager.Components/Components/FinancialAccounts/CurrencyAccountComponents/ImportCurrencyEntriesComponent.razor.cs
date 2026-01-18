@@ -1,3 +1,4 @@
+using FinanceManager.Components.DtoMapping;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
@@ -11,13 +12,13 @@ using Microsoft.Extensions.Logging;
 using MudBlazor;
 using System.Globalization;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents;
 
-public partial class ImportBankEntriesComponent : ComponentBase
+public partial class ImportCurrencyEntriesComponent : ComponentBase
 {
     private const string _defaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
     private string _dragClass = _defaultDragClass;
-    private List<ImportBankModel> _importModels = [];
+    private List<ImportCurrencyModel> _importModels = [];
 
     private List<IBrowserFile> LoadedFiles = [];
     private List<string> _erorrs = [];
@@ -73,9 +74,9 @@ public partial class ImportBankEntriesComponent : ComponentBase
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
-    [Inject] public required ILogger<ImportBankEntriesComponent> Logger { get; set; }
-    [Inject] public required CurrencyAccountImportHttpClient BankAccountImportHttpClient { get; set; }
-    [Inject] public required CurrencyAccountHttpClient BankAccountHttpClient { get; set; }
+    [Inject] public required ILogger<ImportCurrencyEntriesComponent> Logger { get; set; }
+    [Inject] public required CurrencyAccountImportHttpClient AccountImportHttpClient { get; set; }
+    [Inject] public required CurrencyAccountHttpClient AccountHttpClient { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -109,7 +110,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
 
         try
         {
-            var result = await ImportBankModelReader.Read(_uploadedContent, _delimiter, cancellationToken);
+            var result = await ImportCurrencyModelReader.Read(_uploadedContent, _delimiter, cancellationToken);
 
             _headers = result.Value.Headers ?? [];
             var allParsedRows = result.Value.Data ?? [];
@@ -274,7 +275,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
             if (string.IsNullOrEmpty(_selectedValueChangeHeader))
                 throw new Exception("Value change header is not selected.");
 
-            var (Headers, Data) = await ImportBankModelReader.Read(_uploadedContent!, _delimiter, CancellationToken.None) ??
+            var (Headers, Data) = await ImportCurrencyModelReader.Read(_uploadedContent!, _delimiter, CancellationToken.None) ??
                 throw new Exception("Failed to read data for import.");
 
             var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, Headers, Data);
@@ -282,7 +283,7 @@ public partial class ImportBankEntriesComponent : ComponentBase
 
             try
             {
-                _importResult = await BankAccountImportHttpClient.ImportCurrencyEntriesAsync(new(AccountId, entries));
+                _importResult = await AccountImportHttpClient.ImportCurrencyEntriesAsync(new(AccountId, entries));
 
                 if (_importResult is not null && _importResult.Imported != 0)
                     _summaryInfos.Add($"Imported {_importResult.Imported} entries.");

@@ -100,10 +100,10 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             if (_chart is not null) await _chart.UpdateSeriesAsync(true);
             await Task.Run(async () =>
             {
-                IEnumerable<CurrencyAccount> bankAccounts = [];
+                IEnumerable<CurrencyAccount> currencyAccounts = [];
                 try
                 {
-                    bankAccounts = (await FinancalAccountService.GetAccounts<CurrencyAccount>(user.UserId, StartDateTime, DateTime.Now))
+                    currencyAccounts = (await FinancalAccountService.GetAccounts<CurrencyAccount>(user.UserId, StartDateTime, DateTime.Now))
                    .Where(x => x.Entries is not null && x.Entries.Any());
                 }
                 catch (Exception ex)
@@ -112,7 +112,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                 }
 
 
-                foreach (var account in bankAccounts)
+                foreach (var account in currencyAccounts)
                 {
                     if (account.Entries is null) continue;
 
@@ -154,6 +154,5 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
             public string Source = string.Empty;
             public decimal Value;
         }
-
     }
 }

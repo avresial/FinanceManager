@@ -30,7 +30,7 @@
 
                     <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
                         <MudPaper Class="p-5">
-                            <AddBankEntry BankAccount=Account ActionCompleted="HideOverlay" />
+                            <AddCurrencyEntry CurrencyAccount=Account ActionCompleted="HideOverlay" />
                         </MudPaper>
                     </MudOverlay>
                 </div>
@@ -40,7 +40,7 @@
                     <MudExpansionPanels Elevation="0" MultiExpansion>
                         @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
                         {
-                            <BankAccountDetailsRow BankAccountEntry="@entry" BankAccount=Account />
+                            <CurrencyAccountDetailsRow CurrencyAccountEntry="@entry" CurrencyAccount=Account />
                         }
                     </MudExpansionPanels>
                 </div>
@@ -189,12 +189,12 @@
 }
 else if (Account is not null && (Account.Entries is null || !Account.Entries.Any()))
 {
-    <AddBankEntry BankAccount=Account ActionCompleted="HideOverlay">
+    <AddCurrencyEntry CurrencyAccount=Account ActionCompleted="HideOverlay">
         <CustomButton>
             <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.AccountId}")">
                 Import</MudButton>
         </CustomButton>
-    </AddBankEntry>
+    </AddCurrencyEntry>
 }
 else if (!string.IsNullOrEmpty(ErrorMessage))
 {

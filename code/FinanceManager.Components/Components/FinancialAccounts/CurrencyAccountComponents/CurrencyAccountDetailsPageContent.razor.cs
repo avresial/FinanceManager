@@ -1,5 +1,4 @@
 using FinanceManager.Application.Services;
-using FinanceManager.Components.Components.SharedComponents.Charts;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
@@ -10,9 +9,9 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents;
 
-public partial class BankAccountDetailsPageContent : ComponentBase
+public partial class CurrencyAccountDetailsPageContent : ComponentBase
 {
     private bool _isLoadingMore = false;
     private decimal _balanceChange = 100;
@@ -40,7 +39,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
-    [Inject] public required ILogger<BankAccountDetailsPageContent> Logger { get; set; }
+    [Inject] public required ILogger<CurrencyAccountDetailsPageContent> Logger { get; set; }
 
     public async Task ShowOverlay()
     {
@@ -145,7 +144,7 @@ public partial class BankAccountDetailsPageContent : ComponentBase
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
-            Logger.LogError(ex, "Error while loading bank account details for account ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error while loading currency account details for account ID {AccountId}", AccountId);
         }
     }
     private async Task UpdateChartData()

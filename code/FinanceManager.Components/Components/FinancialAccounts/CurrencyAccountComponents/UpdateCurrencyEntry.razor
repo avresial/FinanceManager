@@ -6,14 +6,14 @@
 
 @inject ISettingsService settingsService
 
-@if (BankAccountEntry is not null && BankAccount is not null)
+@if (CurrencyAccountEntry is not null && CurrencyAccount is not null)
 {
     <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
         <MudContainer MaxWidth="MaxWidth.Medium">
             <MudGrid Justify="Justify.Center">
                 <MudItem xs="12" sm="12" md="12">
                     <MudText Typo="Typo.h4">Update</MudText>
-                    <MudText Typo="Typo.subtitle1">@BankAccount.Name</MudText>
+                    <MudText Typo="Typo.subtitle1">@CurrencyAccount.Name</MudText>
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudDatePicker Label="Posting date" @bind-Date="_postingDate" Validation="@(new NotInFutureAttribute())" />

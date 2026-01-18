@@ -63,7 +63,7 @@ public partial class AllAccountsSummary : ComponentBase
 
         //foreach (var expenseType in expenseTypes)
         //{
-        //    ExpensesCathegoriesAgregate.Add(expenseType, new List<BankAccountEntry>());
+        //    ExpensesCathegoriesAgregate.Add(expenseType, new List<CurrencyAccountEntry>());
         //    SpendingByCategory.Add(new ExpenseTypeSummaryViewModel() { ExpenseType = expenseType, Value = 0 });
         //}
 

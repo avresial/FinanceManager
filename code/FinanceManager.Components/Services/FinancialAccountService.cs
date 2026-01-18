@@ -9,14 +9,14 @@ using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Services;
 
-public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpClient, CurrencyEntryHttpClient bankEntryHttpClient,
+public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHttpClient, CurrencyEntryHttpClient currencyEntryHttpClient,
     StockAccountHttpClient stockAccountHttpClient, StockEntryHttpClient stockEntryHttpClient,
     BondAccountHttpClient bondAccountHttpClient, BondEntryHttpClient bondEntryHttpClient,
     ILogger<FinancialAccountService> logger) : IFinancialAccountService
 {
     public async Task<bool> AccountExists(int id)
     {
-        if ((await bankAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id)) return true;
+        if ((await currencyAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id)) return true;
         if ((await stockAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id)) return true;
         if ((await bondAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id)) return true;
 
@@ -24,7 +24,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpCl
     }
     public async Task<bool> AccountExists<T>(int id)
     {
-        if (typeof(T) == typeof(CurrencyAccount)) return (await bankAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id);
+        if (typeof(T) == typeof(CurrencyAccount)) return (await currencyAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id);
         if (typeof(T) == typeof(StockAccount)) return (await stockAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id);
         if (typeof(T) == typeof(BondAccount)) return (await bondAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id);
 
@@ -35,7 +35,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpCl
         switch (account)
         {
             case CurrencyAccount:
-                await bankAccountHttpClient.AddAccountAsync(new AddAccount(account.Name));
+                await currencyAccountHttpClient.AddAccountAsync(new AddAccount(account.Name));
                 break;
             case StockAccount:
                 await stockAccountHttpClient.AddAccountAsync(new AddAccount(account.Name));
@@ -53,13 +53,13 @@ public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpCl
     {
         if (typeof(AccountType) == typeof(CurrencyAccount))
         {
-            await bankAccountHttpClient.AddAccountAsync(new(accountName));
+            await currencyAccountHttpClient.AddAccountAsync(new(accountName));
             foreach (var item in data)
             {
-                if (item is CurrencyAccountEntry bankEntry)
+                if (item is CurrencyAccountEntry currencyEntry)
                 {
-                    await bankEntryHttpClient.AddEntryAsync(new(bankEntry.AccountId, bankEntry.EntryId, bankEntry.PostingDate,
-                        bankEntry.Value, bankEntry.ValueChange, bankEntry.Description));
+                    await currencyEntryHttpClient.AddEntryAsync(new(currencyEntry.AccountId, currencyEntry.EntryId, currencyEntry.PostingDate,
+                        currencyEntry.Value, currencyEntry.ValueChange, currencyEntry.Description));
                 }
             }
         }
@@ -88,9 +88,9 @@ public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpCl
     {
         switch (accountEntry)
         {
-            case CurrencyAccountEntry bankEntry:
-                await bankEntryHttpClient.AddEntryAsync(new(bankEntry.AccountId, bankEntry.EntryId, bankEntry.PostingDate, bankEntry.Value,
-                    bankEntry.ValueChange, bankEntry.Description));
+            case CurrencyAccountEntry currencyEntry:
+                await currencyEntryHttpClient.AddEntryAsync(new(currencyEntry.AccountId, currencyEntry.EntryId, currencyEntry.PostingDate, currencyEntry.Value,
+                    currencyEntry.ValueChange, currencyEntry.Description));
                 break;
 
             case StockAccountEntry stockAccountEntry:
@@ -110,7 +110,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpCl
     public async Task<T?> GetAccount<T>(int userId, int id, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
     {
         if (typeof(T) == typeof(CurrencyAccount))
-            return await bankAccountHttpClient.GetAccountWithEntriesAsync(id, dateStart, dateEnd) as T;
+            return await currencyAccountHttpClient.GetAccountWithEntriesAsync(id, dateStart, dateEnd) as T;
         else if (typeof(T) == typeof(StockAccount))
             return await stockAccountHttpClient.GetAccountWithEntriesAsync(id, dateStart, dateEnd) as T;
         else if (typeof(T) == typeof(BondAccount))
@@ -125,7 +125,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpCl
         IEnumerable<AvailableAccount> accounts = [];
 
         if (typeof(T) == typeof(CurrencyAccount))
-            accounts = await bankAccountHttpClient.GetAvailableAccountsAsync();
+            accounts = await currencyAccountHttpClient.GetAvailableAccountsAsync();
         else if (typeof(T) == typeof(StockAccount))
             accounts = await stockAccountHttpClient.GetAvailableAccountsAsync();
         else if (typeof(T) == typeof(BondAccount))
@@ -147,12 +147,12 @@ public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpCl
         Dictionary<int, Type> result = [];
         try
         {
-            foreach (var account in await bankAccountHttpClient.GetAvailableAccountsAsync())
+            foreach (var account in await currencyAccountHttpClient.GetAvailableAccountsAsync())
                 result.Add(account.AccountId, typeof(CurrencyAccount));
         }
         catch (Exception ex)
         {
-            logger.LogError("Error while fetching bank accounts: {Message}", ex.Message);
+            logger.LogError("Error while fetching currency accounts: {Message}", ex.Message);
         }
 
         try
@@ -179,8 +179,8 @@ public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpCl
     }
     public async Task<DateTime?> GetEndDate(int accountId)
     {
-        if ((await bankAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
-            return await bankEntryHttpClient.GetYoungestEntryDate(accountId);
+        if ((await currencyAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
+            return await currencyEntryHttpClient.GetYoungestEntryDate(accountId);
 
         if ((await stockAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
             return await stockEntryHttpClient.GetYoungestEntryDate(accountId);
@@ -192,8 +192,8 @@ public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpCl
     }
     public async Task<DateTime?> GetStartDate(int accountId)
     {
-        if ((await bankAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
-            return await bankEntryHttpClient.GetOldestEntryDate(accountId);
+        if ((await currencyAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
+            return await currencyEntryHttpClient.GetOldestEntryDate(accountId);
 
         if ((await stockAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
             return await stockEntryHttpClient.GetOldestEntryDate(accountId);
@@ -205,7 +205,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpCl
     }
     public async Task<int?> GetLastAccountId()
     {
-        List<AvailableAccount> accounts = [.. (await bankAccountHttpClient.GetAvailableAccountsAsync())];
+        List<AvailableAccount> accounts = [.. (await currencyAccountHttpClient.GetAvailableAccountsAsync())];
         accounts.AddRange([.. (await stockAccountHttpClient.GetAvailableAccountsAsync())]);
         accounts.AddRange([.. (await bondAccountHttpClient.GetAvailableAccountsAsync())]);
 
@@ -219,7 +219,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpCl
     {
         if (await AccountExists<CurrencyAccount>(id))
         {
-            await bankAccountHttpClient.DeleteAccountAsync(id);
+            await currencyAccountHttpClient.DeleteAccountAsync(id);
             return;
         }
 
@@ -240,7 +240,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpCl
     public async Task RemoveEntry(int entryId, int accountId)
     {
         if (await AccountExists<CurrencyAccount>(accountId))
-            await bankEntryHttpClient.DeleteEntryAsync(accountId, entryId);
+            await currencyEntryHttpClient.DeleteEntryAsync(accountId, entryId);
         else if (await AccountExists<StockAccount>(accountId))
             await stockEntryHttpClient.DeleteEntryAsync(accountId, entryId);
         else if (await AccountExists<BondAccount>(accountId))
@@ -250,8 +250,8 @@ public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpCl
     }
     public Task UpdateAccount<T>(T account) where T : BasicAccountInformation
     {
-        if (account is CurrencyAccount bankAccount)
-            return bankAccountHttpClient.UpdateAccountAsync(new(bankAccount.AccountId, bankAccount.Name, bankAccount.AccountType));
+        if (account is CurrencyAccount currencyAccount)
+            return currencyAccountHttpClient.UpdateAccountAsync(new(currencyAccount.AccountId, currencyAccount.Name, currencyAccount.AccountType));
 
         if (account is StockAccount)
             return stockAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.Enums.AccountLabel.Stock));
@@ -263,9 +263,9 @@ public class FinancialAccountService(CurrencyAccountHttpClient bankAccountHttpCl
     }
     public async Task UpdateEntry<T>(T accountEntry) where T : FinancialEntryBase
     {
-        if (accountEntry is CurrencyAccountEntry bankAccountEntry)
+        if (accountEntry is CurrencyAccountEntry currencyAccountEntry)
         {
-            await bankEntryHttpClient.UpdateEntryAsync(bankAccountEntry);
+            await currencyEntryHttpClient.UpdateEntryAsync(currencyAccountEntry);
             return;
         }
         else if (accountEntry is StockAccountEntry stockAccountEntry)

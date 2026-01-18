@@ -9,7 +9,7 @@
                 </div>
                 <div class="row">
                     <div>
-                        @BankAccountEntry.Value @_currency
+                        @CurrencyAccountEntry.Value @_currency
                     </div>
                 </div>
             </div>
@@ -20,16 +20,16 @@
                     </div>
                 </div>
                 <div class="row">
-                    @if (BankAccountEntry.ValueChange > 0)
+                    @if (CurrencyAccountEntry.ValueChange > 0)
                     {
                         <div class="text-success">
-                            @BankAccountEntry.ValueChange @_currency
+                            @CurrencyAccountEntry.ValueChange @_currency
                         </div>
                     }
                     else
                     {
                         <div class="text-danger">
-                            @BankAccountEntry.ValueChange @_currency
+                            @CurrencyAccountEntry.ValueChange @_currency
                         </div>
                     }
 
@@ -43,7 +43,7 @@
                 </div>
                 <div class="row">
                     <div>
-                        @BankAccountEntry.PostingDate.ToString("yyyy-MM-dd")
+                        @CurrencyAccountEntry.PostingDate.ToString("yyyy-MM-dd")
                     </div>
                 </div>
             </div>
@@ -64,12 +64,12 @@
                             </div>
                             <div class="row mb-1">
                                 <div>
-                                    @BankAccountEntry.PostingDate
+                                    @CurrencyAccountEntry.PostingDate
                                 </div>
                             </div>
                         </div>
                         
-                        @if (BankAccountEntry.Labels is not null && BankAccountEntry.Labels.Any())
+                        @if (CurrencyAccountEntry.Labels is not null && CurrencyAccountEntry.Labels.Any())
                         {
                             <div class="col-6">
                                 <div class="row text-muted">
@@ -79,7 +79,7 @@
                                 </div>
                                 <div class="row mb-1">
                                     <div>
-                                        @foreach (var item in BankAccountEntry.Labels)
+                                        @foreach (var item in CurrencyAccountEntry.Labels)
                                         {
                                             <MudChip T="string">@item.Name</MudChip>
                                         }
@@ -87,7 +87,7 @@
                                 </div>
                             </div>
                         }
-                        @if (!string.IsNullOrEmpty(BankAccountEntry.Description))
+                        @if (!string.IsNullOrEmpty(CurrencyAccountEntry.Description))
                         {
                             <div class="col-12">
                                 <div class="row text-muted">
@@ -97,7 +97,7 @@
                                 </div>
                                 <div class="row mb-1">
                                     <div>
-                                        @BankAccountEntry.Description
+                                        @CurrencyAccountEntry.Description
                                     </div>
                                 </div>
                             </div>
@@ -115,12 +115,12 @@
 
 <MudOverlay @bind-Visible=_updateEntryVisibility DarkBackground="true">
     <MudPaper Class="p-5">
-        <UpdateBankEntry BankAccount=BankAccount BankAccountEntry="BankAccountEntry" ActionCompleted="HideOverlay" />
+        <UpdateCurrencyEntry CurrencyAccount=CurrencyAccount CurrencyAccountEntry="CurrencyAccountEntry" ActionCompleted="HideOverlay" />
     </MudPaper>
 </MudOverlay>
 
 <MudOverlay @bind-Visible=_removeEntryVisibility DarkBackground="true">
     <MudPaper Class="p-5">
-        <RemoveBankEntry BankAccountName=@BankAccount.Name BankAccountEntry="BankAccountEntry" Cancel="HideOverlay" Confirm="Confirm" />
+        <RemoveCurrencyEntry CurrencyAccountName=@CurrencyAccount.Name CurrencyAccountEntry="CurrencyAccountEntry" Cancel="HideOverlay" Confirm="Confirm" />
     </MudPaper>
 </MudOverlay>

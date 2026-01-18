@@ -13,9 +13,9 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
-[Tags("Bank Accounts")]
-public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccount> bankAccountRepository,
-    IAccountEntryRepository<CurrencyAccountEntry> bankAccountEntryRepository, IUserPlanVerifier userPlanVerifier) : ControllerBase
+[Tags("Currency Accounts")]
+public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccount> accountRepository,
+    IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository, IUserPlanVerifier userPlanVerifier) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<CurrencyAccountDto>))]
@@ -23,7 +23,7 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
     public async Task<IActionResult> Get()
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
-        var accounts = await bankAccountRepository.GetAvailableAccounts(userId).ToListAsync();
+        var accounts = await accountRepository.GetAvailableAccounts(userId).ToListAsync();
 
         return accounts.Count == 0 ? NotFound() : Ok(accounts);
     }
@@ -34,7 +34,7 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get(int accountId)
     {
-        var account = await bankAccountRepository.Get(accountId);
+        var account = await accountRepository.Get(accountId);
         if (account is null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
@@ -47,14 +47,14 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate)
     {
-        var account = await bankAccountRepository.Get(accountId);
+        var account = await accountRepository.Get(accountId);
 
         if (account is null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
 
-        var entries = bankAccountEntryRepository.Get(accountId, startDate, endDate);
-        var olderEntry = await bankAccountEntryRepository.GetNextOlder(accountId, startDate);
-        var youngerEntry = await bankAccountEntryRepository.GetNextYounger(accountId, endDate);
+        var entries = accountEntryRepository.Get(accountId, startDate, endDate);
+        var olderEntry = await accountEntryRepository.GetNextOlder(accountId, startDate);
+        var youngerEntry = await accountEntryRepository.GetNextYounger(accountId, endDate);
 
         return Ok(account.ToDto(olderEntry, youngerEntry, await entries.ToListAsync()));
     }
@@ -69,7 +69,7 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         if (!await userPlanVerifier.CanAddMoreAccounts(userId))
             return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
-        return Ok(await bankAccountRepository.Add(userId, addAccount.accountName));
+        return Ok(await accountRepository.Add(userId, addAccount.accountName));
     }
 
     [HttpPut]
@@ -77,10 +77,10 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Update(UpdateAccount updateAccount)
     {
-        var account = await bankAccountRepository.Get(updateAccount.AccountId);
+        var account = await accountRepository.Get(updateAccount.AccountId);
 
         if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return BadRequest();
-        return Ok(await bankAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType));
+        return Ok(await accountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType));
     }
 
     [HttpDelete("{accountId:int}")]
@@ -88,10 +88,10 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Delete(int accountId)
     {
-        var account = await bankAccountRepository.Get(accountId);
+        var account = await accountRepository.Get(accountId);
         if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return BadRequest();
 
-        await bankAccountEntryRepository.Delete(accountId);
-        return Ok(await bankAccountRepository.Delete(accountId));
+        await accountEntryRepository.Delete(accountId);
+        return Ok(await accountRepository.Delete(accountId));
     }
 }

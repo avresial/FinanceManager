@@ -1,27 +1,27 @@
 ﻿using CsvHelper;
 using CsvHelper.Configuration;
+using FinanceManager.Components.DtoMapping;
 using FinanceManager.Infrastructure.DtoMapping;
-using FinanceManager.Infrastructure.Dtos;
 using Microsoft.AspNetCore.Components.Forms;
 using System.Globalization;
 
 namespace FinanceManager.Infrastructure.Readers;
 
-public static class ImportBankModelReader
+public static class ImportCurrencyModelReader
 {
-    public static async Task<List<ImportBankModel>> Read(CsvConfiguration config, IBrowserFile file, string postingDateHeader, string valueChangeHeader, CancellationToken cancellationToken = default)
+    public static async Task<List<ImportCurrencyModel>> Read(CsvConfiguration config, IBrowserFile file, string postingDateHeader, string valueChangeHeader, CancellationToken cancellationToken = default)
     {
-        var result = new List<ImportBankModel>();
+        var result = new List<ImportCurrencyModel>();
         using var reader = new StreamReader(file.OpenReadStream());
         using var csv = new CsvReader(reader, config);
 
-        csv.Context.RegisterClassMap(new ImportBankModelMap(postingDateHeader, valueChangeHeader));
+        csv.Context.RegisterClassMap(new ImportCurrencyModelMap(postingDateHeader, valueChangeHeader));
 
         // iterate rows and support cancellation
         while (await csv.ReadAsync().ConfigureAwait(false))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var record = csv.GetRecord<ImportBankModel>();
+            var record = csv.GetRecord<ImportCurrencyModel>();
             result.Add(record);
         }
 

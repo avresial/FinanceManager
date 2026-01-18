@@ -5,22 +5,22 @@ using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents;
 
-public partial class BankAccountDetailsRow
+public partial class CurrencyAccountDetailsRow
 {
     private bool _expanded = false;
     private bool _removeEntryVisibility;
     private bool _updateEntryVisibility;
     internal Currency _currency = DefaultCurrency.PLN;
 
-    [Parameter] public required CurrencyAccount BankAccount { get; set; }
-    [Parameter] public required CurrencyAccountEntry BankAccountEntry { get; set; }
+    [Parameter] public required CurrencyAccount CurrencyAccount { get; set; }
+    [Parameter] public required CurrencyAccountEntry CurrencyAccountEntry { get; set; }
 
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
-    [Inject] public required ILogger<BankAccountDetailsRow> Logger { get; set; }
+    [Inject] public required ILogger<CurrencyAccountDetailsRow> Logger { get; set; }
 
     protected override void OnParametersSet() => _currency = SettingsService.GetCurrency();
 
@@ -32,7 +32,7 @@ public partial class BankAccountDetailsRow
 
         try
         {
-            await FinancialAccountService.RemoveEntry(BankAccountEntry.EntryId, BankAccount.AccountId);
+            await FinancialAccountService.RemoveEntry(CurrencyAccountEntry.EntryId, CurrencyAccount.AccountId);
         }
         catch (Exception ex)
         {

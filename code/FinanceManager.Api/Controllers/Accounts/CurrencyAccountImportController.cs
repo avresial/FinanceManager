@@ -12,14 +12,14 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
-[Tags("Bank Imports")]
-public class BankAccountImportController(ICurrencyAccountImportService importService, ICurrencyAccountRepository<CurrencyAccount> bankAccountRepository)
+[Tags("Currency Imports")]
+public class CurrencyAccountImportController(ICurrencyAccountImportService importService, ICurrencyAccountRepository<CurrencyAccount> accountRepository)
     : ControllerBase
 {
-    [HttpPost("ImportBankEntries")]
+    [HttpPost("ImportCurrencyEntries")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(object))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> ImportBankEntries([FromBody] CurrencyDataImportDto importDto)
+    public async Task<IActionResult> ImportCurrencyEntries([FromBody] CurrencyDataImportDto importDto)
     {
         if (importDto is null) return BadRequest("No import data provided.");
         var userId = ApiAuthenticationHelper.GetUserId(User);
@@ -39,7 +39,7 @@ public class BankAccountImportController(ICurrencyAccountImportService importSer
 
         foreach (var accountId in resolvedConflicts.Select(rc => rc.AccountId).Distinct())
         {
-            var account = await bankAccountRepository.Get(accountId);
+            var account = await accountRepository.Get(accountId);
             if (account is null || account.UserId != userId)
                 return Forbid("Account not found or access denied.");
         }

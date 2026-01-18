@@ -1,4 +1,3 @@
-
 using FinanceManager.Components.Components.SharedComponents;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
@@ -8,14 +7,14 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents;
 
-public partial class ManageBankAccount
+public partial class ManageCurrencyAccount
 {
     private MudForm? _form;
     private bool _success;
     private string[] _errors = [];
-    private CurrencyAccount? _bankAccount = null;
+    private CurrencyAccount? _currencyAccount = null;
 
     public string AccountName { get; set; } = string.Empty;
     public AccountLabel AccountType { get; set; }
@@ -26,7 +25,7 @@ public partial class ManageBankAccount
     [Inject] public required NavigationManager Navigation { get; set; }
     [Inject] public required IDialogService DialogService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
-    [Inject] public required ILogger<ManageBankAccount> Logger { get; set; }
+    [Inject] public required ILogger<ManageCurrencyAccount> Logger { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
     protected override async Task OnParametersSetAsync()
@@ -36,16 +35,16 @@ public partial class ManageBankAccount
             var user = await LoginService.GetLoggedUser();
             if (user is null) return;
 
-            _bankAccount = await FinancalAccountService.GetAccount<CurrencyAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            _currencyAccount = await FinancalAccountService.GetAccount<CurrencyAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
-            if (_bankAccount is null) return;
+            if (_currencyAccount is null) return;
 
-            AccountName = _bankAccount.Name;
-            AccountType = _bankAccount.AccountType;
+            AccountName = _currencyAccount.Name;
+            AccountType = _currencyAccount.AccountType;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error loading bank account with ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error loading currency account with ID {AccountId}", AccountId);
         }
     }
 
@@ -58,23 +57,23 @@ public partial class ManageBankAccount
             await _form.Validate();
 
             if (!_form.IsValid) return;
-            if (_bankAccount is null) return;
+            if (_currencyAccount is null) return;
             if (string.IsNullOrEmpty(AccountName))
             {
                 _errors = [$"AccountName can not be empty"];
                 return;
             }
 
-            if (_bankAccount is null) return;
+            if (_currencyAccount is null) return;
 
-            CurrencyAccount updatedAccount = new CurrencyAccount(_bankAccount.UserId, _bankAccount.AccountId, AccountName, AccountType);
+            CurrencyAccount updatedAccount = new CurrencyAccount(_currencyAccount.UserId, _currencyAccount.AccountId, AccountName, AccountType);
             await FinancalAccountService.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error updating bank account with ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error updating currency account with ID {AccountId}", AccountId);
         }
     }
 
@@ -96,7 +95,7 @@ public partial class ManageBankAccount
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error removing bank account with ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error removing currency account with ID {AccountId}", AccountId);
         }
     }
 }
