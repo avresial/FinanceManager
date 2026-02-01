@@ -51,6 +51,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase
 
         return Task.CompletedTask;
     }
+
     public async Task HideOverlay()
     {
         _addEntryVisibility = false;
@@ -66,6 +67,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase
 
         StateHasChanged();
     }
+
     public async Task UpdateInfo()
     {
         if (Account is null || Account.Entries is null) return;
@@ -100,6 +102,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase
         _top5 = orderedByPrice.Take(5).ToList();
         _bottom5 = orderedByPrice.Skip(Account.Entries.Count - 5).Take(5).OrderBy(x => x.Item2).ToList();
     }
+
     public async Task LoadMore()
     {
         try
@@ -124,6 +127,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase
                 }
             }
 
+
             await UpdateChartData();
             await UpdateInfo();
         }
@@ -139,13 +143,21 @@ public partial class BondAccountDetailsPageContent : ComponentBase
     {
         try
         {
-
             _user = await LoginService.GetLoggedUser();
             if (_user is null) return;
             _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
             _currency = SettingsService.GetCurrency();
 
-            await UpdateEntries();
+            var loadTask = UpdateEntries();
+            var delayTask = Task.Delay(2000);
+            var completedTask = await Task.WhenAny(loadTask, delayTask);
+            if (completedTask == delayTask)
+            {
+                IsLoading = true;
+                StateHasChanged();
+                await loadTask;
+                IsLoading = false;
+            }
 
             AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
         }
@@ -155,20 +167,21 @@ public partial class BondAccountDetailsPageContent : ComponentBase
             ErrorMessage = ex.Message;
         }
     }
+
     protected override async Task OnParametersSetAsync()
     {
-        IsLoading = true;
-        try
+        if (Account is not null && Account.AccountId == AccountId) return;
+        _loadedAllData = false;
+        var loadTask = UpdateEntries();
+        var delayTask = Task.Delay(2000);
+        var completedTask = await Task.WhenAny(loadTask, delayTask);
+        if (completedTask == delayTask)
         {
-            _loadedAllData = true;
-            await UpdateEntries();
+            IsLoading = true;
+            StateHasChanged();
+            await loadTask;
+            IsLoading = false;
         }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error while setting parameters for bond account details for account ID {AccountId}", AccountId);
-            ErrorMessage = ex.Message;
-        }
-        IsLoading = false;
     }
 
     private async Task UpdateEntries()
@@ -197,6 +210,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase
             Logger.LogError(ex, "Error while loading bond account details for account ID {AccountId}", AccountId);
         }
     }
+
     private async Task UpdateChartData()
     {
         ChartData.Clear();
@@ -215,6 +229,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase
             }));
         }
     }
+
     private async Task UpdateDates()
     {
         _oldestEntryDate = await FinancialAccountService.GetStartDate(AccountId);

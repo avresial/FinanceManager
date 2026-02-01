@@ -1,0 +1,33 @@
+@using FinanceManager.Domain.Entities.Currencies
+
+@if (BalanceChange > 0)
+{
+    <MudGrid>
+        <MudItem xs="6">
+            <MudText>Balance change</MudText>
+        </MudItem>
+        <MudItem xs="6" Class="text-end">
+            <MudText Color="Color.Success">
+                @BalanceChange @Currency <i class="fs-5 bi bi-arrow-up-right"></i>
+            </MudText>
+        </MudItem>
+    </MudGrid>
+}
+else if (BalanceChange != 0)
+{
+    <MudGrid>
+        <MudItem xs="6">
+            <MudText>Balance change</MudText>
+        </MudItem>
+        <MudItem xs="6" Class="text-end">
+            <MudText Color="Color.Error">
+                @BalanceChange @Currency <i class="fs-5 bi bi-arrow-down-right"></i>
+            </MudText>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public decimal BalanceChange { get; set; }
+    [Parameter] public required Currency Currency { get; set; }
+}

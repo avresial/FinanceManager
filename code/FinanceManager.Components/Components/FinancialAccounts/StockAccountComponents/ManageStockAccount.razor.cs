@@ -64,7 +64,7 @@ public partial class ManageStockAccount : ComponentBase
 
             if (StocktAccount is null) return;
 
-            StockAccount updatedAccount = new StockAccount(StocktAccount.UserId, StocktAccount.AccountId, AccountName);
+            StockAccount updatedAccount = new(StocktAccount.UserId, StocktAccount.AccountId, AccountName);
             await FinancalAccountService.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");
@@ -80,7 +80,6 @@ public partial class ManageStockAccount : ComponentBase
     {
         try
         {
-
             var options = new DialogOptions { CloseOnEscapeKey = true };
             var dialog = await DialogService.ShowAsync<ConfirmRemoveDialog>("Simple Dialog", options);
             var result = await dialog.Result;

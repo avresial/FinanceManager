@@ -106,20 +106,50 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-        await UpdateEntries();
+        try
+        {
+            _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            _user = await LoginService.GetLoggedUser();
+            if (_user is null)
+            {
+                IsLoading = false;
+                return;
+            }
 
-        AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
+            var loadTask = UpdateEntries();
+            var delayTask = Task.Delay(2000);
+            var completedTask = await Task.WhenAny(loadTask, delayTask);
+            if (completedTask == delayTask)
+            {
+                IsLoading = true;
+                StateHasChanged();
+                await loadTask;
+                IsLoading = false;
+            }
+            AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during initialization of CurrencyAccountDetailsPageContent for account ID {AccountId}", AccountId);
+        }
     }
     protected override async Task OnParametersSetAsync()
     {
-        IsLoading = true;
-        _user = await LoginService.GetLoggedUser();
-        if (_user is null) return;
-
-        _loadedAllData = false;
-        await UpdateEntries();
-        IsLoading = false;
+        try
+        {
+            if (Account is not null && Account.AccountId == AccountId) return;
+            IsLoading = true;
+            _loadedAllData = false;
+            await UpdateEntries();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during initialization of CurrencyAccountDetailsPageContent for account ID {AccountId}", AccountId);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private async Task UpdateEntries()
@@ -129,15 +159,14 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
             var accounts = await FinancialAccountService.GetAvailableAccounts();
             if (accounts.TryGetValue(AccountId, out Type? accountType))
             {
-                if (accountType == typeof(CurrencyAccount))
+                if (accountType != typeof(CurrencyAccount)) return;
+
+                await UpdateDates();
+                if (_user is not null)
                 {
-                    await UpdateDates();
-                    if (_user is not null)
-                    {
-                        Account = await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, _dateStart, DateTime.UtcNow);
-                        if (Account is not null && Account.Entries is not null)
-                            await UpdateInfo();
-                    }
+                    Account = await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, _dateStart, DateTime.UtcNow);
+                    if (Account is not null && Account.Entries is not null)
+                        await UpdateInfo();
                 }
             }
         }
