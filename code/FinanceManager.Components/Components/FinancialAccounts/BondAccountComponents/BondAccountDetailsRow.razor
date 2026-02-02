@@ -2,134 +2,78 @@
 
 <MudExpansionPanel @bind-Expanded=_expanded>
     <TitleContent>
-        <div class="row">
-            <div class="col-3">
-                <div class="row text-muted mb-1">
-                    <div style="font-size:0.8rem !important">
-                        Bond
-                    </div>
-                </div>
-                <div class="row">
-                    <div>
-                        @if (BondDetails is not null)
-                        {
-                            @BondDetails.Name
-                        }
-                        else
-                        {
-                            @("Unknown Bond")
-                        }
-                    </div>
-                </div>
-            </div>
-            <div class="col-3">
-                <div class="row text-muted mb-1">
-                    <div style="font-size:0.8rem !important">
-                        Balance
-                    </div>
-                </div>
-                <div class="row">
-                    <div>
-                        @BondAccountEntry.Value @_currency
-                    </div>
-                </div>
-            </div>
-            <div class="col-3">
-                <div class="row text-muted mb-1">
-                    <div style="font-size:0.8rem !important">
-                        Change
-                    </div>
-                </div>
-                <div class="row">
-                    @if (BondAccountEntry.ValueChange > 0)
+        <MudGrid>
+            <MudItem xs="3">
+                <MudText Typo="Typo.caption" Color="Color.Default">Bond</MudText>
+                <MudText Typo="Typo.body1">
+                    @if (BondDetails is not null)
                     {
-                        <div class="text-success">
-                            @BondAccountEntry.ValueChange @_currency
-                        </div>
+                        @BondDetails.Name
                     }
                     else
                     {
-                        <div class="text-danger">
-                            @BondAccountEntry.ValueChange @_currency
-                        </div>
+                        @("Unknown Bond")
                     }
-
-                </div>
-            </div>
-            <div class="col-3">
-                <div class="row text-muted mb-1">
-                    <div style="font-size:0.8rem !important">
-                        Posting date
-                    </div>
-                </div>
-                <div class="row">
-                    <div>
-                        @BondAccountEntry.PostingDate.ToString("yyyy-MM-dd")
-                    </div>
-                </div>
-            </div>
-        </div>
+                </MudText>
+            </MudItem>
+            <MudItem xs="3">
+                <MudText Typo="Typo.caption" Color="Color.Default">Balance</MudText>
+                <MudText Typo="Typo.body1">@BondAccountEntry.Value @_currency</MudText>
+            </MudItem>
+            <MudItem xs="3">
+                <MudText Typo="Typo.caption" Color="Color.Default">Change</MudText>
+                <MudText Typo="Typo.body1" Color="@(BondAccountEntry.ValueChange > 0 ? Color.Success : Color.Error)">
+                    @BondAccountEntry.ValueChange @_currency
+                </MudText>
+            </MudItem>
+            <MudItem xs="3">
+                <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
+                <MudText Typo="Typo.body1">@BondAccountEntry.PostingDate.ToString("yyyy-MM-dd")</MudText>
+            </MudItem>
+        </MudGrid>
     </TitleContent>
 
     <ChildContent>
         @if (_expanded)
         {
-            <div class="row">
-                <div class="col-12 mt-4">
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="row text-muted">
-                                <div style="font-size:0.8rem !important">
-                                    Posting date
-                                </div>
-                            </div>
-                            <div class="row mb-1">
-                                <div>
-                                    @BondAccountEntry.PostingDate
-                                </div>
-                            </div>
-                        </div>
+            <MudGrid>
+                <MudItem xs="12" Class="mt-4">
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
+                            <MudText Typo="Typo.body1">@BondAccountEntry.PostingDate</MudText>
+                        </MudItem>
                         
                         @if (BondAccountEntry.Labels is not null && BondAccountEntry.Labels.Any())
                         {
-                            <div class="col-6">
-                                <div class="row text-muted">
-                                    <div style="font-size:0.8rem !important">
-                                        Labels
-                                    </div>
-                                </div>
-                                <div class="row mb-1">
-                                    <div>
-                                        @foreach (var item in BondAccountEntry.Labels)
-                                        {
-                                            <MudChip T="string">@item.Name</MudChip>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Default">Labels</MudText>
+                                <MudStack Row Spacing="1">
+                                    @foreach (var item in BondAccountEntry.Labels)
+                                    {
+                                        <MudChip T="string">@item.Name</MudChip>
+                                    }
+                                </MudStack>
+                            </MudItem>
                         }
                         @if (BondDetails is not null)
                         {
-                            <div class="col-12">
-                                <div class="row text-muted">
-                                    <div style="font-size:0.8rem !important">
-                                        Issuer
-                                    </div>
-                                </div>
-                                <div class="row mb-1">
-                                    <div>
-                                        @BondDetails.Issuer
-                                    </div>
-                                </div>
-                            </div>
+                            <MudItem xs="12">
+                                <MudText Typo="Typo.caption" Color="Color.Default">Issuer</MudText>
+                                <MudText Typo="Typo.body1">@BondDetails.Issuer</MudText>
+                            </MudItem>
                         }
-                    </div>
-                    <div class="row">
-                        <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
-                        <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove</MudButton>
-                    </div>
-                </div>
-            </div>
+                    </MudGrid>
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudButton Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudButton Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove</MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudItem>
+            </MudGrid>
         }
     </ChildContent>
 </MudExpansionPanel>
