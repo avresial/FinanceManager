@@ -43,7 +43,7 @@
                             <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
                             <MudText Typo="Typo.body1">@BondAccountEntry.PostingDate</MudText>
                         </MudItem>
-                        
+
                         @if (BondAccountEntry.Labels is not null && BondAccountEntry.Labels.Any())
                         {
                             <MudItem xs="6">
@@ -69,7 +69,8 @@
                             <MudButton Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
                         </MudItem>
                         <MudItem xs="6">
-                            <MudButton Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove</MudButton>
+                            <MudButton Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove
+                            </MudButton>
                         </MudItem>
                     </MudGrid>
                 </MudItem>
@@ -86,6 +87,7 @@
 
 <MudOverlay @bind-Visible=_removeEntryVisibility DarkBackground="true">
     <MudPaper Class="p-5">
-        <RemoveBondEntry BondAccountName=@BondAccount.Name BondAccountEntry="BondAccountEntry" Cancel="HideOverlay" Confirm="Confirm" />
+        <RemoveBondEntry BondAccountName=@BondAccount.Name BondAccountEntry="BondAccountEntry" Cancel="HideOverlay"
+            Confirm="Confirm" />
     </MudPaper>
 </MudOverlay>
