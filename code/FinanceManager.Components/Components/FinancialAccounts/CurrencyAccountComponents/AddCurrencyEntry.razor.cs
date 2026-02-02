@@ -21,6 +21,7 @@ public partial class AddCurrencyEntry : ComponentBase
     private TimeSpan? _time = new TimeSpan(01, 00, 00);
 
     public string Description { get; set; } = string.Empty;
+    public string? ContractorDetails { get; set; }
     public decimal? BalanceChange { get; set; } = null;
 
     private string _labelValue = "Nothing selected";
@@ -80,6 +81,7 @@ public partial class AddCurrencyEntry : ComponentBase
         CurrencyAccountEntry accountEntry = new(CurrencyAccount.AccountId, -1, date, -1, BalanceChange.Value)
         {
             Description = Description,
+            ContractorDetails = ContractorDetails,
             Labels = GetLabels().ToList()
         };
         try

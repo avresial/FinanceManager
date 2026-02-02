@@ -70,6 +70,7 @@ public class CurrencyEntryController(
         return Ok(await accountEntryRepository.Add(new CurrencyAccountEntry(addEntry.AccountId, addEntry.EntryId, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
         {
             Description = addEntry.Description,
+            ContractorDetails = addEntry.ContractorDetails,
         }));
     }
 
@@ -95,7 +96,8 @@ public class CurrencyEntryController(
         var newEntry = new CurrencyAccountEntry(updateEntry.AccountId, updateEntry.EntryId, updateEntry.PostingDate, updateEntry.Value,
             updateEntry.ValueChange)
         {
-            Description = updateEntry.Description
+            Description = updateEntry.Description,
+            ContractorDetails = updateEntry.ContractorDetails
         };
 
         if (updateEntry.Labels is null)

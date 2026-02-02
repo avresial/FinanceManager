@@ -37,6 +37,7 @@ public class ResolvedImportConflict
             : new(AccountId, 0, ImportData.PostingDate, ImportData.ValueChange, ImportData.ValueChange)
             {
                 Description = description,
+                ContractorDetails = ImportData.ContractorDetails,
                 Labels = labels ?? []
             };
     }

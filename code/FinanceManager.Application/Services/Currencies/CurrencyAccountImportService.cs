@@ -62,6 +62,7 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                     CurrencyAccountEntry newEntry = new(accountId, 0, imp.PostingDate, imp.ValueChange, imp.ValueChange)
                     {
                         Description = string.Empty,
+                        ContractorDetails = imp.ContractorDetails,
                         Labels = []
                     };
 

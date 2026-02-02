@@ -11,16 +11,21 @@
                 <MudText Typo="Typo.subtitle1">@CurrencyAccount.Name</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudDatePicker Label="Posting date" @bind-Date="_postingDate" Validation="@(new NotInFutureAttribute())" />
+                <MudDatePicker Label="Posting date" @bind-Date="_postingDate"
+                    Validation="@(new NotInFutureAttribute())" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTimePicker Label="Time" @bind-Time="_time" Validation="@(new NotInFutureAttributeTime(_postingDate))" />
+                <MudTimePicker Label="Time" @bind-Time="_time"
+                    Validation="@(new NotInFutureAttributeTime(_postingDate))" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency.ShortName" Adornment="Adornment.End" />
+                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange"
+                    Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency.ShortName"
+                    Adornment="Adornment.End" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudSelect T="string" Label="Label" MultiSelection="true" @bind-Value="_labelValue" @bind-SelectedValues="_selectedLabels">
+                <MudSelect T="string" Label="Label" MultiSelection="true" @bind-Value="_labelValue"
+                    @bind-SelectedValues="_selectedLabels">
                     @foreach (var state in _possibleLabels.Select(x => x.Name))
                     {
                         <MudSelectItem T="string" Value="@state">@state</MudSelectItem>
@@ -28,24 +33,30 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="12">
-                <MudTextField @bind-Value="Description" T="string" Label="Description" Variant="Variant.Text" MaxLines="5" AutoGrow="true" />
+                <MudTextField @bind-Value="Description" T="string" Label="Description" Variant="Variant.Text"
+                    MaxLines="5" AutoGrow="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="ContractorDetails" T="string" Label="Contractor Details"
+                    Variant="Variant.Text" MaxLength="140" Counter="140" />
             </MudItem>
             <MudItem xs="12">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add>Add</MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel Class="mx-2">Cancel</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel
+                    Class="mx-2">Cancel</MudButton>
                 @if (CustomButton is not null)
                 {
                     @CustomButton
                 }
             </MudItem>
-            
+
             @if (_errors.Any())
             {
                 <MudItem xs="12">
                     @foreach (var error in _errors)
                     {
                         <MudAlert Severity="Severity.Error">@error</MudAlert>
-                                            }
+                    }
                 </MudItem>
             }
         </MudGrid>

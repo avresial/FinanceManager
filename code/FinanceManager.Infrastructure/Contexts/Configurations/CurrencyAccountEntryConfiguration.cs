@@ -23,6 +23,9 @@ public class CurrencyAccountEntryConfiguration : IEntityTypeConfiguration<Curren
         builder.Property(e => e.ValueChange)
           .HasPrecision(18, 2);
 
+        builder.Property(e => e.ContractorDetails)
+            .HasMaxLength(140);
+
         // Ensure PostingDate is always returned as UTC
         var dateTimeConverter = new ValueConverter<DateTime, DateTime>(
             v => v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime(),

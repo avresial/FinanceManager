@@ -21,6 +21,7 @@ public partial class UpdateCurrencyEntry
     private TimeSpan? _time { get; set; } = new TimeSpan(01, 00, 00);
 
     private string? _description = string.Empty;
+    private string? _contractorDetails;
     private decimal? _balanceChange = 0;
 
     private string _labelValue = "Nothing selected";
@@ -51,6 +52,7 @@ public partial class UpdateCurrencyEntry
         _postingDate = CurrencyAccountEntry.PostingDate;
         _time = new TimeSpan(CurrencyAccountEntry.PostingDate.Hour, CurrencyAccountEntry.PostingDate.Minute, CurrencyAccountEntry.PostingDate.Second);
         _description = CurrencyAccountEntry.Description;
+        _contractorDetails = CurrencyAccountEntry.ContractorDetails;
         _balanceChange = CurrencyAccountEntry.ValueChange;
 
         _selectedLabels = CurrencyAccountEntry.Labels?.Select(x => x.Name.ToString()).ToList() ?? [];
@@ -70,6 +72,7 @@ public partial class UpdateCurrencyEntry
         CurrencyAccountEntry accountEntry = new(CurrencyAccountEntry.AccountId, CurrencyAccountEntry.EntryId, date, -1, _balanceChange.Value)
         {
             Description = this._description is null ? string.Empty : this._description,
+            ContractorDetails = this._contractorDetails,
             Labels = GetLabels().ToList()
         };
 

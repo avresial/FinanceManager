@@ -13,6 +13,7 @@ public static class CurrencyAccountEntryExtension
         ValueChange = currencyAccountEntry.ValueChange,
         Value = currencyAccountEntry.Value,
         Description = currencyAccountEntry.Description,
+        ContractorDetails = currencyAccountEntry.ContractorDetails,
         PostingDate = currencyAccountEntry.PostingDate,
         Labels = [.. currencyAccountEntry.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id })]
     };
