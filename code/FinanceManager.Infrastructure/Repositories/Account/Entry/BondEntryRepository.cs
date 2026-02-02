@@ -12,7 +12,8 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
     {
         // Don't use entry.Value as it may be a placeholder (-1)
         // The correct value will be calculated during recalculation
-        var newEntry = new BondAccountEntry(entry.AccountId, 0, entry.PostingDate, 0, entry.ValueChange, entry.BondDetailsId)
+        var newEntry = new BondAccountEntry(entry.AccountId, 0, DateTime.SpecifyKind(entry.PostingDate, DateTimeKind.Utc),
+         0, entry.ValueChange, entry.BondDetailsId)
         {
             Labels = entry.Labels,
         };
@@ -32,7 +33,8 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         {
             // Don't use entry.Value as it may be a placeholder
             // The correct value will be calculated during recalculation
-            var newEntry = new BondAccountEntry(entry.AccountId, 0, entry.PostingDate, 0, entry.ValueChange, entry.BondDetailsId)
+            var newEntry = new BondAccountEntry(entry.AccountId, 0, DateTime.SpecifyKind(entry.PostingDate, DateTimeKind.Utc),
+             0, entry.ValueChange, entry.BondDetailsId)
             {
                 Labels = entry.Labels,
             };
@@ -153,8 +155,6 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             .OrderBy(x => x.PostingDate)
             .ThenBy(x => x.EntryId)
             .ToListAsync();
-
-        entriesToUpdate.Insert(0, entry);
 
         // Group by BondDetailsId to calculate values independently per bond
         var entriesByBond = entriesToUpdate.GroupBy(e => e.BondDetailsId);

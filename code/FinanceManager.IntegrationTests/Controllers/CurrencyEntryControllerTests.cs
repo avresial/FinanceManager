@@ -140,7 +140,8 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
             DateTime.UtcNow.Date.AddDays(-3),
             500m,
             250m,
-            "New test entry"
+            "New test entry",
+            null
         );
 
         // act

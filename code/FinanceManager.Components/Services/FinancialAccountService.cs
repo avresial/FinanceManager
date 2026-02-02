@@ -59,7 +59,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
                 if (item is CurrencyAccountEntry currencyEntry)
                 {
                     await currencyEntryHttpClient.AddEntryAsync(new(currencyEntry.AccountId, currencyEntry.EntryId, currencyEntry.PostingDate,
-                        currencyEntry.Value, currencyEntry.ValueChange, currencyEntry.Description));
+                        currencyEntry.Value, currencyEntry.ValueChange, currencyEntry.Description, currencyEntry.ContractorDetails));
                 }
             }
         }
@@ -90,7 +90,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         {
             case CurrencyAccountEntry currencyEntry:
                 await currencyEntryHttpClient.AddEntryAsync(new(currencyEntry.AccountId, currencyEntry.EntryId, currencyEntry.PostingDate, currencyEntry.Value,
-                    currencyEntry.ValueChange, currencyEntry.Description));
+                    currencyEntry.ValueChange, currencyEntry.Description, currencyEntry.ContractorDetails));
                 break;
 
             case StockAccountEntry stockAccountEntry:
