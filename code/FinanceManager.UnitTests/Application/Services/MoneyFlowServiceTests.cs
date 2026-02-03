@@ -14,6 +14,8 @@ using Moq;
 
 namespace FinanceManager.UnitTests.Application.Services;
 
+[Collection("Application")]
+[Trait("Category", "Unit")]
 public class MoneyFlowServiceTests
 {
     private readonly DateTime _startDate = new(DateTime.UtcNow.Year - 1, 1, 1);

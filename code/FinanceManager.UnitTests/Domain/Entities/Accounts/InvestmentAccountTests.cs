@@ -4,6 +4,8 @@ using FinanceManager.Domain.Extensions;
 
 namespace FinanceManager.UnitTests.Domain.Entities.Accounts;
 
+[Collection("Domain")]
+[Trait("Category", "Unit")]
 public class InvestmentAccountTests
 {
     private readonly StockAccount _investmentAccount = new(1, 1, "TestAccount");

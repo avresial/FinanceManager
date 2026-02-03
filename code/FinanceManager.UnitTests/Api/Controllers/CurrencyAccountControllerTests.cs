@@ -15,6 +15,8 @@ using System.Security.Claims;
 
 namespace FinanceManager.UnitTests.Api.Controllers;
 
+[Collection("Api")]
+[Trait("Category", "Unit")]
 public class CurrencyAccountControllerTests
 {
     private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _mockAccountRepository = new();

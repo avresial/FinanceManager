@@ -10,6 +10,8 @@ using Xunit;
 
 namespace FinanceManager.IntegrationTests.Controllers;
 
+[Collection("api")]
+[Trait("Category", "Integration")]
 public class LoginControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
     private static readonly string _testUserName = "testUser";

@@ -2,6 +2,8 @@
 
 namespace FinanceManager.UnitTests.Domain.Entities.Accounts;
 
+[Collection("Domain")]
+[Trait("Category", "Unit")]
 public class FinancialAccountTests
 {
     private readonly FinancialAccountBase<FinancialEntryBase> _financialAccount = new(1, 1, "Test account");
