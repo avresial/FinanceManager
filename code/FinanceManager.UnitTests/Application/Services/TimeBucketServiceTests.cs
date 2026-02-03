@@ -3,7 +3,7 @@ using System.Globalization;
 
 namespace FinanceManager.UnitTests.Application.Services;
 
-[Collection("unit")]
+[Collection("Application")]
 [Trait("Category", "Unit")]
 public class TimeBucketServiceTests
 {

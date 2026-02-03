@@ -10,7 +10,7 @@ using Moq;
 
 namespace FinanceManager.UnitTests.Application.Services;
 
-[Collection("unit")]
+[Collection("Application")]
 [Trait("Category", "Unit")]
 public class UserPlanVerifierTests
 {

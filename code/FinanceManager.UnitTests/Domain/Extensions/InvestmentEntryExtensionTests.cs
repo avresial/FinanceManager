@@ -4,7 +4,7 @@ using FinanceManager.Domain.Extensions;
 
 namespace FinanceManager.UnitTests.Domain.Extensions;
 
-[Collection("unit")]
+[Collection("Domain")]
 [Trait("Category", "Unit")]
 public class InvestmentEntryExtensionTests
 {

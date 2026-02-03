@@ -10,7 +10,7 @@ using System.Security.Claims;
 
 namespace FinanceManager.UnitTests.Api.Controllers;
 
-[Collection("unit")]
+[Collection("Api")]
 [Trait("Category", "Unit")]
 public class StockAccountControllerTests
 {

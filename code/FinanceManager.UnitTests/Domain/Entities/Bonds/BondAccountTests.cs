@@ -3,7 +3,7 @@ using FinanceManager.Domain.Enums;
 
 namespace FinanceManager.UnitTests.Domain.Entities.Bonds;
 
-[Collection("unit")]
+[Collection("Domain")]
 [Trait("Category", "Unit")]
 public class BondAccountTests
 {
