@@ -10,6 +10,8 @@ using Moq;
 
 namespace FinanceManager.UnitTests.Application.Services;
 
+[Collection("unit")]
+[Trait("Category", "Unit")]
 public class UserPlanVerifierTests
 {
     private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _currencyAccountRepositoryMock = new();

@@ -2,6 +2,8 @@
 
 namespace FinanceManager.UnitTests.Domain.Entities.Accounts;
 
+[Collection("unit")]
+[Trait("Category", "Unit")]
 public class CurrencyAccountTests
 {
     private readonly CurrencyAccount _account = new(1, 1, "Test account", FinanceManager.Domain.Enums.AccountLabel.Other);

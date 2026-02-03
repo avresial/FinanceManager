@@ -10,6 +10,8 @@ using System.Security.Claims;
 
 namespace FinanceManager.UnitTests.Api.Controllers;
 
+[Collection("unit")]
+[Trait("Category", "Unit")]
 public class StockAccountControllerTests
 {
     private readonly Mock<IAccountRepository<StockAccount>> _mockStockAccountRepository;

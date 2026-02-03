@@ -7,6 +7,8 @@ using Moq;
 
 namespace FinanceManager.UnitTests.Application.Services;
 
+[Collection("unit")]
+[Trait("Category", "Unit")]
 public class AssetsServiceCurrencyTests
 {
     private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();

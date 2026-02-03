@@ -7,6 +7,8 @@ using Moq;
 
 namespace FinanceManager.UnitTests.Application.Services;
 
+[Collection("unit")]
+[Trait("Category", "Unit")]
 public class BalanceServiceTests
 {
     private readonly DateTime _startDate = new(DateTime.UtcNow.Year - 1, 1, 1);

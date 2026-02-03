@@ -12,6 +12,8 @@ using Moq;
 
 namespace FinanceManager.UnitTests.Application.Services;
 
+[Collection("unit")]
+[Trait("Category", "Unit")]
 public class CurrencyAccountImportServiceTests
 {
     private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _mockAccountRepository;

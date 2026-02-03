@@ -14,6 +14,7 @@ using Xunit;
 namespace FinanceManager.IntegrationTests.Controllers;
 
 [Collection("api")]
+[Trait("Category", "Integration")]
 public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private TestDatabase? _testDatabase;

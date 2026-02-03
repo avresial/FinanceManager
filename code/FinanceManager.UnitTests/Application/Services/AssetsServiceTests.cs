@@ -7,6 +7,8 @@ using Moq;
 
 namespace FinanceManager.UnitTests.Application.Services;
 
+[Collection("unit")]
+[Trait("Category", "Unit")]
 public class AssetsServiceTests
 {
     private readonly Mock<IAssetsServiceTyped> _mockService1 = new Mock<IAssetsServiceTyped>();
