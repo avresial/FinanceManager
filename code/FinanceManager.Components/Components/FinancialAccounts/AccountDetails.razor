@@ -1,10 +1,11 @@
 ﻿@page "/AccountDetails/{AccountId:int}"
-@using FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents
-@using FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents
+
 @using FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents
-@using FinanceManager.Domain.Entities.Cash
-@using FinanceManager.Domain.Entities.Stocks
+@using FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents
+@using FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents
 @using FinanceManager.Domain.Entities.Bonds
+@using FinanceManager.Domain.Entities.FinancialAccounts.Currencies
+@using FinanceManager.Domain.Entities.Stocks
 
 @if (accountType is null)
 {
@@ -19,9 +20,9 @@ else
                 @ErrorMessage
             </div>
         }
-        else if (accountType == typeof(BankAccount))
+        else if (accountType == typeof(CurrencyAccount))
         {
-            <BankAccountDetailsPageContent AccountId="@AccountId" />
+            <CurrencyAccountDetailsPageContent AccountId="@AccountId" />
         }
         else if (accountType == typeof(StockAccount))
         {

@@ -61,13 +61,27 @@ public class BondEntryController(
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BondAccountEntryDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> AddEntry(AddBondAccountEntry addEntry)
     {
+        var account = await bondAccountRepository.Get(addEntry.AccountId);
+        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
         if (!await userPlanVerifier.CanAddMoreEntries(ApiAuthenticationHelper.GetUserId(User)))
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
-        return Ok(await bondAccountEntryRepository.Add(new BondAccountEntry(addEntry.AccountId, addEntry.EntryId,
-        addEntry.PostingDate, addEntry.Value, addEntry.ValueChange, addEntry.BondDetailsId)));
+        var newEntry = new BondAccountEntry(addEntry.AccountId, addEntry.EntryId,
+            addEntry.PostingDate, addEntry.Value, addEntry.ValueChange, addEntry.BondDetailsId);
+
+        await bondAccountEntryRepository.Add(newEntry);
+
+        // Get all entries for this account and date to find the one we just added
+        var entries = await bondAccountEntryRepository.Get(addEntry.AccountId, addEntry.PostingDate, addEntry.PostingDate.AddSeconds(1))
+            .Where(e => e.BondDetailsId == addEntry.BondDetailsId)
+            .OrderByDescending(x => x.EntryId)
+            .ToListAsync();
+
+        var savedEntry = entries.FirstOrDefault();
+        return Ok(savedEntry);
     }
 
     [HttpDelete("{accountId:int}/{entryId:int}")]

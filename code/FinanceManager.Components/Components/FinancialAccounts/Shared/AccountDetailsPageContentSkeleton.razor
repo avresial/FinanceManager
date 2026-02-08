@@ -1,0 +1,45 @@
+<div class="@ChartContainerClass">
+    <MudPaper Height="150px" Width="100%" Elevation="0" Style="background-color: transparent" />
+</div>
+
+<MudContainer>
+    <MudGrid Spacing="3">
+        <MudItem xs="12" lg="2">
+            <MudStack Spacing="2">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="100%" Height="36px" />
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="100%" Height="36px" />
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="100%" Height="36px" />
+            </MudStack>
+        </MudItem>
+        <MudItem xs="12" lg="7">
+            <MudGrid Spacing="0">
+                <MudItem xs="12">
+                    <MudExpansionPanels Elevation="0" MultiExpansion>
+                        @for (int i = 0; i < 15; i++)
+                        {
+                            <MudExpansionPanel Style="height: 48px;">
+                                <TitleContent>
+                                    <MudSkeleton Animation="Animation.Wave" Width="100%" />
+                                </TitleContent>
+                            </MudExpansionPanel>
+                        }
+                    </MudExpansionPanels>
+                </MudItem>
+                <MudItem xs="12" Class="d-flex justify-content-center" Style="min-height:40px">
+                    <MudSkeleton Animation="Animation.Wave" Height="36px" Width="36px" />
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+        <MudItem xs="0" lg="3">
+            <MudStack Spacing="2">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Height="24px" Width="100%" />
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Width="100%" Height="250px" />
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Width="100%" Height="250px" />
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    [Parameter] public string ChartContainerClass { get; set; } = "col-12 mb-4";
+}

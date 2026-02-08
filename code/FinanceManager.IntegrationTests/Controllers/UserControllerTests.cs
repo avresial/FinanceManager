@@ -12,6 +12,7 @@ using Xunit;
 namespace FinanceManager.IntegrationTests.Controllers;
 
 [Collection("api")]
+[Trait("Category", "Integration")]
 public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private const int _testUserId = 42;

@@ -1,4 +1,5 @@
 using FinanceManager.Application.Commands.Account;
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.ValueObjects;
 using FinanceManager.Infrastructure.Dtos;
@@ -40,7 +41,7 @@ public class BondAccountHttpClient(HttpClient httpClient)
             result.AccountLabel, nextOlder, nextYounger);
     }
 
-    public async Task<int?> AddAccountAsync(AddBondAccount addAccount)
+    public async Task<int?> AddAccountAsync(AddAccount addAccount)
     {
         var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/BondAccount", addAccount);
         if (response.IsSuccessStatusCode) return await response.Content.ReadFromJsonAsync<int?>();

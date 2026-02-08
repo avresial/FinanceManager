@@ -9,6 +9,8 @@ using Moq;
 using System.Security.Claims;
 namespace FinanceManager.UnitTests.Api.Controllers;
 
+[Collection("Api")]
+[Trait("Category", "Unit")]
 public class MoneyFlowControllerTests
 {
     private const int testUserId = 1;

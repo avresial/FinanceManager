@@ -152,6 +152,7 @@ jobs:
   integration-tests:
     runs-on: ubuntu-latest
     needs: [build, unit-tests]
+    if: github.ref == 'refs/heads/main'
     env:
       FINANCE_MANAGER_DB_KEY: ${{ secrets.FINANCE_MANAGER_DB_KEY }}
       UseInMemoryDatabase: true

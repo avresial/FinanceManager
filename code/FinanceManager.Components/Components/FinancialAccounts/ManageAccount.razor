@@ -1,12 +1,12 @@
 ﻿@page "/ManageAccount/{AccountId:int}"
 @using FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents
+@using FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents
+@using FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents
 @using FinanceManager.Components.Services
 @using FinanceManager.Domain.Entities.Bonds
-@using FinanceManager.Domain.Entities.Cash
+@using FinanceManager.Domain.Entities.FinancialAccounts.Currencies
 @using FinanceManager.Domain.Entities.Stocks
 @using FinanceManager.Domain.Repositories
-@using FinanceManager.Components.Components.FinancialAccounts.BankAccountComponents
-@using FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents
 @using FinanceManager.Domain.Repositories.Account
 
 
@@ -23,9 +23,9 @@ else
                 @ErrorMessage
             </div>
         }
-        else if (AccountType == typeof(BankAccount))
+        else if (AccountType == typeof(CurrencyAccount))
         {
-            <ManageBankAccount AccountId="@AccountId" />
+            <ManageCurrencyAccount AccountId="@AccountId" />
         }
         else if (AccountType == typeof(StockAccount))
         {

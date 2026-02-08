@@ -1,0 +1,86 @@
+﻿@using FinanceManager.Components.Components.FinancialAccounts.Shared
+@using FinanceManager.Components.Components.SharedComponents.Charts
+@using FinanceManager.Domain.Entities.MoneyFlowModels;
+
+@if (Account is null)
+{
+    @if (IsLoading)
+    {
+        <AccountDetailsPageContentSkeleton />
+    }
+}
+else if (IsLoading || Account.Entries.Any())
+{
+    <AccountDetailsPageContent AccountName="@Account.Name"
+                               ChartData="ChartData"
+                               IsLoading="@IsLoading"
+                               IsLoadingMore="@_isLoadingMore"
+                               LoadedAllData="@_loadedAllData"
+                               OnLoadMore="LoadMore">
+
+        <ActionButtons>
+            <MudButton Variant="Variant.Text" Class="col-12" href="@($"Import/{Account.AccountId}")">Import</MudButton>
+            <MudButton Variant="Variant.Text" Class="col-12" Disabled>Export</MudButton>
+            <MudButton Variant="Variant.Text" Class="col-12" href="@($"ManageAccount/{Account.AccountId}")">Manage</MudButton>
+        </ActionButtons>
+
+        <AddEntryOverlay>
+            <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add"
+                    OnClick=ShowOverlay Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:2;" />
+
+            <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
+                <MudPaper Class="p-5">
+                    <AddCurrencyEntry CurrencyAccount=Account ActionCompleted="HideOverlay" />
+                </MudPaper>
+            </MudOverlay>
+        </AddEntryOverlay>
+        <Entries>
+            @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
+            {
+                <CurrencyAccountDetailsRow CurrencyAccountEntry="@entry" CurrencyAccount=Account />
+            }
+        </Entries>
+        <SidePanel>
+            <MudStack>
+                <AccountBalanceChangePanel BalanceChange="@_balanceChange" Currency="@_currency" />
+
+                @if (_top5 is not null && _top5.Any())
+                {
+                    <AccountTopBottomList Title="Top 5"
+                                          Items="_top5"
+                                          ValueColor="Color.Success"
+                                          ItemTitle="@(entry => entry.Labels.Any() ? entry.Labels.First().Name : "Transaction")"
+                                          ItemDescription="@(entry => entry.Description)"
+                                          ItemValue="@(entry => $"{entry.ValueChange} {_currency}")"
+                                          ItemDate="@(entry => entry.PostingDate.ToString("yyyy-MM-dd"))" />
+                }
+
+                @if (_bottom5 is not null && _bottom5.Any())
+                {
+                    <AccountTopBottomList Title="Bottom 5"
+                                          Items="_bottom5"
+                                          ValueColor="Color.Error"
+                                          ItemTitle="@(entry => entry.Labels.Any() ? entry.Labels.First().Name : "Transaction")"
+                                          ItemDescription="@(entry => entry.Description)"
+                                          ItemValue="@(entry => $"{entry.ValueChange} {_currency}")"
+                                          ItemDate="@(entry => entry.PostingDate.ToString("yyyy-MM-dd"))" />
+                }
+            </MudStack>
+        </SidePanel>
+    </AccountDetailsPageContent>
+}
+else if (!Account.Entries.Any())
+{
+    <AddCurrencyEntry CurrencyAccount=Account ActionCompleted="HideOverlay">
+        <CustomButton>
+            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.AccountId}")">
+                Import
+            </MudButton>
+        </CustomButton>
+    </AddCurrencyEntry>
+}
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <MudAlert Severity="Severity.Error">@ErrorMessage</MudAlert>
+}

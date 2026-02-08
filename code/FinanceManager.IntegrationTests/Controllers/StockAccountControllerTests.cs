@@ -1,6 +1,7 @@
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
@@ -13,6 +14,7 @@ using Xunit;
 namespace FinanceManager.IntegrationTests.Controllers;
 
 [Collection("api")]
+[Trait("Category", "Integration")]
 public class StockAccountControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private const int _testUserId = 89;

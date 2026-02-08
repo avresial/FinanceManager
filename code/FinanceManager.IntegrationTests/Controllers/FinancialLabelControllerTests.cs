@@ -1,6 +1,6 @@
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
@@ -11,6 +11,7 @@ using Xunit;
 namespace FinanceManager.IntegrationTests.Controllers;
 
 [Collection("api")]
+[Trait("Category", "Integration")]
 public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private TestDatabase? _testDatabase;
@@ -29,11 +30,11 @@ public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : Co
 
     private async Task SeedWithTestFinancialLabel(string name = "Test Label")
     {
-        if (await _testDatabase!.Context.FinancialLabels.AnyAsync(x => x.Name == name))
+        if (await _testDatabase!.Context.FinancialLabels.AnyAsync(x => x.Name == name, TestContext.Current.CancellationToken))
             return;
 
         _testDatabase!.Context.FinancialLabels.Add(new FinancialLabel { Name = name });
-        await _testDatabase.Context.SaveChangesAsync();
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -131,7 +132,7 @@ public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : Co
         var addLabel = new AddFinancialLabel("Test Label");
         await new FinancialLabelHttpClient(Client).Add(addLabel, TestContext.Current.CancellationToken);
         var label = await _testDatabase!.Context.FinancialLabels.FirstAsync(x => x.Name == addLabel.Name, TestContext.Current.CancellationToken);
-        _testDatabase!.Context.BankEntries.Add(new BankAccountEntry(1, 0, DateTime.UtcNow, 1, 1)
+        _testDatabase!.Context.CurrencyEntries.Add(new CurrencyAccountEntry(1, 0, DateTime.UtcNow, 1, 1)
         {
             Labels = [label]
         });

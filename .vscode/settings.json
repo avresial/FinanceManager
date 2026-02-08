@@ -1,3 +1,10 @@
 {
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "chat.tools.terminal.autoApprove": {
+        "dotnet test": true,
+        "/^cd code; powershell -Command \"dotnet build --no-incremental\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
 }

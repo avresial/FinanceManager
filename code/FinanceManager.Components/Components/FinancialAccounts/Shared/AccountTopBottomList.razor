@@ -1,0 +1,34 @@
+@typeparam TItem
+
+<MudText Align="Align.Center" Typo="Typo.h6" Class="mt-2">@Title</MudText>
+
+@foreach (var item in Items)
+{
+    <MudGrid>
+        <MudItem xs="6">
+            <MudText>@ItemTitle(item)</MudText>
+            @if (ItemDescription is not null)
+            {
+                <MudText Color="Color.Secondary" Typo="Typo.caption">
+                    @ItemDescription(item)
+                </MudText>
+            }
+        </MudItem>
+        <MudItem xs="6" Class="text-end">
+            <MudText Color="ValueColor">@ItemValue(item)</MudText>
+            <MudText Color="Color.Default" Typo="Typo.caption">
+                @ItemDate(item)
+            </MudText>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public required string Title { get; set; }
+    [Parameter] public required IEnumerable<TItem> Items { get; set; }
+    [Parameter] public required Func<TItem, string> ItemTitle { get; set; }
+    [Parameter] public Func<TItem, string>? ItemDescription { get; set; }
+    [Parameter] public required Func<TItem, string> ItemValue { get; set; }
+    [Parameter] public required Func<TItem, string> ItemDate { get; set; }
+    [Parameter] public Color ValueColor { get; set; } = Color.Default;
+}

@@ -1,10 +1,9 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Cash;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
-using FinanceManager.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -12,6 +11,7 @@ using Xunit;
 namespace FinanceManager.IntegrationTests.Controllers;
 
 [Collection("api")]
+[Trait("Category", "Integration")]
 public class AssetsControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private TestDatabase? _testDatabase;
@@ -35,10 +35,10 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
 
     }
 
-    private async Task SeedWithTestBankAccount(string accountName = "Test Bank Account")
+    private async Task SeedWithTestCurrencyAccount(string accountName = "Test Currency Account")
     {
 
-        if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.Name == accountName))
+        if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.Name == accountName, TestContext.Current.CancellationToken))
             return;
 
         _value = _valueChange;
@@ -49,22 +49,22 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
             AccountId = 1,
             Name = accountName,
             AccountLabel = AccountLabel.Cash,
-            AccountType = AccountType.Bank
+            AccountType = AccountType.Currency
         };
 
         _testDatabase!.Context.Accounts.Add(test);
-        await _testDatabase.Context.SaveChangesAsync();
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         for (DateTime i = DateTime.UtcNow.AddMonths(-24).Date; i <= DateTime.UtcNow; i = i.AddDays(1))
-            _testDatabase!.Context.BankEntries.Add(new BankAccountEntry(test.AccountId, 0, i, _value += _valueChange, _valueChange));
+            _testDatabase!.Context.CurrencyEntries.Add(new CurrencyAccountEntry(test.AccountId, 0, i, _value += _valueChange, _valueChange));
 
-        await _testDatabase.Context.SaveChangesAsync();
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
     public async Task IsAnyAccountWithAssets_ReturnsTrue()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new AssetsHttpClient(Client).IsAnyAccountWithAssets(1);
@@ -75,21 +75,21 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     [Fact]
     public async Task GetEndAssetsPerAccount_ReturnsList()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new AssetsHttpClient(Client).GetEndAssetsPerAccount(1, DefaultCurrency.USD, _nowUtc);
 
         Assert.NotNull(result);
         Assert.Single(result);
-        Assert.Equal("Test Bank Account", result[0].Name);
+        Assert.Equal("Test Currency Account", result[0].Name);
         Assert.Equal(_value, result[0].Value);
     }
 
     [Fact]
     public async Task GetEndAssetsPerType_ReturnsList()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new AssetsHttpClient(Client).GetEndAssetsPerType(1, DefaultCurrency.USD, _nowUtc);
@@ -103,7 +103,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     [Fact]
     public async Task GetAssetsTimeSeries_ReturnsList()
     {
-        await SeedWithTestBankAccount();
+        await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new AssetsHttpClient(Client).GetAssetsTimeSeries(1, DefaultCurrency.USD, _nowUtc.AddDays(-2), _nowUtc);

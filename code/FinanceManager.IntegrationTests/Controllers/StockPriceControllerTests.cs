@@ -12,6 +12,7 @@ using Xunit;
 namespace FinanceManager.IntegrationTests.Controllers;
 
 [Collection("api")]
+[Trait("Category", "Integration")]
 public class StockPriceControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private TestDatabase? _testDatabase;
@@ -39,7 +40,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         currency ??= DefaultCurrency.PLN;
         if (date == default) date = DateTime.UtcNow.Date;
 
-        if (await _testDatabase!.Context.StockPrices.AnyAsync(x => x.Ticker == ticker && x.Date == date))
+        if (await _testDatabase!.Context.StockPrices.AnyAsync(x => x.Ticker == ticker && x.Date == date, TestContext.Current.CancellationToken))
             return;
 
         _testDatabase!.Context.StockPrices.Add(new StockPriceDto
@@ -50,7 +51,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
             Date = date
         });
 
-        await _testDatabase.Context.SaveChangesAsync();
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]

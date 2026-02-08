@@ -1,4 +1,3 @@
-﻿namespace FinanceManager.Application.Commands
-{
-    public record DeleteUser(int userId);
-}
+﻿namespace FinanceManager.Application.Commands;
+
+public record DeleteUser(int userId);

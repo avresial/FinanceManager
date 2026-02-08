@@ -138,17 +138,33 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
             _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
             _currency = SettingsService.GetCurrency();
 
-            await UpdateEntries();
+            var loadTask = UpdateEntries();
+            var delayTask = Task.Delay(2000);
+            var completedTask = await Task.WhenAny(loadTask, delayTask);
+            if (completedTask == delayTask)
+            {
+                IsLoading = true;
+                StateHasChanged();
+                await loadTask;
+                IsLoading = false;
+            }
 
             AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
         }
         protected override async Task OnParametersSetAsync()
         {
-            IsLoading = true;
-
-            _loadedAllData = true;
-            await UpdateEntries();
-            IsLoading = false;
+            if (Account is not null && Account.AccountId == AccountId) return;
+            _loadedAllData = false;
+            var loadTask = UpdateEntries();
+            var delayTask = Task.Delay(2000);
+            var completedTask = await Task.WhenAny(loadTask, delayTask);
+            if (completedTask == delayTask)
+            {
+                IsLoading = true;
+                StateHasChanged();
+                await loadTask;
+                IsLoading = false;
+            }
         }
 
         private async Task UpdateEntries()

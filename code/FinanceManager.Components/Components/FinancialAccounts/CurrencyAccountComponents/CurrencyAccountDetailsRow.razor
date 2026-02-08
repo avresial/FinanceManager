@@ -1,0 +1,87 @@
+﻿<MudExpansionPanel @bind-Expanded=_expanded>
+    <TitleContent>
+        <MudGrid>
+            <MudItem xs="4">
+                <MudText Typo="Typo.caption" Color="Color.Default">Balance</MudText>
+                <MudText Typo="Typo.body1">@CurrencyAccountEntry.Value @_currency</MudText>
+            </MudItem>
+            <MudItem xs="4">
+                <MudText Typo="Typo.caption" Color="Color.Default">Change</MudText>
+                <MudText Typo="Typo.body1"
+                    Color="@(CurrencyAccountEntry.ValueChange > 0 ? Color.Success : Color.Error)">
+                    @CurrencyAccountEntry.ValueChange @_currency
+                </MudText>
+            </MudItem>
+            <MudItem xs="4">
+                <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
+                <MudText Typo="Typo.body1">@CurrencyAccountEntry.PostingDate.ToString("yyyy-MM-dd")</MudText>
+            </MudItem>
+        </MudGrid>
+    </TitleContent>
+
+    <ChildContent>
+        @if (_expanded)
+        {
+            <MudGrid>
+                <MudItem xs="12" Class="mt-4">
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
+                            <MudText Typo="Typo.body1">@CurrencyAccountEntry.PostingDate</MudText>
+                        </MudItem>
+
+                        @if (CurrencyAccountEntry.Labels is not null && CurrencyAccountEntry.Labels.Any())
+                        {
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Default">Labels</MudText>
+                                <MudStack Row Spacing="1">
+                                    @foreach (var item in CurrencyAccountEntry.Labels)
+                                    {
+                                        <MudChip T="string">@item.Name</MudChip>
+                                    }
+                                </MudStack>
+                            </MudItem>
+                        }
+                        @if (!string.IsNullOrEmpty(CurrencyAccountEntry.Description))
+                        {
+                            <MudItem xs="12">
+                                <MudText Typo="Typo.caption" Color="Color.Default">Description</MudText>
+                                <MudText Typo="Typo.body1">@CurrencyAccountEntry.Description</MudText>
+                            </MudItem>
+                        }
+                        @if (!string.IsNullOrEmpty(CurrencyAccountEntry.ContractorDetails))
+                        {
+                            <MudItem xs="12">
+                                <MudText Typo="Typo.caption" Color="Color.Default">Contractor Details</MudText>
+                                <MudText Typo="Typo.body1">@CurrencyAccountEntry.ContractorDetails</MudText>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudButton Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudButton Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudItem>
+            </MudGrid>
+        }
+    </ChildContent>
+</MudExpansionPanel>
+
+<MudOverlay @bind-Visible=_updateEntryVisibility DarkBackground="true">
+    <MudPaper Class="p-5">
+        <UpdateCurrencyEntry CurrencyAccount=CurrencyAccount CurrencyAccountEntry="CurrencyAccountEntry"
+            ActionCompleted="HideOverlay" />
+    </MudPaper>
+</MudOverlay>
+
+<MudOverlay @bind-Visible=_removeEntryVisibility DarkBackground="true">
+    <MudPaper Class="p-5">
+        <RemoveCurrencyEntry CurrencyAccountName=@CurrencyAccount.Name CurrencyAccountEntry="CurrencyAccountEntry"
+            Cancel="HideOverlay" Confirm="Confirm" />
+    </MudPaper>
+</MudOverlay>

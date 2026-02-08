@@ -6,126 +6,66 @@
 
 <MudExpansionPanel @bind-Expanded=_expanded>
     <TitleContent>
-        <div class="row">
-            <div class="col-3">
-                <div class="row text-muted mb-1">
-                    <div style="font-size:0.8rem !important">
-                        Ticker
-                    </div>
-                </div>
-                <div class="row">
-                    <div>
-                        @InvestmentEntry.Ticker
-                    </div>
-                </div>
-            </div>
-            <div class="col-3">
-                <div class="row text-muted mb-1">
-                    <div style="font-size:0.8rem !important">
-                        Value
-                    </div>
-                </div>
-                <div class="row">
-                    <div>
-                        @InvestmentEntry.Value.ToString("G29")
-                    </div>
-                </div>
-            </div>
-            <div class="col-3">
-                <div class="row text-muted mb-1">
-                    <div style="font-size:0.8rem !important">
-                        Change
-                    </div>
-                </div>
-                <div class="row">
-                    @if (InvestmentEntry.ValueChange > 0)
-                    {
-                        <div class="text-success">
-                            @InvestmentEntry.ValueChange.ToString("G29")
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-danger">
-                            @InvestmentEntry.ValueChange.ToString("G29")
-                        </div>
-                    }
-
-                </div>
-            </div>
-            <div class="col-3">
-                <div class="row text-muted mb-1">
-                    <div style="font-size:0.8rem !important">
-                        Posting date
-                    </div>
-                </div>
-                <div class="row">
-                    <div>
-                        @InvestmentEntry.PostingDate.ToLocalTime().ToString("yyyy-MM-dd")
-                    </div>
-                </div>
-            </div>
-        </div>
+        <MudGrid>
+            <MudItem xs="3">
+                <MudText Typo="Typo.caption" Color="Color.Default">Ticker</MudText>
+                <MudText Typo="Typo.body1">@InvestmentEntry.Ticker</MudText>
+            </MudItem>
+            <MudItem xs="3">
+                <MudText Typo="Typo.caption" Color="Color.Default">Value</MudText>
+                <MudText Typo="Typo.body1">@InvestmentEntry.Value.ToString("G29")</MudText>
+            </MudItem>
+            <MudItem xs="3">
+                <MudText Typo="Typo.caption" Color="Color.Default">Change</MudText>
+                <MudText Typo="Typo.body1" Color="@(InvestmentEntry.ValueChange > 0 ? Color.Success : Color.Error)">
+                    @InvestmentEntry.ValueChange.ToString("G29")
+                </MudText>
+            </MudItem>
+            <MudItem xs="3">
+                <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
+                <MudText Typo="Typo.body1">@InvestmentEntry.PostingDate.ToLocalTime().ToString("yyyy-MM-dd")</MudText>
+            </MudItem>
+        </MudGrid>
     </TitleContent>
 
     <ChildContent>
         @if (_expanded)
         {
-            <div class="row">
-                <div class="col-12 mt-4">
-                    <div class="row">
-                        <div class="col-4">
-                            <div class="row text-muted">
-                                <div style="font-size:0.8rem !important">
-                                    Investment type
-                                </div>
-                            </div>
-                            <div class="row mb-1">
-                                <div>
-                                    @InvestmentEntry.InvestmentType
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="row text-muted">
-                                <div style="font-size:0.8rem !important">
-                                    Posting date
-                                </div>
-                            </div>
-                            <div class="row mb-1">
-                                <div>
-                                    @InvestmentEntry.PostingDate.ToLocalTime()
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-4">
+            <MudGrid>
+                <MudItem xs="12" Class="mt-4">
+                    <MudGrid>
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.caption" Color="Color.Default">Investment type</MudText>
+                            <MudText Typo="Typo.body1">@InvestmentEntry.InvestmentType</MudText>
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
+                            <MudText Typo="Typo.body1">@InvestmentEntry.PostingDate.ToLocalTime()</MudText>
+                        </MudItem>
+                        <MudItem xs="4">
                             @if (_price.HasValue)
                             {
-                                <div class="row text-muted">
-                                    <div style="font-size:0.8rem !important">
-                                        Price
-                                    </div>
-                                </div>
-                                <div class="row mb-1">
-                                    <div>
-                                        @($"{_price.Value.ToString("0.00")} {_currency}")
-                                    </div>
-                                </div>
+                                <MudText Typo="Typo.caption" Color="Color.Default">Price</MudText>
+                                <MudText Typo="Typo.body1">@($"{_price.Value.ToString("0.00")} {_currency}")</MudText>
                             }
                             else
                             {
-                                <MudButton Color=Color.Warning Variant="Variant.Text" Href=@($"StockPrices/{InvestmentEntry.Ticker}/{InvestmentEntry.PostingDate.ToRfc3339()}")>
+                                <MudButton Color="Color.Warning" Variant="Variant.Text" Href=@($"StockPrices/{InvestmentEntry.Ticker}/{InvestmentEntry.PostingDate.ToRfc3339()}")>
                                     Add ticker price
                                 </MudButton>
                             }
-                        </div>
-                    </div>
-                    <div class="row">
-                        <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
-                        <MudButton Class="col-6" Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove</MudButton>
-                    </div>
-                </div>
-            </div>
+                        </MudItem>
+                    </MudGrid>
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudButton Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudButton Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove</MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudItem>
+            </MudGrid>
         }
     </ChildContent>
 </MudExpansionPanel>

@@ -7,5 +7,11 @@
             "request": "launch",
             "projectPath": "${workspaceFolder}\\code\\AppHost\\AppHost.csproj"
         },
+        {
+            "name": "C#: FinanceManager.WebUi Debug",
+            "type": "dotnet",
+            "request": "launch",
+            "projectPath": "${workspaceFolder}\\code\\FinanceManager\\FinanceManager.WebUi.csproj"
+        }
     ]
 }

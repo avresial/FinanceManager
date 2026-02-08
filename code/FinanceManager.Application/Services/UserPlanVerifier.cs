@@ -1,19 +1,20 @@
 ﻿using FinanceManager.Application.Providers;
-using FinanceManager.Domain.Entities.Cash;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 
 namespace FinanceManager.Application.Services;
 
-public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRepository, IAccountEntryRepository<BankAccountEntry> bankAccountEntryRepository,
+public class UserPlanVerifier(ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
+    IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,
     IUserRepository userRepository) : IUserPlanVerifier
 {
     public async Task<int> GetUsedRecordsCapacity(int userId)
     {
         int totalEntries = 0;
 
-        foreach (var account in await bankAccountRepository.GetAvailableAccounts(userId).ToListAsync())
-            totalEntries += await bankAccountEntryRepository.GetCount(account.AccountId);
+        foreach (var account in await currencyAccountRepository.GetAvailableAccounts(userId).ToListAsync())
+            totalEntries += await currencyAccountEntryRepository.GetCount(account.AccountId);
 
         return await Task.FromResult(totalEntries);
     }
@@ -33,7 +34,7 @@ public class UserPlanVerifier(IBankAccountRepository<BankAccount> bankAccountRep
         var user = await userRepository.GetUser(userId);
         if (user is null) return false;
 
-        var accountsCount = await bankAccountRepository.GetAvailableAccounts(userId)
+        var accountsCount = await currencyAccountRepository.GetAvailableAccounts(userId)
             .CountAsync();
 
         return accountsCount < PricingProvider.GetMaxAccountCount(user.PricingLevel);

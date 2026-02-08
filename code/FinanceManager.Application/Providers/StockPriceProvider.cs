@@ -21,9 +21,14 @@ public class StockPriceProvider(IStockPriceRepository stockRepository, ICurrency
             entry.SlidingExpiration = TimeSpan.FromMinutes(5);
 
             var stockPrice = await stockRepository.GetThisOrNextOlder(ticker, asOf);
-            decimal price = 1m;
+            decimal price = 0m;
             if (stockPrice is not null)
-                price = await currencyExchangeService.GetPricePerUnit(stockPrice, targetCurrency, asOf);
+            {
+                if (stockPrice.Currency == targetCurrency)
+                    price = stockPrice.PricePerUnit;
+                else
+                    price = await currencyExchangeService.GetPricePerUnit(stockPrice, targetCurrency, asOf);
+            }
 
             return price;
         });

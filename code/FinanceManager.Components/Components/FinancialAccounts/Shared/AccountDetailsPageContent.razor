@@ -1,0 +1,80 @@
+﻿@using FinanceManager.Components.Components.SharedComponents.Charts
+@using FinanceManager.Domain.Entities.MoneyFlowModels
+<MudStack>
+    <h3 class="m-3" style="position: absolute; z-index: 50; display: inline-block;">
+        @AccountName
+    </h3>
+
+    @if (IsLoading)
+    {
+        <AccountDetailsPageContentSkeleton />
+    }
+    else
+    {
+        <div style="min-height:150px; width:100%">
+            <LineChartJs Series="@([ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()])" />
+        </div>
+
+        <MudContainer>
+            <MudGrid>
+                <MudItem xs="12" lg="2">
+                    @if (ActionButtons is not null)
+                    {
+                        <MudStack>
+                            @ActionButtons
+                        </MudStack>
+                    }
+                    @if (AddEntryOverlay is not null)
+                    {
+                        <MudStack>
+                            @AddEntryOverlay
+                        </MudStack>
+                    }
+                </MudItem>
+                <MudItem xs="12" lg="7">
+                    <MudStack>
+                        <MudExpansionPanels Elevation="0" MultiExpansion>
+                            @Entries
+                        </MudExpansionPanels>
+
+                        @if (IsLoadingMore)
+                        {
+                            <MudStack Justify="Justify.Center" Row>
+                                <MudProgressCircular Color="MudBlazor.Color.Primary" Size="MudBlazor.Size.Small" Indeterminate
+                                                     Class="my-3" />
+                            </MudStack>
+                        }
+                        else if (!LoadedAllData && !IsLoading)
+                        {
+                            <MudStack Justify="Justify.Center" Row>
+                                <MudButton @onclick="OnLoadMore">
+                                    <i class="bi bi-arrow-bar-down"></i>
+                                </MudButton>
+                            </MudStack>
+                        }
+                    </MudStack>
+                </MudItem>
+
+                @if (SidePanel is not null)
+                {
+                    <MudItem xs="0" lg="3">
+                        @SidePanel
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudContainer>
+    }
+</MudStack>
+@code {
+    [Parameter] public required string AccountName { get; set; }
+    [Parameter] public required List<TimeSeriesModel> ChartData { get; set; } = [];
+    [Parameter] public string ChartContainerClass { get; set; } = "col-12 mb-4";
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public bool IsLoadingMore { get; set; }
+    [Parameter] public bool LoadedAllData { get; set; }
+    [Parameter] public EventCallback OnLoadMore { get; set; }
+    [Parameter] public RenderFragment? ActionButtons { get; set; }
+    [Parameter] public RenderFragment? AddEntryOverlay { get; set; }
+    [Parameter] public RenderFragment? Entries { get; set; }
+    [Parameter] public RenderFragment? SidePanel { get; set; }
+}
