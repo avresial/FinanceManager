@@ -185,9 +185,6 @@ public class FinancialAccountTests
         account.Add(new FinancialEntryBase(1, 2, new DateTime(2023, 1, 2), 0, 50m), recalculateValues: false);
         account.Add(new FinancialEntryBase(1, 3, new DateTime(2023, 1, 3), 0, 25m), recalculateValues: false);
 
-        // Act - Values should be incorrect initially
-        var valuesBeforeRecalc = account.Entries.Select(e => e.Value).ToList();
-
         // Explicit recalculation
         account.RecalculateEntryValues(account.Entries.Count - 1);
 

@@ -11,10 +11,16 @@ namespace FinanceManager.UnitTests.Application.Services;
 
 [Collection("Application")]
 [Trait("Category", "Unit")]
-public class CurrencyExchangeServiceTests
+public class CurrencyExchangeServiceTests : IDisposable
 {
     private readonly ILogger<CurrencyExchangeService> _loggerMock = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<CurrencyExchangeService>();
     private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock = new();
+    private readonly HttpClient _httpClient;
+
+    public CurrencyExchangeServiceTests()
+    {
+        _httpClient = new HttpClient(_httpMessageHandlerMock.Object);
+    }
 
     [Fact]
     public async Task GetExchangeRateAsync_ValidRequest_ReturnsRate()
@@ -329,12 +335,8 @@ public class CurrencyExchangeServiceTests
         Assert.Equal(expectedRate, result.Value);
     }
 
-    private CurrencyExchangeService CreateService()
-    {
-        var httpClient = new HttpClient(_httpMessageHandlerMock.Object);
-        return new CurrencyExchangeService(httpClient, _loggerMock);
-    }
-
+    private CurrencyExchangeService CreateService() => new CurrencyExchangeService(_httpClient, _loggerMock);
+    public void Dispose() => _httpClient?.Dispose();
     private void SetupHttpResponse(HttpStatusCode statusCode, string content)
     {
         _httpMessageHandlerMock.Protected()
