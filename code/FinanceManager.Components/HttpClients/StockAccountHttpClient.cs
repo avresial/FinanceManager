@@ -1,4 +1,5 @@
 using FinanceManager.Application.Commands.Account;
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.ValueObjects;
 using FinanceManager.Infrastructure.Dtos;

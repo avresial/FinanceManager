@@ -1,6 +1,7 @@
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
@@ -130,7 +131,7 @@ public class BondAccountControllerTests(OptionsProvider optionsProvider) : Contr
         // arrange
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new BondAccountHttpClient(Client);
-        var newAccountCmd = new AddBondAccount("New Bond Account");
+        var newAccountCmd = new AddAccount("New Bond Account");
 
         // act
         var newAccountId = await client.AddAccountAsync(newAccountCmd);

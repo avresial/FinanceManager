@@ -10,6 +10,7 @@ public class BondEntryHttpClient(HttpClient httpClient)
     {
         var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/BondEntry?accountId={accountId}&entryId={entryId}");
         if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
         return await response.Content.ReadFromJsonAsync<BondAccountEntry?>();
     }
 
@@ -17,6 +18,7 @@ public class BondEntryHttpClient(HttpClient httpClient)
     {
         var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/BondEntry/Oldest/{accountId}");
         if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
         return await response.Content.ReadFromJsonAsync<DateTime?>();
     }
 
@@ -24,6 +26,7 @@ public class BondEntryHttpClient(HttpClient httpClient)
     {
         var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/BondEntry/Youngest/{accountId}");
         if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
         return await response.Content.ReadFromJsonAsync<DateTime?>();
     }
 

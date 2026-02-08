@@ -13,6 +13,7 @@ public class CurrencyEntryHttpClient(HttpClient httpClient)
         {
             var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/CurrencyEntry?accountId={accountId}&entryId={entryId}");
             if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
             return await response.Content.ReadFromJsonAsync<CurrencyAccountEntry?>();
         }
         catch (Exception)
@@ -26,6 +27,8 @@ public class CurrencyEntryHttpClient(HttpClient httpClient)
         try
         {
             var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/CurrencyEntry/Oldest/{accountId}");
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
             return await response.Content.ReadFromJsonAsync<DateTime?>();
         }
         catch (Exception)
@@ -39,6 +42,8 @@ public class CurrencyEntryHttpClient(HttpClient httpClient)
         try
         {
             var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/CurrencyEntry/Youngest/{accountId}");
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
             return await response.Content.ReadFromJsonAsync<DateTime?>();
         }
         catch (Exception)

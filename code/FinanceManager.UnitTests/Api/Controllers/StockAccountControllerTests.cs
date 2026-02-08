@@ -1,5 +1,6 @@
 using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.Commands.Account;
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
@@ -121,7 +122,7 @@ public class StockAccountControllerTests
         // Arrange
         var newAccountId = 1;
         AddAccount addAccount = new("New Account");
-        _mockStockAccountRepository.Setup(repo => repo.Add(TestUserId, addAccount.accountName))
+        _mockStockAccountRepository.Setup(repo => repo.Add(TestUserId, addAccount.AccountName))
             .ReturnsAsync(newAccountId);
 
         // Act

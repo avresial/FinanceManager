@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Repositories.Account;
@@ -69,7 +70,7 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         if (!await userPlanVerifier.CanAddMoreAccounts(userId))
             return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
-        return Ok(await accountRepository.Add(userId, addAccount.accountName));
+        return Ok(await accountRepository.Add(userId, addAccount.AccountName));
     }
 
     [HttpPut]

@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Application.Commands.Account;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
@@ -41,7 +42,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
                 await stockAccountHttpClient.AddAccountAsync(new AddAccount(account.Name));
                 break;
             case BondAccount:
-                await bondAccountHttpClient.AddAccountAsync(new AddBondAccount(account.Name));
+                await bondAccountHttpClient.AddAccountAsync(new AddAccount(account.Name));
                 break;
 
             default: throw new NotSupportedException($"Account type {typeof(T)} not supported for adding account.");

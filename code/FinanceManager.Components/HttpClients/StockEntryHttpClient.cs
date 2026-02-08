@@ -9,6 +9,7 @@ public class StockEntryHttpClient(HttpClient httpClient)
     {
         var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/StockEntry/GetOldestEntryDate/{accountId}");
         if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
         return await response.Content.ReadFromJsonAsync<DateTime?>();
     }
 
@@ -16,6 +17,7 @@ public class StockEntryHttpClient(HttpClient httpClient)
     {
         var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/StockEntry/GetYoungestEntryDate/{accountId}");
         if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
         return await response.Content.ReadFromJsonAsync<DateTime?>();
     }
 
