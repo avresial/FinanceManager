@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
+using FinanceManager.Domain.Commands.Account;
 
 namespace FinanceManager.IntegrationTests.Controllers;
 
@@ -169,7 +170,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         _testDatabase.Context.CurrencyEntries.Add(
-            new CurrencyAccountEntry(2, 1, _nowUtc.AddDays(-5), 0, 5000m) { Labels = [] });
+            new CurrencyAccountEntry(2, 100, _nowUtc.AddDays(-5), 5000m, 5000m) { Labels = [] });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Add a stock account
@@ -185,7 +186,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         _testDatabase.Context.StockEntries.Add(
-            new StockAccountEntry(3, 1, _nowUtc.AddDays(-3), 0, 100m, "AAPL", InvestmentType.Stock));
+            new StockAccountEntry(3, 200, _nowUtc.AddDays(-3), 100m, 100m, "AAPL", InvestmentType.Stock));
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Add a bond account
@@ -201,7 +202,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         _testDatabase.Context.BondEntries.Add(
-            new BondAccountEntry(4, 1, _nowUtc.AddDays(-10), 0, 3000m, 1));
+            new BondAccountEntry(4, 300, _nowUtc.AddDays(-10), 3000m, 3000m, 1));
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         Authorize("TestUser", 1, UserRole.User);
@@ -279,16 +280,15 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
             };
             _testDatabase.Context.Accounts.Add(account);
             await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
             // Add entries with varying value changes
             _testDatabase.Context.CurrencyEntries.Add(
-                new CurrencyAccountEntry(11, 1, _nowUtc.AddDays(-10), 0, 1000m) { Labels = [] });
+                new CurrencyAccountEntry(11, 1, _nowUtc.AddDays(-10), 1000m, 1000m) { Labels = [] });
             _testDatabase.Context.CurrencyEntries.Add(
-                new CurrencyAccountEntry(11, 2, _nowUtc.AddDays(-7), 0, 500m) { Labels = [] });
+                new CurrencyAccountEntry(11, 2, _nowUtc.AddDays(-7), 1500m, 500m) { Labels = [] });
             _testDatabase.Context.CurrencyEntries.Add(
-                new CurrencyAccountEntry(11, 3, _nowUtc.AddDays(-5), 0, -300m) { Labels = [] });
+                new CurrencyAccountEntry(11, 3, _nowUtc.AddDays(-5), 1200m, -300m) { Labels = [] });
             _testDatabase.Context.CurrencyEntries.Add(
-                new CurrencyAccountEntry(11, 4, _nowUtc.AddDays(-2), 0, 200m) { Labels = [] });
+                new CurrencyAccountEntry(11, 4, _nowUtc.AddDays(-2), 1400m, 200m) { Labels = [] });
 
             await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
@@ -345,9 +345,9 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
 
             var bondFirstDate = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             _testDatabase.Context.CurrencyEntries.Add(
-                new CurrencyAccountEntry(12, 1, bondFirstDate, 0, 1000m) { Labels = [] });
+                new CurrencyAccountEntry(12, 1, bondFirstDate, 1000m, 1000m) { Labels = [] });
             _testDatabase.Context.CurrencyEntries.Add(
-                new CurrencyAccountEntry(12, 2, bondFirstDate.AddYears(1), 0, 500m) { Labels = [] });
+                new CurrencyAccountEntry(12, 2, bondFirstDate.AddYears(1), 1500m, 500m) { Labels = [] });
 
             await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
@@ -402,10 +402,8 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         _testDatabase.Context.Accounts.Add(user2Account);
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        _testDatabase.Context.CurrencyEntries.Add(
-            new CurrencyAccountEntry(20, 1, _nowUtc, 0, 1000m) { Labels = [] });
-        _testDatabase.Context.CurrencyEntries.Add(
-            new CurrencyAccountEntry(21, 1, _nowUtc, 0, 5000m) { Labels = [] });
+        _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(20, 1, _nowUtc, 1000m, 1000m) { Labels = [] });
+        _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(21, 2, _nowUtc, 5000m, 5000m) { Labels = [] });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act - User 1 gets their net worth
