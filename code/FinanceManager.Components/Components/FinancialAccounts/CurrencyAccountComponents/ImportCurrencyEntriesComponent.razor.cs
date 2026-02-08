@@ -1,6 +1,7 @@
 using FinanceManager.Components.DtoMapping;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Services;
@@ -29,7 +30,9 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
     private List<string> _headers = [];
     private string? _selectedPostingDateHeader;
     private string? _selectedValueChangeHeader;
-    private List<(DateTime PostingDate, decimal ValueChange)> _mappedPreview = [];
+    private string? _selectedContractorDetailsHeader;
+    private string? _selectedDescriptionHeader;
+    private List<(DateTime PostingDate, decimal ValueChange, string? ContractorDetails, string? Description)> _mappedPreview = [];
 
     private ImportResult? _importResult = null;
     private string? _uploadedContent;
@@ -241,7 +244,8 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
 
         try
         {
-            _mappedPreview = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, _headers, _rawPreview).ToList();
+            _mappedPreview = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader,
+                _selectedContractorDetailsHeader, _selectedDescriptionHeader, _headers, _rawPreview).ToList();
         }
         catch (Exception ex)
         {
@@ -278,8 +282,9 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
             var (Headers, Data) = await ImportCurrencyModelReader.Read(_uploadedContent!, _delimiter, CancellationToken.None) ??
                 throw new Exception("Failed to read data for import.");
 
-            var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, Headers, Data);
-            var entries = exportResult.Select(x => new CurrencyEntryImportRecordDto(x.PostingDate, x.ValueChange)).ToList();
+            var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader,
+                _selectedContractorDetailsHeader, _selectedDescriptionHeader, Headers, Data);
+            var entries = exportResult.Select(x => new CurrencyEntryImportRecordDto(x.PostingDate, x.ValueChange, x.ContractorDetails, x.Description)).ToList();
 
             try
             {
@@ -338,6 +343,8 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
         _headers.Clear();
         _selectedPostingDateHeader = null;
         _selectedValueChangeHeader = null;
+        _selectedContractorDetailsHeader = null;
+        _selectedDescriptionHeader = null;
         _mappedPreview.Clear();
         _summaryInfos.Clear();
         _warnings.Clear();
@@ -413,11 +420,18 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
         }
         await Task.CompletedTask;
     }
-    private IEnumerable<(DateTime PostingDate, decimal ValueChange)> GetExportData(string postingDateHeader, string valueChangeHeader,
-           List<string> headers, List<List<string>> dataToConvert)
+    private IEnumerable<(DateTime PostingDate, decimal ValueChange, string? ContractorDetails, string? Description)> GetExportData(
+        string postingDateHeader, string valueChangeHeader, string? contractorDetailsHeader, string? descriptionHeader,
+        List<string> headers, List<List<string>> dataToConvert)
     {
         var postingIndex = headers.FindIndex(h => h.Equals(postingDateHeader, StringComparison.OrdinalIgnoreCase));
         var valueIndex = headers.FindIndex(h => h.Equals(valueChangeHeader, StringComparison.OrdinalIgnoreCase));
+        var contractorIndex = !string.IsNullOrEmpty(contractorDetailsHeader)
+            ? headers.FindIndex(h => h.Equals(contractorDetailsHeader, StringComparison.OrdinalIgnoreCase))
+            : -1;
+        var descriptionIndex = !string.IsNullOrEmpty(descriptionHeader)
+            ? headers.FindIndex(h => h.Equals(descriptionHeader, StringComparison.OrdinalIgnoreCase))
+            : -1;
 
         if (postingIndex < 0 || valueIndex < 0)
             throw new Exception("Selected headers are invalid.");
@@ -426,6 +440,8 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
         {
             var posting = postingIndex < row.Count ? row[postingIndex] : string.Empty;
             var value = valueIndex < row.Count ? row[valueIndex] : string.Empty;
+            var contractor = contractorIndex >= 0 && contractorIndex < row.Count ? row[contractorIndex] : null;
+            var description = descriptionIndex >= 0 && descriptionIndex < row.Count ? row[descriptionIndex] : null;
 
             if (!DateTime.TryParse(posting, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
                 throw new Exception($"Could not parse posting date: '{posting}'");
@@ -433,7 +449,11 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
             if (!decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var valueChange))
                 throw new Exception($"Could not parse value change: '{value}'");
 
-            yield return (new(date.Ticks, DateTimeKind.Utc), valueChange);
+            // Normalize empty strings to null
+            contractor = string.IsNullOrWhiteSpace(contractor) ? null : contractor;
+            description = string.IsNullOrWhiteSpace(description) ? null : description;
+
+            yield return (new(date.Ticks, DateTimeKind.Utc), valueChange, contractor, description);
         }
     }
 }

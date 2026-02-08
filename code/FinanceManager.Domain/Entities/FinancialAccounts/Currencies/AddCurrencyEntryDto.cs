@@ -2,4 +2,4 @@
 
 namespace FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 
-public record AddCurrencyEntryDto(DateTime PostingDate, decimal ValueChange, string Description, List<FinancialLabel> Labels);
+public record AddCurrencyEntryDto(DateTime PostingDate, decimal ValueChange, string Description, string? ContractorDetails, List<FinancialLabel> Labels);

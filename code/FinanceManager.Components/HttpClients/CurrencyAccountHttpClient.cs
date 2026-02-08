@@ -24,14 +24,25 @@ public class CurrencyAccountHttpClient(HttpClient httpClient)
         if (result is null) return null;
 
         CurrencyAccountEntry? nextOlderEntry = result.NextOlderEntry is null ? null : new(result.NextOlderEntry.AccountId, result.NextOlderEntry.EntryId,
-            result.NextOlderEntry.PostingDate, result.NextOlderEntry.Value, result.NextOlderEntry.ValueChange);
+            result.NextOlderEntry.PostingDate, result.NextOlderEntry.Value, result.NextOlderEntry.ValueChange)
+        {
+            Description = result.NextOlderEntry.Description,
+            ContractorDetails = result.NextOlderEntry.ContractorDetails,
+            Labels = result.NextOlderEntry.Labels
+        };
 
         CurrencyAccountEntry? nextYoungerEntry = result.NextYoungerEntry is null ? null : new(result.NextYoungerEntry.AccountId, result.NextYoungerEntry.EntryId,
-            result.NextYoungerEntry.PostingDate, result.NextYoungerEntry.Value, result.NextYoungerEntry.ValueChange);
+            result.NextYoungerEntry.PostingDate, result.NextYoungerEntry.Value, result.NextYoungerEntry.ValueChange)
+        {
+            Description = result.NextYoungerEntry.Description,
+            ContractorDetails = result.NextYoungerEntry.ContractorDetails,
+            Labels = result.NextYoungerEntry.Labels
+        };
 
         return new(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new CurrencyAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange)
         {
             Description = x.Description,
+            ContractorDetails = x.ContractorDetails,
             Labels = x.Labels
         }), result.AccountLabel, nextOlderEntry, nextYoungerEntry);
     }

@@ -1,3 +1,4 @@
+using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using System.Net.Http.Json;
@@ -61,7 +62,17 @@ public class CurrencyEntryHttpClient(HttpClient httpClient)
 
     public async Task<bool> UpdateEntryAsync(CurrencyAccountEntry entry)
     {
-        var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/CurrencyEntry", entry);
+        var updateCommand = new UpdateCurrencyAccountEntry(
+            entry.AccountId,
+            entry.EntryId,
+            entry.PostingDate,
+            entry.Value,
+            entry.ValueChange,
+            entry.Description,
+            entry.ContractorDetails,
+            entry.Labels?.Select(l => new UpdateFiancialLabel(l.Id, l.Name)).ToList() ?? []
+        );
+        var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/CurrencyEntry", updateCommand);
         return response.IsSuccessStatusCode;
     }
 }

@@ -243,7 +243,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     public async Task AddEntry<T>(T accountEntry, int id) where T : FinancialEntryBase
     {
         if (accountEntry is CurrencyAccountEntry currencyEntry)
-            await AddCurrencyAccountEntry(id, currencyEntry.ValueChange, currencyEntry.Description, currencyEntry.PostingDate);
+            await AddCurrencyAccountEntry(id, currencyEntry.ValueChange, currencyEntry.Description, currencyEntry.ContractorDetails, currencyEntry.PostingDate);
         if (accountEntry is StockAccountEntry investmentEntry)
             await AddStockAccountEntry(id, investmentEntry.Ticker, investmentEntry.InvestmentType, investmentEntry.ValueChange, investmentEntry.PostingDate);
 
@@ -295,14 +295,14 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     }
 
 
-    private async Task AddCurrencyAccountEntry(int id, decimal balanceChange, string description, DateTime? postingDate = null)
+    private async Task AddCurrencyAccountEntry(int id, decimal balanceChange, string description, string? contractorDetails, DateTime? postingDate = null)
     {
         var account = await FindAccount<CurrencyAccount>(id);
         if (account is null) return;
 
         var finalPostingDate = postingDate ?? DateTime.UtcNow;
 
-        account.AddEntry(new AddCurrencyEntryDto(finalPostingDate, balanceChange, description, [new() { Name = "Sallary" }]));
+        account.AddEntry(new AddCurrencyEntryDto(finalPostingDate, balanceChange, description, contractorDetails, [new() { Name = "Sallary" }]));
     }
     private async Task UpdateCurrencyAccountEntry(int id, CurrencyAccountEntry currencyAccountEntry)
     {

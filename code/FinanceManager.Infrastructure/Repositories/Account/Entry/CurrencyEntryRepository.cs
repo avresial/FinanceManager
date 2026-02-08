@@ -13,6 +13,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         CurrencyAccountEntry newAccountEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange)
         {
             Description = entry.Description,
+            ContractorDetails = entry.ContractorDetails,
             Labels = entry.Labels,
         };
 
@@ -31,6 +32,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             CurrencyAccountEntry newEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange)
             {
                 Description = entry.Description,
+                ContractorDetails = entry.ContractorDetails,
                 Labels = entry.Labels,
             };
 
