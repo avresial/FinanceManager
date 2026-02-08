@@ -116,7 +116,8 @@ public class MoneyFlowServiceTests
 
         // Assert
         Assert.NotEmpty(result);
-        Assert.Equal(1000, result[_endDate]);
+        // Currency account: 1000, Stock account: testStock1 (10 * 2) + testStock2 (10 * 4) = 20 + 40 = 60
+        Assert.Equal(1060m, result[_endDate]);
     }
 
     [Fact]
@@ -154,6 +155,10 @@ public class MoneyFlowServiceTests
         var stockAccount = new StockAccount(userId, 2, "Stock Account 1");
         stockAccount.Add(new StockAccountEntry(1, 1, _startDate, 10, 10, "TICKER", InvestmentType.Stock), false);
 
+        // Setup mock for TICKER
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("TICKER", It.IsAny<DateTime>()))
+            .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "TICKER", PricePerUnit = 1m });
+
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(new[] { currencyAccount }.ToAsyncEnumerable());
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
@@ -177,15 +182,15 @@ public class MoneyFlowServiceTests
 
         // Currency account: 5000
         var currencyAccount = new CurrencyAccount(userId, 1, "Checking", AccountLabel.Cash);
-        currencyAccount.Add(new CurrencyAccountEntry(1, 1, date.AddDays(-10), 0, 5000m) { Labels = [] });
+        currencyAccount.Add(new CurrencyAccountEntry(1, 1, date.AddDays(-10), 5000m, 5000m) { Labels = [] });
 
         // Stock account: 10 shares at 100 per share = 1000
         var stockAccount = new StockAccount(userId, 2, "Stocks");
-        stockAccount.Add(new StockAccountEntry(2, 1, date.AddDays(-5), 0, 10m, "MSFT", InvestmentType.Stock));
+        stockAccount.Add(new StockAccountEntry(2, 1, date.AddDays(-5), 10m, 10m, "MSFT", InvestmentType.Stock));
 
         // Bond account: 3000
         var bondAccount = new BondAccount(userId, 3, "Bonds", AccountLabel.Other);
-        bondAccount.Add(new BondAccountEntry(3, 1, date.AddDays(-7), 0, 3000m, 1));
+        bondAccount.Add(new BondAccountEntry(3, 1, date.AddDays(-7), 3000m, 3000m, 1));
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(new[] { currencyAccount }.ToAsyncEnumerable());
@@ -213,7 +218,7 @@ public class MoneyFlowServiceTests
         var date = new DateTime(2023, 6, 15, 0, 0, 0, DateTimeKind.Utc);
 
         var stockAccount = new StockAccount(userId, 1, "Stocks");
-        stockAccount.Add(new StockAccountEntry(1, 1, date.AddDays(-5), 0, 10m, "UNKNOWN", InvestmentType.Stock));
+        stockAccount.Add(new StockAccountEntry(1, 1, date.AddDays(-5), 10m, 10m, "UNKNOWN", InvestmentType.Stock));
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
@@ -267,7 +272,7 @@ public class MoneyFlowServiceTests
         // Arrange
         var userId = 1;
         var futureDate = DateTime.UtcNow.AddYears(1);
-        
+
         var currencyAccount = new CurrencyAccount(userId, 1, "Test", AccountLabel.Cash);
         currencyAccount.Add(new CurrencyAccountEntry(1, 1, DateTime.UtcNow.AddDays(-1), 0, 1000m) { Labels = [] });
 
@@ -295,13 +300,13 @@ public class MoneyFlowServiceTests
 
         // Test with very large values approaching decimal limits
         var currencyAccount = new CurrencyAccount(userId, 1, "Large", AccountLabel.Cash);
-        currencyAccount.Add(new CurrencyAccountEntry(1, 1, date, 0, 999999999.99m) { Labels = [] });
+        currencyAccount.Add(new CurrencyAccountEntry(1, 1, date, 999999999.99m, 999999999.99m) { Labels = [] });
 
         var stockAccount = new StockAccount(userId, 2, "Large Stocks");
-        stockAccount.Add(new StockAccountEntry(2, 1, date, 0, 1000000m, "MEGA", InvestmentType.Stock));
+        stockAccount.Add(new StockAccountEntry(2, 1, date, 1000000m, 1000000m, "MEGA", InvestmentType.Stock));
 
         var bondAccount = new BondAccount(userId, 3, "Large Bonds", AccountLabel.Other);
-        bondAccount.Add(new BondAccountEntry(3, 1, date, 0, 888888888.88m, 1));
+        bondAccount.Add(new BondAccountEntry(3, 1, date, 888888888.88m, 888888888.88m, 1));
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(new[] { currencyAccount }.ToAsyncEnumerable());
@@ -330,9 +335,9 @@ public class MoneyFlowServiceTests
         var date = new DateTime(2023, 6, 15, 0, 0, 0, DateTimeKind.Utc);
 
         var stockAccount = new StockAccount(userId, 1, "Diversified");
-        stockAccount.Add(new StockAccountEntry(1, 1, date, 0, 10m, "AAPL", InvestmentType.Stock));
-        stockAccount.Add(new StockAccountEntry(1, 2, date, 0, 20m, "GOOGL", InvestmentType.Stock));
-        stockAccount.Add(new StockAccountEntry(1, 3, date, 0, 15m, "MSFT", InvestmentType.Stock));
+        stockAccount.Add(new StockAccountEntry(1, 1, date, 10m, 10m, "AAPL", InvestmentType.Stock));
+        stockAccount.Add(new StockAccountEntry(1, 2, date, 20m, 20m, "GOOGL", InvestmentType.Stock));
+        stockAccount.Add(new StockAccountEntry(1, 3, date, 15m, 15m, "MSFT", InvestmentType.Stock));
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
@@ -364,9 +369,9 @@ public class MoneyFlowServiceTests
         var date = new DateTime(2023, 6, 15, 0, 0, 0, DateTimeKind.Utc);
 
         var bondAccount = new BondAccount(userId, 1, "Mixed Bonds", AccountLabel.Other);
-        bondAccount.Add(new BondAccountEntry(1, 1, date, 0, 1000m, 1)); // Bond ID 1
-        bondAccount.Add(new BondAccountEntry(1, 2, date, 0, 2000m, 2)); // Bond ID 2
-        bondAccount.Add(new BondAccountEntry(1, 3, date, 0, 1500m, 3)); // Bond ID 3
+        bondAccount.Add(new BondAccountEntry(1, 1, date, 1000m, 1000m, 1)); // Bond ID 1
+        bondAccount.Add(new BondAccountEntry(1, 2, date, 2000m, 2000m, 2)); // Bond ID 2
+        bondAccount.Add(new BondAccountEntry(1, 3, date, 1500m, 1500m, 3)); // Bond ID 3
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
@@ -461,7 +466,7 @@ public class MoneyFlowServiceTests
         Assert.Equal(5, result.Count);
         Assert.True(result.ContainsKey(startDate));
         Assert.True(result.ContainsKey(endDate));
-        
+
         // All values should be 1000 since no changes
         Assert.All(result.Values, value => Assert.Equal(1000m, value));
     }

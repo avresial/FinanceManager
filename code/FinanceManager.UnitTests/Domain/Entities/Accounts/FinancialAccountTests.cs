@@ -157,10 +157,10 @@ public class FinancialAccountTests
         // Assert
         Assert.Equal(1000, account.Entries.Count);
 
-        // First entry (oldest) should have highest value
+        // First entry (youngest/newest) should have highest value
         Assert.Equal(10000m, account.Entries.First().Value);
 
-        // Last entry (newest) should have lowest value
+        // Last entry (oldest) should have lowest value
         Assert.Equal(10m, account.Entries.Last().Value);
 
         // Verify each entry has correct cumulative value
@@ -200,19 +200,19 @@ public class FinancialAccountTests
     [Fact]
     public void Remove_FirstEntry_ShouldRecalculateCorrectly()
     {
-        // Arrange - Entry at index 0 (oldest)
+        // Arrange - Entry at index 0 (youngest)
         var account = new FinancialAccountBase<FinancialEntryBase>(1, 1, "Test");
         account.Add(new FinancialEntryBase(1, 1, new DateTime(2023, 1, 1), 30, 30m));
         account.Add(new FinancialEntryBase(1, 2, new DateTime(2023, 1, 2), 20, -10m));
         account.Add(new FinancialEntryBase(1, 3, new DateTime(2023, 1, 3), 10, -10m));
 
-        // Act - Remove the first (oldest) entry
+        // Act - Remove the first entry (youngest) from the list
         account.Remove(account.Entries.First().EntryId);
 
-        // Assert
+        // Assert - After removing youngest (entry 3), entry 2 becomes youngest
         Assert.Equal(2, account.Entries.Count);
-        Assert.Equal(20m, account.Entries.First().Value); // First entry now: 0 + (-10) = -10, then next -10 = 10
-        Assert.Equal(30m, account.Entries.Last().Value);
+        Assert.Equal(20m, account.Entries.First().Value); // Entry 2 (now youngest): 30 + (-10) = 20
+        Assert.Equal(30m, account.Entries.Last().Value); // Entry 1 (oldest): 30
     }
 
     [Fact]
