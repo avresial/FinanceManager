@@ -1,9 +1,10 @@
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Commands.Account;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Contexts;
@@ -12,7 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
-using FinanceManager.Domain.Commands.Account;
 
 namespace FinanceManager.IntegrationTests.Controllers;
 

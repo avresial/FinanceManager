@@ -102,10 +102,10 @@ public class BondAccountTests
     {
         // Arrange
         var postingDate = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        
+
         // Bond 1: 1000 at 3.65%
         var entry1 = new BondAccountEntry(1, 1, postingDate, 0, 1000m, 1);
-        
+
         // Bond 2: 2000 at 5% (different bond)
         var entry2 = new BondAccountEntry(1, 2, postingDate, 0, 2000m, 2);
 
@@ -135,7 +135,8 @@ public class BondAccountTests
             DateOnly.FromDateTime(postingDate),
             DateOnly.FromDateTime(postingDate.AddYears(1)),
             [calculationMethod1]
-        ) { Id = 1 };
+        )
+        { Id = 1 };
 
         var bondDetails2 = new BondDetails(
             "Bond 5%",
@@ -143,26 +144,27 @@ public class BondAccountTests
             DateOnly.FromDateTime(postingDate),
             DateOnly.FromDateTime(postingDate.AddYears(1)),
             [calculationMethod2]
-        ) { Id = 2 };
+        )
+        { Id = 2 };
 
         var targetDate = DateOnly.FromDateTime(postingDate.AddDays(30));
 
         // Act
         var result = account.GetDailyPrice(
-            DateOnly.FromDateTime(postingDate), 
-            targetDate, 
+            DateOnly.FromDateTime(postingDate),
+            targetDate,
             [bondDetails1, bondDetails2]);
 
         // Assert - Should aggregate both bonds
         Assert.Equal(31, result.Count); // 31 days (0 through 30)
-        
+
         // Day 0 should be 3000 (1000 + 2000)
         Assert.Equal(3000m, result[DateOnly.FromDateTime(postingDate)]);
-        
+
         // Day 30 should be more than 3000 (both growing at different rates)
         var day30Value = result[targetDate];
         Assert.True(day30Value > 3000m, $"Expected value > 3000, got {day30Value}");
-        
+
         // Bond with higher rate should contribute more to growth
         // Approximate: 1000 * (1 + 0.0365/365)^30 + 2000 * (1 + 0.05/365)^30
         Assert.True(day30Value > 3010m && day30Value < 3020m,
@@ -174,7 +176,7 @@ public class BondAccountTests
     {
         // Arrange - Buy and sell on same day should net to zero
         var postingDate = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        
+
         var buyEntry = new BondAccountEntry(1, 1, postingDate, 0, 1000m, 1);
         var sellEntry = new BondAccountEntry(1, 2, postingDate, 0, -1000m, 1);
 
@@ -196,14 +198,15 @@ public class BondAccountTests
             DateOnly.FromDateTime(postingDate),
             DateOnly.FromDateTime(postingDate.AddYears(1)),
             [calculationMethod]
-        ) { Id = 1 };
+        )
+        { Id = 1 };
 
         var targetDate = DateOnly.FromDateTime(postingDate.AddDays(10));
 
         // Act
         var result = account.GetDailyPrice(
-            DateOnly.FromDateTime(postingDate), 
-            targetDate, 
+            DateOnly.FromDateTime(postingDate),
+            targetDate,
             [bondDetails]);
 
         // Assert - Should be zero or near-zero throughout
@@ -216,7 +219,7 @@ public class BondAccountTests
     {
         // Arrange - Add more capital at different dates
         var startDate = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        
+
         var entry1 = new BondAccountEntry(1, 1, startDate, 0, 1000m, 1);
         var entry2 = new BondAccountEntry(1, 2, startDate.AddDays(30), 0, 500m, 1);
         var entry3 = new BondAccountEntry(1, 3, startDate.AddDays(60), 0, 250m, 1);
@@ -240,14 +243,15 @@ public class BondAccountTests
             DateOnly.FromDateTime(startDate),
             DateOnly.FromDateTime(startDate.AddYears(1)),
             [calculationMethod]
-        ) { Id = 1 };
+        )
+        { Id = 1 };
 
         var targetDate = DateOnly.FromDateTime(startDate.AddDays(90));
 
         // Act
         var result = account.GetDailyPrice(
-            DateOnly.FromDateTime(startDate), 
-            targetDate, 
+            DateOnly.FromDateTime(startDate),
+            targetDate,
             [bondDetails]);
 
         // Assert
@@ -259,16 +263,16 @@ public class BondAccountTests
 
         // Day 0: 1000
         Assert.Equal(1000m, day0);
-        
+
         // Day 29: ~1000 with some growth
         Assert.True(day29 > 1000m && day29 < 1010m);
-        
+
         // Day 30: Should jump to ~1500 + accumulated interest (new entry added)
         Assert.True(day30 > 1500m && day30 < 1520m);
-        
+
         // Day 60: Should jump again (third entry)
         Assert.True(day60 > 1750m && day60 < 1780m);
-        
+
         // Day 90: All entries accumulating
         Assert.True(day90 > 1760m, $"Expected final value > 1760, got {day90}");
     }
@@ -284,8 +288,8 @@ public class BondAccountTests
 
         // Act
         var result = account.GetDailyPrice(
-            DateOnly.FromDateTime(startDate), 
-            targetDate, 
+            DateOnly.FromDateTime(startDate),
+            targetDate,
             []);
 
         // Assert
@@ -305,12 +309,12 @@ public class BondAccountTests
         var targetDate = DateOnly.FromDateTime(postingDate.AddDays(10));
 
         // Act & Assert - Should throw ArgumentException when bond details are missing
-        var exception = await Assert.ThrowsAsync<ArgumentException>(async () => 
+        var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
             account.GetDailyPrice(
-                DateOnly.FromDateTime(postingDate), 
-                targetDate, 
+                DateOnly.FromDateTime(postingDate),
+                targetDate,
                 [])); // No bond details provided
-        
+
         Assert.Contains("BondDetails", exception.Message);
     }
 }
