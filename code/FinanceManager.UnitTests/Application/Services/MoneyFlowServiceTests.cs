@@ -167,4 +167,302 @@ public class MoneyFlowServiceTests
         Assert.Equal(1000, result.First().Salary);
         Assert.Equal(10, result.First().InvestmentsChange);
     }
+
+    [Fact]
+    public async Task GetNetWorth_MixedPortfolio_ShouldAggregateAllAccountTypes()
+    {
+        // Arrange
+        var userId = 1;
+        var date = new DateTime(2023, 6, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        // Currency account: 5000
+        var currencyAccount = new CurrencyAccount(userId, 1, "Checking", AccountLabel.Cash);
+        currencyAccount.Add(new CurrencyAccountEntry(1, 1, date.AddDays(-10), 0, 5000m) { Labels = [] });
+
+        // Stock account: 10 shares at 100 per share = 1000
+        var stockAccount = new StockAccount(userId, 2, "Stocks");
+        stockAccount.Add(new StockAccountEntry(2, 1, date.AddDays(-5), 0, 10m, "MSFT", InvestmentType.Stock));
+
+        // Bond account: 3000
+        var bondAccount = new BondAccount(userId, 3, "Bonds", AccountLabel.Other);
+        bondAccount.Add(new BondAccountEntry(3, 1, date.AddDays(-7), 0, 3000m, 1));
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { currencyAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { stockAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { bondAccount }.ToAsyncEnumerable());
+
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("MSFT", It.IsAny<DateTime>()))
+            .ReturnsAsync(new StockPrice { Currency = DefaultCurrency.PLN, Ticker = "MSFT", PricePerUnit = 100m });
+
+        // Act
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
+
+        // Assert - Should be 5000 + 1000 + 3000 = 9000
+        Assert.NotNull(result);
+        Assert.Equal(9000m, result.Value);
+    }
+
+    [Fact]
+    public async Task GetNetWorth_MissingStockPrice_ShouldUsePriceProviderFallback()
+    {
+        // Arrange
+        var userId = 1;
+        var date = new DateTime(2023, 6, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        var stockAccount = new StockAccount(userId, 1, "Stocks");
+        stockAccount.Add(new StockAccountEntry(1, 1, date.AddDays(-5), 0, 10m, "UNKNOWN", InvestmentType.Stock));
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { stockAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<BondAccount>());
+
+        // Stock price not found - returns null, provider should return 0
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("UNKNOWN", It.IsAny<DateTime>()))
+            .ReturnsAsync((StockPrice?)null);
+
+        // Act
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
+
+        // Assert - Should be 0 (10 shares * 0 price)
+        Assert.NotNull(result);
+        Assert.Equal(0m, result.Value);
+    }
+
+    [Fact]
+    public async Task GetNetWorth_EmptyAccounts_ShouldReturnZero()
+    {
+        // Arrange
+        var userId = 1;
+        var date = new DateTime(2023, 6, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        // Accounts with no entries
+        var currencyAccount = new CurrencyAccount(userId, 1, "Empty", AccountLabel.Cash);
+        var stockAccount = new StockAccount(userId, 2, "Empty Stocks");
+        var bondAccount = new BondAccount(userId, 3, "Empty Bonds", AccountLabel.Other);
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { currencyAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { stockAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { bondAccount }.ToAsyncEnumerable());
+
+        // Act
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(0m, result.Value);
+    }
+
+    [Fact]
+    public async Task GetNetWorth_FutureDate_ShouldUseCurrentDate()
+    {
+        // Arrange
+        var userId = 1;
+        var futureDate = DateTime.UtcNow.AddYears(1);
+        
+        var currencyAccount = new CurrencyAccount(userId, 1, "Test", AccountLabel.Cash);
+        currencyAccount.Add(new CurrencyAccountEntry(1, 1, DateTime.UtcNow.AddDays(-1), 0, 1000m) { Labels = [] });
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { currencyAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<StockAccount>());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<BondAccount>());
+
+        // Act
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, futureDate);
+
+        // Assert - Should calculate using DateTime.UtcNow instead
+        Assert.NotNull(result);
+        Assert.Equal(1000m, result.Value);
+    }
+
+    [Fact]
+    public async Task GetNetWorth_LargePortfolioValues_ShouldMaintainPrecision()
+    {
+        // Arrange
+        var userId = 1;
+        var date = new DateTime(2023, 6, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        // Test with very large values approaching decimal limits
+        var currencyAccount = new CurrencyAccount(userId, 1, "Large", AccountLabel.Cash);
+        currencyAccount.Add(new CurrencyAccountEntry(1, 1, date, 0, 999999999.99m) { Labels = [] });
+
+        var stockAccount = new StockAccount(userId, 2, "Large Stocks");
+        stockAccount.Add(new StockAccountEntry(2, 1, date, 0, 1000000m, "MEGA", InvestmentType.Stock));
+
+        var bondAccount = new BondAccount(userId, 3, "Large Bonds", AccountLabel.Other);
+        bondAccount.Add(new BondAccountEntry(3, 1, date, 0, 888888888.88m, 1));
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { currencyAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { stockAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { bondAccount }.ToAsyncEnumerable());
+
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("MEGA", It.IsAny<DateTime>()))
+            .ReturnsAsync(new StockPrice { Currency = DefaultCurrency.PLN, Ticker = "MEGA", PricePerUnit = 1.11m });
+
+        // Act
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
+
+        // Assert - Should handle large values: 999999999.99 + (1000000 * 1.11) + 888888888.88
+        Assert.NotNull(result);
+        var expected = 999999999.99m + (1000000m * 1.11m) + 888888888.88m;
+        Assert.Equal(Math.Round(expected, 2), result.Value);
+    }
+
+    [Fact]
+    public async Task GetNetWorth_MultipleStocksInSameAccount_ShouldAggregateCorrectly()
+    {
+        // Arrange
+        var userId = 1;
+        var date = new DateTime(2023, 6, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        var stockAccount = new StockAccount(userId, 1, "Diversified");
+        stockAccount.Add(new StockAccountEntry(1, 1, date, 0, 10m, "AAPL", InvestmentType.Stock));
+        stockAccount.Add(new StockAccountEntry(1, 2, date, 0, 20m, "GOOGL", InvestmentType.Stock));
+        stockAccount.Add(new StockAccountEntry(1, 3, date, 0, 15m, "MSFT", InvestmentType.Stock));
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { stockAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<BondAccount>());
+
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("AAPL", It.IsAny<DateTime>()))
+            .ReturnsAsync(new StockPrice { Currency = DefaultCurrency.PLN, Ticker = "AAPL", PricePerUnit = 150m });
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("GOOGL", It.IsAny<DateTime>()))
+            .ReturnsAsync(new StockPrice { Currency = DefaultCurrency.PLN, Ticker = "GOOGL", PricePerUnit = 100m });
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("MSFT", It.IsAny<DateTime>()))
+            .ReturnsAsync(new StockPrice { Currency = DefaultCurrency.PLN, Ticker = "MSFT", PricePerUnit = 200m });
+
+        // Act
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
+
+        // Assert - (10 * 150) + (20 * 100) + (15 * 200) = 1500 + 2000 + 3000 = 6500
+        Assert.NotNull(result);
+        Assert.Equal(6500m, result.Value);
+    }
+
+    [Fact]
+    public async Task GetNetWorth_MultipleBondsInSameAccount_ShouldAggregateCorrectly()
+    {
+        // Arrange
+        var userId = 1;
+        var date = new DateTime(2023, 6, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        var bondAccount = new BondAccount(userId, 1, "Mixed Bonds", AccountLabel.Other);
+        bondAccount.Add(new BondAccountEntry(1, 1, date, 0, 1000m, 1)); // Bond ID 1
+        bondAccount.Add(new BondAccountEntry(1, 2, date, 0, 2000m, 2)); // Bond ID 2
+        bondAccount.Add(new BondAccountEntry(1, 3, date, 0, 1500m, 3)); // Bond ID 3
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<StockAccount>());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { bondAccount }.ToAsyncEnumerable());
+
+        // Act
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
+
+        // Assert - 1000 + 2000 + 1500 = 4500
+        Assert.NotNull(result);
+        Assert.Equal(4500m, result.Value);
+    }
+
+    [Fact]
+    public async Task GetNetWorth_DateBeforeAllEntries_ShouldReturnZero()
+    {
+        // Arrange
+        var userId = 1;
+        var entryDate = new DateTime(2023, 6, 15, 0, 0, 0, DateTimeKind.Utc);
+        var queryDate = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc); // Before all entries
+
+        var currencyAccount = new CurrencyAccount(userId, 1, "Test", AccountLabel.Cash);
+        currencyAccount.Add(new CurrencyAccountEntry(1, 1, entryDate, 0, 1000m) { Labels = [] });
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { currencyAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<StockAccount>());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<BondAccount>());
+
+        // Act
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, queryDate);
+
+        // Assert - GetThisOrNextOlder should return null for dates before all entries
+        Assert.NotNull(result);
+        Assert.Equal(0m, result.Value);
+    }
+
+    [Fact]
+    public async Task GetNetWorth_NegativeBalances_ShouldCalculateCorrectly()
+    {
+        // Arrange
+        var userId = 1;
+        var date = new DateTime(2023, 6, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        // Currency account with negative balance (debt/credit card)
+        var currencyAccount = new CurrencyAccount(userId, 1, "Credit Card", AccountLabel.Loan);
+        currencyAccount.Add(new CurrencyAccountEntry(1, 1, date, 0, 1000m) { Labels = [] });
+        currencyAccount.Add(new CurrencyAccountEntry(1, 2, date.AddDays(1), 0, -1500m) { Labels = [] });
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { currencyAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<StockAccount>());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<BondAccount>());
+
+        // Act
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date.AddDays(1));
+
+        // Assert - Should be -500 (1000 - 1500)
+        Assert.NotNull(result);
+        Assert.Equal(-500m, result.Value);
+    }
+
+    [Fact]
+    public async Task GetNetWorth_TimeSeries_ShouldContainAllDates()
+    {
+        // Arrange
+        var userId = 1;
+        var startDate = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var endDate = new DateTime(2023, 1, 5, 0, 0, 0, DateTimeKind.Utc);
+
+        var currencyAccount = new CurrencyAccount(userId, 1, "Test", AccountLabel.Cash);
+        currencyAccount.Add(new CurrencyAccountEntry(1, 1, startDate, 0, 1000m) { Labels = [] });
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { currencyAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<StockAccount>());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<BondAccount>());
+
+        // Act
+        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, startDate, endDate);
+
+        // Assert - Should have 5 days (Jan 1-5)
+        Assert.Equal(5, result.Count);
+        Assert.True(result.ContainsKey(startDate));
+        Assert.True(result.ContainsKey(endDate));
+        
+        // All values should be 1000 since no changes
+        Assert.All(result.Values, value => Assert.Equal(1000m, value));
+    }
 }

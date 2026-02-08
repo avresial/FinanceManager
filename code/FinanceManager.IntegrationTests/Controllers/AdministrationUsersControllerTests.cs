@@ -31,7 +31,7 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
     {
         for (int i = 1; i <= userCount; i++)
         {
-            if (await _testDatabase!.Context.Users.AnyAsync(x => x.Id == i))
+            if (await _testDatabase!.Context.Users.AnyAsync(x => x.Id == i, TestContext.Current.CancellationToken))
                 continue;
 
             _testDatabase.Context.Users.Add(new UserDto
@@ -45,7 +45,7 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
             });
         }
 
-        await _testDatabase!.Context.SaveChangesAsync();
+        await _testDatabase!.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     private async Task SeedTestAccounts(int accountCount = 3)
@@ -54,7 +54,7 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
 
         for (int i = 1; i <= accountCount; i++)
         {
-            if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.AccountId == i))
+            if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.AccountId == i, TestContext.Current.CancellationToken))
                 continue;
 
             _testDatabase.Context.Accounts.Add(new FinancialAccountBaseDto
@@ -67,7 +67,7 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
             });
         }
 
-        await _testDatabase!.Context.SaveChangesAsync();
+        await _testDatabase!.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     private async Task SeedTestActiveUsers()
@@ -83,7 +83,7 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
             });
         }
 
-        await _testDatabase!.Context.SaveChangesAsync();
+        await _testDatabase!.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]

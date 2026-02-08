@@ -38,7 +38,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     private async Task SeedWithTestCurrencyAccount(string accountName = "Test Currency Account")
     {
 
-        if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.Name == accountName))
+        if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.Name == accountName, TestContext.Current.CancellationToken))
             return;
 
         _value = _valueChange;
@@ -53,12 +53,12 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         };
 
         _testDatabase!.Context.Accounts.Add(test);
-        await _testDatabase.Context.SaveChangesAsync();
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         for (DateTime i = DateTime.UtcNow.AddMonths(-24).Date; i <= DateTime.UtcNow; i = i.AddDays(1))
             _testDatabase!.Context.CurrencyEntries.Add(new CurrencyAccountEntry(test.AccountId, 0, i, _value += _valueChange, _valueChange));
 
-        await _testDatabase.Context.SaveChangesAsync();
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]

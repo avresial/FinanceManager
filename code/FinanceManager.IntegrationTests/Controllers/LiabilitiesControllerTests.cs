@@ -33,7 +33,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
 
     private async Task SeedWithTestCurrencyAccount(string accountName = "Test Currency Account")
     {
-        if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.Name == accountName))
+        if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.Name == accountName, TestContext.Current.CancellationToken))
             return;
 
         _value = _valueChange;
@@ -48,14 +48,14 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
         };
 
         _testDatabase!.Context.Accounts.Add(test);
-        await _testDatabase.Context.SaveChangesAsync();
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         int days = 100;
         _value = (2 + days) * _valueChange * -1;
 
         for (DateTime i = DateTime.UtcNow.AddDays(-days).Date; i <= DateTime.UtcNow; i = i.AddDays(1))
             _testDatabase!.Context.CurrencyEntries.Add(new CurrencyAccountEntry(test.AccountId, 0, i, _value += _valueChange, _valueChange));
 
-        await _testDatabase.Context.SaveChangesAsync();
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]

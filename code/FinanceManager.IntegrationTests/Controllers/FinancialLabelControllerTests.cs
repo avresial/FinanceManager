@@ -30,11 +30,11 @@ public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : Co
 
     private async Task SeedWithTestFinancialLabel(string name = "Test Label")
     {
-        if (await _testDatabase!.Context.FinancialLabels.AnyAsync(x => x.Name == name))
+        if (await _testDatabase!.Context.FinancialLabels.AnyAsync(x => x.Name == name, TestContext.Current.CancellationToken))
             return;
 
         _testDatabase!.Context.FinancialLabels.Add(new FinancialLabel { Name = name });
-        await _testDatabase.Context.SaveChangesAsync();
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
