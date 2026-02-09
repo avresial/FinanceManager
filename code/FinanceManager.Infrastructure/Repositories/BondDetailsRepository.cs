@@ -32,6 +32,14 @@ internal class BondDetailsRepository(AppDbContext context) : IBondDetailsReposit
     public async Task<IReadOnlyList<BondDetails>> GetByIssuerAsync(string issuer, CancellationToken cancellationToken = default)
         => await context.Bonds.Include(b => b.CalculationMethods).Where(x => x.Issuer == issuer).ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<string>> GetIssuersAsync(CancellationToken cancellationToken = default)
+        => await context.Bonds.AsNoTracking()
+            .Select(b => b.Issuer)
+            .Where(issuer => issuer != null && issuer != string.Empty)
+            .Distinct()
+            .OrderBy(issuer => issuer)
+            .ToListAsync(cancellationToken);
+
     public async Task<bool> UpdateAsync(BondDetails bond, CancellationToken cancellationToken = default)
     {
         context.Update(bond);

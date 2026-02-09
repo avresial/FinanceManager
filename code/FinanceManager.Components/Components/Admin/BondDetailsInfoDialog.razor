@@ -1,0 +1,81 @@
+@using FinanceManager.Domain.Entities.Bonds
+
+<MudDialog>
+    <TitleContent>
+        Bond details
+    </TitleContent>
+    <DialogContent>
+        @if (Details is not null)
+        {
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.subtitle2">Name</MudText>
+                    <MudText>@Details.Name</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.subtitle2">Issuer</MudText>
+                    <MudText>@Details.Issuer</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.subtitle2">Start emission date</MudText>
+                    <MudText>@FormatDate(Details.StartEmissionDate)</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.subtitle2">End emission date</MudText>
+                    <MudText>@FormatDate(Details.EndEmissionDate)</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.subtitle2">Type</MudText>
+                    <MudText>@Details.Type</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.subtitle2">Currency</MudText>
+                    <MudText>@Details.Currency</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.subtitle2">Capitalization</MudText>
+                    <MudText>@BondDetails.Capitalization</MudText>
+                </MudItem>
+            </MudGrid>
+
+            <MudDivider Class="my-3" />
+
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Calculation methods</MudText>
+            @if (Details.CalculationMethods.Any())
+            {
+                <MudList T="BondCalculationMethod" Dense="true">
+                    @foreach (var method in Details.CalculationMethods)
+                    {
+                        <MudListItem T="BondCalculationMethod">
+                            <MudText>@method.DateOperator @method.DateValue</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Rate: @method.Rate</MudText>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">No calculation methods configured yet.</MudText>
+            }
+        }
+        else
+        {
+            <MudText>No bond details available.</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public BondDetails? Details { get; set; }
+
+    private void Close() => MudDialog?.Close();
+
+    private static string FormatDate(DateOnly date) => date.ToString("yyyy-MM-dd");
+}

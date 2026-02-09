@@ -1,0 +1,60 @@
+@page "/Admin/Bonds"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+
+@if (!_isLoading)
+{
+    <MudStack Spacing="2">
+        @foreach (var message in _errors)
+        {
+            <MudAlert Severity="Severity.Error">@message</MudAlert>
+        }
+    </MudStack>
+
+    <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="mt-2">
+        <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearchChanged" Placeholder="Search by name"
+                      Immediate="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true"
+                      Class="flex-grow-1" />
+        <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="add" Href="Admin/AddBondDetails"
+                       Color="Color.Primary" />
+    </MudStack>
+
+    @if (_pagedElements.Any())
+    {
+        <MudTable @ref="@Table" Items="@_pagedElements" RowsPerPage="@_elementsPerPage" Dense Breakpoint="Breakpoint.Md"
+                  LoadingProgressColor="Color.Info" Elevation="0" Class="my-3">
+            <HeaderContent>
+                <MudTh>Id</MudTh>
+                <MudTh>Name</MudTh>
+                <MudTh>Issuer</MudTh>
+                <MudTh>Action</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Id">@context.Id</MudTd>
+                <MudTd DataLabel="Name">@context.Name</MudTd>
+                <MudTd DataLabel="Issuer">@context.Issuer</MudTd>
+                <MudTd DataLabel="Action">
+                    <MudStack Row Spacing="1">
+                        <MudIconButton Icon="@Icons.Material.Filled.Info" Color="Color.Primary"
+                                       OnClick="@(() => ShowInfo(context))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                       OnClick="@(() => DeleteBondDetails(context))" />
+                    </MudStack>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                @if (Table is not null && _pagesCount > 1)
+                {
+                    <MudPagination SelectedChanged="PageChanged" Count="@_pagesCount" Selected="@SelectedPage" Class="pa-4" />
+                }
+            </PagerContent>
+        </MudTable>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-3">
+            No bond details found.
+        </MudAlert>
+    }
+}

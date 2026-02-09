@@ -1,0 +1,132 @@
+@page "/Admin/AddBondDetails"
+@using FinanceManager.Domain.Entities.Bonds
+@using FinanceManager.Domain.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+
+<MudForm @ref="_form" @bind-IsValid="_isValid">
+    <MudGrid Spacing="4">
+        <MudItem xs="12">
+            <MudText Typo="Typo.h4">Add bond details</MudText>
+        </MudItem>
+
+        <MudItem xs="12" sm="6">
+            <MudTextField T="string" Label="Name" @bind-Value="_name" Required="true"
+                          RequiredError="Name is required" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudAutocomplete T="string" Label="Issuer" @bind-Value="_issuer" SearchFunc="SearchIssuer"
+                             ResetValueOnEmptyText="false" CoerceText="false" CoerceValue="false"
+                             Required="true" RequiredError="Issuer is required" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6">
+            <MudDatePicker Label="Start emission date" @bind-Date="_startDate" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudDatePicker Label="End emission date" @bind-Date="_endDate" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6">
+            <MudSelect T="BondType" Label="Type" @bind-Value="_selectedType">
+                @foreach (var bondType in _bondTypes)
+                {
+                    <MudSelectItem T="BondType" Value="@bondType">@bondType</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudSelect T="FinanceManager.Domain.Entities.Currencies.Currency" Label="Currency"
+                       @bind-Value="_selectedCurrency" ToStringFunc="@(c => c?.ShortName)">
+                @foreach (var currency in _currencies)
+                {
+                    <MudSelectItem T="FinanceManager.Domain.Entities.Currencies.Currency" Value="@currency">
+                        @currency.ShortName</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudSelect T="Capitalization" Label="Capitalization" @bind-Value="_selectedCapitalization" Disabled="true">
+                    @foreach (var cap in _capitalizations)
+                    {
+                        <MudSelectItem T="Capitalization" Value="@cap">@cap</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Capitalization is fixed in the backend.</MudText>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudDivider Class="my-2" />
+                <MudText Typo="Typo.h6">Calculation methods</MudText>
+            </MudItem>
+
+            <MudItem xs="12">
+                @if (_calculationMethods.Count > 0)
+                {
+                    <MudTable T="BondCalculationMethod" Items="@_calculationMethods" Dense Breakpoint="Breakpoint.Sm"
+                              Elevation="0">
+                        <HeaderContent>
+                            <MudTh>Operator</MudTh>
+                            <MudTh>Date</MudTh>
+                            <MudTh>Rate</MudTh>
+                            <MudTh>Action</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Operator">@context.DateOperator</MudTd>
+                            <MudTd DataLabel="Date">@context.DateValue</MudTd>
+                            <MudTd DataLabel="Rate">@context.Rate</MudTd>
+                            <MudTd DataLabel="Action">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                               OnClick="@(() => RemoveCalculationMethod(context))" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">No calculation methods added yet.</MudText>
+                }
+            </MudItem>
+
+            <MudItem xs="12" sm="3">
+                <MudSelect T="DateOperator" Label="Date operator" @bind-Value="_methodDateOperator">
+                    @foreach (var op in _dateOperators)
+                    {
+                        <MudSelectItem T="DateOperator" Value="@op">@op</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" sm="3">
+                <MudDatePicker Label="Date" @bind-Date="_methodDate" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudNumericField T="decimal?" Label="Rate" @bind-Value="_methodRate" Variant="Variant.Text" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.FlexStart" Style="height:100%;">
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="AddCalculationMethod">Add method</MudButton>
+                </MudStack>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudStack Spacing="2">
+                    @foreach (var message in _errors)
+                    {
+                        <MudAlert Severity="Severity.Error">@message</MudAlert>
+                    }
+                    @foreach (var message in _info)
+                    {
+                        <MudAlert Severity="Severity.Info">@message</MudAlert>
+                    }
+                </MudStack>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddBondDetails">Add</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" Class="ml-2" OnClick="Cancel">Cancel </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudForm>

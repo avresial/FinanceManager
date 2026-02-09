@@ -36,6 +36,12 @@ public class BondDetailsController(IBondDetailsRepository bondDetailsRepository,
     public async Task<IActionResult> GetByIssuer(string issuer, CancellationToken cancellationToken) =>
      Ok(await bondDetailsRepository.GetByIssuerAsync(issuer, cancellationToken));
 
+    [HttpGet("issuers")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<string>))]
+    public async Task<IActionResult> GetIssuers(CancellationToken cancellationToken) =>
+     Ok(await bondDetailsRepository.GetIssuersAsync(cancellationToken));
+
     [HttpPost]
     [Authorize(Roles = "Admin")]
     [ProducesResponseType(StatusCodes.Status201Created)]
