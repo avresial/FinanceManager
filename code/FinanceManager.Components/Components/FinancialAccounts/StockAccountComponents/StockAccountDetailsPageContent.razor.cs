@@ -31,6 +31,9 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
         private Dictionary<StockAccountEntry, StockPrice> _prices = [];
         private List<string> _stocks = [];
 
+        private decimal? _filterFrom;
+        private decimal? _filterTo;
+
 
         public bool IsLoading = false;
         public StockAccount? Account { get; set; }
@@ -225,6 +228,28 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
                 await UpdateEntries();
                 await InvokeAsync(StateHasChanged);
             });
+        }
+
+        private bool HasActiveFilter => _filterFrom.HasValue || _filterTo.HasValue;
+
+        private List<StockAccountEntry> GetFilteredEntries()
+        {
+            if (Account?.Entries is null) return [];
+
+            IEnumerable<StockAccountEntry> entries = Account.Entries;
+
+            if (_filterFrom.HasValue)
+                entries = entries.Where(x => x.ValueChange >= _filterFrom.Value);
+            if (_filterTo.HasValue)
+                entries = entries.Where(x => x.ValueChange <= _filterTo.Value);
+
+            return entries.OrderByDescending(x => x.PostingDate).ToList();
+        }
+
+        private void OnFilterChanged((decimal? From, decimal? To) filter)
+        {
+            _filterFrom = filter.From;
+            _filterTo = filter.To;
         }
     }
 }

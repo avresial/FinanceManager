@@ -12,7 +12,8 @@
     else
     {
         <div style="min-height:150px; width:100%">
-            <LineChartJs Series="@([ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()])" />
+            <LineChartJs
+            Series="@([ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()])" />
         </div>
 
         <MudContainer>
@@ -33,6 +34,10 @@
                 </MudItem>
                 <MudItem xs="12" lg="7">
                     <MudStack>
+                        @if (EntryFilter is not null)
+                        {
+                            @EntryFilter
+                        }
                         <MudExpansionPanels Elevation="0" MultiExpansion>
                             @Entries
                         </MudExpansionPanels>
@@ -75,6 +80,7 @@
     [Parameter] public EventCallback OnLoadMore { get; set; }
     [Parameter] public RenderFragment? ActionButtons { get; set; }
     [Parameter] public RenderFragment? AddEntryOverlay { get; set; }
+    [Parameter] public RenderFragment? EntryFilter { get; set; }
     [Parameter] public RenderFragment? Entries { get; set; }
     [Parameter] public RenderFragment? SidePanel { get; set; }
 }

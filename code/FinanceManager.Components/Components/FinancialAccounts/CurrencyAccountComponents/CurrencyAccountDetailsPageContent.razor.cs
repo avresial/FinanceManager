@@ -27,6 +27,9 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
     private Currency _currency = DefaultCurrency.PLN;
     private UserSession? _user;
 
+    private decimal? _filterFrom;
+    private decimal? _filterTo;
+
 
     public bool IsLoading = false;
     public CurrencyAccount? Account { get; set; }
@@ -239,5 +242,27 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
             await UpdateEntries();
             await InvokeAsync(StateHasChanged);
         });
+    }
+
+    private bool HasActiveFilter => _filterFrom.HasValue || _filterTo.HasValue;
+
+    private List<CurrencyAccountEntry> GetFilteredEntries()
+    {
+        if (Account?.Entries is null) return [];
+
+        IEnumerable<CurrencyAccountEntry> entries = Account.Entries;
+
+        if (_filterFrom.HasValue)
+            entries = entries.Where(x => x.ValueChange >= _filterFrom.Value);
+        if (_filterTo.HasValue)
+            entries = entries.Where(x => x.ValueChange <= _filterTo.Value);
+
+        return entries.OrderByDescending(x => x.PostingDate).ToList();
+    }
+
+    private void OnFilterChanged((decimal? From, decimal? To) filter)
+    {
+        _filterFrom = filter.From;
+        _filterTo = filter.To;
     }
 }
