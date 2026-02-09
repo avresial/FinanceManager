@@ -10,7 +10,14 @@
             @if (ItemDescription is not null)
             {
                 <MudText Color="Color.Secondary" Typo="Typo.caption">
-                    @ItemDescription(item)
+                    @if (ItemDescription(item).Length > 30)
+                    {
+                        @(ItemDescription(item).Substring(0, 30) + "...")
+                    }
+                    else
+                    {
+                        @ItemDescription(item)
+                    }
                 </MudText>
             }
         </MudItem>
