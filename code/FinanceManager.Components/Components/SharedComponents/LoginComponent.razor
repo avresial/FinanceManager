@@ -19,13 +19,13 @@
                         <MudAlert Severity="Severity.Error" Class="my-3">@error</MudAlert>
                     }
                 }
-                <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
+                <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors" @onkeydown="OnKeyDown">
                     <MudTextField @bind-Value="_loginModel.Login" T="string" Label="Login" Variant="Variant.Outlined"
-                        Immediate Required Class="mt-5" />
+                                  Immediate Required Class="mt-5" />
                     <MudTextField @bind-Value="_loginModel.Password" T="string" Label="Password"
-                        Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
+                                  Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
 
-                    <MudButton Class="my-2" Variant="Variant.Filled" Color="Color.Primary" type="submit" @onclick=Login>
+                    <MudButton Class="my-2" Variant="Variant.Filled" Color="Color.Primary" @onclick=Login Disabled="@_isProcessing">
                         <MudText Typo="Typo.h5">Login</MudText>
                     </MudButton>
                     <MudButton Href="register" Class="my-2" Variant="Variant.Outlined" Color="Color.Primary">

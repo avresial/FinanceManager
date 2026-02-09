@@ -1,12 +1,18 @@
 ﻿@using FinanceManager.Domain.Services
 @inherits LayoutComponentBase
+@implements IDisposable
 
 <MudThemeProvider />
 
 <MudLayout>
     <MudAppBar Elevation="0">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudSpacer />
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="flex-grow-1">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+            @if (_breadcrumbs.Count > 0)
+            {
+                <MudBreadcrumbs Items="_breadcrumbs" />
+            }
+        </MudStack>
         <MudIconButton OnClick=LoginService.Logout Icon="@Icons.Material.Filled.Logout" Edge="Edge.End" />
     </MudAppBar>
 
@@ -30,12 +36,76 @@
 </MudLayout>
 
 @code {
+    private IReadOnlyList<BreadcrumbItem> _breadcrumbs = [];
+
     [Inject] required public ILoginService LoginService { get; set; }
+    [Inject] required public NavigationManager NavigationManager { get; set; }
 
     bool _drawerOpen = true;
+
+    protected override void OnInitialized()
+    {
+        BuildBreadcrumbs();
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args)
+    {
+        BuildBreadcrumbs();
+        StateHasChanged();
+    }
+
+    private void BuildBreadcrumbs()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var segments = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+        if (segments.Length == 0 || !segments[0].Equals("Admin", StringComparison.OrdinalIgnoreCase))
+        {
+            _breadcrumbs = [];
+            return;
+        }
+
+        var items = new List<BreadcrumbItem>
+        {
+            new("Admin", href: "Admin/Dashboard")
+        };
+
+        if (segments.Length > 1)
+        {
+            var section = segments[1];
+            var label = section switch
+            {
+                "Users" => "Users",
+                "Labels" => "Labels",
+                "Bonds" => "Bonds",
+                "Dashboard" => "Dashboard",
+                "AddBondDetails" => "Add bond",
+                "AddLabel" => "Add label",
+                "AddUser" => "Add user",
+                _ => section
+            };
+
+            var href = string.Join('/', segments.Take(2));
+            items.Add(new BreadcrumbItem(label, href: href));
+
+            if (segments.Length > 2)
+            {
+                var tail = string.Join('/', segments.Skip(2));
+                items.Add(new BreadcrumbItem(tail, href: null, disabled: true));
+            }
+        }
+
+        _breadcrumbs = items;
+    }
 
     void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }

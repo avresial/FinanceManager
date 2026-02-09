@@ -11,8 +11,11 @@ public partial class AdminLabelPage : ComponentBase
     private int _labelsCount;
     private int _elementsPerPage = 20;
     private int _pagesCount;
+    private string _searchText = string.Empty;
 
     private List<string> _errors = [];
+    private IReadOnlyList<FinancialLabel> _allElements = [];
+    private IReadOnlyList<FinancialLabel> _filteredElements = [];
     private IEnumerable<FinancialLabel> _elements = [];
 
     public MudTable<FinancialLabel>? Table { get; set; }
@@ -41,7 +44,8 @@ public partial class AdminLabelPage : ComponentBase
 
         try
         {
-            _elements = await FinancialLabelHttpClient.Get(0, _elementsPerPage);
+            _allElements = (await FinancialLabelHttpClient.Get(0, _labelsCount)).ToList();
+            ApplyFilter();
         }
         catch (Exception)
         {
@@ -50,8 +54,6 @@ public partial class AdminLabelPage : ComponentBase
             return;
         }
 
-        if (_elementsPerPage != 0)
-            _pagesCount = (int)Math.Ceiling((double)_labelsCount / _elementsPerPage);
         _isLoading = false;
     }
 
@@ -59,7 +61,8 @@ public partial class AdminLabelPage : ComponentBase
     {
         try
         {
-            _elements = (await FinancialLabelHttpClient.Get((i - 1) * _elementsPerPage, _elementsPerPage)).Take(_elementsPerPage).ToList();
+            SelectedPage = i;
+            _elements = PageItems(i);
         }
         catch (Exception)
         {
@@ -77,6 +80,37 @@ public partial class AdminLabelPage : ComponentBase
             return;
         }
 
-        _elements = await FinancialLabelHttpClient.Get((SelectedPage - 1) * _elementsPerPage, _elementsPerPage);
+        _elements = PageItems(SelectedPage);
+    }
+
+    private void OnSearchChanged(string value)
+    {
+        _searchText = value ?? string.Empty;
+        SelectedPage = 1;
+        ApplyFilter();
+    }
+
+    private IEnumerable<FinancialLabel> PageItems(int page) =>
+        _filteredElements.Skip((page - 1) * _elementsPerPage).Take(_elementsPerPage).ToList();
+
+    private void ApplyFilter()
+    {
+        _filteredElements = string.IsNullOrWhiteSpace(_searchText)
+            ? _allElements
+            : _allElements.Where(item => item.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        _pagesCount = _filteredElements.Count == 0 ? 0 : (int)Math.Ceiling((double)_filteredElements.Count / _elementsPerPage);
+
+        if (_pagesCount == 0)
+        {
+            SelectedPage = 1;
+            _elements = [];
+            return;
+        }
+
+        if (SelectedPage > _pagesCount)
+            SelectedPage = _pagesCount;
+
+        _elements = PageItems(SelectedPage);
     }
 }
