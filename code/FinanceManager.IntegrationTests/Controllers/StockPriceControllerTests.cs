@@ -1,5 +1,6 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Contexts;
@@ -40,14 +41,32 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         currency ??= DefaultCurrency.PLN;
         if (date == default) date = DateTime.UtcNow.Date;
 
-        if (await _testDatabase!.Context.StockPrices.AnyAsync(x => x.Ticker == ticker && x.Date == date, TestContext.Current.CancellationToken))
+        if (await _testDatabase!.Context.StockPrices
+            .Include(x => x.StockDetails)
+            .AnyAsync(x => x.StockDetails!.Ticker == ticker && x.Date == date, TestContext.Current.CancellationToken))
             return;
+
+        var stockDetails = await _testDatabase!.Context.StockDetails
+            .Include(x => x.Currency)
+            .FirstOrDefaultAsync(x => x.Ticker == ticker, TestContext.Current.CancellationToken);
+
+        if (stockDetails is null)
+        {
+            stockDetails = new StockDetails
+            {
+                Ticker = ticker,
+                Name = "Test",
+                Type = "Stock",
+                Region = "US",
+                Currency = currency
+            };
+            _testDatabase.Context.StockDetails.Add(stockDetails);
+        }
 
         _testDatabase!.Context.StockPrices.Add(new StockPriceDto
         {
-            Ticker = ticker,
             PricePerUnit = price,
-            Currency = currency,
+            StockDetails = stockDetails,
             Date = date
         });
 

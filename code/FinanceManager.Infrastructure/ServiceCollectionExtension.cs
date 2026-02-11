@@ -24,6 +24,7 @@ public static class ServiceCollectionExtension
 
         services
                 .AddScoped<IStockPriceRepository, StockPriceRepository>()
+                .AddScoped<IStockDetailsRepository, StockDetailsRepository>()
                 .AddScoped<IFinancialAccountRepository, AccountRepository>()
                 .AddScoped<IUserRepository, UserRepository>()
                 .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()

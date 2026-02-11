@@ -1,0 +1,65 @@
+@page "/Admin/EditStock/{Ticker}"
+@using FinanceManager.Domain.Entities.Stocks
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+
+@if (_isLoading)
+{
+}
+else if (_details is null)
+{
+    <MudAlert Severity="Severity.Error">Stock @Ticker could not be found.</MudAlert>
+}
+else
+{
+    <MudForm @ref="_form" @bind-IsValid="_isValid">
+        <MudGrid Spacing="4">
+            <MudItem xs="12">
+                <MudText Typo="Typo.h4">Edit stock @_details.Ticker</MudText>
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string" Label="Ticker" Value="@_details.Ticker" Disabled="true" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string" Label="Name" @bind-Value="_name" Required="true"
+                              RequiredError="Name is required" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string" Label="Type" @bind-Value="_type" Required="true"
+                              RequiredError="Type is required" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string" Label="Region" @bind-Value="_region" Required="true"
+                              RequiredError="Region is required" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string" Label="Currency" @bind-Value="_currency" Required="true"
+                              RequiredError="Currency is required" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudStack Spacing="2">
+                    @foreach (var message in _errors)
+                    {
+                        <MudAlert Severity="Severity.Error">@message</MudAlert>
+                    }
+                    @foreach (var message in _info)
+                    {
+                        <MudAlert Severity="Severity.Info">@message</MudAlert>
+                    }
+                </MudStack>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">Save</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" Class="ml-2" OnClick="Cancel">Cancel</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudForm>
+}

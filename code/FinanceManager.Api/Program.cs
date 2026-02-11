@@ -1,4 +1,5 @@
 using FinanceManager.Api.Services;
+using FinanceManager.Application.Options;
 using FinanceManager.Application;
 using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -26,6 +27,7 @@ builder.Services
 
 
 builder.Services.Configure<JwtAuthOptions>(builder.Configuration.GetSection("JwtConfig"));
+builder.Services.Configure<StockApiOptions>(builder.Configuration.GetSection("StockApi"));
 
 
 builder.Services.AddCors(options =>

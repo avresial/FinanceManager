@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Stocks;
@@ -13,6 +14,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<ActiveUser> ActiveUsers { get; set; } = default!;
     public DbSet<UserDto> Users { get; set; } = default!;
+    public DbSet<Currency> Currencies { get; set; } = default!;
+    public DbSet<StockDetails> StockDetails { get; set; } = default!;
     public DbSet<FinancialAccountBaseDto> Accounts { get; set; } = default!;
     public DbSet<CurrencyAccountEntry> CurrencyEntries { get; set; } = default!;
     public DbSet<StockAccountEntry> StockEntries { get; set; } = default!;
@@ -26,9 +29,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new ActiveUserConfiguration());
         modelBuilder.ApplyConfiguration(new FinancialAccountBaseDtoConfiguration());
         modelBuilder.ApplyConfiguration(new CurrencyAccountEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new CurrencyConfiguration());
         modelBuilder.ApplyConfiguration(new BondAccountEntryConfiguration());
         modelBuilder.ApplyConfiguration(new NewVisitsConfiguration());
         modelBuilder.ApplyConfiguration(new StockAccountEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new StockDetailsConfiguration());
         modelBuilder.ApplyConfiguration(new StockPriceDtoConfiguration());
         modelBuilder.ApplyConfiguration(new UserDtoConfiguration());
         modelBuilder.ApplyConfiguration(new BondDetailsConfiguration());

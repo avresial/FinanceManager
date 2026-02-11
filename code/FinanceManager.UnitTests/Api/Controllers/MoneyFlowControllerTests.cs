@@ -1,8 +1,8 @@
 ﻿using FinanceManager.Api.Controllers;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
-using FinanceManager.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -17,14 +17,17 @@ public class MoneyFlowControllerTests
 
     private readonly Mock<IMoneyFlowService> _mockmoneyFlowService;
     private readonly Mock<IBalanceService> _mockBalanceService;
+    private readonly Mock<ICurrencyRepository> _mockCurrencyRepository;
     private readonly MoneyFlowController _controller;
 
     public MoneyFlowControllerTests()
     {
         _mockmoneyFlowService = new Mock<IMoneyFlowService>();
         _mockBalanceService = new Mock<IBalanceService>();
-        var currencyRepository = new CurrencyRepository();
-        _controller = new MoneyFlowController(_mockmoneyFlowService.Object, _mockBalanceService.Object, currencyRepository);
+        _mockCurrencyRepository = new Mock<ICurrencyRepository>();
+        _mockCurrencyRepository.Setup(repo => repo.GetCurrencies(It.IsAny<CancellationToken>()))
+            .Returns(new[] { DefaultCurrency.PLN, DefaultCurrency.USD }.ToAsyncEnumerable());
+        _controller = new MoneyFlowController(_mockmoneyFlowService.Object, _mockBalanceService.Object, _mockCurrencyRepository.Object);
 
         // Mock user identity
         var user = new ClaimsPrincipal(new ClaimsIdentity([new(ClaimTypes.NameIdentifier, testUserId.ToString())], "mock"));

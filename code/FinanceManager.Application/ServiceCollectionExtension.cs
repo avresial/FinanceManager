@@ -3,6 +3,7 @@ using FinanceManager.Application.Services;
 using FinanceManager.Application.Services.Bonds;
 using FinanceManager.Application.Services.Currencies;
 using FinanceManager.Application.Services.Seeders;
+using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,6 +45,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<HttpClient>()
                 .AddScoped<ICurrencyAccountImportService, CurrencyAccountImportService>()
                 .AddScoped<IStockPriceProvider, StockPriceProvider>()
+                .AddScoped<IStockMarketService, StockMarketService>()
                 .AddScoped<IBondService, BondService>()
             ;
 

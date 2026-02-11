@@ -72,4 +72,46 @@ public class StockPriceHttpClient(HttpClient httpClient, ILogger<StockPriceHttpC
             return null;
         }
     }
+
+    public async Task<List<StockDetails>> GetStocks(CancellationToken cancellationToken = default)
+    {
+        var result = await httpClient.GetFromJsonAsync<List<StockDetails>>($"{httpClient.BaseAddress}api/StockPrice/get-stocks", cancellationToken);
+        return result ?? [];
+    }
+
+    public async Task<StockDetails?> AddStockDetails(string ticker, string name, string type, string region, string currency, CancellationToken cancellationToken = default)
+    {
+        var request = new { Ticker = ticker, Name = name, Type = type, Region = region, Currency = currency };
+        var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/StockPrice/add-stock", request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<StockDetails>(cancellationToken: cancellationToken);
+    }
+
+    public async Task<StockDetails?> GetStockDetails(string ticker, CancellationToken cancellationToken = default)
+    {
+        return await httpClient.GetFromJsonAsync<StockDetails>($"{httpClient.BaseAddress}api/StockPrice/stock-details/{Uri.EscapeDataString(ticker)}", cancellationToken);
+    }
+
+    public async Task<StockDetails?> UpdateStockDetails(string ticker, string name, string type, string region, string currency, CancellationToken cancellationToken = default)
+    {
+        var request = new { Ticker = ticker, Name = name, Type = type, Region = region, Currency = currency };
+        var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/StockPrice/stock-details", request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<StockDetails>(cancellationToken: cancellationToken);
+    }
+
+    public async Task<bool> DeleteStock(string ticker, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.DeleteAsync($"{httpClient.BaseAddress}api/StockPrice/delete-stock/{Uri.EscapeDataString(ticker)}", cancellationToken);
+            response.EnsureSuccessStatusCode();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, ex.Message);
+            return false;
+        }
+    }
 }

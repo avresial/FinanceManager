@@ -1,0 +1,19 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build-solution",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"code/FinanceManager.slnx"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "build"
+		}
+	]
+}
