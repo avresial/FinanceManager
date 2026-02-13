@@ -1,6 +1,6 @@
 using FinanceManager.Api.Services;
-using FinanceManager.Application.Options;
 using FinanceManager.Application;
+using FinanceManager.Application.Options;
 using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;

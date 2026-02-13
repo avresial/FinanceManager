@@ -11,7 +11,8 @@ namespace FinanceManager.Api.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Stock Prices")]
-public class StockPriceController(IStockPriceRepository stockPriceRepository, ICurrencyExchangeService currencyExchangeService, ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, IStockDetailsRepository stockDetailsRepository) : ControllerBase
+public class StockPriceController(IStockPriceRepository stockPriceRepository, ICurrencyExchangeService currencyExchangeService,
+ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, IStockDetailsRepository stockDetailsRepository) : ControllerBase
 {
 
     [Authorize]
@@ -61,9 +62,9 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
         if (currency is null)
             return NotFound("Currency not found.");
 
-        var stockPrice = await stockPriceRepository.GetThisOrNextOlder(ticker, date);
-
-        if (stockPrice is null) return NotFound("Stock price not found.");
+        var stockPrices = await stockMarketService.GetDailyStock(ticker, date, date, cancellationToken);
+        if (stockPrices.Count == 0) return NotFound("Stock price not found.");
+        var stockPrice = stockPrices.First(sp => sp.Date.Date == date.Date);
         if (currency == stockPrice.Currency)
             return Ok(stockPrice);
 
@@ -134,7 +135,7 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
     }
 
     [HttpGet("get-stocks")]
-    [Authorize(Roles = "Admin")]
+    // [Authorize(Roles = "Admin")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<StockDetails>))]
     public async Task<IActionResult> GetStocks(CancellationToken cancellationToken = default)
         => Ok(await stockDetailsRepository.GetAll(cancellationToken));

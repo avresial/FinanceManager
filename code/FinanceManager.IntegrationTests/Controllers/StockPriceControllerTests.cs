@@ -168,6 +168,19 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         Assert.Equal(DefaultCurrency.PLN.Symbol, result.Currency.Symbol);
     }
 
+    [Fact]
+    public async Task GetStocks_AsAdmin_ReturnsStocks()
+    {
+        await SeedWithTestStockPrice("AAPL", 100, DefaultCurrency.PLN);
+        Authorize("TestUser", 1, UserRole.Admin);
+
+        var result = await new StockPriceHttpClient(Client, null!).GetStocks(TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.Contains(result, x => x.Ticker == "AAPL");
+    }
+
     public override void Dispose()
     {
         base.Dispose();

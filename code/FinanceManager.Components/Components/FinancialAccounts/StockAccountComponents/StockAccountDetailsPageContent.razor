@@ -4,8 +4,8 @@
 
 @if (Account is not null && Account.Entries is not null && (IsLoading || Account.Entries.Any() || !_loadedAllData))
 {
-    <AccountDetailsPageContent AccountName="@Account.Name"         ChartData="ChartData"             ChartContainerClass="col-12 mb-2"
-                               IsLoading="@IsLoading"                 IsLoadingMore="@_isLoadingMore"                     LoadedAllData="@_loadedAllData"                         OnLoadMore="LoadMore">
+    <AccountDetailsPageContent AccountName="@Account.Name" ChartData="ChartData" ChartContainerClass="col-12 mb-2"
+                               IsLoading="@IsLoading" IsLoadingMore="@_isLoadingMore" LoadedAllData="@_loadedAllData" OnLoadMore="LoadMore">
         <ActionButtons>
             <MudButton Variant="Variant.Text" href="@($"Import/{Account.AccountId}")">Import</MudButton>
             <MudButton Variant="Variant.Text" Disabled>Export</MudButton>
@@ -13,12 +13,12 @@
             <MudButton Variant="Variant.Text" href="@($"StockPrices")">Stocks Prices</MudButton>
         </ActionButtons>
         <AddEntryOverlay>
-            <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add"         OnClick=ShowOverlay
+            <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick=ShowOverlay
                     Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:1000;" />
 
             <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
                 <MudPaper Class="p-5">
-                    <AddStockEntry InvestmentAccount=Account ActionCompleted="HideOverlay" Tickers=@_stocks />
+                    <AddStockEntry InvestmentAccount=Account ActionCompleted="HideOverlay" Tickers=@_availableStocks />
                 </MudPaper>
             </MudOverlay>
         </AddEntryOverlay>
@@ -60,7 +60,7 @@
 
                     @if (_top5 is not null && _top5.Any())
                     {
-                        <AccountTopBottomList Title="Top 5"                      Items="_top5 ?? []"              ValueColor="Color.Success"
+                        <AccountTopBottomList Title="Top 5" Items="_top5 ?? []" ValueColor="Color.Success"
                                               ItemTitle="@(item => item.Item1.Ticker)"
                                               ItemValue="@(item => $"{item.Item2.ToString("0.00")} {_currency}")"
                                               ItemDate="@(item => item.Item1.PostingDate.ToLocalTime().ToString("yyyy-MM-dd"))" />
@@ -68,7 +68,7 @@
 
                     @if (_bottom5 is not null && _bottom5.Any())
                     {
-                        <AccountTopBottomList Title="Bottom 5"                     Items="_bottom5 ?? []"                                        ValueColor="Color.Error"
+                        <AccountTopBottomList Title="Bottom 5" Items="_bottom5 ?? []" ValueColor="Color.Error"
                                               ItemTitle="@(item => item.Item1.Ticker)"
                                               ItemValue="@(item => $"{item.Item2.ToString("0.00")} {_currency}")"
                                               ItemDate="@(item => item.Item1.PostingDate.ToLocalTime().ToString("yyyy-MM-dd"))" />
@@ -80,7 +80,7 @@
 }
 else if (Account is not null && (Account.Entries is null || !Account.Entries.Any()))
 {
-    <AddStockEntry InvestmentAccount=Account ActionCompleted="HideOverlay" Tickers=@_stocks>
+    <AddStockEntry InvestmentAccount=Account ActionCompleted="HideOverlay" Tickers=@_availableStocks>
         <CustomButton>
             <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.Name}")">
                 Import

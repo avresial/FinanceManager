@@ -62,7 +62,7 @@ public static class ServiceCollectionExtension
             {
                 var connectionString = configuration.GetValue<string>("FINANCE_MANAGER_DB_KEY");
                 if (configuration.GetSection("ConnectionStrings").Exists())
-                    connectionString = configuration.GetSection("ConnectionStrings").GetValue<string>("testDB");
+                    connectionString = configuration.GetSection("ConnectionStrings").GetValue<string>("FinanceManagerDb");
 
                 if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) ||
                     databaseProvider.Equals("Supabase", StringComparison.OrdinalIgnoreCase))

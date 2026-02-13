@@ -30,6 +30,7 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
 
         private Dictionary<StockAccountEntry, StockPrice> _prices = [];
         private List<string> _stocks = [];
+        private List<string> _availableStocks = [];
 
         private decimal? _filterFrom;
         private decimal? _filterTo;
@@ -151,7 +152,8 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
                 await loadTask;
                 IsLoading = false;
             }
-
+            var availableStocks = await StockPriceHttpClient.GetStocks();
+            _availableStocks = availableStocks.Select(x => x.Ticker).ToList();
             AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
         }
         protected override async Task OnParametersSetAsync()

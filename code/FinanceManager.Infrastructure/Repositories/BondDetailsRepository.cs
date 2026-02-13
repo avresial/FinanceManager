@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,7 @@ internal class BondDetailsRepository(AppDbContext context) : IBondDetailsReposit
 {
     public async Task<int> AddAsync(BondDetails bond, CancellationToken cancellationToken = default)
     {
+        NormalizeCurrencyTracking(bond);
         context.Bonds.Add(bond);
         await context.SaveChangesAsync(cancellationToken);
         return bond.Id;
@@ -42,9 +44,31 @@ internal class BondDetailsRepository(AppDbContext context) : IBondDetailsReposit
 
     public async Task<bool> UpdateAsync(BondDetails bond, CancellationToken cancellationToken = default)
     {
+        NormalizeCurrencyTracking(bond);
         context.Update(bond);
 
         await context.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    private void NormalizeCurrencyTracking(BondDetails bond)
+    {
+        if (bond.Currency is null) return;
+
+        var tracked = context.ChangeTracker
+            .Entries<Currency>()
+            .FirstOrDefault(x => x.Entity.Id == bond.Currency.Id)
+            ?.Entity;
+
+        if (tracked is not null)
+        {
+            bond.Currency = tracked;
+            return;
+        }
+
+        if (context.Entry(bond.Currency).State == EntityState.Detached)
+        {
+            context.Attach(bond.Currency);
+        }
     }
 }

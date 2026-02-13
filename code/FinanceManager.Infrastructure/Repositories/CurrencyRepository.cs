@@ -54,9 +54,17 @@ public class CurrencyRepository(AppDbContext context) : ICurrencyRepository
 
     private async Task EnsureDefaults(CancellationToken ct)
     {
-        if (await context.Currencies.AnyAsync(ct)) return;
+        var existingCodes = await context.Currencies
+            .Select(x => x.ShortName)
+            .ToListAsync(ct);
 
-        context.Currencies.AddRange(DefaultCurrency.PLN, DefaultCurrency.USD);
+        var missingDefaults = new[] { DefaultCurrency.PLN, DefaultCurrency.USD }
+            .Where(x => !existingCodes.Contains(x.ShortName, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+        if (missingDefaults.Count == 0) return;
+
+        context.Currencies.AddRange(missingDefaults);
         await context.SaveChangesAsync(ct);
     }
 
