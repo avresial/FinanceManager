@@ -20,7 +20,7 @@ internal class StockMarketService(
     ICurrencyRepository currencyRepository,
     IStockDetailsRepository stockDetailsRepository) : IStockMarketService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
@@ -48,7 +48,7 @@ internal class StockMarketService(
             }
 
             var content = await response.Content.ReadAsStringAsync(ct);
-            var apiResponse = JsonSerializer.Deserialize<AlphaVantageSymbolSearchResponse>(content, JsonOptions);
+            var apiResponse = JsonSerializer.Deserialize<AlphaVantageSymbolSearchResponse>(content, _jsonOptions);
             if (apiResponse?.BestMatches is null || apiResponse.BestMatches.Count == 0) return Array.Empty<TickerSearchMatch>();
 
             var result = new List<TickerSearchMatch>(apiResponse.BestMatches.Count);
@@ -97,6 +97,100 @@ internal class StockMarketService(
         }
 
         return existing.OrderByDescending(x => x.Date).ToList();
+    }
+
+    public async Task<IReadOnlyList<StockDetails>> GetListingStatus(CancellationToken ct = default)
+    {
+        var apiKey = options.Value.ApiKey;
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            logger.LogWarning("Stock API key is missing.");
+            return [];
+        }
+
+        var url = $"{options.Value.BaseUrl}?function=LISTING_STATUS&apikey={apiKey}";
+
+        try
+        {
+            var response = await httpClient.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("Stock API listing status failed with status {StatusCode}", response.StatusCode);
+                return [];
+            }
+
+            var content = await response.Content.ReadAsStringAsync(ct);
+            var alphaVantageListings = ParseListingStatusCsv(content);
+
+            var defaultCurrency = await currencyRepository.GetOrAdd(DefaultCurrency.USD.ShortName, DefaultCurrency.USD.Symbol, ct);
+            var stockDetailsList = new List<StockDetails>();
+
+            foreach (var listing in alphaVantageListings)
+            {
+                if (string.IsNullOrWhiteSpace(listing.Symbol)) continue;
+
+                var stockDetails = new StockDetails
+                {
+                    Ticker = listing.Symbol,
+                    Name = listing.Name ?? string.Empty,
+                    Type = listing.AssetType ?? string.Empty,
+                    Region = listing.Exchange ?? string.Empty,
+                    Currency = defaultCurrency
+                };
+
+                stockDetailsList.Add(stockDetails);
+            }
+
+            return stockDetailsList;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Stock API listing status failed");
+            return [];
+        }
+    }
+
+    private static List<AlphaVantageListing> ParseListingStatusCsv(string csv)
+    {
+        var listings = new List<AlphaVantageListing>();
+        var lines = csv.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+        if (lines.Length == 0) return listings;
+
+        // Skip header line
+        for (int i = 1; i < lines.Length; i++)
+        {
+            var line = lines[i].Trim();
+            if (string.IsNullOrWhiteSpace(line)) continue;
+
+            var parts = line.Split(',');
+            if (parts.Length < 7) continue;
+
+            var listing = new AlphaVantageListing
+            {
+                Symbol = parts[0],
+                Name = parts[1],
+                Exchange = parts[2],
+                AssetType = parts[3],
+                IpoDate = ParseNullableDate(parts[4]),
+                DelistingDate = ParseNullableDate(parts[5]),
+                Status = parts[6]
+            };
+
+            listings.Add(listing);
+        }
+
+        return listings;
+    }
+
+    private static DateTime? ParseNullableDate(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Equals("null", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        return DateTime.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date)
+            ? DateTime.SpecifyKind(date.Date, DateTimeKind.Utc)
+            : null;
     }
 
     private async Task<StockDetails> ResolveStockDetails(string ticker, CancellationToken ct)
@@ -154,7 +248,7 @@ internal class StockMarketService(
             }
 
             var content = await response.Content.ReadAsStringAsync(ct);
-            var apiResponse = JsonSerializer.Deserialize<AlphaVantageDailyResponse>(content, JsonOptions);
+            var apiResponse = JsonSerializer.Deserialize<AlphaVantageDailyResponse>(content, _jsonOptions);
             if (apiResponse?.Series is null || apiResponse.Series.Count == 0) return [];
 
             var prices = new List<StockPrice>();
@@ -267,5 +361,16 @@ internal class StockMarketService(
     {
         [JsonPropertyName("4. close")]
         public string? Close { get; set; }
+    }
+
+    private sealed class AlphaVantageListing
+    {
+        public string? Symbol { get; set; }
+        public string? Name { get; set; }
+        public string? Exchange { get; set; }
+        public string? AssetType { get; set; }
+        public DateTime? IpoDate { get; set; }
+        public DateTime? DelistingDate { get; set; }
+        public string? Status { get; set; }
     }
 }

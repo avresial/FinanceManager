@@ -38,6 +38,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<ISeeder, GuestAccountSeeder>()
                 .AddScoped<ISeeder, AdminAccountSeeder>()
                 .AddScoped<ISeeder, BondDetailsSeeder>()
+                .AddScoped<ISeeder, StockDetailsSeeder>()
                 .AddScoped<ISeeder, FinancialLabelSeeder>()
                 .AddScoped<IUserPlanVerifier, UserPlanVerifier>()
                 .AddScoped<IAdministrationUsersService, AdministrationUsersService>()
