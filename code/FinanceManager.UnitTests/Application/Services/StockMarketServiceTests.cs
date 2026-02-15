@@ -1,14 +1,9 @@
-using FinanceManager.Application.Options;
 using FinanceManager.Application.Services.Stocks;
+using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Moq;
-using Moq.Protected;
-using System.Net;
-using System.Text;
 
 namespace FinanceManager.UnitTests.Application.Services;
 
@@ -16,48 +11,36 @@ namespace FinanceManager.UnitTests.Application.Services;
 [Trait("Category", "Unit")]
 public class StockMarketServiceTests : IDisposable
 {
-    private readonly ILogger<StockMarketService> _logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<StockMarketService>();
-    private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock = new();
-    private readonly HttpClient _httpClient;
+    private readonly Mock<IAlphaVantageClient> _apiClient = new();
     private readonly Mock<IStockPriceRepository> _stockPriceRepository = new();
     private readonly Mock<ICurrencyRepository> _currencyRepository = new();
     private readonly Mock<IStockDetailsRepository> _stockDetailsRepository = new();
-    private readonly IOptions<StockApiOptions> _options;
 
     public StockMarketServiceTests()
     {
-        _httpClient = new HttpClient(_httpMessageHandlerMock.Object);
-        _options = Options.Create(new StockApiOptions
-        {
-            BaseUrl = "https://www.alphavantage.co/query",
-            ApiKey = "test-key",
-            OutputSize = "compact"
-        });
     }
 
     [Fact]
     public async Task SearchTicker_MapsAllFields()
     {
         // Arrange
-        var jsonResponse = """
-{
-    "bestMatches": [
+        var matches = new List<TickerSearchMatch>
         {
-            "1. symbol": "CSPX.LON",
-            "2. name": "iShares Core S&P 500 UCITS ETF USD (Acc)",
-            "3. type": "ETF",
-            "4. region": "United Kingdom",
-            "5. marketOpen": "08:00",
-            "6. marketClose": "16:30",
-            "7. timezone": "UTC+01",
-            "8. currency": "USD",
-            "9. matchScore": "0.8000"
-        }
-    ]
-}
-""";
-
-        SetupHttpResponse("function=SYMBOL_SEARCH", jsonResponse);
+            new()
+            {
+                Symbol = "CSPX.LON",
+                Name = "iShares Core S&P 500 UCITS ETF USD (Acc)",
+                Type = "ETF",
+                Region = "United Kingdom",
+                MarketOpen = "08:00",
+                MarketClose = "16:30",
+                Timezone = "UTC+01",
+                Currency = "USD",
+                MatchScore = 0.8000m
+            }
+        };
+        _apiClient.Setup(client => client.SearchTicker("CSPX", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(matches);
         var service = CreateService();
 
         // Act
@@ -95,20 +78,17 @@ public class StockMarketServiceTests : IDisposable
                 Currency = new Currency(1, "USD", "$")
             });
 
-        var jsonResponse = """
-{
-    "Time Series (Daily)": {
-        "2026-02-10": { "4. close": "747.1800" },
-        "2026-02-09": { "4. close": "747.0200" }
-    }
-}
-""";
-
-        SetupHttpResponse("function=TIME_SERIES_DAILY", jsonResponse);
+        var apiPrices = new List<StockPrice>
+        {
+            new() { Ticker = "CSPX.LON", PricePerUnit = 747.18m, Currency = new Currency(1, "USD", "$"), Date = end },
+            new() { Ticker = "CSPX.LON", PricePerUnit = 747.02m, Currency = new Currency(1, "USD", "$"), Date = start }
+        };
+        _apiClient.Setup(client => client.GetDailySeries("CSPX.LON", start, end, It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(apiPrices);
         var service = CreateService();
 
         // Act
-        var result = await service.GetDailyStock("CSPX.LON", start, end, TestContext.Current.CancellationToken);
+        var result = await service.GetStockPrices("CSPX.LON", start, end, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, result.Count);
@@ -116,26 +96,11 @@ public class StockMarketServiceTests : IDisposable
         _stockPriceRepository.Verify(repo => repo.Add(It.IsAny<IEnumerable<StockPrice>>()), Times.Once);
     }
 
-    private void SetupHttpResponse(string queryFragment, string jsonResponse)
-    {
-        _httpMessageHandlerMock.Protected()
-            .Setup<Task<HttpResponseMessage>>("SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => req.RequestUri!.ToString().Contains(queryFragment)),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage
-            {
-                StatusCode = HttpStatusCode.OK,
-                Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json")
-            });
-    }
-
     private StockMarketService CreateService() => new(
-        _httpClient,
-        _logger,
-        _options,
+        _apiClient.Object,
         _stockPriceRepository.Object,
         _currencyRepository.Object,
         _stockDetailsRepository.Object);
 
-    public void Dispose() => _httpClient.Dispose();
+    public void Dispose() { }
 }

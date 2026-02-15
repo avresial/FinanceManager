@@ -1,4 +1,6 @@
 using FinanceManager.Api.Controllers;
+using FinanceManager.Application.Services.Stocks;
+using FinanceManager.Domain.Commands.Stocks;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
@@ -77,47 +79,6 @@ public class StockPriceControllerTests
     }
 
     [Fact]
-    public async Task GetDailyStock_ReturnsOk_WithPrices()
-    {
-        // Arrange
-        var start = new DateTime(2026, 2, 9);
-        var end = new DateTime(2026, 2, 10);
-        var prices = new List<StockPrice>
-        {
-            new() { Ticker = "CSPX.LON", PricePerUnit = 747.18m, Currency = DefaultCurrency.USD, Date = end },
-            new() { Ticker = "CSPX.LON", PricePerUnit = 747.02m, Currency = DefaultCurrency.USD, Date = start }
-        };
-
-        _stockMarketService.Setup(service => service.GetDailyStock("CSPX.LON", start, end, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(prices);
-
-        // Act
-        var result = await _controller.GetDailyStock("CSPX.LON", start, end, TestContext.Current.CancellationToken);
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var value = Assert.IsType<List<StockPrice>>(okResult.Value);
-        Assert.Equal(2, value.Count);
-    }
-
-    [Fact]
-    public async Task GetDailyStock_ReturnsNotFound_WhenEmpty()
-    {
-        // Arrange
-        var start = new DateTime(2026, 2, 9);
-        var end = new DateTime(2026, 2, 10);
-
-        _stockMarketService.Setup(service => service.GetDailyStock("CSPX.LON", start, end, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<StockPrice>());
-
-        // Act
-        var result = await _controller.GetDailyStock("CSPX.LON", start, end, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.IsType<NotFoundObjectResult>(result);
-    }
-
-    [Fact]
     public async Task GetStocks_ReturnsOk_WithTickers()
     {
         // Arrange
@@ -129,7 +90,7 @@ public class StockPriceControllerTests
             .ReturnsAsync(stocks);
 
         // Act
-        var result = await _controller.GetStocks(TestContext.Current.CancellationToken);
+        var result = await _controller.GetStocksDetails(TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -155,8 +116,8 @@ public class StockPriceControllerTests
             .ReturnsAsync(details);
 
         // Act
-        var request = new StockPriceController.AddStockRequest("CSPX.LON", "Test", "ETF", "UK", "USD");
-        var result = await _controller.AddStock(request, TestContext.Current.CancellationToken);
+        var request = new AddStockRequest("CSPX.LON", "Test", "ETF", "UK", "USD");
+        var result = await _controller.AddStockDetails(request, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -176,6 +137,34 @@ public class StockPriceControllerTests
 
         // Assert
         Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task DeleteStockPrice_ReturnsNoContent_WhenDeleted()
+    {
+        // Arrange
+        _stockPriceRepository.Setup(repo => repo.Delete(123, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _controller.DeleteStockPrice(123, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task DeleteStockPrice_ReturnsNotFound_WhenMissing()
+    {
+        // Arrange
+        _stockPriceRepository.Setup(repo => repo.Delete(999, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        // Act
+        var result = await _controller.DeleteStockPrice(999, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.IsType<NotFoundResult>(result);
     }
 
     [Fact]
@@ -220,7 +209,7 @@ public class StockPriceControllerTests
             .ReturnsAsync(details);
 
         // Act
-        var request = new StockPriceController.UpdateStockRequest("CSPX.LON", "Test", "ETF", "UK", "USD");
+        var request = new UpdateStockRequest("CSPX.LON", "Test", "ETF", "UK", "USD");
         var result = await _controller.UpdateStockDetails(request, TestContext.Current.CancellationToken);
 
         // Assert

@@ -13,4 +13,5 @@ public interface IStockPriceRepository
     Task<StockPrice?> GetThisOrNextOlder(string ticker, DateTime date);
     Task<DateTime?> GetLatestMissing(string ticker);
     Task<Currency?> GetTickerCurrency(string ticker);
+    Task<bool> Delete(int id, CancellationToken ct = default);
 }

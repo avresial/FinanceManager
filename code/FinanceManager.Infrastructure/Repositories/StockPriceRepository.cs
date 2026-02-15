@@ -124,6 +124,16 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         await context.SaveChangesAsync();
     }
 
+    public async Task<bool> Delete(int id, CancellationToken ct = default)
+    {
+        var entity = await context.StockPrices.FindAsync(new object[] { id }, ct);
+        if (entity is null) return false;
+
+        context.StockPrices.Remove(entity);
+        await context.SaveChangesAsync(ct);
+        return true;
+    }
+
     public async Task<StockPrice> Update(string ticker, decimal pricePerUnit, Currency currency, DateTime date)
     {
         var normalizedTicker = ticker.Trim().ToUpperInvariant();

@@ -1,5 +1,5 @@
+using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Services.Seeders;
@@ -23,7 +23,7 @@ public class StockDetailsSeeder(
 
         try
         {
-            var stockListings = await stockMarketService.GetListingStatus(cancellationToken);
+            var stockListings = await stockMarketService.ListStockDetails(cancellationToken);
 
             if (stockListings.Count == 0)
             {

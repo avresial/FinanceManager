@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Bonds;
+﻿using FinanceManager.Application.Services.Stocks;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Providers;
@@ -10,6 +11,7 @@ using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
 using FinanceManager.Infrastructure.Services;
+using FinanceManager.Infrastructure.Services.Stocks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +23,7 @@ public static class ServiceCollectionExtension
 {
     public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
     {
+        services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
 
         services
                 .AddScoped<IStockPriceRepository, StockPriceRepository>()

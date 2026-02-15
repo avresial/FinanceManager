@@ -156,12 +156,12 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
     }
 
     [Fact]
-    public async Task GetTickerCurrency_ReturnsCurrency()
+    public async Task GetStockDetails_ReturnsCurrency()
     {
         await SeedWithTestStockPrice();
-        // No auth
+        Authorize("TestUser", 1, UserRole.Admin);
 
-        var result = await new StockPriceHttpClient(Client, null!).GetTickerCurrency("AAPL");
+        var result = await new StockPriceHttpClient(Client, null!).GetStockDetails("AAPL", TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal("AAPL", result.Ticker);
@@ -179,6 +179,25 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         Assert.NotNull(result);
         Assert.NotEmpty(result);
         Assert.Contains(result, x => x.Ticker == "AAPL");
+    }
+
+    [Fact]
+    public async Task DeleteStockPrice_AsAdmin_RemovesPrice()
+    {
+        var date = DateTime.UtcNow.Date;
+        await SeedWithTestStockPrice("AAPL", 100, DefaultCurrency.PLN, date);
+
+        var dto = await _testDatabase!.Context.StockPrices
+            .Include(x => x.StockDetails)
+            .FirstAsync(x => x.StockDetails!.Ticker == "AAPL" && x.Date == date, TestContext.Current.CancellationToken);
+
+        Authorize("TestUser", 1, UserRole.Admin);
+
+        var ok = await new StockPriceHttpClient(Client, null!).DeleteStockPrice(dto.Id, TestContext.Current.CancellationToken);
+        Assert.True(ok);
+
+        var exists = await _testDatabase.Context.StockPrices.AnyAsync(x => x.Id == dto.Id, TestContext.Current.CancellationToken);
+        Assert.False(exists);
     }
 
     public override void Dispose()
