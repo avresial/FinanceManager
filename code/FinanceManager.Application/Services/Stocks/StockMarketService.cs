@@ -11,15 +11,15 @@ internal class StockMarketService(
     ICurrencyRepository currencyRepository,
     IStockDetailsRepository stockDetailsRepository) : IStockMarketService
 {
-    public async Task<IReadOnlyList<TickerSearchMatch>> SearchTicker(string keywords, CancellationToken ct = default)
+    public Task<IReadOnlyList<TickerSearchMatch>> SearchTicker(string keywords, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(keywords)) return [];
-        return await apiClient.SearchTicker(keywords, ct);
+        if (string.IsNullOrWhiteSpace(keywords)) return Task.FromResult<IReadOnlyList<TickerSearchMatch>>([]);
+        return apiClient.SearchTicker(keywords, ct);
     }
 
     public async Task<IReadOnlyList<StockPrice>> GetStockPrices(string ticker, DateTime start, DateTime end, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(ticker) || start == default || end == default) return Array.Empty<StockPrice>();
+        if (string.IsNullOrWhiteSpace(ticker) || start == default || end == default) return [];
         if (end < start) return [];
 
         var normalizedTicker = ticker.Trim().ToUpperInvariant();

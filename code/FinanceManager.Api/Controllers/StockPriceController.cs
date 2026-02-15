@@ -1,7 +1,6 @@
 ﻿using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Commands.Stocks;
 using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
