@@ -96,7 +96,7 @@ internal class StockMarketService(
             }
         }
 
-        return existing.OrderByDescending(x => x.Date).ToList();
+        return existing.Where(x => x.Date >= start && x.Date <= end).OrderByDescending(x => x.Date).ToList();
     }
 
     public async Task<IReadOnlyList<StockDetails>> GetListingStatus(CancellationToken ct = default)

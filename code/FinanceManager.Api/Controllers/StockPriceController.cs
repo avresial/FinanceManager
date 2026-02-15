@@ -85,19 +85,25 @@ ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, 
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetStockPrices([FromQuery] string ticker, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long step = default, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(ticker) || start == default || end == default || step == default)
+        if (string.IsNullOrWhiteSpace(ticker) || start == default || end == default)
             return BadRequest("Invalid input parameters.");
 
-        List<StockPrice> stockPrices = [];
+        var stockPrices = await stockMarketService.GetDailyStock(ticker, start, end, cancellationToken);
 
-        for (var i = start; i < end; i = i.Add(new(step)))
+        if (stockPrices.Count == 0)
+            return NotFound("Stock prices not found.");
+
+        if (step > 0)
         {
-            var stockPrice = await stockPriceRepository.Get(ticker, i);
-            if (stockPrice is null) continue;
-            stockPrices.Add(stockPrice);
+            List<StockPrice> filteredPrices = [];
+            for (var i = start; i <= end; i = i.Add(new TimeSpan(step)))
+            {
+                var priceOnDate = stockPrices.FirstOrDefault(sp => sp.Date.Date == i.Date);
+                if (priceOnDate is not null)
+                    filteredPrices.Add(priceOnDate);
+            }
+            return Ok(filteredPrices);
         }
-
-        if (!stockPrices.Any()) return NotFound("Stock prices not found.");
 
         return Ok(stockPrices);
     }
