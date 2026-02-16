@@ -22,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<BondAccountEntry> BondEntries { get; set; } = default!;
     public DbSet<StockPriceDto> StockPrices { get; set; } = default!;
     public DbSet<NewVisits> NewVisits { get; set; } = default!;
+    public DbSet<FinancialInsight> FinancialInsights { get; set; } = default!;
     public DbSet<FinancialLabel> FinancialLabels { get; set; } = default!;
     public DbSet<BondDetails> Bonds { get; set; } = default!;
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -32,6 +33,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new CurrencyConfiguration());
         modelBuilder.ApplyConfiguration(new BondAccountEntryConfiguration());
         modelBuilder.ApplyConfiguration(new NewVisitsConfiguration());
+        modelBuilder.ApplyConfiguration(new FinancialInsightConfiguration());
         modelBuilder.ApplyConfiguration(new StockAccountEntryConfiguration());
         modelBuilder.ApplyConfiguration(new StockDetailsConfiguration());
         modelBuilder.ApplyConfiguration(new StockPriceDtoConfiguration());

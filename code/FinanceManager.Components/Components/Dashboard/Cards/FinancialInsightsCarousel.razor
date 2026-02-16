@@ -1,0 +1,42 @@
+@using FinanceManager.Domain.Entities.Users
+
+<MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
+    <MudCardHeader>
+        <MudText Typo="Typo.h5">Insights</MudText>
+    </MudCardHeader>
+
+    <MudCardContent Class="flex-grow-1 d-flex">
+        @if (_isLoading)
+        {
+            <div style="height:100%">
+                <ChartSpinner MaxHeight=@Height />
+            </div>
+        }
+        else if (_insights.Any())
+        {
+            <MudCarousel TData="FinancialInsight" Class="w-100" ShowArrows ShowBullets AutoCycle>
+                @foreach (var insight in _insights)
+                {
+                    <MudCarouselItem>
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.h6">@insight.Title</MudText>
+                            <MudText>@insight.Message</MudText>
+                            <MudStack Row Spacing="1">
+                                @foreach (var tag in GetTags(insight.Tags))
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@tag</MudChip>
+                                }
+                            </MudStack>
+                        </MudStack>
+                    </MudCarouselItem>
+                }
+            </MudCarousel>
+        }
+        else
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                <MudText Typo="Typo.button" HtmlTag="h3">No insights</MudText>
+            </div>
+        }
+    </MudCardContent>
+</MudCard>
