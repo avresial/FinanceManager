@@ -1,4 +1,5 @@
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Application.Services.FinancialInsights;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
@@ -23,6 +24,14 @@ public class FinancialInsightsControllerTests(OptionsProvider optionsProvider) :
             services.Remove(descriptor);
 
         services.AddSingleton(_testDatabase.Context);
+
+        services.AddSingleton<IFinancialInsightsAiGenerator>(new StubInsightsAiGenerator());
+    }
+
+    private sealed class StubInsightsAiGenerator : IFinancialInsightsAiGenerator
+    {
+        public Task<List<FinancialInsight>> GenerateInsights(int userId, int? accountId, int count, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new List<FinancialInsight>());
     }
 
     [Fact]

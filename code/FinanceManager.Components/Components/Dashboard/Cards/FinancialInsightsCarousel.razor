@@ -2,7 +2,16 @@
 
 <MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
     <MudCardHeader>
-        <MudText Typo="Typo.h5">Insights</MudText>
+        <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100">
+            <MudText Typo="Typo.h5">Insights</MudText>
+
+            @if (_isLoggedIn)
+            {
+                <MudButton Variant="Variant.Outlined" Disabled="@_isLoading" OnClick="GenerateAsync">
+                    Generate
+                </MudButton>
+            }
+        </MudStack>
     </MudCardHeader>
 
     <MudCardContent Class="flex-grow-1 d-flex">

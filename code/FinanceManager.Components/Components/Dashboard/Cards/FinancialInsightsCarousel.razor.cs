@@ -9,6 +9,7 @@ public partial class FinancialInsightsCarousel
 {
     private bool _isLoading;
     private List<FinancialInsight> _insights = [];
+    private bool _isLoggedIn;
 
     [Inject] public required FinancialInsightsHttpClient FinancialInsightsHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -29,11 +30,40 @@ public partial class FinancialInsightsCarousel
             var user = await LoginService.GetLoggedUser();
             if (user is null)
             {
+                _isLoggedIn = false;
                 _insights = [];
                 return;
             }
 
+            _isLoggedIn = true;
+
             _insights = await FinancialInsightsHttpClient.GetLatestAsync(Count, AccountId);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task GenerateAsync()
+    {
+        if (_isLoading)
+            return;
+
+        _isLoading = true;
+        try
+        {
+            var user = await LoginService.GetLoggedUser();
+            if (user is null)
+            {
+                _isLoggedIn = false;
+                _insights = [];
+                return;
+            }
+
+            _isLoggedIn = true;
+            var generated = await FinancialInsightsHttpClient.GenerateAsync(Count, AccountId);
+            _insights = generated.Count > 0 ? generated : await FinancialInsightsHttpClient.GetLatestAsync(Count, AccountId);
         }
         finally
         {

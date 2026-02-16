@@ -1,4 +1,5 @@
 using FinanceManager.Api.Controllers;
+using FinanceManager.Application.Services.FinancialInsights;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Http;
@@ -15,12 +16,14 @@ public class FinancialInsightsControllerTests
     private const int TestUserId = 1;
 
     private readonly Mock<IFinancialInsightsRepository> _mockRepository;
+    private readonly Mock<IFinancialInsightsAiGenerator> _mockGenerator;
     private readonly FinancialInsightsController _controller;
 
     public FinancialInsightsControllerTests()
     {
         _mockRepository = new Mock<IFinancialInsightsRepository>();
-        _controller = new FinancialInsightsController(_mockRepository.Object);
+        _mockGenerator = new Mock<IFinancialInsightsAiGenerator>();
+        _controller = new FinancialInsightsController(_mockRepository.Object, _mockGenerator.Object);
 
         var user = new ClaimsPrincipal(new ClaimsIdentity([new(ClaimTypes.NameIdentifier, TestUserId.ToString())], "mock"));
         _controller.ControllerContext = new ControllerContext

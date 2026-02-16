@@ -11,11 +11,13 @@ using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
 using FinanceManager.Infrastructure.Services;
+using FinanceManager.Infrastructure.Services.Ai;
 using FinanceManager.Infrastructure.Services.Stocks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using FinanceManager.Application.Services.FinancialInsights;
 
 namespace FinanceManager.Infrastructure;
 
@@ -24,6 +26,7 @@ public static class ServiceCollectionExtension
     public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
     {
         services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
+        services.AddHttpClient<IFinancialInsightsAiGenerator, OllamaFinancialInsightsAiGenerator>();
 
         services
                 .AddScoped<IStockPriceRepository, StockPriceRepository>()

@@ -28,6 +28,7 @@ builder.Services
 
 builder.Services.Configure<JwtAuthOptions>(builder.Configuration.GetSection("JwtConfig"));
 builder.Services.Configure<StockApiOptions>(builder.Configuration.GetSection("StockApi"));
+builder.Services.Configure<OllamaOptions>(builder.Configuration.GetSection("Ollama"));
 
 
 builder.Services.AddCors(options =>
