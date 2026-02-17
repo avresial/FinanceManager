@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Currencies;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
@@ -16,7 +17,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Tags("Currency Accounts")]
 public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccount> accountRepository,
-    IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository, IUserPlanVerifier userPlanVerifier) : ControllerBase
+    IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository, IUserPlanVerifier userPlanVerifier,
+    ICurrencyAccountCsvExportService currencyAccountCsvExportService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<CurrencyAccountDto>))]
@@ -94,5 +96,21 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
 
         await accountEntryRepository.Delete(accountId);
         return Ok(await accountRepository.Delete(accountId));
+    }
+
+    [HttpGet("export/{accountId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ExportCsv(int accountId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate, CancellationToken cancellationToken)
+    {
+        var account = await accountRepository.Get(accountId);
+        if (account is null) return NotFound();
+        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+
+        var csv = await currencyAccountCsvExportService.GetExportResults(account.UserId, accountId, startDate, endDate, cancellationToken);
+        var fileName = $"currency-account-{accountId}-{startDate:yyyyMMdd}-{endDate:yyyyMMdd}.csv";
+
+        return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", fileName);
     }
 }

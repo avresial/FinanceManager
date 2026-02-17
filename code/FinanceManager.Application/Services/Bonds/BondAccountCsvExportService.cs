@@ -5,19 +5,19 @@ using System.Globalization;
 using UserId = int;
 using AccountId = int;
 
-namespace FinanceManager.Application.Services.Currencies;
+namespace FinanceManager.Application.Services.Bonds;
 
-public class CurrencyAccountCsvExportService(ICurrencyAccountExportService currencyAccountExportService) : ICurrencyAccountCsvExportService
+public class BondAccountCsvExportService(IBondAccountExportService bondAccountExportService) : IBondAccountCsvExportService
 {
     public async Task<string> GetExportResults(UserId userId, AccountId accountId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
     {
         using var writer = new StringWriter(CultureInfo.InvariantCulture);
         using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
-        csv.Context.RegisterClassMap<CurrencyAccountExportDtoMap>();
-        csv.WriteHeader<CurrencyAccountExportDto>();
+        csv.Context.RegisterClassMap<BondAccountExportDtoMap>();
+        csv.WriteHeader<BondAccountExportDto>();
         await csv.NextRecordAsync();
 
-        var exportItems = currencyAccountExportService.GetExportResults(userId, accountId, start, end, cancellationToken);
+        var exportItems = bondAccountExportService.GetExportResults(userId, accountId, start, end, cancellationToken);
         await foreach (var exportItem in exportItems.WithCancellation(cancellationToken))
         {
             csv.WriteRecord(exportItem);

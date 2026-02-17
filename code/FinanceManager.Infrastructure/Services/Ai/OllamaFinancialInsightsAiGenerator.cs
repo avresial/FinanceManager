@@ -1,24 +1,31 @@
 using FinanceManager.Application.Services.FinancialInsights;
+using FinanceManager.Application.Services.Bonds;
+using FinanceManager.Application.Services.Currencies;
+using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Dtos;
-using Microsoft.EntityFrameworkCore;
+using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.Logging;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace FinanceManager.Infrastructure.Services.Ai;
 
 internal sealed class OllamaFinancialInsightsAiGenerator(
-    AppDbContext dbContext,
+    ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
+    IAccountRepository<StockAccount> stockAccountRepository,
+    IAccountRepository<BondAccount> bondAccountRepository,
+    ICurrencyAccountCsvExportService currencyAccountCsvExportService,
+    IStockAccountCsvExportService stockAccountCsvExportService,
+    IBondAccountCsvExportService bondAccountCsvExportService,
     OllamaProvider ollamaProvider,
     ILogger<OllamaFinancialInsightsAiGenerator> logger) : IFinancialInsightsAiGenerator
 {
-    private const int MaxEntriesPerAccount = 200;
-    private const int MaxAccounts = 50;
+    private const int _maxEntriesPerAccount = 200;
+    private const int _maxAccounts = 50;
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -29,14 +36,14 @@ internal sealed class OllamaFinancialInsightsAiGenerator(
     {
         if (count <= 0) return [];
 
-        var entriesContextJson = await BuildEntriesContextJson(userId, accountId, cancellationToken);
+        var entriesContextCsv = await BuildEntriesContextCsv(userId, accountId, cancellationToken);
 
         var prompt = $"Generate short financial insight for a personal finance dashboard. " +
                      "No disclaimers, no markdown. Output must be STRICT JSON ONLY with this shape: " +
                      "{\"insights\":[{\"title\":string,\"message\":string,\"tags\":[string]}]}. " +
                  "Keep title <= 128 chars, message <= 1024 chars. Tags: 1-3 short lowercase words. " +
-                 "Use the provided user data context to make insights specific." +
-                 $"\n\nUSER_DATA_CONTEXT_JSON (last 3 months per account; may be truncated):\n{entriesContextJson}";
+                     "Use the provided user data context to make insights specific." +
+                     $"\n\nUSER_DATA_CONTEXT_CSV (last 3 months per account; may be truncated):\n{entriesContextCsv}";
 
         var request = new OllamaChatRequest
         {
@@ -148,101 +155,92 @@ internal sealed class OllamaFinancialInsightsAiGenerator(
     private static string Truncate(string value, int maxLen) =>
         value.Length <= maxLen ? value : value[..maxLen];
 
-    private async Task<string> BuildEntriesContextJson(int userId, int? accountId, CancellationToken cancellationToken)
+    private async Task<string> BuildEntriesContextCsv(int userId, int? accountId, CancellationToken cancellationToken)
     {
         var end = DateTime.UtcNow;
         var start = end.AddMonths(-3);
 
-        var accountsQuery = dbContext.Accounts.AsNoTracking().Where(a => a.UserId == userId);
-        if (accountId.HasValue)
-            accountsQuery = accountsQuery.Where(a => a.AccountId == accountId.Value);
+        var sb = new StringBuilder();
+        sb.AppendLine($"timeRangeUtcStart,{start:O}");
+        sb.AppendLine($"timeRangeUtcEnd,{end:O}");
 
-        var accounts = await accountsQuery
-            .OrderBy(a => a.AccountId)
-            .Take(MaxAccounts)
-            .ToListAsync(cancellationToken);
+        var addedAccounts = 0;
 
-        var context = new EntriesContext
+        await foreach (var account in currencyAccountRepository.GetAvailableAccounts(userId).OrderBy(x => x.AccountId).WithCancellation(cancellationToken))
         {
-            TimeRangeUtc = new TimeRangeContext { StartUtc = start, EndUtc = end },
-            Accounts = []
-        };
+            if (addedAccounts >= _maxAccounts)
+                break;
 
-        foreach (var account in accounts)
-        {
-            var accountContext = new AccountEntriesContext
-            {
-                AccountId = account.AccountId,
-                Name = account.Name,
-                AccountType = account.AccountType.ToString(),
-                AccountLabel = account.AccountLabel.ToString(),
-                Entries = []
-            };
+            if (accountId.HasValue && account.AccountId != accountId.Value)
+                continue;
 
-            switch (account.AccountType)
-            {
-                case Domain.Enums.AccountType.Currency:
-                    accountContext.Entries = await dbContext.CurrencyEntries.AsNoTracking()
-                        .Where(e => e.AccountId == account.AccountId && e.PostingDate >= start && e.PostingDate <= end)
-                        .OrderBy(e => e.PostingDate)
-                        .Take(MaxEntriesPerAccount)
-                        .Select(e => new EntryContext
-                        {
-                            PostingDateUtc = e.PostingDate,
-                            Value = e.Value,
-                            ValueChange = e.ValueChange,
-                            Description = e.Description
-                        })
-                        .ToListAsync(cancellationToken);
-                    break;
+            var csv = await currencyAccountCsvExportService.GetExportResults(userId, account.AccountId, start, end, cancellationToken);
 
-                case Domain.Enums.AccountType.Stock:
-                    accountContext.Entries = await dbContext.StockEntries.AsNoTracking()
-                        .Where(e => e.AccountId == account.AccountId && e.PostingDate >= start && e.PostingDate <= end)
-                        .OrderBy(e => e.PostingDate)
-                        .Take(MaxEntriesPerAccount)
-                        .Select(e => new EntryContext
-                        {
-                            PostingDateUtc = e.PostingDate,
-                            Value = e.Value,
-                            ValueChange = e.ValueChange,
-                            Ticker = e.Ticker,
-                            InvestmentType = e.InvestmentType.ToString()
-                        })
-                        .ToListAsync(cancellationToken);
-                    break;
+            sb.AppendLine();
+            sb.AppendLine($"[account]");
+            sb.AppendLine($"accountId,{account.AccountId}");
+            sb.AppendLine($"name,{EscapeCsvValue(account.AccountName)}");
+            sb.AppendLine("accountType,Currency");
+            sb.AppendLine("csv:");
+            sb.AppendLine(Truncate(csv, _maxEntriesPerAccount * 220));
 
-                case Domain.Enums.AccountType.Bond:
-                    accountContext.Entries = await dbContext.BondEntries.AsNoTracking()
-                        .Where(e => e.AccountId == account.AccountId && e.PostingDate >= start && e.PostingDate <= end)
-                        .OrderBy(e => e.PostingDate)
-                        .Take(MaxEntriesPerAccount)
-                        .Select(e => new EntryContext
-                        {
-                            PostingDateUtc = e.PostingDate,
-                            Value = e.Value,
-                            ValueChange = e.ValueChange,
-                            BondDetailsId = e.BondDetailsId
-                        })
-                        .ToListAsync(cancellationToken);
-                    break;
-            }
-
-            // Keep descriptions compact if present
-            foreach (var entry in accountContext.Entries)
-            {
-                if (!string.IsNullOrWhiteSpace(entry.Description))
-                    entry.Description = Truncate(entry.Description.Trim(), 80);
-            }
-
-            context.Accounts.Add(accountContext);
+            addedAccounts++;
         }
 
-        return JsonSerializer.Serialize(context, new JsonSerializerOptions
+        await foreach (var account in stockAccountRepository.GetAvailableAccounts(userId).OrderBy(x => x.AccountId).WithCancellation(cancellationToken))
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        });
+            if (addedAccounts >= _maxAccounts)
+                break;
+
+            if (accountId.HasValue && account.AccountId != accountId.Value)
+                continue;
+
+            var csv = await stockAccountCsvExportService.GetExportResults(userId, account.AccountId, start, end, cancellationToken);
+
+            sb.AppendLine();
+            sb.AppendLine($"[account]");
+            sb.AppendLine($"accountId,{account.AccountId}");
+            sb.AppendLine($"name,{EscapeCsvValue(account.AccountName)}");
+            sb.AppendLine("accountType,Stock");
+            sb.AppendLine("csv:");
+            sb.AppendLine(Truncate(csv, _maxEntriesPerAccount * 220));
+
+            addedAccounts++;
+        }
+
+        await foreach (var account in bondAccountRepository.GetAvailableAccounts(userId).OrderBy(x => x.AccountId).WithCancellation(cancellationToken))
+        {
+            if (addedAccounts >= _maxAccounts)
+                break;
+
+            if (accountId.HasValue && account.AccountId != accountId.Value)
+                continue;
+
+            var csv = await bondAccountCsvExportService.GetExportResults(userId, account.AccountId, start, end, cancellationToken);
+
+            sb.AppendLine();
+            sb.AppendLine($"[account]");
+            sb.AppendLine($"accountId,{account.AccountId}");
+            sb.AppendLine($"name,{EscapeCsvValue(account.AccountName)}");
+            sb.AppendLine("accountType,Bond");
+            sb.AppendLine("csv:");
+            sb.AppendLine(Truncate(csv, _maxEntriesPerAccount * 220));
+
+            addedAccounts++;
+        }
+
+        return sb.ToString();
+    }
+
+    private static string EscapeCsvValue(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
+
+        if (!value.Contains(',') && !value.Contains('"') && !value.Contains('\n') && !value.Contains('\r'))
+            return value;
+
+        return $"\"{value.Replace("\"", "\"\"")}\"";
     }
 
     private sealed class InsightsRoot
@@ -263,35 +261,5 @@ internal sealed class OllamaFinancialInsightsAiGenerator(
         public List<string>? Tags { get; set; }
     }
 
-    private sealed class EntriesContext
-    {
-        public TimeRangeContext TimeRangeUtc { get; set; } = new();
-        public List<AccountEntriesContext> Accounts { get; set; } = [];
-    }
 
-    private sealed class TimeRangeContext
-    {
-        public DateTime StartUtc { get; set; }
-        public DateTime EndUtc { get; set; }
-    }
-
-    private sealed class AccountEntriesContext
-    {
-        public int AccountId { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string AccountType { get; set; } = string.Empty;
-        public string AccountLabel { get; set; } = string.Empty;
-        public List<EntryContext> Entries { get; set; } = [];
-    }
-
-    private sealed class EntryContext
-    {
-        public DateTime PostingDateUtc { get; set; }
-        public decimal Value { get; set; }
-        public decimal ValueChange { get; set; }
-        public string? Description { get; set; }
-        public string? Ticker { get; set; }
-        public string? InvestmentType { get; set; }
-        public int? BondDetailsId { get; set; }
-    }
 }

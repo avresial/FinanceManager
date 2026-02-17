@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
+using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories.Account;
@@ -16,7 +17,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Tags("Stock Accounts")]
 public class StockAccountController(IAccountRepository<StockAccount> stockAccountRepository,
-    IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository) : ControllerBase
+    IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository,
+    IStockAccountCsvExportService stockAccountCsvExportService) : ControllerBase
 {
 
     [HttpGet]
@@ -103,5 +105,22 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
 
         await stockAccountEntryRepository.Delete(accountId);
         return Ok(await stockAccountRepository.Delete(accountId));
+    }
+
+    [HttpGet("export/{accountId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ExportCsv(int accountId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate, CancellationToken cancellationToken)
+    {
+        var account = await stockAccountRepository.Get(accountId);
+        if (account is null) return NotFound();
+        if (account.UserId != ApiAuthenticationHelper.GetUserId(User))
+            return Forbid("User does not own this account.");
+
+        var csv = await stockAccountCsvExportService.GetExportResults(account.UserId, accountId, startDate, endDate, cancellationToken);
+        var fileName = $"stock-account-{accountId}-{startDate:yyyyMMdd}-{endDate:yyyyMMdd}.csv";
+
+        return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", fileName);
     }
 }

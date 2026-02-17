@@ -1,5 +1,6 @@
 using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.Commands.Account;
+using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories.Account;
@@ -17,6 +18,7 @@ public class StockAccountControllerTests
 {
     private readonly Mock<IAccountRepository<StockAccount>> _mockStockAccountRepository;
     private readonly Mock<IStockAccountEntryRepository<StockAccountEntry>> _mockStockAccountEntryRepository;
+    private readonly Mock<IStockAccountCsvExportService> _mockStockAccountCsvExportService;
     private readonly StockAccountController _controller;
     private const int TestUserId = 1;
 
@@ -24,7 +26,8 @@ public class StockAccountControllerTests
     {
         _mockStockAccountRepository = new Mock<IAccountRepository<StockAccount>>();
         _mockStockAccountEntryRepository = new Mock<IStockAccountEntryRepository<StockAccountEntry>>();
-        _controller = new StockAccountController(_mockStockAccountRepository.Object, _mockStockAccountEntryRepository.Object);
+        _mockStockAccountCsvExportService = new Mock<IStockAccountCsvExportService>();
+        _controller = new StockAccountController(_mockStockAccountRepository.Object, _mockStockAccountEntryRepository.Object, _mockStockAccountCsvExportService.Object);
 
         // Mock user identity
         var user = new ClaimsPrincipal(new ClaimsIdentity(
@@ -182,5 +185,27 @@ public class StockAccountControllerTests
 
         // Assert
         Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task ExportCsv_ReturnsFileResult_WithCsvContent()
+    {
+        var accountId = 1;
+        var startDate = new DateTime(2026, 1, 1);
+        var endDate = new DateTime(2026, 1, 31);
+        var csvContent = "PostingDate,ValueChange,Ticker,InvestmentType\n";
+        StockAccount account = new(TestUserId, accountId, "Test Account");
+
+        _mockStockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
+        _mockStockAccountCsvExportService
+            .Setup(s => s.GetExportResults(TestUserId, accountId, startDate, endDate, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(csvContent);
+
+        var result = await _controller.ExportCsv(accountId, startDate, endDate, TestContext.Current.CancellationToken);
+
+        var fileResult = Assert.IsType<FileContentResult>(result);
+        Assert.Equal("text/csv", fileResult.ContentType);
+        var content = System.Text.Encoding.UTF8.GetString(fileResult.FileContents);
+        Assert.Equal(csvContent, content);
     }
 }

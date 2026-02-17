@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Currencies;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
@@ -25,6 +26,7 @@ public class CurrencyAccountControllerTests
 
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IUserPlanVerifier> _userPlanVerifier = new();
+    private readonly Mock<ICurrencyAccountCsvExportService> _currencyAccountCsvExportService = new();
 
     private readonly CurrencyAccountController _controller;
 
@@ -33,7 +35,7 @@ public class CurrencyAccountControllerTests
         var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = PricingLevel.Premium, CreationDate = DateTime.UtcNow };
         _userRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
 
-        _controller = new(_mockAccountRepository.Object, _mockAccountEntryRepository.Object, _userPlanVerifier.Object);
+        _controller = new(_mockAccountRepository.Object, _mockAccountEntryRepository.Object, _userPlanVerifier.Object, _currencyAccountCsvExportService.Object);
 
         // Mock user identity
         var userClaims = new ClaimsPrincipal(new ClaimsIdentity(
@@ -172,5 +174,28 @@ public class CurrencyAccountControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.IsType<bool>(okResult.Value);
         Assert.True((bool)okResult.Value);
+    }
+
+    [Fact]
+    public async Task ExportCsv_ReturnsFileResult_WithCsvContent()
+    {
+        var userId = 1;
+        var accountId = 1;
+        var startDate = new DateTime(2026, 1, 1);
+        var endDate = new DateTime(2026, 1, 31);
+        var csvContent = "PostingDate,ValueChange,ContractorDetails,Description\n";
+        CurrencyAccount account = new(userId, accountId, "Test Account");
+
+        _mockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
+        _currencyAccountCsvExportService
+            .Setup(s => s.GetExportResults(userId, accountId, startDate, endDate, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(csvContent);
+
+        var result = await _controller.ExportCsv(accountId, startDate, endDate, TestContext.Current.CancellationToken);
+
+        var fileResult = Assert.IsType<FileContentResult>(result);
+        Assert.Equal("text/csv", fileResult.ContentType);
+        var content = System.Text.Encoding.UTF8.GetString(fileResult.FileContents);
+        Assert.Equal(csvContent, content);
     }
 }

@@ -10,7 +10,4 @@
 		<None Remove="Records\**" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<PackageReference Include="CsvHelper" />
-	</ItemGroup>
 </Project>

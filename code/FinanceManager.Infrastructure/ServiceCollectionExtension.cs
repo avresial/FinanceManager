@@ -29,7 +29,7 @@ public static class ServiceCollectionExtension
     {
         services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
         services.AddHttpClient<OllamaProvider>();
-        services.AddHttpClient<IFinancialInsightsAiGenerator, OpenRouterFinancialInsightsAiGenerator>((serviceProvider, client) =>
+        services.AddHttpClient<OpenRouterProvider>((serviceProvider, client) =>
         {
             var openRouterOptions = serviceProvider.GetRequiredService<IOptions<OpenRouterOptions>>().Value;
             var timeoutSeconds = openRouterOptions.RequestTimeoutSeconds > 0
@@ -58,6 +58,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<ICurrencyRepository, CurrencyRepository>()
                 .AddScoped<IBondDetailsRepository, BondDetailsRepository>()
                 .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()
+                .AddScoped<IFinancialInsightsAiGenerator, OpenRouterFinancialInsightsAiGenerator>()
 
                 .AddHostedService<DatabaseInitializer>()
                 ;

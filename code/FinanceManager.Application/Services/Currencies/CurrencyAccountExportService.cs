@@ -1,6 +1,7 @@
 using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Repositories.Account;
+using System.Runtime.CompilerServices;
 using UserId = int;
 using AccountId = int;
 
@@ -9,17 +10,16 @@ namespace FinanceManager.Application.Services.Currencies;
 public class CurrencyAccountExportService(ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository) : ICurrencyAccountExportService
 {
-    public async IAsyncEnumerable<CurrencyAccountExportDto> GetExportResults(UserId userId, AccountId accountId, DateTime start, DateTime end)
+    public async IAsyncEnumerable<CurrencyAccountExportDto> GetExportResults(UserId userId, AccountId accountId, DateTime start, DateTime end, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var account = await currencyAccountRepository.Get(accountId);
         if (account is null || account.UserId != userId)
             throw new InvalidOperationException("Account not found or access denied.");
 
-        var entries = currencyAccountEntryRepository.Get(accountId, start, end)
+        await foreach (var entry in currencyAccountEntryRepository.Get(accountId, start, end)
             .OrderBy(x => x.PostingDate)
-            .ToListAsync();
-
-        foreach (var entry in await entries)
+            .ThenBy(x => x.EntryId)
+            .WithCancellation(cancellationToken))
         {
             yield return new CurrencyAccountExportDto(entry.PostingDate, entry.ValueChange, entry.ContractorDetails, entry.Description);
         }

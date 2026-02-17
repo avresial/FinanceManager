@@ -1,22 +1,27 @@
-using FinanceManager.Application.Options;
+using FinanceManager.Application.Services.Bonds;
+using FinanceManager.Application.Services.Currencies;
 using FinanceManager.Application.Services.FinancialInsights;
+using FinanceManager.Application.Services.Stocks;
+using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
-using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Dtos;
-using Microsoft.EntityFrameworkCore;
+using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace FinanceManager.Infrastructure.Services.Ai;
 
 internal sealed class OpenRouterFinancialInsightsAiGenerator(
-    HttpClient httpClient,
-    AppDbContext dbContext,
-    IOptions<OpenRouterOptions> options,
+    ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
+    IAccountRepository<StockAccount> stockAccountRepository,
+    IAccountRepository<BondAccount> bondAccountRepository,
+    ICurrencyAccountCsvExportService currencyAccountCsvExportService,
+    IStockAccountCsvExportService stockAccountCsvExportService,
+    IBondAccountCsvExportService bondAccountCsvExportService,
+    OpenRouterProvider openRouterProvider,
     ILogger<OpenRouterFinancialInsightsAiGenerator> logger) : IFinancialInsightsAiGenerator
 {
     private const int MaxEntriesPerAccount = 200;
@@ -31,65 +36,18 @@ internal sealed class OpenRouterFinancialInsightsAiGenerator(
     {
         if (count <= 0) return [];
 
-        var model = options.Value.Model;
-        if (string.IsNullOrWhiteSpace(model))
-        {
-            logger.LogWarning("OpenRouter model is not configured.");
-            return [];
-        }
-
-        var apiKey = options.Value.ApiKey;
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            logger.LogWarning("OpenRouter API key is not configured.");
-            return [];
-        }
-
-        var baseUrl = options.Value.BaseUrl;
-        if (!string.IsNullOrWhiteSpace(baseUrl))
-        {
-            var normalizedBaseUrl = baseUrl.EndsWith('/') ? baseUrl : $"{baseUrl}/";
-            httpClient.BaseAddress = new Uri(normalizedBaseUrl, UriKind.Absolute);
-        }
-
-        var entriesContextJson = await BuildEntriesContextJson(userId, accountId, cancellationToken);
+        var entriesContextCsv = await BuildEntriesContextCsv(userId, accountId, cancellationToken);
 
         var prompt = "Generate short financial insight for a personal finance dashboard. " +
                      "No disclaimers, no markdown. Output must be STRICT JSON ONLY with this shape: " +
                      "{\"insights\":[{\"title\":string,\"message\":string,\"tags\":[string]}]}. " +
                      "Keep title <= 128 chars, message <= 1024 chars. Tags: 1-3 short lowercase words. " +
                      "Use the provided user data context to make insights specific." +
-                     $"\n\nUSER_DATA_CONTEXT_JSON (last 3 months per account; may be truncated):\n{entriesContextJson}";
-
-        var request = new OpenRouterChatRequest
-        {
-            Model = model,
-            Messages =
-            [
-                new OpenRouterMessage("system", "You are a finance assistant that outputs strict JSON."),
-                new OpenRouterMessage("user", prompt)
-            ],
-            ResponseFormat = new OpenRouterResponseFormat { Type = "json_object" }
-        };
+                     $"\n\nUSER_DATA_CONTEXT_CSV (last 3 months per account; may be truncated):\n{entriesContextCsv}";
 
         try
         {
-            using var requestMessage = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
-            {
-                Content = JsonContent.Create(request)
-            };
-
-            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-
-            using var response = await httpClient.SendAsync(requestMessage, cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                logger.LogWarning("OpenRouter chat request failed with status {StatusCode}", response.StatusCode);
-                return [];
-            }
-
-            var payload = await response.Content.ReadFromJsonAsync<OpenRouterChatResponse>(_jsonOptions, cancellationToken);
-            var content = payload?.Choices?.FirstOrDefault()?.Message?.Content;
+            var content = await openRouterProvider.Get(prompt, cancellationToken);
             if (string.IsNullOrWhiteSpace(content))
                 return [];
 
@@ -121,11 +79,6 @@ internal sealed class OpenRouterFinancialInsightsAiGenerator(
             }
 
             return result;
-        }
-        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
-        {
-            logger.LogWarning(ex, "OpenRouter insights generation timed out");
-            return [];
         }
         catch (Exception ex)
         {
@@ -187,134 +140,92 @@ internal sealed class OpenRouterFinancialInsightsAiGenerator(
     private static string Truncate(string value, int maxLen) =>
         value.Length <= maxLen ? value : value[..maxLen];
 
-    private async Task<string> BuildEntriesContextJson(int userId, int? accountId, CancellationToken cancellationToken)
+    private async Task<string> BuildEntriesContextCsv(int userId, int? accountId, CancellationToken cancellationToken)
     {
         var end = DateTime.UtcNow;
         var start = end.AddMonths(-3);
 
-        var accountsQuery = dbContext.Accounts.AsNoTracking().Where(a => a.UserId == userId);
-        if (accountId.HasValue)
-            accountsQuery = accountsQuery.Where(a => a.AccountId == accountId.Value);
+        var sb = new StringBuilder();
+        sb.AppendLine($"timeRangeUtcStart,{start:O}");
+        sb.AppendLine($"timeRangeUtcEnd,{end:O}");
 
-        var accounts = await accountsQuery
-            .OrderBy(a => a.AccountId)
-            .Take(MaxAccounts)
-            .ToListAsync(cancellationToken);
+        var addedAccounts = 0;
 
-        var context = new EntriesContext
+        await foreach (var account in currencyAccountRepository.GetAvailableAccounts(userId).OrderBy(x => x.AccountId).WithCancellation(cancellationToken))
         {
-            TimeRangeUtc = new TimeRangeContext { StartUtc = start, EndUtc = end },
-            Accounts = []
-        };
+            if (addedAccounts >= MaxAccounts)
+                break;
 
-        foreach (var account in accounts)
-        {
-            var accountContext = new AccountEntriesContext
-            {
-                AccountId = account.AccountId,
-                Name = account.Name,
-                AccountType = account.AccountType.ToString(),
-                AccountLabel = account.AccountLabel.ToString(),
-                Entries = []
-            };
+            if (accountId.HasValue && account.AccountId != accountId.Value)
+                continue;
 
-            switch (account.AccountType)
-            {
-                case Domain.Enums.AccountType.Currency:
-                    accountContext.Entries = await dbContext.CurrencyEntries.AsNoTracking()
-                        .Where(e => e.AccountId == account.AccountId && e.PostingDate >= start && e.PostingDate <= end)
-                        .OrderBy(e => e.PostingDate)
-                        .Take(MaxEntriesPerAccount)
-                        .Select(e => new EntryContext
-                        {
-                            PostingDateUtc = e.PostingDate,
-                            Value = e.Value,
-                            ValueChange = e.ValueChange,
-                            Description = e.Description
-                        })
-                        .ToListAsync(cancellationToken);
-                    break;
+            var csv = await currencyAccountCsvExportService.GetExportResults(userId, account.AccountId, start, end, cancellationToken);
 
-                case Domain.Enums.AccountType.Stock:
-                    accountContext.Entries = await dbContext.StockEntries.AsNoTracking()
-                        .Where(e => e.AccountId == account.AccountId && e.PostingDate >= start && e.PostingDate <= end)
-                        .OrderBy(e => e.PostingDate)
-                        .Take(MaxEntriesPerAccount)
-                        .Select(e => new EntryContext
-                        {
-                            PostingDateUtc = e.PostingDate,
-                            Value = e.Value,
-                            ValueChange = e.ValueChange,
-                            Ticker = e.Ticker,
-                            InvestmentType = e.InvestmentType.ToString()
-                        })
-                        .ToListAsync(cancellationToken);
-                    break;
+            sb.AppendLine();
+            sb.AppendLine("[account]");
+            sb.AppendLine($"accountId,{account.AccountId}");
+            sb.AppendLine($"name,{EscapeCsvValue(account.AccountName)}");
+            sb.AppendLine("accountType,Currency");
+            sb.AppendLine("csv:");
+            sb.AppendLine(Truncate(csv, MaxEntriesPerAccount * 220));
 
-                case Domain.Enums.AccountType.Bond:
-                    accountContext.Entries = await dbContext.BondEntries.AsNoTracking()
-                        .Where(e => e.AccountId == account.AccountId && e.PostingDate >= start && e.PostingDate <= end)
-                        .OrderBy(e => e.PostingDate)
-                        .Take(MaxEntriesPerAccount)
-                        .Select(e => new EntryContext
-                        {
-                            PostingDateUtc = e.PostingDate,
-                            Value = e.Value,
-                            ValueChange = e.ValueChange,
-                            BondDetailsId = e.BondDetailsId
-                        })
-                        .ToListAsync(cancellationToken);
-                    break;
-            }
-
-            foreach (var entry in accountContext.Entries)
-            {
-                if (!string.IsNullOrWhiteSpace(entry.Description))
-                    entry.Description = Truncate(entry.Description.Trim(), 80);
-            }
-
-            context.Accounts.Add(accountContext);
+            addedAccounts++;
         }
 
-        return JsonSerializer.Serialize(context, new JsonSerializerOptions
+        await foreach (var account in stockAccountRepository.GetAvailableAccounts(userId).OrderBy(x => x.AccountId).WithCancellation(cancellationToken))
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        });
+            if (addedAccounts >= MaxAccounts)
+                break;
+
+            if (accountId.HasValue && account.AccountId != accountId.Value)
+                continue;
+
+            var csv = await stockAccountCsvExportService.GetExportResults(userId, account.AccountId, start, end, cancellationToken);
+
+            sb.AppendLine();
+            sb.AppendLine("[account]");
+            sb.AppendLine($"accountId,{account.AccountId}");
+            sb.AppendLine($"name,{EscapeCsvValue(account.AccountName)}");
+            sb.AppendLine("accountType,Stock");
+            sb.AppendLine("csv:");
+            sb.AppendLine(Truncate(csv, MaxEntriesPerAccount * 220));
+
+            addedAccounts++;
+        }
+
+        await foreach (var account in bondAccountRepository.GetAvailableAccounts(userId).OrderBy(x => x.AccountId).WithCancellation(cancellationToken))
+        {
+            if (addedAccounts >= MaxAccounts)
+                break;
+
+            if (accountId.HasValue && account.AccountId != accountId.Value)
+                continue;
+
+            var csv = await bondAccountCsvExportService.GetExportResults(userId, account.AccountId, start, end, cancellationToken);
+
+            sb.AppendLine();
+            sb.AppendLine("[account]");
+            sb.AppendLine($"accountId,{account.AccountId}");
+            sb.AppendLine($"name,{EscapeCsvValue(account.AccountName)}");
+            sb.AppendLine("accountType,Bond");
+            sb.AppendLine("csv:");
+            sb.AppendLine(Truncate(csv, MaxEntriesPerAccount * 220));
+
+            addedAccounts++;
+        }
+
+        return sb.ToString();
     }
 
-    private sealed class OpenRouterChatRequest
+    private static string EscapeCsvValue(string value)
     {
-        [JsonPropertyName("model")]
-        public string Model { get; set; } = string.Empty;
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
 
-        [JsonPropertyName("messages")]
-        public List<OpenRouterMessage> Messages { get; set; } = [];
+        if (!value.Contains(',') && !value.Contains('"') && !value.Contains('\n') && !value.Contains('\r'))
+            return value;
 
-        [JsonPropertyName("response_format")]
-        public OpenRouterResponseFormat? ResponseFormat { get; set; }
-    }
-
-    private sealed class OpenRouterResponseFormat
-    {
-        [JsonPropertyName("type")]
-        public string Type { get; set; } = string.Empty;
-    }
-
-    private sealed record OpenRouterMessage(
-        [property: JsonPropertyName("role")] string Role,
-        [property: JsonPropertyName("content")] string Content);
-
-    private sealed class OpenRouterChatResponse
-    {
-        [JsonPropertyName("choices")]
-        public List<OpenRouterChoice>? Choices { get; set; }
-    }
-
-    private sealed class OpenRouterChoice
-    {
-        [JsonPropertyName("message")]
-        public OpenRouterMessage? Message { get; set; }
+        return $"\"{value.Replace("\"", "\"\"")}\"";
     }
 
     private sealed class InsightsRoot
@@ -335,35 +246,4 @@ internal sealed class OpenRouterFinancialInsightsAiGenerator(
         public List<string>? Tags { get; set; }
     }
 
-    private sealed class EntriesContext
-    {
-        public TimeRangeContext TimeRangeUtc { get; set; } = new();
-        public List<AccountEntriesContext> Accounts { get; set; } = [];
-    }
-
-    private sealed class TimeRangeContext
-    {
-        public DateTime StartUtc { get; set; }
-        public DateTime EndUtc { get; set; }
-    }
-
-    private sealed class AccountEntriesContext
-    {
-        public int AccountId { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string AccountType { get; set; } = string.Empty;
-        public string AccountLabel { get; set; } = string.Empty;
-        public List<EntryContext> Entries { get; set; } = [];
-    }
-
-    private sealed class EntryContext
-    {
-        public DateTime PostingDateUtc { get; set; }
-        public decimal Value { get; set; }
-        public decimal ValueChange { get; set; }
-        public string? Description { get; set; }
-        public string? Ticker { get; set; }
-        public string? InvestmentType { get; set; }
-        public int? BondDetailsId { get; set; }
-    }
 }

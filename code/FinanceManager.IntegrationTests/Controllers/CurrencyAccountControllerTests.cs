@@ -234,6 +234,26 @@ public class CurrencyAccountControllerTests(OptionsProvider optionsProvider) : C
         Assert.Empty(entriesInDb);
     }
 
+    [Fact]
+    public async Task ExportCsv_ReturnsCsvFile()
+    {
+        await SeedAccountWithEntries();
+        Authorize("testuser", _testUserId, UserRole.User);
+
+        var startDate = DateTime.UtcNow.Date.AddDays(-15);
+        var endDate = DateTime.UtcNow.Date;
+        var url = $"{Client.BaseAddress}api/CurrencyAccount/export/{_testAccountId}?startDate={Uri.EscapeDataString(startDate.ToString("O"))}&endDate={Uri.EscapeDataString(endDate.ToString("O"))}";
+
+        var response = await Client.GetAsync(url, TestContext.Current.CancellationToken);
+
+        Assert.True(response.IsSuccessStatusCode);
+        Assert.Equal("text/csv", response.Content.Headers.ContentType?.MediaType);
+
+        var csv = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Contains("PostingDate", csv, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ValueChange", csv, StringComparison.OrdinalIgnoreCase);
+    }
+
     public override void Dispose()
     {
         base.Dispose();
