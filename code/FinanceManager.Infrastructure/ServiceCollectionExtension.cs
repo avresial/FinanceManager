@@ -17,7 +17,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using FinanceManager.Application.Services.FinancialInsights;
+using FinanceManager.Application.Options;
 
 namespace FinanceManager.Infrastructure;
 
@@ -26,7 +28,15 @@ public static class ServiceCollectionExtension
     public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
     {
         services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
-        services.AddHttpClient<IFinancialInsightsAiGenerator, OllamaFinancialInsightsAiGenerator>();
+        services.AddHttpClient<IFinancialInsightsAiGenerator, OpenRouterFinancialInsightsAiGenerator>((serviceProvider, client) =>
+        {
+            var openRouterOptions = serviceProvider.GetRequiredService<IOptions<OpenRouterOptions>>().Value;
+            var timeoutSeconds = openRouterOptions.RequestTimeoutSeconds > 0
+                ? openRouterOptions.RequestTimeoutSeconds
+                : 180;
+
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        });
 
         services
                 .AddScoped<IStockPriceRepository, StockPriceRepository>()

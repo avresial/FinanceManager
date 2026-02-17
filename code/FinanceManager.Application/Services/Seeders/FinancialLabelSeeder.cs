@@ -6,6 +6,20 @@ namespace FinanceManager.Application.Services.Seeders;
 
 public class FinancialLabelSeeder(IFinancialLabelsRepository financialLabelsRepository, ILogger<FinancialLabelSeeder> logger) : ISeeder
 {
+    private readonly IReadOnlyCollection<string> _defaultLabels =
+    [
+        "Salary",
+        "Groceries",
+        "Rent",
+        "Utilities",
+        "Entertainment",
+        "Transportation",
+        "Healthcare",
+        "Education",
+        "Dining Out",
+        "Travel"
+    ];
+
     public async Task Seed(CancellationToken cancellationToken = default)
     {
         try
@@ -17,11 +31,13 @@ public class FinancialLabelSeeder(IFinancialLabelsRepository financialLabelsRepo
                 return;
             }
 
-            var added = await financialLabelsRepository.Add("Salary");
-            if (added)
-                logger.LogInformation("Seeded default financial label: Salary");
-            else
-                logger.LogWarning("Failed to seed default financial label: Salary");
+            foreach (var label in _defaultLabels)
+            {
+                if (await financialLabelsRepository.Add(label, cancellationToken))
+                    logger.LogInformation("Seeded default financial label: {Label}", label);
+                else
+                    logger.LogWarning("Failed to seed default financial label: {Label}", label);
+            }
         }
         catch (Exception ex)
         {
