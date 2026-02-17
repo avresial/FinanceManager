@@ -1,4 +1,3 @@
-using FinanceManager.Application.Options;
 using FinanceManager.Application.Services.FinancialInsights;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Users;
@@ -6,19 +5,16 @@ using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
-using System.Net.Http.Json;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace FinanceManager.Infrastructure.Services.Ai;
 
 internal sealed class OllamaFinancialInsightsAiGenerator(
-    HttpClient httpClient,
     AppDbContext dbContext,
-    IOptions<OllamaOptions> options,
+    OllamaProvider ollamaProvider,
     ILogger<OllamaFinancialInsightsAiGenerator> logger) : IFinancialInsightsAiGenerator
 {
     private const int MaxEntriesPerAccount = 200;
@@ -33,17 +29,6 @@ internal sealed class OllamaFinancialInsightsAiGenerator(
     {
         if (count <= 0) return [];
 
-        var model = options.Value.Model;
-        if (string.IsNullOrWhiteSpace(model))
-        {
-            logger.LogWarning("Ollama Model is not configured.");
-            return [];
-        }
-
-        var baseUrl = options.Value.BaseUrl;
-        if (!string.IsNullOrWhiteSpace(baseUrl))
-            httpClient.BaseAddress = new Uri(baseUrl, UriKind.Absolute);
-
         var entriesContextJson = await BuildEntriesContextJson(userId, accountId, cancellationToken);
 
         var prompt = $"Generate short financial insight for a personal finance dashboard. " +
@@ -55,7 +40,7 @@ internal sealed class OllamaFinancialInsightsAiGenerator(
 
         var request = new OllamaChatRequest
         {
-            Model = model,
+            Model = string.Empty,
             Stream = false,
             Format = "json",
             Messages =
@@ -67,14 +52,7 @@ internal sealed class OllamaFinancialInsightsAiGenerator(
 
         try
         {
-            using var response = await httpClient.PostAsJsonAsync("/api/chat", request, cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                logger.LogWarning("Ollama chat request failed with status {StatusCode}", response.StatusCode);
-                return [];
-            }
-
-            var payload = await response.Content.ReadFromJsonAsync<OllamaChatResponse>(_jsonOptions, cancellationToken);
+            var payload = await ollamaProvider.Get(request, cancellationToken);
             var content = payload?.Message?.Content;
             if (string.IsNullOrWhiteSpace(content))
                 return [];
@@ -265,31 +243,6 @@ internal sealed class OllamaFinancialInsightsAiGenerator(
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         });
-    }
-
-    private sealed class OllamaChatRequest
-    {
-        [JsonPropertyName("model")]
-        public string Model { get; set; } = string.Empty;
-
-        [JsonPropertyName("messages")]
-        public List<OllamaMessage> Messages { get; set; } = [];
-
-        [JsonPropertyName("stream")]
-        public bool Stream { get; set; }
-
-        [JsonPropertyName("format")]
-        public string? Format { get; set; }
-    }
-
-    private sealed record OllamaMessage(
-        [property: JsonPropertyName("role")] string Role,
-        [property: JsonPropertyName("content")] string Content);
-
-    private sealed class OllamaChatResponse
-    {
-        [JsonPropertyName("message")]
-        public OllamaMessage? Message { get; set; }
     }
 
     private sealed class InsightsRoot

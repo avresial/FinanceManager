@@ -28,6 +28,7 @@ public static class ServiceCollectionExtension
     public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
     {
         services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
+        services.AddHttpClient<OllamaProvider>();
         services.AddHttpClient<IFinancialInsightsAiGenerator, OpenRouterFinancialInsightsAiGenerator>((serviceProvider, client) =>
         {
             var openRouterOptions = serviceProvider.GetRequiredService<IOptions<OpenRouterOptions>>().Value;

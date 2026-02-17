@@ -46,6 +46,8 @@ public static class ServiceCollectionExtension
                 .AddScoped<ICurrencyExchangeService, CurrencyExchangeService>()
                 .AddScoped<HttpClient>()
                 .AddScoped<ICurrencyAccountImportService, CurrencyAccountImportService>()
+                .AddScoped<ICurrencyAccountExportService, CurrencyAccountExportService>()
+                .AddScoped<ICurrencyAccountCsvExportService, CurrencyAccountCsvExportService>()
                 .AddScoped<IStockAccountImportService, StockAccountImportService>()
                 .AddScoped<IStockPriceProvider, StockPriceProvider>()
                 .AddScoped<IBondService, BondService>()
