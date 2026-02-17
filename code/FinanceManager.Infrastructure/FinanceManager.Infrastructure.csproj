@@ -34,4 +34,8 @@
 	  <ProjectReference Include="..\FinanceManager.Domain\FinanceManager.Domain.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<None Include="Services\Ai\Prompts\financial-insights-prompt.txt" CopyToOutputDirectory="PreserveNewest" TargetPath="Prompts\financial-insights-prompt.txt" />
+	</ItemGroup>
+
 </Project>

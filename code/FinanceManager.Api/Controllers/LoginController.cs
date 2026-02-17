@@ -12,7 +12,8 @@ namespace FinanceManager.Api.Controllers;
 [ApiController]
 [Tags("Authentication")]
 public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepository userRepository, IActiveUsersRepository activeUsersRepository,
-    GuestAccountSeeder guestAccountSeeder, ILogger<LoginController> logger) : ControllerBase
+    GuestAccountSeeder guestAccountSeeder, IInsightsGenerationChannel insightsGenerationChannel,
+    ILogger<LoginController> logger) : ControllerBase
 {
 
     [AllowAnonymous]
@@ -44,6 +45,15 @@ public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepositor
         catch (Exception ex)
         {
             logger.LogError(ex, "Error occurred while adding user to active users repository");
+        }
+
+        try
+        {
+            await insightsGenerationChannel.QueueUser(token.UserId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while queueing user {UserId} for insights generation", token.UserId);
         }
 
         return Ok(token);

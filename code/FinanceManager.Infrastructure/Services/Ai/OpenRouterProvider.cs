@@ -68,14 +68,102 @@ internal sealed class OpenRouterProvider(
                 return null;
             }
 
-            var payload = await response.Content.ReadFromJsonAsync<OpenRouterChatResponse>(_jsonOptions, cancellationToken);
-            return payload?.Choices?.FirstOrDefault()?.Message?.Content;
+            var rawContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var extractedContent = ExtractContent(rawContent);
+
+            if (string.IsNullOrWhiteSpace(extractedContent))
+            {
+                logger.LogWarning("OpenRouter returned success but no extractable content. Payload snippet: {PayloadSnippet}",
+                    rawContent.Length <= 500 ? rawContent : rawContent[..500]);
+            }
+
+            return extractedContent;
         }
         catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
             logger.LogWarning(ex, "OpenRouter request timed out");
             return null;
         }
+    }
+
+    private static string? ExtractContent(string rawContent)
+    {
+        if (string.IsNullOrWhiteSpace(rawContent))
+            return null;
+
+        try
+        {
+            var typed = JsonSerializer.Deserialize<OpenRouterChatResponse>(rawContent, _jsonOptions);
+            var direct = typed?.Choices?.FirstOrDefault()?.Message?.Content;
+            if (!string.IsNullOrWhiteSpace(direct))
+                return direct;
+        }
+        catch
+        {
+            // fall back to JsonDocument parsing below
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(rawContent);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("choices", out var choices) || choices.ValueKind != JsonValueKind.Array || choices.GetArrayLength() == 0)
+                return null;
+
+            var firstChoice = choices[0];
+
+            if (firstChoice.TryGetProperty("message", out var message))
+            {
+                if (message.TryGetProperty("content", out var contentElement))
+                {
+                    if (contentElement.ValueKind == JsonValueKind.String)
+                        return contentElement.GetString();
+
+                    if (contentElement.ValueKind == JsonValueKind.Array)
+                    {
+                        var parts = new List<string>();
+                        foreach (var part in contentElement.EnumerateArray())
+                        {
+                            if (part.ValueKind == JsonValueKind.String)
+                            {
+                                var partText = part.GetString();
+                                if (!string.IsNullOrWhiteSpace(partText)) parts.Add(partText);
+                                continue;
+                            }
+
+                            if (part.ValueKind == JsonValueKind.Object)
+                            {
+                                if (part.TryGetProperty("text", out var textProp) && textProp.ValueKind == JsonValueKind.String)
+                                {
+                                    var partText = textProp.GetString();
+                                    if (!string.IsNullOrWhiteSpace(partText)) parts.Add(partText);
+                                    continue;
+                                }
+
+                                if (part.TryGetProperty("content", out var nestedContent) && nestedContent.ValueKind == JsonValueKind.String)
+                                {
+                                    var partText = nestedContent.GetString();
+                                    if (!string.IsNullOrWhiteSpace(partText)) parts.Add(partText);
+                                }
+                            }
+                        }
+
+                        if (parts.Count != 0)
+                            return string.Join("\n", parts);
+                    }
+                }
+            }
+
+            if (firstChoice.TryGetProperty("text", out var textElement) && textElement.ValueKind == JsonValueKind.String)
+                return textElement.GetString();
+        }
+        catch
+        {
+            return null;
+        }
+
+        return null;
     }
 
     private sealed class OpenRouterChatRequest

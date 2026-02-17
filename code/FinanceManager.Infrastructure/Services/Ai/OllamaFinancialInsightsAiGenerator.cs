@@ -1,11 +1,11 @@
-using FinanceManager.Application.Services.FinancialInsights;
 using FinanceManager.Application.Services.Bonds;
 using FinanceManager.Application.Services.Currencies;
+using FinanceManager.Application.Services.FinancialInsights;
 using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.Logging;
 using System.Text;
@@ -21,6 +21,7 @@ internal sealed class OllamaFinancialInsightsAiGenerator(
     ICurrencyAccountCsvExportService currencyAccountCsvExportService,
     IStockAccountCsvExportService stockAccountCsvExportService,
     IBondAccountCsvExportService bondAccountCsvExportService,
+    IInsightsPromptProvider insightsPromptProvider,
     OllamaProvider ollamaProvider,
     ILogger<OllamaFinancialInsightsAiGenerator> logger) : IFinancialInsightsAiGenerator
 {
@@ -37,13 +38,7 @@ internal sealed class OllamaFinancialInsightsAiGenerator(
         if (count <= 0) return [];
 
         var entriesContextCsv = await BuildEntriesContextCsv(userId, accountId, cancellationToken);
-
-        var prompt = $"Generate short financial insight for a personal finance dashboard. " +
-                     "No disclaimers, no markdown. Output must be STRICT JSON ONLY with this shape: " +
-                     "{\"insights\":[{\"title\":string,\"message\":string,\"tags\":[string]}]}. " +
-                 "Keep title <= 128 chars, message <= 1024 chars. Tags: 1-3 short lowercase words. " +
-                     "Use the provided user data context to make insights specific." +
-                     $"\n\nUSER_DATA_CONTEXT_CSV (last 3 months per account; may be truncated):\n{entriesContextCsv}";
+        var prompt = await insightsPromptProvider.BuildPromptAsync(entriesContextCsv, cancellationToken);
 
         var request = new OllamaChatRequest
         {

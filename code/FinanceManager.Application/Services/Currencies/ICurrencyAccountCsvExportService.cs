@@ -1,5 +1,5 @@
-using UserId = int;
 using AccountId = int;
+using UserId = int;
 
 namespace FinanceManager.Application.Services.Currencies;
 

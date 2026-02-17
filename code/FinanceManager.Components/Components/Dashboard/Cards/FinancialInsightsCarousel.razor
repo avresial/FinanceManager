@@ -23,10 +23,10 @@
         }
         else if (_insights.Any())
         {
-            <MudCarousel TData="FinancialInsight" Class="w-100" ShowArrows ShowBullets AutoCycle>
+            <MudCarousel TData="FinancialInsight" Class="w-100" AutoCycle         AutoCycleTime="@TimeSpan.FromMinutes(2)">
                 @foreach (var insight in _insights)
                 {
-                    <MudCarouselItem>
+                    <MudCarouselItem Transition="Transition.Fade">
                         <MudStack Spacing="2">
                             <MudText Typo="Typo.h6">@insight.Title</MudText>
                             <MudText>@insight.Message</MudText>

@@ -21,6 +21,7 @@ internal sealed class OpenRouterFinancialInsightsAiGenerator(
     ICurrencyAccountCsvExportService currencyAccountCsvExportService,
     IStockAccountCsvExportService stockAccountCsvExportService,
     IBondAccountCsvExportService bondAccountCsvExportService,
+    IInsightsPromptProvider insightsPromptProvider,
     OpenRouterProvider openRouterProvider,
     ILogger<OpenRouterFinancialInsightsAiGenerator> logger) : IFinancialInsightsAiGenerator
 {
@@ -37,13 +38,7 @@ internal sealed class OpenRouterFinancialInsightsAiGenerator(
         if (count <= 0) return [];
 
         var entriesContextCsv = await BuildEntriesContextCsv(userId, accountId, cancellationToken);
-
-        var prompt = "Generate short financial insight for a personal finance dashboard. " +
-                     "No disclaimers, no markdown. Output must be STRICT JSON ONLY with this shape: " +
-                     "{\"insights\":[{\"title\":string,\"message\":string,\"tags\":[string]}]}. " +
-                     "Keep title <= 128 chars, message <= 1024 chars. Tags: 1-3 short lowercase words. " +
-                     "Use the provided user data context to make insights specific." +
-                     $"\n\nUSER_DATA_CONTEXT_CSV (last 3 months per account; may be truncated):\n{entriesContextCsv}";
+        var prompt = await insightsPromptProvider.BuildPromptAsync(entriesContextCsv, cancellationToken);
 
         try
         {

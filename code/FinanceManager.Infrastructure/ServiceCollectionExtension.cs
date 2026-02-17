@@ -1,4 +1,6 @@
-﻿using FinanceManager.Application.Services.Stocks;
+﻿using FinanceManager.Application.Options;
+using FinanceManager.Application.Services.FinancialInsights;
+using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
@@ -18,8 +20,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using FinanceManager.Application.Services.FinancialInsights;
-using FinanceManager.Application.Options;
 
 namespace FinanceManager.Infrastructure;
 
@@ -59,6 +59,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IBondDetailsRepository, BondDetailsRepository>()
                 .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()
                 .AddScoped<IFinancialInsightsAiGenerator, OpenRouterFinancialInsightsAiGenerator>()
+                .AddSingleton<IInsightsPromptProvider, InsightsPromptProvider>()
 
                 .AddHostedService<DatabaseInitializer>()
                 ;

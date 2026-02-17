@@ -64,6 +64,8 @@ builder.Services.AddCors(options =>
 builder.Services.AddMemoryCache();
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenGenerator>();
+builder.Services.AddSingleton<IInsightsGenerationChannel, InsightsGenerationChannel>();
+builder.Services.AddHostedService<InsightsGenerationBackgroundService>();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())

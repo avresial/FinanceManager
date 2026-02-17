@@ -2,8 +2,8 @@ using CsvHelper;
 using FinanceManager.Application.Services.Exports.Maps;
 using FinanceManager.Domain.Entities.Exports;
 using System.Globalization;
-using UserId = int;
 using AccountId = int;
+using UserId = int;
 
 namespace FinanceManager.Application.Services.Currencies;
 

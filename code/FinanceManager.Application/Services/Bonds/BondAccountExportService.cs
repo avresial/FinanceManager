@@ -2,8 +2,8 @@ using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Repositories.Account;
 using System.Runtime.CompilerServices;
-using UserId = int;
 using AccountId = int;
+using UserId = int;
 
 namespace FinanceManager.Application.Services.Bonds;
 
