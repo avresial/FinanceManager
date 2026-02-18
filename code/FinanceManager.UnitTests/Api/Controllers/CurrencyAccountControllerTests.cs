@@ -1,7 +1,8 @@
 ﻿using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
-using FinanceManager.Application.Services.Currencies;
+using FinanceManager.Application.Services.Exports;
+using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
@@ -26,7 +27,7 @@ public class CurrencyAccountControllerTests
 
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IUserPlanVerifier> _userPlanVerifier = new();
-    private readonly Mock<ICurrencyAccountCsvExportService> _currencyAccountCsvExportService = new();
+    private readonly Mock<IAccountCsvExportService<CurrencyAccountExportDto>> _currencyAccountCsvExportService = new();
 
     private readonly CurrencyAccountController _controller;
 

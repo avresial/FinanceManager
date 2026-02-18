@@ -213,5 +213,15 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
         return true;
     }
 
+    public async Task<IReadOnlyList<StockAccountEntry>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default)
+    {
+        if (entryIds.Count == 0)
+            return [];
+
+        return await context.StockEntries
+            .Where(e => entryIds.Contains(e.EntryId))
+            .ToListAsync(cancellationToken);
+    }
+
 
 }

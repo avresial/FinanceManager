@@ -66,6 +66,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddSingleton<IInsightsGenerationChannel, InsightsGenerationChannel>();
 builder.Services.AddHostedService<InsightsGenerationBackgroundService>();
+builder.Services.AddSingleton<ILabelSetterChannel, LabelSetterChannel>();
+builder.Services.AddHostedService<LabelSetterBackgroundService>();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())

@@ -1,6 +1,7 @@
 using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.Commands.Account;
-using FinanceManager.Application.Services.Stocks;
+using FinanceManager.Application.Services.Exports;
+using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories.Account;
@@ -18,7 +19,7 @@ public class StockAccountControllerTests
 {
     private readonly Mock<IAccountRepository<StockAccount>> _mockStockAccountRepository;
     private readonly Mock<IStockAccountEntryRepository<StockAccountEntry>> _mockStockAccountEntryRepository;
-    private readonly Mock<IStockAccountCsvExportService> _mockStockAccountCsvExportService;
+    private readonly Mock<IAccountCsvExportService<StockAccountExportDto>> _mockStockAccountCsvExportService;
     private readonly StockAccountController _controller;
     private const int TestUserId = 1;
 
@@ -26,7 +27,7 @@ public class StockAccountControllerTests
     {
         _mockStockAccountRepository = new Mock<IAccountRepository<StockAccount>>();
         _mockStockAccountEntryRepository = new Mock<IStockAccountEntryRepository<StockAccountEntry>>();
-        _mockStockAccountCsvExportService = new Mock<IStockAccountCsvExportService>();
+        _mockStockAccountCsvExportService = new Mock<IAccountCsvExportService<StockAccountExportDto>>();
         _controller = new StockAccountController(_mockStockAccountRepository.Object, _mockStockAccountEntryRepository.Object, _mockStockAccountCsvExportService.Object);
 
         // Mock user identity

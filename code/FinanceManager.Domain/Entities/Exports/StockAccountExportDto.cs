@@ -8,4 +8,4 @@ public record StockAccountExportDto(
     decimal SharesCount,
     decimal Price,
     string Ticker,
-    InvestmentType InvestmentType);
+    InvestmentType InvestmentType) : IAccountExportDto;

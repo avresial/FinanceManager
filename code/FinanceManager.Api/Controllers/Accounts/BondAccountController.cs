@@ -1,7 +1,8 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
-using FinanceManager.Application.Services.Bonds;
+using FinanceManager.Application.Services.Exports;
+using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Repositories.Account;
@@ -18,7 +19,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Tags("Bond Accounts")]
 public class BondAccountController(IAccountRepository<BondAccount> bondAccountRepository,
     IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository, IUserPlanVerifier userPlanVerifier,
-    IBondAccountCsvExportService bondAccountCsvExportService) : ControllerBase
+    IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<BondAccountDto>))]

@@ -189,5 +189,14 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         return true;
     }
 
+    public async Task<IReadOnlyList<CurrencyAccountEntry>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default)
+    {
+        if (entryIds.Count == 0)
+            return [];
 
+        return await context.CurrencyEntries
+            .Where(e => entryIds.Contains(e.EntryId))
+            .Include(e => e.Labels)
+            .ToListAsync(cancellationToken);
+    }
 }

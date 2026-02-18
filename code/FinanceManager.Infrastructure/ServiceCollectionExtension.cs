@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Application.Options;
+using FinanceManager.Application.Services.Ai;
 using FinanceManager.Application.Services.FinancialInsights;
 using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Entities.Bonds;
@@ -59,7 +60,9 @@ public static class ServiceCollectionExtension
                 .AddScoped<IBondDetailsRepository, BondDetailsRepository>()
                 .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()
                 .AddScoped<IFinancialInsightsAiGenerator, OpenRouterFinancialInsightsAiGenerator>()
+                .AddScoped<ILabelSetterAiService, OpenRouterLabelSetterAiService>()
                 .AddSingleton<IInsightsPromptProvider, InsightsPromptProvider>()
+                .AddSingleton<ILabelSetterPromptProvider, LabelSetterPromptProvider>()
 
                 .AddHostedService<DatabaseInitializer>()
                 ;

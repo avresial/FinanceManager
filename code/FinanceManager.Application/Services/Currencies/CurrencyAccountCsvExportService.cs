@@ -1,4 +1,5 @@
 using CsvHelper;
+using FinanceManager.Application.Services.Exports;
 using FinanceManager.Application.Services.Exports.Maps;
 using FinanceManager.Domain.Entities.Exports;
 using System.Globalization;
@@ -7,7 +8,7 @@ using UserId = int;
 
 namespace FinanceManager.Application.Services.Currencies;
 
-public class CurrencyAccountCsvExportService(ICurrencyAccountExportService currencyAccountExportService) : ICurrencyAccountCsvExportService
+public class CurrencyAccountCsvExportService(ICurrencyAccountExportService currencyAccountExportService) : IAccountCsvExportService<CurrencyAccountExportDto>
 {
     public async Task<string> GetExportResults(UserId userId, AccountId accountId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
     {
@@ -24,6 +25,17 @@ public class CurrencyAccountCsvExportService(ICurrencyAccountExportService curre
             await csv.NextRecordAsync();
         }
 
+        return writer.ToString();
+    }
+
+    public string GetExportResults(IReadOnlyList<CurrencyAccountExportDto> entries)
+    {
+        using var writer = new StringWriter(CultureInfo.InvariantCulture);
+        using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+        csv.Context.RegisterClassMap<CurrencyAccountExportDtoMap>();
+        csv.WriteHeader<CurrencyAccountExportDto>();
+        csv.NextRecord();
+        csv.WriteRecords(entries);
         return writer.ToString();
     }
 }

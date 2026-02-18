@@ -234,6 +234,16 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         return true;
     }
 
+    public async Task<IReadOnlyList<BondAccountEntry>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default)
+    {
+        if (entryIds.Count == 0)
+            return [];
+
+        return await context.BondEntries
+            .Where(e => entryIds.Contains(e.EntryId))
+            .ToListAsync(cancellationToken);
+    }
+
     async Task<Dictionary<int, BondAccountEntry>> IBondAccountEntryRepository<BondAccountEntry>.GetNextOlder(int accountId, DateTime date)
     {
         Dictionary<int, BondAccountEntry> result = [];

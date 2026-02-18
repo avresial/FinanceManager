@@ -2,8 +2,10 @@
 using FinanceManager.Application.Services;
 using FinanceManager.Application.Services.Bonds;
 using FinanceManager.Application.Services.Currencies;
+using FinanceManager.Application.Services.Exports;
 using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Application.Services.Stocks;
+using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,12 +49,12 @@ public static class ServiceCollectionExtension
                 .AddScoped<HttpClient>()
                 .AddScoped<ICurrencyAccountImportService, CurrencyAccountImportService>()
                 .AddScoped<ICurrencyAccountExportService, CurrencyAccountExportService>()
-                .AddScoped<ICurrencyAccountCsvExportService, CurrencyAccountCsvExportService>()
+                .AddScoped<IAccountCsvExportService<CurrencyAccountExportDto>, CurrencyAccountCsvExportService>()
                 .AddScoped<IStockAccountImportService, StockAccountImportService>()
                 .AddScoped<IStockAccountExportService, StockAccountExportService>()
-                .AddScoped<IStockAccountCsvExportService, StockAccountCsvExportService>()
+                .AddScoped<IAccountCsvExportService<StockAccountExportDto>, StockAccountCsvExportService>()
                 .AddScoped<IBondAccountExportService, BondAccountExportService>()
-                .AddScoped<IBondAccountCsvExportService, BondAccountCsvExportService>()
+                .AddScoped<IAccountCsvExportService<BondAccountExportDto>, BondAccountCsvExportService>()
                 .AddScoped<IStockPriceProvider, StockPriceProvider>()
                 .AddScoped<IBondService, BondService>()
                 .AddScoped<IStockMarketService, StockMarketService>()

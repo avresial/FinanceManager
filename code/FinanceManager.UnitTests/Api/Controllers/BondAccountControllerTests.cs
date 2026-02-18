@@ -1,6 +1,7 @@
 using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.Services;
-using FinanceManager.Application.Services.Bonds;
+using FinanceManager.Application.Services.Exports;
+using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories.Account;
@@ -18,7 +19,7 @@ public class BondAccountControllerTests
     private readonly Mock<IAccountRepository<BondAccount>> _mockBondAccountRepository = new();
     private readonly Mock<IBondAccountEntryRepository<BondAccountEntry>> _mockBondAccountEntryRepository = new();
     private readonly Mock<IUserPlanVerifier> _userPlanVerifier = new();
-    private readonly Mock<IBondAccountCsvExportService> _bondAccountCsvExportService = new();
+    private readonly Mock<IAccountCsvExportService<BondAccountExportDto>> _bondAccountCsvExportService = new();
     private readonly BondAccountController _controller;
 
     public BondAccountControllerTests()

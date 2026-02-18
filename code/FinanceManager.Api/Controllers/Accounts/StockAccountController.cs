@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
-using FinanceManager.Application.Services.Stocks;
+using FinanceManager.Application.Services.Exports;
+using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories.Account;
@@ -18,7 +19,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Tags("Stock Accounts")]
 public class StockAccountController(IAccountRepository<StockAccount> stockAccountRepository,
     IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository,
-    IStockAccountCsvExportService stockAccountCsvExportService) : ControllerBase
+    IAccountCsvExportService<StockAccountExportDto> stockAccountCsvExportService) : ControllerBase
 {
 
     [HttpGet]

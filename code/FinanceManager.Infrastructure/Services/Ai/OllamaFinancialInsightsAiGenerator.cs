@@ -1,7 +1,6 @@
-using FinanceManager.Application.Services.Bonds;
-using FinanceManager.Application.Services.Currencies;
+using FinanceManager.Application.Services.Exports;
 using FinanceManager.Application.Services.FinancialInsights;
-using FinanceManager.Application.Services.Stocks;
+using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
@@ -18,9 +17,9 @@ internal sealed class OllamaFinancialInsightsAiGenerator(
     ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
     IAccountRepository<StockAccount> stockAccountRepository,
     IAccountRepository<BondAccount> bondAccountRepository,
-    ICurrencyAccountCsvExportService currencyAccountCsvExportService,
-    IStockAccountCsvExportService stockAccountCsvExportService,
-    IBondAccountCsvExportService bondAccountCsvExportService,
+    IAccountCsvExportService<CurrencyAccountExportDto> currencyAccountCsvExportService,
+    IAccountCsvExportService<StockAccountExportDto> stockAccountCsvExportService,
+    IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService,
     IInsightsPromptProvider insightsPromptProvider,
     OllamaProvider ollamaProvider,
     ILogger<OllamaFinancialInsightsAiGenerator> logger) : IFinancialInsightsAiGenerator

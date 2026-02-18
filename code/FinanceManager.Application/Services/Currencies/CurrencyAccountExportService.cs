@@ -21,7 +21,7 @@ public class CurrencyAccountExportService(ICurrencyAccountRepository<CurrencyAcc
             .ThenBy(x => x.EntryId)
             .WithCancellation(cancellationToken))
         {
-            yield return new CurrencyAccountExportDto(entry.PostingDate, entry.ValueChange, entry.ContractorDetails, entry.Description);
+            yield return CurrencyAccountExportDto.FromEntity(entry);
         }
     }
 }

@@ -36,6 +36,7 @@
 
 	<ItemGroup>
 		<None Include="Services\Ai\Prompts\financial-insights-prompt.txt" CopyToOutputDirectory="PreserveNewest" TargetPath="Prompts\financial-insights-prompt.txt" />
+		<None Include="Services\Ai\Prompts\label-setter-prompt.txt" CopyToOutputDirectory="PreserveNewest" TargetPath="Prompts\label-setter-prompt.txt" />
 	</ItemGroup>
 
 </Project>
