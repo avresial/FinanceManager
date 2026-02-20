@@ -1,12 +1,12 @@
 using FinanceManager.Application.Services.Exports;
 using FinanceManager.Application.Services.FinancialInsights;
-using FinanceManager.Application.Services.Ai;
-using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Repositories.Account;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Text.Json;
@@ -14,7 +14,7 @@ using System.Text.Json.Serialization;
 
 namespace FinanceManager.Infrastructure.Services.Ai;
 
-internal sealed class OpenRouterFinancialInsightsAiGenerator(
+internal sealed class FinancialInsightsAiGenerator(
     ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
     IAccountRepository<StockAccount> stockAccountRepository,
     IAccountRepository<BondAccount> bondAccountRepository,
@@ -22,12 +22,12 @@ internal sealed class OpenRouterFinancialInsightsAiGenerator(
     IAccountCsvExportService<StockAccountExportDto> stockAccountCsvExportService,
     IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService,
     IInsightsPromptProvider insightsPromptProvider,
-    IAiProvider aiProvider,
-    ILogger<OpenRouterFinancialInsightsAiGenerator> logger) : IFinancialInsightsAiGenerator
+    IChatClient chatClient,
+    ILogger<FinancialInsightsAiGenerator> logger) : IFinancialInsightsAiGenerator
 {
-    private const int MaxEntriesPerAccount = 200;
-    private const int MaxAccounts = 50;
-    private const string SystemPrompt = "You are a finance assistant that outputs strict JSON.";
+    private const int _maxEntriesPerAccount = 200;
+    private const int _maxAccounts = 50;
+    private const string _systemPrompt = "You are a finance assistant that outputs strict JSON.";
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -43,7 +43,14 @@ internal sealed class OpenRouterFinancialInsightsAiGenerator(
 
         try
         {
-            var content = await aiProvider.Get(SystemPrompt, prompt, cancellationToken);
+            var messages = new List<ChatMessage>
+            {
+                new(ChatRole.System, _systemPrompt),
+                new(ChatRole.User, prompt)
+            };
+            var chatOptions = new ChatOptions { ResponseFormat = ChatResponseFormat.Json };
+            var response = await chatClient.GetResponseAsync(messages, chatOptions, cancellationToken);
+            var content = response.Text;
             if (string.IsNullOrWhiteSpace(content))
                 return [];
 
@@ -78,7 +85,7 @@ internal sealed class OpenRouterFinancialInsightsAiGenerator(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "OpenRouter insights generation failed");
+            logger.LogError(ex, "AI insights generation failed");
             return [];
         }
     }
@@ -149,7 +156,7 @@ internal sealed class OpenRouterFinancialInsightsAiGenerator(
 
         await foreach (var account in currencyAccountRepository.GetAvailableAccounts(userId).OrderBy(x => x.AccountId).WithCancellation(cancellationToken))
         {
-            if (addedAccounts >= MaxAccounts)
+            if (addedAccounts >= _maxAccounts)
                 break;
 
             if (accountId.HasValue && account.AccountId != accountId.Value)
@@ -163,14 +170,14 @@ internal sealed class OpenRouterFinancialInsightsAiGenerator(
             sb.AppendLine($"name,{EscapeCsvValue(account.AccountName)}");
             sb.AppendLine("accountType,Currency");
             sb.AppendLine("csv:");
-            sb.AppendLine(Truncate(csv, MaxEntriesPerAccount * 220));
+            sb.AppendLine(Truncate(csv, _maxEntriesPerAccount * 220));
 
             addedAccounts++;
         }
 
         await foreach (var account in stockAccountRepository.GetAvailableAccounts(userId).OrderBy(x => x.AccountId).WithCancellation(cancellationToken))
         {
-            if (addedAccounts >= MaxAccounts)
+            if (addedAccounts >= _maxAccounts)
                 break;
 
             if (accountId.HasValue && account.AccountId != accountId.Value)
@@ -184,14 +191,14 @@ internal sealed class OpenRouterFinancialInsightsAiGenerator(
             sb.AppendLine($"name,{EscapeCsvValue(account.AccountName)}");
             sb.AppendLine("accountType,Stock");
             sb.AppendLine("csv:");
-            sb.AppendLine(Truncate(csv, MaxEntriesPerAccount * 220));
+            sb.AppendLine(Truncate(csv, _maxEntriesPerAccount * 220));
 
             addedAccounts++;
         }
 
         await foreach (var account in bondAccountRepository.GetAvailableAccounts(userId).OrderBy(x => x.AccountId).WithCancellation(cancellationToken))
         {
-            if (addedAccounts >= MaxAccounts)
+            if (addedAccounts >= _maxAccounts)
                 break;
 
             if (accountId.HasValue && account.AccountId != accountId.Value)
@@ -205,7 +212,7 @@ internal sealed class OpenRouterFinancialInsightsAiGenerator(
             sb.AppendLine($"name,{EscapeCsvValue(account.AccountName)}");
             sb.AppendLine("accountType,Bond");
             sb.AppendLine("csv:");
-            sb.AppendLine(Truncate(csv, MaxEntriesPerAccount * 220));
+            sb.AppendLine(Truncate(csv, _maxEntriesPerAccount * 220));
 
             addedAccounts++;
         }
@@ -241,5 +248,4 @@ internal sealed class OpenRouterFinancialInsightsAiGenerator(
         [JsonPropertyName("tags")]
         public List<string>? Tags { get; set; }
     }
-
 }

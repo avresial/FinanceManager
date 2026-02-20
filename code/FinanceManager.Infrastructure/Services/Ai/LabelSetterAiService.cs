@@ -5,6 +5,7 @@ using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -16,7 +17,7 @@ internal sealed class LabelSetterAiService(
     IFinancialLabelsRepository financialLabelsRepository,
     ILabelSetterPromptProvider promptProvider,
     IAccountCsvExportService<CurrencyAccountExportDto> csvExportService,
-    IAiProvider aiProvider,
+    IChatClient chatClient,
     ILogger<LabelSetterAiService> logger) : ILabelSetterAiService
 {
     private const string _systemPrompt = "You are a finance assistant that outputs strict JSON.";
@@ -62,7 +63,14 @@ internal sealed class LabelSetterAiService(
         {
             logger.LogDebug("Sending {Count} entries to AI model for label assignment.", entries.Count);
 
-            var content = await aiProvider.Get(_systemPrompt, prompt, cancellationToken);
+            var messages = new List<ChatMessage>
+            {
+                new(ChatRole.System, _systemPrompt),
+                new(ChatRole.User, prompt)
+            };
+            var chatOptions = new ChatOptions { ResponseFormat = ChatResponseFormat.Json };
+            var response = await chatClient.GetResponseAsync(messages, chatOptions, cancellationToken);
+            var content = response.Text;
             if (string.IsNullOrWhiteSpace(content))
             {
                 logger.LogWarning("AI model returned empty response for label assignment batch.");
