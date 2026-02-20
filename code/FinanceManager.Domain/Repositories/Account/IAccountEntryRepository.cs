@@ -17,6 +17,7 @@ public interface IAccountEntryRepository<T>
     Task<bool> Add(T entry, bool recalculate = true);
     Task<bool> Add(IEnumerable<T> entries, bool recalculate = true);
     Task<bool> AddLabel(int entryId, int labelId);
+    Task<int> AddLabels(IEnumerable<(int entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default);
     Task<bool> Update(T entry);
     Task<bool> Delete(int accountId, int entryId);
     Task<bool> Delete(int accountId);

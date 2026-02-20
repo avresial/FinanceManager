@@ -48,15 +48,26 @@ internal sealed class GitHubModelsLabelSetterAiService(
 
         foreach (var batch in entryIds.Chunk(_maxEntriesPerBatch))
         {
-            var entries = await currencyEntryRepository.GetByIds(batch, cancellationToken);
-            if (entries.Count == 0) continue;
+            logger.LogTrace("Processing batch with {Count} entry IDs.", batch.Length);
 
+            var entries = await currencyEntryRepository.GetByIds(batch, cancellationToken);
+            if (entries.Count == 0)
+            {
+                logger.LogTrace("No entries found for batch of {Count} entry IDs.", batch.Length);
+                continue;
+            }
+
+            logger.LogTrace("Retrieved {Count} entries for batch.", entries.Count);
+
+            var batchSet = new HashSet<int>(batch);
             var dtos = entries.Select(CurrencyAccountExportDto.FromEntity).ToList();
             var csv = csvExportService.GetExportResults(dtos);
             var prompt = await promptProvider.BuildPromptAsync(availableLabels, csv, cancellationToken);
 
             try
             {
+                logger.LogTrace("Sending batch of {Count} entries to AI for label assignment.", entries.Count);
+
                 var content = await aiProvider.Get(_systemPrompt, prompt, cancellationToken);
                 if (string.IsNullOrWhiteSpace(content))
                 {
@@ -65,14 +76,21 @@ internal sealed class GitHubModelsLabelSetterAiService(
                 }
 
                 var parsed = TryParseAssignments(content);
+                logger.LogTrace("Parsed {Count} assignments from AI response for batch.", parsed.Count);
+
+                int batchAssignments = 0;
                 foreach (var assignment in parsed)
                 {
                     if (assignment.EntryId is null) continue;
                     if (string.IsNullOrWhiteSpace(assignment.LabelName)) continue;
+                    if (!batchSet.Contains(assignment.EntryId.Value)) continue;
                     if (!labelNameSet.Contains(assignment.LabelName)) continue;
 
                     result[assignment.EntryId.Value] = assignment.LabelName;
+                    batchAssignments++;
                 }
+
+                logger.LogTrace("Added {Count} valid assignments to result for batch.", batchAssignments);
             }
             catch (Exception ex)
             {

@@ -54,6 +54,8 @@ public sealed class LabelSetterBackgroundService(
                         continue;
                     }
 
+                    // Build list of valid label assignments
+                    var validAssignments = new List<(int entryId, int labelId)>();
                     foreach (var (entryId, labelName) in assignments)
                     {
                         if (!labelsById.TryGetValue(labelName, out var labelId))
@@ -66,13 +68,18 @@ public sealed class LabelSetterBackgroundService(
                             continue;
                         }
 
-                        var added = await currencyEntryRepository.AddLabel(entryId, labelId);
-                        if (!added)
-                            logger.LogWarning(
-                                "Failed to add label '{LabelName}' to entry {EntryId} for account {AccountId}.",
-                                labelName,
-                                entryId,
-                                request.AccountId);
+                        validAssignments.Add((entryId, labelId));
+                    }
+
+                    // Add all labels in one batch
+                    if (validAssignments.Count > 0)
+                    {
+                        var addedCount = await currencyEntryRepository.AddLabels(validAssignments, stoppingToken);
+                        logger.LogDebug(
+                            "Added {Count} labels for {BatchSize} entries in account {AccountId}.",
+                            addedCount,
+                            entryIdBatch.Length,
+                            request.AccountId);
                     }
 
                     totalAssignments += assignments.Count;

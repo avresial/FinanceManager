@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -7,8 +8,7 @@ namespace FinanceManager.Api.Services;
 
 internal sealed class LabelSetterStartupService(
     IServiceScopeFactory scopeFactory,
-    ILabelSetterChannel labelSetterChannel,
-    IConfiguration configuration,
+    ILabelSetterChannel labelSetterChannel, IConfiguration configuration,
     ILogger<LabelSetterStartupService> logger) : IHostedService
 {
     private const int _maxEntriesPerBatch = 200;
@@ -21,10 +21,13 @@ internal sealed class LabelSetterStartupService(
         {
             using var scope = scopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
 
-            var guestUserId = await ResolveGuestUserId(dbContext, cancellationToken);
+
+            var guestUser = await userRepository.GetUser(configuration["DefaultUser:Login"]!);
 
             var unlabeledQuery = from entry in dbContext.CurrencyEntries.AsNoTracking()
+                                .Include(x => x.Labels)
                                  join account in dbContext.Accounts.AsNoTracking()
                                      on entry.AccountId equals account.AccountId
                                  where !entry.Labels.Any()
@@ -33,12 +36,13 @@ internal sealed class LabelSetterStartupService(
                                          || (entry.ContractorDetails != null && entry.ContractorDetails != ""))
                                  select new { entry.AccountId, entry.EntryId, account.UserId };
 
-            if (guestUserId.HasValue)
-                unlabeledQuery = unlabeledQuery.Where(entry => entry.UserId != guestUserId.Value);
 
             var unlabeledEntries = await unlabeledQuery
                 .Select(entry => new { entry.AccountId, entry.EntryId })
                 .ToListAsync(cancellationToken);
+
+            if (guestUser is not null)
+                unlabeledEntries.RemoveAll(entry => entry.AccountId == guestUser.UserId);
 
             if (unlabeledEntries.Count == 0)
             {
@@ -81,30 +85,4 @@ internal sealed class LabelSetterStartupService(
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    private async Task<int?> ResolveGuestUserId(AppDbContext dbContext, CancellationToken cancellationToken)
-    {
-        var guestLogin = configuration["DefaultUser:Login"];
-        if (string.IsNullOrWhiteSpace(guestLogin))
-        {
-            logger.LogWarning("DefaultUser:Login not configured. Guest filtering is disabled.");
-            return null;
-        }
-
-        var guestUserId = await dbContext.Users
-            .AsNoTracking()
-            .Where(user => user.Login == guestLogin)
-            .Select(user => (int?)user.Id)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (guestUserId.HasValue)
-        {
-            logger.LogInformation("Guest user id resolved to {GuestUserId}.", guestUserId.Value);
-        }
-        else
-        {
-            logger.LogWarning("Guest user '{GuestLogin}' not found. Guest filtering is disabled.", guestLogin);
-        }
-
-        return guestUserId;
-    }
 }

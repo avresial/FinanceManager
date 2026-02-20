@@ -234,6 +234,48 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         return true;
     }
 
+    public async Task<int> AddLabels(IEnumerable<(int entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default)
+    {
+        var assignments = labelAssignments.ToList();
+        if (assignments.Count == 0) return 0;
+
+        var entryIds = assignments.Select(a => a.entryId).Distinct().ToList();
+        var labelIds = assignments.Select(a => a.labelId).Distinct().ToList();
+
+        // Fetch all relevant entries and labels at once
+        var entries = await context.BondEntries
+            .Where(e => entryIds.Contains(e.EntryId))
+            .Include(e => e.Labels)
+            .ToListAsync(cancellationToken);
+
+        var labels = await context.FinancialLabels
+            .Where(l => labelIds.Contains(l.Id))
+            .ToListAsync(cancellationToken);
+
+        var entriesById = entries.ToDictionary(e => e.EntryId);
+        var labelsById = labels.ToDictionary(l => l.Id);
+
+        int addedCount = 0;
+
+        foreach (var (entryId, labelId) in assignments)
+        {
+            if (!entriesById.TryGetValue(entryId, out var entry) || !labelsById.TryGetValue(labelId, out var label))
+                continue;
+
+            // Only add if not already present
+            if (!entry.Labels.Any(l => l.Id == labelId))
+            {
+                entry.Labels.Add(label);
+                addedCount++;
+            }
+        }
+
+        if (addedCount > 0)
+            await context.SaveChangesAsync(cancellationToken);
+
+        return addedCount;
+    }
+
     public async Task<IReadOnlyList<BondAccountEntry>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default)
     {
         if (entryIds.Count == 0)
