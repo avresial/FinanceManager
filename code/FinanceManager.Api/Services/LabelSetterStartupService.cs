@@ -27,7 +27,10 @@ internal sealed class LabelSetterStartupService(
             var unlabeledQuery = from entry in dbContext.CurrencyEntries.AsNoTracking()
                                  join account in dbContext.Accounts.AsNoTracking()
                                      on entry.AccountId equals account.AccountId
-                                 where !entry.Labels.Any() && account.AccountType == AccountType.Currency
+                                 where !entry.Labels.Any()
+                                     && account.AccountType == AccountType.Currency
+                                     && (entry.Description != ""
+                                         || (entry.ContractorDetails != null && entry.ContractorDetails != ""))
                                  select new { entry.AccountId, entry.EntryId, account.UserId };
 
             if (guestUserId.HasValue)

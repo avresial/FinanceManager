@@ -25,7 +25,7 @@ internal sealed class GitHubModelsProvider(
 
         await using var client = new CopilotClient();
         var started = false;
-
+        string? sessionid = null;
         try
         {
             await client.StartAsync(cancellationToken);
@@ -42,12 +42,12 @@ internal sealed class GitHubModelsProvider(
             }
 
             await using var session = await client.CreateSessionAsync(sessionConfig, cancellationToken);
+            sessionid = session.SessionId;
 
             var response = await session.SendAndWaitAsync(
                 new MessageOptions { Prompt = userPrompt },
                 TimeSpan.FromSeconds(timeoutSeconds),
                 cancellationToken);
-
             return response?.Data?.Content;
         }
         catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
@@ -67,6 +67,9 @@ internal sealed class GitHubModelsProvider(
                 try
                 {
                     await client.StopAsync();
+
+                    if (sessionid != null)
+                        await client.DeleteSessionAsync(sessionid, cancellationToken);
                 }
                 catch (Exception ex)
                 {

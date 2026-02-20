@@ -179,12 +179,17 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
     }
     public async Task<bool> AddLabel(int entryId, int labelId)
     {
-        var entry = await context.CurrencyEntries.FirstOrDefaultAsync(e => e.EntryId == entryId);
+        var entry = await context.CurrencyEntries
+            .Include(e => e.Labels)
+            .FirstOrDefaultAsync(e => e.EntryId == entryId);
         var label = await context.FinancialLabels.FirstOrDefaultAsync(l => l.Id == labelId);
 
         if (entry is null || label is null) return false;
-        entry.Labels.Add(label);
 
+        // Check if label already exists before adding
+        if (entry.Labels.Any(l => l.Id == labelId)) return true;
+
+        entry.Labels.Add(label);
         await context.SaveChangesAsync();
 
         return true;
