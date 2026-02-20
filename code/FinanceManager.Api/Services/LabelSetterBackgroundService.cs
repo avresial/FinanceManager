@@ -13,9 +13,16 @@ public sealed class LabelSetterBackgroundService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await foreach (var entryIds in channel.ReadAll(stoppingToken))
+        logger.LogInformation("Label setter background service started.");
+
+        await foreach (var request in channel.ReadAll(stoppingToken))
         {
-            if (entryIds.Count == 0) continue;
+            if (request.EntryIds.Count == 0) continue;
+
+            logger.LogDebug(
+                "Processing label assignment for account {AccountId} with {Count} entries.",
+                request.AccountId,
+                request.EntryIds.Count);
 
             try
             {
@@ -25,10 +32,6 @@ public sealed class LabelSetterBackgroundService(
                 var currencyEntryRepository = scope.ServiceProvider.GetRequiredService<IAccountEntryRepository<CurrencyAccountEntry>>();
                 var financialLabelsRepository = scope.ServiceProvider.GetRequiredService<IFinancialLabelsRepository>();
 
-                // Ask AI for label assignments (only existing labels are returned)
-                var assignments = await labelSetterAiService.AssignLabels(entryIds, stoppingToken);
-                if (assignments.Count == 0) continue;
-
                 // Build name → id lookup once
                 var allLabels = await financialLabelsRepository
                     .GetLabels(stoppingToken)
@@ -36,15 +39,49 @@ public sealed class LabelSetterBackgroundService(
 
                 var labelsById = allLabels.ToDictionary(l => l.Name, l => l.Id, StringComparer.Ordinal);
 
-                foreach (var (entryId, labelName) in assignments)
-                {
-                    if (!labelsById.TryGetValue(labelName, out var labelId))
-                        continue;
+                var totalAssignments = 0;
 
-                    var added = await currencyEntryRepository.AddLabel(entryId, labelId);
-                    if (!added)
-                        logger.LogWarning("Failed to add label '{LabelName}' to entry {EntryId}.", labelName, entryId);
+                foreach (var entryIdBatch in request.EntryIds.Chunk(100))
+                {
+                    // Ask AI for label assignments (only existing labels are returned)
+                    var assignments = await labelSetterAiService.AssignLabels(entryIdBatch, stoppingToken);
+                    if (assignments.Count == 0)
+                    {
+                        logger.LogDebug(
+                            "No label assignments returned for account {AccountId} for batch size {BatchSize}.",
+                            request.AccountId,
+                            entryIdBatch.Length);
+                        continue;
+                    }
+
+                    foreach (var (entryId, labelName) in assignments)
+                    {
+                        if (!labelsById.TryGetValue(labelName, out var labelId))
+                        {
+                            logger.LogTrace(
+                                "Skipping unknown label '{LabelName}' for entry {EntryId} in account {AccountId}.",
+                                labelName,
+                                entryId,
+                                request.AccountId);
+                            continue;
+                        }
+
+                        var added = await currencyEntryRepository.AddLabel(entryId, labelId);
+                        if (!added)
+                            logger.LogWarning(
+                                "Failed to add label '{LabelName}' to entry {EntryId} for account {AccountId}.",
+                                labelName,
+                                entryId,
+                                request.AccountId);
+                    }
+
+                    totalAssignments += assignments.Count;
                 }
+
+                logger.LogInformation(
+                    "Finished label assignment for account {AccountId}. Assignments: {Count}.",
+                    request.AccountId,
+                    totalAssignments);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -52,8 +89,14 @@ public sealed class LabelSetterBackgroundService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error occurred in label setter background worker for {Count} entries.", entryIds.Count);
+                logger.LogError(
+                    ex,
+                    "Error occurred in label setter background worker for account {AccountId} and {Count} entries.",
+                    request.AccountId,
+                    request.EntryIds.Count);
             }
         }
+
+        logger.LogInformation("Label setter background service stopped.");
     }
 }

@@ -1,5 +1,6 @@
 using FinanceManager.Application.Services.Exports;
 using FinanceManager.Application.Services.FinancialInsights;
+using FinanceManager.Application.Services.Ai;
 using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
@@ -21,11 +22,12 @@ internal sealed class OllamaFinancialInsightsAiGenerator(
     IAccountCsvExportService<StockAccountExportDto> stockAccountCsvExportService,
     IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService,
     IInsightsPromptProvider insightsPromptProvider,
-    OllamaProvider ollamaProvider,
+    IAiProvider aiProvider,
     ILogger<OllamaFinancialInsightsAiGenerator> logger) : IFinancialInsightsAiGenerator
 {
     private const int _maxEntriesPerAccount = 200;
     private const int _maxAccounts = 50;
+    private const string _systemPrompt = "You are a finance assistant that outputs strict JSON.";
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -39,22 +41,9 @@ internal sealed class OllamaFinancialInsightsAiGenerator(
         var entriesContextCsv = await BuildEntriesContextCsv(userId, accountId, cancellationToken);
         var prompt = await insightsPromptProvider.BuildPromptAsync(entriesContextCsv, cancellationToken);
 
-        var request = new OllamaChatRequest
-        {
-            Model = string.Empty,
-            Stream = false,
-            Format = "json",
-            Messages =
-            [
-                new OllamaMessage("system", "You are a finance assistant that outputs strict JSON."),
-                new OllamaMessage("user", prompt)
-            ]
-        };
-
         try
         {
-            var payload = await ollamaProvider.Get(request, cancellationToken);
-            var content = payload?.Message?.Content;
+            var content = await aiProvider.Get(_systemPrompt, prompt, cancellationToken);
             if (string.IsNullOrWhiteSpace(content))
                 return [];
 

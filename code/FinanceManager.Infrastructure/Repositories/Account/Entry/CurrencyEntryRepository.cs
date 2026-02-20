@@ -183,6 +183,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         var label = await context.FinancialLabels.FirstOrDefaultAsync(l => l.Id == labelId);
 
         if (entry is null || label is null) return false;
+        entry.Labels.Add(label);
 
         await context.SaveChangesAsync();
 

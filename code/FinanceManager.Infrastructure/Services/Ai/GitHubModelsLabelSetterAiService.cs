@@ -11,13 +11,13 @@ using System.Text.Json.Serialization;
 
 namespace FinanceManager.Infrastructure.Services.Ai;
 
-internal sealed class OpenRouterLabelSetterAiService(
+internal sealed class GitHubModelsLabelSetterAiService(
     IAccountEntryRepository<CurrencyAccountEntry> currencyEntryRepository,
     IFinancialLabelsRepository financialLabelsRepository,
     ILabelSetterPromptProvider promptProvider,
     IAccountCsvExportService<CurrencyAccountExportDto> csvExportService,
     IAiProvider aiProvider,
-    ILogger<OpenRouterLabelSetterAiService> logger) : ILabelSetterAiService
+    ILogger<GitHubModelsLabelSetterAiService> logger) : ILabelSetterAiService
 {
     private const int _maxEntriesPerBatch = 25;
     private const string _systemPrompt = "You are a finance assistant that outputs strict JSON.";
@@ -37,7 +37,7 @@ internal sealed class OpenRouterLabelSetterAiService(
         var allLabels = await financialLabelsRepository.GetLabels(cancellationToken).ToListAsync(cancellationToken);
         if (allLabels.Count == 0)
         {
-            logger.LogInformation("No labels defined in the system – skipping label assignment.");
+            logger.LogInformation("No labels defined in the system - skipping label assignment.");
             return [];
         }
 
@@ -60,7 +60,7 @@ internal sealed class OpenRouterLabelSetterAiService(
                 var content = await aiProvider.Get(_systemPrompt, prompt, cancellationToken);
                 if (string.IsNullOrWhiteSpace(content))
                 {
-                    logger.LogWarning("OpenRouter returned empty response for label setter batch.");
+                    logger.LogWarning("GitHub Models returned empty response for label setter batch.");
                     continue;
                 }
 
@@ -76,7 +76,7 @@ internal sealed class OpenRouterLabelSetterAiService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "OpenRouter label setter failed for a batch of {Count} entries.", batch.Length);
+                logger.LogError(ex, "GitHub Models label setter failed for a batch of {Count} entries.", batch.Length);
             }
         }
 
@@ -117,7 +117,6 @@ internal sealed class OpenRouterLabelSetterAiService(
             }
         }
     }
-
 
     private sealed class AssignmentsRoot
     {

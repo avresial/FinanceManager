@@ -1,4 +1,5 @@
 using FinanceManager.Application.Options;
+using FinanceManager.Application.Services.Ai;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
@@ -9,7 +10,7 @@ namespace FinanceManager.Infrastructure.Services.Ai;
 internal sealed class OllamaProvider(
     HttpClient httpClient,
     IOptions<OllamaOptions> options,
-    ILogger<OllamaProvider> logger)
+    ILogger<OllamaProvider> logger) : IAiProvider
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -45,5 +46,23 @@ internal sealed class OllamaProvider(
         }
 
         return await response.Content.ReadFromJsonAsync<OllamaChatResponse>(_jsonOptions, cancellationToken);
+    }
+
+    public async Task<string?> Get(string systemPrompt, string userPrompt, CancellationToken cancellationToken = default)
+    {
+        var request = new OllamaChatRequest
+        {
+            Model = string.Empty,
+            Stream = false,
+            Format = "json",
+            Messages =
+            [
+                new OllamaMessage("system", systemPrompt),
+                new OllamaMessage("user", userPrompt)
+            ]
+        };
+
+        var response = await Get(request, cancellationToken);
+        return response?.Message?.Content;
     }
 }

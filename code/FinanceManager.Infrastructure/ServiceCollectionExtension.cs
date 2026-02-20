@@ -39,6 +39,7 @@ public static class ServiceCollectionExtension
 
             client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         });
+        services.AddScoped<GitHubModelsProvider>();
 
         services
                 .AddScoped<IStockPriceRepository, StockPriceRepository>()
@@ -60,8 +61,10 @@ public static class ServiceCollectionExtension
                 .AddScoped<IBondDetailsRepository, BondDetailsRepository>()
                 .AddScoped<ICsvHeaderMappingRepository, CsvHeaderMappingRepository>()
                 .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()
-                .AddScoped<IFinancialInsightsAiGenerator, OpenRouterFinancialInsightsAiGenerator>()
-                .AddScoped<ILabelSetterAiService, OpenRouterLabelSetterAiService>()
+                .AddScoped<IFinancialInsightsAiGenerator, GitHubModelsFinancialInsightsAiGenerator>()
+                .AddScoped<ILabelSetterAiService, GitHubModelsLabelSetterAiService>()
+                .AddScoped<IAiProvider, GitHubModelsProvider>()
+
                 .AddSingleton<IInsightsPromptProvider, InsightsPromptProvider>()
                 .AddSingleton<ILabelSetterPromptProvider, LabelSetterPromptProvider>()
 

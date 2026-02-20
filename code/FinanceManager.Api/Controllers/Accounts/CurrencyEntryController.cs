@@ -1,4 +1,5 @@
 using FinanceManager.Api.Helpers;
+using FinanceManager.Api.Services;
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Dtos;
@@ -17,7 +18,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 public class CurrencyEntryController(
     ICurrencyAccountRepository<CurrencyAccount> accountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
-    IUserPlanVerifier userPlanVerifier) : ControllerBase
+    IUserPlanVerifier userPlanVerifier, ILabelSetterChannel labelSetterChannel) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountEntryDto))]
@@ -67,11 +68,17 @@ public class CurrencyEntryController(
         if (!await userPlanVerifier.CanAddMoreEntries(ApiAuthenticationHelper.GetUserId(User)))
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
-        return Ok(await accountEntryRepository.Add(new CurrencyAccountEntry(addEntry.AccountId, addEntry.EntryId, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
+
+        var newEntry = new CurrencyAccountEntry(addEntry.AccountId, 0, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
         {
             Description = addEntry.Description,
-            ContractorDetails = addEntry.ContractorDetails,
-        }));
+            ContractorDetails = addEntry.ContractorDetails
+        };
+
+        var result = await accountEntryRepository.Add(newEntry);
+        await labelSetterChannel.QueueEntries(newEntry.AccountId, [newEntry.EntryId]);
+
+        return Ok(result);
     }
 
     [HttpDelete("{accountId:int}/{entryId:int}")]

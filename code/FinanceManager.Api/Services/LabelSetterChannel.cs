@@ -4,7 +4,7 @@ namespace FinanceManager.Api.Services;
 
 public sealed class LabelSetterChannel : ILabelSetterChannel
 {
-    private readonly Channel<IReadOnlyCollection<int>> _channel = Channel.CreateBounded<IReadOnlyCollection<int>>(
+    private readonly Channel<LabelSetterRequest> _channel = Channel.CreateBounded<LabelSetterRequest>(
         new BoundedChannelOptions(512)
         {
             SingleReader = true,
@@ -12,9 +12,9 @@ public sealed class LabelSetterChannel : ILabelSetterChannel
             FullMode = BoundedChannelFullMode.DropOldest
         });
 
-    public ValueTask QueueEntries(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default) =>
-        _channel.Writer.WriteAsync(entryIds, cancellationToken);
+    public ValueTask QueueEntries(int accountId, IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default) =>
+        _channel.Writer.WriteAsync(new LabelSetterRequest(accountId, entryIds), cancellationToken);
 
-    public IAsyncEnumerable<IReadOnlyCollection<int>> ReadAll(CancellationToken cancellationToken) =>
+    public IAsyncEnumerable<LabelSetterRequest> ReadAll(CancellationToken cancellationToken) =>
         _channel.Reader.ReadAllAsync(cancellationToken);
 }

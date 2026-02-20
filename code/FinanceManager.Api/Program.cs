@@ -29,6 +29,8 @@ builder.Services
 builder.Services.Configure<JwtAuthOptions>(builder.Configuration.GetSection("JwtConfig"));
 builder.Services.Configure<StockApiOptions>(builder.Configuration.GetSection("StockApi"));
 builder.Services.Configure<OpenRouterOptions>(builder.Configuration.GetSection("OpenRouter"));
+builder.Services.Configure<GitHubModelsOptions>(builder.Configuration.GetSection("GitHubModels"));
+builder.Services.Configure<AiProviderOptions>(builder.Configuration.GetSection("AiProvider"));
 
 
 builder.Services.AddCors(options =>
@@ -68,6 +70,7 @@ builder.Services.AddSingleton<IInsightsGenerationChannel, InsightsGenerationChan
 builder.Services.AddHostedService<InsightsGenerationBackgroundService>();
 builder.Services.AddSingleton<ILabelSetterChannel, LabelSetterChannel>();
 builder.Services.AddHostedService<LabelSetterBackgroundService>();
+builder.Services.AddHostedService<LabelSetterStartupService>();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
