@@ -95,15 +95,9 @@ public static class ServiceCollectionExtension
 
     private static IChatClient CreateGitHubModelsChatClient(IServiceProvider sp)
     {
-        var options = sp.GetRequiredService<IOptions<GitHubModelsOptions>>().Value;
-        var timeoutSeconds = options.RequestTimeoutSeconds > 0 ? options.RequestTimeoutSeconds : 180;
-        var clientOptions = new OpenAIClientOptions
-        {
-            Endpoint = new Uri(options.BaseUrl),
-            NetworkTimeout = TimeSpan.FromSeconds(timeoutSeconds)
-        };
-        var openAIClient = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
-        return openAIClient.GetChatClient(options.Model).AsIChatClient();
+        return new CopilotChatClient(
+            sp.GetRequiredService<IOptions<GitHubModelsOptions>>(),
+            sp.GetRequiredService<ILogger<CopilotChatClient>>());
     }
 
     private static IChatClient CreateOllamaChatClient(IServiceProvider sp)
