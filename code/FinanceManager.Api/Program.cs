@@ -30,6 +30,7 @@ builder.Services.Configure<JwtAuthOptions>(builder.Configuration.GetSection("Jwt
 builder.Services.Configure<StockApiOptions>(builder.Configuration.GetSection("StockApi"));
 builder.Services.Configure<OpenRouterOptions>(builder.Configuration.GetSection("OpenRouter"));
 builder.Services.Configure<GitHubModelsOptions>(builder.Configuration.GetSection("GitHubModels"));
+builder.Services.Configure<OllamaOptions>(builder.Configuration.GetSection("Ollama"));
 builder.Services.Configure<AiProviderOptions>(builder.Configuration.GetSection("AiProvider"));
 
 

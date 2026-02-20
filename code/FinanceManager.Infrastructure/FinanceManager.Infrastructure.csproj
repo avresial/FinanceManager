@@ -7,7 +7,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="CsvHelper" />
-		<PackageReference Include="GitHub.Copilot.SDK" Condition="'$(RuntimeIdentifier)' != 'browser-wasm'" />
+		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Condition="'$(RuntimeIdentifier)' != 'browser-wasm'" />
+		<PackageReference Include="OllamaSharp" Condition="'$(RuntimeIdentifier)' != 'browser-wasm'" />
 		<PackageReference Include="Microsoft.Extensions.Http" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
