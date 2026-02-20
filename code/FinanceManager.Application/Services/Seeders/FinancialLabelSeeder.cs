@@ -18,7 +18,8 @@ public class FinancialLabelSeeder(IFinancialLabelsRepository financialLabelsRepo
         "Healthcare",
         "Education",
         "Dining Out",
-        "Travel"
+        "Travel",
+        "Investment",
     ];
 
     public async Task Seed(CancellationToken cancellationToken = default)
