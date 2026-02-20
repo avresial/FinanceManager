@@ -18,6 +18,7 @@ Rules
 - If no label fits, set labelName to null.
 - Do not output markdown.
 
+
 Output requirements (STRICT)
 Return valid JSON only, with this exact schema and no extra keys:
 
@@ -33,6 +34,7 @@ Return valid JSON only, with this exact schema and no extra keys:
 Constraints
 - Output one assignment object per input entry, preserving all entryIds.
 - labelName must be exactly as written in available_labels (case-sensitive), or null.
+- If salary label is available, entry must contain "Graw" in any of column, otherwise label it differently
 
 available_labels: {available_labels}
 
