@@ -21,7 +21,7 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
     private string _dragClass = _defaultDragClass;
     private List<ImportCurrencyModel> _importModels = [];
 
-    private List<IBrowserFile> LoadedFiles = [];
+    private List<IBrowserFile> _loadedFiles = [];
     private List<string> _erorrs = [];
     private List<string> _warnings = [];
     private List<string> _summaryInfos = [];
@@ -40,7 +40,7 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
     private CancellationTokenSource? _regenCts;
 
     private string _delimiterBacking = ",";
-    private string _delimiter
+    private string Delimiter
     {
         get => _delimiterBacking;
         set
@@ -80,6 +80,7 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
     [Inject] public required ILogger<ImportCurrencyEntriesComponent> Logger { get; set; }
     [Inject] public required CurrencyAccountImportHttpClient AccountImportHttpClient { get; set; }
     [Inject] public required CurrencyAccountHttpClient AccountHttpClient { get; set; }
+    [Inject] public required CsvHeaderMappingHttpClient MappingHttpClient { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -113,7 +114,7 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
 
         try
         {
-            var result = await ImportCurrencyModelReader.Read(_uploadedContent, _delimiter, cancellationToken);
+            var result = await ImportCurrencyModelReader.Read(_uploadedContent, Delimiter, cancellationToken);
 
             _headers = result.Value.Headers ?? [];
             var allParsedRows = result.Value.Data ?? [];
@@ -143,7 +144,7 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
         }
         catch (Exception ex)
         {
-            Logger?.LogDebug(ex, "CsvHelper attempt failed for delimiter {delimiter}", _delimiter);
+            Logger?.LogDebug(ex, "CsvHelper attempt failed for delimiter {delimiter}", Delimiter);
         }
 
         if (_headers.Count == 0)
@@ -153,6 +154,12 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
 
         if (!_step1Complete && _erorrs.Count == 0)
             _erorrs.Add("Step 1 can not be completed - loading files failed.");
+
+        // Fetch and apply suggested mappings if headers were loaded successfully
+        if (_headers.Count > 0)
+        {
+            await ApplySuggestedMappings();
+        }
 
         await InvokeAsync(StateHasChanged);
     }
@@ -179,7 +186,7 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
             return;
         }
 
-        LoadedFiles = [file];
+        _loadedFiles = [file];
         if (file is null)
         {
             _erorrs.Add("Failed to load file.");
@@ -231,6 +238,46 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
             await UploadFiles(file);
     }
 
+    private async Task ApplySuggestedMappings()
+    {
+        try
+        {
+            if (_headers.Count == 0) return;
+
+            var suggestions = await MappingHttpClient.GetSuggestedMappingsAsync(_headers);
+
+            if (suggestions is null || suggestions.Count == 0) return;
+
+            // Apply suggestions
+            foreach (var suggestion in suggestions)
+            {
+                switch (suggestion.MappedFieldName)
+                {
+                    case "PostingDate":
+                        _selectedPostingDateHeader = suggestion.OriginalHeaderName;
+                        break;
+                    case "ValueChange":
+                        _selectedValueChangeHeader = suggestion.OriginalHeaderName;
+                        break;
+                    case "ContractorDetails":
+                        _selectedContractorDetailsHeader = suggestion.OriginalHeaderName;
+                        break;
+                    case "Description":
+                        _selectedDescriptionHeader = suggestion.OriginalHeaderName;
+                        break;
+                }
+            }
+
+            // Trigger mapping validation after suggestions are applied
+            OnMappingChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogDebug(ex, "Failed to get mapping suggestions");
+            // Don't fail the import if mapping suggestion fails
+        }
+    }
+
     private void OnMappingChanged()
     {
         _erorrs.Clear();
@@ -279,7 +326,7 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
             if (string.IsNullOrEmpty(_selectedValueChangeHeader))
                 throw new Exception("Value change header is not selected.");
 
-            var (Headers, Data) = await ImportCurrencyModelReader.Read(_uploadedContent!, _delimiter, CancellationToken.None) ??
+            var (Headers, Data) = await ImportCurrencyModelReader.Read(_uploadedContent!, Delimiter, CancellationToken.None) ??
                 throw new Exception("Failed to read data for import.");
 
             var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader,
@@ -324,13 +371,16 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
             return;
         }
 
+        // Save the user's mapping choices for future use
+        await SaveMappingChoices();
+
         _step3Complete = true;
         _isImportingData = false;
     }
 
     public async Task Clear()
     {
-        LoadedFiles?.Clear();
+        _loadedFiles?.Clear();
 
         _step1Complete = false;
         _step2Complete = false;
@@ -360,6 +410,42 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
         catch { }
 
         await Task.CompletedTask;
+    }
+
+    private async Task SaveMappingChoices()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(_selectedPostingDateHeader) || string.IsNullOrEmpty(_selectedValueChangeHeader))
+                return;
+
+            var mappingItems = new List<HeaderMappingRequestItemDto>();
+
+            // Add the required mappings
+            if (!string.IsNullOrEmpty(_selectedPostingDateHeader))
+                mappingItems.Add(new(_selectedPostingDateHeader, "PostingDate"));
+
+            if (!string.IsNullOrEmpty(_selectedValueChangeHeader))
+                mappingItems.Add(new(_selectedValueChangeHeader, "ValueChange"));
+
+            // Add optional mappings if they exist
+            if (!string.IsNullOrEmpty(_selectedContractorDetailsHeader))
+                mappingItems.Add(new(_selectedContractorDetailsHeader, "ContractorDetails"));
+
+            if (!string.IsNullOrEmpty(_selectedDescriptionHeader))
+                mappingItems.Add(new(_selectedDescriptionHeader, "Description"));
+
+            if (mappingItems.Count > 0)
+            {
+                await MappingHttpClient.SaveMappingsAsync(new SaveMappingRequestDto(mappingItems));
+                Logger?.LogInformation("Mapping choices saved successfully");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogDebug(ex, "Failed to save mapping choices");
+            // Don't fail the import if mapping save fails
+        }
     }
 
     private void SetDragClass() => _dragClass = $"{_defaultDragClass} mud-border-primary";

@@ -47,6 +47,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IAdministrationUsersService, AdministrationUsersService>()
                 .AddScoped<ICurrencyExchangeService, CurrencyExchangeService>()
                 .AddScoped<HttpClient>()
+                .AddScoped<ICsvHeaderMappingService, CsvHeaderMappingService>()
                 .AddScoped<ICurrencyAccountImportService, CurrencyAccountImportService>()
                 .AddScoped<ICurrencyAccountExportService, CurrencyAccountExportService>()
                 .AddScoped<IAccountCsvExportService<CurrencyAccountExportDto>, CurrencyAccountCsvExportService>()

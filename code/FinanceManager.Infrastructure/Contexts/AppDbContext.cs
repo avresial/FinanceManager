@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
@@ -25,6 +26,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<FinancialInsight> FinancialInsights { get; set; } = default!;
     public DbSet<FinancialLabel> FinancialLabels { get; set; } = default!;
     public DbSet<BondDetails> Bonds { get; set; } = default!;
+    public DbSet<CsvHeaderMapping> CsvHeaderMappings { get; set; } = default!;
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new ActiveUserConfiguration());
@@ -40,6 +42,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new UserDtoConfiguration());
         modelBuilder.ApplyConfiguration(new BondDetailsConfiguration());
         modelBuilder.ApplyConfiguration(new BondCalculationMethodConfiguration());
+        modelBuilder.ApplyConfiguration(new CsvHeaderMappingConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }

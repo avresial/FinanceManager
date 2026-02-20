@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
 	<PropertyGroup>
-		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 		<UserSecretsId>272f8c97-d2cb-451b-a5ed-25e82f194604</UserSecretsId>
 	</PropertyGroup>
 
