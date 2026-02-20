@@ -62,7 +62,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<ICsvHeaderMappingRepository, CsvHeaderMappingRepository>()
                 .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()
                 .AddScoped<IFinancialInsightsAiGenerator, GitHubModelsFinancialInsightsAiGenerator>()
-                .AddScoped<ILabelSetterAiService, GitHubModelsLabelSetterAiService>()
+                .AddScoped<ILabelSetterAiService, LabelSetterAiService>()
                 .AddScoped<IAiProvider, GitHubModelsProvider>()
 
                 .AddSingleton<IInsightsPromptProvider, InsightsPromptProvider>()

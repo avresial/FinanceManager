@@ -39,18 +39,38 @@ public sealed class LabelSetterBackgroundService(
 
                 var labelsById = allLabels.ToDictionary(l => l.Name, l => l.Id, StringComparer.Ordinal);
 
-                var totalAssignments = 0;
+                // Pre-calculate batch count
+                var batches = request.EntryIds.Chunk(50).ToList();
+                logger.LogInformation(
+                    "Adding labels for AccountId {AccountId} started. Processing {TotalEntries} entries in {BatchCount} batches.",
+                    request.AccountId,
+                    request.EntryIds.Count,
+                    batches.Count);
 
-                foreach (var entryIdBatch in request.EntryIds.Chunk(100))
+                var totalProcessed = 0;
+                var currentBatchNumber = 0;
+
+                foreach (var entryIdBatch in batches)
                 {
-                    // Ask AI for label assignments (only existing labels are returned)
+                    currentBatchNumber++;
+                    totalProcessed += entryIdBatch.Length;
+
+                    logger.LogInformation(
+                        "Batch {BatchNumber}/{TotalBatches} started for AccountId {AccountId}. Processing {BatchSize} entries.",
+                        currentBatchNumber,
+                        batches.Count,
+                        request.AccountId,
+                        entryIdBatch.Length);
+
+                    // Get AI label assignments for this batch
                     var assignments = await labelSetterAiService.AssignLabels(entryIdBatch, stoppingToken);
                     if (assignments.Count == 0)
                     {
                         logger.LogDebug(
-                            "No label assignments returned for account {AccountId} for batch size {BatchSize}.",
+                            "No label assignments returned for account {AccountId} batch {BatchNumber}/{TotalBatches}.",
                             request.AccountId,
-                            entryIdBatch.Length);
+                            currentBatchNumber,
+                            batches.Count);
                         continue;
                     }
 
@@ -71,24 +91,26 @@ public sealed class LabelSetterBackgroundService(
                         validAssignments.Add((entryId, labelId));
                     }
 
-                    // Add all labels in one batch
+                    // Persist all labels for this batch at once
                     if (validAssignments.Count > 0)
                     {
                         var addedCount = await currencyEntryRepository.AddLabels(validAssignments, stoppingToken);
                         logger.LogDebug(
-                            "Added {Count} labels for {BatchSize} entries in account {AccountId}.",
+                            "Persisted {AddedCount} labels for {BatchSize} entries in batch {BatchNumber}/{TotalBatches} for account {AccountId}.",
                             addedCount,
                             entryIdBatch.Length,
+                            currentBatchNumber,
+                            batches.Count,
                             request.AccountId);
                     }
-
-                    totalAssignments += assignments.Count;
                 }
 
                 logger.LogInformation(
-                    "Finished label assignment for account {AccountId}. Assignments: {Count}.",
+                    "Adding labels for AccountId {AccountId} finished. Successfully processed {TotalProcessed}/{TotalEntries} entries in {BatchCount} batches.",
                     request.AccountId,
-                    totalAssignments);
+                    totalProcessed,
+                    request.EntryIds.Count,
+                    batches.Count);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
