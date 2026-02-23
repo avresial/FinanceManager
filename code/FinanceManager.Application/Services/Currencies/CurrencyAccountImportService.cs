@@ -52,17 +52,17 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                 continue;
             }
 
-            foreach (var imp in importsThisDay)
+            foreach (var import in importsThisDay)
             {
                 try
                 {
-                    if (imp.PostingDate.Kind != DateTimeKind.Utc)
-                        throw new Exception($"Date kind of this entry posting date: {imp.PostingDate}, value change: {imp.ValueChange} is not UTC - {imp.PostingDate.Kind}");
+                    if (import.PostingDate.Kind != DateTimeKind.Utc)
+                        throw new Exception($"Date kind of this entry posting date: {import.PostingDate}, value change: {import.ValueChange} is not UTC - {import.PostingDate.Kind}");
 
-                    CurrencyAccountEntry newEntry = new(accountId, 0, imp.PostingDate, imp.ValueChange, imp.ValueChange)
+                    CurrencyAccountEntry newEntry = new(accountId, 0, import.PostingDate, import.ValueChange, import.ValueChange)
                     {
-                        Description = string.Empty,
-                        ContractorDetails = imp.ContractorDetails,
+                        Description = import.Description ?? string.Empty,
+                        ContractorDetails = import.ContractorDetails,
                         Labels = []
                     };
 
@@ -74,7 +74,7 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                     else
                     {
                         failed++;
-                        errors.Add($"Failed to import entry with date {imp.PostingDate}.");
+                        errors.Add($"Failed to import entry with date {import.PostingDate}.");
                     }
                 }
                 catch (Exception ex)

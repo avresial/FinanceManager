@@ -21,16 +21,11 @@
 
                                 @if (!_rawPreview.Any())
                                 {
-                                    <MudFileUpload Class="mt-3" T="IBrowserFile"
-                                                   Hidden="@false"
+                                    <MudFileUpload Class="mt-3" T="IBrowserFile" Hidden="@false"
                                                    InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
-                                                   InputStyle="opacity:0"
-                                                   ErrorText="@string.Empty"
-                                                   tabindex="-1"
-                                                   @ondrop="@ClearDragClass"
-                                                   @ondragenter="@SetDragClass"
-                                                   @ondragleave="@ClearDragClass"
-                                                   @ondragend="@ClearDragClass"
+                                                   InputStyle="opacity:0" ErrorText="@string.Empty" tabindex="-1"
+                                                   @ondrop="@ClearDragClass" @ondragenter="@SetDragClass"
+                                                   @ondragleave="@ClearDragClass" @ondragend="@ClearDragClass"
                                                    OnFilesChanged="UploadFiles">
 
                                         <ActivatorContent>
@@ -49,8 +44,7 @@
                                 {
                                     <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles">
                                         <ActivatorContent>
-                                            <MudButton Variant="Variant.Filled"
-                                                       Color="Color.Primary"
+                                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
                                                        StartIcon="@Icons.Material.Filled.CloudUpload">
                                                 Upload different file
                                             </MudButton>
@@ -64,7 +58,8 @@
 
                                         <MudItem xs="4">
                                             @{
-                                                var _delimOptions = new List<(string Value, string Label)> { (",", "Comma (,)"), (";", "Semicolon (;)"), ("\t", "Tab (\\t)") };
+                                                var _delimOptions = new List<(string Value, string Label)> { (",", "Comma (,)"),
+                                        (";", "Semicolon (;)"), ("\t", "Tab (\\t)") };
                                             }
                                             <MudSelect T="string" Label="Delimiter" @bind-Value="_delimiter">
                                                 @foreach (var opt in _delimOptions)
@@ -118,14 +113,17 @@
                     </MudStack>
                 </MudStep>
 
-                <MudStep Title="Validate" SecondaryText="Step2" @bind-Completed="_step2Complete" Disabled="@(_step1Complete == false)">
+                <MudStep Title="Validate" SecondaryText="Step2" @bind-Completed="_step2Complete"
+                         Disabled="@(_step1Complete == false)">
                     <MudGrid Class="mb-2">
                         <MudItem xs="12">
                             <MudStack Spacing="2">
                                 <MudText Typo="Typo.h6">Select columns</MudText>
                                 <MudGrid>
                                     <MudItem xs="6">
-                                        <MudSelect T="string" Label="Posting date column" Value="_selectedPostingDateHeader" ValueChanged="@((string v) => { _selectedPostingDateHeader = v; OnMappingChanged(); })">
+                                        <MudSelect T="string" Label="Posting date column"
+                                                   Value="_selectedPostingDateHeader"
+                                                   ValueChanged="@((string v) => { _selectedPostingDateHeader = v; OnMappingChanged(); })">
                                             @foreach (var h in _headers)
                                             {
                                                 <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
@@ -133,7 +131,35 @@
                                         </MudSelect>
                                     </MudItem>
                                     <MudItem xs="6">
-                                        <MudSelect T="string" Label="Value change column" Value="_selectedValueChangeHeader" ValueChanged="@((string v) => { _selectedValueChangeHeader = v; OnMappingChanged(); })">
+                                        <MudSelect T="string" Label="Value change column"
+                                                   Value="_selectedValueChangeHeader"
+                                                   ValueChanged="@((string v) => { _selectedValueChangeHeader = v; OnMappingChanged(); })">
+                                            @foreach (var h in _headers)
+                                            {
+                                                <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
+                                            }
+                                        </MudSelect>
+                                    </MudItem>
+                                </MudGrid>
+
+                                <MudText Typo="Typo.h6" Class="mt-3">Optional columns</MudText>
+                                <MudGrid>
+                                    <MudItem xs="6">
+                                        <MudSelect T="string" Label="Contractor details column (optional)"
+                                                   Value="_selectedContractorDetailsHeader"
+                                                   ValueChanged="@((string v) => { _selectedContractorDetailsHeader = v; OnMappingChanged(); })"
+                                                   Clearable="true">
+                                            @foreach (var h in _headers)
+                                            {
+                                                <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
+                                            }
+                                        </MudSelect>
+                                    </MudItem>
+                                    <MudItem xs="6">
+                                        <MudSelect T="string" Label="Description column (optional)"
+                                                   Value="_selectedDescriptionHeader"
+                                                   ValueChanged="@((string v) => { _selectedDescriptionHeader = v; OnMappingChanged(); })"
+                                                   Clearable="true">
                                             @foreach (var h in _headers)
                                             {
                                                 <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
@@ -152,6 +178,8 @@
                                                 <tr>
                                                     <th>Posting date</th>
                                                     <th>Value change</th>
+                                                    <th>Contractor details</th>
+                                                    <th>Description</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -160,6 +188,8 @@
                                                     <tr>
                                                         <td>@row.PostingDate</td>
                                                         <td>@row.ValueChange</td>
+                                                        <td>@(row.ContractorDetails ?? "-")</td>
+                                                        <td>@(row.Description ?? "-")</td>
                                                     </tr>
                                                 }
                                             </tbody>
@@ -176,7 +206,8 @@
                         </MudItem>
                     </MudGrid>
                 </MudStep>
-                <MudStep Title="Summary" SecondaryText="Step3" @bind-Completed="_step3Complete" Disabled="@(_step2Complete == false)">
+                <MudStep Title="Summary" SecondaryText="Step3" @bind-Completed="_step3Complete"
+                         Disabled="@(_step2Complete == false)">
                     @if (_isImportingData)
                     {
                         <div class="d-flex justify-content-center my-3">
@@ -217,24 +248,28 @@
             <ActionContent Context="stepper">
                 @if (_stepIndex != 2)
                 {
-                    <MudButton Color="Color.Error" Disabled="@(_stepIndex == 3)" OnClick="@Clear" Variant="Variant.Outlined">Clear</MudButton>
+                    <MudButton Color="Color.Error" Disabled="@(_stepIndex == 3)" OnClick="@Clear"
+                               Variant="Variant.Outlined">Clear</MudButton>
                     <MudSpacer />
                 }
                 @if (_stepIndex == 0)
                 {
-                    <MudButton Disabled="@(!_rawPreview.Any() || _headers.Count < 2)" OnClick="GoToNextStep" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Next step</MudButton>
+                    <MudButton Disabled="@(!_rawPreview.Any() || _headers.Count < 2)" OnClick="GoToNextStep"
+                               Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Next step</MudButton>
                 }
                 @if (_stepIndex == 1)
                 {
-                    <MudButton @onclick=BeginImport Disabled="@(_erorrs.Any() || !_mappedPreview.Any())" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Begin import</MudButton>
+                    <MudButton @onclick=BeginImport Disabled="@(_erorrs.Any() || !_mappedPreview.Any())"
+                               Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Begin import</MudButton>
                 }
-                @if (_stepIndex == 2 && (_importResult is null || _importResult is not null && !_importResult.Conflicts.Any()))
+                @if (_stepIndex == 2 && (_importResult is null || _importResult is not null &&
+                                                !_importResult.Conflicts.Any()))
                 {
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_step3Complete)" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">@($"Go back to {AccountName}")</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_step3Complete)"
+                               href="@($"AccountDetails/{AccountId}")" Class="ml-auto">@($"Go back to {AccountName}")</MudButton>
                 }
             </ActionContent>
         </MudStepper>
     </MudPaper>
 
 </MudContainer>
-

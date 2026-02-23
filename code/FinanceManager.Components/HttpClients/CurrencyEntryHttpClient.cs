@@ -1,3 +1,4 @@
+using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using System.Net.Http.Json;
@@ -12,6 +13,7 @@ public class CurrencyEntryHttpClient(HttpClient httpClient)
         {
             var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/CurrencyEntry?accountId={accountId}&entryId={entryId}");
             if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
             return await response.Content.ReadFromJsonAsync<CurrencyAccountEntry?>();
         }
         catch (Exception)
@@ -25,6 +27,8 @@ public class CurrencyEntryHttpClient(HttpClient httpClient)
         try
         {
             var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/CurrencyEntry/Oldest/{accountId}");
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
             return await response.Content.ReadFromJsonAsync<DateTime?>();
         }
         catch (Exception)
@@ -38,6 +42,8 @@ public class CurrencyEntryHttpClient(HttpClient httpClient)
         try
         {
             var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/CurrencyEntry/Youngest/{accountId}");
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
             return await response.Content.ReadFromJsonAsync<DateTime?>();
         }
         catch (Exception)
@@ -61,7 +67,17 @@ public class CurrencyEntryHttpClient(HttpClient httpClient)
 
     public async Task<bool> UpdateEntryAsync(CurrencyAccountEntry entry)
     {
-        var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/CurrencyEntry", entry);
+        var updateCommand = new UpdateCurrencyAccountEntry(
+            entry.AccountId,
+            entry.EntryId,
+            entry.PostingDate,
+            entry.Value,
+            entry.ValueChange,
+            entry.Description,
+            entry.ContractorDetails,
+            entry.Labels?.Select(l => new UpdateFiancialLabel(l.Id, l.Name)).ToList() ?? []
+        );
+        var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/CurrencyEntry", updateCommand);
         return response.IsSuccessStatusCode;
     }
 }

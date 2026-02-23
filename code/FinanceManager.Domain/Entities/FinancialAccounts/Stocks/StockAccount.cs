@@ -116,6 +116,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
                 $"Ticker {alreadyExistingEntry.Ticker}, Value change {alreadyExistingEntry.ValueChange}");
         }
 
+        // Find the correct position in the list (youngest entry older than the new one)
         var previousEntry = Entries.GetNextYounger(entry.PostingDate).FirstOrDefault();
         var index = previousEntry is null ? -1 : Entries.IndexOf(previousEntry);
 
@@ -130,8 +131,10 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
         }
 
         if (recalculateValues)
+        {
+            // Use the existing RecalculateEntryValues which already filters by ticker
             RecalculateEntryValues(index);
-
+        }
     }
     public override void UpdateEntry(StockAccountEntry entry, bool recalculateValues = true)
     {

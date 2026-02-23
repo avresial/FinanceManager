@@ -37,7 +37,7 @@ public class BondAccountEntry(int accountId, int entryId, DateTime postingDate, 
                 result[postingDate] = current;
                 for (var i = postingDate.AddDays(1); i <= date; i = i.AddDays(1))
                 {
-                    var calculation = bondDetails.CalculationMethods.FirstOrDefault(cm => cm.IsActiveAt(date));
+                    var calculation = bondDetails.CalculationMethods.FirstOrDefault(cm => cm.IsActiveAt(i));
                     if (calculation is null) continue;
                     decimal change = Math.Round(capital * calculation.Rate / 365, 5);
                     current += change;

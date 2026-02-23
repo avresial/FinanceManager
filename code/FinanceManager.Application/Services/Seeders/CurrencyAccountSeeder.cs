@@ -15,14 +15,14 @@ internal static class CurrencyAccountSeeder
         var days = (int)(end - start).TotalDays;
         if (accountLabel == AccountLabel.Loan)
         {
-            newAccount.AddEntry(new AddCurrencyEntryDto(start, Random.Shared.Next(days * -100, days * -100), "", labels), false);
+            newAccount.AddEntry(new AddCurrencyEntryDto(start, Random.Shared.Next(days * -100, days * -100), "", null, labels), false);
             for (DateTime date = start.AddDays(1); date <= end; date = date.AddDays(1))
-                newAccount.AddEntry(new AddCurrencyEntryDto(date, Random.Shared.Next(10, 100), "", labels), false);
+                newAccount.AddEntry(new AddCurrencyEntryDto(date, Random.Shared.Next(10, 100), "", null, labels), false);
         }
         else
         {
             for (var date = start; date <= end; date = date.AddDays(1))
-                newAccount.AddEntry(new AddCurrencyEntryDto(date, Random.Shared.Next(-90, 100), "", labels), false);
+                newAccount.AddEntry(new AddCurrencyEntryDto(date, Random.Shared.Next(-90, 100), "", null, labels), false);
         }
         newAccount.RecalculateEntryValues(newAccount.Entries.Count - 1);
         await accountRepository.AddAccount(newAccount);

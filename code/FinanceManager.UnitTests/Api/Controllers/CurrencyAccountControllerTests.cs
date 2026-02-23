@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Users;
@@ -124,7 +125,7 @@ public class CurrencyAccountControllerTests
         var userId = 1;
         AddAccount addAccount = new("New Account");
         var newAccountId = 1;
-        _mockAccountRepository.Setup(repo => repo.Add(userId, addAccount.accountName)).ReturnsAsync(newAccountId);
+        _mockAccountRepository.Setup(repo => repo.Add(userId, addAccount.AccountName)).ReturnsAsync(newAccountId);
         _userPlanVerifier.Setup(x => x.CanAddMoreAccounts(userId)).ReturnsAsync(true);
 
         // Act

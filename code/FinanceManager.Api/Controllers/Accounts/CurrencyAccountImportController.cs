@@ -23,7 +23,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
     {
         if (importDto is null) return BadRequest("No import data provided.");
         var userId = ApiAuthenticationHelper.GetUserId(User);
-        var domainEntries = importDto.Entries.Select(e => new CurrencyEntryImport(e.PostingDate, e.ValueChange, e.ContractorDetails));
+        var domainEntries = importDto.Entries.Select(e => new CurrencyEntryImport(e.PostingDate, e.ValueChange, e.ContractorDetails, e.Description));
         var domainResult = await importService.ImportEntries(userId, importDto.AccountId, domainEntries);
         return Ok(domainResult);
     }

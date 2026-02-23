@@ -1,6 +1,7 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Dtos;
@@ -69,7 +70,7 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
         if (!await userPlanVerifier.CanAddMoreAccounts(userId))
             return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
-        return Ok(await bondAccountRepository.Add(userId, addAccount.accountName));
+        return Ok(await bondAccountRepository.Add(userId, addAccount.AccountName));
     }
 
     [HttpPut]

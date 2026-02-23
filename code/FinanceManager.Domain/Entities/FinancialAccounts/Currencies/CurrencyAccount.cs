@@ -56,6 +56,7 @@ public class CurrencyAccount : FinancialAccountBase<CurrencyAccountEntry>
         var newEntry = new CurrencyAccountEntry(AccountId, GetNextFreeId(), entry.PostingDate, entry.ValueChange, entry.ValueChange)
         {
             Description = entry.Description,
+            ContractorDetails = entry.ContractorDetails,
             Labels = entry.Labels
         };
 

@@ -52,12 +52,13 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
-    private async Task SeedEntry(int entryId, DateTime postingDate, decimal value, decimal valueChange, string description = "Test entry")
+    private async Task SeedEntry(int entryId, DateTime postingDate, decimal value, decimal valueChange, string description = "Test entry", string? contractorDetails = null)
     {
         if (_testDatabase is null) return;
         _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(_testAccountId, entryId, postingDate, value, valueChange)
         {
             Description = description,
+            ContractorDetails = contractorDetails,
             Labels = []
         });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -216,6 +217,43 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
         Assert.NotNull(dbEntry);
         Assert.Equal("Updated description", dbEntry.Description);
         Assert.Equal(300m, dbEntry.ValueChange);
+    }
+
+    [Fact]
+    public async Task UpdateEntry_WithContractorDetails_PreservesContractorDetails()
+    {
+        // arrange
+        await SeedAccount();
+        var entryId = 8;
+        var originalDate = DateTime.UtcNow.Date.AddDays(-12);
+        var originalContractor = "Original Contractor";
+        await SeedEntry(entryId, originalDate, 500m, 250m, "Original description", originalContractor);
+        Authorize("user", _testUserId, UserRole.User);
+        var client = new CurrencyEntryHttpClient(Client);
+
+        // Retrieve the entry first to update it
+        var entry = await client.GetEntry(_testAccountId, entryId);
+        Assert.NotNull(entry);
+        Assert.Equal(originalContractor, entry.ContractorDetails);
+
+        // Update the entry including ContractorDetails
+        entry.Description = "Updated description";
+        entry.ContractorDetails = "Updated Contractor";
+        entry.ValueChange = 350m;
+
+        // act
+        var result = await client.UpdateEntryAsync(entry);
+
+        // assert
+        Assert.True(result);
+
+        // verify entry was updated in database including ContractorDetails
+        var dbEntry = await _testDatabase!.Context.CurrencyEntries
+            .FirstOrDefaultAsync(e => e.AccountId == _testAccountId && e.EntryId == entryId, TestContext.Current.CancellationToken);
+        Assert.NotNull(dbEntry);
+        Assert.Equal("Updated description", dbEntry.Description);
+        Assert.Equal("Updated Contractor", dbEntry.ContractorDetails);
+        Assert.Equal(350m, dbEntry.ValueChange);
     }
 
     public override void Dispose()

@@ -1,0 +1,51 @@
+# CodeRabbit configuration for Finance Manager
+# Visit https://docs.coderabbit.ai/guides/configure-coderabbit for more details
+
+language: en-US
+early_access: false
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+      - develop
+  path_filters:
+    - "!**/*.md"
+    - "!**/TestResults/**"
+    - "!**/bin/**"
+    - "!**/obj/**"
+    - "!**/*.min.js"
+    - "!**/*.min.css"
+  path_instructions:
+    - path: "code/**/*.cs"
+      instructions: |
+        - Focus on C# best practices and .NET conventions
+        - Check for proper error handling and async/await patterns
+        - Verify dependency injection usage
+        - Look for potential null reference issues
+        - Ensure SOLID principles are followed
+    - path: "code/**/*Tests/*.cs"
+      instructions: |
+        - Verify test coverage and meaningful test names
+        - Check for proper arrange-act-assert pattern
+        - Ensure tests are isolated and independent
+    - path: "code/**/Controllers/*.cs"
+      instructions: |
+        - Verify proper HTTP status codes
+        - Check authentication and authorization
+        - Ensure proper API documentation attributes
+        - Validate input validation
+    - path: ".github/workflows/*.yml"
+      instructions: |
+        - Check for security best practices
+        - Verify proper secret handling
+        - Ensure efficient workflow execution
+chat:
+  auto_reply: true

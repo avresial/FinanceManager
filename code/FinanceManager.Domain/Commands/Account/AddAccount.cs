@@ -1,3 +1,3 @@
-﻿namespace FinanceManager.Application.Commands.Account;
+﻿namespace FinanceManager.Domain.Commands.Account;
 
-public record AddAccount(string accountName);
+public record AddAccount(string AccountName);

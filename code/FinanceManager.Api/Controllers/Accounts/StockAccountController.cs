@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
@@ -74,7 +75,7 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Add(AddAccount addAccount) =>
-        Ok(await stockAccountRepository.Add(ApiAuthenticationHelper.GetUserId(User), addAccount.accountName));
+        Ok(await stockAccountRepository.Add(ApiAuthenticationHelper.GetUserId(User), addAccount.AccountName));
 
     [HttpPut("Update")]
     [ProducesResponseType(StatusCodes.Status200OK)]

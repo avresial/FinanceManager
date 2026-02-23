@@ -74,8 +74,8 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
 
         List<CurrencyEntryImportRecordDto> entries =
         [
-            new(_utcNow.Date.AddDays(-2).AddHours(10), 100m),
-            new(_utcNow.Date.AddDays(-1).AddHours(9), -50m)
+            new(_utcNow.Date.AddDays(-2).AddHours(10), 100m, ContractorDetails: "Test Contractor", Description: "Test Description"),
+            new(_utcNow.Date.AddDays(-1).AddHours(9), -50m, ContractorDetails: "Test Contractor 2", Description: "Test Description 2")
         ];
 
         // act
@@ -88,6 +88,43 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         Assert.Equal(0, result.Failed);
         Assert.Empty(result.Errors);
         Assert.Empty(result.Conflicts);
+    }
+
+    [Fact]
+    public async Task ImportCurrencyEntries_WithAllOptionalFields_ImportsCorrectly()
+    {
+        // arrange
+        await SeedAccount();
+        Authorize("user", _testUserId, UserRole.User);
+        var testDescription = "Test expense description";
+        var testContractor = "Test Contractor";
+        var testDate = _utcNow.Date.AddDays(-5).AddHours(14);
+        var testValue = 150m;
+
+        List<CurrencyEntryImportRecordDto> entries =
+        [
+            new(testDate, testValue, ContractorDetails: testContractor, Description: testDescription)
+        ];
+
+        // act
+        var result = await new CurrencyAccountImportHttpClient(Client).ImportCurrencyEntriesAsync(new(_testAccountId, entries));
+
+        // assert
+        Assert.NotNull(result);
+        Assert.Equal(1, result!.Imported);
+        Assert.Equal(0, result.Failed);
+
+        // Verify all fields were stored in the database
+        Assert.NotNull(_testDatabase);
+        var test = await new CurrencyAccountHttpClient(Client).GetAccountWithEntriesAsync(_testAccountId, _utcNow.Date.AddDays(-5), _utcNow); // ensure entries are loaded
+        Assert.NotNull(test);
+        Assert.NotNull(test.Entries);
+
+        var importedEntry = test.Entries.First(e => e.AccountId == _testAccountId && e.PostingDate == testDate);
+        Assert.Equal(testDate, importedEntry.PostingDate);
+        Assert.Equal(testValue, importedEntry.ValueChange);
+        Assert.Equal(testDescription, importedEntry.Description);
+        Assert.Equal(testContractor, importedEntry.ContractorDetails);
     }
 
     [Fact]
@@ -211,8 +248,9 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         var existingDate = _utcNow.Date.AddDays(-4).AddHours(8);
         var existingValue = 10m;
         var importValue = 5m;
+        var importDescription = "Import description";
         await SeedExistingEntryExactMatch(existingDate, existingValue);
-        var importResult = await client.ImportCurrencyEntriesAsync(new(_testAccountId, [new(existingDate, importValue)]));
+        var importResult = await client.ImportCurrencyEntriesAsync(new(_testAccountId, [new(existingDate, importValue, Description: importDescription)]));
         Assert.NotNull(importResult);
         var existingEntry = importResult.Conflicts[1].ExistingEntry;
         Assert.NotNull(existingEntry);
