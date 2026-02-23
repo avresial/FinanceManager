@@ -28,6 +28,7 @@ internal sealed class FinancialInsightsAiGenerator(
     private const int _maxEntriesPerAccount = 200;
     private const int _maxAccounts = 50;
     private const string _systemPrompt = "You are a finance assistant that outputs strict JSON.";
+    private const string _modelId = "gpt-5-mini";
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -48,7 +49,11 @@ internal sealed class FinancialInsightsAiGenerator(
                 new(ChatRole.System, _systemPrompt),
                 new(ChatRole.User, prompt)
             };
-            var chatOptions = new ChatOptions { ResponseFormat = ChatResponseFormat.Json };
+            var chatOptions = new ChatOptions
+            {
+                ResponseFormat = ChatResponseFormat.Json,
+                ModelId = _modelId
+            };
             var response = await chatClient.GetResponseAsync(messages, chatOptions, cancellationToken);
             var content = response.Text;
             if (string.IsNullOrWhiteSpace(content))

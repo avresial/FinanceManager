@@ -21,10 +21,6 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using OllamaSharp;
-using OpenAI;
-using System.ClientModel;
 
 namespace FinanceManager.Infrastructure;
 
@@ -34,19 +30,7 @@ public static class ServiceCollectionExtension
     {
         services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
 
-        services.AddScoped<IChatClient>(static sp =>
-        {
-            var providerOptions = sp.GetRequiredService<IOptions<AiProviderOptions>>().Value;
-            return (providerOptions.Provider ?? "OpenRouter").Trim() switch
-            {
-                { } p when p.Equals("Ollama", StringComparison.OrdinalIgnoreCase)
-                    => CreateOllamaChatClient(sp),
-                { } p when p.Equals("GitHubModels", StringComparison.OrdinalIgnoreCase)
-                    || p.Equals("GitHub", StringComparison.OrdinalIgnoreCase)
-                    => CreateGitHubModelsChatClient(sp),
-                _ => CreateOpenRouterChatClient(sp)
-            };
-        });
+        services.AddAI();
 
         services
                 .AddScoped<IStockPriceRepository, StockPriceRepository>()
@@ -76,32 +60,6 @@ public static class ServiceCollectionExtension
                 ;
 
         return services;
-    }
-
-    private static IChatClient CreateOpenRouterChatClient(IServiceProvider sp)
-    {
-        var options = sp.GetRequiredService<IOptions<OpenRouterOptions>>().Value;
-        var timeoutSeconds = options.RequestTimeoutSeconds > 0 ? options.RequestTimeoutSeconds : 180;
-        var clientOptions = new OpenAIClientOptions
-        {
-            Endpoint = new Uri(options.BaseUrl),
-            NetworkTimeout = TimeSpan.FromSeconds(timeoutSeconds)
-        };
-        var openAIClient = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
-        return openAIClient.GetChatClient(options.Model).AsIChatClient();
-    }
-
-    private static IChatClient CreateGitHubModelsChatClient(IServiceProvider sp)
-    {
-        return new CopilotChatClient(
-            sp.GetRequiredService<IOptions<GitHubModelsOptions>>(),
-            sp.GetRequiredService<ILogger<CopilotChatClient>>());
-    }
-
-    private static IChatClient CreateOllamaChatClient(IServiceProvider sp)
-    {
-        var options = sp.GetRequiredService<IOptions<OllamaOptions>>().Value;
-        return new OllamaApiClient(new Uri(options.BaseUrl), options.Model);
     }
 
     public static IServiceCollection AddDatabase(this IServiceCollection services, IConfigurationManager configuration)

@@ -8,8 +8,10 @@ namespace FinanceManager.Infrastructure.Services.Ai;
 
 internal sealed class CopilotChatClient(
     IOptions<GitHubModelsOptions> options,
-    ILogger<CopilotChatClient> logger) : IChatClient
+    ILogger<CopilotChatClient> logger) : INamedChatClient
 {
+    public string ProviderName => "GitHub";
+
     public async Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages,
         ChatOptions? chatOptions = null,
@@ -19,7 +21,13 @@ internal sealed class CopilotChatClient(
         var systemPrompt = messageList.FirstOrDefault(m => m.Role == ChatRole.System)?.Text ?? string.Empty;
         var userPrompt = messageList.LastOrDefault(m => m.Role == ChatRole.User)?.Text ?? string.Empty;
 
-        var model = options.Value.Model;
+        var model = chatOptions?.ModelId?.Trim();
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            logger.LogWarning("GitHub request skipped because ChatOptions.ModelId is empty.");
+            return new ChatResponse(new ChatMessage(ChatRole.Assistant, string.Empty));
+        }
+
         var timeoutSeconds = options.Value.RequestTimeoutSeconds > 0
             ? options.Value.RequestTimeoutSeconds
             : 60;
