@@ -32,6 +32,7 @@ builder.Services.Configure<OpenRouterOptions>(builder.Configuration.GetSection("
 builder.Services.Configure<GitHubModelsOptions>(builder.Configuration.GetSection("GitHubModels"));
 builder.Services.Configure<OllamaOptions>(builder.Configuration.GetSection("Ollama"));
 builder.Services.Configure<AiProviderOptions>(builder.Configuration.GetSection("AiProvider"));
+builder.Services.Configure<List<AiProviderFallbackStrategyOption>>(builder.Configuration.GetSection("AIProviderFallbackStrategies"));
 
 
 builder.Services.AddCors(options =>
