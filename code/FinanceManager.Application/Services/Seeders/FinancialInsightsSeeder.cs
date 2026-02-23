@@ -8,7 +8,7 @@ namespace FinanceManager.Application.Services.Seeders;
 public class FinancialInsightsSeeder(IFinancialInsightsRepository financialInsightsRepository, IUserRepository userRepository,
     IConfiguration configuration, ILogger<FinancialInsightsSeeder> logger) : ISeeder
 {
-    private static readonly string[] TagPool = ["summary", "portfolio", "cashflow", "allocation", "risk", "trend"];
+    private static readonly string[] _tagPool = ["summary", "portfolio", "cashflow", "allocation", "risk", "trend"];
 
     public async Task Seed(CancellationToken cancellationToken = default)
     {
@@ -50,8 +50,8 @@ public class FinancialInsightsSeeder(IFinancialInsightsRepository financialInsig
 
     private static string GenerateTags()
     {
-        var first = TagPool[Random.Shared.Next(TagPool.Length)];
-        var second = TagPool[Random.Shared.Next(TagPool.Length)];
+        var first = _tagPool[Random.Shared.Next(_tagPool.Length)];
+        var second = _tagPool[Random.Shared.Next(_tagPool.Length)];
         return first == second ? first : $"{first},{second}";
     }
 }

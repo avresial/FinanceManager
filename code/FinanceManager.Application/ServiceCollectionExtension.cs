@@ -1,8 +1,10 @@
 ﻿using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Ai;
 using FinanceManager.Application.Services.Bonds;
 using FinanceManager.Application.Services.Currencies;
 using FinanceManager.Application.Services.Exports;
+using FinanceManager.Application.Services.FinancialInsights;
 using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Entities.Exports;
@@ -59,6 +61,9 @@ public static class ServiceCollectionExtension
                 .AddScoped<IStockPriceProvider, StockPriceProvider>()
                 .AddScoped<IBondService, BondService>()
                 .AddScoped<IStockMarketService, StockMarketService>()
+
+                .AddScoped<IFinancialInsightsAiGenerator, FinancialInsightsAiGenerator>()
+                .AddScoped<ILabelSetterAiService, LabelSetterAiService>()
             ;
 
         return services;

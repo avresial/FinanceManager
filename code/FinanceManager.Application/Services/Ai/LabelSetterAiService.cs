@@ -1,16 +1,14 @@
-using FinanceManager.Application.Services.Ai;
 using FinanceManager.Application.Services.Exports;
 using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace FinanceManager.Infrastructure.Services.Ai;
+namespace FinanceManager.Application.Services.Ai;
 
 internal sealed class LabelSetterAiService(
     IAccountEntryRepository<CurrencyAccountEntry> currencyEntryRepository,

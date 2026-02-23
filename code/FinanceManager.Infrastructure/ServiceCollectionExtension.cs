@@ -68,8 +68,6 @@ public static class ServiceCollectionExtension
                 .AddScoped<IBondDetailsRepository, BondDetailsRepository>()
                 .AddScoped<ICsvHeaderMappingRepository, CsvHeaderMappingRepository>()
                 .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()
-                .AddScoped<IFinancialInsightsAiGenerator, FinancialInsightsAiGenerator>()
-                .AddScoped<ILabelSetterAiService, LabelSetterAiService>()
 
                 .AddSingleton<IInsightsPromptProvider, InsightsPromptProvider>()
                 .AddSingleton<ILabelSetterPromptProvider, LabelSetterPromptProvider>()

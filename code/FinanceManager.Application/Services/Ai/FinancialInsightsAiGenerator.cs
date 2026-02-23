@@ -12,7 +12,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace FinanceManager.Infrastructure.Services.Ai;
+namespace FinanceManager.Application.Services.Ai;
 
 internal sealed class FinancialInsightsAiGenerator(
     ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,

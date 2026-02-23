@@ -1,6 +1,6 @@
-namespace FinanceManager.Infrastructure.Services.Ai;
+namespace FinanceManager.Application.Services.Ai;
 
-internal interface IInsightsPromptProvider
+public interface IInsightsPromptProvider
 {
     Task<string> BuildPromptAsync(string entriesContextCsv, CancellationToken cancellationToken = default);
 }
