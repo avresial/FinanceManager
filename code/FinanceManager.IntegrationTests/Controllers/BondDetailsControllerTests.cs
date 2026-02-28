@@ -1,6 +1,7 @@
 using FinanceManager.Application.Commands.Bonds;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -32,14 +33,24 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
         // Arrange
         Authorize("TestUser", 1, UserRole.Admin);
         var client = new BondDetailsHttpClient(Client);
-        BondDetails bond = new("Test Bond", "Test Issuer", new DateOnly(2024, 1, 1), new DateOnly(2028, 1, 1),
+        BondDetails bond = new()
+        {
+            Name = "Test Bond",
+            Issuer = "Test Issuer",
+            StartEmissionDate = new DateOnly(2024, 1, 1),
+            EndEmissionDate = new DateOnly(2028, 1, 1),
+            Type = BondType.InflationBond,
+            Currency = DefaultCurrency.PLN,
+            CalculationMethods =
             [
-                new() {
+                new()
+                {
                     DateOperator = DateOperator.UntilDate,
                     DateValue = "2028-01-01",
                     Rate = 5.0m
                 }
-            ]);
+            ]
+        };
 
         // Act
         var result = await client.Add(bond, TestContext.Current.CancellationToken);
@@ -63,7 +74,8 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
             Issuer = "Get Issuer",
             StartEmissionDate = new DateOnly(2024, 1, 1),
             EndEmissionDate = new DateOnly(2028, 1, 1),
-            Type = BondType.InflationBond
+            Type = BondType.InflationBond,
+            Currency = DefaultCurrency.PLN
         };
         var added = await client.Add(bond, TestContext.Current.CancellationToken);
 
@@ -89,7 +101,8 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
             Issuer = "Issuer A",
             StartEmissionDate = new DateOnly(2024, 1, 1),
             EndEmissionDate = new DateOnly(2028, 1, 1),
-            Type = BondType.InflationBond
+            Type = BondType.InflationBond,
+            Currency = DefaultCurrency.PLN
         }, TestContext.Current.CancellationToken);
         await client.Add(new BondDetails
         {
@@ -97,7 +110,8 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
             Issuer = "Issuer B",
             StartEmissionDate = new DateOnly(2024, 6, 1),
             EndEmissionDate = new DateOnly(2028, 6, 1),
-            Type = BondType.InflationBond
+            Type = BondType.InflationBond,
+            Currency = DefaultCurrency.PLN
         }, TestContext.Current.CancellationToken);
 
         // Act
@@ -122,7 +136,8 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
             Issuer = "Ministry of Finance",
             StartEmissionDate = new DateOnly(2024, 1, 1),
             EndEmissionDate = new DateOnly(2028, 1, 1),
-            Type = BondType.InflationBond
+            Type = BondType.InflationBond,
+            Currency = DefaultCurrency.PLN
         }, TestContext.Current.CancellationToken);
         await client.Add(new BondDetails
         {
@@ -130,7 +145,8 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
             Issuer = "Ministry of Finance",
             StartEmissionDate = new DateOnly(2024, 3, 1),
             EndEmissionDate = new DateOnly(2028, 3, 1),
-            Type = BondType.InflationBond
+            Type = BondType.InflationBond,
+            Currency = DefaultCurrency.PLN
         }, TestContext.Current.CancellationToken);
         await client.Add(new BondDetails
         {
@@ -138,7 +154,8 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
             Issuer = "Private Company",
             StartEmissionDate = new DateOnly(2024, 1, 1),
             EndEmissionDate = new DateOnly(2027, 1, 1),
-            Type = BondType.InflationBond
+            Type = BondType.InflationBond,
+            Currency = DefaultCurrency.PLN
         }, TestContext.Current.CancellationToken);
 
         // Act
@@ -162,7 +179,8 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
             Issuer = "Original Issuer",
             StartEmissionDate = new DateOnly(2024, 1, 1),
             EndEmissionDate = new DateOnly(2028, 1, 1),
-            Type = BondType.InflationBond
+            Type = BondType.InflationBond,
+            Currency = DefaultCurrency.PLN
         };
         var added = await client.Add(bond, TestContext.Current.CancellationToken);
 
@@ -190,7 +208,8 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
             Issuer = "Delete Issuer",
             StartEmissionDate = new DateOnly(2024, 1, 1),
             EndEmissionDate = new DateOnly(2028, 1, 1),
-            Type = BondType.InflationBond
+            Type = BondType.InflationBond,
+            Currency = DefaultCurrency.PLN
         };
         var added = await client.Add(bond, TestContext.Current.CancellationToken);
 
@@ -209,14 +228,24 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
         // Arrange
         Authorize("TestUser", 1, UserRole.Admin);
         var client = new BondDetailsHttpClient(Client);
-        var bond = new BondDetails("Test Bond", "Test Issuer", new DateOnly(2024, 1, 1), new DateOnly(2028, 1, 1),
+        var bond = new BondDetails
+        {
+            Name = "Test Bond",
+            Issuer = "Test Issuer",
+            StartEmissionDate = new DateOnly(2024, 1, 1),
+            EndEmissionDate = new DateOnly(2028, 1, 1),
+            Type = BondType.InflationBond,
+            Currency = DefaultCurrency.PLN,
+            CalculationMethods =
             [
-                new() {
+                new()
+                {
                     DateOperator = DateOperator.UntilDate,
                     DateValue = "2028-01-01",
                     Rate = 5.0m
                 }
-            ]);
+            ]
+        };
         var added = await client.Add(bond, TestContext.Current.CancellationToken);
 
         var newMethod = new BondCalculationMethod
@@ -243,19 +272,30 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
         // Arrange
         Authorize("TestUser", 1, UserRole.Admin);
         var client = new BondDetailsHttpClient(Client);
-        var bond = new BondDetails("Test Bond", "Test Issuer", new DateOnly(2024, 1, 1), new DateOnly(2028, 1, 1),
+        var bond = new BondDetails
+        {
+            Name = "Test Bond",
+            Issuer = "Test Issuer",
+            StartEmissionDate = new DateOnly(2024, 1, 1),
+            EndEmissionDate = new DateOnly(2028, 1, 1),
+            Type = BondType.InflationBond,
+            Currency = DefaultCurrency.PLN,
+            CalculationMethods =
             [
-                new() {
+                new()
+                {
                     DateOperator = DateOperator.UntilDate,
                     DateValue = "2028-01-01",
                     Rate = 5.0m
                 },
-                new() {
+                new()
+                {
                     DateOperator = DateOperator.UntilDate,
                     DateValue = "2029-01-01",
                     Rate = 6.0m
                 }
-            ]);
+            ]
+        };
         var added = await client.Add(bond, TestContext.Current.CancellationToken);
         var methodToRemove = added!.CalculationMethods.First();
 

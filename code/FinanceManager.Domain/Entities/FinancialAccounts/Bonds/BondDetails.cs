@@ -1,5 +1,6 @@
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Enums;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.Entities.Bonds;
@@ -11,8 +12,8 @@ public class BondDetails
     public string Issuer { get; set; } = string.Empty;
     public DateOnly StartEmissionDate { get; set; }
     public DateOnly EndEmissionDate { get; set; }
-    public BondType Type { get; set; } = BondType.InflationBond;
-    public Currency Currency { get; set; } = DefaultCurrency.PLN;
+    public required BondType Type { get; set; }
+    public required Currency Currency { get; set; }
     public List<BondCalculationMethod> CalculationMethods { get; set; } = [];
     public static Capitalization Capitalization => Capitalization.Annual;
 
@@ -20,6 +21,7 @@ public class BondDetails
     {
     }
 
+    [SetsRequiredMembers]
     [JsonConstructor]
     public BondDetails(string name, string issuer, DateOnly startEmissionDate, DateOnly endEmissionDate,
         List<BondCalculationMethod> calculationMethods, Currency? currency = null, BondType type = BondType.InflationBond)

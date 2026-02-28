@@ -7,6 +7,9 @@
 
 	<ItemGroup>
 		<PackageReference Include="CsvHelper" />
+		<PackageReference Include="GitHub.Copilot.SDK" Condition="'$(RuntimeIdentifier)' != 'browser-wasm'" />
+		<PackageReference Include="OllamaSharp" Condition="'$(RuntimeIdentifier)' != 'browser-wasm'" />
+		<PackageReference Include="Microsoft.Extensions.Http" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
 		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
@@ -31,6 +34,11 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\FinanceManager.Application\FinanceManager.Application.csproj" />
 	  <ProjectReference Include="..\FinanceManager.Domain\FinanceManager.Domain.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="Services\Ai\Prompts\financial-insights-prompt.txt" CopyToOutputDirectory="PreserveNewest" TargetPath="Prompts\financial-insights-prompt.txt" />
+		<None Include="Services\Ai\Prompts\label-setter-prompt.txt" CopyToOutputDirectory="PreserveNewest" TargetPath="Prompts\label-setter-prompt.txt" />
 	</ItemGroup>
 
 </Project>

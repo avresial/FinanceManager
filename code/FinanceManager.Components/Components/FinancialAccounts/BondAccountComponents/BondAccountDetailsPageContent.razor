@@ -5,20 +5,18 @@
 
 @if (Account is not null && Account.Entries is not null && (IsLoading || Account.Entries.Any()))
 {
-    <AccountDetailsPageContent AccountName="@Account.Name"
-                               ChartData="ChartData"
-                               IsLoading="@IsLoading"
-                               IsLoadingMore="@_isLoadingMore"
-                               LoadedAllData="@_loadedAllData"
-                               OnLoadMore="LoadMore">
+    <AccountDetailsPageContent AccountName="@Account.Name"         ChartData="ChartData"              IsLoading="@IsLoading"
+                               IsLoadingMore="@_isLoadingMore"                  LoadedAllData="@_loadedAllData"                      OnLoadMore="LoadMore">
         <ActionButtons>
-            <MudButton Variant="Variant.Text" Class="col-12" href="@($"Import/{Account.AccountId}")" Disabled>Import </MudButton>
+            <MudButton Variant="Variant.Text" Class="col-12" href="@($"Import/{Account.AccountId}")" Disabled>Import
+            </MudButton>
             <MudButton Variant="Variant.Text" Class="col-12" Disabled>Export</MudButton>
-            <MudButton Variant="Variant.Text" Class="col-12" href="@($"ManageAccount/{Account.AccountId}")">Manage </MudButton>
+            <MudButton Variant="Variant.Text" Class="col-12" href="@($"ManageAccount/{Account.AccountId}")">Manage
+            </MudButton>
         </ActionButtons>
         <AddEntryOverlay>
-            <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add"
-                    OnClick=ShowOverlay Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:2;" />
+            <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add"       OnClick=ShowOverlay
+                    Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:2;" />
 
             <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
                 <MudPaper Class="p-5">
@@ -26,11 +24,24 @@
                 </MudPaper>
             </MudOverlay>
         </AddEntryOverlay>
+        <EntryFilter>
+            <ValueChangeRangeFilterBar From="_filterFrom" To="_filterTo" OnFilterChanged="OnFilterChanged" />
+        </EntryFilter>
         <Entries>
-            @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
+            @{
+                var filteredEntries = GetFilteredEntries();
+            }
+            @if (HasActiveFilter && !filteredEntries.Any())
             {
-                var bond = _bondDetails.FirstOrDefault(x => x.Id == entry.BondDetailsId);
-                <BondAccountDetailsRow BondAccountEntry="@entry" BondAccount=Account BondDetails="bond" />
+                <MudAlert Severity="Severity.Info" Class="my-3">No entries match the current filter.</MudAlert>
+            }
+            else
+            {
+                @foreach (var entry in filteredEntries)
+                {
+                    var bond = _bondDetails.FirstOrDefault(x => x.Id == entry.BondDetailsId);
+                    <BondAccountDetailsRow BondAccountEntry="@entry" BondAccount=Account BondDetails="bond" />
+                }
             }
         </Entries>
         <SidePanel>
@@ -40,12 +51,10 @@
                     {
                         <AccountBalanceChangePanel BalanceChange="@_balanceChange.Value" Currency="@_currency" />
                     }
-                 
+
                     @if (_top5 is not null && _top5.Any())
                     {
-                        <AccountTopBottomList Title="Top 5"
-                                              Items="_top5 ?? []"
-                                              ValueColor="Color.Success"
+                        <AccountTopBottomList Title="Top 5"                         Items="_top5 ?? []"                                             ValueColor="Color.Success"
                                               ItemTitle="@(item => _bondDetails.FirstOrDefault(x => x.Id == item.Item1.BondDetailsId)?.Name ?? "Bond")"
                                               ItemValue="@(item => $"{item.Item2} {_currency}")"
                                               ItemDate="@(item => item.Item1.PostingDate.ToString("yyyy-MM-dd"))" />
@@ -53,9 +62,7 @@
 
                     @if (_bottom5 is not null && _bottom5.Any())
                     {
-                        <AccountTopBottomList Title="Bottom 5"
-                                              Items="_bottom5 ?? []"
-                                              ValueColor="Color.Error"
+                        <AccountTopBottomList Title="Bottom 5"                          Items="_bottom5 ?? []"                  ValueColor="Color.Error"
                                               ItemTitle="@(item => _bondDetails.FirstOrDefault(x => x.Id == item.Item1.BondDetailsId)?.Name ?? "Bond")"
                                               ItemValue="@(item => $"{item.Item2} {_currency}")"
                                               ItemDate="@(item => item.Item1.PostingDate.ToString("yyyy-MM-dd"))" />
@@ -69,14 +76,15 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
 {
     <AddBondEntry BondAccount=Account ActionCompleted="HideOverlay">
         <CustomButton>
-            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.AccountId}")"> Import</MudButton>
-        </CustomButton>
-    </AddBondEntry>
-    <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.AccountId}")">
-        Import
-    </MudButton>
-}
+            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.AccountId}")">
+                Import</MudButton>
+            </CustomButton>
+        </AddBondEntry>
+        <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.AccountId}")">
+            Import
+        </MudButton>
+    }
 else if (!string.IsNullOrEmpty(ErrorMessage))
-{
-    <MudAlert Severity="Severity.Error">@ErrorMessage</MudAlert>
-}
+    {
+        <MudAlert Severity="Severity.Error">@ErrorMessage</MudAlert>
+    }

@@ -16,6 +16,8 @@ public static class TimeBucketService
 
     public static IEnumerable<(DateTime Date, List<T> Objects)> Get<T>(IEnumerable<(DateTime Date, T Object)> dataToGroup)
     {
+        if (!dataToGroup.Any()) return [];
+
         var startDate = dataToGroup.Min(x => x.Date);
         var endDate = dataToGroup.Max(x => x.Date);
         var totalDays = (endDate - startDate).TotalDays;

@@ -30,6 +30,10 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
 
         private Dictionary<StockAccountEntry, StockPrice> _prices = [];
         private List<string> _stocks = [];
+        private List<string> _availableStocks = [];
+
+        private decimal? _filterFrom;
+        private decimal? _filterTo;
 
 
         public bool IsLoading = false;
@@ -148,7 +152,8 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
                 await loadTask;
                 IsLoading = false;
             }
-
+            var availableStocks = await StockPriceHttpClient.GetStocks();
+            _availableStocks = availableStocks.Select(x => x.Ticker).ToList();
             AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
         }
         protected override async Task OnParametersSetAsync()
@@ -225,6 +230,28 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
                 await UpdateEntries();
                 await InvokeAsync(StateHasChanged);
             });
+        }
+
+        private bool HasActiveFilter => _filterFrom.HasValue || _filterTo.HasValue;
+
+        private List<StockAccountEntry> GetFilteredEntries()
+        {
+            if (Account?.Entries is null) return [];
+
+            IEnumerable<StockAccountEntry> entries = Account.Entries;
+
+            if (_filterFrom.HasValue)
+                entries = entries.Where(x => x.ValueChange >= _filterFrom.Value);
+            if (_filterTo.HasValue)
+                entries = entries.Where(x => x.ValueChange <= _filterTo.Value);
+
+            return entries.OrderByDescending(x => x.PostingDate).ToList();
+        }
+
+        private void OnFilterChanged((decimal? From, decimal? To) filter)
+        {
+            _filterFrom = filter.From;
+            _filterTo = filter.To;
         }
     }
 }

@@ -15,6 +15,7 @@ namespace FinanceManager.Components.Components.SharedComponents
         private string[] _errors = [];
         private MudForm? _form;
         private LoginModel _loginModel = new();
+        private bool _isProcessing = false;
 
         [Inject] public required ILogger<LoginComponent> Logger { get; set; }
         [Inject] public required NavigationManager Navigation { get; set; }
@@ -63,34 +64,46 @@ namespace FinanceManager.Components.Components.SharedComponents
         {
             if (_loginModel.Login is null || _loginModel.Password is null) return;
             if (_form is null) return;
-            await _form.Validate();
 
-            var loginResult = await LoginService.Login(_loginModel.Login, _loginModel.Password);
+            if (_isProcessing) return;
+            _isProcessing = true;
 
-            if (loginResult)
+            try
             {
-                var loggedUser = await LoginService.GetLoggedUser();
-                if (loggedUser is null) return;
+                await _form.Validate();
 
-                switch (loggedUser.UserRole)
+                var loginResult = await LoginService.Login(_loginModel.Login, _loginModel.Password);
+
+                if (loginResult)
                 {
-                    case Domain.Enums.UserRole.User:
-                        Navigation.NavigateTo("");
-                        break;
-                    case Domain.Enums.UserRole.Admin:
-                        Navigation.NavigateTo("Admin/Dashboard");
-                        break;
-                    default:
-                        Navigation.NavigateTo("");
-                        break;
+                    var loggedUser = await LoginService.GetLoggedUser();
+                    if (loggedUser is null) return;
+
+                    switch (loggedUser.UserRole)
+                    {
+                        case Domain.Enums.UserRole.User:
+                            Navigation.NavigateTo("");
+                            break;
+                        case Domain.Enums.UserRole.Admin:
+                            Navigation.NavigateTo("Admin/Dashboard");
+                            break;
+                        default:
+                            Navigation.NavigateTo("");
+                            break;
+                    }
+
+                    return;
                 }
 
-                return;
+                _errors = ["Incorrect username or password."];
+                _loginModel.Password = string.Empty;
             }
-
-            _errors = ["Incorrect username or password."];
-            _loginModel.Password = string.Empty;
+            finally
+            {
+                _isProcessing = false;
+            }
         }
+
 
         private async Task LogGuest()
         {
@@ -105,6 +118,14 @@ namespace FinanceManager.Components.Components.SharedComponents
 
             await LoginService.Login(_guestLogin, "GuestPassword");
             Navigation.NavigateTo("");
+        }
+
+        private async Task OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+        {
+            if (e.Key == "Enter")
+            {
+                await Login();
+            }
         }
     }
 }

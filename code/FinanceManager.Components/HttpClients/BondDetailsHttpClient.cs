@@ -22,6 +22,12 @@ public class BondDetailsHttpClient(HttpClient httpClient)
         return result ?? [];
     }
 
+    public async Task<List<string>> GetIssuers(CancellationToken cancellationToken = default)
+    {
+        var result = await httpClient.GetFromJsonAsync<List<string>>($"{httpClient.BaseAddress}api/BondDetails/issuers", cancellationToken);
+        return result ?? [];
+    }
+
     public async Task<BondDetails?> Add(BondDetails bond, CancellationToken cancellationToken = default)
     {
         var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/BondDetails", bond, cancellationToken);

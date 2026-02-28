@@ -3,17 +3,21 @@
 @attribute [Authorize(Roles = "Admin")]
 @layout AdminLayout
 
-<h3>Existing users</h3>
-
 <MudStack Spacing="2">
-
     @foreach (var message in _errors)
     {
         <MudAlert Severity="Severity.Error">@message</MudAlert>
     }
 </MudStack>
 
-<MudTable @ref="@Table" Items="@_elements" RowsPerPage="@_recordsPerPage" Dense Breakpoint="Breakpoint.Md" LoadingProgressColor="Color.Info" Elevation="0" Class="my-3">
+<MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="mt-2">
+    <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearchChanged" Placeholder="Search by name"
+                  Immediate="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true"
+                  Class="flex-grow-1" />
+    <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="add" Href="Admin/AddUser" Color="Color.Primary" />
+</MudStack>
+<MudTable @ref="@Table" Items="@_pagedElements" RowsPerPage="@_recordsPerPage" Dense Breakpoint="Breakpoint.Md"
+          LoadingProgressColor="Color.Info" Elevation="0" Class="my-3">
     <HeaderContent>
         <MudTh>User id</MudTh>
         <MudTh>User name</MudTh>
@@ -24,12 +28,14 @@
     <RowTemplate>
         <MudTd DataLabel="User id">@context.UserId</MudTd>
         <MudTd DataLabel="User name">@context.Login</MudTd>
-        <MudTd DataLabel="User name">@context.PricingLevel</MudTd>
-        <MudTd DataLabel="Capacity"><MudProgressLinear Color="Color.Primary" Value="@context.RecordCapacity.GetStorageUsedPercentage()" /> </MudTd>
+        <MudTd DataLabel="Pricing Level">@context.PricingLevel</MudTd>
+        <MudTd DataLabel="Capacity">
+            <MudProgressLinear Color="Color.Primary" Value="@context.RecordCapacity.GetStorageUsedPercentage()" />
+        </MudTd>
         <MudTd DataLabel="Action">
             <MudMenu Label="Action" Variant="Variant.Text">
                 <MudMenuItem Label="Edit" Href=@($"Admin/EditUser/{context.UserId}") />
-                <MudMenuItem Label="Remove" OnClick="@(()=>RemoveUser(context.UserId))" />
+                <MudMenuItem Label="Remove" OnClick="@(() => RemoveUser(context.UserId))" />
             </MudMenu>
         </MudTd>
     </RowTemplate>

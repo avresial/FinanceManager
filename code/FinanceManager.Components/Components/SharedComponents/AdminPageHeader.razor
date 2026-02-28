@@ -1,0 +1,41 @@
+@using MudBlazor
+
+<MudPaper Class="pa-4 mb-4" Elevation="0">
+    @if (BreadcrumbItems is not null && BreadcrumbItems.Count > 0)
+    {
+        <MudBreadcrumbs Items="BreadcrumbItems" Class="mb-2" />
+    }
+
+    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icon" Size="Size.Large" Color="Color.Primary" />
+            <div>
+                <MudText Typo="Typo.h5">@Title</MudText>
+                @if (!string.IsNullOrEmpty(Subtitle))
+                {
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">@Subtitle</MudText>
+                }
+            </div>
+        </MudStack>
+
+        <div>
+            @if (Actions is not null)
+            {
+                <MudStack Row Spacing="1">@Actions</MudStack>
+            }
+            else if (ChildContent is not null)
+            {
+                <MudStack Row Spacing="1">@ChildContent</MudStack>
+            }
+        </div>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public string Icon { get; set; } = Icons.Material.Filled.Info;
+    [Parameter] public RenderFragment? Actions { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public IReadOnlyList<BreadcrumbItem>? BreadcrumbItems { get; set; }
+}

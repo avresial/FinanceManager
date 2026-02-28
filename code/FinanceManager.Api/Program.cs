@@ -1,5 +1,6 @@
 using FinanceManager.Api.Services;
 using FinanceManager.Application;
+using FinanceManager.Application.Options;
 using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
@@ -26,6 +27,12 @@ builder.Services
 
 
 builder.Services.Configure<JwtAuthOptions>(builder.Configuration.GetSection("JwtConfig"));
+builder.Services.Configure<StockApiOptions>(builder.Configuration.GetSection("StockApi"));
+builder.Services.Configure<OpenRouterOptions>(builder.Configuration.GetSection("OpenRouter"));
+builder.Services.Configure<GitHubModelsOptions>(builder.Configuration.GetSection("GitHubModels"));
+builder.Services.Configure<OllamaOptions>(builder.Configuration.GetSection("Ollama"));
+builder.Services.Configure<AiProviderOptions>(builder.Configuration.GetSection("AiProvider"));
+builder.Services.Configure<List<AiProviderFallbackStrategyOption>>(builder.Configuration.GetSection("AIProviderFallbackStrategies"));
 
 
 builder.Services.AddCors(options =>
@@ -61,6 +68,11 @@ builder.Services.AddCors(options =>
 builder.Services.AddMemoryCache();
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenGenerator>();
+builder.Services.AddSingleton<IInsightsGenerationChannel, InsightsGenerationChannel>();
+builder.Services.AddHostedService<InsightsGenerationBackgroundService>();
+builder.Services.AddSingleton<ILabelSetterChannel, LabelSetterChannel>();
+builder.Services.AddHostedService<LabelSetterBackgroundService>();
+builder.Services.AddHostedService<LabelSetterStartupService>();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())

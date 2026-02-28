@@ -34,10 +34,23 @@ else if (IsLoading || Account.Entries.Any())
                 </MudPaper>
             </MudOverlay>
         </AddEntryOverlay>
+        <EntryFilter>
+            <ValueChangeRangeFilterBar From="_filterFrom" To="_filterTo" OnFilterChanged="OnFilterChanged" />
+        </EntryFilter>
         <Entries>
-            @foreach (var entry in Account.Entries.OrderByDescending(x => x.PostingDate))
+            @{
+                var filteredEntries = GetFilteredEntries();
+            }
+            @if (HasActiveFilter && !filteredEntries.Any())
             {
-                <CurrencyAccountDetailsRow CurrencyAccountEntry="@entry" CurrencyAccount=Account />
+                <MudAlert Severity="Severity.Info" Class="my-3">No entries match the current filter.</MudAlert>
+            }
+            else
+            {
+                @foreach (var entry in filteredEntries)
+                {
+                    <CurrencyAccountDetailsRow CurrencyAccountEntry="@entry" CurrencyAccount=Account />
+                }
             }
         </Entries>
         <SidePanel>

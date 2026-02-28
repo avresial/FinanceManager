@@ -5,8 +5,6 @@
 
 @if (!_isLoading)
 {
-    <h3>Existing labels</h3>
-
     <MudStack Spacing="2">
 
         @foreach (var message in _errors)
@@ -15,10 +13,17 @@
         }
     </MudStack>
 
+
+    <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="mt-2">
+        <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearchChanged" Placeholder="Search by name"
+                      Immediate="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true"
+                      Class="flex-grow-1" />
+        <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="add" Href="Admin/AddLabel" Color="Color.Primary" />
+    </MudStack>
     @if (_elements.Any())
     {
-        <MudTable @ref="@Table" Items="@_elements" RowsPerPage="@_elementsPerPage" Dense Breakpoint="Breakpoint.Md" LoadingProgressColor="Color.Info"
-                  Elevation="0" Class="my-3">
+        <MudTable @ref="@Table" Items="@_elements" RowsPerPage="@_elementsPerPage" Dense Breakpoint="Breakpoint.Md"
+                  LoadingProgressColor="Color.Info" Elevation="0" Class="my-3">
             <HeaderContent>
                 <MudTh>Label id</MudTh>
                 <MudTh>Label name</MudTh>
@@ -45,12 +50,7 @@
     else
     {
         <MudAlert Severity="Severity.Info" Class="mt-3">
-            No labels found. You can create a new label by clicking the button below.
+            No labels found.
         </MudAlert>
-
     }
-
-    <MudButton Href="Admin/AddLabel" Color="Color.Primary" Variant="Variant.Filled" Class="mt-2">
-        Add new label
-    </MudButton>
 }

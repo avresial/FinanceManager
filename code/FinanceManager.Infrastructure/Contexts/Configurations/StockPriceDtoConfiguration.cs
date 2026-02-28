@@ -12,6 +12,14 @@ public class StockPriceDtoConfiguration : IEntityTypeConfiguration<StockPriceDto
         builder.Property(e => e.Id)
             .ValueGeneratedOnAdd();
 
+        builder.HasOne(e => e.StockDetails)
+            .WithMany()
+            .HasForeignKey("StockTicker")
+            .IsRequired();
+
+        builder.Property<string>("StockTicker")
+            .HasMaxLength(32);
+
 
         builder.Property(e => e.PricePerUnit)
             .HasPrecision(18, 8);

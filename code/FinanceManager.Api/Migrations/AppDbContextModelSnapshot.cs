@@ -137,22 +137,24 @@ namespace FinanceManager.Api.Migrations
             modelBuilder.Entity("FinanceManager.Domain.Entities.Currencies.Currency", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ShortName")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
 
                     b.Property<string>("Symbol")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Currency");
+                    b.HasIndex("ShortName")
+                        .IsUnique();
+
+                    b.ToTable("Currencies");
                 });
 
             modelBuilder.Entity("FinanceManager.Domain.Entities.FinancialAccounts.Currencies.CurrencyAccountEntry", b =>
@@ -188,6 +190,42 @@ namespace FinanceManager.Api.Migrations
                     b.HasKey("EntryId");
 
                     b.ToTable("CurrencyEntries");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Imports.CsvHeaderMapping", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FieldName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("HeaderName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HeaderName")
+                        .HasDatabaseName("IX_CsvHeaderMapping_Header");
+
+                    b.HasIndex("HeaderName", "FieldName")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CsvHeaderMapping_Header_Field");
+
+                    b.ToTable("CsvHeaderMappings");
                 });
 
             modelBuilder.Entity("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabel", b =>
@@ -251,6 +289,37 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("StockEntries");
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Stocks.StockDetails", b =>
+                {
+                    b.Property<string>("Ticker")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("CurrencyId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Region")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Ticker");
+
+                    b.HasIndex("CurrencyId");
+
+                    b.ToTable("StockDetails");
+                });
+
             modelBuilder.Entity("FinanceManager.Domain.Entities.Users.ActiveUser", b =>
                 {
                     b.Property<int>("Id")
@@ -268,6 +337,45 @@ namespace FinanceManager.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ActiveUsers");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Users.FinancialInsight", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AccountId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("Tags")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("FinancialInsights");
                 });
 
             modelBuilder.Entity("FinanceManager.Domain.Entities.Users.NewVisits", b =>
@@ -323,9 +431,6 @@ namespace FinanceManager.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("CurrencyId")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
 
@@ -333,16 +438,14 @@ namespace FinanceManager.Api.Migrations
                         .HasPrecision(18, 8)
                         .HasColumnType("numeric(18,8)");
 
-                    b.Property<string>("Ticker")
+                    b.Property<string>("StockTicker")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("Verified")
-                        .HasColumnType("boolean");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CurrencyId");
+                    b.HasIndex("StockTicker");
 
                     b.ToTable("StockPrices");
                 });
@@ -425,13 +528,26 @@ namespace FinanceManager.Api.Migrations
                         .HasForeignKey("StockAccountEntryEntryId");
                 });
 
-            modelBuilder.Entity("FinanceManager.Infrastructure.Dtos.StockPriceDto", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Stocks.StockDetails", b =>
                 {
                     b.HasOne("FinanceManager.Domain.Entities.Currencies.Currency", "Currency")
                         .WithMany()
-                        .HasForeignKey("CurrencyId");
+                        .HasForeignKey("CurrencyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Currency");
+                });
+
+            modelBuilder.Entity("FinanceManager.Infrastructure.Dtos.StockPriceDto", b =>
+                {
+                    b.HasOne("FinanceManager.Domain.Entities.Stocks.StockDetails", "StockDetails")
+                        .WithMany()
+                        .HasForeignKey("StockTicker")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("StockDetails");
                 });
 
             modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondAccountEntry", b =>

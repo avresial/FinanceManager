@@ -1,37 +1,32 @@
-﻿using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.Stocks;
+﻿using FinanceManager.Domain.Entities.Stocks;
 
 namespace FinanceManager.Infrastructure.Dtos;
 
 public class StockPriceDto
 {
     public int Id { get; set; }
-    public string Ticker { get; set; } = string.Empty;
     public decimal PricePerUnit { get; set; }
-    public Currency? Currency { get; set; }
+    public StockDetails StockDetails { get; set; } = default!;
     public DateTime Date { get; set; }
-    public bool Verified { get; set; }
 
     public StockPriceDto()
     {
 
     }
 
-    public StockPriceDto(int id, string ticker, decimal pricePerUnit, Currency currency, DateTime date, bool verified = false)
+    public StockPriceDto(int id, StockDetails stockDetails, decimal pricePerUnit, DateTime date)
     {
         Id = id;
-        Ticker = ticker;
         PricePerUnit = pricePerUnit;
-        Currency = currency;
+        StockDetails = stockDetails;
         Date = date;
-        Verified = verified;
     }
 
     public StockPrice ToStockPrice() => new()
     {
-        Ticker = Ticker,
+        Ticker = StockDetails.Ticker,
         PricePerUnit = PricePerUnit,
-        Currency = Currency!,
+        Currency = StockDetails.Currency,
         Date = Date
     };
 };

@@ -9,7 +9,7 @@ namespace FinanceManager.Application.Services;
 
 public class BalanceService(IFinancialAccountRepository financialAccountRepository) : IBalanceService
 {
-    private static readonly TimeSpan OneDay = TimeSpan.FromDays(1);
+    private static readonly TimeSpan _oneDay = TimeSpan.FromDays(1);
 
     public async Task<List<TimeSeriesModel>> GetIncome(int userId, Currency currency, DateTime start, DateTime end)
     {
@@ -39,7 +39,7 @@ public class BalanceService(IFinancialAccountRepository financialAccountReposito
         {
             if (account?.Entries is null) continue;
 
-            for (var date = end.Date; date >= start.Date; date = date.Add(-OneDay))
+            for (var date = end.Date; date >= start.Date; date = date.Add(-_oneDay))
             {
                 if (!result.ContainsKey(date)) result.Add(date, 0);
 

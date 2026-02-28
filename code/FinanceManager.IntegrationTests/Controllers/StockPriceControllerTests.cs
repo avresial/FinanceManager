@@ -1,5 +1,6 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Contexts;
@@ -40,14 +41,32 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         currency ??= DefaultCurrency.PLN;
         if (date == default) date = DateTime.UtcNow.Date;
 
-        if (await _testDatabase!.Context.StockPrices.AnyAsync(x => x.Ticker == ticker && x.Date == date, TestContext.Current.CancellationToken))
+        if (await _testDatabase!.Context.StockPrices
+            .Include(x => x.StockDetails)
+            .AnyAsync(x => x.StockDetails!.Ticker == ticker && x.Date == date, TestContext.Current.CancellationToken))
             return;
+
+        var stockDetails = await _testDatabase!.Context.StockDetails
+            .Include(x => x.Currency)
+            .FirstOrDefaultAsync(x => x.Ticker == ticker, TestContext.Current.CancellationToken);
+
+        if (stockDetails is null)
+        {
+            stockDetails = new StockDetails
+            {
+                Ticker = ticker,
+                Name = "Test",
+                Type = "Stock",
+                Region = "US",
+                Currency = currency
+            };
+            _testDatabase.Context.StockDetails.Add(stockDetails);
+        }
 
         _testDatabase!.Context.StockPrices.Add(new StockPriceDto
         {
-            Ticker = ticker,
             PricePerUnit = price,
-            Currency = currency,
+            StockDetails = stockDetails,
             Date = date
         });
 
@@ -137,16 +156,48 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
     }
 
     [Fact]
-    public async Task GetTickerCurrency_ReturnsCurrency()
+    public async Task GetStockDetails_ReturnsCurrency()
     {
         await SeedWithTestStockPrice();
-        // No auth
+        Authorize("TestUser", 1, UserRole.Admin);
 
-        var result = await new StockPriceHttpClient(Client, null!).GetTickerCurrency("AAPL");
+        var result = await new StockPriceHttpClient(Client, null!).GetStockDetails("AAPL", TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal("AAPL", result.Ticker);
         Assert.Equal(DefaultCurrency.PLN.Symbol, result.Currency.Symbol);
+    }
+
+    [Fact]
+    public async Task GetStocks_AsAdmin_ReturnsStocks()
+    {
+        await SeedWithTestStockPrice("AAPL", 100, DefaultCurrency.PLN);
+        Authorize("TestUser", 1, UserRole.Admin);
+
+        var result = await new StockPriceHttpClient(Client, null!).GetStocks(TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.Contains(result, x => x.Ticker == "AAPL");
+    }
+
+    [Fact]
+    public async Task DeleteStockPrice_AsAdmin_RemovesPrice()
+    {
+        var date = DateTime.UtcNow.Date;
+        await SeedWithTestStockPrice("AAPL", 100, DefaultCurrency.PLN, date);
+
+        var dto = await _testDatabase!.Context.StockPrices
+            .Include(x => x.StockDetails)
+            .FirstAsync(x => x.StockDetails!.Ticker == "AAPL" && x.Date == date, TestContext.Current.CancellationToken);
+
+        Authorize("TestUser", 1, UserRole.Admin);
+
+        var ok = await new StockPriceHttpClient(Client, null!).DeleteStockPrice(dto.Id, TestContext.Current.CancellationToken);
+        Assert.True(ok);
+
+        var exists = await _testDatabase.Context.StockPrices.AnyAsync(x => x.Id == dto.Id, TestContext.Current.CancellationToken);
+        Assert.False(exists);
     }
 
     public override void Dispose()

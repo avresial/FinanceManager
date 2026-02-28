@@ -1,4 +1,8 @@
-﻿using FinanceManager.Domain.Entities.Bonds;
+﻿using FinanceManager.Application.Options;
+using FinanceManager.Application.Services.Ai;
+using FinanceManager.Application.Services.FinancialInsights;
+using FinanceManager.Application.Services.Stocks;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Providers;
@@ -10,7 +14,10 @@ using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
 using FinanceManager.Infrastructure.Services;
+using FinanceManager.Infrastructure.Services.Ai;
+using FinanceManager.Infrastructure.Services.Stocks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -21,9 +28,13 @@ public static class ServiceCollectionExtension
 {
     public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
     {
+        services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
+
+        services.AddAI();
 
         services
                 .AddScoped<IStockPriceRepository, StockPriceRepository>()
+                .AddScoped<IStockDetailsRepository, StockDetailsRepository>()
                 .AddScoped<IFinancialAccountRepository, AccountRepository>()
                 .AddScoped<IUserRepository, UserRepository>()
                 .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()
@@ -35,10 +46,15 @@ public static class ServiceCollectionExtension
                 .AddScoped<IAccountRepository<BondAccount>, BondAccountRepository>()
                 .AddScoped<ICurrencyAccountRepository<CurrencyAccount>, CurrencyAccountRepository>()
                 .AddScoped<INewVisitsRepository, NewVisitsRepository>()
+                .AddScoped<IFinancialInsightsRepository, FinancialInsightsRepository>()
                 .AddScoped<IFinancialLabelsRepository, FinancialLabelsRepository>()
                 .AddScoped<ICurrencyRepository, CurrencyRepository>()
                 .AddScoped<IBondDetailsRepository, BondDetailsRepository>()
+                .AddScoped<ICsvHeaderMappingRepository, CsvHeaderMappingRepository>()
                 .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()
+
+                .AddSingleton<IInsightsPromptProvider, InsightsPromptProvider>()
+                .AddSingleton<ILabelSetterPromptProvider, LabelSetterPromptProvider>()
 
                 .AddHostedService<DatabaseInitializer>()
                 ;
@@ -61,7 +77,7 @@ public static class ServiceCollectionExtension
             {
                 var connectionString = configuration.GetValue<string>("FINANCE_MANAGER_DB_KEY");
                 if (configuration.GetSection("ConnectionStrings").Exists())
-                    connectionString = configuration.GetSection("ConnectionStrings").GetValue<string>("testDB");
+                    connectionString = configuration.GetSection("ConnectionStrings").GetValue<string>("FinanceManagerDb");
 
                 if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) ||
                     databaseProvider.Equals("Supabase", StringComparison.OrdinalIgnoreCase))

@@ -1,8 +1,13 @@
 ﻿using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Ai;
 using FinanceManager.Application.Services.Bonds;
 using FinanceManager.Application.Services.Currencies;
+using FinanceManager.Application.Services.Exports;
+using FinanceManager.Application.Services.FinancialInsights;
 using FinanceManager.Application.Services.Seeders;
+using FinanceManager.Application.Services.Stocks;
+using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,14 +42,28 @@ public static class ServiceCollectionExtension
                 .AddScoped<ISeeder, GuestAccountSeeder>()
                 .AddScoped<ISeeder, AdminAccountSeeder>()
                 .AddScoped<ISeeder, BondDetailsSeeder>()
+                .AddScoped<ISeeder, StockDetailsSeeder>()
                 .AddScoped<ISeeder, FinancialLabelSeeder>()
+                // .AddScoped<ISeeder, FinancialInsightsSeeder>()
                 .AddScoped<IUserPlanVerifier, UserPlanVerifier>()
                 .AddScoped<IAdministrationUsersService, AdministrationUsersService>()
                 .AddScoped<ICurrencyExchangeService, CurrencyExchangeService>()
                 .AddScoped<HttpClient>()
+                .AddScoped<ICsvHeaderMappingService, CsvHeaderMappingService>()
                 .AddScoped<ICurrencyAccountImportService, CurrencyAccountImportService>()
+                .AddScoped<ICurrencyAccountExportService, CurrencyAccountExportService>()
+                .AddScoped<IAccountCsvExportService<CurrencyAccountExportDto>, CurrencyAccountCsvExportService>()
+                .AddScoped<IStockAccountImportService, StockAccountImportService>()
+                .AddScoped<IStockAccountExportService, StockAccountExportService>()
+                .AddScoped<IAccountCsvExportService<StockAccountExportDto>, StockAccountCsvExportService>()
+                .AddScoped<IBondAccountExportService, BondAccountExportService>()
+                .AddScoped<IAccountCsvExportService<BondAccountExportDto>, BondAccountCsvExportService>()
                 .AddScoped<IStockPriceProvider, StockPriceProvider>()
                 .AddScoped<IBondService, BondService>()
+                .AddScoped<IStockMarketService, StockMarketService>()
+
+                .AddScoped<IFinancialInsightsAiGenerator, FinancialInsightsAiGenerator>()
+                .AddScoped<ILabelSetterAiService, LabelSetterAiService>()
             ;
 
         return services;

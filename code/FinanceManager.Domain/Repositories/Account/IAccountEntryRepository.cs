@@ -4,6 +4,7 @@ public interface IAccountEntryRepository<T>
 {
     IAsyncEnumerable<T> Get(int accountId, DateTime startDate, DateTime endDate);
     Task<T?> Get(int accountId, int entryId);
+    Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default);
     Task<T?> GetYoungest(int accountId);
     Task<T?> GetNextYounger(int accountId, int entryId);
     Task<T?> GetNextYounger(int accountId, DateTime date);
@@ -16,6 +17,7 @@ public interface IAccountEntryRepository<T>
     Task<bool> Add(T entry, bool recalculate = true);
     Task<bool> Add(IEnumerable<T> entries, bool recalculate = true);
     Task<bool> AddLabel(int entryId, int labelId);
+    Task<int> AddLabels(IEnumerable<(int entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default);
     Task<bool> Update(T entry);
     Task<bool> Delete(int accountId, int entryId);
     Task<bool> Delete(int accountId);

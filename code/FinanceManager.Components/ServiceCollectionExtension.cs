@@ -16,6 +16,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<StockPriceHttpClient>()
                 .AddScoped<StockAccountHttpClient>()
                 .AddScoped<StockEntryHttpClient>()
+                .AddScoped<StockAccountImportHttpClient>()
 
                 .AddScoped<CurrencyAccountHttpClient>()
                 .AddScoped<CurrencyAccountImportHttpClient>()
@@ -30,8 +31,10 @@ public static class ServiceCollectionExtension
                 .AddScoped<LiabilitiesHttpClient>()
                 .AddScoped<UserHttpClient>()
                 .AddScoped<FinancialLabelHttpClient>()
+                .AddScoped<FinancialInsightsHttpClient>()
                 .AddScoped<AdministrationUsersHttpClient>()
                 .AddScoped<NewVisitorsHttpClient>()
+                .AddScoped<CsvHeaderMappingHttpClient>()
                 .AddScoped<AccountDataSynchronizationService>()
                 .AddScoped<IUserService, UserService>()
                 .AddScoped<IFinancialAccountService, FinancialAccountService>()

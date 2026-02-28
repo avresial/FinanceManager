@@ -4,61 +4,70 @@
 <MudText Typo="Typo.h3" Class="mx-2" style="position: absolute; z-index: 50; display: inline-block;">@Ticker.ToUpper()
 </MudText>
 <LineChartJs
-    Series="@([_stockPrices.Select(x => new ChartJsLineDataPoint(x.Date.ToLocalTime(), x.PricePerUnit)).ToList()])" />
+Series="@([_stockPrices.Select(x => new ChartJsLineDataPoint(x.Date.ToLocalTime(), x.PricePerUnit)).ToList()])" />
 
 <DashboardDatePicker StockStyle DateChanged=DateChanged InitialDateRange=DateRange />
 
 <MudContainer Class="mt-3">
     <MudGrid>
         <MudItem xs="12" md="6">
-            <MudStack Row>
-                <MudTextField @bind-Value="Ticker" Label="Ticker" Variant="Variant.Text" />
-                <MudButton @onclick=GetStockPriceAsync>Apply</MudButton>
-            </MudStack>
+            <MudAutocomplete T="FinanceManager.Domain.Entities.Stocks.StockDetails"                  Value="_selectedStock"
+                             Label="Search Stock"        Placeholder="Search by ticker or name"   SearchFunc="SearchStocks"
+                             ToStringFunc="@(stock => stock?.Ticker ?? string.Empty)"           Variant="Variant.Outlined"      Immediate="true"
+                             ResetValueOnEmptyText="true"             CoerceText="false"       Clearable="true"  ValueChanged="OnStockSelected">
+                <ItemTemplate Context="stock">
+                    <MudText>@stock.Ticker - @stock.Name</MudText>
+                </ItemTemplate>
+            </MudAutocomplete>
         </MudItem>
 
-        <MudItem xs="12" Class="mt-2">
-            <MudText Typo="Typo.h4">Missing stock prices</MudText>
-        </MudItem>
-
-        <MudItem xs="12">
-            <MudGrid>
-                <MudItem xs="12" sm="6">
-                    <div class="d-flex flex-grow-1 gap-4">
-                        @if (_existingCurrency is null)
-                        {
-                            <MudAutocomplete @bind-Value="SelectedCurrency" Label="Currency" Variant="Variant.Text"
-                                SearchFunc="Search" Class="flex-grow-0" Disabled=@(string.IsNullOrEmpty(Ticker)) />
-                            <MudTextField Immediate @bind-Value="PricePerUnit" Label="Price per unit" Variant="Variant.Text"
-                                Class="flex-grow-1" Disabled=@(string.IsNullOrEmpty(Ticker)) />
-                        }
-                        else
-                        {
-                            <MudTextField Immediate @bind-Value="PricePerUnit" Adornment="Adornment.Start"
-                                AdornmentText="@_existingCurrency.ShortName" Label="Price per unit" Variant="Variant.Text"
-                                Class="flex-grow-1" Disabled=@(string.IsNullOrEmpty(Ticker)) />
-                        }
-
-                    </div>
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudDatePicker Label="Date" @bind-Date="Date" Disabled=@(string.IsNullOrEmpty(Ticker)) />
-                </MudItem>
-
-                <MudItem xs="12">
-                    @if (!_stockPriceExists)
-                    {
-                        <MudButton @onclick=AddNewStock Variant="Variant.Filled" Color="Color.Primary"
-                            Disabled=@(string.IsNullOrEmpty(Ticker) || PricePerUnit <= 0)>Add</MudButton>
-                    }
-                    else
-                    {
-                        <MudButton @onclick=UpdateStockPrice Variant="Variant.Filled" Color="Color.Primary"
-                            Disabled=@(string.IsNullOrEmpty(Ticker))>Update</MudButton>
-                    }
-                </MudItem>
+        @if (_selectedStock is not null)
+        {
+            <MudItem xs="12">
+                <MudCard Elevation="2" Class="mt-2">
+                    <MudCardContent>
+                        <MudGrid>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Ticker</MudText>
+                                <MudText Typo="Typo.body1"><strong>@_selectedStock.Ticker</strong></MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Name</MudText>
+                                <MudText Typo="Typo.body1">@_selectedStock.Name</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="2">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Type</MudText>
+                                <MudText Typo="Typo.body1">@_selectedStock.Type</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="2">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Region</MudText>
+                                <MudText Typo="Typo.body1">@_selectedStock.Region</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="2">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Currency</MudText>
+                                <MudText Typo="Typo.body1">@_selectedStock.Currency.ShortName</MudText>
+                            </MudItem>
+                            @if (_stockPrices.Any())
+                            {
+                                <MudItem xs="12" sm="6" md="3">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Latest Price</MudText>
+                                    <MudText Typo="Typo.body1">@_stockPrices.First().PricePerUnit.ToString("N2")
+                                        @_selectedStock.Currency.ShortName</MudText>
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6" md="3">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Data Points</MudText>
+                                        <MudText Typo="Typo.body1">@_stockPrices.Count</MudText>
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6" md="3">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Date Range</MudText>
+                                        <MudText Typo="Typo.body1">@_stockPrices.Last().Date.ToString("MMM dd") -
+                                            @_stockPrices.First().Date.ToString("MMM dd, yyyy")</MudText>
+                                        </MudItem>
+                                    }
+                                </MudGrid>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
             </MudGrid>
-        </MudItem>
-
-    </MudGrid>
-</MudContainer>
+        </MudContainer>

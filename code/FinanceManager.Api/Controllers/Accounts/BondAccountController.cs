@@ -1,6 +1,8 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Exports;
+using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Repositories.Account;
@@ -16,7 +18,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Tags("Bond Accounts")]
 public class BondAccountController(IAccountRepository<BondAccount> bondAccountRepository,
-    IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository, IUserPlanVerifier userPlanVerifier) : ControllerBase
+    IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository, IUserPlanVerifier userPlanVerifier,
+    IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<BondAccountDto>))]
@@ -95,5 +98,21 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
 
         await bondAccountEntryRepository.Delete(accountId);
         return Ok(await bondAccountRepository.Delete(accountId));
+    }
+
+    [HttpGet("export/{accountId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ExportCsv(int accountId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate, CancellationToken cancellationToken)
+    {
+        var account = await bondAccountRepository.Get(accountId);
+        if (account is null) return NotFound();
+        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+
+        var csv = await bondAccountCsvExportService.GetExportResults(account.UserId, accountId, startDate, endDate, cancellationToken);
+        var fileName = $"bond-account-{accountId}-{startDate:yyyyMMdd}-{endDate:yyyyMMdd}.csv";
+
+        return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", fileName);
     }
 }

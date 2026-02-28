@@ -30,6 +30,9 @@ public partial class BondAccountDetailsPageContent : ComponentBase
 
     private List<BondDetails> _bondDetails = [];
 
+    private decimal? _filterFrom;
+    private decimal? _filterTo;
+
     public bool IsLoading = false;
     public BondAccount? Account { get; set; }
     public string ErrorMessage { get; set; } = string.Empty;
@@ -250,5 +253,27 @@ public partial class BondAccountDetailsPageContent : ComponentBase
         {
             Logger.LogError(ex, "Error while synchronizing bond account data for account ID {AccountId}", AccountId);
         }
+    }
+
+    private bool HasActiveFilter => _filterFrom.HasValue || _filterTo.HasValue;
+
+    private List<BondAccountEntry> GetFilteredEntries()
+    {
+        if (Account?.Entries is null) return [];
+
+        IEnumerable<BondAccountEntry> entries = Account.Entries;
+
+        if (_filterFrom.HasValue)
+            entries = entries.Where(x => x.ValueChange >= _filterFrom.Value);
+        if (_filterTo.HasValue)
+            entries = entries.Where(x => x.ValueChange <= _filterTo.Value);
+
+        return entries.OrderByDescending(x => x.PostingDate).ToList();
+    }
+
+    private void OnFilterChanged((decimal? From, decimal? To) filter)
+    {
+        _filterFrom = filter.From;
+        _filterTo = filter.To;
     }
 }

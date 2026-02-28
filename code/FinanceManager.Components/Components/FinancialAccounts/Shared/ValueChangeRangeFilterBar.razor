@@ -1,0 +1,104 @@
+<MudPaper Elevation="0" Style="background-color:transparent;">
+    <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                <MudMenu Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" @ref="_menu">
+                    <ActivatorContent>
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Style="text-transform: none; padding: 0;">
+                            <span class="mud-typography-caption">Value change</span>
+                            @if (HasActiveFilter)
+                            {
+                                <span class="mud-typography-caption ms-1">@GetRangeLabel()</span>
+                            }
+                        </MudButton>
+                    </ActivatorContent>
+                    <ChildContent>
+                        <MudPaper Class="pa-3" Elevation="0" Style="min-width: 260px;">
+                            <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.subtitle2">Filter entries by value change range</MudText>
+                            </MudStack>
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                <MudNumericField T="decimal?" Value="From" ValueChanged="OnFromChanged" Label="From"
+                                                 Variant="Variant.Outlined" Margin="Margin.Dense" Clearable
+                                                 Style="max-width: 140px;" />
+                                <MudNumericField T="decimal?" Value="To" ValueChanged="OnToChanged" Label="To"
+                                                 Variant="Variant.Outlined" Margin="Margin.Dense" Clearable
+                                                 Style="max-width: 140px;" />
+                            </MudStack>
+                            @if (!string.IsNullOrEmpty(_validationError))
+                            {
+                                <MudText Color="Color.Error" Typo="Typo.caption" Class="mt-1">@_validationError</MudText>
+                            }
+                        </MudPaper>
+                    </ChildContent>
+                </MudMenu>
+                @if (HasActiveFilter)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Default"
+                                   @onclick="ResetFilter" />
+                }
+            </MudStack>
+        </MudChip>
+    </MudStack>
+</MudPaper>
+
+@code {
+    private string? _validationError;
+    private MudMenu? _menu;
+
+    [Parameter] public decimal? From { get; set; }
+    [Parameter] public decimal? To { get; set; }
+    [Parameter] public EventCallback<(decimal? From, decimal? To)> OnFilterChanged { get; set; }
+
+    private bool HasActiveFilter => From.HasValue || To.HasValue;
+
+    private async Task CloseMenu()
+    {
+        if (_menu is not null)
+            await _menu.CloseMenuAsync();
+    }
+
+    private string GetRangeLabel()
+    {
+        if (From.HasValue && To.HasValue)
+            return $"{From.Value}..{To.Value}";
+        if (From.HasValue)
+            return $">= {From.Value}";
+        if (To.HasValue)
+            return $"<= {To.Value}";
+
+        return string.Empty;
+    }
+
+    private async Task OnFromChanged(decimal? value)
+    {
+        From = value;
+        await ApplyFilter();
+    }
+
+    private async Task OnToChanged(decimal? value)
+    {
+        To = value;
+        await ApplyFilter();
+    }
+
+    private async Task ApplyFilter()
+    {
+        if (From.HasValue && To.HasValue && From.Value > To.Value)
+        {
+            _validationError = "'From' must be less than or equal to 'To'";
+            return;
+        }
+
+        _validationError = null;
+        await OnFilterChanged.InvokeAsync((From, To));
+    }
+
+    private async Task ResetFilter(MouseEventArgs args)
+    {
+        From = null;
+        To = null;
+        _validationError = null;
+        await OnFilterChanged.InvokeAsync((null, null));
+    }
+}

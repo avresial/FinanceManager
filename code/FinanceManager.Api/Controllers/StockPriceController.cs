@@ -1,4 +1,6 @@
-﻿using FinanceManager.Domain.Entities;
+﻿using FinanceManager.Application.Services.Stocks;
+using FinanceManager.Domain.Commands.Stocks;
+using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
@@ -10,7 +12,8 @@ namespace FinanceManager.Api.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Stock Prices")]
-public class StockPriceController(IStockPriceRepository stockPriceRepository, ICurrencyExchangeService currencyExchangeService, ICurrencyRepository currencyRepository) : ControllerBase
+public partial class StockPriceController(IStockPriceRepository stockPriceRepository, ICurrencyExchangeService currencyExchangeService,
+ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, IStockDetailsRepository stockDetailsRepository) : ControllerBase
 {
 
     [Authorize]
@@ -60,9 +63,9 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
         if (currency is null)
             return NotFound("Currency not found.");
 
-        var stockPrice = await stockPriceRepository.GetThisOrNextOlder(ticker, date);
-
-        if (stockPrice is null) return NotFound("Stock price not found.");
+        var stockPrices = await stockMarketService.GetStockPrices(ticker, date, date, cancellationToken);
+        if (stockPrices.Count == 0) return NotFound("Stock price not found.");
+        var stockPrice = stockPrices.First(sp => sp.Date.Date == date.Date);
         if (currency == stockPrice.Currency)
             return Ok(stockPrice);
 
@@ -76,28 +79,48 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
         return Ok(stockPrice);
     }
 
-
     [HttpGet("get-stock-prices")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<StockPrice>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetStockPrices([FromQuery] string ticker, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long step = default, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(ticker) || start == default || end == default || step == default)
+        if (string.IsNullOrWhiteSpace(ticker) || start == default || end == default)
             return BadRequest("Invalid input parameters.");
 
-        List<StockPrice> stockPrices = [];
+        var stockPrices = await stockMarketService.GetStockPrices(ticker, start, end, cancellationToken);
 
-        for (var i = start; i < end; i = i.Add(new(step)))
+        if (stockPrices.Count == 0)
+            return NotFound("Stock prices not found.");
+
+        if (step > 0)
         {
-            var stockPrice = await stockPriceRepository.Get(ticker, i);
-            if (stockPrice is null) continue;
-            stockPrices.Add(stockPrice);
+            List<StockPrice> filteredPrices = [];
+            for (var i = start; i <= end; i = i.Add(new TimeSpan(step)))
+            {
+                var priceOnDate = stockPrices.FirstOrDefault(sp => sp.Date.Date == i.Date);
+                if (priceOnDate is not null)
+                    filteredPrices.Add(priceOnDate);
+            }
+            return Ok(filteredPrices);
         }
 
-        if (!stockPrices.Any()) return NotFound("Stock prices not found.");
-
         return Ok(stockPrices);
+    }
+
+    [HttpGet("search-ticker")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TickerSearchMatch>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SearchTicker([FromQuery] string keywords, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(keywords))
+            return BadRequest("Invalid input parameters.");
+
+        var result = await stockMarketService.SearchTicker(keywords, cancellationToken);
+        if (result.Count == 0) return NotFound("No ticker matches found.");
+
+        return Ok(result);
     }
 
     [HttpGet("get-latest-missing-stock-price")]
@@ -116,19 +139,112 @@ public class StockPriceController(IStockPriceRepository stockPriceRepository, IC
         return Ok(stockPrice);
     }
 
-    [HttpGet("get-ticker-currency")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TickerCurrency))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+
+    [HttpGet("get-stock-details/{ticker}")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockDetails))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetTickerCurrency(string ticker, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetStockDetails(string ticker, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(ticker))
             return BadRequest("Invalid input parameters.");
 
-        var currency = await stockPriceRepository.GetTickerCurrency(ticker);
+        var details = await stockDetailsRepository.Get(ticker, cancellationToken);
+        if (details is null)
+            return NotFound();
 
-        if (currency is null) return NotFound("Stock price not found.");
+        return Ok(details);
+    }
 
-        return Ok(new TickerCurrency(ticker, currency));
+    [HttpGet("get-stocks-details")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<StockDetails>))]
+    public async Task<IActionResult> GetStocksDetails(CancellationToken cancellationToken = default)
+        => Ok(await stockDetailsRepository.GetAll(cancellationToken));
+
+
+    [HttpPost("add-stock-details")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockDetails))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddStockDetails([FromBody] AddStockRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.Ticker) || string.IsNullOrWhiteSpace(request.Currency))
+            return BadRequest("Invalid input parameters.");
+        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Type) || string.IsNullOrWhiteSpace(request.Region))
+            return BadRequest("Invalid input parameters.");
+
+        var normalizedCurrency = request.Currency.Trim().ToUpperInvariant();
+        var currency = await currencyRepository.GetOrAdd(normalizedCurrency, normalizedCurrency, cancellationToken);
+        var details = new StockDetails
+        {
+            Ticker = request.Ticker.Trim().ToUpperInvariant(),
+            Name = request.Name.Trim(),
+            Type = request.Type.Trim(),
+            Region = request.Region.Trim(),
+            Currency = currency
+        };
+
+        var result = await stockDetailsRepository.Add(details, cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpPut("update-stock-details")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockDetails))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateStockDetails([FromBody] UpdateStockRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.Ticker) || string.IsNullOrWhiteSpace(request.Currency))
+            return BadRequest("Invalid input parameters.");
+        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Type) || string.IsNullOrWhiteSpace(request.Region))
+            return BadRequest("Invalid input parameters.");
+
+        var normalizedCurrency = request.Currency.Trim().ToUpperInvariant();
+        var currency = await currencyRepository.GetOrAdd(normalizedCurrency, normalizedCurrency, cancellationToken);
+        var details = new StockDetails
+        {
+            Ticker = request.Ticker.Trim().ToUpperInvariant(),
+            Name = request.Name.Trim(),
+            Type = request.Type.Trim(),
+            Region = request.Region.Trim(),
+            Currency = currency
+        };
+
+        var result = await stockDetailsRepository.Add(details, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpDelete("delete-stock-price/{id}")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteStockPrice(int id, CancellationToken cancellationToken = default)
+    {
+        if (id <= 0)
+            return BadRequest("Invalid input parameters.");
+
+        if (!await stockPriceRepository.Delete(id, cancellationToken))
+            return NotFound();
+
+        return NoContent();
+    }
+
+    [HttpDelete("delete-stock/{ticker}")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteStock(string ticker, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(ticker))
+            return BadRequest("Invalid input parameters.");
+
+        if (!await stockDetailsRepository.Delete(ticker, cancellationToken))
+            return NotFound();
+
+        return NoContent();
     }
 }
