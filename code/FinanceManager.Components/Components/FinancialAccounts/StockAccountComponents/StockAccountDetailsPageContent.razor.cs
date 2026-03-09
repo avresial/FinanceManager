@@ -1,4 +1,3 @@
-using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
@@ -47,6 +46,7 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
         [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
         [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
         [Inject] public required StockPriceHttpClient StockPriceHttpClient { get; set; }
+        [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
         [Inject] public required ISettingsService SettingsService { get; set; }
         [Inject] public required ILoginService LoginService { get; set; }
 
@@ -203,16 +203,9 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
         {
             ChartData.Clear();
 
-            if (Account is null || Account.Entries is null) return;
-            Dictionary<DateOnly, decimal> pricesDaily = await Account.GetDailyPrice((ticker, date) => StockPriceHttpClient.GetStockPrice(ticker, _currency.Id, date));
+            if (Account is null || _user is null) return;
 
-            var result = pricesDaily.Select(x => new TimeSeriesModel() { DateTime = x.Key.ToDateTime(new TimeOnly()), Value = x.Value }).ToList();
-            var timeBucket = TimeBucketService.Get(result.Select(x => (x.DateTime, x.Value)));
-            ChartData.AddRange(timeBucket.Select(x => new TimeSeriesModel()
-            {
-                DateTime = x.Date,
-                Value = x.Objects.Last(),
-            }));
+            ChartData.AddRange(await MoneyFlowHttpClient.GetClosingBalance(_user.UserId, _currency, _dateStart, _dateEnd, [AccountId]));
         }
         private async Task UpdateDates()
         {

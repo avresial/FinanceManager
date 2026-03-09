@@ -7,9 +7,11 @@ using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Services.Currencies;
 
-public class CurrencyBalanceService(IFinancialAccountRepository financialAccountRepository) : IBalanceService
+public class CurrencyBalanceService(IFinancialAccountRepository financialAccountRepository) : IBalanceServiceTyped
 {
     private static readonly TimeSpan _oneDay = TimeSpan.FromDays(1);
+
+    public bool IsOfType<T>() => typeof(T) == typeof(CurrencyAccount);
 
     public Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end) =>
         GetInflow(userId, currency, start, end, []);

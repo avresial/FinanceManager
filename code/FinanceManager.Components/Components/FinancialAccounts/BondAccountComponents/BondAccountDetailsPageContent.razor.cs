@@ -1,4 +1,3 @@
-using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Bonds;
@@ -43,6 +42,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
+    [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<BondAccountDetailsPageContent> Logger { get; set; }
@@ -218,19 +218,9 @@ public partial class BondAccountDetailsPageContent : ComponentBase
     {
         ChartData.Clear();
 
-        if (Account is null || Account.Entries is null) return;
-        Dictionary<DateOnly, decimal> pricesDaily = Account.GetDailyPrice(DateOnly.FromDateTime(_dateStart), DateOnly.FromDateTime(_dateEnd), _bondDetails);
+        if (Account is null || _user is null) return;
 
-        var result = pricesDaily.Select(x => new TimeSeriesModel() { DateTime = x.Key.ToDateTime(new TimeOnly()), Value = x.Value }).OrderBy(x => x.DateTime).ToList();
-        if (result.Count != 0)
-        {
-            var timeBucket = TimeBucketService.Get(result.Select(x => (x.DateTime, x.Value)));
-            ChartData.AddRange(timeBucket.Select(x => new TimeSeriesModel()
-            {
-                DateTime = x.Date,
-                Value = x.Objects.Last(),
-            }));
-        }
+        ChartData.AddRange(await MoneyFlowHttpClient.GetClosingBalance(_user.UserId, _currency, _dateStart, _dateEnd, [AccountId]));
     }
 
     private async Task UpdateDates()
