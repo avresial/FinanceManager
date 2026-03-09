@@ -102,6 +102,36 @@ public class CurrencyBalanceServiceTests
     }
 
     [Fact]
+    public async Task GetClosingBalance_ForLongRange_UsesLastValuePerBucket()
+    {
+        var userId = 1;
+        DateTime startDate = new(2024, 1, 1);
+        DateTime endDate = new(2024, 4, 5);
+        var account = new CurrencyAccount(
+            userId,
+            1,
+            "Currency Account 1",
+            [
+                new CurrencyAccountEntry(1, 4, new DateTime(2024, 4, 1), 40, 10),
+                new CurrencyAccountEntry(1, 3, new DateTime(2024, 3, 1), 30, 10),
+                new CurrencyAccountEntry(1, 2, new DateTime(2024, 2, 1), 20, 10),
+                new CurrencyAccountEntry(1, 1, new DateTime(2024, 1, 1), 10, 10)
+            ],
+            AccountLabel.Cash);
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                                       .Returns(new[] { account }.ToAsyncEnumerable());
+
+        var result = await _balanceService.GetClosingBalance(userId, DefaultCurrency.PLN, startDate, endDate);
+
+        Assert.Equal(4, result.Count);
+        Assert.Equal(10, result.Single(x => x.DateTime == new DateTime(2024, 1, 1)).Value);
+        Assert.Equal(20, result.Single(x => x.DateTime == new DateTime(2024, 2, 1)).Value);
+        Assert.Equal(30, result.Single(x => x.DateTime == new DateTime(2024, 3, 1)).Value);
+        Assert.Equal(40, result.Single(x => x.DateTime == new DateTime(2024, 4, 1)).Value);
+    }
+
+    [Fact]
     public async Task GetNetCashFlow_ReturnsNetTimeSeries()
     {
         var userId = 1;

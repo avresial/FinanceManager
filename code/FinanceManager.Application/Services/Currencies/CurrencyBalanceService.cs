@@ -44,7 +44,7 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
     public async Task<List<TimeSeriesModel>> GetClosingBalance(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
     {
         var result = await AggregateClosingBalanceByDay(userId, start, end, accountIds);
-        return BucketToSeries(result);
+        return BucketToClosingBalanceSeries(result);
     }
 
     private async Task<Dictionary<DateTime, decimal>> AggregateByDay(int userId, DateTime start, DateTime end, Func<FinancialEntryBase, bool> predicate, IReadOnlyCollection<int> accountIds)
@@ -105,5 +105,10 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
     private static List<TimeSeriesModel> BucketToSeries(Dictionary<DateTime, decimal> data) =>
         TimeBucketService.Get(data.Select(x => (x.Key, x.Value)))
                          .Select(bucket => new TimeSeriesModel(bucket.Date, bucket.Objects.Sum()))
+                         .ToList();
+
+    private static List<TimeSeriesModel> BucketToClosingBalanceSeries(Dictionary<DateTime, decimal> data) =>
+        TimeBucketService.Get(data.OrderBy(x => x.Key).Select(x => (x.Key, x.Value)))
+                         .Select(bucket => new TimeSeriesModel(bucket.Date, bucket.Objects.Last()))
                          .ToList();
 }

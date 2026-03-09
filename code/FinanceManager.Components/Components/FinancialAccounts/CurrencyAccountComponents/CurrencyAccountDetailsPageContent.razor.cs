@@ -1,5 +1,5 @@
-using FinanceManager.Application.Services;
 using FinanceManager.Components.Services;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
@@ -42,6 +42,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required ILogger<CurrencyAccountDetailsPageContent> Logger { get; set; }
 
     public async Task ShowOverlay()
@@ -182,49 +183,11 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
     private async Task UpdateChartData()
     {
         ChartData.Clear();
-        if (Account is null || Account.Entries is null) return;
-        List<TimeSeriesModel> chartData = [];
+        if (Account is null || _user is null) return;
 
-        decimal previousValue = 0;
-
-        bool initialZero = true;
-        for (DateTime date = _dateStart; date <= _dateEnd; date = date.AddDays(1))
-        {
-            var entries = Account.Entries.Where(x => x.PostingDate.Date == date.Date).ToList();
-            if (date == _dateStart && entries.Count == 0 && Account.NextOlderEntry is not null && _user is not null)
-            {
-                var olderAccount = (await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, Account.NextOlderEntry.PostingDate,
-                    Account.NextOlderEntry.PostingDate.Date.AddDays(1).AddTicks(-1)));
-
-                if (olderAccount is not null)
-                {
-                    var olderEntries = olderAccount.Entries;
-                    if (olderEntries is not null)
-                        entries = olderEntries;
-                }
-            }
-
-            decimal value = 0;
-            if (entries.Count != 0) value = entries.Max(x => x.Value);
-
-            if (value != 0 && initialZero) initialZero = false;
-            if (initialZero) continue;
-
-            chartData.Add(new()
-            {
-                DateTime = date,
-                Value = entries.Count != 0 ? value : previousValue,
-            });
-
-            if (entries.Count != 0) previousValue = value;
-        }
-
-        var timeBucket = TimeBucketService.Get(chartData.Select(x => (x.DateTime, x.Value)));
-        ChartData.AddRange(timeBucket.Select(x => new TimeSeriesModel()
-        {
-            DateTime = x.Date,
-            Value = x.Objects.Last(),
-        }));
+        _currency = SettingsService.GetCurrency();
+        var chartData = await MoneyFlowHttpClient.GetClosingBalance(_user.UserId, _currency, _dateStart, _dateEnd, [AccountId]);
+        ChartData.AddRange(chartData.SkipWhile(x => x.Value == 0));
 
     }
     private async Task UpdateDates()
