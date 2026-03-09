@@ -8,7 +8,7 @@
 
 <MudCard Outlined Class="d-flex flex-nowrap " Style="@($"height:{Height};")">
     <MudPaper Class="flex-grow-0 p-3" Elevation="0">
-        <MudText Typo=Typo.h5>Income source</MudText>
+        <MudText Typo=Typo.h5>Inflow source</MudText>
         @if ( ChartData.Any())
         {
             <MudText Typo=Typo.h6 Class="mb-2 text-muted">@Total @_currency</MudText>
@@ -20,7 +20,7 @@
             <ApexChart @ref="_chart" TItem="IncomeSourceOverviewEntry" Height="@("100%")" Options="options">
                 <ApexPointSeries TItem="IncomeSourceOverviewEntry"
                                  Items="ChartData"
-                                 Name="Income"
+                                 Name="Inflow"
                                  XValue="@(e => e.Source)"
                                  YValue="e=> e.Value"
                                  SeriesType="SeriesType.Bar" />

@@ -76,7 +76,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards
                         Show = false
                     },
                     Show = false,
-                    SeriesName = "income",
+                    SeriesName = "inflow",
                     DecimalsInFloat = 0,
 
                 },

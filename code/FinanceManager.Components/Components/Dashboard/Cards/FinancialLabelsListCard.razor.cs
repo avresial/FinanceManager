@@ -31,7 +31,7 @@ public partial class FinancialLabelsListCard
         try
         {
             if (userId is not null)
-                _data = await MoneyFlowHttpClient.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime);
+                _data = (await MoneyFlowHttpClient.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime)).Where(x => x.Value != 0).ToList();
         }
         finally
         {
@@ -48,7 +48,7 @@ public partial class FinancialLabelsListCard
         try
         {
             if (userId is not null)
-                _data = await MoneyFlowHttpClient.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime);
+                _data = (await MoneyFlowHttpClient.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime)).Where(x => x.Value != 0).ToList();
         }
         finally
         {

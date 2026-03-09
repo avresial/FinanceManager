@@ -11,23 +11,28 @@
         </MudItem>
 
         <MudItem xs="12" md="6">
-            <IncomeVsSpendingOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@StartDate" EndDateTime="@EndDate" DisplayIncome />
+            <NetCashFlowOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@StartDate"
+                                     EndDateTime="@EndDate" />
         </MudItem>
 
         <MudItem xs="12" md="6">
-            <IncomeVsSpendingOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@StartDate" EndDateTime="@EndDate" DisplaySpending UseOnlyPrimaryColor />
+            <ClosingBalanceOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@StartDate"
+                                        EndDateTime="@EndDate" />
         </MudItem>
 
         <MudItem xs="12" md="6" lg="4">
-            <LiabilityPerTypeOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate" EndDateTime="@EndDate" />
-        </MudItem>
-       
-        <MudItem xs="12" md="6" lg="4">
-            <FinancialLabelsListCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate" EndDateTime="@EndDate" />
+            <LiabilityPerTypeOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
+                                          EndDateTime="@EndDate" />
         </MudItem>
 
         <MudItem xs="12" md="6" lg="4">
-            <AssetsPerTypeOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate" EndDateTime="@EndDate" />
+            <FinancialLabelsListCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
+                                     EndDateTime="@EndDate" />
+        </MudItem>
+
+        <MudItem xs="12" md="6" lg="4">
+            <AssetsPerTypeOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
+                                       EndDateTime="@EndDate" />
         </MudItem>
 
     </MudGrid>
