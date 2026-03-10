@@ -11,4 +11,5 @@ public interface IFinancialLabelsRepository
     Task<bool> Add(string name, CancellationToken cancellationToken = default);
     Task<bool> Delete(int id, CancellationToken cancellationToken = default);
     Task<bool> UpdateName(int id, string name, CancellationToken cancellationToken = default);
+    Task<bool> AddClassification(int labelId, string kind, string value, CancellationToken cancellationToken = default);
 }

@@ -22,14 +22,18 @@ internal class FinancialLabelsRepository(AppDbContext context) : IFinancialLabel
     }
 
     public Task<int> GetCount(CancellationToken cancellationToken = default) => context.FinancialLabels.CountAsync(cancellationToken);
-    public IAsyncEnumerable<FinancialLabel> GetLabels(CancellationToken cancellationToken = default) => context.FinancialLabels.ToAsyncEnumerable();
+    public IAsyncEnumerable<FinancialLabel> GetLabels(CancellationToken cancellationToken = default) =>
+        context.FinancialLabels.Include(x => x.Classifications).AsAsyncEnumerable();
 
-    public IAsyncEnumerable<FinancialLabel> GetLabelsByAccountId(int accountId, CancellationToken cancellationToken = default) => context.CurrencyEntries.Where(x => x.AccountId == accountId)
-        .SelectMany(x => x.Labels)
-        .Distinct()
-        .ToAsyncEnumerable();
+    public IAsyncEnumerable<FinancialLabel> GetLabelsByAccountId(int accountId, CancellationToken cancellationToken = default) =>
+        context.CurrencyEntries.Where(x => x.AccountId == accountId)
+            .SelectMany(x => x.Labels)
+            .Include(x => x.Classifications)
+            .Distinct()
+            .AsAsyncEnumerable();
 
-    public Task<FinancialLabel> GetLabelsById(int id, CancellationToken cancellationToken = default) => context.FinancialLabels.SingleAsync(x => x.Id == id, cancellationToken);
+    public Task<FinancialLabel> GetLabelsById(int id, CancellationToken cancellationToken = default) =>
+        context.FinancialLabels.Include(x => x.Classifications).SingleAsync(x => x.Id == id, cancellationToken);
 
     public async Task<bool> UpdateName(int id, string name, CancellationToken cancellationToken = default)
     {
@@ -37,5 +41,34 @@ internal class FinancialLabelsRepository(AppDbContext context) : IFinancialLabel
         elementToRemove.Name = name;
 
         return await context.SaveChangesAsync(cancellationToken) == 1;
+    }
+
+    public async Task<bool> AddClassification(int labelId, string kind, string value, CancellationToken cancellationToken = default)
+    {
+        if (!FinancialLabelClassificationCatalog.TryNormalize(kind, value, out string normalizedKind, out string normalizedValue))
+            throw new ArgumentException("Invalid financial label classification.", nameof(value));
+
+        var label = await context.FinancialLabels
+            .Include(x => x.Classifications)
+            .SingleAsync(x => x.Id == labelId, cancellationToken);
+
+        var existing = label.Classifications.SingleOrDefault(x => x.Kind == normalizedKind);
+        if (existing is null)
+        {
+            label.Classifications.Add(new FinancialLabelClassification
+            {
+                LabelId = labelId,
+                Kind = normalizedKind,
+                Value = normalizedValue
+            });
+
+            return await context.SaveChangesAsync(cancellationToken) > 0;
+        }
+
+        if (existing.Value == normalizedValue)
+            return true;
+
+        existing.Value = normalizedValue;
+        return await context.SaveChangesAsync(cancellationToken) > 0;
     }
 }

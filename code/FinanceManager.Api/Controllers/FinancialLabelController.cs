@@ -44,6 +44,17 @@ public class FinancialLabelController(IFinancialLabelsRepository financialLabels
     public async Task<IActionResult> UpdateName([FromQuery] int id, string name, CancellationToken cancellationToken = default) =>
     Ok(await financialLabelsRepository.UpdateName(id, name, cancellationToken));
 
+    [HttpPost("add-classification")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> AddClassification(AddFinancialLabelClassification classification, CancellationToken cancellationToken = default)
+    {
+        if (!FinancialLabelClassificationCatalog.TryNormalize(classification.Kind, classification.Value, out string normalizedKind, out string normalizedValue))
+            return BadRequest("Invalid financial label classification.");
+
+        return Ok(await financialLabelsRepository.AddClassification(classification.LabelId, normalizedKind, normalizedValue, cancellationToken));
+    }
+
     [HttpDelete("delete")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

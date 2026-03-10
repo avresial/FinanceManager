@@ -24,6 +24,8 @@ public static class ServiceCollectionExtension
     {
         services.AddScoped<ISettingsService, SettingsService>()
                 .AddScoped<IMoneyFlowService, MoneyFlowService>()
+            .AddScoped<IEssentialSpendingServiceTyped, CurrencyEssentialSpendingService>()
+            .AddScoped<IEssentialSpendingService, EssentialSpendingService>()
                 .AddScoped<IBalanceServiceTyped, CurrencyBalanceService>()
                 .AddScoped<IBalanceServiceTyped, BondBalanceService>()
                 .AddScoped<IBalanceServiceTyped, StockBalanceService>()
