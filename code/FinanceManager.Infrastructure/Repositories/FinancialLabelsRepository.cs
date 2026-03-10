@@ -45,30 +45,27 @@ internal class FinancialLabelsRepository(AppDbContext context) : IFinancialLabel
 
     public async Task<bool> AddClassification(int labelId, string kind, string value, CancellationToken cancellationToken = default)
     {
-        if (!FinancialLabelClassificationCatalog.TryNormalize(kind, value, out string normalizedKind, out string normalizedValue))
-            throw new ArgumentException("Invalid financial label classification.", nameof(value));
-
         var label = await context.FinancialLabels
             .Include(x => x.Classifications)
             .SingleAsync(x => x.Id == labelId, cancellationToken);
 
-        var existing = label.Classifications.SingleOrDefault(x => x.Kind == normalizedKind);
+        var existing = label.Classifications.SingleOrDefault(x => x.Kind == kind);
         if (existing is null)
         {
             label.Classifications.Add(new FinancialLabelClassification
             {
                 LabelId = labelId,
-                Kind = normalizedKind,
-                Value = normalizedValue
+                Kind = kind,
+                Value = value
             });
 
             return await context.SaveChangesAsync(cancellationToken) > 0;
         }
 
-        if (existing.Value == normalizedValue)
+        if (existing.Value == value)
             return true;
 
-        existing.Value = normalizedValue;
+        existing.Value = value;
         return await context.SaveChangesAsync(cancellationToken) > 0;
     }
 }
