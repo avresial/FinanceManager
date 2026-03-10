@@ -108,6 +108,28 @@ public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : Co
     }
 
     [Fact]
+    public async Task AddClassification_StoresNormalizedClassification()
+    {
+        Authorize("TestUser", 1, UserRole.User);
+
+        await new FinancialLabelHttpClient(Client).Add(new AddFinancialLabel("Rent"), TestContext.Current.CancellationToken);
+        var label = (await new FinancialLabelHttpClient(Client).Get(0, 10, TestContext.Current.CancellationToken)).Single();
+
+        var updateResult = await new FinancialLabelHttpClient(Client).AddClassification(
+            new AddFinancialLabelClassification(label.Id, "spendingnecessity", "essential"),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(updateResult);
+
+        var refreshedLabel = await new FinancialLabelHttpClient(Client).Get(label.Id, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(refreshedLabel);
+        var classification = Assert.Single(refreshedLabel.Classifications);
+        Assert.Equal(FinancialLabelClassificationCatalog.SpendingNecessityKind, classification.Kind);
+        Assert.Equal(FinancialLabelClassificationCatalog.EssentialValue, classification.Value);
+    }
+
+    [Fact]
     public async Task Delete_DeletesLabel()
     {
         Authorize("TestUser", 1, UserRole.User);
