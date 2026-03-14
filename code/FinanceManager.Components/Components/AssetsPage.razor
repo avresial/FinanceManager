@@ -10,19 +10,26 @@
         </MudItem>
 
         <MudItem xs="12" lg="4">
-            <AssetsPerTypeOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
+            <AssetsPerTypeOverviewCard StartDateTime=StartDate EndDateTime="@EndDate"
+                                       Height="@($"{1.5 * _unitHeight}px")" />
         </MudItem>
 
         <MudItem xs="12" lg="4">
-            <AssetsPerAccountOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
+            <AssetsPerAccountOverviewCard StartDateTime=StartDate EndDateTime="@EndDate"
+                                          Height="@($"{1.5 * _unitHeight}px")" />
         </MudItem>
 
         <MudItem xs="12" lg="4">
-            <AssetsPerAccountOverviewCard DisplayAsChart="false" StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
+            <AssetsPerAccountOverviewCard DisplayAsChart="false" StartDateTime=StartDate EndDateTime="@EndDate"
+                                          Height="@($"{1.5 * _unitHeight}px")" />
         </MudItem>
 
         <MudItem xs="12" lg="4">
-            <InvestmentRateCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1 * _unitHeight}px")" />
+            <InvestmentRateCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
+        </MudItem>
+
+        <MudItem xs="12" lg="4">
+            <InvestmentPaycheckEstimatorCard EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
         </MudItem>
     </MudGrid>
 </MudContainer>

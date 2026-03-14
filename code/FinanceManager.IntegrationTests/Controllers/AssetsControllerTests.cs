@@ -1,4 +1,6 @@
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Enums;
@@ -112,6 +114,52 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         Assert.NotEmpty(result);
 
         Assert.All(result, item => Assert.True(item.Value > 0));
+    }
+
+    [Fact]
+    public async Task GetInvestmentPaycheckEstimate_ReturnsPartialSalaryHistoryMetadata()
+    {
+        var salary = new FinancialLabel { Name = "salary" };
+        _testDatabase!.Context.FinancialLabels.Add(salary);
+
+        var salaryAccount = new FinancialAccountBaseDto
+        {
+            UserId = 1,
+            AccountId = 10,
+            Name = "Salary Account",
+            AccountLabel = AccountLabel.Cash,
+            AccountType = AccountType.Currency
+        };
+
+        var bondAccount = new FinancialAccountBaseDto
+        {
+            UserId = 1,
+            AccountId = 11,
+            Name = "Bond Portfolio",
+            AccountLabel = AccountLabel.Other,
+            AccountType = AccountType.Bond
+        };
+
+        _testDatabase.Context.Accounts.AddRange(salaryAccount, bondAccount);
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        _testDatabase.Context.CurrencyEntries.AddRange(
+            new CurrencyAccountEntry(salaryAccount.AccountId, 1, _nowUtc.AddMonths(-2), 3000m, 3000m) { Labels = [salary] },
+            new CurrencyAccountEntry(salaryAccount.AccountId, 2, _nowUtc, 4500m, 4500m) { Labels = [salary] });
+        _testDatabase.Context.BondEntries.Add(new BondAccountEntry(bondAccount.AccountId, 1, _nowUtc.AddDays(-1), 12000m, 12000m, 1));
+
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        Authorize("TestUser", 1, UserRole.User);
+
+        var result = await new AssetsHttpClient(Client).GetInvestmentPaycheckEstimate(1, DefaultCurrency.USD, _nowUtc, 0.05m, 3);
+
+        Assert.NotNull(result);
+        Assert.Equal(12000m, result.InvestableAssetsValue);
+        Assert.Equal(50m, result.SustainableMonthlyPaycheck);
+        Assert.Equal(3, result.SalaryMonthsRequested);
+        Assert.Equal(2, result.SalaryMonthsUsed);
+        Assert.Equal(3750m, result.AverageMonthlySalary);
+        Assert.True(result.HasPartialSalaryHistory);
     }
 
     public override void Dispose()

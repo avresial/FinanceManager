@@ -1,6 +1,7 @@
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
+using System.Globalization;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;
@@ -41,5 +42,17 @@ public class AssetsHttpClient(HttpClient httpClient)
     {
         var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>($"{httpClient.BaseAddress}api/Assets/GetEndAssetsPerType/{userId}/{currency.Id}/{asOfDate:O}");
         return result ?? [];
+    }
+
+    public async Task<InvestmentPaycheckEstimate> GetInvestmentPaycheckEstimate(int userId, Currency currency, DateTime asOfDate, decimal withdrawalRate = 0.05m, int salaryMonths = 3)
+    {
+        string endpoint = $"{httpClient.BaseAddress}api/Assets/GetInvestmentPaycheckEstimate/{userId}/{currency.Id}/{asOfDate:O}?withdrawalRate={withdrawalRate.ToString(CultureInfo.InvariantCulture)}&salaryMonths={salaryMonths}";
+        var result = await httpClient.GetFromJsonAsync<InvestmentPaycheckEstimate>(endpoint);
+        return result ?? new InvestmentPaycheckEstimate
+        {
+            AsOfDate = asOfDate,
+            AnnualWithdrawalRate = withdrawalRate,
+            SalaryMonthsRequested = salaryMonths,
+        };
     }
 }
