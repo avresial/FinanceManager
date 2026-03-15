@@ -31,7 +31,7 @@
                                         <ActivatorContent>
                                             <MudPaper Height="150px" Outlined="true" Class="@_dragClass">
                                                 <MudText Typo="Typo.h6"> Drag and drop file here or click </MudText>
-                                                @foreach (var item in LoadedFiles)
+                                                @foreach (var item in _loadedFiles)
                                                 {
                                                     <MudChip T="string" Color="Color.Dark" Text="@item.Name" />
                                                 }
@@ -61,7 +61,7 @@
                                                 var _delimOptions = new List<(string Value, string Label)> { (",", "Comma (,)"),
                                         (";", "Semicolon (;)"), ("\t", "Tab (\\t)") };
                                             }
-                                            <MudSelect T="string" Label="Delimiter" @bind-Value="_delimiter">
+                                            <MudSelect T="string" Label="Delimiter" @bind-Value="Delimiter">
                                                 @foreach (var opt in _delimOptions)
                                                 {
                                                     <MudSelectItem T="string" Value="@opt.Value">@opt.Label</MudSelectItem>
@@ -263,7 +263,7 @@
                                Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Begin import</MudButton>
                 }
                 @if (_stepIndex == 2 && (_importResult is null || _importResult is not null &&
-                                                !_importResult.Conflicts.Any()))
+                                                                !_importResult.Conflicts.Any()))
                 {
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_step3Complete)"
                                href="@($"AccountDetails/{AccountId}")" Class="ml-auto">@($"Go back to {AccountName}")</MudButton>

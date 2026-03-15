@@ -9,4 +9,5 @@
 		<EmbeddedResource Remove="Records\**" />
 		<None Remove="Records\**" />
 	</ItemGroup>
+
 </Project>

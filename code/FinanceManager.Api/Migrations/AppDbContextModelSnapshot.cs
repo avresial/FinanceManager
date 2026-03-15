@@ -192,6 +192,42 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("CurrencyEntries");
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Imports.CsvHeaderMapping", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FieldName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("HeaderName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HeaderName")
+                        .HasDatabaseName("IX_CsvHeaderMapping_Header");
+
+                    b.HasIndex("HeaderName", "FieldName")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CsvHeaderMapping_Header_Field");
+
+                    b.ToTable("CsvHeaderMappings");
+                });
+
             modelBuilder.Entity("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabel", b =>
                 {
                     b.Property<int>("Id")
@@ -331,6 +367,45 @@ namespace FinanceManager.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ActiveUsers");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Users.FinancialInsight", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AccountId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("Tags")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("FinancialInsights");
                 });
 
             modelBuilder.Entity("FinanceManager.Domain.Entities.Users.NewVisits", b =>

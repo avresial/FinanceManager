@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
@@ -27,8 +28,21 @@ public static class Extensions
 
         builder.Services.ConfigureHttpClientDefaults(http =>
         {
+            var attemptTimeoutSeconds = builder.Configuration.GetValue<int?>("HttpClientResilience:AttemptTimeoutSeconds") ?? 600;
+            var totalRequestTimeoutSeconds = builder.Configuration.GetValue<int?>("HttpClientResilience:TotalRequestTimeoutSeconds") ?? 900;
+            var circuitBreakerSamplingSeconds = builder.Configuration.GetValue<int?>("HttpClientResilience:CircuitBreakerSamplingDurationSeconds") ?? 1200;
+
+            attemptTimeoutSeconds = Math.Max(1, attemptTimeoutSeconds);
+            totalRequestTimeoutSeconds = Math.Max(attemptTimeoutSeconds, totalRequestTimeoutSeconds);
+            circuitBreakerSamplingSeconds = Math.Max(attemptTimeoutSeconds * 2, circuitBreakerSamplingSeconds);
+
             // Turn on resilience by default
-            http.AddStandardResilienceHandler();
+            http.AddStandardResilienceHandler(options =>
+            {
+                options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(attemptTimeoutSeconds);
+                options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(totalRequestTimeoutSeconds);
+                options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(circuitBreakerSamplingSeconds);
+            });
 
             // Turn on service discovery by default
             http.AddServiceDiscovery();

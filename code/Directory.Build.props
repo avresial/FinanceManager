@@ -8,5 +8,6 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<LangVersion>latest</LangVersion>
+		<CopilotCliDownloadTimeout>600000</CopilotCliDownloadTimeout>
 	</PropertyGroup>
 </Project>

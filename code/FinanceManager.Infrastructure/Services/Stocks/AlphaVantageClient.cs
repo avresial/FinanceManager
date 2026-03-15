@@ -16,7 +16,7 @@ internal sealed class AlphaVantageClient(
     ILogger<AlphaVantageClient> logger,
     IOptions<StockApiOptions> options) : IAlphaVantageClient
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
@@ -44,7 +44,7 @@ internal sealed class AlphaVantageClient(
             }
 
             var content = await response.Content.ReadAsStringAsync(ct);
-            var apiResponse = JsonSerializer.Deserialize<AlphaVantageSymbolSearchResponse>(content, JsonOptions);
+            var apiResponse = JsonSerializer.Deserialize<AlphaVantageSymbolSearchResponse>(content, _jsonOptions);
             if (apiResponse?.BestMatches is null || apiResponse.BestMatches.Count == 0) return [];
 
             var result = new List<TickerSearchMatch>(apiResponse.BestMatches.Count);
@@ -97,7 +97,7 @@ internal sealed class AlphaVantageClient(
             }
 
             var content = await response.Content.ReadAsStringAsync(ct);
-            var apiResponse = JsonSerializer.Deserialize<AlphaVantageDailyResponse>(content, JsonOptions);
+            var apiResponse = JsonSerializer.Deserialize<AlphaVantageDailyResponse>(content, _jsonOptions);
             if (apiResponse?.Series is null || apiResponse.Series.Count == 0) return [];
 
             var prices = new List<StockPrice>();

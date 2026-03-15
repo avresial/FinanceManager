@@ -6,6 +6,7 @@ namespace FinanceManager.Application.Services;
 
 public class BalanceService(IEnumerable<IBalanceServiceTyped> typedBalanceServices) : IBalanceService
 {
+    private static readonly TimeSpan _oneDay = TimeSpan.FromDays(1);
     public Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end) =>
         Aggregate(service => service.GetInflow(userId, currency, start, end));
 
