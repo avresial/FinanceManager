@@ -34,15 +34,29 @@ builder.Services.Configure<OllamaOptions>(builder.Configuration.GetSection("Olla
 builder.Services.Configure<AiProviderOptions>(builder.Configuration.GetSection("AiProvider"));
 builder.Services.Configure<List<AiProviderFallbackStrategyOption>>(builder.Configuration.GetSection("AIProviderFallbackStrategies"));
 
+var allowedCorsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?.Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ApiCorsPolicy",
-        builder =>
+        corsPolicyBuilder =>
         {
-            builder.AllowAnyOrigin()
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+            if (allowedCorsOrigins is { Length: > 0 })
+            {
+                corsPolicyBuilder.WithOrigins(allowedCorsOrigins)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod();
+
+                return;
+            }
+
+            corsPolicyBuilder.AllowAnyOrigin()
+                .AllowAnyHeader()
+                .AllowAnyMethod();
         });
 }).AddAuthentication(options =>
 {

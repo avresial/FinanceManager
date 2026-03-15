@@ -149,12 +149,15 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         var result = new Dictionary<DateOnly, decimal>();
         if (Entries is null || start > end) return result;
 
+        var detailsById = bondDetails.ToDictionary(x => x.Id);
+
         var detailsIds = Entries.Select(e => e.BondDetailsId)
             .Concat(NextOlderEntries.Keys)
             .Distinct()
             .ToList();
-        if (!detailsIds.All(id => bondDetails.Any(bd => bd.Id == id)))
-            throw new ArgumentException("Not all BondDetails are provided for the entries in this account.");
+        var missingDetailIds = detailsIds.Where(id => !detailsById.ContainsKey(id)).ToList();
+        if (missingDetailIds.Count != 0)
+            throw new InvalidOperationException($"Bond valuation requires details for bond ids: {string.Join(", ", missingDetailIds)}.");
 
         for (var date = start; date <= end; date = date.AddDays(1))
         {
@@ -164,8 +167,7 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
                 var currentEntry = GetThisOrNextOlder(date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), detailId);
                 if (currentEntry is null) continue;
 
-                var details = bondDetails.Single(bd => bd.Id == detailId);
-                total += currentEntry.GetPriceAt(date, details);
+                total += currentEntry.GetPriceAt(date, detailsById[detailId]);
             }
 
             if (total != 0)

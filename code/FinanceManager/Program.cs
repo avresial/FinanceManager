@@ -17,7 +17,12 @@ builder.Services.AddMudServices();
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddBlazoredSessionStorage();
 
-var apiBaseAddress = builder.Configuration["Api:BaseAddress"] ?? throw new InvalidOperationException("API base address is not configured.");
+var apiBaseAddress = builder.Configuration["Api:BaseAddress"];
+if (string.IsNullOrWhiteSpace(apiBaseAddress))
+{
+    throw new InvalidOperationException("API base address is not configured.");
+}
+
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
 
 builder.Services.AddApplication().AddUIComponents();

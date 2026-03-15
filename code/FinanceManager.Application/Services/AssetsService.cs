@@ -46,7 +46,7 @@ public class AssetsService(IEnumerable<IAssetsServiceTyped> typedAssetServices) 
             }
         }
 
-        return BucketToClosingBalanceSeries(prices);
+        return BucketToClosingBalanceSeries(prices, start, end);
     }
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end, InvestmentType investmentType)
     {
@@ -63,16 +63,28 @@ public class AssetsService(IEnumerable<IAssetsServiceTyped> typedAssetServices) 
             }
         }
 
-        return BucketToClosingBalanceSeries(prices);
+        return BucketToClosingBalanceSeries(prices, start, end);
     }
 
-    private static List<TimeSeriesModel> BucketToClosingBalanceSeries(Dictionary<DateTime, decimal> data)
+    private static List<TimeSeriesModel> BucketToClosingBalanceSeries(Dictionary<DateTime, decimal> data, DateTime start, DateTime end)
     {
+        if (data.Count == 0) return [];
+
         var dailyTotals = data
             .GroupBy(x => x.Key.Date)
             .ToDictionary(group => group.Key, group => group.Sum(x => x.Value));
 
-        return TimeBucketService.Get(dailyTotals.OrderBy(x => x.Key).Select(x => (x.Key, x.Value)))
+        Dictionary<DateTime, decimal> closingBalances = [];
+        decimal lastKnownValue = 0;
+        for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
+        {
+            if (dailyTotals.TryGetValue(date, out var dayValue))
+                lastKnownValue = dayValue;
+
+            closingBalances[date] = lastKnownValue;
+        }
+
+        return TimeBucketService.Get(closingBalances.OrderBy(x => x.Key).Select(x => (x.Key, x.Value)))
             .OrderByDescending(x => x.Date)
             .Select(bucket => new TimeSeriesModel() { DateTime = bucket.Date, Value = bucket.Objects.Last() })
             .ToList();

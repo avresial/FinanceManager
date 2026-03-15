@@ -145,9 +145,10 @@ public class AssetsServiceTests
         var aggregated = await _assetsService.GetAssetsTimeSeries(1, DefaultCurrency.PLN, day, day.AddDays(1));
 
         // Assert
-        Assert.Single(aggregated);
-        Assert.Equal(15m, aggregated[0].Value);
-        Assert.Equal(day.Date, aggregated[0].DateTime);
+        Assert.Equal(2, aggregated.Count);
+        Assert.All(aggregated, point => Assert.Equal(15m, point.Value));
+        Assert.Contains(aggregated, point => point.DateTime == day.Date);
+        Assert.Contains(aggregated, point => point.DateTime == day.AddDays(1).Date);
     }
 
     [Fact]

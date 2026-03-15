@@ -60,7 +60,7 @@ public class InvestmentPaycheckEstimatorService(
                 if (newestEntry is null)
                     continue;
                 if (!bondDetails.TryGetValue(detailsId, out var details))
-                    continue;
+                    throw new InvalidOperationException($"Bond valuation requires details for bond id {detailsId}.");
 
                 result += newestEntry.GetPriceAt(DateOnly.FromDateTime(asOfDate), details);
             }

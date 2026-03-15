@@ -33,7 +33,8 @@ IStockPriceProvider stockPriceProvider, IBondDetailsRepository bondDetailsReposi
             {
                 var newestEntry = account.GetThisOrNextOlder(date, detailsId);
                 if (newestEntry is null) continue;
-                if (!bondDetails.TryGetValue(detailsId, out var details)) continue;
+                if (!bondDetails.TryGetValue(detailsId, out var details))
+                    throw new InvalidOperationException($"Bond valuation requires details for bond id {detailsId}.");
 
                 result += newestEntry.GetPriceAt(DateOnly.FromDateTime(date), details);
             }

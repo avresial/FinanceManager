@@ -66,7 +66,8 @@ public class AssetsServiceBond(IFinancialAccountRepository financialAccountRepos
             {
                 var latestEntry = account.GetThisOrNextOlder(asOfDate, bondDetailsId);
                 if (latestEntry is null) continue;
-                if (!bondDetails.TryGetValue(bondDetailsId, out var details)) continue;
+                if (!bondDetails.TryGetValue(bondDetailsId, out var details))
+                    throw new InvalidOperationException($"Bond valuation requires details for bond id {bondDetailsId}.");
 
                 value += latestEntry.GetPriceAt(DateOnly.FromDateTime(asOfDate), details);
             }
@@ -86,7 +87,8 @@ public class AssetsServiceBond(IFinancialAccountRepository financialAccountRepos
             {
                 var latestEntry = account.GetThisOrNextOlder(asOfDate, bondDetailsId);
                 if (latestEntry is null) continue;
-                if (!bondDetails.TryGetValue(bondDetailsId, out var details)) continue;
+                if (!bondDetails.TryGetValue(bondDetailsId, out var details))
+                    throw new InvalidOperationException($"Bond valuation requires details for bond id {bondDetailsId}.");
 
                 value += latestEntry.GetPriceAt(DateOnly.FromDateTime(asOfDate), details);
             }

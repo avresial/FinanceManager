@@ -45,6 +45,26 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         services.AddSingleton(currencyRepoMock.Object);
     }
 
+    private static BondDetails CreateBondDetails(int id, DateTime nowUtc, decimal unitValue = 1m)
+    {
+        var calculationMethod = new BondCalculationMethod
+        {
+            Id = id,
+            DateOperator = DateOperator.UntilDate,
+            DateValue = DateOnly.FromDateTime(nowUtc.AddYears(1)).ToString("yyyy-MM-dd"),
+            Rate = 0.0365m
+        };
+
+        return new BondDetails(
+            $"Bond {id}",
+            "Test Issuer",
+            DateOnly.FromDateTime(nowUtc.AddYears(-1)),
+            DateOnly.FromDateTime(nowUtc.AddYears(5)),
+            [calculationMethod],
+            unitValue: unitValue)
+        { Id = id };
+    }
+
     private async Task SeedWithTestCurrencyAccount(string accountName = "Test Currency Account")
     {
         if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.Name == accountName, TestContext.Current.CancellationToken))
@@ -256,6 +276,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
             AccountType = AccountType.Bond
         };
         _testDatabase.Context.Accounts.Add(bondAccount);
+        _testDatabase.Context.Bonds.Add(CreateBondDetails(1, _nowUtc));
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         _testDatabase.Context.BondEntries.Add(

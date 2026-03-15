@@ -312,14 +312,14 @@ public class BondAccountTests
 
         var targetDate = DateOnly.FromDateTime(postingDate.AddDays(10));
 
-        // Act & Assert - Should throw ArgumentException when bond details are missing
-        var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
+        // Act & Assert - Should throw when bond details are missing
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             account.GetDailyPrice(
                 DateOnly.FromDateTime(postingDate),
                 targetDate,
                 [])); // No bond details provided
 
-        Assert.Contains("BondDetails", exception.Message);
+        Assert.Contains("Bond valuation requires details", exception.Message);
     }
 
     [Fact]
