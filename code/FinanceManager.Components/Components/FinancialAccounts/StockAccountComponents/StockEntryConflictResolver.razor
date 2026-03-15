@@ -26,8 +26,8 @@ else if (_conflictsByDay.Any() == true)
                     @foreach (var c in _selectedConflicts.Where(c => c.ImportEntry is not null))
                     {
                         <tr>
-                            <td>@c.ImportEntry!.PostingDate</td>
-                            <td>@c.ImportEntry!.ValueChange</td>
+                            <td>@c.ImportEntry!.PostingDate.ToString("dd-MM-yyyy")</td>
+                            <td>@c.ImportEntry!.ValueChange.ToString("0.00")</td>
                             <td>@c.ImportEntry!.Ticker</td>
                         </tr>
                     }
@@ -48,8 +48,8 @@ else if (_conflictsByDay.Any() == true)
                     @foreach (var c in _selectedConflicts.Where(c => c.ExistingEntry is not null))
                     {
                         <tr>
-                            <td>@c.ExistingEntry!.PostingDate</td>
-                            <td>@c.ExistingEntry!.ValueChange</td>
+                            <td>@c.ExistingEntry!.PostingDate.ToString("dd-MM-yyyy")</td>
+                            <td>@c.ExistingEntry!.ValueChange.ToString("0.00")</td>
                             <td>@c.ExistingEntry!.Ticker</td>
                         </tr>
                     }

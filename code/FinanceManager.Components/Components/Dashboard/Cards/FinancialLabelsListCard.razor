@@ -1,5 +1,4 @@
-﻿
-<MudCard Outlined Class="d-flex flex-nowrap" Style="@($"height:{Height};")">
+﻿<MudCard Outlined Class="d-flex flex-nowrap" Style="@($"height:{Height};")">
     <MudPaper Class="flex-grow-0 p-3" Elevation="0">
         <MudText Typo=Typo.h5>Labels</MudText>
     </MudPaper>
@@ -17,7 +16,7 @@
                 <MudList T="string" ReadOnly>
                     @foreach (var label in _data)
                     {
-                        <MudListItem Text="@($"{label.Name} - {label.Value} {currency}")" />
+                        <MudListItem Text="@($"{label.Name} - {label.Value:0.00} {currency}")" />
                     }
                 </MudList>
             </MudStack>

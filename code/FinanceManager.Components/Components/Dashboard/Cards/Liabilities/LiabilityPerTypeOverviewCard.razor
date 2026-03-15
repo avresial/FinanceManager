@@ -9,7 +9,7 @@
         }
         else if (_data.Any())
         {
-            <MudText Typo=Typo.h6 Class="mb-2 text-muted">@_totalLiabilities @_currency</MudText>
+            <MudText Typo=Typo.h6 Class="mb-2 text-muted">@_totalLiabilities.ToString("0.00") @_currency</MudText>
         }
     </MudPaper>
     <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
@@ -21,7 +21,8 @@
         }
         else if (_data.Any())
         {
-            <MudChart ChartType="ChartType.Pie" InputData="@_data" InputLabels="@_labels" Width="100%" Height="100%" ChartOptions=_chartOptions AxisChartOptions=_axisChartOptions Class="p-3" />
+            <MudChart ChartType="ChartType.Pie" InputData="@_data" InputLabels="@_labels" Width="100%" Height="100%"
+                      ChartOptions=_chartOptions AxisChartOptions=_axisChartOptions Class="p-3" />
         }
         else
         {

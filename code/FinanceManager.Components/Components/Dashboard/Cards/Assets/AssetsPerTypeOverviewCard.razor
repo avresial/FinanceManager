@@ -9,7 +9,7 @@
         }
         else if (_data.Any())
         {
-            <MudText Typo=Typo.h6 Class="mb-2 text-muted">@_totalAssets @_currency</MudText>
+            <MudText Typo=Typo.h6 Class="mb-2 text-muted">@_totalAssets.ToString("0.00") @_currency</MudText>
         }
     </MudPaper>
     <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">

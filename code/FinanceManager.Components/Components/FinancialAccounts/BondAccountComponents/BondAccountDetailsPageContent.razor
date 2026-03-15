@@ -57,7 +57,7 @@
                         <AccountTopBottomList Title="Top 5" Items="_top5 ?? []" ValueColor="Color.Success"
                                               ItemTitle="@(item => _bondDetails.FirstOrDefault(x => x.Id == item.Item1.BondDetailsId)?.Name ?? "Bond")"
                                               ItemValue="@(item => $"{item.Item2} units")"
-                                              ItemDate="@(item => item.Item1.PostingDate.ToString("yyyy-MM-dd"))" />
+                                              ItemDate="@(item => item.Item1.PostingDate.ToString("dd-MM-yyyy"))" />
                     }
 
                     @if (_bottom5 is not null && _bottom5.Any())
@@ -65,7 +65,7 @@
                         <AccountTopBottomList Title="Bottom 5" Items="_bottom5 ?? []" ValueColor="Color.Error"
                                               ItemTitle="@(item => _bondDetails.FirstOrDefault(x => x.Id == item.Item1.BondDetailsId)?.Name ?? "Bond")"
                                               ItemValue="@(item => $"{item.Item2} units")"
-                                              ItemDate="@(item => item.Item1.PostingDate.ToString("yyyy-MM-dd"))" />
+                                              ItemDate="@(item => item.Item1.PostingDate.ToString("dd-MM-yyyy"))" />
                     }
                 </MudStack>
             </MudPaper>

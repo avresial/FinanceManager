@@ -42,7 +42,7 @@ public partial class ClosingBalanceOverviewCard
             var closingBalance = await MoneyFlowHttpClient.GetClosingBalance(user.UserId, DefaultCurrency.PLN, StartDateTime.Date, EndDateTime);
             var orderedSeries = closingBalance.OrderBy(x => x.DateTime).ToList();
 
-            _closingBalance = Math.Round(orderedSeries.LastOrDefault()?.Value ?? 0, 0);
+            _closingBalance = Math.Round(orderedSeries.LastOrDefault()?.Value ?? 0, 2);
             _series.Add(orderedSeries
                 .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), Math.Round(x.Value, 2)))
                 .ToList());

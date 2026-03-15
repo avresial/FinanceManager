@@ -1,4 +1,4 @@
-﻿@using FinanceManager.Components.Helpers
+@using FinanceManager.Components.Helpers
 @using FinanceManager.Domain.Entities
 @using FinanceManager.Domain.Repositories;
 @using FinanceManager.Domain.Repositories.Account
@@ -23,7 +23,7 @@
             </MudItem>
             <MudItem xs="3">
                 <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
-                <MudText Typo="Typo.body1">@InvestmentEntry.PostingDate.ToLocalTime().ToString("yyyy-MM-dd")</MudText>
+                <MudText Typo="Typo.body1">@InvestmentEntry.PostingDate.ToLocalTime().ToString("dd-MM-yyyy")</MudText>
             </MudItem>
         </MudGrid>
     </TitleContent>
@@ -40,7 +40,8 @@
                         </MudItem>
                         <MudItem xs="4">
                             <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
-                            <MudText Typo="Typo.body1">@InvestmentEntry.PostingDate.ToLocalTime()</MudText>
+                            <MudText Typo="Typo.body1">@InvestmentEntry.PostingDate.ToLocalTime().ToString("dd-MM-yyyy")
+                            </MudText>
                         </MudItem>
                         <MudItem xs="4">
                             @if (_price.HasValue)
@@ -50,7 +51,8 @@
                             }
                             else
                             {
-                                <MudButton Color="Color.Warning" Variant="Variant.Text" Href=@($"StockPrices/{InvestmentEntry.Ticker}/{InvestmentEntry.PostingDate.ToRfc3339()}")>
+                                <MudButton Color="Color.Warning" Variant="Variant.Text"
+                                           Href=@($"StockPrices/{InvestmentEntry.Ticker}/{InvestmentEntry.PostingDate.ToRfc3339()}")>
                                     Add ticker price
                                 </MudButton>
                             }
@@ -61,7 +63,8 @@
                             <MudButton Variant="Variant.Text" OnClick=ShowEditOverlay>Edit</MudButton>
                         </MudItem>
                         <MudItem xs="6">
-                            <MudButton Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove</MudButton>
+                            <MudButton Variant="Variant.Text" OnClick=ShowRemoveOverlay Color="Color.Error">Remove
+                            </MudButton>
                         </MudItem>
                     </MudGrid>
                 </MudItem>
@@ -72,13 +75,14 @@
 
 <MudOverlay @bind-Visible=_updateEntryVisibility DarkBackground="true">
     <MudPaper Class="p-5">
-        <UpdateStockEntry InvestmentAccount=InvestmentAccount InvestmentEntry="InvestmentEntry" ActionCompleted="HideOverlay" />
+        <UpdateStockEntry InvestmentAccount=InvestmentAccount InvestmentEntry="InvestmentEntry"
+                          ActionCompleted="HideOverlay" />
     </MudPaper>
 </MudOverlay>
 
 <MudOverlay @bind-Visible=_removeEntryVisibility DarkBackground="true">
     <MudPaper Class="p-5">
-        <RemoveStockEntry InvestmentAccountName=@InvestmentAccount.Name InvestmentEntry="InvestmentEntry" Cancel="HideOverlay" Confirm="Confirm" />
+        <RemoveStockEntry InvestmentAccountName=@InvestmentAccount.Name InvestmentEntry="InvestmentEntry"
+                          Cancel="HideOverlay" Confirm="Confirm" />
     </MudPaper>
 </MudOverlay>
-

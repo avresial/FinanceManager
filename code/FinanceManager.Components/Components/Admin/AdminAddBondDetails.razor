@@ -79,7 +79,7 @@
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd DataLabel="Operator">@context.DateOperator</MudTd>
-                            <MudTd DataLabel="Date">@context.DateValue</MudTd>
+                            <MudTd DataLabel="Date">@DateOnly.Parse(context.DateValue).ToString("dd-MM-yyyy")</MudTd>
                             <MudTd DataLabel="Rate">@context.Rate</MudTd>
                             <MudTd DataLabel="Action">
                                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"

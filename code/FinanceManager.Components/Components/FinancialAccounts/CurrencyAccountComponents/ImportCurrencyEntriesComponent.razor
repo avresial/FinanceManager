@@ -1,4 +1,4 @@
-﻿@using CsvHelper
+@using CsvHelper
 @using CsvHelper.Configuration
 @using FinanceManager.Infrastructure.Readers
 @using Microsoft.AspNetCore.Components.Forms
@@ -186,8 +186,8 @@
                                                 @foreach (var row in _mappedPreview)
                                                 {
                                                     <tr>
-                                                        <td>@row.PostingDate</td>
-                                                        <td>@row.ValueChange</td>
+                                                        <td>@row.PostingDate.ToString("dd-MM-yyyy")</td>
+                                                        <td>@row.ValueChange.ToString("0.00")</td>
                                                         <td>@(row.ContractorDetails ?? "-")</td>
                                                         <td>@(row.Description ?? "-")</td>
                                                     </tr>
@@ -263,7 +263,7 @@
                                Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Begin import</MudButton>
                 }
                 @if (_stepIndex == 2 && (_importResult is null || _importResult is not null &&
-                                                                !_importResult.Conflicts.Any()))
+                                                                                !_importResult.Conflicts.Any()))
                 {
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_step3Complete)"
                                href="@($"AccountDetails/{AccountId}")" Class="ml-auto">@($"Go back to {AccountName}")</MudButton>

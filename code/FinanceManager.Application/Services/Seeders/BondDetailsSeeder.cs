@@ -18,44 +18,6 @@ public class BondDetailsSeeder(IBondDetailsRepository bondDetailsRepository, ICu
         {
             new BondDetails
             {
-                Name = "EDO0728",
-                Issuer = "Ministry of Finance - Poland",
-                StartEmissionDate = new DateOnly(2024, 7, 1),
-                EndEmissionDate = new DateOnly(2034, 7, 1),
-                Type = BondType.InflationBond,
-                Currency = plnCurrency,
-                UnitValue = 100m,
-                CalculationMethods =
-                [
-                    new ()
-                    {
-                        DateOperator = DateOperator.UntilDate,
-                        DateValue = "2034-07-01",
-                        Rate = 0.025m
-                    }
-                ]
-            },
-            new BondDetails
-            {
-                Name = "EDO0428",
-                Issuer = "Ministry of Finance - Poland",
-                StartEmissionDate = new DateOnly(2024, 4, 1),
-                EndEmissionDate = new DateOnly(2034, 4, 1),
-                Type = BondType.InflationBond,
-                Currency = plnCurrency,
-                UnitValue = 100m,
-                CalculationMethods =
-                [
-                    new ()
-                    {
-                        DateOperator = DateOperator.UntilDate,
-                        DateValue = "2034-04-01",
-                        Rate = 0.025m
-                    }
-                ]
-            },
-            new BondDetails
-            {
                 Name = "EDO1235",
                 Issuer = "Ministry of Finance - Poland",
                 StartEmissionDate = new DateOnly(2025, 12, 1),
@@ -73,7 +35,140 @@ public class BondDetailsSeeder(IBondDetailsRepository bondDetailsRepository, ICu
                     }
                 ]
             },
+            new BondDetails
+            {
+                Name = "EDO1033",
+                Issuer = "Ministry of Finance - Poland",
+                StartEmissionDate = new DateOnly(2023, 10, 1),
+                EndEmissionDate = new DateOnly(2023, 10, 31),
+                Type = BondType.InflationBond,
+                Currency = plnCurrency,
+                UnitValue = 100m,
+                CalculationMethods =
+                [
+                    new ()
+                    {
+                        DateOperator = DateOperator.UntilDate,
+                        DateValue = "2033-10-31",
+                        Rate = 0.05m
+                    }
+                ]
+            },
+            new BondDetails
+            {
+                Name = "EDO0933",
+                Issuer = "Ministry of Finance - Poland",
+                StartEmissionDate = new DateOnly(2023, 9, 1),
+                EndEmissionDate = new DateOnly(2023, 9, 30),
+                Type = BondType.InflationBond,
+                Currency = plnCurrency,
+                UnitValue = 100m,
+                CalculationMethods =
+                [
+                    new ()
+                    {
+                        DateOperator = DateOperator.UntilDate,
+                        DateValue = "2033-09-30",
+                        Rate = 0.05m
+                    }
+                ]
+            },
+            new BondDetails
+            {
+                Name = "EDO0833",
+                Issuer = "Ministry of Finance - Poland",
+                StartEmissionDate = new DateOnly(2023, 8, 1),
+                EndEmissionDate = new DateOnly(2023, 8, 31),
+                Type = BondType.InflationBond,
+                Currency = plnCurrency,
+                UnitValue = 100m,
+                CalculationMethods =
+                [
+                    new ()
+                    {
+                        DateOperator = DateOperator.UntilDate,
+                        DateValue = "2033-08-31",
+                        Rate = 0.05m
+                    }
+                ]
+            },
 
+            new BondDetails
+            {
+                Name = "EDO0433",
+                Issuer = "Ministry of Finance - Poland",
+                StartEmissionDate = new DateOnly(2021, 4, 1),
+                EndEmissionDate = new DateOnly(2021, 4, 30),
+                Type = BondType.InflationBond,
+                Currency = plnCurrency,
+                UnitValue = 100m,
+                CalculationMethods =
+                [
+                    new ()
+                    {
+                        DateOperator = DateOperator.UntilDate,
+                        DateValue = "2031-04-30",
+                        Rate = 0.05m
+                    }
+                ]
+            },
+            new BondDetails
+            {
+                Name = "EDO0233",
+                Issuer = "Ministry of Finance - Poland",
+                StartEmissionDate = new DateOnly(2021, 2, 1),
+                EndEmissionDate = new DateOnly(2021, 2, 28),
+                Type = BondType.InflationBond,
+                Currency = plnCurrency,
+                UnitValue = 100m,
+                CalculationMethods =
+                [
+                    new ()
+                    {
+                        DateOperator = DateOperator.UntilDate,
+                        DateValue = "2031-02-28",
+                        Rate = 0.05m
+                    }
+                ]
+            },
+            new BondDetails
+            {
+                Name = "EDO0133",
+                Issuer = "Ministry of Finance - Poland",
+                StartEmissionDate = new DateOnly(2023, 1, 1),
+                EndEmissionDate = new DateOnly(2023, 1, 31),
+                Type = BondType.InflationBond,
+                Currency = plnCurrency,
+                UnitValue = 100m,
+                CalculationMethods =
+                [
+                    new ()
+                    {
+                        DateOperator = DateOperator.UntilDate,
+                        DateValue = "2033-01-31",
+                        Rate = 0.05m
+                    }
+                ]
+            },
+             new BondDetails
+            {
+                Name = "EDO1032",
+                Issuer = "Ministry of Finance - Poland",
+                StartEmissionDate = new DateOnly(2022, 10, 1),
+                EndEmissionDate = new DateOnly(2022, 10, 31),
+                Type = BondType.InflationBond,
+                Currency = plnCurrency,
+                UnitValue = 100m,
+                CalculationMethods =
+                [
+                    new ()
+                    {
+                        DateOperator = DateOperator.UntilDate,
+                        DateValue = "2032-10-31",
+                        Rate = 0.05m
+                    }
+                ]
+            },
 
         };
 

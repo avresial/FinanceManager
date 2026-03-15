@@ -6,7 +6,8 @@
         <MudText Typo=Typo.h5>Liabilities per wallet</MudText>
         @if (DisplayAsChart && Data.Any())
         {
-            <MudText Typo=Typo.h6 Class="mb-2 text-muted">@Math.Round(_totalLiabilities, 2) @_currency</MudText>
+            <MudText Typo=Typo.h6 Class="mb-2 text-muted">@Math.Round(_totalLiabilities, 2).ToString("0.00") @_currency
+            </MudText>
         }
     </MudPaper>
     <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
@@ -40,12 +41,8 @@
         {
             <ApexChart @ref="_chart" Height="@("100%")" TItem="NameValueResult" Options="_options">
 
-                <ApexPointSeries TItem="NameValueResult"
-                                 Items="Data"
-                                 Name="Liabilities"
-                                 XValue="e => e.Name.ToString()"
-                                 YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"
-                                 SeriesType="SeriesType.Pie"
+                <ApexPointSeries TItem="NameValueResult"             Items="Data"      Name="Liabilities"                   XValue="e => e.Name.ToString()"
+                                 YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"         SeriesType="SeriesType.Pie"
                                  OrderByDescending="@(e=>e.Y)" />
             </ApexChart>
         }

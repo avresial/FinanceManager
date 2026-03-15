@@ -28,7 +28,7 @@
             </MudItem>
             <MudItem xs="3">
                 <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
-                <MudText Typo="Typo.body1">@BondAccountEntry.PostingDate.ToString("yyyy-MM-dd")</MudText>
+                <MudText Typo="Typo.body1">@BondAccountEntry.PostingDate.ToString("dd-MM-yyyy")</MudText>
             </MudItem>
         </MudGrid>
     </TitleContent>
@@ -41,7 +41,7 @@
                     <MudGrid>
                         <MudItem xs="6">
                             <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
-                            <MudText Typo="Typo.body1">@BondAccountEntry.PostingDate</MudText>
+                            <MudText Typo="Typo.body1">@BondAccountEntry.PostingDate.ToString("dd-MM-yyyy")</MudText>
                         </MudItem>
 
                         @if (BondAccountEntry.Labels is not null && BondAccountEntry.Labels.Any())
@@ -64,18 +64,18 @@
                             </MudItem>
                             <MudItem xs="6">
                                 <MudText Typo="Typo.caption" Color="Color.Default">Unit value</MudText>
-                                <MudText Typo="Typo.body1">@BondDetails.UnitValue @BondDetails.Currency.ShortName</MudText>
+                                <MudText Typo="Typo.body1">@BondDetails.UnitValue.ToString("0.00") @BondDetails.Currency.ShortName</MudText>
                             </MudItem>
                             <MudItem xs="6">
                                 <MudText Typo="Typo.caption" Color="Color.Default">Current value</MudText>
-                                <MudText Typo="Typo.body1">@(CurrentValue?.ToString() ?? "-") @_currency</MudText>
+                                <MudText Typo="Typo.body1">@(CurrentValue.HasValue ? CurrentValue.Value.ToString("0.00") : "-") @_currency</MudText>
                             </MudItem>
                         }
                         @if (UnitsChangeValue.HasValue)
                         {
                             <MudItem xs="12">
                                 <MudText Typo="Typo.caption" Color="Color.Default">Change value</MudText>
-                                <MudText Typo="Typo.body1">@UnitsChangeValue @_currency</MudText>
+                                <MudText Typo="Typo.body1">@UnitsChangeValue.Value.ToString("0.00") @_currency</MudText>
                             </MudItem>
                         }
                     </MudGrid>
