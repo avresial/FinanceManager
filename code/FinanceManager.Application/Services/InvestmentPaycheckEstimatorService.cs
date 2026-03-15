@@ -87,19 +87,20 @@ public class InvestmentPaycheckEstimatorService(
         if (salaryLabel is null)
             return (null, 0);
 
-        DateTime start = new(asOfDate.Year, asOfDate.Month, 1, 0, 0, 0, asOfDate.Kind == DateTimeKind.Unspecified ? DateTimeKind.Utc : asOfDate.Kind);
-        start = start.AddMonths(-(salaryMonths - 1));
+        DateTime firstDayOfCurrentMonth = new(asOfDate.Year, asOfDate.Month, 1, 0, 0, 0, asOfDate.Kind == DateTimeKind.Unspecified ? DateTimeKind.Utc : asOfDate.Kind);
+        DateTime start = firstDayOfCurrentMonth.AddMonths(-salaryMonths);
+        DateTime endExclusive = firstDayOfCurrentMonth;
 
         decimal salary = 0;
         HashSet<(int Year, int Month)> salaryMonthsUsed = [];
 
-        await foreach (CurrencyAccount account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, asOfDate))
+        await foreach (CurrencyAccount account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, endExclusive))
         {
             if (account.Entries is null || account.Entries.Count == 0)
                 continue;
 
             var salaryEntries = account.Entries
-                .Where(x => x.PostingDate >= start && x.PostingDate <= asOfDate && x.Labels is not null && x.Labels.Any(y => y.Id == salaryLabel.Id));
+                .Where(x => x.PostingDate >= start && x.PostingDate < endExclusive && x.Labels is not null && x.Labels.Any(y => y.Id == salaryLabel.Id));
 
             salary += salaryEntries.Sum(x => x.ValueChange);
 

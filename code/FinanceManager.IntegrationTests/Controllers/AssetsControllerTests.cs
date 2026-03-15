@@ -1,8 +1,8 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
@@ -157,8 +157,8 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         Assert.Equal(12000m, result.InvestableAssetsValue);
         Assert.Equal(50m, result.SustainableMonthlyPaycheck);
         Assert.Equal(3, result.SalaryMonthsRequested);
-        Assert.Equal(2, result.SalaryMonthsUsed);
-        Assert.Equal(3750m, result.AverageMonthlySalary);
+        Assert.Equal(1, result.SalaryMonthsUsed);
+        Assert.Equal(3000m, result.AverageMonthlySalary);
         Assert.True(result.HasPartialSalaryHistory);
     }
 

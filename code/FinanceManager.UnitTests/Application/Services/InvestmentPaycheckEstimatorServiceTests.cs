@@ -36,7 +36,7 @@ public class InvestmentPaycheckEstimatorServiceTests
     }
 
     [Fact]
-    public async Task GetEstimate_MixedAssetsAndPartialSalaryHistory_ReturnsExpectedValues()
+    public async Task GetEstimate_ExcludesCurrentPartialMonthFromSalaryAverage()
     {
         var userId = 1;
         var asOfDate = new DateTime(2026, 3, 14, 0, 0, 0, DateTimeKind.Utc);
@@ -75,9 +75,9 @@ public class InvestmentPaycheckEstimatorServiceTests
         Assert.Equal(13000m, result.InvestableAssetsValue);
         Assert.Equal(54.17m, result.SustainableMonthlyPaycheck);
         Assert.Equal(3, result.SalaryMonthsRequested);
-        Assert.Equal(2, result.SalaryMonthsUsed);
-        Assert.Equal(3750m, result.AverageMonthlySalary);
-        Assert.Equal(0.0144m, result.IncomeReplacementRatio);
+        Assert.Equal(1, result.SalaryMonthsUsed);
+        Assert.Equal(3000m, result.AverageMonthlySalary);
+        Assert.Equal(0.0181m, result.IncomeReplacementRatio);
         Assert.True(result.HasPartialSalaryHistory);
     }
 

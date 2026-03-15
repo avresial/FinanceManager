@@ -43,9 +43,9 @@ public partial class NetCashFlowOverviewCard
             var netCashFlow = await MoneyFlowHttpClient.GetNetCashFlow(user.UserId, DefaultCurrency.PLN, StartDateTime.Date, EndDateTime);
             var orderedSeries = netCashFlow.OrderBy(x => x.DateTime).ToList();
 
-            _totalNetCashFlow = orderedSeries.Sum(x => x.Value);
+            _totalNetCashFlow = Math.Round(orderedSeries.Sum(x => x.Value), 0);
             _series.Add(orderedSeries
-                .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
+                .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), Math.Round(x.Value, 2)))
                 .ToList());
         }
         catch (Exception ex)
