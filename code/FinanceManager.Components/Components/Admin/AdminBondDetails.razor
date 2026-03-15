@@ -28,12 +28,14 @@
                 <MudTh>Id</MudTh>
                 <MudTh>Name</MudTh>
                 <MudTh>Issuer</MudTh>
+                <MudTh>Unit value</MudTh>
                 <MudTh>Action</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Id">@context.Id</MudTd>
                 <MudTd DataLabel="Name">@context.Name</MudTd>
                 <MudTd DataLabel="Issuer">@context.Issuer</MudTd>
+                <MudTd DataLabel="Unit value">@context.UnitValue @context.Currency.ShortName</MudTd>
                 <MudTd DataLabel="Action">
                     <MudStack Row Spacing="1">
                         <MudIconButton Icon="@Icons.Material.Filled.Info" Color="Color.Primary"

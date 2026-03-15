@@ -24,6 +24,7 @@ public class BondDetailsSeeder(IBondDetailsRepository bondDetailsRepository, ICu
                 EndEmissionDate = new DateOnly(2034, 7, 1),
                 Type = BondType.InflationBond,
                 Currency = plnCurrency,
+                UnitValue = 100m,
                 CalculationMethods =
                 [
                     new ()
@@ -42,6 +43,7 @@ public class BondDetailsSeeder(IBondDetailsRepository bondDetailsRepository, ICu
                 EndEmissionDate = new DateOnly(2034, 4, 1),
                 Type = BondType.InflationBond,
                 Currency = plnCurrency,
+                UnitValue = 100m,
                 CalculationMethods =
                 [
                     new ()
@@ -60,6 +62,7 @@ public class BondDetailsSeeder(IBondDetailsRepository bondDetailsRepository, ICu
                 EndEmissionDate = new DateOnly(2035, 12, 1),
                 Type = BondType.InflationBond,
                 Currency = plnCurrency,
+                UnitValue = 100m,
                 CalculationMethods =
                 [
                     new ()

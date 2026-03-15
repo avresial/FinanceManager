@@ -22,6 +22,7 @@ public partial class AdminAddBondDetails : ComponentBase
 
     private BondType _selectedType = BondType.InflationBond;
     private Currency _selectedCurrency = DefaultCurrency.PLN;
+    private decimal? _unitValue = 100m;
     private Capitalization _selectedCapitalization = BondDetails.Capitalization;
 
     private DateOperator _methodDateOperator = DateOperator.UntilDate;
@@ -87,6 +88,12 @@ public partial class AdminAddBondDetails : ComponentBase
             return;
         }
 
+        if (!_unitValue.HasValue || _unitValue.Value <= 0)
+        {
+            _errors.Add("Unit value must be greater than 0.");
+            return;
+        }
+
         if (_calculationMethods.Count == 0)
         {
             _errors.Add("At least one calculation method is required.");
@@ -101,6 +108,7 @@ public partial class AdminAddBondDetails : ComponentBase
             EndEmissionDate = DateOnly.FromDateTime(_endDate.Value),
             Type = _selectedType,
             Currency = _selectedCurrency,
+            UnitValue = _unitValue.Value,
             CalculationMethods = _calculationMethods.ToList(),
         };
 

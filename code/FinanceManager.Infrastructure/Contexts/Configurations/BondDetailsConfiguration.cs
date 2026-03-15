@@ -19,6 +19,10 @@ public class BondDetailsConfiguration : IEntityTypeConfiguration<BondDetails>
             .IsRequired()
             .HasMaxLength(200);
 
+        builder.Property(e => e.UnitValue)
+            .HasPrecision(18, 4)
+            .HasDefaultValue(100m);
+
         // Store enum as int
         builder.Property(e => e.Type).HasConversion<int>();
 

@@ -26,6 +26,7 @@ public class MoneyFlowServiceTests
     private readonly Mock<IStockPriceRepository> _stockRepository = new();
     private readonly Mock<ICurrencyExchangeService> _currencyExchangeService = new();
     private readonly Mock<IFinancialLabelsRepository> _financialLabelsRepositoryMock = new();
+    private readonly Mock<IBondDetailsRepository> _bondDetailsRepositoryMock = new();
     private readonly List<CurrencyAccount> _currencyAccounts;
     private readonly List<StockAccount> _investmentAccountAccounts;
 
@@ -63,8 +64,24 @@ public class MoneyFlowServiceTests
         IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
         var stockPriceProvider = new StockPriceProvider(_stockRepository.Object, _currencyExchangeService.Object, cache);
 
-        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _financialLabelsRepositoryMock.Object, stockPriceProvider);
+        _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>())).Returns(AsyncEnumerable.Empty<BondDetails>());
+
+        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _financialLabelsRepositoryMock.Object, stockPriceProvider, _bondDetailsRepositoryMock.Object);
     }
+
+    private static BondDetails CreateBondDetails(int id, DateTime date, decimal unitValue = 1m) =>
+        new(
+            $"Bond {id}",
+            "Issuer",
+            DateOnly.FromDateTime(date.AddYears(-1)),
+            DateOnly.FromDateTime(date.AddYears(1)),
+            [new BondCalculationMethod { DateOperator = DateOperator.UntilDate, DateValue = date.AddYears(1).ToString("yyyy-MM-dd"), Rate = 0m }],
+            DefaultCurrency.PLN,
+            BondType.InflationBond,
+            unitValue)
+        {
+            Id = id
+        };
 
 
 
@@ -198,6 +215,8 @@ public class MoneyFlowServiceTests
             .Returns(new[] { stockAccount }.ToAsyncEnumerable());
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(new[] { bondAccount }.ToAsyncEnumerable());
+        _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+            .Returns(new[] { CreateBondDetails(1, date) }.ToAsyncEnumerable());
 
         _stockRepository.Setup(x => x.GetThisOrNextOlder("MSFT", It.IsAny<DateTime>()))
             .ReturnsAsync(new StockPrice { Currency = DefaultCurrency.PLN, Ticker = "MSFT", PricePerUnit = 100m });
@@ -314,6 +333,8 @@ public class MoneyFlowServiceTests
             .Returns(new[] { stockAccount }.ToAsyncEnumerable());
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(new[] { bondAccount }.ToAsyncEnumerable());
+        _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+            .Returns(new[] { CreateBondDetails(1, date) }.ToAsyncEnumerable());
 
         _stockRepository.Setup(x => x.GetThisOrNextOlder("MEGA", It.IsAny<DateTime>()))
             .ReturnsAsync(new StockPrice { Currency = DefaultCurrency.PLN, Ticker = "MEGA", PricePerUnit = 1.11m });
@@ -379,6 +400,13 @@ public class MoneyFlowServiceTests
             .Returns(AsyncEnumerable.Empty<StockAccount>());
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(new[] { bondAccount }.ToAsyncEnumerable());
+        _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+            .Returns(new[]
+            {
+                CreateBondDetails(1, date),
+                CreateBondDetails(2, date),
+                CreateBondDetails(3, date)
+            }.ToAsyncEnumerable());
 
         // Act
         var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);

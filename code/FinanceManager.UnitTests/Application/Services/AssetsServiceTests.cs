@@ -127,4 +127,52 @@ public class AssetsServiceTests
         Assert.Single(aggregated);
         Assert.Equal(10m, aggregated[0].Value);
     }
+
+    [Fact]
+    public async Task GetAssetsTimeSeries_AggregatesSameDayValues_WithDifferentTimestamps()
+    {
+        // Arrange
+        var day = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var morning = day.AddHours(8);
+        var evening = day.AddHours(20);
+
+        _mockService1.Setup(x => x.GetAssetsTimeSeries(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([new TimeSeriesModel(morning, 10)]);
+        _mockService2.Setup(x => x.GetAssetsTimeSeries(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([new TimeSeriesModel(evening, 5)]);
+
+        // Act
+        var aggregated = await _assetsService.GetAssetsTimeSeries(1, DefaultCurrency.PLN, day, day.AddDays(1));
+
+        // Assert
+        Assert.Single(aggregated);
+        Assert.Equal(15m, aggregated[0].Value);
+        Assert.Equal(day.Date, aggregated[0].DateTime);
+    }
+
+    [Fact]
+    public async Task GetAssetsTimeSeries_LongRange_UsesClosingBalancePerBucket_AfterSameDayAggregation()
+    {
+        // Arrange
+        var start = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var end = start.AddDays(95);
+        var firstDayMorning = start.AddHours(8);
+        var firstDayEvening = start.AddHours(20);
+        var laterInMonth = start.AddDays(30).AddHours(9);
+
+        _mockService1.Setup(x => x.GetAssetsTimeSeries(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([
+                new TimeSeriesModel(firstDayMorning, 10),
+                new TimeSeriesModel(laterInMonth, 20)
+            ]);
+        _mockService2.Setup(x => x.GetAssetsTimeSeries(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([new TimeSeriesModel(firstDayEvening, 5)]);
+
+        // Act
+        var aggregated = await _assetsService.GetAssetsTimeSeries(1, DefaultCurrency.PLN, start, end);
+
+        // Assert
+        var januaryBucket = aggregated.Single(x => x.DateTime == start.Date);
+        Assert.Equal(20m, januaryBucket.Value);
+    }
 }

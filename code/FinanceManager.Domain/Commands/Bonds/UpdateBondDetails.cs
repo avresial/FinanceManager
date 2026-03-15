@@ -1,3 +1,3 @@
 namespace FinanceManager.Application.Commands.Bonds;
 
-public record UpdateBondDetails(int Id, string NameToUpdate, string IssuerToUpdate);
+public record UpdateBondDetails(int Id, string NameToUpdate, string IssuerToUpdate, decimal UnitValueToUpdate);

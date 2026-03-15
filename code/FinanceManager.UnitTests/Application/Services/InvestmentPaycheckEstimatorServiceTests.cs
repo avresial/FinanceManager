@@ -22,6 +22,7 @@ public class InvestmentPaycheckEstimatorServiceTests
     private readonly Mock<IFinancialLabelsRepository> _financialLabelsRepositoryMock = new();
     private readonly Mock<IStockPriceRepository> _stockRepositoryMock = new();
     private readonly Mock<ICurrencyExchangeService> _currencyExchangeServiceMock = new();
+    private readonly Mock<IBondDetailsRepository> _bondDetailsRepositoryMock = new();
     private readonly InvestmentPaycheckEstimatorService _service;
 
     public InvestmentPaycheckEstimatorServiceTests()
@@ -32,7 +33,7 @@ public class InvestmentPaycheckEstimatorServiceTests
 
         IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
         var stockPriceProvider = new StockPriceProvider(_stockRepositoryMock.Object, _currencyExchangeServiceMock.Object, cache);
-        _service = new InvestmentPaycheckEstimatorService(_financialAccountRepositoryMock.Object, _financialLabelsRepositoryMock.Object, stockPriceProvider);
+        _service = new InvestmentPaycheckEstimatorService(_financialAccountRepositoryMock.Object, _financialLabelsRepositoryMock.Object, stockPriceProvider, _bondDetailsRepositoryMock.Object);
     }
 
     [Fact]
@@ -65,6 +66,23 @@ public class InvestmentPaycheckEstimatorServiceTests
         _financialAccountRepositoryMock
             .Setup(x => x.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(new[] { bondAccount }.ToAsyncEnumerable());
+        _bondDetailsRepositoryMock
+            .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+            .Returns(new[]
+            {
+                new BondDetails(
+                    "Bond",
+                    "Issuer",
+                    DateOnly.FromDateTime(asOfDate.AddYears(-1)),
+                    DateOnly.FromDateTime(asOfDate.AddYears(1)),
+                    [new BondCalculationMethod { DateOperator = DateOperator.UntilDate, DateValue = asOfDate.AddYears(1).ToString("yyyy-MM-dd"), Rate = 0m }],
+                    DefaultCurrency.PLN,
+                    BondType.InflationBond,
+                    1m)
+                {
+                    Id = 1
+                }
+            }.ToAsyncEnumerable());
 
         _stockRepositoryMock
             .Setup(x => x.GetThisOrNextOlder("MSFT", It.IsAny<DateTime>()))
@@ -103,6 +121,23 @@ public class InvestmentPaycheckEstimatorServiceTests
         _financialAccountRepositoryMock
             .Setup(x => x.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(new[] { bondAccount }.ToAsyncEnumerable());
+        _bondDetailsRepositoryMock
+            .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+            .Returns(new[]
+            {
+                new BondDetails(
+                    "Bond",
+                    "Issuer",
+                    DateOnly.FromDateTime(asOfDate.AddYears(-1)),
+                    DateOnly.FromDateTime(asOfDate.AddYears(1)),
+                    [new BondCalculationMethod { DateOperator = DateOperator.UntilDate, DateValue = asOfDate.AddYears(1).ToString("yyyy-MM-dd"), Rate = 0m }],
+                    DefaultCurrency.PLN,
+                    BondType.InflationBond,
+                    1m)
+                {
+                    Id = 1
+                }
+            }.ToAsyncEnumerable());
 
         var result = await _service.GetEstimate(userId, DefaultCurrency.PLN, asOfDate, 0.04m, 3);
 

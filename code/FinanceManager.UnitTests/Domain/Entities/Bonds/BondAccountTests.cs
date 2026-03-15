@@ -84,7 +84,8 @@ public class BondAccountTests
             "Issuer",
             DateOnly.FromDateTime(postingDate),
             DateOnly.FromDateTime(postingDate.AddYears(1)),
-            [calculationMethod]
+            [calculationMethod],
+            unitValue: 1m
         )
         { Id = 1 };
 
@@ -94,7 +95,7 @@ public class BondAccountTests
         // Assert
         Assert.Equal(5, result.Count);
         Assert.Equal(100.01m, result[DateOnly.FromDateTime(postingDate.AddDays(1))]);
-        Assert.Equal(200.04m, result[DateOnly.FromDateTime(endDate)], 2);
+        Assert.Equal(200m, result[DateOnly.FromDateTime(endDate)], 2);
     }
 
     [Fact]
@@ -134,7 +135,8 @@ public class BondAccountTests
             "Issuer A",
             DateOnly.FromDateTime(postingDate),
             DateOnly.FromDateTime(postingDate.AddYears(1)),
-            [calculationMethod1]
+            [calculationMethod1],
+            unitValue: 1m
         )
         { Id = 1 };
 
@@ -143,7 +145,8 @@ public class BondAccountTests
             "Issuer B",
             DateOnly.FromDateTime(postingDate),
             DateOnly.FromDateTime(postingDate.AddYears(1)),
-            [calculationMethod2]
+            [calculationMethod2],
+            unitValue: 1m
         )
         { Id = 2 };
 
@@ -197,7 +200,8 @@ public class BondAccountTests
             "Issuer",
             DateOnly.FromDateTime(postingDate),
             DateOnly.FromDateTime(postingDate.AddYears(1)),
-            [calculationMethod]
+            [calculationMethod],
+            unitValue: 1m
         )
         { Id = 1 };
 
@@ -209,9 +213,8 @@ public class BondAccountTests
             targetDate,
             [bondDetails]);
 
-        // Assert - Should be zero or near-zero throughout
-        Assert.Equal(0m, result[DateOnly.FromDateTime(postingDate)]);
-        Assert.Equal(0m, result[targetDate], 2);
+        // Assert - Zero balance is omitted from the result set.
+        Assert.Empty(result);
     }
 
     [Fact]
@@ -242,7 +245,8 @@ public class BondAccountTests
             "Issuer",
             DateOnly.FromDateTime(startDate),
             DateOnly.FromDateTime(startDate.AddYears(1)),
-            [calculationMethod]
+            [calculationMethod],
+            unitValue: 1m
         )
         { Id = 1 };
 
@@ -267,14 +271,14 @@ public class BondAccountTests
         // Day 29: ~1000 with some growth
         Assert.True(day29 > 1000m && day29 < 1010m);
 
-        // Day 30: Should jump to ~1500 + accumulated interest (new entry added)
-        Assert.True(day30 > 1500m && day30 < 1520m);
+        // Day 30: New entry establishes the cumulative units for that day.
+        Assert.Equal(1500m, day30);
 
-        // Day 60: Should jump again (third entry)
-        Assert.True(day60 > 1750m && day60 < 1780m);
+        // Day 60: Third entry establishes the new cumulative units.
+        Assert.Equal(1750m, day60);
 
         // Day 90: All entries accumulating
-        Assert.True(day90 > 1760m, $"Expected final value > 1760, got {day90}");
+        Assert.True(day90 > 1755m, $"Expected final value > 1755, got {day90}");
     }
 
     [Fact]
@@ -316,5 +320,49 @@ public class BondAccountTests
                 [])); // No bond details provided
 
         Assert.Contains("BondDetails", exception.Message);
+    }
+
+    [Fact]
+    public void GetDailyPrice_ShouldIncludeBondsFromNextOlderEntries()
+    {
+        var startDate = new DateTime(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc);
+        var endDate = startDate.AddDays(2);
+
+        var carriedBondEntry = new BondAccountEntry(1, 1, startDate.AddDays(-5), 10m, 10m, 1);
+        var currentBondEntry = new BondAccountEntry(1, 2, startDate, 5m, 5m, 2);
+
+        var account = new BondAccount(
+            1,
+            1,
+            "Test Account",
+            [currentBondEntry],
+            AccountLabel.Other,
+            new Dictionary<int, BondAccountEntry> { [1] = carriedBondEntry });
+
+        var firstBondDetails = new BondDetails(
+            "Bond A",
+            "Issuer A",
+            DateOnly.FromDateTime(startDate.AddYears(-1)),
+            DateOnly.FromDateTime(endDate.AddYears(1)),
+            [new BondCalculationMethod { Id = 1, DateOperator = DateOperator.UntilDate, DateValue = endDate.AddYears(1).ToString("yyyy-MM-dd"), Rate = 0m }],
+            unitValue: 1m)
+        { Id = 1 };
+
+        var secondBondDetails = new BondDetails(
+            "Bond B",
+            "Issuer B",
+            DateOnly.FromDateTime(startDate),
+            DateOnly.FromDateTime(endDate.AddYears(1)),
+            [new BondCalculationMethod { Id = 2, DateOperator = DateOperator.UntilDate, DateValue = endDate.AddYears(1).ToString("yyyy-MM-dd"), Rate = 0m }],
+            unitValue: 1m)
+        { Id = 2 };
+
+        var result = account.GetDailyPrice(
+            DateOnly.FromDateTime(startDate),
+            DateOnly.FromDateTime(endDate),
+            [firstBondDetails, secondBondDetails]);
+
+        Assert.Equal(3, result.Count);
+        Assert.All(result.Values, value => Assert.Equal(15m, value));
     }
 }

@@ -23,6 +23,9 @@ public partial class BondAccountDetailsRow : ComponentBase
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILogger<BondAccountDetailsRow> Logger { get; set; }
 
+    private decimal? CurrentValue => BondDetails is null ? null : BondAccountEntry.Value * BondDetails.UnitValue;
+    private decimal? UnitsChangeValue => BondDetails is null ? null : BondAccountEntry.ValueChange * BondDetails.UnitValue;
+
     protected override void OnInitialized() => _currency = SettingsService.GetCurrency();
 
     public void ShowEditOverlay()
