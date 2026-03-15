@@ -11,7 +11,7 @@ namespace FinanceManager.Api.Controllers;
 [Authorize]
 [ApiController]
 [Tags("Financial Analysis")]
-public class AssetsController(IAssetsService assetsService, ICurrencyRepository currencyRepository) : ControllerBase
+public class AssetsController(IAssetsService assetsService, IInvestmentPaycheckEstimatorService investmentPaycheckEstimatorService, ICurrencyRepository currencyRepository) : ControllerBase
 {
     [HttpGet("IsAnyAccountWithAssets/{userId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
@@ -37,5 +37,10 @@ public class AssetsController(IAssetsService assetsService, ICurrencyRepository 
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TimeSeriesModel>))]
     public async Task<IActionResult> GetAssetsTimeSeries(int userId, int currencyId, DateTime start, DateTime end, InvestmentType investmentType, CancellationToken cancellationToken = default) =>
         Ok(await assetsService.GetAssetsTimeSeries(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), start, end, investmentType));
+
+    [HttpGet("GetInvestmentPaycheckEstimate/{userId:int}/{currencyId:int}/{asOfDate:DateTime}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(InvestmentPaycheckEstimate))]
+    public async Task<IActionResult> GetInvestmentPaycheckEstimate(int userId, int currencyId, DateTime asOfDate, [FromQuery] decimal withdrawalRate = 0.05m, [FromQuery] int salaryMonths = 3, CancellationToken cancellationToken = default) =>
+        Ok(await investmentPaycheckEstimatorService.GetEstimate(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), asOfDate, withdrawalRate, salaryMonths));
 
 }

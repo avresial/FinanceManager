@@ -90,7 +90,7 @@ IStockPriceProvider stockPriceProvider) : IMoneyFlowService
 
         // TODO: Add labels for stock accounts?
 
-        return result.Values.ToList();
+        return result.Values.OrderByDescending(x => x.Value).ToList();
     }
     public async IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end)
     {

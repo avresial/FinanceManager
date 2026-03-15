@@ -241,7 +241,8 @@ namespace FinanceManager.Api.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<int?>("StockAccountEntryEntryId")
                         .HasColumnType("integer");
@@ -253,6 +254,35 @@ namespace FinanceManager.Api.Migrations
                     b.HasIndex("StockAccountEntryEntryId");
 
                     b.ToTable("FinancialLabels");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabelClassification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("LabelId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LabelId", "Kind")
+                        .IsUnique();
+
+                    b.ToTable("FinancialLabelClassifications");
                 });
 
             modelBuilder.Entity("FinanceManager.Domain.Entities.Stocks.StockAccountEntry", b =>
@@ -528,6 +558,15 @@ namespace FinanceManager.Api.Migrations
                         .HasForeignKey("StockAccountEntryEntryId");
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabelClassification", b =>
+                {
+                    b.HasOne("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabel", null)
+                        .WithMany("Classifications")
+                        .HasForeignKey("LabelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FinanceManager.Domain.Entities.Stocks.StockDetails", b =>
                 {
                     b.HasOne("FinanceManager.Domain.Entities.Currencies.Currency", "Currency")
@@ -558,6 +597,11 @@ namespace FinanceManager.Api.Migrations
             modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondDetails", b =>
                 {
                     b.Navigation("CalculationMethods");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabel", b =>
+                {
+                    b.Navigation("Classifications");
                 });
 
             modelBuilder.Entity("FinanceManager.Domain.Entities.Stocks.StockAccountEntry", b =>

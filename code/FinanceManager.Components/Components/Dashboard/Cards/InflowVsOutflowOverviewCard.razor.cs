@@ -9,7 +9,7 @@ using MudBlazor;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards;
 
-public partial class IncomeVsSpendingOverviewCard
+public partial class InflowVsOutflowOverviewCard
 {
 
     private List<List<ChartJsLineDataPoint>> _series = [];
@@ -20,13 +20,13 @@ public partial class IncomeVsSpendingOverviewCard
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
-    [Parameter] public bool DisplayIncome { get; set; }
-    [Parameter] public bool DisplaySpending { get; set; }
-    [Parameter] public bool DisplayBalance { get; set; }
+    [Parameter] public bool DisplayInflow { get; set; }
+    [Parameter] public bool DisplayOutflow { get; set; }
+    [Parameter] public bool DisplayClosingBalance { get; set; }
     [Parameter] public bool UseOnlyPrimaryColor { get; set; }
 
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
-    [Inject] public required ILogger<IncomeVsSpendingOverviewCard> Logger { get; set; }
+    [Inject] public required ILogger<InflowVsOutflowOverviewCard> Logger { get; set; }
     [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -41,19 +41,17 @@ public partial class IncomeVsSpendingOverviewCard
         var user = await LoginService.GetLoggedUser();
         if (user is null) return;
 
-        var timespanInDays = (EndDateTime - StartDateTime).TotalDays;
         _series.Clear();
-        List<TimeSeriesChartSeries> newData = [];
         try
         {
-            if (DisplayIncome)
+            if (DisplayInflow)
             {
-                var incomeData = (await MoneyFlowHttpClient.GetIncome(user.UserId, DefaultCurrency.PLN, StartDateTime.Date, EndDateTime))
+                var flowData = (await MoneyFlowHttpClient.GetInflow(user.UserId, DefaultCurrency.PLN, StartDateTime.Date, EndDateTime))
                     .OrderBy(x => x.DateTime)
                     .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
                     .ToList();
 
-                _series.Add(incomeData);
+                _series.Add(flowData);
 
             }
         }
@@ -64,14 +62,14 @@ public partial class IncomeVsSpendingOverviewCard
 
         try
         {
-            if (DisplaySpending)
+            if (DisplayOutflow)
             {
-                var incomeData = (await MoneyFlowHttpClient.GetSpending(user.UserId, DefaultCurrency.PLN, StartDateTime.Date, EndDateTime))
+                var flowData = (await MoneyFlowHttpClient.GetOutflow(user.UserId, DefaultCurrency.PLN, StartDateTime.Date, EndDateTime))
                     .OrderBy(x => x.DateTime)
                     .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
                     .ToList();
 
-                _series.Add(incomeData);
+                _series.Add(flowData);
             }
         }
         catch (Exception ex)
@@ -81,14 +79,14 @@ public partial class IncomeVsSpendingOverviewCard
 
         try
         {
-            if (DisplayBalance)
+            if (DisplayClosingBalance)
             {
-                var incomeData = (await MoneyFlowHttpClient.GetBalance(user.UserId, DefaultCurrency.PLN, StartDateTime.Date, EndDateTime))
+                var flowData = (await MoneyFlowHttpClient.GetClosingBalance(user.UserId, DefaultCurrency.PLN, StartDateTime.Date, EndDateTime))
                       .OrderBy(x => x.DateTime)
                       .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value))
                       .ToList();
 
-                _series.Add(incomeData);
+                _series.Add(flowData);
             }
         }
         catch (Exception ex)

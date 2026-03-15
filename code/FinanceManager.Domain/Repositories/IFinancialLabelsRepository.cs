@@ -11,4 +11,6 @@ public interface IFinancialLabelsRepository
     Task<bool> Add(string name, CancellationToken cancellationToken = default);
     Task<bool> Delete(int id, CancellationToken cancellationToken = default);
     Task<bool> UpdateName(int id, string name, CancellationToken cancellationToken = default);
+    /// <summary>Adds or updates a classification on the specified label. The <paramref name="kind"/> and <paramref name="value"/> must already be normalized (use <see cref="FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabelClassificationCatalog.TryNormalize"/> before calling).</summary>
+    Task<bool> AddClassification(int labelId, string kind, string value, CancellationToken cancellationToken = default);
 }

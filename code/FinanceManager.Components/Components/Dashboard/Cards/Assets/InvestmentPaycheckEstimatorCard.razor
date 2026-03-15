@@ -1,0 +1,58 @@
+<MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
+    <MudPaper Class="p-3 pb-0" Elevation="0">
+        <div>
+            <MudText Typo="Typo.h5">Investment paycheck</MudText>
+            <MudText Typo="Typo.body2" Class="text-muted">Sustainable monthly liquidation based on assets. </MudText>
+        </div>
+    </MudPaper>
+
+    <MudPaper Class="flex-grow-1 p-3 pt-2 overflow-auto" Elevation="0">
+        @if (_isLoading)
+        {
+            <MudText Typo="Typo.h3" Class="mb-1 text-muted">
+                <StringSpinner CharactersCount="6" />
+            </MudText>
+        }
+        else
+        {
+            <div class="d-flex align-end gap-1 mb-3">
+                <MudText Typo="Typo.h3" Color="Color.Primary">@FormatCurrency(_estimate.SustainableMonthlyPaycheck)
+                </MudText>
+                <MudText Typo="Typo.body2" Class="text-muted mb-1">/mo</MudText>
+            </div>
+
+            <MudText Typo="Typo.body2"
+                     Class="@(_estimate.SalaryMonthsUsed < _estimate.SalaryMonthsRequested ? "mud-warning-text" : "text-muted")">
+                Based on @_estimate.SalaryMonthsUsed of @_estimate.SalaryMonthsRequested requested months.
+            </MudText>
+
+            <div class="d-flex flex-wrap gap-1">
+                <div class="mr-2">
+                    <MudText Typo="Typo.caption" Class="text-muted">Investable assets</MudText>
+                    <MudText Typo="Typo.body1">@FormatCurrency(_estimate.InvestableAssetsValue)</MudText>
+                </div>
+                <div class="mr-2">
+                    <MudText Typo="Typo.caption" Class="text-muted">Average salary</MudText>
+                    <MudText Typo="Typo.body1">@FormatCurrency(_estimate.AverageMonthlySalary)</MudText>
+                </div>
+                <div class="mr-2">
+                    <MudText Typo="Typo.caption" Class="text-muted">Income replacement</MudText>
+                    <MudText Typo="Typo.body1">@FormatRatio(_estimate.IncomeReplacementRatio)</MudText>
+                </div>
+
+                <div class="mr-2">
+                    <MudText Typo="Typo.caption" Class="text-muted">Withdrawal rate</MudText>
+                    <div class="d-flex align-end gap-1">
+                    <MudNumericField T="decimal?" Variant="Variant.Text" Min="0.001m" Max="0.2m" Immediate HideSpinButtons
+                                     Style="max-width: 70px;" @bind-Value="_annualWithdrawalRate" />
+                        @if (ShowRecalculateButton)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Variant="Variant.Text" Color="Color.Default"
+                                           Class="mb-0 p-1" OnClick="RefreshEstimate" />
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </MudPaper>
+</MudCard>

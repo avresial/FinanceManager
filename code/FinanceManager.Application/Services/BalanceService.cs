@@ -1,63 +1,53 @@
 using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Entities.Shared.Accounts;
-using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Services;
 
-public class BalanceService(IFinancialAccountRepository financialAccountRepository) : IBalanceService
+public class BalanceService(IEnumerable<IBalanceServiceTyped> typedBalanceServices) : IBalanceService
 {
     private static readonly TimeSpan _oneDay = TimeSpan.FromDays(1);
+    public Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end) =>
+        Aggregate(service => service.GetInflow(userId, currency, start, end));
 
-    public async Task<List<TimeSeriesModel>> GetIncome(int userId, Currency currency, DateTime start, DateTime end)
+    public Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds) =>
+        Aggregate(service => service.GetInflow(userId, currency, start, end, accountIds));
+
+    public Task<List<TimeSeriesModel>> GetOutflow(int userId, Currency currency, DateTime start, DateTime end) =>
+        Aggregate(service => service.GetOutflow(userId, currency, start, end));
+
+    public Task<List<TimeSeriesModel>> GetOutflow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds) =>
+        Aggregate(service => service.GetOutflow(userId, currency, start, end, accountIds));
+
+    public Task<List<TimeSeriesModel>> GetNetCashFlow(int userId, Currency currency, DateTime start, DateTime end) =>
+        Aggregate(service => service.GetNetCashFlow(userId, currency, start, end));
+
+    public Task<List<TimeSeriesModel>> GetNetCashFlow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds) =>
+        Aggregate(service => service.GetNetCashFlow(userId, currency, start, end, accountIds));
+
+    public Task<List<TimeSeriesModel>> GetClosingBalance(int userId, Currency currency, DateTime start, DateTime end) =>
+        Aggregate(service => service.GetClosingBalance(userId, currency, start, end));
+
+    public Task<List<TimeSeriesModel>> GetClosingBalance(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds) =>
+        Aggregate(service => service.GetClosingBalance(userId, currency, start, end, accountIds));
+
+    private async Task<List<TimeSeriesModel>> Aggregate(Func<IBalanceServiceTyped, Task<List<TimeSeriesModel>>> getter)
     {
-        var result = await AggregateByDay(userId, start, end, entry => entry.ValueChange > 0);
-        return BucketToSeries(result);
-    }
+        Dictionary<DateTime, decimal> aggregated = [];
 
-    public async Task<List<TimeSeriesModel>> GetSpending(int userId, Currency currency, DateTime start, DateTime end)
-    {
-        var result = await AggregateByDay(userId, start, end, entry => entry.ValueChange < 0);
-        return BucketToSeries(result);
-    }
-
-    public async Task<List<TimeSeriesModel>> GetBalance(int userId, Currency currency, DateTime start, DateTime end)
-    {
-        var result = await AggregateByDay(userId, start, end, _ => true);
-        return BucketToSeries(result);
-    }
-
-    private async Task<Dictionary<DateTime, decimal>> AggregateByDay(int userId, DateTime start, DateTime end, Func<FinancialEntryBase, bool> predicate)
-    {
-        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
-
-        Dictionary<DateTime, decimal> result = [];
-
-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
+        foreach (var service in typedBalanceServices)
         {
-            if (account?.Entries is null) continue;
-
-            for (var date = end.Date; date >= start.Date; date = date.Add(-_oneDay))
+            foreach (var point in await getter(service))
             {
-                if (!result.ContainsKey(date)) result.Add(date, 0);
-
-                var entries = account.Get(date);
-                foreach (var entry in entries.Select(x => x as FinancialEntryBase).Where(x => x is not null))
-                {
-                    if (entry!.PostingDate.Date != date.Date) continue;
-                    if (!predicate(entry)) continue;
-                    result[date] += entry.ValueChange;
-                }
+                if (aggregated.ContainsKey(point.DateTime))
+                    aggregated[point.DateTime] += point.Value;
+                else
+                    aggregated[point.DateTime] = point.Value;
             }
         }
 
-        return result;
-    }
-
-    private static List<TimeSeriesModel> BucketToSeries(Dictionary<DateTime, decimal> data) =>
-        TimeBucketService.Get(data.Select(x => (x.Key, x.Value)))
-                         .Select(bucket => new TimeSeriesModel(bucket.Date, bucket.Objects.Sum()))
+        return aggregated.OrderBy(x => x.Key)
+                         .Select(x => new TimeSeriesModel(x.Key, x.Value))
                          .ToList();
+    }
 }

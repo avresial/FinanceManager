@@ -100,28 +100,85 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     }
 
     [Fact]
-    public async Task GetIncome_ReturnsList()
+    public async Task GetInflow_ReturnsList()
     {
         await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
         int days = 7;
 
-        var result = await new MoneyFlowHttpClient(Client).GetIncome(1, DefaultCurrency.USD, _nowUtc.AddDays(-days), _nowUtc);
+        var result = await new MoneyFlowHttpClient(Client).GetInflow(1, DefaultCurrency.USD, _nowUtc.AddDays(-days), _nowUtc);
 
         Assert.NotNull(result);
         Assert.All(result, x => Assert.Equal(_valueChange, x.Value));
     }
 
     [Fact]
-    public async Task GetSpending_ReturnsList()
+    public async Task GetInflow_WithAccountIds_ReturnsFilteredList()
+    {
+        await SeedWithTestCurrencyAccount();
+
+        var secondAccount = new FinancialAccountBaseDto
+        {
+            UserId = 1,
+            AccountId = 2,
+            Name = "Filtered Account",
+            AccountLabel = AccountLabel.Cash,
+            AccountType = AccountType.Currency
+        };
+        _testDatabase!.Context.Accounts.Add(secondAccount);
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        for (DateTime i = _nowUtc.AddDays(-7); i <= _nowUtc; i = i.AddDays(1))
+            _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(secondAccount.AccountId, 100 + i.Day, i, 5, 5) { Labels = [] });
+
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        Authorize("TestUser", 1, UserRole.User);
+
+        var result = await new MoneyFlowHttpClient(Client).GetInflow(1, DefaultCurrency.USD, _nowUtc.AddDays(-7), _nowUtc, [2]);
+
+        Assert.NotNull(result);
+        Assert.All(result, x => Assert.Equal(5, x.Value));
+    }
+
+    [Fact]
+    public async Task GetOutflow_ReturnsList()
     {
         await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new MoneyFlowHttpClient(Client).GetSpending(1, DefaultCurrency.USD, _nowUtc.AddDays(-7), _nowUtc);
+        var result = await new MoneyFlowHttpClient(Client).GetOutflow(1, DefaultCurrency.USD, _nowUtc.AddDays(-7), _nowUtc);
 
         Assert.NotNull(result);
         Assert.Equal(0, result.Sum(x => x.Value));
+    }
+
+    [Fact]
+    public async Task GetNetCashFlow_ReturnsList()
+    {
+        await SeedWithTestCurrencyAccount();
+        Authorize("TestUser", 1, UserRole.User);
+        int days = 7;
+
+        var result = await new MoneyFlowHttpClient(Client).GetNetCashFlow(1, DefaultCurrency.USD, _nowUtc.AddDays(-days), _nowUtc);
+
+        Assert.NotNull(result);
+        Assert.All(result, x => Assert.Equal(_valueChange, x.Value));
+        Assert.Equal((days + 1) * _valueChange, result.Sum(x => x.Value));
+    }
+
+    [Fact]
+    public async Task GetClosingBalance_ReturnsDailyClosingBalances()
+    {
+        await SeedWithTestCurrencyAccount();
+        Authorize("TestUser", 1, UserRole.User);
+        int days = 7;
+
+        var result = await new MoneyFlowHttpClient(Client).GetClosingBalance(1, DefaultCurrency.USD, _nowUtc.AddDays(-days), _nowUtc);
+
+        Assert.NotNull(result);
+        Assert.Equal(days + 1, result.Count);
+        Assert.Equal(_value - (days * _valueChange), result.First(x => x.DateTime == _nowUtc.AddDays(-days)).Value);
+        Assert.Equal(_value, result.First(x => x.DateTime == _nowUtc).Value);
     }
 
     [Fact]

@@ -1,0 +1,42 @@
+@using FinanceManager.Components.Components.SharedComponents.Charts
+
+<MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
+    <MudPaper Class="flex-grow-0 p-3 pb-1" Elevation="0">
+        <MudText Typo="Typo.h5">Net cash flow</MudText>
+        <MudText Typo="Typo.h3" Class="card-subtitle text-muted">
+            @if (_isLoading)
+            {
+                <StringSpinner CharactersCount="4" />
+                @_currency
+            }
+            else if (_totalNetCashFlow is not null)
+            {
+                @_totalNetCashFlow
+                @_currency
+            }
+            else
+            {
+                @("No data")
+            }
+        </MudText>
+    </MudPaper>
+
+    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
+        @if (_isLoading)
+        {
+            <div style="height:100%">
+                <ChartSpinner MaxHeight="@Height" />
+            </div>
+        }
+        else if (_series.Any())
+        {
+            <LineChartJs Series="@_series" />
+        }
+        else
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
+            </div>
+        }
+    </MudPaper>
+</MudCard>
