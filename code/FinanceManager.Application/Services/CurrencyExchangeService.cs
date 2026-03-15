@@ -32,6 +32,7 @@ internal class CurrencyExchangeService(HttpClient httpClient, ILogger<CurrencyEx
     {
         if (stockPrice is null) return 1;
         if (stockPrice.Currency == currency) return stockPrice.PricePerUnit;
+        if (date > DateTime.UtcNow) date = DateTime.UtcNow;
         var priceInRightCurrency = await GetExchangeRateAsync(stockPrice.Currency, currency, date.Date);
         if (priceInRightCurrency is not null)
             return stockPrice.PricePerUnit * priceInRightCurrency.Value;

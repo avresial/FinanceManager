@@ -51,7 +51,27 @@ public class BondDetailsSeeder(IBondDetailsRepository bondDetailsRepository, ICu
                         Rate = 0.025m
                     }
                 ]
-            }
+            },
+            new BondDetails
+            {
+                Name = "EDO1235",
+                Issuer = "Ministry of Finance - Poland",
+                StartEmissionDate = new DateOnly(2025, 12, 1),
+                EndEmissionDate = new DateOnly(2035, 12, 1),
+                Type = BondType.InflationBond,
+                Currency = plnCurrency,
+                CalculationMethods =
+                [
+                    new ()
+                    {
+                        DateOperator = DateOperator.UntilDate,
+                        DateValue = "2035-12-01",
+                        Rate = 0.05m
+                    }
+                ]
+            },
+
+
         };
 
         var seededCount = 0;
