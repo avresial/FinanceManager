@@ -12,8 +12,8 @@ public partial class InvestmentPaycheckEstimatorCard
     private bool _isLoading;
     private Currency _currency = DefaultCurrency.PLN;
     private InvestmentPaycheckEstimate _estimate = new() { AnnualWithdrawalRate = 0.05m, SalaryMonthsRequested = 3 };
-    private decimal? _withdrawalRatePercent = 0.05m;
-    private bool ShowRecalculateButton => !_isLoading && Math.Round(_withdrawalRatePercent ?? 0.05m, 4) != Math.Round(_estimate.AnnualWithdrawalRate, 4);
+    private decimal? _annualWithdrawalRate = 0.05m;
+    private bool ShowRecalculateButton => !_isLoading && Math.Round(_annualWithdrawalRate ?? 0.05m, 4) != Math.Round(_estimate.AnnualWithdrawalRate, 4);
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
@@ -49,7 +49,7 @@ public partial class InvestmentPaycheckEstimatorCard
                 return;
             }
 
-            decimal withdrawalRate = Math.Round(_withdrawalRatePercent ?? 0.05m, 4);
+            decimal withdrawalRate = Math.Round(_annualWithdrawalRate ?? 0.05m, 4);
             _estimate = await AssetsHttpClient.GetInvestmentPaycheckEstimate(user.UserId, _currency, EndDateTime, withdrawalRate, SalaryMonths);
         }
         catch (Exception ex)
@@ -69,12 +69,4 @@ public partial class InvestmentPaycheckEstimatorCard
     private string FormatCurrency(decimal? value) => value.HasValue ? FormatCurrency(value.Value) : "No data";
 
     private static string FormatRatio(decimal? value) => value.HasValue ? $"{value.Value * 100m:0.00}%" : "No data";
-
-    private string GetSalaryMessage()
-    {
-        if (_estimate.HasPartialSalaryHistory)
-            return $"Salary baseline uses {_estimate.SalaryMonthsUsed} month(s) because fewer than {_estimate.SalaryMonthsRequested} salary months were found.";
-
-        return "Salary baseline uses the full requested history window.";
-    }
 }

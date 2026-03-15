@@ -44,7 +44,7 @@
                     <MudText Typo="Typo.caption" Class="text-muted">Withdrawal rate</MudText>
                     <div class="d-flex align-end gap-1">
                     <MudNumericField T="decimal?" Variant="Variant.Text" Min="0.001m" Max="0.2m" Immediate HideSpinButtons
-                                     Style="max-width: 70px;" @bind-Value="_withdrawalRatePercent" />
+                                     Style="max-width: 70px;" @bind-Value="_annualWithdrawalRate" />
                         @if (ShowRecalculateButton)
                         {
                             <MudIconButton Icon="@Icons.Material.Filled.Refresh" Variant="Variant.Text" Color="Color.Default"
