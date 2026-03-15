@@ -17,13 +17,13 @@
                 </MudText>
             </MudItem>
             <MudItem xs="3">
-                <MudText Typo="Typo.caption" Color="Color.Default">Balance</MudText>
-                <MudText Typo="Typo.body1">@BondAccountEntry.Value @_currency</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Default">Balance units</MudText>
+                <MudText Typo="Typo.body1">@BondAccountEntry.Value</MudText>
             </MudItem>
             <MudItem xs="3">
-                <MudText Typo="Typo.caption" Color="Color.Default">Change</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Default">Change units</MudText>
                 <MudText Typo="Typo.body1" Color="@(BondAccountEntry.ValueChange > 0 ? Color.Success : Color.Error)">
-                    @BondAccountEntry.ValueChange @_currency
+                    @BondAccountEntry.ValueChange
                 </MudText>
             </MudItem>
             <MudItem xs="3">
@@ -62,6 +62,21 @@
                                 <MudText Typo="Typo.caption" Color="Color.Default">Issuer</MudText>
                                 <MudText Typo="Typo.body1">@BondDetails.Issuer</MudText>
                             </MudItem>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Default">Unit value</MudText>
+                                <MudText Typo="Typo.body1">@BondDetails.UnitValue @BondDetails.Currency.ShortName</MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Default">Current value</MudText>
+                                <MudText Typo="Typo.body1">@(CurrentValue?.ToString() ?? "-") @_currency</MudText>
+                            </MudItem>
+                        }
+                        @if (UnitsChangeValue.HasValue)
+                        {
+                            <MudItem xs="12">
+                                <MudText Typo="Typo.caption" Color="Color.Default">Change value</MudText>
+                                <MudText Typo="Typo.body1">@UnitsChangeValue @_currency</MudText>
+                            </MudItem>
                         }
                     </MudGrid>
                     <MudGrid>
@@ -88,6 +103,6 @@
 <MudOverlay @bind-Visible=_removeEntryVisibility DarkBackground="true">
     <MudPaper Class="p-5">
         <RemoveBondEntry BondAccountName=@BondAccount.Name BondAccountEntry="BondAccountEntry" Cancel="HideOverlay"
-            Confirm="Confirm" />
+                         Confirm="Confirm" />
     </MudPaper>
 </MudOverlay>

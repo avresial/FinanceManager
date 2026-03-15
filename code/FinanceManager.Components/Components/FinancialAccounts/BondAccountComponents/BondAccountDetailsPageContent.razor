@@ -5,8 +5,8 @@
 
 @if (Account is not null && Account.Entries is not null && (IsLoading || Account.Entries.Any()))
 {
-    <AccountDetailsPageContent AccountName="@Account.Name"         ChartData="ChartData"              IsLoading="@IsLoading"
-                               IsLoadingMore="@_isLoadingMore"                  LoadedAllData="@_loadedAllData"                      OnLoadMore="LoadMore">
+    <AccountDetailsPageContent AccountName="@Account.Name" ChartData="ChartData" IsLoading="@IsLoading"
+                               IsLoadingMore="@_isLoadingMore" LoadedAllData="@_loadedAllData" OnLoadMore="LoadMore">
         <ActionButtons>
             <MudButton Variant="Variant.Text" Class="col-12" href="@($"Import/{Account.AccountId}")" Disabled>Import
             </MudButton>
@@ -15,7 +15,7 @@
             </MudButton>
         </ActionButtons>
         <AddEntryOverlay>
-            <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add"       OnClick=ShowOverlay
+            <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick=ShowOverlay
                     Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:2;" />
 
             <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
@@ -54,17 +54,17 @@
 
                     @if (_top5 is not null && _top5.Any())
                     {
-                        <AccountTopBottomList Title="Top 5"                         Items="_top5 ?? []"                                             ValueColor="Color.Success"
+                        <AccountTopBottomList Title="Top 5" Items="_top5 ?? []" ValueColor="Color.Success"
                                               ItemTitle="@(item => _bondDetails.FirstOrDefault(x => x.Id == item.Item1.BondDetailsId)?.Name ?? "Bond")"
-                                              ItemValue="@(item => $"{item.Item2} {_currency}")"
+                                              ItemValue="@(item => $"{item.Item2} units")"
                                               ItemDate="@(item => item.Item1.PostingDate.ToString("yyyy-MM-dd"))" />
                     }
 
                     @if (_bottom5 is not null && _bottom5.Any())
                     {
-                        <AccountTopBottomList Title="Bottom 5"                          Items="_bottom5 ?? []"                  ValueColor="Color.Error"
+                        <AccountTopBottomList Title="Bottom 5" Items="_bottom5 ?? []" ValueColor="Color.Error"
                                               ItemTitle="@(item => _bondDetails.FirstOrDefault(x => x.Id == item.Item1.BondDetailsId)?.Name ?? "Bond")"
-                                              ItemValue="@(item => $"{item.Item2} {_currency}")"
+                                              ItemValue="@(item => $"{item.Item2} units")"
                                               ItemDate="@(item => item.Item1.PostingDate.ToString("yyyy-MM-dd"))" />
                     }
                 </MudStack>

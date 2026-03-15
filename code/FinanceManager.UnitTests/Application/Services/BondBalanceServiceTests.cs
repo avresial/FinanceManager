@@ -39,7 +39,8 @@ public class BondBalanceServiceTests
             DateOnly.FromDateTime(endDate.AddYears(1)),
             [new BondCalculationMethod { DateOperator = DateOperator.UntilDate, DateValue = endDate.AddYears(1).ToString("yyyy-MM-dd"), Rate = 0 }],
             DefaultCurrency.PLN,
-            BondType.InflationBond)
+            BondType.InflationBond,
+            100m)
         {
             Id = 1
         };
@@ -51,7 +52,7 @@ public class BondBalanceServiceTests
         var result = await _service.GetClosingBalance(userId, DefaultCurrency.PLN, startDate, endDate);
 
         Assert.Equal(3, result.Count);
-        Assert.All(result, point => Assert.Equal(100, point.Value));
+        Assert.All(result, point => Assert.Equal(10000, point.Value));
     }
 
     [Fact]
@@ -73,7 +74,8 @@ public class BondBalanceServiceTests
             DateOnly.FromDateTime(endDate.AddYears(1)),
             [new BondCalculationMethod { DateOperator = DateOperator.UntilDate, DateValue = endDate.AddYears(1).ToString("yyyy-MM-dd"), Rate = 0 }],
             DefaultCurrency.PLN,
-            BondType.InflationBond)
+            BondType.InflationBond,
+            100m)
         {
             Id = 1
         };
@@ -85,7 +87,7 @@ public class BondBalanceServiceTests
         var result = await _service.GetNetCashFlow(userId, DefaultCurrency.PLN, startDate, endDate);
 
         Assert.Equal(2, result.Count);
-        Assert.Equal(100, result.Single(x => x.DateTime == startDate).Value);
-        Assert.Equal(-50, result.Single(x => x.DateTime == endDate).Value);
+        Assert.Equal(10000, result.Single(x => x.DateTime == startDate).Value);
+        Assert.Equal(-5000, result.Single(x => x.DateTime == endDate).Value);
     }
 }

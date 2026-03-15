@@ -12,7 +12,8 @@ namespace FinanceManager.Application.Services;
 public class InvestmentPaycheckEstimatorService(
     IFinancialAccountRepository financialAccountRepository,
     IFinancialLabelsRepository financialLabelsRepository,
-    IStockPriceProvider stockPriceProvider) : IInvestmentPaycheckEstimatorService
+    IStockPriceProvider stockPriceProvider,
+    IBondDetailsRepository bondDetailsRepository) : IInvestmentPaycheckEstimatorService
 {
     public async Task<InvestmentPaycheckEstimate> GetEstimate(int userId, Currency currency, DateTime asOfDate, decimal annualWithdrawalRate = 0.05m, int salaryMonths = 3)
     {
@@ -49,6 +50,7 @@ public class InvestmentPaycheckEstimatorService(
     private async Task<decimal> GetInvestableAssetsValue(int userId, Currency currency, DateTime asOfDate)
     {
         decimal result = 0;
+        var bondDetails = await bondDetailsRepository.GetAllAsync().ToDictionaryAsync(x => x.Id);
 
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, asOfDate.Date, asOfDate))
         {
@@ -57,8 +59,10 @@ public class InvestmentPaycheckEstimatorService(
                 var newestEntry = account.GetThisOrNextOlder(asOfDate, detailsId);
                 if (newestEntry is null)
                     continue;
+                if (!bondDetails.TryGetValue(detailsId, out var details))
+                    continue;
 
-                result += newestEntry.Value;
+                result += newestEntry.GetPriceAt(DateOnly.FromDateTime(asOfDate), details);
             }
         }
 

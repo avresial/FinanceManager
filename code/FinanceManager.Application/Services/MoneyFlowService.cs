@@ -11,12 +11,13 @@ using FinanceManager.Domain.Services;
 namespace FinanceManager.Application.Services;
 
 public class MoneyFlowService(IFinancialAccountRepository financialAccountRepository, IFinancialLabelsRepository financialLabelsRepository,
-IStockPriceProvider stockPriceProvider) : IMoneyFlowService
+IStockPriceProvider stockPriceProvider, IBondDetailsRepository bondDetailsRepository) : IMoneyFlowService
 {
     public async Task<decimal?> GetNetWorth(int userId, Currency currency, DateTime date)
     {
         if (date > DateTime.UtcNow) date = DateTime.UtcNow;
         decimal result = 0;
+        var bondDetails = await bondDetailsRepository.GetAllAsync().ToDictionaryAsync(x => x.Id);
 
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, date.Date, date))
         {
@@ -32,8 +33,9 @@ IStockPriceProvider stockPriceProvider) : IMoneyFlowService
             {
                 var newestEntry = account.GetThisOrNextOlder(date, detailsId);
                 if (newestEntry is null) continue;
+                if (!bondDetails.TryGetValue(detailsId, out var details)) continue;
 
-                result += newestEntry.Value;
+                result += newestEntry.GetPriceAt(DateOnly.FromDateTime(date), details);
             }
         }
 

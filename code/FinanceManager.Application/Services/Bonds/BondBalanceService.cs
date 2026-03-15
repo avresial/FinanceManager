@@ -79,7 +79,7 @@ internal class BondBalanceService(IFinancialAccountRepository financialAccountRe
                 if (!predicate(entry)) continue;
                 if (!bondDetails.TryGetValue(entry.BondDetailsId, out var details)) continue;
 
-                var priceAtDate = entry.GetPrice(DateOnly.FromDateTime(entry.PostingDate), details).Values.LastOrDefault();
+                var priceAtDate = entry.ValueChange * details.UnitValue;
                 if (!result.ContainsKey(entry.PostingDate.Date)) result[entry.PostingDate.Date] = 0;
 
                 result[entry.PostingDate.Date] += entry.ValueChange >= 0 ? priceAtDate : -Math.Abs(priceAtDate);

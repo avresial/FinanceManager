@@ -62,7 +62,8 @@ public class BondAccountEntryTests
             "Issuer",
             DateOnly.FromDateTime(postingDate),
             DateOnly.FromDateTime(postingDate.AddYears(1)),
-            [calculationMethod]
+            [calculationMethod],
+            unitValue: 1m
         );
 
         var targetDate = DateOnly.FromDateTime(postingDate.AddDays(2));
@@ -75,6 +76,34 @@ public class BondAccountEntryTests
         Assert.Equal(3, result.Count);
         Assert.Equal(100m, result[DateOnly.FromDateTime(postingDate)]);
         Assert.Equal(100.01m, result[DateOnly.FromDateTime(postingDate.AddDays(1))]);
+    }
+
+    [Fact]
+    public void GetPrice_ShouldApplyUnitValueMultiplier()
+    {
+        var postingDate = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var entry = new BondAccountEntry(1, 1, postingDate, 10m, 10m, 1);
+
+        var calculationMethod = new BondCalculationMethod
+        {
+            Id = 1,
+            DateOperator = FinanceManager.Domain.Enums.DateOperator.UntilDate,
+            DateValue = "2024-01-01",
+            Rate = 0m
+        };
+
+        var bondDetails = new BondDetails(
+            "Test Bond",
+            "Issuer",
+            DateOnly.FromDateTime(postingDate),
+            DateOnly.FromDateTime(postingDate.AddYears(1)),
+            [calculationMethod],
+            unitValue: 100m
+        );
+
+        var result = entry.GetPrice(DateOnly.FromDateTime(postingDate), bondDetails);
+
+        Assert.Equal(1000m, result[DateOnly.FromDateTime(postingDate)]);
     }
 
     [Fact]
@@ -97,7 +126,8 @@ public class BondAccountEntryTests
             "Issuer",
             DateOnly.FromDateTime(postingDate),
             DateOnly.FromDateTime(postingDate.AddYears(3)),
-            [calculationMethod]
+            [calculationMethod],
+            unitValue: 1m
         );
 
         // Target date is after 365 days (should capitalize even though 2024 is leap year)
@@ -145,7 +175,8 @@ public class BondAccountEntryTests
             "Issuer",
             DateOnly.FromDateTime(postingDate),
             DateOnly.FromDateTime(postingDate.AddYears(1)),
-            [calculationMethod1, calculationMethod2]
+            [calculationMethod1, calculationMethod2],
+            unitValue: 1m
         );
 
         var beforeRateChange = DateOnly.FromDateTime(new DateTime(2023, 6, 30, 0, 0, 0, DateTimeKind.Utc));
@@ -182,7 +213,8 @@ public class BondAccountEntryTests
             "Issuer",
             DateOnly.FromDateTime(postingDate),
             DateOnly.FromDateTime(postingDate.AddYears(5)),
-            [calculationMethod]
+            [calculationMethod],
+            unitValue: 1m
         );
 
         var targetDate = DateOnly.FromDateTime(postingDate.AddYears(5));
@@ -210,7 +242,7 @@ public class BondAccountEntryTests
     {
         // Arrange - Bond redemption (selling/withdrawing)
         var postingDate = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var entry = new BondAccountEntry(1, 1, postingDate, 0m, -500m, 1); // Negative value change
+        var entry = new BondAccountEntry(1, 1, postingDate, -500m, -500m, 1); // Negative value change
 
         var calculationMethod = new BondCalculationMethod
         {
@@ -225,7 +257,8 @@ public class BondAccountEntryTests
             "Issuer",
             DateOnly.FromDateTime(postingDate),
             DateOnly.FromDateTime(postingDate.AddYears(1)),
-            [calculationMethod]
+            [calculationMethod],
+            unitValue: 1m
         );
 
         var targetDate = DateOnly.FromDateTime(postingDate.AddDays(10));
@@ -261,7 +294,8 @@ public class BondAccountEntryTests
             "Issuer",
             DateOnly.FromDateTime(postingDate),
             DateOnly.FromDateTime(postingDate.AddYears(1)),
-            [calculationMethod]
+            [calculationMethod],
+            unitValue: 1m
         );
 
         var targetDate = DateOnly.FromDateTime(postingDate);
@@ -294,7 +328,8 @@ public class BondAccountEntryTests
             "Issuer",
             DateOnly.FromDateTime(postingDate),
             DateOnly.FromDateTime(postingDate.AddYears(1)),
-            [calculationMethod]
+            [calculationMethod],
+            unitValue: 1m
         );
 
         var targetDate = DateOnly.FromDateTime(postingDate.AddDays(100));
@@ -302,9 +337,9 @@ public class BondAccountEntryTests
         // Act
         var result = entry.GetPrice(targetDate, bondDetails);
 
-        // Assert - Should start from ValueChange (2000) not Value (0)
-        Assert.Equal(2000m, result[DateOnly.FromDateTime(postingDate)]);
-        Assert.True(result[targetDate] > 2000m, "Value should grow from initial ValueChange");
+        // Assert - Should start from Value (0), because Value tracks the active unit balance.
+        Assert.Equal(0m, result[DateOnly.FromDateTime(postingDate)]);
+        Assert.Equal(0m, result[targetDate]);
     }
 
     [Fact]
@@ -327,7 +362,8 @@ public class BondAccountEntryTests
             "Issuer",
             DateOnly.FromDateTime(postingDate),
             DateOnly.FromDateTime(postingDate.AddYears(1)),
-            [calculationMethod]
+            [calculationMethod],
+            unitValue: 1m
         );
 
         var targetDate = DateOnly.FromDateTime(postingDate.AddDays(10));

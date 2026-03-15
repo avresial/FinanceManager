@@ -11,7 +11,7 @@ public class StockPriceProvider(IStockPriceRepository stockRepository, ICurrency
     {
         if (string.IsNullOrWhiteSpace(ticker)) throw new ArgumentException("{ticker}", nameof(ticker));
 
-        var key = ticker.Trim().ToUpperInvariant();
+        var key = $"STOCK_PRICE_{asOf:yyyyMMdd}_{ticker.Trim().ToUpperInvariant()}";
 
         if (cache.TryGetValue(key, out decimal cached))
             return Task.FromResult(cached);

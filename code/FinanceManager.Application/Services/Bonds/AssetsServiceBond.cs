@@ -57,22 +57,38 @@ public class AssetsServiceBond(IFinancialAccountRepository financialAccountRepos
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
     {
-        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Where(x => x.ContainsAssets))
-            yield return new(account.Name, account.Entries.First().Value);
-    }
+        var bondDetails = await bondDetailsRepository.GetAllAsync().ToDictionaryAsync(x => x.Id);
 
-    public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
-    {
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Where(x => x.ContainsAssets))
         {
             decimal value = 0;
             foreach (var bondDetailsId in account.GetStoredBondsIds())
             {
-                var latestEntry = account.Get(asOfDate)
-                    .FirstOrDefault(x => x.BondDetailsId == bondDetailsId);
+                var latestEntry = account.GetThisOrNextOlder(asOfDate, bondDetailsId);
                 if (latestEntry is null) continue;
+                if (!bondDetails.TryGetValue(bondDetailsId, out var details)) continue;
 
-                value += latestEntry.Value;
+                value += latestEntry.GetPriceAt(DateOnly.FromDateTime(asOfDate), details);
+            }
+
+            yield return new(account.Name, value);
+        }
+    }
+
+    public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
+    {
+        var bondDetails = await bondDetailsRepository.GetAllAsync().ToDictionaryAsync(x => x.Id);
+
+        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Where(x => x.ContainsAssets))
+        {
+            decimal value = 0;
+            foreach (var bondDetailsId in account.GetStoredBondsIds())
+            {
+                var latestEntry = account.GetThisOrNextOlder(asOfDate, bondDetailsId);
+                if (latestEntry is null) continue;
+                if (!bondDetails.TryGetValue(bondDetailsId, out var details)) continue;
+
+                value += latestEntry.GetPriceAt(DateOnly.FromDateTime(asOfDate), details);
             }
 
             yield return new(account.Name, value);
