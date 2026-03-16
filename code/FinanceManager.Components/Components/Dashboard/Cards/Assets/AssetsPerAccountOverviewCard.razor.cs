@@ -1,5 +1,6 @@
 using FinanceManager.Components.Helpers;
-using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Models;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Entities.Users;
@@ -35,7 +36,7 @@ public partial class AssetsPerAccountOverviewCard
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
     [Inject] public required ILogger<AssetsPerAccountOverviewCard> Logger { get; set; }
-    [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
+    [Inject] public required AssetsPageCardsCacheService AssetsPageCardsCacheService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
@@ -63,7 +64,16 @@ public partial class AssetsPerAccountOverviewCard
 
             _totalAssets = 0;
 
-            Data = await GetData();
+            var context = new AssetsPageCardsRefreshContext
+            {
+                UserId = _user.UserId,
+                CurrencyId = _currency.Id,
+                StartDateTime = StartDateTime,
+                EndDateTime = EndDateTime,
+            };
+
+            var snapshot = await AssetsPageCardsCacheService.GetSnapshotAsync(context);
+            Data = [.. snapshot.EndAssetsPerAccount];
             _chartData = Data.Select(x => (double)Math.Round(x.Value, 2)).ToArray();
             _chartSeries = [new ChartSeries<double> { Data = _chartData }];
 
@@ -80,25 +90,6 @@ public partial class AssetsPerAccountOverviewCard
 
         _isLoading = false;
 
-    }
-
-    async Task<List<NameValueResult>> GetData()
-    {
-        if (StartDateTime == new DateTime()) return [];
-
-        if (_user is not null)
-        {
-            try
-            {
-                return await AssetsHttpClient.GetEndAssetsPerAccount(_user.UserId, DefaultCurrency.PLN, EndDateTime);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex.ToString());
-            }
-        }
-
-        return [];
     }
 
     private string FormatLegendLabel(string name, decimal value, decimal total)

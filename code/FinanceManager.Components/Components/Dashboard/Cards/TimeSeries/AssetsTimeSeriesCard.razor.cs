@@ -1,4 +1,5 @@
-using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Models;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
@@ -17,7 +18,7 @@ public partial class AssetsTimeSeriesCard
     [Parameter] public string Height { get; set; } = "250px";
 
     [Inject] public required ILogger<AssetsTimeSeriesCard> Logger { get; set; }
-    [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
+    [Inject] public required AssetsPageCardsCacheService AssetsPageCardsCacheService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
@@ -31,7 +32,16 @@ public partial class AssetsTimeSeriesCard
         try
         {
             ChartData.Clear();
-            ChartData.AddRange((await GetData()).OrderBy(x => x.DateTime));
+            var context = new AssetsPageCardsRefreshContext
+            {
+                UserId = user.UserId,
+                CurrencyId = SettingsService.GetCurrency().Id,
+                StartDateTime = StartDateTime,
+                EndDateTime = EndDateTime,
+            };
+
+            var snapshot = await AssetsPageCardsCacheService.GetSnapshotAsync(context);
+            ChartData.AddRange(snapshot.AssetsTimeSeries.OrderBy(x => x.DateTime));
         }
         catch (Exception ex)
         {
@@ -39,22 +49,5 @@ public partial class AssetsTimeSeriesCard
         }
 
         _isLoading = false;
-    }
-
-    private async Task<List<TimeSeriesModel>> GetData()
-    {
-        var user = await LoginService.GetLoggedUser();
-        if (user is null) return [];
-
-        try
-        {
-            return await AssetsHttpClient.GetAssetsTimeSeries(user.UserId, DefaultCurrency.PLN, StartDateTime, EndDateTime);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error getting assets time series data");
-        }
-
-        return [];
     }
 }
