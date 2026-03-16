@@ -25,7 +25,9 @@
                     </MudText>
                     <MudStack Row>
                         <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Title="TrendingUp" />
-                        <MudText Typo="Typo.subtitle2"><StringSpinner Characters="!#$^&*" />%</MudText>
+                        <MudText Typo="Typo.subtitle2">
+                            <StringSpinner Characters="!#$^&*" />%
+                        </MudText>
                     </MudStack>
                 </MudPaper>
             </MudCardContent>
@@ -51,7 +53,9 @@
                     </MudText>
                     <MudStack Row>
                         <MudIcon Icon="@Icons.Material.Filled.TrendingFlat" Title="TrendingFlat" />
-                        <MudText Typo="Typo.subtitle2"><StringSpinner Characters="!#$^&*" />%</MudText>
+                        <MudText Typo="Typo.subtitle2">
+                            <StringSpinner Characters="!#$^&*" />%
+                        </MudText>
                     </MudStack>
                 </MudPaper>
             </MudCardContent>
@@ -77,7 +81,9 @@
                     </MudText>
                     <MudStack Row>
                         <MudIcon Icon="@Icons.Material.Filled.TrendingDown" Title="TrendingDown" />
-                        <MudText Typo="Typo.subtitle2"><StringSpinner Characters="!#$^&*" />%</MudText>
+                        <MudText Typo="Typo.subtitle2">
+                            <StringSpinner Characters="!#$^&*" />%
+                        </MudText>
                     </MudStack>
                 </MudPaper>
             </MudCardContent>
@@ -101,7 +107,9 @@
                     </MudText>
                     <MudStack Row>
                         <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Title="TrendingUp" />
-                        <MudText Typo="Typo.subtitle2"><StringSpinner Characters="!#$^&*" />%</MudText>
+                        <MudText Typo="Typo.subtitle2">
+                            <StringSpinner Characters="!#$^&*" />%
+                        </MudText>
                     </MudStack>
                 </MudPaper>
             </MudCardContent>
@@ -114,7 +122,8 @@
                 <MudText>Daily active users</MudText>
                 @if (_dailyActiveUsersSeries is not null)
                 {
-                    <MudChart ChartType="ChartType.Bar" ChartSeries="@_dailyActiveUsersSeries" Width="100%" Height="300px" ChartOptions=_chartOptions AxisChartOptions=_axisChartOptions />
+                    <MudChart T="double" ChartType="ChartType.Bar" ChartSeries="@_dailyActiveUsersSeries" Width="100%"
+                              Height="300px" ChartOptions=_chartOptions />
                 }
                 else
                 {
@@ -132,7 +141,8 @@
                 <MudText>New users</MudText>
                 @if (_newUsersSeries is not null)
                 {
-                    <MudChart ChartType="ChartType.Bar" ChartSeries="@_newUsersSeries" Width="100%" Height="300px" ChartOptions="@_chartOptions" AxisChartOptions=@_axisChartOptions />
+                    <MudChart T="double" ChartType="ChartType.Bar" ChartSeries="@_newUsersSeries" Width="100%"
+                              Height="300px" ChartOptions="@_chartOptions" />
                 }
                 else
                 {

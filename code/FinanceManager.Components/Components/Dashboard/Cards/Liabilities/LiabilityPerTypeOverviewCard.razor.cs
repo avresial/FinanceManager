@@ -7,18 +7,14 @@ using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
+using MudBlazor.Charts;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 {
     public partial class LiabilityPerTypeOverviewCard
     {
-        private readonly AxisChartOptions _axisChartOptions = new()
-        {
-            MatchBoundsToSize = true,
-        };
         private readonly ChartOptions _chartOptions = new()
         {
-            LineStrokeWidth = 3,
             ChartPalette = ColorsProvider.GetColors().ToArray(),
             ShowLegend = false,
         };
@@ -26,6 +22,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
         private bool _isLoading;
         private double[] _data = [];
         private string[] _labels = [];
+        private List<ChartSeries<double>> _chartSeries = [];
 
         private Currency _currency = DefaultCurrency.PLN;
         private decimal _totalLiabilities = 0;
@@ -56,6 +53,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
                 var data = await GetData();
                 _data = data.Select(x => (double)x.Value).ToArray();
                 _labels = data.Select(x => x.Name).ToArray();
+                _chartSeries = [new ChartSeries<double> { Data = _data }];
             }
             catch (Exception ex)
             {

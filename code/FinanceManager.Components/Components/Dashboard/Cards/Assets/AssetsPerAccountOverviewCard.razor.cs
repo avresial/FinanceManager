@@ -8,19 +8,14 @@ using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
+using MudBlazor.Charts;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards.Assets;
 
 public partial class AssetsPerAccountOverviewCard
 {
-    private readonly AxisChartOptions _axisChartOptions = new()
-    {
-        MatchBoundsToSize = true,
-    };
-
     private readonly ChartOptions _chartOptions = new()
     {
-        LineStrokeWidth = 3,
         ChartPalette = ColorsProvider.GetColors().ToArray(),
         ShowLegend = false,
         ShowToolTips = true,
@@ -32,6 +27,7 @@ public partial class AssetsPerAccountOverviewCard
     private bool _isLoading = false;
     private double[] _chartData = [];
     private string[] _chartLabels = [];
+    private List<ChartSeries<double>> _chartSeries = [];
 
     [Parameter] public bool DisplayAsChart { get; set; } = true;
     [Parameter] public string Height { get; set; } = "300px";
@@ -69,6 +65,7 @@ public partial class AssetsPerAccountOverviewCard
 
             Data = await GetData();
             _chartData = Data.Select(x => (double)Math.Round(x.Value, 2)).ToArray();
+            _chartSeries = [new ChartSeries<double> { Data = _chartData }];
 
             if (Data.Count != 0) _totalAssets = Math.Round(Data.Sum(x => x.Value), 2);
 

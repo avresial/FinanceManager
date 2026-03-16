@@ -1,5 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
+	<PropertyGroup>
+		<NoWarn>$(NoWarn);CS0618;MUD0002;MUD0012</NoWarn>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<InternalsVisibleTo Include="FinanceManager.IntegrationTests" />
 		<InternalsVisibleTo Include="FinanceManager.UnitTests" />

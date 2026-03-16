@@ -1,9 +1,8 @@
 ﻿@page "/Assets"
 @using FinanceManager.Components.Components.Dashboard.Cards.Assets
 
-
 <PageTitle>Assets</PageTitle>
-<MudContainer Class="mt-2">
+<MudContainer Class="py-2">
     <MudGrid Spacing="2">
         <MudItem xs="12">
             <AssetsTimeSeriesCard StartDateTime=StartDate EndDateTime="@EndDate" />
@@ -11,25 +10,20 @@
 
         <MudItem xs="12" lg="4">
             <AssetsPerTypeOverviewCard StartDateTime=StartDate EndDateTime="@EndDate"
-                                       Height="@($"{1.5 * _unitHeight}px")" />
+                                       Height="@($"{2 * _unitHeight}px")" />
         </MudItem>
 
         <MudItem xs="12" lg="4">
             <AssetsPerAccountOverviewCard StartDateTime=StartDate EndDateTime="@EndDate"
-                                          Height="@($"{1.5 * _unitHeight}px")" />
+                                          Height="@($"{2 * _unitHeight}px")" />
         </MudItem>
 
         <MudItem xs="12" lg="4">
-            <AssetsPerAccountOverviewCard DisplayAsChart="false" StartDateTime=StartDate EndDateTime="@EndDate"
-                                          Height="@($"{1.5 * _unitHeight}px")" />
+            <InvestmentPaycheckEstimatorCard EndDateTime="@EndDate" Height="@($"{2 * _unitHeight}px")" />
         </MudItem>
 
         <MudItem xs="12" lg="4">
             <InvestmentRateCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
-        </MudItem>
-
-        <MudItem xs="12" lg="4">
-            <InvestmentPaycheckEstimatorCard EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
         </MudItem>
     </MudGrid>
 </MudContainer>
