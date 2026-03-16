@@ -32,9 +32,11 @@ public class InvestmentPaycheckEstimateCacheService(
         var normalizedRate = Math.Round(refreshContext.WithdrawalRate, 4);
         var endDate = refreshContext.EndDateTime;
 
+        var currency = new Currency(refreshContext.CurrencyId, string.Empty, string.Empty);
+
         var estimate = await assetsHttpClient.GetInvestmentPaycheckEstimate(
             refreshContext.UserId,
-            refreshContext.CurrencyId,
+            currency,
             endDate,
             normalizedRate,
             refreshContext.SalaryMonths);
