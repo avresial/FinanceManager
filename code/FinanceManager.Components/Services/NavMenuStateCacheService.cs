@@ -6,95 +6,46 @@ using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace FinanceManager.Components.Services;
 
 public class NavMenuStateCacheService(
     ILocalStorageService localStorageService,
+    IMemoryCache memoryCache,
     IFinancialAccountService financialAccountService,
     AssetsHttpClient assetsHttpClient,
     LiabilitiesHttpClient liabilitiesHttpClient,
     ILogger<NavMenuStateCacheService> logger)
+    : LocalStorageStateCacheService<NavMenuCacheSnapshot, UserSession, int>(localStorageService, memoryCache, logger, _cacheKeyPrefix)
 {
     private const string _cacheKeyPrefix = "nav-menu-cache-v1";
     private static readonly TimeSpan _maxStale = TimeSpan.FromHours(24);
 
-    private readonly SemaphoreSlim _refreshLock = new(1, 1);
-    private readonly Dictionary<int, NavMenuCacheSnapshot> _memoryCache = [];
-
     public async Task<NavMenuCacheSnapshot?> GetCachedSnapshotAsync(int userId)
+        => await GetCachedAsync(userId);
+
+    protected override int GetCacheKey(UserSession refreshContext) => refreshContext.UserId;
+
+    protected override async Task<NavMenuCacheSnapshot> BuildStateAsync(UserSession user)
     {
-        if (_memoryCache.TryGetValue(userId, out var memorySnapshot) && IsUsable(memorySnapshot))
-            return memorySnapshot;
-
-        try
-        {
-            var persistedSnapshot = await localStorageService.GetItemAsync<NavMenuCacheSnapshot>(BuildCacheKey(userId));
-            if (!IsUsable(persistedSnapshot))
-            {
-                await localStorageService.RemoveItemAsync(BuildCacheKey(userId));
-                return null;
-            }
-
-            if (persistedSnapshot is null)
-            {
-                _memoryCache.Remove(userId);
-                return null;
-            }
-
-            _memoryCache[userId] = persistedSnapshot;
-            return persistedSnapshot;
-        }
-        catch (JsonException ex)
-        {
-            logger.LogWarning(ex, "Invalid nav menu cache payload for user {UserId}", userId);
-            await localStorageService.RemoveItemAsync(BuildCacheKey(userId));
-            return null;
-        }
-    }
-
-    public async Task<NavMenuCacheSnapshot> RefreshAsync(UserSession user)
-    {
-        await _refreshLock.WaitAsync();
-
-        try
-        {
-            var snapshot = await BuildSnapshotAsync(user);
-            _memoryCache[user.UserId] = snapshot;
-            await localStorageService.SetItemAsync(BuildCacheKey(user.UserId), snapshot);
-            return snapshot;
-        }
-        finally
-        {
-            _refreshLock.Release();
-        }
-    }
-
-    public async Task InvalidateAsync(int userId)
-    {
-        _memoryCache.Remove(userId);
-        await localStorageService.RemoveItemAsync(BuildCacheKey(userId));
-    }
-
-    private async Task<NavMenuCacheSnapshot> BuildSnapshotAsync(UserSession user)
-    {
+        var userId = user.UserId;
         var availableAccountsTask = financialAccountService.GetAvailableAccounts();
-        var displayAssetsTask = GetAssetsFlagAsync(user.UserId);
-        var displayLiabilitiesTask = GetLiabilitiesFlagAsync(user.UserId);
+        var displayAssetsTask = GetAssetsFlagAsync(userId);
+        var displayLiabilitiesTask = GetLiabilitiesFlagAsync(userId);
 
         var availableAccounts = await availableAccountsTask;
-        var accounts = await BuildAccountsAsync(user.UserId, availableAccounts);
+        var accounts = await BuildAccountsAsync(userId, availableAccounts);
 
         return new NavMenuCacheSnapshot
         {
             SchemaVersion = NavMenuCacheSnapshot.CurrentSchemaVersion,
-            UserId = user.UserId,
+            UserId = userId,
             FetchedAtUtc = DateTime.UtcNow,
             Accounts = accounts,
             DisplayAssetsLink = await displayAssetsTask,
-            DisplayLiabilitiesLink = await displayLiabilitiesTask,
+            DisplayLiabilitiesLink = await displayLiabilitiesTask
         };
     }
 
@@ -165,16 +116,17 @@ public class NavMenuStateCacheService(
         }
     }
 
-    private static string BuildCacheKey(int userId) => $"{_cacheKeyPrefix}:{userId}";
-
-    private static bool IsUsable(NavMenuCacheSnapshot? snapshot)
+    protected override bool IsUsable(NavMenuCacheSnapshot? snapshot, int cacheKey, DateTime utcNow)
     {
         if (snapshot is null)
+            return false;
+
+        if (snapshot.UserId != cacheKey)
             return false;
 
         if (snapshot.SchemaVersion != NavMenuCacheSnapshot.CurrentSchemaVersion)
             return false;
 
-        return DateTime.UtcNow - snapshot.FetchedAtUtc <= _maxStale;
+        return utcNow - snapshot.FetchedAtUtc <= _maxStale;
     }
 }

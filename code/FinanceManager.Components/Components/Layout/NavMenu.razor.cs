@@ -12,7 +12,7 @@ public partial class NavMenu : ComponentBase, IDisposable
     private bool _displayAssetsLink = false;
     private bool _displayLiabilitiesLink = false;
     private int? _currentUserId;
-    private bool _isDisposed;
+    private readonly CancellationTokenSource _disposeTokenSource = new();
 
     [Parameter] public bool DrawerIsOpen { get; set; }
     [Inject] public required NavMenuStateCacheService NavMenuStateCacheService { get; set; }
@@ -31,7 +31,10 @@ public partial class NavMenu : ComponentBase, IDisposable
 
         try
         {
-            await LoadCachedStateAndRefreshAsync(forceRefresh: false);
+            await LoadCachedStateAndRefreshAsync(forceRefresh: false, _disposeTokenSource.Token);
+        }
+        catch (OperationCanceledException)
+        {
         }
         catch (Exception ex)
         {
@@ -39,34 +42,53 @@ public partial class NavMenu : ComponentBase, IDisposable
         }
     }
 
-    private void AccountDataSynchronizationService_AccountsChanged() => _ = InvokeAsync(RefreshAfterAccountChangeAsync);
-
-    private void LoginService_LogginStateChanged(bool isLoggedIn) => _ = InvokeAsync(() => HandleLoginStateChangedAsync(isLoggedIn));
-
-    private async Task HandleLoginStateChangedAsync(bool isLoggedIn)
+    private void AccountDataSynchronizationService_AccountsChanged()
     {
+        if (_disposeTokenSource.IsCancellationRequested)
+            return;
+
+        _ = InvokeAsync(() => RefreshAfterAccountChangeAsync(_disposeTokenSource.Token));
+    }
+
+    private void LoginService_LogginStateChanged(bool isLoggedIn)
+    {
+        if (_disposeTokenSource.IsCancellationRequested)
+            return;
+
+        _ = InvokeAsync(() => HandleLoginStateChangedAsync(isLoggedIn, _disposeTokenSource.Token));
+    }
+
+    private async Task HandleLoginStateChangedAsync(bool isLoggedIn, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (!isLoggedIn)
         {
             _currentUserId = null;
             ClearState();
+            cancellationToken.ThrowIfCancellationRequested();
             await InvokeAsync(StateHasChanged);
             return;
         }
 
-        await LoadCachedStateAndRefreshAsync(forceRefresh: false);
+        await LoadCachedStateAndRefreshAsync(forceRefresh: false, cancellationToken);
     }
 
-    private async Task RefreshAfterAccountChangeAsync()
+    private async Task RefreshAfterAccountChangeAsync(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (_currentUserId.HasValue)
             await NavMenuStateCacheService.InvalidateAsync(_currentUserId.Value);
 
-        await LoadCachedStateAndRefreshAsync(forceRefresh: true);
+        await LoadCachedStateAndRefreshAsync(forceRefresh: true, cancellationToken);
     }
 
-    private async Task LoadCachedStateAndRefreshAsync(bool forceRefresh)
+    private async Task LoadCachedStateAndRefreshAsync(bool forceRefresh, CancellationToken cancellationToken)
     {
-        var user = await TryGetLoggedUserAsync();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var user = await TryGetLoggedUserAsync(cancellationToken);
         if (user is null)
         {
             _currentUserId = null;
@@ -82,22 +104,28 @@ public partial class NavMenu : ComponentBase, IDisposable
             if (cachedSnapshot is not null)
             {
                 ApplySnapshot(cachedSnapshot);
+                cancellationToken.ThrowIfCancellationRequested();
                 await InvokeAsync(StateHasChanged);
-                _ = RefreshSnapshotAsync(user);
+                _ = RefreshSnapshotAsync(user, cancellationToken);
                 return;
             }
         }
 
-        await RefreshSnapshotAsync(user);
+        await RefreshSnapshotAsync(user, cancellationToken);
     }
 
-    private async Task<UserSession?> TryGetLoggedUserAsync()
+    private async Task<UserSession?> TryGetLoggedUserAsync(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         ErrorMessage = string.Empty;
 
         try
         {
             return await LoginService.GetLoggedUser();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -107,16 +135,22 @@ public partial class NavMenu : ComponentBase, IDisposable
         }
     }
 
-    private async Task RefreshSnapshotAsync(UserSession user)
+    private async Task RefreshSnapshotAsync(UserSession user, CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var snapshot = await NavMenuStateCacheService.RefreshAsync(user);
-            if (_currentUserId != user.UserId || _isDisposed)
+            if (_currentUserId != user.UserId)
                 return;
 
+            cancellationToken.ThrowIfCancellationRequested();
             ApplySnapshot(snapshot);
             ErrorMessage = string.Empty;
+        }
+        catch (OperationCanceledException)
+        {
+            return;
         }
         catch (Exception ex)
         {
@@ -124,7 +158,7 @@ public partial class NavMenu : ComponentBase, IDisposable
             Logger.LogError(ex, "Error while refreshing nav menu snapshot");
         }
 
-        if (!_isDisposed)
+        if (!cancellationToken.IsCancellationRequested)
             await InvokeAsync(StateHasChanged);
     }
 
@@ -145,8 +179,9 @@ public partial class NavMenu : ComponentBase, IDisposable
 
     public void Dispose()
     {
-        _isDisposed = true;
+        _disposeTokenSource.Cancel();
         AccountDataSynchronizationService.AccountsChanged -= AccountDataSynchronizationService_AccountsChanged;
         LoginService.LogginStateChanged -= LoginService_LogginStateChanged;
+        _disposeTokenSource.Dispose();
     }
 }

@@ -1,4 +1,5 @@
-using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Models;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
@@ -20,7 +21,7 @@ public partial class InvestmentRateCard
 
 
     [Inject] public required ILogger<InvestmentRateCard> Logger { get; set; }
-    [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
+    [Inject] public required AssetsPageCardsCacheService AssetsPageCardsCacheService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
@@ -41,7 +42,16 @@ public partial class InvestmentRateCard
 
             try
             {
-                InvestmentRates = await MoneyFlowHttpClient.GetInvestmentRate(user.UserId, StartDateTime, EndDateTime).ToListAsync();
+                var context = new AssetsPageCardsRefreshContext
+                {
+                    UserId = user.UserId,
+                    CurrencyId = _currency.Id,
+                    StartDateTime = StartDateTime,
+                    EndDateTime = EndDateTime,
+                };
+
+                var snapshot = await AssetsPageCardsCacheService.GetSnapshotAsync(context);
+                InvestmentRates = [.. snapshot.InvestmentRates];
             }
             catch (Exception ex)
             {
