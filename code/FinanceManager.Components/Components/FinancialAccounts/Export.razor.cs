@@ -12,7 +12,15 @@ public partial class Export : ComponentBase
 {
     [Parameter] public required int AccountId { get; set; }
 
-    [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+
+    // Backwards-compatible alias with the previous misspelled name.
+    public IFinancialAccountService FinancalAccountService
+    {
+        get => FinancialAccountService;
+        set => FinancialAccountService = value;
+    }
+
     [Inject] public required HttpClient HttpClient { get; set; }
     [Inject] public required IJSRuntime JSRuntime { get; set; }
     [Inject] public required CurrencyAccountHttpClient CurrencyAccountHttpClient { get; set; }
