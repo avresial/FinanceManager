@@ -29,12 +29,6 @@ public partial class Export : ComponentBase
 
     private bool CanDownload => _startDate.HasValue && _endDate.HasValue && _startDate.Value <= _endDate.Value;
 
-    protected override async Task OnInitializedAsync()
-    {
-        SetDefaultDates();
-        await UpdateAccountType();
-    }
-
     protected override async Task OnParametersSetAsync()
     {
         accountType = null;
