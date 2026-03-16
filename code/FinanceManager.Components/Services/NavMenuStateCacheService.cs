@@ -73,7 +73,7 @@ public class NavMenuStateCacheService(
             name = await GetAccountNameAsync<BondAccount>(userId, accountId, now);
         else
         {
-            logger.LogError("Account type {AccountType} can not be handled, account id {AccountId}", accountType.Name, accountId);
+            logger.LogError("Account type {AccountType} can not be handled for an account.", accountType.Name);
             return null;
         }
 
