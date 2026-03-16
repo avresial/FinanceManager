@@ -34,7 +34,7 @@ public class InvestmentPaycheckEstimateCacheService(
 
         var estimate = await assetsHttpClient.GetInvestmentPaycheckEstimate(
             refreshContext.UserId,
-            DefaultCurrency.PLN,
+            refreshContext.CurrencyId,
             endDate,
             normalizedRate,
             refreshContext.SalaryMonths);
