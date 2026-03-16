@@ -3,7 +3,7 @@
 @using FinanceManager.Domain.Entities.FinancialAccounts.Currencies
 @using FinanceManager.Domain.Entities.Stocks
 
-@if (accountType is null)
+@if (accountType is null && string.IsNullOrEmpty(ErrorMessage))
 {
     <DisplaySpinner />
 }
