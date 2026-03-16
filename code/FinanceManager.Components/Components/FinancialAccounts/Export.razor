@@ -1,0 +1,47 @@
+@page "/Export/{AccountId:int}"
+@using FinanceManager.Domain.Entities.Bonds
+@using FinanceManager.Domain.Entities.FinancialAccounts.Currencies
+@using FinanceManager.Domain.Entities.Stocks
+
+@if (accountType is null)
+{
+    <DisplaySpinner />
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Small" Class="mt-6">
+        <MudPaper Class="pa-4">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.h4">Export data</MudText>
+                <MudText Typo="Typo.subtitle1">@GetAccountTypeLabel() account</MudText>
+                @if (!string.IsNullOrWhiteSpace(AccountName))
+                {
+                    <MudText Typo="Typo.subtitle2">@AccountName</MudText>
+                }
+
+                @if (ErrorMessage != string.Empty)
+                {
+                    <MudAlert Severity="Severity.Error">@ErrorMessage</MudAlert>
+                }
+
+                <MudDatePicker Label="Start date" @bind-Date="_startDate" />
+                <MudDatePicker Label="End date" @bind-Date="_endDate" />
+
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!CanDownload || _isDownloading)"
+                               OnClick="Download">
+                        @if (_isDownloading)
+                        {
+                            <MudProgressCircular Class="mr-2" Color="Color.Inherit" Size="Size.Small" Indeterminate="true" />
+                        }
+                        Download
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Text" Color="Color.Secondary" href="@($"AccountDetails/{AccountId}")">
+                        Cancel
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+    </MudContainer>
+}

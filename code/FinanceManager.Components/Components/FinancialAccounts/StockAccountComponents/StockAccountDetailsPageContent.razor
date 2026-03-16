@@ -8,7 +8,7 @@
                                IsLoading="@IsLoading" IsLoadingMore="@_isLoadingMore" LoadedAllData="@_loadedAllData" OnLoadMore="LoadMore">
         <ActionButtons>
             <MudButton Variant="Variant.Text" href="@($"Import/{Account.AccountId}")">Import</MudButton>
-            <MudButton Variant="Variant.Text" Disabled>Export</MudButton>
+            <MudButton Variant="Variant.Text" href="@($"Export/{Account.AccountId}")">Export</MudButton>
             <MudButton Variant="Variant.Text" href="@($"ManageAccount/{Account.AccountId}")">Manage</MudButton>
             <MudButton Variant="Variant.Text" href="@($"StockPrices")">Stocks Prices</MudButton>
         </ActionButtons>
