@@ -21,10 +21,6 @@
                 <MudText Typo="Typo.body2" Class="text-muted mb-1">/mo</MudText>
             </div>
 
-            <MudText Typo="Typo.body2"
-                     Class="@(_estimate.SalaryMonthsUsed < _estimate.SalaryMonthsRequested ? "mud-warning-text" : "text-muted")">
-                Based on @_estimate.SalaryMonthsUsed of @_estimate.SalaryMonthsRequested requested months.
-            </MudText>
 
             <div class="d-flex flex-wrap gap-1">
                 <div class="mr-2">
@@ -53,6 +49,11 @@
                     </div>
                 </div>
             </div>
+            
+            <MudText Typo="Typo.body2"
+                    Class="@(_estimate.SalaryMonthsUsed < _estimate.SalaryMonthsRequested ? "mud-warning-text" : "text-muted")">
+                Based on @_estimate.SalaryMonthsUsed of @_estimate.SalaryMonthsRequested requested months.
+            </MudText>
         }
     </MudPaper>
 </MudCard>

@@ -1,5 +1,4 @@
-﻿@using ApexCharts
-@using FinanceManager.Components.Components.SharedComponents
+﻿@using FinanceManager.Components.Components.SharedComponents
 @using FinanceManager.Domain.Entities
 @using FinanceManager.Domain.Entities.MoneyFlowModels
 @using FinanceManager.Domain.Providers
@@ -8,7 +7,7 @@
 @using FinanceManager.Domain.Services
 @using FinanceManager.Components.Helpers
 
-<MudCard Outlined Class="d-flex flex-nowrap " Style="@($"height:{Height};")">
+<MudCard Outlined Class="d-flex flex-nowrap" Style="@($"height:{Height};")">
     <MudPaper Class="flex-grow-0 p-3" Elevation="0">
         <MudText Typo=Typo.h5>Assets per wallet</MudText>
         @if (_isLoading)
@@ -57,15 +56,8 @@
         }
         else if (Data.Any())
         {
-            <div>
-                <ApexChart @ref="_chart" Height="@("100%")" TItem="NameValueResult" Options="Options">
-
-                    <ApexPointSeries TItem="NameValueResult"                Items="Data"        Name="Assets"                       XValue="e => e.Name.ToString()"
-                                     YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"         SeriesType="SeriesType.Pie"
-                                     OrderByDescending="@(e=>e.Y)" />
-
-                </ApexChart>
-            </div>
+            <MudChart ChartType="ChartType.Pie" InputData="@_chartData" InputLabels="@_chartLabels" Width="100%"
+                      Height="100%" ChartOptions="_chartOptions" AxisChartOptions="_axisChartOptions" Class="p-3" />
         }
         else
         {

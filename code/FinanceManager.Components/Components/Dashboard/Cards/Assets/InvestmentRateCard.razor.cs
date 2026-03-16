@@ -1,4 +1,5 @@
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -9,7 +10,9 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Assets;
 public partial class InvestmentRateCard
 {
     private bool _isLoading;
-    private List<InvestmentRate> _investmentRates { get; set; } = [];
+    private Currency _currency = DefaultCurrency.PLN;
+    public List<InvestmentRate> InvestmentRates { get; set; } = [];
+    private InvestmentRate? LatestInvestmentRate => InvestmentRates.FirstOrDefault(x => x.Salary != 0);
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
@@ -18,21 +21,27 @@ public partial class InvestmentRateCard
 
     [Inject] public required ILogger<InvestmentRateCard> Logger { get; set; }
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _currency = SettingsService.GetCurrency();
+    }
 
     protected override async Task OnParametersSetAsync()
     {
         _isLoading = true;
         try
         {
-            _investmentRates.Clear();
+            InvestmentRates.Clear();
 
             var user = await LoginService.GetLoggedUser();
             if (user is null) return;
 
             try
             {
-                _investmentRates = await MoneyFlowHttpClient.GetInvestmentRate(user.UserId, StartDateTime, EndDateTime).ToListAsync();
+                InvestmentRates = await MoneyFlowHttpClient.GetInvestmentRate(user.UserId, StartDateTime, EndDateTime).ToListAsync();
             }
             catch (Exception ex)
             {
@@ -46,4 +55,8 @@ public partial class InvestmentRateCard
         }
         _isLoading = false;
     }
+
+    private static string FormatPercentage(decimal value) => $"{value * 100m:0.00}%";
+
+    private string FormatAmount(decimal value) => $"{value:0.00} {_currency.ShortName}";
 }
