@@ -48,7 +48,7 @@ public abstract class LocalStorageStateCacheService<TState, TRefreshContext, TCa
         }
         catch (JsonException ex)
         {
-            logger.LogWarning(ex, "Invalid {CacheType} payload for key {CacheKey}", typeof(TState).Name, cacheKey);
+            logger.LogWarning(ex, "Invalid {CacheType} payload encountered during deserialization.", typeof(TState).Name);
             memoryCache.Remove(memoryStateKey);
             await localStorageService.RemoveItemAsync(BuildStorageKey(cacheKey));
             return null;
