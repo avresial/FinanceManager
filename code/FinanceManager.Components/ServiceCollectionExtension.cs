@@ -37,6 +37,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<NewVisitorsHttpClient>()
                 .AddScoped<CsvHeaderMappingHttpClient>()
                 .AddScoped<AccountDataSynchronizationService>()
+                .AddScoped<NavMenuStateCacheService>()
                 .AddScoped<IUserService, UserService>()
                 .AddScoped<IFinancialAccountService, FinancialAccountService>()
                 .AddScoped<IUserRepository, UserLocalStorageRepository>();

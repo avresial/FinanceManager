@@ -1,8 +1,5 @@
-﻿using FinanceManager.Components.HttpClients;
+﻿using FinanceManager.Components.Models;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -10,15 +7,15 @@ using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Components.Layout;
 
-public partial class NavMenu : ComponentBase
+public partial class NavMenu : ComponentBase, IDisposable
 {
     private bool _displayAssetsLink = false;
     private bool _displayLiabilitiesLink = false;
+    private int? _currentUserId;
+    private bool _isDisposed;
 
     [Parameter] public bool DrawerIsOpen { get; set; }
-    [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
-    [Inject] public required LiabilitiesHttpClient LiabilitiesHttpClient { get; set; }
-    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required NavMenuStateCacheService NavMenuStateCacheService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<NavMenu> Logger { get; set; }
@@ -29,10 +26,12 @@ public partial class NavMenu : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+        AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
+        LoginService.LogginStateChanged += LoginService_LogginStateChanged;
+
         try
         {
-            await UpdateAccounts();
-            AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
+            await LoadCachedStateAndRefreshAsync(forceRefresh: false);
         }
         catch (Exception ex)
         {
@@ -40,90 +39,114 @@ public partial class NavMenu : ComponentBase
         }
     }
 
-    private async void AccountDataSynchronizationService_AccountsChanged() => await UpdateAccounts();
-    private async Task UpdateAccounts()
-    {
-        UserSession? user = null;
+    private void AccountDataSynchronizationService_AccountsChanged() => _ = InvokeAsync(RefreshAfterAccountChangeAsync);
 
-        try
+    private void LoginService_LogginStateChanged(bool isLoggedIn) => _ = InvokeAsync(() => HandleLoginStateChangedAsync(isLoggedIn));
+
+    private async Task HandleLoginStateChangedAsync(bool isLoggedIn)
+    {
+        if (!isLoggedIn)
         {
-            user = await LoginService.GetLoggedUser();
-            if (user is null) return;
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = ex.Message;
+            _currentUserId = null;
+            ClearState();
+            await InvokeAsync(StateHasChanged);
             return;
         }
 
-        try
+        await LoadCachedStateAndRefreshAsync(forceRefresh: false);
+    }
+
+    private async Task RefreshAfterAccountChangeAsync()
+    {
+        if (_currentUserId.HasValue)
+            await NavMenuStateCacheService.InvalidateAsync(_currentUserId.Value);
+
+        await LoadCachedStateAndRefreshAsync(forceRefresh: true);
+    }
+
+    private async Task LoadCachedStateAndRefreshAsync(bool forceRefresh)
+    {
+        var user = await TryGetLoggedUserAsync();
+        if (user is null)
         {
-            Accounts.Clear();
+            _currentUserId = null;
+            ClearState();
+            return;
+        }
 
-            var availableAccounts = await FinancialAccountService.GetAvailableAccounts();
-            foreach (var account in availableAccounts)
+        _currentUserId = user.UserId;
+
+        if (!forceRefresh)
+        {
+            var cachedSnapshot = await NavMenuStateCacheService.GetCachedSnapshotAsync(user.UserId);
+            if (cachedSnapshot is not null)
             {
-                var name = string.Empty;
-                if (account.Value == typeof(CurrencyAccount))
-                {
-                    var existingAccount = await FinancialAccountService.GetAccount<CurrencyAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
-                    if (existingAccount is not null)
-                        name = existingAccount.Name;
-                }
-                else if (account.Value == typeof(StockAccount))
-                {
-                    var existingAccount = await FinancialAccountService.GetAccount<StockAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
-                    if (existingAccount is not null)
-                        name = existingAccount.Name;
-                }
-                else if (account.Value == typeof(BondAccount))
-                {
-                    var existingAccount = await FinancialAccountService.GetAccount<BondAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
-                    if (existingAccount is not null)
-                        name = existingAccount.Name;
-                }
-                else
-                {
-                    Logger.LogError("account type {account.Name} can not be handled, Account id {account.Key}", account.Value.Name, account.Key);
-                    continue;
-                }
-
-                Accounts.TryAdd(account.Key, name);
+                ApplySnapshot(cachedSnapshot);
+                await InvokeAsync(StateHasChanged);
+                _ = RefreshSnapshotAsync(user);
+                return;
             }
         }
-        catch (Exception ex)
-        {
-            ErrorMessage = ex.Message;
-            Logger.LogError(ex, "Error while getting available accounts");
-        }
+
+        await RefreshSnapshotAsync(user);
+    }
+
+    private async Task<UserSession?> TryGetLoggedUserAsync()
+    {
+        ErrorMessage = string.Empty;
 
         try
         {
-            _displayAssetsLink = await AssetsHttpClient.IsAnyAccountWithAssets(user.UserId);
-        }
-        catch (HttpRequestException ex)
-        {
-            Logger.LogError(ex, ex.Message);
+            return await LoginService.GetLoggedUser();
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error while checking if any account with assets");
             ErrorMessage = ex.Message;
+            Logger.LogError(ex, "Error while getting logged user for nav menu");
+            return null;
         }
+    }
 
+    private async Task RefreshSnapshotAsync(UserSession user)
+    {
         try
         {
-            _displayLiabilitiesLink = await LiabilitiesHttpClient.IsAnyAccountWithLiabilities(user.UserId);
-        }
-        catch (HttpRequestException)
-        {
+            var snapshot = await NavMenuStateCacheService.RefreshAsync(user);
+            if (_currentUserId != user.UserId || _isDisposed)
+                return;
+
+            ApplySnapshot(snapshot);
+            ErrorMessage = string.Empty;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error while checking if any account with liabilities");
             ErrorMessage = ex.Message;
+            Logger.LogError(ex, "Error while refreshing nav menu snapshot");
         }
 
-        await InvokeAsync(StateHasChanged);
+        if (!_isDisposed)
+            await InvokeAsync(StateHasChanged);
+    }
+
+    private void ApplySnapshot(NavMenuCacheSnapshot snapshot)
+    {
+        Accounts = snapshot.Accounts.ToDictionary(account => account.AccountId, account => account.Name);
+        _displayAssetsLink = snapshot.DisplayAssetsLink;
+        _displayLiabilitiesLink = snapshot.DisplayLiabilitiesLink;
+    }
+
+    private void ClearState()
+    {
+        ErrorMessage = string.Empty;
+        Accounts.Clear();
+        _displayAssetsLink = false;
+        _displayLiabilitiesLink = false;
+    }
+
+    public void Dispose()
+    {
+        _isDisposed = true;
+        AccountDataSynchronizationService.AccountsChanged -= AccountDataSynchronizationService_AccountsChanged;
+        LoginService.LogginStateChanged -= LoginService_LogginStateChanged;
     }
 }
