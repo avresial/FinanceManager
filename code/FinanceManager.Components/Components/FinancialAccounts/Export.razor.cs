@@ -125,8 +125,11 @@ public partial class Export : ComponentBase
 
         try
         {
-            var startDate = DateTime.SpecifyKind(_startDate!.Value, DateTimeKind.Utc);
-            var endDate = DateTime.SpecifyKind(_endDate!.Value, DateTimeKind.Utc);
+            // Interpret selected dates as local calendar days and convert to UTC start/end-of-day.
+            var localStart = DateTime.SpecifyKind(_startDate!.Value.Date, DateTimeKind.Local);
+            var localEnd = DateTime.SpecifyKind(_endDate!.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Local);
+            var startDate = localStart.ToUniversalTime();
+            var endDate = localEnd.ToUniversalTime();
 
             var url = $"{endpoint}?startDate={Uri.EscapeDataString(startDate.ToString("O"))}&endDate={Uri.EscapeDataString(endDate.ToString("O"))}";
             var response = await HttpClient.GetAsync(url);
