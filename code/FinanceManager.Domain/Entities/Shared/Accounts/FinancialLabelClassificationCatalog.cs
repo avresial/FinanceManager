@@ -48,12 +48,10 @@ public static class FinancialLabelClassificationCatalog
         return false;
     }
 
-    public static string? ResolveClassification(IEnumerable<FinancialLabel> labels)
+    private static string? ResolveMostFrequentValue(IEnumerable<string> values)
     {
-        var counts = labels
-            .SelectMany(label => label.Classifications)
-            .Where(c => c.Kind == SpendingNecessityKind)
-            .GroupBy(c => c.Value)
+        var counts = values
+            .GroupBy(v => v)
             .Select(g => new { Value = g.Key, Count = g.Count() })
             .OrderByDescending(g => g.Count)
             .ThenBy(g => g.Value, StringComparer.Ordinal)
@@ -66,5 +64,15 @@ public static class FinancialLabelClassificationCatalog
             return null;
 
         return counts[0].Value;
+    }
+
+    public static string? ResolveClassification(IEnumerable<FinancialLabel> labels)
+    {
+        var values = labels
+            .SelectMany(label => label.Classifications)
+            .Where(c => c.Kind == SpendingNecessityKind)
+            .Select(c => c.Value);
+
+        return ResolveMostFrequentValue(values);
     }
 }
