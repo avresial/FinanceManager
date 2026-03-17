@@ -74,7 +74,7 @@ public partial class ExpenseDistributionOverviewCard
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex.Message, ex);
+            Logger.LogError(ex, ex.Message);
         }
         finally
         {
