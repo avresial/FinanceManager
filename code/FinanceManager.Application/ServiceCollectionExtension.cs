@@ -31,6 +31,8 @@ public static class ServiceCollectionExtension
                 .AddScoped<IInvestmentPaycheckEstimatorService, InvestmentPaycheckEstimatorService>()
             .AddScoped<IEssentialSpendingServiceTyped, CurrencyEssentialSpendingService>()
             .AddScoped<IEssentialSpendingService, EssentialSpendingService>()
+            .AddScoped<IExpenseDistributionServiceTyped, CurrencyExpenseDistributionService>()
+            .AddScoped<IExpenseDistributionService, ExpenseDistributionService>()
                 .AddScoped<IBalanceServiceTyped, CurrencyBalanceService>()
                 .AddScoped<IBalanceServiceTyped, BondBalanceService>()
                 .AddScoped<IBalanceServiceTyped, StockBalanceService>()

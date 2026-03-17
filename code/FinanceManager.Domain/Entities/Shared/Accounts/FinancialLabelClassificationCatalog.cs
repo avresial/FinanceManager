@@ -47,4 +47,24 @@ public static class FinancialLabelClassificationCatalog
 
         return false;
     }
+
+    public static string? ResolveClassification(IEnumerable<FinancialLabel> labels)
+    {
+        var counts = labels
+            .SelectMany(label => label.Classifications)
+            .Where(c => c.Kind == SpendingNecessityKind)
+            .GroupBy(c => c.Value)
+            .Select(g => new { Value = g.Key, Count = g.Count() })
+            .OrderByDescending(g => g.Count)
+            .ThenBy(g => g.Value, StringComparer.Ordinal)
+            .ToList();
+
+        if (counts.Count == 0)
+            return null;
+
+        if (counts.Count > 1 && counts[0].Count == counts[1].Count)
+            return null;
+
+        return counts[0].Value;
+    }
 }
