@@ -76,8 +76,10 @@ public partial class ExpenseDistributionOverviewCard
         {
             Logger.LogError(ex.Message, ex);
         }
-
-        _isLoading = false;
-        StateHasChanged();
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
     }
 }
