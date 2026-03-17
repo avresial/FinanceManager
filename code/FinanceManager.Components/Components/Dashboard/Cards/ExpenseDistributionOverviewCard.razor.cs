@@ -11,7 +11,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards;
 
 public partial class ExpenseDistributionOverviewCard
 {
-    private readonly ChartOptions _chartOptions = new()
+    private ChartOptions _chartOptions = new()
     {
         ChartPalette = ColorsProvider.GetColors().ToArray(),
         ShowLegend = false,
@@ -36,6 +36,12 @@ public partial class ExpenseDistributionOverviewCard
     protected override async Task OnInitializedAsync()
     {
         _currency = SettingsService.GetCurrency();
+        _chartOptions = new ChartOptions
+        {
+            ChartPalette = ColorsProvider.GetColors().ToArray(),
+            ShowLegend = false,
+            TooltipTitleFormat = "{{Y_VALUE}} " + _currency.ShortName,
+        };
         await Task.CompletedTask;
     }
 
@@ -58,8 +64,12 @@ public partial class ExpenseDistributionOverviewCard
             var data = await MoneyFlowHttpClient.GetExpenseDistribution(user.UserId, _currency, StartDateTime, EndDateTime);
 
             _totalExpenses = data.Count == 0 ? 0 : Math.Round(data.Sum(x => x.Value), 2);
-            _labels = data.Select(x => x.Name).ToArray();
             var values = data.Select(x => (double)x.Value).ToArray();
+            _labels = data.Select((x, i) =>
+            {
+                var pct = _totalExpenses > 0 ? (double)x.Value / (double)_totalExpenses * 100.0 : 0.0;
+                return $"{x.Name} ({pct:F1}%)";
+            }).ToArray();
             _chartSeries = [new ChartSeries<double> { Data = values }];
         }
         catch (Exception ex)
