@@ -65,6 +65,13 @@ public class MoneyFlowHttpClient(HttpClient httpClient)
         return result ?? [];
     }
 
+    public async Task<List<NameValueResult>> GetExpenseDistribution(int userId, Currency currency, DateTime start, DateTime end)
+    {
+        string endpoint = $"{httpClient.BaseAddress}api/ExpenseDistribution/GetExpenseDistribution/{userId}/{currency.Id}/{start:O}/{end:O}";
+        var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>(endpoint);
+        return result ?? [];
+    }
+
     public async IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end)
     {
         var results = await httpClient.GetFromJsonAsync<List<InvestmentRate>>($"{httpClient.BaseAddress}api/MoneyFlow/GetInvestmentRate?userId={userId}&start={start:O}&end={end:O}");

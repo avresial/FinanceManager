@@ -17,6 +17,7 @@ public partial class EditLabelPage : ComponentBase
     private bool _isLoadingPage;
     private bool _success;
     public string? NameField { get; set; }
+    private string _selectedClassification = string.Empty;
 
     [Inject] public required FinancialLabelHttpClient FinancialLabelHttpClient { get; set; }
 
@@ -36,6 +37,9 @@ public partial class EditLabelPage : ComponentBase
                 return;
             }
             NameField = _labelData.Name;
+            _selectedClassification = _labelData.Classifications
+                .FirstOrDefault(c => c.Kind == FinancialLabelClassificationCatalog.SpendingNecessityKind)?.Value
+                ?? string.Empty;
         }
         catch (Exception ex)
         {
@@ -43,6 +47,29 @@ public partial class EditLabelPage : ComponentBase
         }
 
         _isLoadingPage = false;
+    }
+
+    private async Task SetClassificationAsync()
+    {
+        if (_labelData is null || string.IsNullOrEmpty(_selectedClassification)) return;
+
+        var result = await FinancialLabelHttpClient.AddClassification(
+            new(_labelData.Id, FinancialLabelClassificationCatalog.SpendingNecessityKind, _selectedClassification));
+
+        if (!result)
+        {
+            _errors.Insert(0, "Failed to set classification.");
+            return;
+        }
+
+        _errors.Clear();
+        _info.Insert(0, $"Classification set to '{_selectedClassification}'.");
+
+        _labelData = await FinancialLabelHttpClient.Get(_labelData.Id);
+        if (_labelData is not null)
+            _selectedClassification = _labelData.Classifications
+                .FirstOrDefault(c => c.Kind == FinancialLabelClassificationCatalog.SpendingNecessityKind)?.Value
+                ?? string.Empty;
     }
     private async Task UpdateNameAsync()
     {

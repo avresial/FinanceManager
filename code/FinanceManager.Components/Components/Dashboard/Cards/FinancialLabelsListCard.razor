@@ -12,14 +12,29 @@
         }
         else if (_data.Any())
         {
-            <MudStack Row>
-                <MudList T="string" ReadOnly>
-                    @foreach (var label in _data)
-                    {
-                        <MudListItem Text="@($"{label.Name} - {label.Value:0.00} {currency}")" />
-                    }
-                </MudList>
-            </MudStack>
+            <MudList T="string" ReadOnly Class="pa-3">
+                @foreach (var label in _data)
+                {
+                    var percentage = GetPercentage(label.Value);
+                    var isIncome = label.Value > 0;
+                    var categoryIcon = GetCategoryIcon(label.Name);
+                    var barColor = isIncome ? Color.Success : Color.Error;
+
+                    <MudListItem Class="pa-2">
+                        <div class="d-flex align-items-center gap-3 w-100">
+                            <MudIcon Icon="@categoryIcon" Size="Size.Small" />
+                            <div class="flex-grow-1">
+                                <MudText Typo="Typo.body2" Class="font-weight-500">@label.Name</MudText>
+                                <MudProgressLinear Value="@percentage" Color="@barColor"                                                 Class="mt-1" Size="Size.Small" />
+                            </div>
+                            <MudText Typo="Typo.body2" Color="@barColor" Class="@($"font-weight-600")"
+                                     Style="min-width: 120px; text-align: right;">
+                                @($"{(isIncome ? "+" : "")}{label.Value:0.00} {currency}")
+                            </MudText>
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
         }
         else
         {
