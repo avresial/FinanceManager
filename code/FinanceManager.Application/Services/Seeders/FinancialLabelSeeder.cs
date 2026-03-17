@@ -15,6 +15,7 @@ public class FinancialLabelSeeder(IFinancialLabelsRepository financialLabelsRepo
         "Rent",
         "Utilities",
         "Entertainment",
+        "Subscription",
         "Transportation",
         "Healthcare",
         "Education",
