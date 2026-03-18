@@ -37,7 +37,8 @@
             {
                 @foreach (var entry in filteredEntries)
                 {
-                    <StockAccountDetailsRow InvestmentAccount=@Account InvestmentEntry=entry />
+                    <StockAccountDetailsRow InvestmentAccount=@Account InvestmentEntry=entry
+                                            UnrealizedGainLoss="GetUnrealizedForTicker(entry.Ticker)" />
                 }
             }
         </Entries>
@@ -56,6 +57,43 @@
                     @if (_balanceChange.HasValue)
                     {
                         <AccountBalanceChangePanel BalanceChange="@_balanceChange.Value" Currency="@_currency" />
+                    }
+
+                    @if (_unrealizedAccount is not null)
+                    {
+                        <MudPaper Class="pa-3" Elevation="1">
+                            <MudText Typo="Typo.caption" Color="Color.Default">Unrealized gain/loss</MudText>
+                            <MudText Typo="Typo.h6"
+                                     Color="@(_unrealizedAccount.UnrealizedGainLoss >= 0 ? Color.Success : Color.Error)">
+                                @_unrealizedAccount.UnrealizedGainLoss.ToString("0.00") @_currency
+                            </MudText>
+                            <MudText Typo="Typo.body2"
+                                     Color="@(_unrealizedAccount.UnrealizedGainLoss >= 0 ? Color.Success : Color.Error)">
+                                @_unrealizedAccount.UnrealizedGainLossPercent.ToString("0.00")%
+                            </MudText>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
+                                <MudTooltip Text="Base (amount spent)">
+                                    <MudText Typo="Typo.caption" Color="Color.Default">
+                                        @_unrealizedAccount.CostBasis.ToString("0.00") @_currency
+                                    </MudText>
+                                </MudTooltip>
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Color="Color.Default" />
+                                <MudTooltip Text="Current valuation">
+                                    <MudText Typo="Typo.caption" Color="Color.Default">
+                                        @_unrealizedAccount.CurrentValue.ToString("0.00") @_currency
+                                    </MudText>
+                                </MudTooltip>
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Default">
+                                As of @_unrealizedAccount.AsOfDate.ToLocalTime().ToString("dd-MM-yyyy HH:mm")
+                            </MudText>
+                            @if (_unrealizedAccount.ExcludedInstrumentsCount > 0)
+                            {
+                                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                                    @_unrealizedAccount.ExcludedInstrumentsCount instrument(s) excluded due to missing prices.
+                                </MudAlert>
+                            }
+                        </MudPaper>
                     }
 
                     @if (_top5 is not null && _top5.Any())

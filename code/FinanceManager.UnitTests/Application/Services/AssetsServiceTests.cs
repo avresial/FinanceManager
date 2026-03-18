@@ -48,6 +48,12 @@ public class AssetsServiceTests
 
         mock.Setup(x => x.GetAssetsTimeSeries(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<InvestmentType>()))
             .ReturnsAsync([]);
+
+        mock.Setup(x => x.GetUnrealizedGainLossPerAccount(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([]);
+
+        mock.Setup(x => x.GetUnrealizedGainLossPerInstrument(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([]);
     }
     private static void SetupServiceReturnsPerAccount(Mock<IAssetsServiceTyped> mock, string name, decimal value)
     {
@@ -175,5 +181,26 @@ public class AssetsServiceTests
         // Assert
         var januaryBucket = aggregated.Single(x => x.DateTime == start.Date);
         Assert.Equal(20m, januaryBucket.Value);
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLossPerAccount_MergesResultsFromAllTypedServices()
+    {
+        var asOfDate = new DateTime(2026, 3, 17, 0, 0, 0, DateTimeKind.Utc);
+
+        _mockService1.Setup(x => x.GetUnrealizedGainLossPerAccount(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([
+                new UnrealizedGainLossAccountResult(1, "Stock account", 100m, 120m, 20m, 20m, asOfDate, 0)
+            ]);
+        _mockService2.Setup(x => x.GetUnrealizedGainLossPerAccount(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([
+                new UnrealizedGainLossAccountResult(2, "Bond account", 200m, 180m, -20m, -10m, asOfDate, 1)
+            ]);
+
+        var results = await _assetsService.GetUnrealizedGainLossPerAccount(1, DefaultCurrency.PLN, asOfDate);
+
+        Assert.Equal(2, results.Count);
+        Assert.Contains(results, x => x.AccountName == "Stock account" && x.UnrealizedGainLoss == 20m);
+        Assert.Contains(results, x => x.AccountName == "Bond account" && x.UnrealizedGainLoss == -20m);
     }
 }

@@ -1,6 +1,7 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -17,6 +18,7 @@ public partial class StockAccountDetailsRow
 
     [Parameter] public required StockAccount InvestmentAccount { get; set; }
     [Parameter] public required StockAccountEntry InvestmentEntry { get; set; }
+    [Parameter] public UnrealizedGainLossInstrumentResult? UnrealizedGainLoss { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }

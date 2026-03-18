@@ -98,4 +98,10 @@ internal class AssetsServiceCurrency(IFinancialAccountRepository financialAccoun
 
         return financialAccountRepository.GetAccounts<CurrencyAccount>(userId, end.AddDays(-1), end).AnyAsync(x => x.ContainsAssets).AsTask();
     }
+
+    public Task<List<UnrealizedGainLossAccountResult>> GetUnrealizedGainLossPerAccount(int userId, Currency currency, DateTime asOfDate) =>
+        Task.FromResult(new List<UnrealizedGainLossAccountResult>());
+
+    public Task<List<UnrealizedGainLossInstrumentResult>> GetUnrealizedGainLossPerInstrument(int userId, Currency currency, DateTime asOfDate) =>
+        Task.FromResult(new List<UnrealizedGainLossInstrumentResult>());
 }

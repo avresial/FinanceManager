@@ -14,6 +14,8 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
     {
         private bool _isLoadingMore = false;
         private decimal? _balanceChange = null;
+        private UnrealizedGainLossAccountResult? _unrealizedAccount;
+        private Dictionary<string, UnrealizedGainLossInstrumentResult> _unrealizedByTicker = [];
         private bool _loadedAllData = false;
         private DateTime _dateStart;
         private DateTime _dateEnd = DateTime.UtcNow;
@@ -47,6 +49,7 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
         [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
         [Inject] public required StockPriceHttpClient StockPriceHttpClient { get; set; }
         [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
+        [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
         [Inject] public required ISettingsService SettingsService { get; set; }
         [Inject] public required ILoginService LoginService { get; set; }
 
@@ -83,6 +86,7 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
                 _loadedAllData = (_oldestEntryDate >= Account.Entries.Last().PostingDate);
 
             await UpdateChartData();
+            await UpdateUnrealizedGainLoss();
 
             if (ChartData is not null && ChartData.Count >= 2)
                 _balanceChange = ChartData.Last().Value - ChartData.First().Value;
@@ -215,6 +219,25 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
             if (_youngestEntryDate is not null && _dateStart > _youngestEntryDate)
                 _dateStart = new DateTime(_youngestEntryDate.Value.Date.Year, _youngestEntryDate.Value.Date.Month, 1);
         }
+
+        private async Task UpdateUnrealizedGainLoss()
+        {
+            _unrealizedAccount = null;
+            _unrealizedByTicker.Clear();
+
+            if (_user is null || Account is null) return;
+
+            var asOfDate = DateTime.UtcNow;
+            var accountResults = await AssetsHttpClient.GetUnrealizedGainLossPerAccount(_user.UserId, _currency, asOfDate);
+            _unrealizedAccount = accountResults.FirstOrDefault(x => x.AccountId == AccountId);
+
+            var instrumentResults = await AssetsHttpClient.GetUnrealizedGainLossPerInstrument(_user.UserId, _currency, asOfDate);
+            foreach (var result in instrumentResults.Where(x => x.AccountId == AccountId))
+                _unrealizedByTicker[result.InstrumentId] = result;
+        }
+
+        private UnrealizedGainLossInstrumentResult? GetUnrealizedForTicker(string ticker) =>
+            _unrealizedByTicker.TryGetValue(ticker, out var result) ? result : null;
 
         private void AccountDataSynchronizationService_AccountsChanged()
         {

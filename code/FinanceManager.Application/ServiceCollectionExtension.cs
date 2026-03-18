@@ -67,6 +67,8 @@ public static class ServiceCollectionExtension
                 .AddScoped<IBondAccountExportService, BondAccountExportService>()
                 .AddScoped<IAccountCsvExportService<BondAccountExportDto>, BondAccountCsvExportService>()
                 .AddScoped<IStockPriceProvider, StockPriceProvider>()
+                .AddScoped<IStockUnrealizedGainLossCalculator, StockUnrealizedGainLossCalculator>()
+                .AddScoped<IBondUnrealizedGainLossCalculator, BondUnrealizedGainLossCalculator>()
                 .AddScoped<IBondService, BondService>()
                 .AddScoped<IStockMarketService, StockMarketService>()
 

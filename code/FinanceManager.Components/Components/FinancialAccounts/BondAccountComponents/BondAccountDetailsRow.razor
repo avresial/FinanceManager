@@ -78,6 +78,31 @@
                                 <MudText Typo="Typo.body1">@UnitsChangeValue.Value.ToString("0.00") @_currency</MudText>
                             </MudItem>
                         }
+                        @if (UnrealizedGainLoss is not null)
+                        {
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Default">Unrealized gain/loss</MudText>
+                                <MudText Typo="Typo.body1" Color="@(UnrealizedGainLoss.UnrealizedGainLoss >= 0 ? Color.Success : Color.Error)">
+                                    @UnrealizedGainLoss.UnrealizedGainLoss.ToString("0.00") @_currency
+                                </MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Default">Unrealized %</MudText>
+                                <MudText Typo="Typo.body1" Color="@(UnrealizedGainLoss.UnrealizedGainLoss >= 0 ? Color.Success : Color.Error)">
+                                    @UnrealizedGainLoss.UnrealizedGainLossPercent.ToString("0.00")%
+                                </MudText>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudText Typo="Typo.caption" Color="Color.Default">As of</MudText>
+                                <MudText Typo="Typo.body2">@UnrealizedGainLoss.AsOfDate.ToLocalTime().ToString("dd-MM-yyyy HH:mm")</MudText>
+                            </MudItem>
+                            @if (UnrealizedGainLoss.IsExcludedFromTotals && !string.IsNullOrWhiteSpace(UnrealizedGainLoss.WarningMessage))
+                            {
+                                <MudItem xs="12">
+                                    <MudAlert Severity="Severity.Warning" Dense="true">@UnrealizedGainLoss.WarningMessage</MudAlert>
+                                </MudItem>
+                            }
+                        }
                     </MudGrid>
                     <MudGrid>
                         <MudItem xs="6">
