@@ -1,10 +1,11 @@
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.Stocks;
 
 namespace FinanceManager.Domain.Services;
 
 /// <summary>
-/// Resolves a stock's price-per-unit for a given point in time and target currency.
-/// Implementations may cache per-request values to avoid repeated repository calls.
+/// Reads stock prices with automatic AlphaVantage fallback: tries the repository first,
+/// fetches from the external API when data is missing, and persists newly fetched prices.
 /// </summary>
 public interface IStockPriceProvider
 {
@@ -14,4 +15,9 @@ public interface IStockPriceProvider
     /// </summary>
     Task<decimal> GetPricePerUnitAsync(string ticker, Currency targetCurrency, DateTime asOfDate);
 
+    /// <summary>
+    /// Get prices for <paramref name="ticker"/> over the given date range.
+    /// Fetches from the external API and persists when local data is incomplete.
+    /// </summary>
+    Task<IReadOnlyList<StockPrice>> GetPricesAsync(string ticker, DateTime start, DateTime end, CancellationToken ct = default);
 }

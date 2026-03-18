@@ -1,5 +1,6 @@
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
@@ -62,7 +63,13 @@ public class MoneyFlowServiceTests
         _currencyExchangeService.Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>())).ReturnsAsync(1);
 
         IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
-        var stockPriceProvider = new StockPriceProvider(_stockRepository.Object, _currencyExchangeService.Object, cache);
+        var stockPriceProvider = new StockPriceProvider(
+            _stockRepository.Object,
+            new Mock<IAlphaVantageClient>().Object,
+            new Mock<IStockDetailsRepository>().Object,
+            new Mock<ICurrencyRepository>().Object,
+            _currencyExchangeService.Object,
+            cache);
 
         _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>())).Returns(AsyncEnumerable.Empty<BondDetails>());
 

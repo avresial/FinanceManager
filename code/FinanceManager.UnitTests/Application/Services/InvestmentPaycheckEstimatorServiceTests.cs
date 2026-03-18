@@ -1,5 +1,6 @@
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
@@ -32,7 +33,13 @@ public class InvestmentPaycheckEstimatorServiceTests
             .ReturnsAsync(1m);
 
         IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
-        var stockPriceProvider = new StockPriceProvider(_stockRepositoryMock.Object, _currencyExchangeServiceMock.Object, cache);
+        var stockPriceProvider = new StockPriceProvider(
+            _stockRepositoryMock.Object,
+            new Mock<IAlphaVantageClient>().Object,
+            new Mock<IStockDetailsRepository>().Object,
+            new Mock<ICurrencyRepository>().Object,
+            _currencyExchangeServiceMock.Object,
+            cache);
         _service = new InvestmentPaycheckEstimatorService(_financialAccountRepositoryMock.Object, _financialLabelsRepositoryMock.Object, stockPriceProvider, _bondDetailsRepositoryMock.Object);
     }
 
