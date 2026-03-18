@@ -70,7 +70,7 @@ public class StockPriceProvider(
             if (stockPrice.Currency == targetCurrency)
                 price = stockPrice.PricePerUnit;
             else
-                price = await currencyExchangeService.GetPricePerUnit(stockPrice, targetCurrency, asOf);
+                price = (await currencyExchangeService.GetPricePerUnit(stockPrice, targetCurrency, asOf)) ?? 0m;
         }
 
         if (price > 0)

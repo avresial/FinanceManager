@@ -170,7 +170,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         var result = await service.GetPricePerUnit(stockPrice, toCurrency, date);
 
         // Assert
-        Assert.Equal(expected, result, 2);
+        Assert.Equal(expected, result!.Value, 2);
     }
 
     [Fact]
@@ -191,7 +191,7 @@ public class CurrencyExchangeServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPricePerUnit_NullStockPrice_ReturnsOne()
+    public async Task GetPricePerUnit_NullStockPrice_ReturnsNull()
     {
         // Arrange
         var currency = new Currency(1, "USD", "$");
@@ -203,11 +203,11 @@ public class CurrencyExchangeServiceTests : IDisposable
         var result = await service.GetPricePerUnit(null!, currency, date);
 
         // Assert
-        Assert.Equal(1m, result);
+        Assert.Null(result);
     }
 
     [Fact]
-    public async Task GetPricePerUnit_ExchangeRateFails_ReturnsOne()
+    public async Task GetPricePerUnit_ExchangeRateFails_ReturnsNull()
     {
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
@@ -227,7 +227,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         var result = await service.GetPricePerUnit(stockPrice, toCurrency, date);
 
         // Assert
-        Assert.Equal(1m, result);
+        Assert.Null(result);
     }
 
     [Fact]
