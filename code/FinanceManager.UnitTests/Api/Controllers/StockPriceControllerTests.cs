@@ -20,6 +20,7 @@ public class StockPriceControllerTests
     private readonly Mock<ICurrencyRepository> _currencyRepository = new();
     private readonly Mock<IStockMarketService> _stockMarketService = new();
     private readonly Mock<IStockDetailsRepository> _stockDetailsRepository = new();
+    private readonly Mock<IStockPriceBulkImportService> _stockPriceBulkImportService = new();
     private readonly StockPriceController _controller;
 
     public StockPriceControllerTests()
@@ -29,7 +30,8 @@ public class StockPriceControllerTests
             _currencyExchangeService.Object,
             _currencyRepository.Object,
             _stockMarketService.Object,
-            _stockDetailsRepository.Object);
+                _stockDetailsRepository.Object,
+                _stockPriceBulkImportService.Object);
     }
 
     [Fact]

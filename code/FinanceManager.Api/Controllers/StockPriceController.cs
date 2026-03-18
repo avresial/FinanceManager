@@ -13,7 +13,8 @@ namespace FinanceManager.Api.Controllers;
 [ApiController]
 [Tags("Stock Prices")]
 public partial class StockPriceController(IStockPriceRepository stockPriceRepository, ICurrencyExchangeService currencyExchangeService,
-ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, IStockDetailsRepository stockDetailsRepository) : ControllerBase
+ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, IStockDetailsRepository stockDetailsRepository,
+IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
 {
 
     [Authorize]
@@ -246,5 +247,31 @@ ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, 
             return NotFound();
 
         return NoContent();
+    }
+
+    [HttpPost("bulk-import-close-prices")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockPriceBulkImportResultDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> BulkImportClosePrices([FromForm] IFormFile? file, CancellationToken cancellationToken = default)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest("CSV file is required.");
+
+        if (!Path.GetExtension(file.FileName).Equals(".csv", StringComparison.OrdinalIgnoreCase))
+            return BadRequest("Only .csv files are supported.");
+
+        await using var stream = file.OpenReadStream();
+        StockPriceBulkImportResultDto result;
+        try
+        {
+            result = await stockPriceBulkImportService.ImportClosePrices(stream, cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+
+        return Ok(result);
     }
 }

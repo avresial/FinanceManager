@@ -17,6 +17,10 @@
         <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearchChanged" Placeholder="Search by ticker or name"
                       Immediate="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true"
                       Class="flex-grow-1" />
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="Admin/Stocks/BulkImport"
+                   StartIcon="@Icons.Material.Filled.UploadFile">
+            Bulk import prices
+        </MudButton>
         <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="add" Href="Admin/AddStock" Color="Color.Primary" />
     </MudStack>
 
