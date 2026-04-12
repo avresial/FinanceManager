@@ -43,4 +43,14 @@ public class AssetsController(IAssetsService assetsService, IInvestmentPaycheckE
     public async Task<IActionResult> GetInvestmentPaycheckEstimate(int userId, int currencyId, DateTime asOfDate, [FromQuery] decimal withdrawalRate = 0.05m, [FromQuery] int salaryMonths = 3, CancellationToken cancellationToken = default) =>
         Ok(await investmentPaycheckEstimatorService.GetEstimate(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), asOfDate, withdrawalRate, salaryMonths));
 
+    [HttpGet("GetUnrealizedGainLossPerAccount/{userId:int}/{currencyId:int}/{asOfDate:DateTime}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<UnrealizedGainLossAccountResult>))]
+    public async Task<IActionResult> GetUnrealizedGainLossPerAccount(int userId, int currencyId, DateTime asOfDate, CancellationToken cancellationToken = default) =>
+        Ok(await assetsService.GetUnrealizedGainLossPerAccount(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), asOfDate));
+
+    [HttpGet("GetUnrealizedGainLossPerInstrument/{userId:int}/{currencyId:int}/{asOfDate:DateTime}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<UnrealizedGainLossInstrumentResult>))]
+    public async Task<IActionResult> GetUnrealizedGainLossPerInstrument(int userId, int currencyId, DateTime asOfDate, CancellationToken cancellationToken = default) =>
+        Ok(await assetsService.GetUnrealizedGainLossPerInstrument(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), asOfDate));
+
 }

@@ -55,4 +55,16 @@ public class AssetsHttpClient(HttpClient httpClient)
             SalaryMonthsRequested = salaryMonths,
         };
     }
+
+    public async Task<List<UnrealizedGainLossAccountResult>> GetUnrealizedGainLossPerAccount(int userId, Currency currency, DateTime asOfDate)
+    {
+        var result = await httpClient.GetFromJsonAsync<List<UnrealizedGainLossAccountResult>>($"{httpClient.BaseAddress}api/Assets/GetUnrealizedGainLossPerAccount/{userId}/{currency.Id}/{asOfDate:O}");
+        return result ?? [];
+    }
+
+    public async Task<List<UnrealizedGainLossInstrumentResult>> GetUnrealizedGainLossPerInstrument(int userId, Currency currency, DateTime asOfDate)
+    {
+        var result = await httpClient.GetFromJsonAsync<List<UnrealizedGainLossInstrumentResult>>($"{httpClient.BaseAddress}api/Assets/GetUnrealizedGainLossPerInstrument/{userId}/{currency.Id}/{asOfDate:O}");
+        return result ?? [];
+    }
 }

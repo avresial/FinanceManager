@@ -3,6 +3,7 @@ using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Services;
 using Moq;
 
 namespace FinanceManager.UnitTests.Application.Services;
@@ -12,9 +13,8 @@ namespace FinanceManager.UnitTests.Application.Services;
 public class StockMarketServiceTests : IDisposable
 {
     private readonly Mock<IAlphaVantageClient> _apiClient = new();
-    private readonly Mock<IStockPriceRepository> _stockPriceRepository = new();
+    private readonly Mock<IStockPriceProvider> _stockPriceProvider = new();
     private readonly Mock<ICurrencyRepository> _currencyRepository = new();
-    private readonly Mock<IStockDetailsRepository> _stockDetailsRepository = new();
 
     public StockMarketServiceTests()
     {
@@ -61,46 +61,32 @@ public class StockMarketServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetDailyStock_FetchesAndAddsWhenMissing()
+    public async Task GetStockPrices_DelegatesToProvider()
     {
         // Arrange
         var start = new DateTime(2026, 2, 9);
         var end = new DateTime(2026, 2, 10);
-        _stockPriceRepository.Setup(repo => repo.GetRange("CSPX.LON", start, end))
-            .ReturnsAsync(Array.Empty<StockPrice>());
-        _stockDetailsRepository.Setup(repo => repo.Get("CSPX.LON", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new StockDetails
-            {
-                Ticker = "CSPX.LON",
-                Name = "Test",
-                Type = "ETF",
-                Region = "UK",
-                Currency = new Currency(1, "USD", "$")
-            });
-
-        var apiPrices = new List<StockPrice>
+        var expected = new List<StockPrice>
         {
             new() { Ticker = "CSPX.LON", PricePerUnit = 747.18m, Currency = new Currency(1, "USD", "$"), Date = end },
             new() { Ticker = "CSPX.LON", PricePerUnit = 747.02m, Currency = new Currency(1, "USD", "$"), Date = start }
         };
-        _apiClient.Setup(client => client.GetDailySeries("CSPX.LON", start, end, It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(apiPrices);
+        _stockPriceProvider.Setup(p => p.GetPricesAsync("CSPX.LON", start, end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
         var service = CreateService();
 
         // Act
         var result = await service.GetStockPrices("CSPX.LON", start, end, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, result.Count);
-        Assert.True(result[0].Date >= result[1].Date);
-        _stockPriceRepository.Verify(repo => repo.Add(It.IsAny<IEnumerable<StockPrice>>()), Times.Once);
+        Assert.Equal(expected, result);
+        _stockPriceProvider.Verify(p => p.GetPricesAsync("CSPX.LON", start, end, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private StockMarketService CreateService() => new(
         _apiClient.Object,
-        _stockPriceRepository.Object,
-        _currencyRepository.Object,
-        _stockDetailsRepository.Object);
+        _stockPriceProvider.Object,
+        _currencyRepository.Object);
 
     public void Dispose() { }
 }

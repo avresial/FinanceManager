@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Infrastructure.Services;
+using FinanceManager.Api;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -7,7 +8,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace FinanceManager.IntegrationTests;
 
-internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<Program>
+internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<ApiEntryPoint>
 {
     public HttpClient Client { get; }
 

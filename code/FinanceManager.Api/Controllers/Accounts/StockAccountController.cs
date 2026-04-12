@@ -63,15 +63,47 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
 
         var entries = await stockAccountEntryRepository.Get(accountId, startDate, endDate).ToListAsync();
 
-        return Ok(new StockAccountDto()
+        return Ok(await CreateDtoAsync(account, entries, startDate, endDate));
+    }
+
+    [HttpGet("{accountId:int}/entries")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockAccountDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Get(int accountId, [FromQuery] DateTime date, [FromQuery] int count, [FromQuery] bool olderThenDate = true)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+
+        var account = await stockAccountRepository.Get(accountId);
+        if (account is null) return NotFound();
+        if (account.UserId != userId) return Forbid("User ID does not match the account owner.");
+        if (count <= 0) return BadRequest("Count must be greater than 0.");
+
+        var entries = await stockAccountEntryRepository.Get(accountId, date, count, olderThenDate);
+        var nextOlderReferenceDate = entries.Any() ? entries.Min(x => x.PostingDate) : date;
+        var nextYoungerReferenceDate = entries.Any() ? entries.Max(x => x.PostingDate) : date;
+
+        return Ok(await CreateDtoAsync(account, entries, nextOlderReferenceDate, nextYoungerReferenceDate));
+    }
+
+    private async Task<StockAccountDto> CreateDtoAsync(StockAccount account, IEnumerable<StockAccountEntry> entries,
+        DateTime nextOlderReferenceDate, DateTime nextYoungerReferenceDate)
+    {
+        var orderedEntries = entries
+            .OrderByDescending(x => x.PostingDate)
+            .ThenByDescending(x => x.EntryId)
+            .ToList();
+
+        return new StockAccountDto()
         {
             AccountId = account.AccountId,
             UserId = account.UserId,
             Name = account.Name,
-            NextOlderEntries = (await stockAccountEntryRepository.GetNextOlder(accountId, startDate)).ToDictionary(x => x.Key, x => x.Value.ToDto()),
-            NextYoungerEntries = (await stockAccountEntryRepository.GetNextYounger(accountId, startDate)).ToDictionary(x => x.Key, x => x.Value.ToDto()),
-            Entries = entries.Select(x => x.ToDto())
-        });
+            NextOlderEntries = (await stockAccountEntryRepository.GetNextOlder(account.AccountId, nextOlderReferenceDate)).ToDictionary(x => x.Key, x => x.Value.ToDto()),
+            NextYoungerEntries = (await stockAccountEntryRepository.GetNextYounger(account.AccountId, nextYoungerReferenceDate)).ToDictionary(x => x.Key, x => x.Value.ToDto()),
+            Entries = orderedEntries.Select(x => x.ToDto())
+        };
     }
 
     [HttpPost("Add")]

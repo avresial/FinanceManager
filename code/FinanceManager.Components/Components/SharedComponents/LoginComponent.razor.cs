@@ -6,126 +6,125 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.SharedComponents
+namespace FinanceManager.Components.Components.SharedComponents;
+
+public partial class LoginComponent
 {
-    public partial class LoginComponent
+    private const string _guestLogin = "Guest";
+    private bool _success;
+    private string[] _errors = [];
+    private MudForm? _form;
+    private LoginModel _loginModel = new();
+    private bool _isProcessing = false;
+
+    [Inject] public required ILogger<LoginComponent> Logger { get; set; }
+    [Inject] public required NavigationManager Navigation { get; set; }
+    [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required ILocalStorageService LocalStorageService { get; set; }
+    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+
+    protected override async Task OnInitializedAsync()
     {
-        private const string _guestLogin = "Guest";
-        private bool _success;
-        private string[] _errors = [];
-        private MudForm? _form;
-        private LoginModel _loginModel = new();
-        private bool _isProcessing = false;
-
-        [Inject] public required ILogger<LoginComponent> Logger { get; set; }
-        [Inject] public required NavigationManager Navigation { get; set; }
-        [Inject] public required ILoginService LoginService { get; set; }
-        [Inject] public required ILocalStorageService LocalStorageService { get; set; }
-        [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
-
-        protected override async Task OnInitializedAsync()
-        {
 #if DEBUG
-            //await LoginService.Login("guest", "GuestPassword");
-            //Navigation.NavigateTo("");
+        //await LoginService.Login("guest", "GuestPassword");
+        //Navigation.NavigateTo("");
 
-            //Navigation.NavigateTo("UserSettings");
+        //Navigation.NavigateTo("UserSettings");
 
-            //await LoginService.Login("admin", "admin");
-            //Navigation.NavigateTo("Admin/Dashboard");
-            //return;
+        //await LoginService.Login("admin", "admin");
+        //Navigation.NavigateTo("Admin/Dashboard");
+        //return;
 #endif
 
-            bool firstVisit = !(await LocalStorageService.ContainKeyAsync("isThisFirstVisit"));
-            if (firstVisit)
-            {
-                await LocalStorageService.SetItemAsync("isThisFirstVisit", true);
-                Navigation.NavigateTo("landingpage");
-                return;
-            }
-
-            var loggedUser = await LoginService.GetLoggedUser();
-            if (loggedUser is not null)
-            {
-                Navigation.NavigateTo("");
-                return;
-            }
-
-            var getKeepMeLoggedinSession = await LoginService.GetKeepMeLoggedInSession();
-            if (getKeepMeLoggedinSession is not null)
-            {
-                var result = await LoginService.Login(getKeepMeLoggedinSession);
-                if (result)
-                    Navigation.NavigateTo("");
-            }
+        bool firstVisit = !(await LocalStorageService.ContainKeyAsync("isThisFirstVisit"));
+        if (firstVisit)
+        {
+            await LocalStorageService.SetItemAsync("isThisFirstVisit", true);
+            Navigation.NavigateTo("landingpage");
+            return;
         }
 
-        private async Task Login()
+        var loggedUser = await LoginService.GetLoggedUser();
+        if (loggedUser is not null)
         {
-            if (_loginModel.Login is null || _loginModel.Password is null) return;
-            if (_form is null) return;
+            Navigation.NavigateTo("");
+            return;
+        }
 
-            if (_isProcessing) return;
-            _isProcessing = true;
+        var getKeepMeLoggedinSession = await LoginService.GetKeepMeLoggedInSession();
+        if (getKeepMeLoggedinSession is not null)
+        {
+            var result = await LoginService.Login(getKeepMeLoggedinSession);
+            if (result)
+                Navigation.NavigateTo("");
+        }
+    }
 
-            try
+    private async Task Login()
+    {
+        if (_loginModel.Login is null || _loginModel.Password is null) return;
+        if (_form is null) return;
+
+        if (_isProcessing) return;
+        _isProcessing = true;
+
+        try
+        {
+            await _form.Validate();
+
+            var loginResult = await LoginService.Login(_loginModel.Login, _loginModel.Password);
+
+            if (loginResult)
             {
-                await _form.Validate();
+                var loggedUser = await LoginService.GetLoggedUser();
+                if (loggedUser is null) return;
 
-                var loginResult = await LoginService.Login(_loginModel.Login, _loginModel.Password);
-
-                if (loginResult)
+                switch (loggedUser.UserRole)
                 {
-                    var loggedUser = await LoginService.GetLoggedUser();
-                    if (loggedUser is null) return;
-
-                    switch (loggedUser.UserRole)
-                    {
-                        case Domain.Enums.UserRole.User:
-                            Navigation.NavigateTo("");
-                            break;
-                        case Domain.Enums.UserRole.Admin:
-                            Navigation.NavigateTo("Admin/Dashboard");
-                            break;
-                        default:
-                            Navigation.NavigateTo("");
-                            break;
-                    }
-
-                    return;
+                    case Domain.Enums.UserRole.User:
+                        Navigation.NavigateTo("");
+                        break;
+                    case Domain.Enums.UserRole.Admin:
+                        Navigation.NavigateTo("Admin/Dashboard");
+                        break;
+                    default:
+                        Navigation.NavigateTo("");
+                        break;
                 }
 
-                _errors = ["Incorrect username or password."];
-                _loginModel.Password = string.Empty;
+                return;
             }
-            finally
-            {
-                _isProcessing = false;
-            }
+
+            _errors = ["Incorrect username or password."];
+            _loginModel.Password = string.Empty;
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+
+    private async Task LogGuest()
+    {
+        try
+        {
+            FinancialAccountService.InitializeMock();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex.ToString());
         }
 
+        await LoginService.Login(_guestLogin, "GuestPassword");
+        Navigation.NavigateTo("");
+    }
 
-        private async Task LogGuest()
+    private async Task OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
         {
-            try
-            {
-                FinancialAccountService.InitializeMock();
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex.ToString());
-            }
-
-            await LoginService.Login(_guestLogin, "GuestPassword");
-            Navigation.NavigateTo("");
-        }
-
-        private async Task OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
-        {
-            if (e.Key == "Enter")
-            {
-                await Login();
-            }
+            await Login();
         }
     }
 }

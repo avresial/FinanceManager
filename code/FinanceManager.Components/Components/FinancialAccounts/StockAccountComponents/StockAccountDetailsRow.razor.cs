@@ -1,6 +1,7 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -10,6 +11,7 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
 public partial class StockAccountDetailsRow
 {
     private decimal? _price = null;
+    private decimal? _priceChange = null;
     private bool _expanded = false;
     private bool _removeEntryVisibility;
     private bool _updateEntryVisibility;
@@ -17,6 +19,7 @@ public partial class StockAccountDetailsRow
 
     [Parameter] public required StockAccount InvestmentAccount { get; set; }
     [Parameter] public required StockAccountEntry InvestmentEntry { get; set; }
+    [Parameter] public UnrealizedGainLossInstrumentResult? UnrealizedGainLoss { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
@@ -35,6 +38,7 @@ public partial class StockAccountDetailsRow
             {
                 _currency = price.Currency;
                 _price = price.PricePerUnit * InvestmentEntry.Value;
+                _priceChange = price.PricePerUnit * InvestmentEntry.ValueChange;
             }
         }
         catch (Exception ex)

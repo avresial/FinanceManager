@@ -4,6 +4,7 @@ using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.Services;
 using Moq;
 
 namespace FinanceManager.UnitTests.Application.Services;
@@ -14,11 +15,15 @@ public class AssetsServiceBondTests
 {
     private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
     private readonly Mock<IBondDetailsRepository> _bondDetailsRepositoryMock = new();
+    private readonly Mock<ICurrencyExchangeService> _currencyExchangeServiceMock = new();
     private readonly AssetsServiceBond _service;
 
     public AssetsServiceBondTests()
     {
-        _service = new AssetsServiceBond(_financialAccountRepositoryMock.Object, _bondDetailsRepositoryMock.Object);
+        _service = new AssetsServiceBond(
+            _financialAccountRepositoryMock.Object,
+            _bondDetailsRepositoryMock.Object,
+            new BondUnrealizedGainLossCalculator(_currencyExchangeServiceMock.Object));
     }
 
     [Fact]

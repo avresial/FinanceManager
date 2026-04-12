@@ -66,6 +66,24 @@ public class AssetsService(IEnumerable<IAssetsServiceTyped> typedAssetServices) 
         return BucketToClosingBalanceSeries(prices, start, end);
     }
 
+    public async Task<List<UnrealizedGainLossAccountResult>> GetUnrealizedGainLossPerAccount(int userId, Currency currency, DateTime asOfDate)
+    {
+        List<UnrealizedGainLossAccountResult> results = [];
+        foreach (var service in typedAssetServices)
+            results.AddRange(await service.GetUnrealizedGainLossPerAccount(userId, currency, asOfDate));
+
+        return results.OrderByDescending(x => x.UnrealizedGainLoss).ToList();
+    }
+
+    public async Task<List<UnrealizedGainLossInstrumentResult>> GetUnrealizedGainLossPerInstrument(int userId, Currency currency, DateTime asOfDate)
+    {
+        List<UnrealizedGainLossInstrumentResult> results = [];
+        foreach (var service in typedAssetServices)
+            results.AddRange(await service.GetUnrealizedGainLossPerInstrument(userId, currency, asOfDate));
+
+        return results.OrderByDescending(x => x.UnrealizedGainLoss).ToList();
+    }
+
     private static List<TimeSeriesModel> BucketToClosingBalanceSeries(Dictionary<DateTime, decimal> data, DateTime start, DateTime end)
     {
         if (data.Count == 0) return [];

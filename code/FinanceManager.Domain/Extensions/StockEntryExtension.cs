@@ -67,7 +67,7 @@ public static class StockEntryExtension
     }
     public static IEnumerable<StockAccountEntry> GetNextOlder(this IEnumerable<StockAccountEntry> entries, DateTime date, string ticker)
     {
-        var lastEntry = entries.FirstOrDefault(x => x.PostingDate < date && x.Ticker == ticker);
+        var lastEntry = entries.Where(x => x.PostingDate < date && x.Ticker == ticker).OrderByDescending(x => x.PostingDate).FirstOrDefault();
         if (lastEntry is null) return [];
 
         return [lastEntry];

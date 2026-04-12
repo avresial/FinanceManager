@@ -1,6 +1,7 @@
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -15,10 +16,12 @@ public class CurrencyExchangeServiceTests : IDisposable
 {
     private readonly ILogger<CurrencyExchangeService> _loggerMock = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<CurrencyExchangeService>();
     private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock = new();
+    private readonly IConfiguration _configuration;
     private readonly HttpClient _httpClient;
 
     public CurrencyExchangeServiceTests()
     {
+        _configuration = new ConfigurationBuilder().Build();
         _httpClient = new HttpClient(_httpMessageHandlerMock.Object);
     }
 
@@ -170,7 +173,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         var result = await service.GetPricePerUnit(stockPrice, toCurrency, date);
 
         // Assert
-        Assert.Equal(expected, result, 2);
+        Assert.Equal(expected, result!.Value, 2);
     }
 
     [Fact]
@@ -191,7 +194,7 @@ public class CurrencyExchangeServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPricePerUnit_NullStockPrice_ReturnsOne()
+    public async Task GetPricePerUnit_NullStockPrice_ReturnsNull()
     {
         // Arrange
         var currency = new Currency(1, "USD", "$");
@@ -203,11 +206,11 @@ public class CurrencyExchangeServiceTests : IDisposable
         var result = await service.GetPricePerUnit(null!, currency, date);
 
         // Assert
-        Assert.Equal(1m, result);
+        Assert.Null(result);
     }
 
     [Fact]
-    public async Task GetPricePerUnit_ExchangeRateFails_ReturnsOne()
+    public async Task GetPricePerUnit_ExchangeRateFails_ReturnsNull()
     {
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
@@ -227,7 +230,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         var result = await service.GetPricePerUnit(stockPrice, toCurrency, date);
 
         // Assert
-        Assert.Equal(1m, result);
+        Assert.Null(result);
     }
 
     [Fact]
@@ -335,7 +338,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         Assert.Equal(expectedRate, result.Value);
     }
 
-    private CurrencyExchangeService CreateService() => new CurrencyExchangeService(_httpClient, _loggerMock);
+    private CurrencyExchangeService CreateService() => new CurrencyExchangeService(_httpClient, _loggerMock, _configuration);
     public void Dispose() => _httpClient?.Dispose();
     private void SetupHttpResponse(HttpStatusCode statusCode, string content)
     {
