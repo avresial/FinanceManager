@@ -1,5 +1,7 @@
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
@@ -16,6 +18,7 @@ public partial class StockPricesComponent
     [Parameter] public string Ticker { get; set; } = string.Empty;
 
     [Inject] private StockPriceHttpClient StockPriceHttpClient { get; set; } = default!;
+    [Inject] private ISettingsService SettingsService { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -75,7 +78,8 @@ public partial class StockPricesComponent
 
         try
         {
-            _stockPrices = [.. await StockPriceHttpClient.GetStockPrices(Ticker, DateRange.Start.Value, DateRange.End.Value, timeSpan)];
+            var currency = SettingsService.GetCurrency();
+            _stockPrices = [.. await StockPriceHttpClient.GetStockPrices(Ticker, currency.Id, DateRange.Start.Value, DateRange.End.Value, timeSpan)];
         }
         catch (Exception ex)
         {

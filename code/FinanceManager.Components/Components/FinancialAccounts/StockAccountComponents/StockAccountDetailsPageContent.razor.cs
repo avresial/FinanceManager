@@ -22,8 +22,6 @@ public partial class StockAccountDetailsPageContent : ComponentBase
     private bool _loadedAllData = false;
     private DateTime _dateStart;
     private DateTime _dateEnd = DateTime.UtcNow;
-    private DateTime? _oldestEntryDate;
-    private DateTime? _youngestEntryDate;
 
     private bool _addEntryVisibility;
 
@@ -110,49 +108,29 @@ public partial class StockAccountDetailsPageContent : ComponentBase
     public async Task UpdateInfo()
     {
         if (Account is null || Account.Entries is null) return;
-        await UpdateDates();
+        var updateChartDataTask = UpdateChartData();
+        UpdateLoadStateFromAccount();
         _stocks = Account.GetStoredTickers();
-        Dictionary<string, IReadOnlyList<StockPrice>> stockPricesByTicker = new(StringComparer.OrdinalIgnoreCase);
-        Dictionary<(string, DateTime), StockPrice?> resolvedPrices = [];
+
+        var priceTasksByTicker = new Dictionary<string, Task<IEnumerable<StockPrice>>>();
         foreach (var ticker in _stocks)
         {
-            var prices = await StockPriceHttpClient.GetStockPrices(ticker, _dateStart, _dateEnd, TimeSpan.FromDays(1));
-            stockPricesByTicker[ticker] = prices.OrderByDescending(price => price.Date).ToList();
+            priceTasksByTicker[ticker] = StockPriceHttpClient.GetStockPrices(ticker, _currency.Id, _dateStart, _dateEnd, TimeSpan.FromDays(1));
         }
+        await Task.WhenAll(priceTasksByTicker.Values);
 
-        foreach (var entry in Account.Entries)
+        foreach (var ticker in _stocks)
         {
-            if (_prices.ContainsKey(entry)) continue;
-
-            var priceKey = (entry.Ticker, entry.PostingDate.Date);
-            if (!resolvedPrices.TryGetValue(priceKey, out var price))
+            var prices = await priceTasksByTicker[ticker];
+            Account.Entries.Where(x => x.Ticker.Equals(ticker, StringComparison.OrdinalIgnoreCase)).ToList().ForEach(entry =>
             {
-                if (stockPricesByTicker.TryGetValue(entry.Ticker, out var prices))
-                {
-                    price = GetLatestPriceOnOrBefore(prices, entry.PostingDate);
-
-                    if (price is not null && price.Currency.Id != _currency.Id)
-                        price = null;
-                }
-
-                price ??= await StockPriceHttpClient.GetStockPrice(entry.Ticker, _currency.Id, entry.PostingDate);
-                resolvedPrices[priceKey] = price;
-            }
-
-            if (price is null) continue;
-            _prices.Add(entry, price);
+                var price = GetLatestPriceOnOrBefore(prices, entry.PostingDate.Date);
+                if (price is not null)
+                    _prices.Add(entry, price);
+            });
         }
 
-        if (Account.Entries is not null && Account.Entries.Any() && _oldestEntryDate is not null)
-            _loadedAllData = _oldestEntryDate >= Account.Entries.Last().PostingDate;
-
-        await UpdateChartData();
         await UpdateUnrealizedGainLoss();
-
-        if (ChartData is not null && ChartData.Count >= 2)
-            _balanceChange = ChartData.Last().Value - ChartData.First().Value;
-
-        if (Account.Entries is null) return;
 
         List<(StockAccountEntry, decimal)> orderedByPrice = [];
         foreach (var entry in Account.Entries)
@@ -170,6 +148,10 @@ public partial class StockAccountDetailsPageContent : ComponentBase
         orderedByPrice = orderedByPrice.OrderByDescending(x => x.Item2).ToList();
         _top5 = orderedByPrice.Take(5).ToList();
         _bottom5 = orderedByPrice.Skip(Account.Entries.Count - 5).Take(5).OrderBy(x => x.Item2).ToList();
+
+        await updateChartDataTask;
+        if (ChartData is not null && ChartData.Count >= 2)
+            _balanceChange = ChartData.Last().Value - ChartData.First().Value;
     }
     public async Task LoadMore()
     {
@@ -221,35 +203,27 @@ public partial class StockAccountDetailsPageContent : ComponentBase
 
         try
         {
-            var accounts = await FinancialAccountService.GetAvailableAccounts();
-            if (accounts.TryGetValue(AccountId, out Type? accountType))
+            if (_user is not null)
             {
-                if (accountType == typeof(StockAccount))
+                _dateEnd = DateTime.UtcNow;
+                _isUsingRecentEntriesMode = false;
+                Account = await FinancialAccountService.GetAccount<StockAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
+
+                if ((Account?.Entries.Count ?? 0) < _minimumRecentEntryCount)
                 {
-                    await UpdateDates();
-                    if (_user is not null)
+                    var recentAccount = await StockAccountHttpClient.GetAccountWithEntriesAsync(AccountId, _dateEnd, _minimumRecentEntryCount);
+                    if (recentAccount is not null)
                     {
-                        _dateEnd = DateTime.UtcNow;
-                        _isUsingRecentEntriesMode = false;
-                        Account = await FinancialAccountService.GetAccount<StockAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
-
-                        if ((Account?.Entries.Count ?? 0) < _minimumRecentEntryCount)
-                        {
-                            var recentAccount = await StockAccountHttpClient.GetAccountWithEntriesAsync(AccountId, _dateEnd, _minimumRecentEntryCount);
-                            if (recentAccount is not null)
-                            {
-                                Account = recentAccount;
-                                _dateStart = recentAccount.Entries
-                                                .OrderByDescending(x => x.PostingDate)
-                                                .LastOrDefault()?.PostingDate ?? _dateStart;
-                                _isUsingRecentEntriesMode = true;
-                            }
-                        }
-
-                        if (Account is not null && Account.Entries is not null)
-                            await UpdateInfo();
+                        Account = recentAccount;
+                        _dateStart = recentAccount.Entries
+                                        .OrderByDescending(x => x.PostingDate)
+                                        .LastOrDefault()?.PostingDate ?? _dateStart;
+                        _isUsingRecentEntriesMode = true;
                     }
                 }
+
+                if (Account is not null && Account.Entries is not null)
+                    await UpdateInfo();
             }
         }
         catch (Exception ex)
@@ -279,13 +253,15 @@ public partial class StockAccountDetailsPageContent : ComponentBase
 
         ChartData.AddRange(await MoneyFlowHttpClient.GetClosingBalance(_user.UserId, _currency, _dateStart, _dateEnd, [AccountId]));
     }
-    private async Task UpdateDates()
+    private void UpdateLoadStateFromAccount()
     {
-        _oldestEntryDate = await FinancialAccountService.GetStartDate(AccountId);
-        _youngestEntryDate = await FinancialAccountService.GetEndDate(AccountId);
+        if (Account is null)
+        {
+            _loadedAllData = false;
+            return;
+        }
 
-        if (_youngestEntryDate is not null && _dateStart > _youngestEntryDate)
-            _dateStart = new DateTime(_youngestEntryDate.Value.Date.Year, _youngestEntryDate.Value.Date.Month, 1);
+        _loadedAllData = Account.NextOlderEntries is null || !Account.NextOlderEntries.Any();
     }
 
     private async Task UpdateUnrealizedGainLoss()
@@ -296,16 +272,46 @@ public partial class StockAccountDetailsPageContent : ComponentBase
         if (_user is null || Account is null) return;
 
         var asOfDate = DateTime.UtcNow;
-        var accountResults = await AssetsHttpClient.GetUnrealizedGainLossPerAccount(_user.UserId, _currency, asOfDate);
-        _unrealizedAccount = accountResults.FirstOrDefault(x => x.AccountId == AccountId);
-
         var instrumentResults = await AssetsHttpClient.GetUnrealizedGainLossPerInstrument(_user.UserId, _currency, asOfDate);
-        foreach (var result in instrumentResults.Where(x => x.AccountId == AccountId))
+        var accountInstrumentResults = instrumentResults.Where(x => x.AccountId == AccountId).ToList();
+
+        foreach (var result in accountInstrumentResults)
             _unrealizedByTicker[result.InstrumentId] = result;
+
+        _unrealizedAccount = BuildUnrealizedAccountResult(accountInstrumentResults, asOfDate);
+    }
+
+    private UnrealizedGainLossAccountResult? BuildUnrealizedAccountResult(
+        List<UnrealizedGainLossInstrumentResult> accountInstrumentResults,
+        DateTime asOfDate)
+    {
+        if (!accountInstrumentResults.Any()) return null;
+
+        var included = accountInstrumentResults.Where(x => !x.IsExcludedFromTotals).ToList();
+        var excludedCount = accountInstrumentResults.Count(x => x.IsExcludedFromTotals);
+
+        var costBasis = included.Sum(x => x.CostBasis);
+        var currentValue = included.Sum(x => x.CurrentValue);
+        var unrealized = currentValue - costBasis;
+        var unrealizedPercent = costBasis == 0 ? 0 : unrealized / costBasis * 100;
+
+        return new UnrealizedGainLossAccountResult(
+            AccountId,
+            Account?.Name ?? string.Empty,
+            costBasis,
+            currentValue,
+            unrealized,
+            unrealizedPercent,
+            asOfDate,
+            excludedCount
+        );
     }
 
     private UnrealizedGainLossInstrumentResult? GetUnrealizedForTicker(string ticker) =>
         _unrealizedByTicker.TryGetValue(ticker, out var result) ? result : null;
+
+    private StockPrice? GetResolvedPrice(StockAccountEntry entry)
+        => _prices.TryGetValue(entry, out var price) ? price : null;
 
     private UnrealizedGainLossInstrumentResult? GetUnrealizedForEntry(StockAccountEntry entry)
     {

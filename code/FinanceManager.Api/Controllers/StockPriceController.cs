@@ -103,29 +103,65 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<StockPrice>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetStockPrices([FromQuery] string ticker, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long step = default, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetStockPrices([FromQuery] string ticker, [FromQuery] int currencyId, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long step = default, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(ticker) || start == default || end == default)
             return BadRequest("Invalid input parameters.");
+
+        var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
+        if (currency is null)
+            return NotFound("Currency not found.");
 
         var stockPrices = await stockMarketService.GetStockPrices(ticker, start, end, cancellationToken);
 
         if (stockPrices.Count == 0)
             return NotFound("Stock prices not found.");
 
+        Dictionary<DateTime, decimal?> ratesByDate = [];
+        var sourceCurrency = stockPrices.First().Currency;
+        if (sourceCurrency != currency)
+        {
+            var rangeRates = await currencyExchangeService.GetExchangeRateAsync(sourceCurrency, currency, start, end);
+            ratesByDate = rangeRates
+                .GroupBy(x => x.Date.Date)
+                .ToDictionary(x => x.Key, x => x.Last().Value);
+        }
+
+        List<StockPrice> result = [];
+        foreach (var price in stockPrices)
+        {
+            if (price.Currency == currency)
+                result.Add(price);
+            else
+            {
+                if (ratesByDate.TryGetValue(price.Date.Date, out var exchangeRate)
+                    && exchangeRate is not null)
+                {
+                    var convertedPrice = new StockPrice
+                    {
+                        Ticker = price.Ticker,
+                        PricePerUnit = price.PricePerUnit * exchangeRate.Value,
+                        Currency = currency,
+                        Date = price.Date
+                    };
+                    result.Add(convertedPrice);
+                }
+            }
+        }
+
         if (step > 0)
         {
             List<StockPrice> filteredPrices = [];
             for (var i = start; i <= end; i = i.Add(new TimeSpan(step)))
             {
-                var priceOnDate = stockPrices.FirstOrDefault(sp => sp.Date.Date == i.Date);
+                var priceOnDate = result.FirstOrDefault(sp => sp.Date.Date == i.Date);
                 if (priceOnDate is not null)
                     filteredPrices.Add(priceOnDate);
             }
             return Ok(filteredPrices);
         }
 
-        return Ok(stockPrices);
+        return Ok(result);
     }
 
     [HttpGet("search-ticker")]

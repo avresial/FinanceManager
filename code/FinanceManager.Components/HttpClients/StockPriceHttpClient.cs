@@ -37,13 +37,13 @@ public class StockPriceHttpClient(HttpClient httpClient, ILogger<StockPriceHttpC
         return default;
 
     }
-    public async Task<IEnumerable<StockPrice>> GetStockPrices(string ticker, DateTime start, DateTime end, TimeSpan step)
+    public async Task<IEnumerable<StockPrice>> GetStockPrices(string ticker, int currencyId, DateTime start, DateTime end, TimeSpan step)
     {
         if (httpClient is null) return [];
 
         try
         {
-            var result = await httpClient.GetFromJsonAsync<IEnumerable<StockPrice>>($"{httpClient.BaseAddress}api/StockPrice/get-stock-prices?ticker={ticker.ToUpper()}&start={start.ToRfc3339()}&end={end.ToRfc3339()}&step={step.Ticks}");
+            var result = await httpClient.GetFromJsonAsync<IEnumerable<StockPrice>>($"{httpClient.BaseAddress}api/StockPrice/get-stock-prices?ticker={ticker.ToUpper()}&currencyId={currencyId}&start={start.ToRfc3339()}&end={end.ToRfc3339()}&step={step.Ticks}");
             if (result is not null) return result;
         }
         catch (Exception ex)
