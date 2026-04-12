@@ -51,22 +51,32 @@ public class MoneyFlowServiceTests
 
         _investmentAccountAccounts = [investmentAccount1];
 
-        _stockRepository.Setup(x => x.GetThisOrNextOlder("testStock1", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "testStock1", PricePerUnit = 2 });
-        _stockRepository.Setup(x => x.GetThisOrNextOlder("testStock2", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "testStock2", PricePerUnit = 4 });
-        _stockRepository.Setup(x => x.Get("testStock1", It.IsAny<DateTime>()))
-                       .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "testStock1", PricePerUnit = 2 });
-        _stockRepository.Setup(x => x.Get("testStock2", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "testStock2", PricePerUnit = 4 });
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("TESTSTOCK1", It.IsAny<DateTime>()))
+                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "TESTSTOCK1", PricePerUnit = 2 });
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("TESTSTOCK2", It.IsAny<DateTime>()))
+                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "TESTSTOCK2", PricePerUnit = 4 });
+        _stockRepository.Setup(x => x.Get("TESTSTOCK1", It.IsAny<DateTime>()))
+                       .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "TESTSTOCK1", PricePerUnit = 2 });
+        _stockRepository.Setup(x => x.Get("TESTSTOCK2", It.IsAny<DateTime>()))
+                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "TESTSTOCK2", PricePerUnit = 4 });
 
         _currencyExchangeService.Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>())).ReturnsAsync(1);
 
         IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
+        var stockDetailsRepoMock = new Mock<IStockDetailsRepository>();
+        stockDetailsRepoMock.Setup(x => x.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string ticker, CancellationToken _) => new StockDetails
+            {
+                Ticker = ticker,
+                Currency = DefaultCurrency.PLN,
+                Name = ticker,
+                Type = "Stock",
+                Region = "US"
+            });
         var stockPriceProvider = new StockPriceProvider(
             _stockRepository.Object,
             new Mock<IAlphaVantageClient>().Object,
-            new Mock<IStockDetailsRepository>().Object,
+            stockDetailsRepoMock.Object,
             new Mock<ICurrencyRepository>().Object,
             _currencyExchangeService.Object,
             cache);

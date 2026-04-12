@@ -1,4 +1,5 @@
-﻿using FinanceManager.Infrastructure.Services;
+﻿using FinanceManager.Api.Services;
+using FinanceManager.Infrastructure.Services;
 using FinanceManager.Api;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -18,10 +19,15 @@ internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<ApiEntryP
         {
             builder.ConfigureServices(s =>
             {
-                // Remove DatabaseInitializer hosted service from integration tests
+                // Remove hosted services that access DB on startup to avoid
+                // race conditions with the singleton in-memory test context.
                 var databaseInitializerDescriptor = s.FirstOrDefault(d => d.ImplementationType == typeof(DatabaseInitializer));
                 if (databaseInitializerDescriptor != null)
                     s.Remove(databaseInitializerDescriptor);
+
+                var labelSetterDescriptor = s.FirstOrDefault(d => d.ImplementationType == typeof(LabelSetterStartupService));
+                if (labelSetterDescriptor != null)
+                    s.Remove(labelSetterDescriptor);
 
                 services?.Invoke(s);
             });

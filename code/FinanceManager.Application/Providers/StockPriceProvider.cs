@@ -30,6 +30,9 @@ public class StockPriceProvider(
         var stockDetails = await stockDetailsRepository.Get(normalizedTicker) ??
                    await ResolveStockDetailsAsync(normalizedTicker, CancellationToken.None);
 
+        if (stockDetails is null)
+            return 0m;
+
         StockPrice? stockPrice = null;
         var originalKey = $"STOCK_PRICE_{stockDetails.Currency.ShortName}_{asOf:yyyyMMdd}_{normalizedTicker}";
         if (cache.TryGetValue(originalKey, out StockPrice? cachedOriginal))
@@ -51,7 +54,7 @@ public class StockPriceProvider(
                     if (stockPrice is null)
                     {
                         var fetched = await TryFetchFromApiAsync(normalizedTicker, asOf.AddDays(-7), asOf, CancellationToken.None);
-                        stockPrice = fetched.Where(x => x.Date.Date <= asOf.Date).OrderByDescending(x => x.Date).FirstOrDefault();
+                        stockPrice = fetched?.Where(x => x.Date.Date <= asOf.Date).OrderByDescending(x => x.Date).FirstOrDefault();
                     }
 
                     if (stockPrice is not null && stockPrice.PricePerUnit > 0)
@@ -124,16 +127,19 @@ public class StockPriceProvider(
             else
             {
                 var existingRange = await stockRepository.GetRange(ticker, start, end);
-                if (!NeedsFetch(existingRange, start, end))
+                if (existingRange is not null && !NeedsFetch(existingRange, start, end))
                     return existingRange;
             }
 
             var details = await ResolveStockDetailsAsync(ticker, ct);
+            if (details is null)
+                return [];
+
             var apiPrices = await apiClient.GetDailySeries(ticker, start, end, details.Currency, ct);
-            if (apiPrices.Count > 0)
+            if (apiPrices is not null && apiPrices.Count > 0)
                 await stockRepository.Add(apiPrices);
 
-            return apiPrices;
+            return apiPrices ?? [];
         }
         finally
         {
@@ -148,8 +154,8 @@ public class StockPriceProvider(
             return existing;
 
         var matches = await apiClient.SearchTicker(ticker, ct);
-        var exact = matches.FirstOrDefault(x => string.Equals(x.Symbol, ticker, StringComparison.OrdinalIgnoreCase));
-        var selected = exact ?? matches.FirstOrDefault();
+        var exact = matches?.FirstOrDefault(x => string.Equals(x.Symbol, ticker, StringComparison.OrdinalIgnoreCase));
+        var selected = exact ?? matches?.FirstOrDefault();
 
         Currency currency;
         if (selected is not null && !string.IsNullOrWhiteSpace(selected.Currency))
@@ -176,7 +182,7 @@ public class StockPriceProvider(
 
     private static bool NeedsFetch(IReadOnlyList<StockPrice> existing, DateTime start, DateTime end)
     {
-        if (existing.Count == 0) return true;
+        if (existing is null || existing.Count == 0) return true;
         if (existing.Count == 1 && start.Date == end.Date) return false;
 
         var existingDates = existing.Select(x => x.Date.Date).ToHashSet();

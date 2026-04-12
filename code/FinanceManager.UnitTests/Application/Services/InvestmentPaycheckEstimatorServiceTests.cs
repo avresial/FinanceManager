@@ -33,10 +33,20 @@ public class InvestmentPaycheckEstimatorServiceTests
             .ReturnsAsync(1m);
 
         IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
+        var stockDetailsRepoMock = new Mock<IStockDetailsRepository>();
+        stockDetailsRepoMock.Setup(x => x.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string ticker, CancellationToken _) => new StockDetails
+            {
+                Ticker = ticker,
+                Currency = DefaultCurrency.PLN,
+                Name = ticker,
+                Type = "Stock",
+                Region = "US"
+            });
         var stockPriceProvider = new StockPriceProvider(
             _stockRepositoryMock.Object,
             new Mock<IAlphaVantageClient>().Object,
-            new Mock<IStockDetailsRepository>().Object,
+            stockDetailsRepoMock.Object,
             new Mock<ICurrencyRepository>().Object,
             _currencyExchangeServiceMock.Object,
             cache);

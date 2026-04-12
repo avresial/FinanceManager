@@ -262,6 +262,28 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         _testDatabase.Context.Accounts.Add(stockAccount);
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
+        // Seed stock details and stock price so StockPriceProvider can resolve the price
+        var usdCurrency = new Currency(1, "USD", "$");
+        _testDatabase.Context.Currencies.Add(usdCurrency);
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var stockDetails = new StockDetails
+        {
+            Ticker = "AAPL",
+            Name = "Apple Inc.",
+            Type = "Stock",
+            Region = "US",
+            Currency = usdCurrency
+        };
+        _testDatabase.Context.StockDetails.Add(stockDetails);
+        _testDatabase.Context.StockPrices.Add(new StockPriceDto
+        {
+            PricePerUnit = 150m,
+            StockDetails = stockDetails,
+            Date = _nowUtc.AddDays(-3)
+        });
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
         _testDatabase.Context.StockEntries.Add(
             new StockAccountEntry(3, 200, _nowUtc.AddDays(-3), 100m, 100m, "AAPL", InvestmentType.Stock));
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
