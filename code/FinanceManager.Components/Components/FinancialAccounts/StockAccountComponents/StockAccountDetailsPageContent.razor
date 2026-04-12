@@ -38,7 +38,7 @@
                 @foreach (var entry in filteredEntries)
                 {
                     <StockAccountDetailsRow InvestmentAccount=@Account InvestmentEntry=entry
-                                            UnrealizedGainLoss="GetUnrealizedForTicker(entry.Ticker)" />
+                                            UnrealizedGainLoss="GetUnrealizedForEntry(entry)" />
                 }
             }
         </Entries>

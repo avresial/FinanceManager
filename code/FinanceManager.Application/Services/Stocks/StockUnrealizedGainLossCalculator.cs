@@ -12,7 +12,7 @@ internal class StockUnrealizedGainLossCalculator(IStockPriceProvider stockPriceP
         var latestEntry = account.GetThisOrNextOlder(asOfDate, ticker);
         if (latestEntry is null || latestEntry.Value <= 0) return null;
 
-        decimal quantity = latestEntry.Value;
+        decimal lastPurchuaseQuantity = latestEntry.Value;
         var buyEntries = account.Entries
             .Where(x => x.Ticker == ticker && x.PostingDate <= asOfDate && x.ValueChange > 0)
             .ToList();
@@ -29,7 +29,7 @@ internal class StockUnrealizedGainLossCalculator(IStockPriceProvider stockPriceP
                     account.Name,
                     ticker,
                     ticker,
-                    quantity,
+                    lastPurchuaseQuantity,
                     0,
                     0,
                     0,
@@ -51,7 +51,7 @@ internal class StockUnrealizedGainLossCalculator(IStockPriceProvider stockPriceP
                 account.Name,
                 ticker,
                 ticker,
-                quantity,
+                lastPurchuaseQuantity,
                 0,
                 0,
                 0,
@@ -63,7 +63,7 @@ internal class StockUnrealizedGainLossCalculator(IStockPriceProvider stockPriceP
         }
 
         var weightedAverageCostPerUnit = totalBoughtCost / totalBoughtUnits;
-        var costBasis = quantity * weightedAverageCostPerUnit;
+        var costBasis = lastPurchuaseQuantity * weightedAverageCostPerUnit;
 
         var currentPrice = await stockPriceProvider.GetPricePerUnitAsync(ticker, currency, asOfDate);
         if (currentPrice <= 0)
@@ -73,7 +73,7 @@ internal class StockUnrealizedGainLossCalculator(IStockPriceProvider stockPriceP
                 account.Name,
                 ticker,
                 ticker,
-                quantity,
+                lastPurchuaseQuantity,
                 costBasis,
                 0,
                 -costBasis,
@@ -84,7 +84,7 @@ internal class StockUnrealizedGainLossCalculator(IStockPriceProvider stockPriceP
             );
         }
 
-        var currentValue = quantity * currentPrice;
+        var currentValue = lastPurchuaseQuantity * currentPrice;
         var unrealized = currentValue - costBasis;
         var unrealizedPercent = costBasis == 0 ? 0 : unrealized / costBasis * 100;
 
@@ -93,7 +93,7 @@ internal class StockUnrealizedGainLossCalculator(IStockPriceProvider stockPriceP
             account.Name,
             ticker,
             ticker,
-            quantity,
+            lastPurchuaseQuantity,
             costBasis,
             currentValue,
             unrealized,

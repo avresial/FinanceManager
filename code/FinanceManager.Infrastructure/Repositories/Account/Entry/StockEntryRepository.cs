@@ -66,6 +66,33 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
             .Where(e => e.AccountId == accountId && e.PostingDate >= startDate && e.PostingDate <= endDate)
             .AsAsyncEnumerable();
 
+    public async Task<List<StockAccountEntry>> Get(int accountId, DateTime date, int count, bool olderThenDate = true)
+    {
+        if (count <= 0) return [];
+
+        if (olderThenDate)
+        {
+            return await context.StockEntries
+                .Where(e => e.AccountId == accountId && e.PostingDate <= date)
+                .OrderByDescending(e => e.PostingDate)
+                .ThenByDescending(e => e.EntryId)
+                .Take(count)
+                .ToListAsync();
+        }
+
+        var entries = await context.StockEntries
+            .Where(e => e.AccountId == accountId && e.PostingDate >= date)
+            .OrderBy(e => e.PostingDate)
+            .ThenBy(e => e.EntryId)
+            .Take(count)
+            .ToListAsync();
+
+        return entries
+            .OrderByDescending(e => e.PostingDate)
+            .ThenByDescending(e => e.EntryId)
+            .ToList();
+    }
+
     public IAsyncEnumerable<StockAccountEntry> Get(int accountId, string ticker, DateTime startDate, DateTime endDate) => context.StockEntries
             .Where(e => e.AccountId == accountId && e.Ticker == ticker && e.PostingDate >= startDate && e.PostingDate <= endDate)
             .AsAsyncEnumerable();

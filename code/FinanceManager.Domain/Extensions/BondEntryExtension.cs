@@ -7,7 +7,7 @@ public static class BondEntryExtension
 {
     public static IEnumerable<BondAccountEntry> GetNextOlder(this IEnumerable<BondAccountEntry> entries, DateTime date, int BondDetailsId)
     {
-        var lastEntry = entries.FirstOrDefault(x => x.PostingDate < date && x.BondDetailsId == BondDetailsId);
+        var lastEntry = entries.Where(x => x.PostingDate < date && x.BondDetailsId == BondDetailsId).OrderByDescending(x => x.PostingDate).FirstOrDefault();
         if (lastEntry is null) return [];
 
         return [lastEntry];

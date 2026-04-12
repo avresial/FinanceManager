@@ -9,86 +9,85 @@ using Microsoft.Extensions.Logging;
 using MudBlazor;
 using MudBlazor.Charts;
 
-namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities
+namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities;
+
+public partial class LiabilityPerTypeOverviewCard
 {
-    public partial class LiabilityPerTypeOverviewCard
+    private readonly ChartOptions _chartOptions = new()
     {
-        private readonly ChartOptions _chartOptions = new()
+        ChartPalette = ColorsProvider.GetColors().ToArray(),
+        ShowLegend = false,
+    };
+
+    private bool _isLoading;
+    private double[] _data = [];
+    private string[] _labels = [];
+    private List<ChartSeries<double>> _chartSeries = [];
+
+    private Currency _currency = DefaultCurrency.PLN;
+    private decimal _totalLiabilities = 0;
+
+    [Parameter] public string Height { get; set; } = "300px";
+    [Parameter] public DateTime StartDateTime { get; set; }
+    [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
+
+    [Inject] public required ILogger<LiabilityPerTypeOverviewCard> Logger { get; set; }
+    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required LiabilitiesHttpClient LiabilitiesHttpClient { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
+    [Inject] public required ILoginService LoginService { get; set; }
+
+
+    protected override void OnInitialized()
+    {
+        _currency = SettingsService.GetCurrency();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
         {
-            ChartPalette = ColorsProvider.GetColors().ToArray(),
-            ShowLegend = false,
-        };
-
-        private bool _isLoading;
-        private double[] _data = [];
-        private string[] _labels = [];
-        private List<ChartSeries<double>> _chartSeries = [];
-
-        private Currency _currency = DefaultCurrency.PLN;
-        private decimal _totalLiabilities = 0;
-
-        [Parameter] public string Height { get; set; } = "300px";
-        [Parameter] public DateTime StartDateTime { get; set; }
-        [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
-
-        [Inject] public required ILogger<LiabilityPerTypeOverviewCard> Logger { get; set; }
-        [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
-        [Inject] public required LiabilitiesHttpClient LiabilitiesHttpClient { get; set; }
-        [Inject] public required ISettingsService SettingsService { get; set; }
-        [Inject] public required ILoginService LoginService { get; set; }
-
-
-        protected override void OnInitialized()
+            var data = await GetData();
+            _data = data.Select(x => (double)x.Value).ToArray();
+            _labels = data.Select(x => x.Name).ToArray();
+            _chartSeries = [new ChartSeries<double> { Data = _data }];
+        }
+        catch (Exception ex)
         {
-            _currency = SettingsService.GetCurrency();
+            Logger.LogError(ex.Message, ex);
         }
 
-        protected override async Task OnParametersSetAsync()
+
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task<List<NameValueResult>> GetData()
+    {
+        if (StartDateTime == new DateTime())
+            return [];
+
+        var user = await LoginService.GetLoggedUser();
+        if (user is null) return [];
+        List<NameValueResult> result = [];
+        try
         {
-            _isLoading = true;
-            StateHasChanged();
-
-            try
-            {
-                var data = await GetData();
-                _data = data.Select(x => (double)x.Value).ToArray();
-                _labels = data.Select(x => x.Name).ToArray();
-                _chartSeries = [new ChartSeries<double> { Data = _data }];
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex.Message, ex);
-            }
-
-
-            _isLoading = false;
-            StateHasChanged();
+            result = await LiabilitiesHttpClient.GetEndLiabilitiesPerType(user.UserId, StartDateTime, EndDateTime).ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error getting assets time series data");
         }
 
-        private async Task<List<NameValueResult>> GetData()
-        {
-            if (StartDateTime == new DateTime())
-                return [];
+        if (result.Count != 0)
+            _totalLiabilities = result.Sum(x => x.Value);
 
-            var user = await LoginService.GetLoggedUser();
-            if (user is null) return [];
-            List<NameValueResult> result = [];
-            try
-            {
-                result = await LiabilitiesHttpClient.GetEndLiabilitiesPerType(user.UserId, StartDateTime, EndDateTime).ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Error getting assets time series data");
-            }
+        foreach (var data in result)
+            data.Value *= -1;
 
-            if (result.Count != 0)
-                _totalLiabilities = result.Sum(x => x.Value);
-
-            foreach (var data in result)
-                data.Value *= -1;
-
-            return result;
-        }
+        return result;
     }
 }
