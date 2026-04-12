@@ -28,7 +28,7 @@ public class StockPriceProvider(
         if (cache.TryGetValue(key, out decimal cached)) return cached;
 
         var stockDetails = await stockDetailsRepository.Get(normalizedTicker) ??
-                            throw new InvalidOperationException($"Stock details not found for ticker '{normalizedTicker}'.");
+                   await ResolveStockDetailsAsync(normalizedTicker, CancellationToken.None);
 
         StockPrice? stockPrice = null;
         var originalKey = $"STOCK_PRICE_{stockDetails.Currency.ShortName}_{asOf:yyyyMMdd}_{normalizedTicker}";

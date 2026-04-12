@@ -131,6 +131,24 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
     }
 
     [Fact]
+    public async Task GetStockPrice_ReturnsLatestOlderPrice_WhenExactDateMissing()
+    {
+        _currencyExchangeMock.Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
+         .ReturnsAsync(1);
+
+        var storedDate = new DateTime(2024, 12, 19, 0, 0, 0, DateTimeKind.Utc);
+        var requestedDate = new DateTime(2024, 12, 20, 9, 0, 45, DateTimeKind.Utc);
+
+        await SeedWithTestStockPrice("AAPL", 100, DefaultCurrency.PLN, storedDate);
+
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice("AAPL", 0, requestedDate);
+
+        Assert.NotNull(result);
+        Assert.Equal(storedDate.Date, result.Date.Date);
+        Assert.Equal(100, result.PricePerUnit);
+    }
+
+    [Fact]
     public async Task GetStockPrices_ReturnsList()
     {
         await SeedWithTestStockPrice();

@@ -56,6 +56,42 @@ public partial class StockAccountDetailsPageContent : ComponentBase
     [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        _user = await LoginService.GetLoggedUser();
+        if (_user is null) return;
+        _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+        _currency = SettingsService.GetCurrency();
+
+        var loadTask = UpdateEntries();
+        var delayTask = Task.Delay(2000);
+        var completedTask = await Task.WhenAny(loadTask, delayTask);
+        if (completedTask == delayTask)
+        {
+            IsLoading = true;
+            StateHasChanged();
+            await loadTask;
+            IsLoading = false;
+        }
+        var availableStocks = await StockPriceHttpClient.GetStocks();
+        _availableStocks = availableStocks.Select(x => x.Ticker).ToList();
+        AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Account is not null && Account.AccountId == AccountId) return;
+        _loadedAllData = false;
+        var loadTask = UpdateEntries();
+        var delayTask = Task.Delay(2000);
+        var completedTask = await Task.WhenAny(loadTask, delayTask);
+        if (completedTask == delayTask)
+        {
+            IsLoading = true;
+            StateHasChanged();
+            await loadTask;
+            IsLoading = false;
+        }
+    }
 
     public async Task ShowOverlay()
     {
@@ -76,25 +112,45 @@ public partial class StockAccountDetailsPageContent : ComponentBase
         if (Account is null || Account.Entries is null) return;
         await UpdateDates();
         _stocks = Account.GetStoredTickers();
+        Dictionary<string, IReadOnlyList<StockPrice>> stockPricesByTicker = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<(string, DateTime), StockPrice?> resolvedPrices = [];
+        foreach (var ticker in _stocks)
+        {
+            var prices = await StockPriceHttpClient.GetStockPrices(ticker, _dateStart, _dateEnd, TimeSpan.FromDays(1));
+            stockPricesByTicker[ticker] = prices.OrderByDescending(price => price.Date).ToList();
+        }
+
         foreach (var entry in Account.Entries)
         {
             if (_prices.ContainsKey(entry)) continue;
 
-            var price = await StockPriceHttpClient.GetStockPrice(entry.Ticker, DefaultCurrency.PLN.Id, entry.PostingDate);
-            if (price is null) continue;
+            var priceKey = (entry.Ticker, entry.PostingDate.Date);
+            if (!resolvedPrices.TryGetValue(priceKey, out var price))
+            {
+                if (stockPricesByTicker.TryGetValue(entry.Ticker, out var prices))
+                {
+                    price = GetLatestPriceOnOrBefore(prices, entry.PostingDate);
 
+                    if (price is not null && price.Currency.Id != _currency.Id)
+                        price = null;
+                }
+
+                price ??= await StockPriceHttpClient.GetStockPrice(entry.Ticker, _currency.Id, entry.PostingDate);
+                resolvedPrices[priceKey] = price;
+            }
+
+            if (price is null) continue;
             _prices.Add(entry, price);
         }
 
         if (Account.Entries is not null && Account.Entries.Any() && _oldestEntryDate is not null)
-            _loadedAllData = (_oldestEntryDate >= Account.Entries.Last().PostingDate);
+            _loadedAllData = _oldestEntryDate >= Account.Entries.Last().PostingDate;
 
         await UpdateChartData();
         await UpdateUnrealizedGainLoss();
 
         if (ChartData is not null && ChartData.Count >= 2)
             _balanceChange = ChartData.Last().Value - ChartData.First().Value;
-
 
         if (Account.Entries is null) return;
 
@@ -157,42 +213,7 @@ public partial class StockAccountDetailsPageContent : ComponentBase
         _isLoadingMore = false;
     }
 
-    protected override async Task OnInitializedAsync()
-    {
-        _user = await LoginService.GetLoggedUser();
-        if (_user is null) return;
-        _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-        _currency = SettingsService.GetCurrency();
 
-        var loadTask = UpdateEntries();
-        var delayTask = Task.Delay(2000);
-        var completedTask = await Task.WhenAny(loadTask, delayTask);
-        if (completedTask == delayTask)
-        {
-            IsLoading = true;
-            StateHasChanged();
-            await loadTask;
-            IsLoading = false;
-        }
-        var availableStocks = await StockPriceHttpClient.GetStocks();
-        _availableStocks = availableStocks.Select(x => x.Ticker).ToList();
-        AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
-    }
-    protected override async Task OnParametersSetAsync()
-    {
-        if (Account is not null && Account.AccountId == AccountId) return;
-        _loadedAllData = false;
-        var loadTask = UpdateEntries();
-        var delayTask = Task.Delay(2000);
-        var completedTask = await Task.WhenAny(loadTask, delayTask);
-        if (completedTask == delayTask)
-        {
-            IsLoading = true;
-            StateHasChanged();
-            await loadTask;
-            IsLoading = false;
-        }
-    }
 
     private async Task UpdateEntries()
     {
@@ -218,6 +239,9 @@ public partial class StockAccountDetailsPageContent : ComponentBase
                             if (recentAccount is not null)
                             {
                                 Account = recentAccount;
+                                _dateStart = recentAccount.Entries
+                                                .OrderByDescending(x => x.PostingDate)
+                                                .LastOrDefault()?.PostingDate ?? _dateStart;
                                 _isUsingRecentEntriesMode = true;
                             }
                         }
@@ -345,5 +369,15 @@ public partial class StockAccountDetailsPageContent : ComponentBase
     {
         _filterFrom = filter.From;
         _filterTo = filter.To;
+    }
+
+    private static StockPrice? GetLatestPriceOnOrBefore(IEnumerable<StockPrice> prices, DateTime targetDate)
+    {
+        var date = targetDate.Date;
+
+        return prices
+            .Where(price => price.Date.Date <= date)
+            .OrderByDescending(price => price.Date)
+            .FirstOrDefault();
     }
 }

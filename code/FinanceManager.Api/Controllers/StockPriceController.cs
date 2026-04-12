@@ -13,7 +13,7 @@ namespace FinanceManager.Api.Controllers;
 [ApiController]
 [Tags("Stock Prices")]
 public partial class StockPriceController(IStockPriceRepository stockPriceRepository, ICurrencyExchangeService currencyExchangeService,
-ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, IStockDetailsRepository stockDetailsRepository,
+ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, IStockPriceProvider stockPriceProvider, IStockDetailsRepository stockDetailsRepository,
 IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
 {
 
@@ -60,13 +60,32 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
         if (string.IsNullOrWhiteSpace(ticker) || date == default)
             return BadRequest("Invalid input parameters.");
 
+        var normalizedTicker = ticker.Trim().ToUpperInvariant();
+
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null)
             return NotFound("Currency not found.");
 
-        var stockPrices = await stockMarketService.GetStockPrices(ticker, date, date, cancellationToken);
-        if (stockPrices.Count == 0) return NotFound("Stock price not found.");
-        var stockPrice = stockPrices.First(sp => sp.Date.Date == date.Date);
+        var stockPrice = await stockPriceRepository.GetThisOrNextOlder(normalizedTicker, date);
+        if (stockPrice is null)
+        {
+            var fetchedPrice = await stockPriceProvider.GetPricePerUnitAsync(normalizedTicker, currency, date);
+            if (fetchedPrice <= 0)
+                return NotFound("Stock price not found.");
+
+            stockPrice = await stockPriceRepository.GetThisOrNextOlder(normalizedTicker, date);
+            if (stockPrice is null)
+            {
+                return Ok(new StockPrice
+                {
+                    Ticker = normalizedTicker,
+                    PricePerUnit = fetchedPrice,
+                    Currency = currency,
+                    Date = date.Date
+                });
+            }
+        }
+
         if (currency == stockPrice.Currency)
             return Ok(stockPrice);
 

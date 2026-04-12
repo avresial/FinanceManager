@@ -11,6 +11,7 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
 public partial class StockAccountDetailsRow
 {
     private decimal? _price = null;
+    private decimal? _priceChange = null;
     private bool _expanded = false;
     private bool _removeEntryVisibility;
     private bool _updateEntryVisibility;
@@ -37,6 +38,7 @@ public partial class StockAccountDetailsRow
             {
                 _currency = price.Currency;
                 _price = price.PricePerUnit * InvestmentEntry.Value;
+                _priceChange = price.PricePerUnit * InvestmentEntry.ValueChange;
             }
         }
         catch (Exception ex)
