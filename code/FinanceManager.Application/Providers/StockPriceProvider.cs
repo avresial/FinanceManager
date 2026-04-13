@@ -111,6 +111,47 @@ public class StockPriceProvider(
         return existing.Where(x => x.Date >= start && x.Date <= end).OrderByDescending(x => x.Date).ToList();
     }
 
+    public async Task<IReadOnlyDictionary<DateTime, decimal>> GetPricePerUnitSeriesAsync(
+        string ticker,
+        Currency targetCurrency,
+        DateTime start,
+        DateTime end,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(ticker) || start == default || end == default) return new Dictionary<DateTime, decimal>();
+        if (end < start) return new Dictionary<DateTime, decimal>();
+
+        var startDate = start.Date;
+        var endDate = end.Date;
+        var normalizedTicker = ticker.Trim().ToUpperInvariant();
+
+        var inRangePrices = await GetPricesAsync(normalizedTicker, startDate, endDate, ct);
+        var latestByDate = inRangePrices
+            .GroupBy(x => x.Date.Date)
+            .ToDictionary(x => x.Key, x => x.OrderByDescending(p => p.Date).First());
+
+        var seedPrice = await stockRepository.GetThisOrNextOlder(normalizedTicker, startDate);
+        var series = new Dictionary<DateTime, decimal>((endDate - startDate).Days + 1);
+        StockPrice? latestKnownPrice = seedPrice;
+
+        for (var date = startDate; date <= endDate; date = date.AddDays(1))
+        {
+            if (latestByDate.TryGetValue(date, out var todayPrice))
+                latestKnownPrice = todayPrice;
+
+            if (latestKnownPrice is null) continue;
+
+            var convertedPrice = latestKnownPrice.Currency == targetCurrency
+                ? latestKnownPrice.PricePerUnit
+                : (await currencyExchangeService.GetPricePerUnit(latestKnownPrice, targetCurrency, date)) ?? 0m;
+
+            if (convertedPrice > 0)
+                series[date] = convertedPrice;
+        }
+
+        return series;
+    }
+
     private async Task<IReadOnlyList<StockPrice>> TryFetchFromApiAsync(string ticker, DateTime start, DateTime end, CancellationToken ct)
     {
         var fetchKey = $"STOCK_AV_FETCH_{ticker}_{start:yyyyMMdd}_{end:yyyyMMdd}";

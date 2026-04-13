@@ -20,6 +20,7 @@ public class StockPriceDtoConfiguration : IEntityTypeConfiguration<StockPriceDto
         builder.Property<string>("StockTicker")
             .HasMaxLength(32);
 
+        builder.HasIndex("StockTicker", nameof(StockPriceDto.Date));
 
         builder.Property(e => e.PricePerUnit)
             .HasPrecision(18, 8);

@@ -151,11 +151,11 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
 
         if (step > 0)
         {
+            var resultByDate = result.ToDictionary(sp => sp.Date.Date);
             List<StockPrice> filteredPrices = [];
             for (var i = start; i <= end; i = i.Add(new TimeSpan(step)))
             {
-                var priceOnDate = result.FirstOrDefault(sp => sp.Date.Date == i.Date);
-                if (priceOnDate is not null)
+                if (resultByDate.TryGetValue(i.Date, out var priceOnDate))
                     filteredPrices.Add(priceOnDate);
             }
             return Ok(filteredPrices);

@@ -20,4 +20,15 @@ public interface IStockPriceProvider
     /// Fetches from the external API and persists when local data is incomplete.
     /// </summary>
     Task<IReadOnlyList<StockPrice>> GetPricesAsync(string ticker, DateTime start, DateTime end, CancellationToken ct = default);
+
+    /// <summary>
+    /// Get per-day price per unit for <paramref name="ticker"/> converted to <paramref name="targetCurrency"/>.
+    /// Missing market days are filled from the latest known older price.
+    /// </summary>
+    Task<IReadOnlyDictionary<DateTime, decimal>> GetPricePerUnitSeriesAsync(
+        string ticker,
+        Currency targetCurrency,
+        DateTime start,
+        DateTime end,
+        CancellationToken ct = default);
 }
