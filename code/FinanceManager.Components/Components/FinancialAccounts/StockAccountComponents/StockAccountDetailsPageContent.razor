@@ -2,10 +2,15 @@
 @using FinanceManager.Components.Components.SharedComponents.Charts
 @using FinanceManager.Domain.Entities.MoneyFlowModels;
 
-@if (Account is not null && Account.Entries is not null && (IsLoading || Account.Entries.Any() || !_loadedAllData))
+@if (Account is null && _isEntriesLoading)
+{
+    <AccountDetailsPageContentSkeleton ChartContainerClass="col-12 mb-2" />
+}
+else if (Account is not null && Account.Entries is not null && (Account.Entries.Any() || !_loadedAllData))
 {
     <AccountDetailsPageContent AccountName="@Account.Name" ChartData="ChartData" ChartContainerClass="col-12 mb-2"
-                               IsLoading="@IsLoading" IsLoadingMore="@_isLoadingMore" LoadedAllData="@_loadedAllData" OnLoadMore="LoadMore">
+                               IsEntriesLoading="@_isEntriesLoading" IsChartLoading="@_isChartLoading" IsSidePanelLoading="@_isSidePanelLoading"
+                               IsLoadingMore="@_isLoadingMore" LoadedAllData="@_loadedAllData" OnLoadMore="LoadMore">
         <ActionButtons>
             <MudButton Variant="Variant.Text" href="@($"Import/{Account.AccountId}")">Import</MudButton>
             <MudButton Variant="Variant.Text" href="@($"Export/{Account.AccountId}")">Export</MudButton>

@@ -24,6 +24,9 @@ public partial class StockAccountDetailsPageContent : ComponentBase
     private DateTime _dateEnd = DateTime.UtcNow;
 
     private bool _addEntryVisibility;
+    private bool _isEntriesLoading = false;
+    private bool _isChartLoading = false;
+    private bool _isSidePanelLoading = false;
 
     private List<(StockAccountEntry, decimal)>? _top5;
     private List<(StockAccountEntry, decimal)>? _bottom5;
@@ -38,7 +41,6 @@ public partial class StockAccountDetailsPageContent : ComponentBase
     private decimal? _filterTo;
 
 
-    public bool IsLoading = false;
     public StockAccount? Account { get; set; }
     public string ErrorMessage { get; set; } = string.Empty;
     public List<TimeSeriesModel> ChartData { get; set; } = [];
@@ -61,34 +63,62 @@ public partial class StockAccountDetailsPageContent : ComponentBase
         _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
         _currency = SettingsService.GetCurrency();
 
-        var loadTask = UpdateEntries();
-        var delayTask = Task.Delay(2000);
-        var completedTask = await Task.WhenAny(loadTask, delayTask);
-        if (completedTask == delayTask)
-        {
-            IsLoading = true;
-            StateHasChanged();
-            await loadTask;
-            IsLoading = false;
-        }
+        _isChartLoading = true;
+        _isSidePanelLoading = true;
+        await LoadEntriesWithSkeleton();
         var availableStocks = await StockPriceHttpClient.GetStocks();
         _availableStocks = availableStocks.Select(x => x.Ticker).ToList();
         AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
     }
+
     protected override async Task OnParametersSetAsync()
     {
         if (Account is not null && Account.AccountId == AccountId) return;
         _loadedAllData = false;
-        var loadTask = UpdateEntries();
+        _isChartLoading = true;
+        _isSidePanelLoading = true;
+        await LoadEntriesWithSkeleton();
+    }
+
+    private async Task LoadEntriesWithSkeleton()
+    {
+        var entriesTask = FetchAccountEntries();
         var delayTask = Task.Delay(2000);
-        var completedTask = await Task.WhenAny(loadTask, delayTask);
-        if (completedTask == delayTask)
+        if (await Task.WhenAny(entriesTask, delayTask) == delayTask)
         {
-            IsLoading = true;
+            _isEntriesLoading = true;
             StateHasChanged();
-            await loadTask;
-            IsLoading = false;
+            await entriesTask;
+            _isEntriesLoading = false;
+            StateHasChanged();
         }
+
+        if (Account?.Entries is not null)
+            await Task.WhenAll(LoadChartAsync(), LoadSidePanelAsync());
+    }
+
+    private async Task LoadChartAsync()
+    {
+        await UpdateChartData();
+        if (ChartData is not null && ChartData.Count >= 2)
+            _balanceChange = ChartData.Last().Value - ChartData.First().Value;
+        _isChartLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadSidePanelAsync()
+    {
+        if (Account?.Entries is null)
+        {
+            _isSidePanelLoading = false;
+            StateHasChanged();
+            return;
+        }
+        UpdateLoadStateFromAccount();
+        _stocks = Account.GetStoredTickers();
+        await ComputeSidePanelDataAsync();
+        _isSidePanelLoading = false;
+        StateHasChanged();
     }
 
     public async Task ShowOverlay()
@@ -111,6 +141,15 @@ public partial class StockAccountDetailsPageContent : ComponentBase
         var updateChartDataTask = UpdateChartData();
         UpdateLoadStateFromAccount();
         _stocks = Account.GetStoredTickers();
+        await ComputeSidePanelDataAsync();
+        await updateChartDataTask;
+        if (ChartData is not null && ChartData.Count >= 2)
+            _balanceChange = ChartData.Last().Value - ChartData.First().Value;
+    }
+
+    private async Task ComputeSidePanelDataAsync()
+    {
+        if (Account?.Entries is null) return;
 
         var priceTasksByTicker = new Dictionary<string, Task<IEnumerable<StockPrice>>>();
         foreach (var ticker in _stocks)
@@ -148,10 +187,6 @@ public partial class StockAccountDetailsPageContent : ComponentBase
         orderedByPrice = orderedByPrice.OrderByDescending(x => x.Item2).ToList();
         _top5 = orderedByPrice.Take(5).ToList();
         _bottom5 = orderedByPrice.Skip(Account.Entries.Count - 5).Take(5).OrderBy(x => x.Item2).ToList();
-
-        await updateChartDataTask;
-        if (ChartData is not null && ChartData.Count >= 2)
-            _balanceChange = ChartData.Last().Value - ChartData.First().Value;
     }
     public async Task LoadMore()
     {
@@ -199,6 +234,13 @@ public partial class StockAccountDetailsPageContent : ComponentBase
 
     private async Task UpdateEntries()
     {
+        await FetchAccountEntries();
+        if (Account?.Entries is not null)
+            await UpdateInfo();
+    }
+
+    private async Task FetchAccountEntries()
+    {
         _prices.Clear();
 
         try
@@ -221,9 +263,6 @@ public partial class StockAccountDetailsPageContent : ComponentBase
                         _isUsingRecentEntriesMode = true;
                     }
                 }
-
-                if (Account is not null && Account.Entries is not null)
-                    await UpdateInfo();
             }
         }
         catch (Exception ex)

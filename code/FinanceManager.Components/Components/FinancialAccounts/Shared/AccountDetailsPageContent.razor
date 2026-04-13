@@ -5,34 +5,57 @@
         @AccountName
     </h3>
 
-    @if (IsLoading)
-    {
-        <AccountDetailsPageContentSkeleton />
-    }
-    else
-    {
-        <div style="min-height:150px; width:100%">
+    <div style="min-height:150px; width:100%">
+        @if (ChartLoading)
+        {
+            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Height="150px" Width="100%" />
+        }
+        else
+        {
             <LineChartJs
             Series="@([ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()])" />
-        </div>
+        }
+    </div>
 
-        <MudContainer>
-            <MudGrid>
-                <MudItem xs="12" lg="2">
-                    @if (ActionButtons is not null)
-                    {
-                        <MudStack>
-                            @ActionButtons
-                        </MudStack>
-                    }
-                    @if (AddEntryOverlay is not null)
-                    {
-                        <MudStack>
-                            @AddEntryOverlay
-                        </MudStack>
-                    }
-                </MudItem>
-                <MudItem xs="12" lg="7">
+    <MudContainer>
+        <MudGrid>
+            <MudItem xs="12" lg="2">
+                @if (ActionButtons is not null)
+                {
+                    <MudStack>
+                        @ActionButtons
+                    </MudStack>
+                }
+                @if (AddEntryOverlay is not null)
+                {
+                    <MudStack>
+                        @AddEntryOverlay
+                    </MudStack>
+                }
+            </MudItem>
+            <MudItem xs="12" lg="7">
+                @if (EntriesLoading)
+                {
+                    <MudGrid Spacing="0">
+                        <MudItem xs="12">
+                            <MudExpansionPanels Elevation="0" MultiExpansion>
+                                @for (int i = 0; i < 15; i++)
+                                {
+                                    <MudExpansionPanel Style="height: 48px;">
+                                        <TitleContent>
+                                            <MudSkeleton Animation="Animation.Wave" Width="100%" />
+                                        </TitleContent>
+                                    </MudExpansionPanel>
+                                }
+                            </MudExpansionPanels>
+                        </MudItem>
+                        <MudItem xs="12" Class="d-flex justify-content-center" Style="min-height:40px">
+                            <MudSkeleton Animation="Animation.Wave" Height="36px" Width="36px" />
+                        </MudItem>
+                    </MudGrid>
+                }
+                else
+                {
                     <MudStack>
                         @if (EntryFilter is not null)
                         {
@@ -49,7 +72,7 @@
                                                      Class="my-3" />
                             </MudStack>
                         }
-                        else if (!LoadedAllData && !IsLoading)
+                        else if (!LoadedAllData && !EntriesLoading)
                         {
                             <MudStack Justify="Justify.Center" Row>
                                 <MudButton @onclick="OnLoadMore">
@@ -58,23 +81,40 @@
                             </MudStack>
                         }
                     </MudStack>
-                </MudItem>
-
-                @if (SidePanel is not null)
-                {
-                    <MudItem xs="0" lg="3">
-                        @SidePanel
-                    </MudItem>
                 }
-            </MudGrid>
-        </MudContainer>
-    }
+            </MudItem>
+
+            @if (SidePanelLoading || SidePanel is not null)
+            {
+                <MudItem xs="0" lg="3">
+                    @if (SidePanelLoading)
+                    {
+                        <MudStack Spacing="2">
+                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Height="24px"
+                                         Width="100%" />
+                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="100%"
+                                         Height="250px" />
+                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="100%"
+                                         Height="250px" />
+                        </MudStack>
+                    }
+                    else
+                    {
+                        @SidePanel
+                    }
+                </MudItem>
+            }
+        </MudGrid>
+    </MudContainer>
 </MudStack>
 @code {
     [Parameter] public required string AccountName { get; set; }
     [Parameter] public required List<TimeSeriesModel> ChartData { get; set; } = [];
     [Parameter] public string ChartContainerClass { get; set; } = "col-12 mb-4";
     [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public bool? IsChartLoading { get; set; }
+    [Parameter] public bool? IsEntriesLoading { get; set; }
+    [Parameter] public bool? IsSidePanelLoading { get; set; }
     [Parameter] public bool IsLoadingMore { get; set; }
     [Parameter] public bool LoadedAllData { get; set; }
     [Parameter] public EventCallback OnLoadMore { get; set; }
@@ -83,4 +123,8 @@
     [Parameter] public RenderFragment? EntryFilter { get; set; }
     [Parameter] public RenderFragment? Entries { get; set; }
     [Parameter] public RenderFragment? SidePanel { get; set; }
+
+    private bool ChartLoading => IsChartLoading ?? IsLoading;
+    private bool EntriesLoading => IsEntriesLoading ?? IsLoading;
+    private bool SidePanelLoading => IsSidePanelLoading ?? IsLoading;
 }
