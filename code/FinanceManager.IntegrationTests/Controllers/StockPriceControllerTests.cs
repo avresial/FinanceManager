@@ -154,7 +154,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         await SeedWithTestStockPrice();
         // No auth
 
-        var result = await new StockPriceHttpClient(Client, null!).GetStockPrices("AAPL", DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1), TimeSpan.FromDays(1));
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrices("AAPL", DefaultCurrency.PLN.Id, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1), TimeSpan.FromDays(1));
 
         Assert.NotNull(result);
         Assert.NotEmpty(result);

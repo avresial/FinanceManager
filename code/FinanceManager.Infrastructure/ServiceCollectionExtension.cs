@@ -8,6 +8,7 @@ using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Providers;
 using FinanceManager.Infrastructure.Repositories;
@@ -15,6 +16,7 @@ using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
 using FinanceManager.Infrastructure.Services;
 using FinanceManager.Infrastructure.Services.Ai;
+using FinanceManager.Infrastructure.Services.Currencies;
 using FinanceManager.Infrastructure.Services.Stocks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
@@ -29,6 +31,7 @@ public static class ServiceCollectionExtension
     public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
     {
         services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
+        services.AddHttpClient<ICurrencyExchangeRateProvider, FawazAhmedCurrencyApiClient>();
 
         services.AddAI();
 

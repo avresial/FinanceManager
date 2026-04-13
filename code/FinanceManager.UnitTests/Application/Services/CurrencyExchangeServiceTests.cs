@@ -1,6 +1,8 @@
 using FinanceManager.Application.Services;
+using FinanceManager.Infrastructure.Services.Currencies;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -14,14 +16,12 @@ namespace FinanceManager.UnitTests.Application.Services;
 [Trait("Category", "Unit")]
 public class CurrencyExchangeServiceTests : IDisposable
 {
-    private readonly ILogger<CurrencyExchangeService> _loggerMock = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<CurrencyExchangeService>();
+    private readonly ILogger<FawazAhmedCurrencyApiClient> _loggerMock = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<FawazAhmedCurrencyApiClient>();
     private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock = new();
-    private readonly IConfiguration _configuration;
     private readonly HttpClient _httpClient;
 
     public CurrencyExchangeServiceTests()
     {
-        _configuration = new ConfigurationBuilder().Build();
         _httpClient = new HttpClient(_httpMessageHandlerMock.Object);
     }
 
@@ -338,7 +338,11 @@ public class CurrencyExchangeServiceTests : IDisposable
         Assert.Equal(expectedRate, result.Value);
     }
 
-    private CurrencyExchangeService CreateService() => new CurrencyExchangeService(_httpClient, _loggerMock, _configuration);
+    private CurrencyExchangeService CreateService()
+    {
+        ICurrencyExchangeRateProvider[] providers = [new FawazAhmedCurrencyApiClient(_httpClient, _loggerMock)];
+        return new CurrencyExchangeService(providers);
+    }
     public void Dispose() => _httpClient?.Dispose();
     private void SetupHttpResponse(HttpStatusCode statusCode, string content)
     {

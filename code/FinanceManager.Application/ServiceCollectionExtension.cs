@@ -55,9 +55,11 @@ public static class ServiceCollectionExtension
                 // .AddScoped<ISeeder, FinancialInsightsSeeder>()
                 .AddScoped<IUserPlanVerifier, UserPlanVerifier>()
                 .AddScoped<IAdministrationUsersService, AdministrationUsersService>()
+                .AddScoped<ICurrencyExchangeRateProvider, CsvCurrencyExchangeProvider>()
                 .AddScoped<ICurrencyExchangeService, CurrencyExchangeService>()
-                .AddScoped<HttpClient>()
-                .AddScoped<ICsvHeaderMappingService, CsvHeaderMappingService>()
+                .Decorate<ICurrencyExchangeService, CachedCurrencyExchangeService>();
+
+        services.AddScoped<ICsvHeaderMappingService, CsvHeaderMappingService>()
                 .AddScoped<ICurrencyAccountImportService, CurrencyAccountImportService>()
                 .AddScoped<ICurrencyAccountExportService, CurrencyAccountExportService>()
                 .AddScoped<IAccountCsvExportService<CurrencyAccountExportDto>, CurrencyAccountCsvExportService>()
