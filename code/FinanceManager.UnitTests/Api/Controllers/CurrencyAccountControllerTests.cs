@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Currencies;
 using FinanceManager.Application.Services.Exports;
 using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Commands.Account;
@@ -36,7 +37,12 @@ public class CurrencyAccountControllerTests
         var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = PricingLevel.Premium, CreationDate = DateTime.UtcNow };
         _userRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
 
-        _controller = new(_mockAccountRepository.Object, _mockAccountEntryRepository.Object, _userPlanVerifier.Object, _currencyAccountCsvExportService.Object);
+        _controller = new(
+            _mockAccountRepository.Object,
+            _mockAccountEntryRepository.Object,
+            new CurrencyEntryProvider(_mockAccountEntryRepository.Object),
+            _userPlanVerifier.Object,
+            _currencyAccountCsvExportService.Object);
 
         // Mock user identity
         var userClaims = new ClaimsPrincipal(new ClaimsIdentity(
@@ -198,5 +204,77 @@ public class CurrencyAccountControllerTests
         Assert.Equal("text/csv", fileResult.ContentType);
         var content = System.Text.Encoding.UTF8.GetString(fileResult.FileContents);
         Assert.Equal(csvContent, content);
+    }
+
+    [Fact]
+    public async Task GetRecentEntries_ReturnsOkResult_WithEntriesAndOlderMetadata()
+    {
+        var userId = 1;
+        var accountId = 1;
+        var date = new DateTime(2026, 4, 26);
+        CurrencyAccount account = new(userId, accountId, "Test Account");
+        List<CurrencyAccountEntry> entries =
+        [
+            new(accountId, 2, new DateTime(2026, 4, 20), 900m, -100m),
+            new(accountId, 1, new DateTime(2026, 4, 10), 1000m, 1000m),
+        ];
+
+        _mockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
+        _mockAccountEntryRepository.Setup(repo => repo.Get(accountId, date, 2, true)).ReturnsAsync(entries);
+        _mockAccountEntryRepository
+            .Setup(repo => repo.GetNextOlder(accountId, new DateTime(2026, 4, 10)))
+            .ReturnsAsync(new CurrencyAccountEntry(accountId, 3, new DateTime(2026, 3, 1), 800m, -100m));
+        _mockAccountEntryRepository
+            .Setup(repo => repo.GetNextYounger(accountId, new DateTime(2026, 4, 20)))
+            .ReturnsAsync((CurrencyAccountEntry?)null);
+
+        var result = await _controller.Get(accountId, date, 2, true);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnValue = Assert.IsType<CurrencyAccountDto>(okResult.Value);
+        Assert.Equal(accountId, returnValue.AccountId);
+        Assert.Equal(2, returnValue.Entries.Count());
+        Assert.NotNull(returnValue.NextOlderEntry);
+        Assert.Equal(new DateTime(2026, 3, 1), returnValue.NextOlderEntry.PostingDate);
+    }
+
+    [Fact]
+    public async Task Get_WithMinimumEntryCount_BackfillsOlderEntriesUntilMinimumIsReached()
+    {
+        var userId = 1;
+        var accountId = 1;
+        var startDate = new DateTime(2026, 4, 1);
+        var endDate = new DateTime(2026, 4, 30);
+        var expandedStartDate = new DateTime(2026, 3, 15);
+        CurrencyAccount account = new(userId, accountId, "Test Account");
+        List<CurrencyAccountEntry> initialEntries =
+        [
+            new(accountId, 2, new DateTime(2026, 4, 20), 900m, -100m),
+        ];
+        List<CurrencyAccountEntry> expandedEntries =
+        [
+            new(accountId, 2, new DateTime(2026, 4, 20), 900m, -100m),
+            new(accountId, 1, expandedStartDate, 1000m, 1000m),
+        ];
+
+        _mockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
+        _mockAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns(initialEntries.ToAsyncEnumerable());
+        _mockAccountEntryRepository
+            .Setup(repo => repo.GetNextOlder(accountId, new DateTime(2026, 4, 20)))
+            .ReturnsAsync(new CurrencyAccountEntry(accountId, 1, expandedStartDate, 1000m, 1000m));
+        _mockAccountEntryRepository.Setup(repo => repo.Get(accountId, expandedStartDate, endDate)).Returns(expandedEntries.ToAsyncEnumerable());
+        _mockAccountEntryRepository
+            .Setup(repo => repo.GetNextOlder(accountId, expandedStartDate))
+            .ReturnsAsync((CurrencyAccountEntry?)null);
+        _mockAccountEntryRepository
+            .Setup(repo => repo.GetNextYounger(accountId, endDate))
+            .ReturnsAsync((CurrencyAccountEntry?)null);
+
+        var result = await _controller.Get(accountId, startDate, endDate, minimumEntryCount: 2);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnValue = Assert.IsType<CurrencyAccountDto>(okResult.Value);
+        Assert.Equal(2, returnValue.Entries.Count());
+        Assert.Equal([2, 1], returnValue.Entries.Select(x => x.EntryId));
     }
 }

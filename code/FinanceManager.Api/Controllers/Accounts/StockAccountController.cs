@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services.Exports;
+using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Stocks;
@@ -19,6 +20,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Tags("Stock Accounts")]
 public class StockAccountController(IAccountRepository<StockAccount> stockAccountRepository,
     IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository,
+    IStockEntryProvider stockEntryProvider,
     IAccountCsvExportService<StockAccountExportDto> stockAccountCsvExportService) : ControllerBase
 {
 
@@ -51,19 +53,21 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
 
     [HttpGet("{accountId:int}&{startDate:DateTime}&{endDate:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockAccountDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate)
+    public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate, [FromQuery] int minimumEntryCount = 0)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
 
         var account = await stockAccountRepository.Get(accountId);
         if (account is null) return NotFound();
         if (account.UserId != userId) return Forbid("User ID does not match the account owner.");
+        if (minimumEntryCount < 0) return BadRequest("Minimum entry count cannot be negative.");
 
-        var entries = await stockAccountEntryRepository.Get(accountId, startDate, endDate).ToListAsync();
+        var loadResult = await stockEntryProvider.GetEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
 
-        return Ok(await CreateDtoAsync(account, entries, startDate, endDate));
+        return Ok(await CreateDtoAsync(account, loadResult.Entries, loadResult.EffectiveStartDate, endDate));
     }
 
     [HttpGet("{accountId:int}/entries")]

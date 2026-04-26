@@ -19,9 +19,22 @@ public class CurrencyAccountHttpClient(HttpClient httpClient)
     public Task<CurrencyAccount?> GetAccountAsync(int accountId) =>
         httpClient.GetFromJsonAsync<CurrencyAccount>($"{httpClient.BaseAddress}api/CurrencyAccount/{accountId}");
 
-    public async Task<CurrencyAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate)
+    public async Task<CurrencyAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount = 0)
     {
-        var result = await httpClient.GetFromJsonAsync<CurrencyAccountDto>($"{httpClient.BaseAddress}api/CurrencyAccount/{accountId}&{startDate:O}&{endDate:O}");
+        var minimumEntryCountQuery = minimumEntryCount > 0 ? $"?minimumEntryCount={minimumEntryCount}" : string.Empty;
+        var result = await httpClient.GetFromJsonAsync<CurrencyAccountDto>($"{httpClient.BaseAddress}api/CurrencyAccount/{accountId}&{startDate:O}&{endDate:O}{minimumEntryCountQuery}");
+        return MapAccount(result);
+    }
+
+    public async Task<CurrencyAccount?> GetAccountWithEntriesAsync(int accountId, DateTime date, int count, bool olderThenDate = true)
+    {
+        var encodedDate = Uri.EscapeDataString(date.ToString("O"));
+        var result = await httpClient.GetFromJsonAsync<CurrencyAccountDto>($"{httpClient.BaseAddress}api/CurrencyAccount/{accountId}/entries?date={encodedDate}&count={count}&olderThenDate={olderThenDate.ToString().ToLowerInvariant()}");
+        return MapAccount(result);
+    }
+
+    private static CurrencyAccount? MapAccount(CurrencyAccountDto? result)
+    {
         if (result is null) return null;
 
         CurrencyAccountEntry? nextOlderEntry = result.NextOlderEntry is null ? null : new(result.NextOlderEntry.AccountId, result.NextOlderEntry.EntryId,
@@ -40,12 +53,16 @@ public class CurrencyAccountHttpClient(HttpClient httpClient)
             Labels = result.NextYoungerEntry.Labels
         };
 
-        return new(result.UserId, result.AccountId, result.Name, result.Entries.Select(x => new CurrencyAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange)
+        var entries = result.Entries.Select(x => new CurrencyAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange)
         {
             Description = x.Description,
             ContractorDetails = x.ContractorDetails,
             Labels = x.Labels
-        }), result.AccountLabel, nextOlderEntry, nextYoungerEntry);
+        })
+        .OrderByDescending(x => x.PostingDate)
+        .ThenByDescending(x => x.EntryId);
+
+        return new(result.UserId, result.AccountId, result.Name, entries, result.AccountLabel, nextOlderEntry, nextYoungerEntry);
     }
 
     public async Task<int?> AddAccountAsync(AddAccount addAccount)

@@ -74,6 +74,37 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             .ThenByDescending(x => x.EntryId)
             .AsAsyncEnumerable();
 
+    public async Task<List<CurrencyAccountEntry>> Get(int accountId, DateTime date, int count, bool olderThenDate = true)
+    {
+        if (count <= 0) return [];
+
+        if (olderThenDate)
+        {
+            return await context.CurrencyEntries
+                .Where(e => e.AccountId == accountId && e.PostingDate <= date)
+                .Include(e => e.Labels)
+                .ThenInclude(l => l.Classifications)
+                .OrderByDescending(e => e.PostingDate)
+                .ThenByDescending(e => e.EntryId)
+                .Take(count)
+                .ToListAsync();
+        }
+
+        var entries = await context.CurrencyEntries
+            .Where(e => e.AccountId == accountId && e.PostingDate >= date)
+            .Include(e => e.Labels)
+            .ThenInclude(l => l.Classifications)
+            .OrderBy(e => e.PostingDate)
+            .ThenBy(e => e.EntryId)
+            .Take(count)
+            .ToListAsync();
+
+        return entries
+            .OrderByDescending(e => e.PostingDate)
+            .ThenByDescending(e => e.EntryId)
+            .ToList();
+    }
+
     public async Task<CurrencyAccountEntry?> Get(int accountId, int entryId) => await context.CurrencyEntries
             .FirstOrDefaultAsync(x => x.AccountId == accountId && x.EntryId == entryId);
 

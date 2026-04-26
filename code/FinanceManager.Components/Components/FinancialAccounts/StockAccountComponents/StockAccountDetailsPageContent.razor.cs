@@ -1,4 +1,5 @@
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Helpers;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
@@ -12,10 +13,9 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
 
 public partial class StockAccountDetailsPageContent : ComponentBase
 {
-    private const int _minimumRecentEntryCount = 50;
+    private const int _minimumEntryCount = 50;
 
     private bool _isLoadingMore = false;
-    private bool _isUsingRecentEntriesMode = false;
     private decimal? _balanceChange = null;
     private UnrealizedGainLossAccountResult? _unrealizedAccount;
     private Dictionary<string, UnrealizedGainLossInstrumentResult> _unrealizedByTicker = [];
@@ -50,7 +50,6 @@ public partial class StockAccountDetailsPageContent : ComponentBase
 
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
-    [Inject] public required StockAccountHttpClient StockAccountHttpClient { get; set; }
     [Inject] public required StockPriceHttpClient StockPriceHttpClient { get; set; }
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
@@ -194,43 +193,19 @@ public partial class StockAccountDetailsPageContent : ComponentBase
         if (_user is null) return;
 
         _isLoadingMore = true;
-
-        if (_isUsingRecentEntriesMode)
-        {
-            var oldestLoadedEntry = Account.Entries.LastOrDefault();
-            if (oldestLoadedEntry is not null)
-            {
-                var olderAccount = await StockAccountHttpClient.GetAccountWithEntriesAsync(AccountId, oldestLoadedEntry.PostingDate, _minimumRecentEntryCount);
-                if (olderAccount is not null)
-                    Account = MergeAccountEntries(Account, olderAccount);
-            }
-        }
-        else
-        {
-            _dateStart = _dateStart.AddMonths(-1);
-
-            int entriesCountBeforeUpdate = 0;
-            if (Account.Entries is not null) entriesCountBeforeUpdate = Account.Entries.Count();
-
-            Account = await FinancialAccountService.GetAccount<StockAccount>(Account.UserId, AccountId, _dateStart, _dateEnd);
-
-            if (Account is not null && Account.Entries is not null && Account.Entries.Count == entriesCountBeforeUpdate)
-            {
-                if (Account.NextOlderEntries is not null && Account.NextOlderEntries.Any())
-                {
-                    _dateStart = Account.NextOlderEntries.First().Value.PostingDate;
-                    Account = await FinancialAccountService.GetAccount<StockAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
-                }
-            }
-        }
+        var loadResult = await RecentEntriesLoader.LoadMoreAsync(
+            Account,
+            _dateStart,
+            _dateEnd,
+            CreateLoaderOptions());
+        Account = loadResult.Account;
+        _dateStart = loadResult.DateStart;
 
         await UpdateChartData();
         await UpdateInfo();
 
         _isLoadingMore = false;
     }
-
-
 
     private async Task UpdateEntries()
     {
@@ -245,43 +220,18 @@ public partial class StockAccountDetailsPageContent : ComponentBase
 
         try
         {
-            if (_user is not null)
-            {
-                _dateEnd = DateTime.UtcNow;
-                _isUsingRecentEntriesMode = false;
-                Account = await FinancialAccountService.GetAccount<StockAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
+            if (_user is null) return;
 
-                if ((Account?.Entries.Count ?? 0) < _minimumRecentEntryCount)
-                {
-                    var recentAccount = await StockAccountHttpClient.GetAccountWithEntriesAsync(AccountId, _dateEnd, _minimumRecentEntryCount);
-                    if (recentAccount is not null)
-                    {
-                        Account = recentAccount;
-                        _dateStart = recentAccount.Entries
-                                        .OrderByDescending(x => x.PostingDate)
-                                        .LastOrDefault()?.PostingDate ?? _dateStart;
-                        _isUsingRecentEntriesMode = true;
-                    }
-                }
-            }
+            var requestedDateStart = _dateStart;
+            _dateEnd = DateTime.UtcNow;
+            Account = await FinancialAccountService.GetAccount<StockAccount>(_user.UserId, AccountId, requestedDateStart, _dateEnd, _minimumEntryCount);
+            UpdateDateStartFromLoadedEntries(requestedDateStart);
         }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
             Console.WriteLine(ex);
         }
-    }
-
-    private static StockAccount MergeAccountEntries(StockAccount currentAccount, StockAccount olderAccount)
-    {
-        var mergedEntries = currentAccount.Entries
-            .Concat(olderAccount.Entries)
-            .DistinctBy(x => x.EntryId)
-            .OrderByDescending(x => x.PostingDate)
-            .ThenByDescending(x => x.EntryId);
-
-        return new(currentAccount.UserId, currentAccount.AccountId, currentAccount.Name,
-            mergedEntries, olderAccount.NextOlderEntries, currentAccount.NextYoungerEntries);
     }
 
     private async Task UpdateChartData()
@@ -300,7 +250,7 @@ public partial class StockAccountDetailsPageContent : ComponentBase
             return;
         }
 
-        _loadedAllData = Account.NextOlderEntries is null || !Account.NextOlderEntries.Any();
+        _loadedAllData = !Account.NextOlderEntries.Any();
     }
 
     private async Task UpdateUnrealizedGainLoss()
@@ -415,6 +365,25 @@ public partial class StockAccountDetailsPageContent : ComponentBase
         _filterFrom = filter.From;
         _filterTo = filter.To;
     }
+
+    private void UpdateDateStartFromLoadedEntries(DateTime requestedDateStart)
+    {
+        var oldestLoadedEntryDate = Account?.Entries.LastOrDefault()?.PostingDate;
+        _dateStart = oldestLoadedEntryDate is not null && oldestLoadedEntryDate.Value < requestedDateStart
+            ? oldestLoadedEntryDate.Value
+            : requestedDateStart;
+    }
+
+    private RecentEntriesLoaderOptions<StockAccount> CreateLoaderOptions() =>
+        new()
+        {
+            LoadByDateRangeAsync = (dateStart, dateEnd) => _user is null
+                ? Task.FromResult<StockAccount?>(null)
+                : FinancialAccountService.GetAccount<StockAccount>(_user.UserId, AccountId, dateStart, dateEnd),
+            GetEntryCount = account => account.Entries.Count,
+            GetNextOlderReferenceDate = account => account.NextOlderEntries.Values.Select(x => (DateTime?)x.PostingDate).Max(),
+            HasOlderEntries = account => account.NextOlderEntries.Any(),
+        };
 
     private static StockPrice? GetLatestPriceOnOrBefore(IEnumerable<StockPrice> prices, DateTime targetDate)
     {

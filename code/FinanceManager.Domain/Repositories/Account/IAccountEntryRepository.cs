@@ -3,6 +3,7 @@
 public interface IAccountEntryRepository<T>
 {
     IAsyncEnumerable<T> Get(int accountId, DateTime startDate, DateTime endDate);
+    Task<List<T>> Get(int accountId, DateTime date, int count, bool olderThenDate = true);
     Task<T?> Get(int accountId, int entryId);
     Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default);
     Task<T?> GetYoungest(int accountId);

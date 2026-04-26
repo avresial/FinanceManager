@@ -25,9 +25,22 @@ public class BondAccountHttpClient(HttpClient httpClient)
         return new BondAccount(result.UserId, result.AccountId, result.Name, [], result.AccountLabel);
     }
 
-    public async Task<BondAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate)
+    public async Task<BondAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount = 0)
     {
-        var result = await httpClient.GetFromJsonAsync<BondAccountDto>($"{httpClient.BaseAddress}api/BondAccount/{accountId}/{startDate:O}/{endDate:O}");
+        var minimumEntryCountQuery = minimumEntryCount > 0 ? $"?minimumEntryCount={minimumEntryCount}" : string.Empty;
+        var result = await httpClient.GetFromJsonAsync<BondAccountDto>($"{httpClient.BaseAddress}api/BondAccount/{accountId}/{startDate:O}/{endDate:O}{minimumEntryCountQuery}");
+        return MapAccount(result);
+    }
+
+    public async Task<BondAccount?> GetAccountWithEntriesAsync(int accountId, DateTime date, int count, bool olderThenDate = true)
+    {
+        var encodedDate = Uri.EscapeDataString(date.ToString("O"));
+        var result = await httpClient.GetFromJsonAsync<BondAccountDto>($"{httpClient.BaseAddress}api/BondAccount/{accountId}/entries?date={encodedDate}&count={count}&olderThenDate={olderThenDate.ToString().ToLowerInvariant()}");
+        return MapAccount(result);
+    }
+
+    private static BondAccount? MapAccount(BondAccountDto? result)
+    {
         if (result is null) return null;
 
         Dictionary<int, BondAccountEntry> nextOlder = result.NextOlderEntries is null ? [] :
@@ -36,8 +49,12 @@ public class BondAccountHttpClient(HttpClient httpClient)
         Dictionary<int, BondAccountEntry> nextYounger = result.NextYoungerEntries is null ? [] :
             result.NextYoungerEntries.ToDictionary(x => x.Key, x => x.Value.ToBondAccountEntry());
 
-        return new(result.UserId, result.AccountId, result.Name, result.Entries
-            .Select(x => new BondAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.BondDetailsId) { Labels = x.Labels }),
+        var entries = result.Entries
+            .Select(x => new BondAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.BondDetailsId) { Labels = x.Labels })
+            .OrderByDescending(x => x.PostingDate)
+            .ThenByDescending(x => x.EntryId);
+
+        return new(result.UserId, result.AccountId, result.Name, entries,
             result.AccountLabel, nextOlder, nextYounger);
     }
 

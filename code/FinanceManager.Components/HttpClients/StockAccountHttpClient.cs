@@ -32,9 +32,10 @@ public class StockAccountHttpClient(HttpClient httpClient)
         return new StockAccount(result.UserId, result.AccountId, result.Name, []);
     }
 
-    public async Task<StockAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate)
+    public async Task<StockAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount = 0)
     {
-        var result = await httpClient.GetFromJsonAsync<StockAccountDto>($"{httpClient.BaseAddress}api/StockAccount/{accountId}&{startDate:O}&{endDate:O}");
+        var minimumEntryCountQuery = minimumEntryCount > 0 ? $"?minimumEntryCount={minimumEntryCount}" : string.Empty;
+        var result = await httpClient.GetFromJsonAsync<StockAccountDto>($"{httpClient.BaseAddress}api/StockAccount/{accountId}&{startDate:O}&{endDate:O}{minimumEntryCountQuery}");
         return MapAccount(result);
     }
 

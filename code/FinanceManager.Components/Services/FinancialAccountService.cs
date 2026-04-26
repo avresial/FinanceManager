@@ -108,14 +108,14 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
         }
     }
-    public async Task<T?> GetAccount<T>(int userId, int id, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
+    public async Task<T?> GetAccount<T>(int userId, int id, DateTime dateStart, DateTime dateEnd, int minimumEntryCount = 0) where T : BasicAccountInformation
     {
         if (typeof(T) == typeof(CurrencyAccount))
-            return await currencyAccountHttpClient.GetAccountWithEntriesAsync(id, dateStart, dateEnd) as T;
+            return await currencyAccountHttpClient.GetAccountWithEntriesAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
         else if (typeof(T) == typeof(StockAccount))
-            return await stockAccountHttpClient.GetAccountWithEntriesAsync(id, dateStart, dateEnd) as T;
+            return await stockAccountHttpClient.GetAccountWithEntriesAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
         else if (typeof(T) == typeof(BondAccount))
-            return await bondAccountHttpClient.GetAccountWithEntriesAsync(id, dateStart, dateEnd) as T;
+            return await bondAccountHttpClient.GetAccountWithEntriesAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
 
         throw new NotSupportedException($"Account type {typeof(T)} not supported for getting start date.");
 
