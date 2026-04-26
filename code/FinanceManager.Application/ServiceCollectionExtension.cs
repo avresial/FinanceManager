@@ -68,6 +68,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IStockAccountExportService, StockAccountExportService>()
                 .AddScoped<IAccountCsvExportService<StockAccountExportDto>, StockAccountCsvExportService>()
                 .AddScoped<IStockEntryProvider, StockEntryProvider>()
+            .AddScoped<IBondAccountImportService, BondAccountImportService>()
                 .AddScoped<IBondAccountExportService, BondAccountExportService>()
                 .AddScoped<IAccountCsvExportService<BondAccountExportDto>, BondAccountCsvExportService>()
                 .AddScoped<IBondEntryProvider, BondEntryProvider>()

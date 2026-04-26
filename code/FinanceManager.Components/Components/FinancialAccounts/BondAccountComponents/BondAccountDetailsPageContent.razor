@@ -8,9 +8,9 @@
     <AccountDetailsPageContent AccountName="@Account.Name" ChartData="ChartData" IsLoading="@IsLoading"
                                IsLoadingMore="@_isLoadingMore" LoadedAllData="@_loadedAllData" OnLoadMore="LoadMore">
         <ActionButtons>
-            <MudTooltip Text="Import is not available for bonds yet">
+            <MudTooltip Text="Import">
                 <MudIconButton Icon="@Icons.Material.Filled.FileUpload" AriaLabel="Import" Color="Color.Primary"
-                               Href="@($"/Import/{Account.AccountId}")" Disabled />
+                               Href="@($"/Import/{Account.AccountId}")" />
             </MudTooltip>
             <MudTooltip Text="Export">
                 <MudIconButton Icon="@Icons.Material.Filled.FileDownload" AriaLabel="Export" Color="Color.Primary"
