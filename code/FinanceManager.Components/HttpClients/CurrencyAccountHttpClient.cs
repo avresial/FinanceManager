@@ -2,6 +2,7 @@ using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.ValueObjects;
 using System.Net.Http.Json;
 
@@ -9,6 +10,8 @@ namespace FinanceManager.Components.HttpClients;
 
 public class CurrencyAccountHttpClient(HttpClient httpClient)
 {
+    private sealed record CurrencyAccountSummaryDto(int UserId, int AccountId, string Name, AccountLabel AccountType);
+
     public async Task<IEnumerable<AvailableAccount>> GetAvailableAccountsAsync()
     {
         var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/CurrencyAccount");
@@ -16,8 +19,13 @@ public class CurrencyAccountHttpClient(HttpClient httpClient)
         return result ?? [];
     }
 
-    public Task<CurrencyAccount?> GetAccountAsync(int accountId) =>
-        httpClient.GetFromJsonAsync<CurrencyAccount>($"{httpClient.BaseAddress}api/CurrencyAccount/{accountId}");
+    public async Task<CurrencyAccount?> GetAccountAsync(int accountId)
+    {
+        var result = await httpClient.GetFromJsonAsync<CurrencyAccountSummaryDto>($"{httpClient.BaseAddress}api/CurrencyAccount/{accountId}");
+        if (result is null) return null;
+
+        return new CurrencyAccount(result.UserId, result.AccountId, result.Name, result.AccountType);
+    }
 
     public async Task<CurrencyAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount = 0)
     {

@@ -19,21 +19,12 @@
 
     <MudContainer>
         <MudGrid>
-            <MudItem xs="12" lg="2">
-                @if (ActionButtons is not null)
-                {
-                    <MudStack>
-                        @ActionButtons
-                    </MudStack>
-                }
+            <MudItem xs="12" lg="9">
                 @if (AddEntryOverlay is not null)
                 {
-                    <MudStack>
-                        @AddEntryOverlay
-                    </MudStack>
+                    @AddEntryOverlay
                 }
-            </MudItem>
-            <MudItem xs="12" lg="7">
+
                 @if (EntriesLoading)
                 {
                     <MudGrid Spacing="0">
@@ -84,24 +75,34 @@
                 }
             </MudItem>
 
-            @if (SidePanelLoading || SidePanel is not null)
+            @if (ActionButtons is not null || SidePanelLoading || SidePanel is not null)
             {
-                <MudItem xs="0" lg="3">
-                    @if (SidePanelLoading)
-                    {
-                        <MudStack Spacing="2">
-                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Height="24px"
-                                         Width="100%" />
-                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="100%"
-                                         Height="250px" />
-                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="100%"
-                                         Height="250px" />
-                        </MudStack>
-                    }
-                    else
-                    {
-                        @SidePanel
-                    }
+                <MudItem xs="12" lg="3">
+                    <MudStack Spacing="2">
+                        @if (ActionButtons is not null)
+                        {
+                            <MudToolBar Dense="true">
+                                <MudSpacer />
+                                @ActionButtons
+                            </MudToolBar>
+                        }
+
+                        @if (SidePanelLoading)
+                        {
+                            <MudStack Spacing="2">
+                                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Height="24px"
+                                             Width="100%" />
+                                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="100%"
+                                             Height="250px" />
+                                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="100%"
+                                             Height="250px" />
+                            </MudStack>
+                        }
+                        else if (SidePanel is not null)
+                        {
+                            @SidePanel
+                        }
+                    </MudStack>
                 </MudItem>
             }
         </MudGrid>

@@ -9,8 +9,8 @@ public sealed class BondAccountExportDtoMap : ClassMap<BondAccountExportDto>
     {
         Map(x => x.Id).Index(0).Name("Id");
         Map(x => x.PostingDate).Index(1).Name("PostingDate").TypeConverterOption.Format("O");
-        Map(x => x.ValueChange).Index(2).Name("ValueChange");
-        Map(x => x.BondDetailsId).Index(3).Name("BondDetailsId");
-        Map(x => x.Labels).Index(4).Name("Labels");
+        Map(x => x.Value).Index(2).Name("Value");
+        Map(x => x.ValueChange).Index(3).Name("ValueChange");
+        Map(x => x.BondDetailsId).Index(4).Name("BondDetailsId");
     }
 }

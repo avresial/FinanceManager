@@ -151,7 +151,10 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
 
         if (step > 0)
         {
-            var resultByDate = result.ToDictionary(sp => sp.Date.Date);
+            var resultByDate = result
+                .GroupBy(sp => sp.Date.Date)
+                .ToDictionary(group => group.Key, group => group.OrderBy(sp => sp.Date).Last());
+
             List<StockPrice> filteredPrices = [];
             for (var i = start; i <= end; i = i.Add(new TimeSpan(step)))
             {

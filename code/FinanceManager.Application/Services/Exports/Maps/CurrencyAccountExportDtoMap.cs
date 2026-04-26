@@ -9,9 +9,9 @@ public sealed class CurrencyAccountExportDtoMap : ClassMap<CurrencyAccountExport
     {
         Map(x => x.Id).Index(0).Name("Id");
         Map(x => x.PostingDate).Index(1).Name("PostingDate").TypeConverterOption.Format("O");
-        Map(x => x.ValueChange).Index(2).Name("ValueChange");
-        Map(x => x.ContractorDetails).Index(3).Name("ContractorDetails");
-        Map(x => x.Description).Index(4).Name("Description");
-        Map(x => x.Labels).Index(5).Name("Labels");
+        Map(x => x.Value).Index(2).Name("Value");
+        Map(x => x.ValueChange).Index(3).Name("ValueChange");
+        Map(x => x.ContractorDetails).Index(4).Name("ContractorDetails");
+        Map(x => x.Description).Index(5).Name("Description");
     }
 }

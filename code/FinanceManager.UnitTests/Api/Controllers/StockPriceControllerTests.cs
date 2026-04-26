@@ -251,4 +251,44 @@ public class StockPriceControllerTests
         var value = Assert.IsType<StockDetails>(okResult.Value);
         Assert.Equal("CSPX.LON", value.Ticker);
     }
+
+    [Fact]
+    public async Task GetStockPrices_WithDuplicateDatesAndStep_ReturnsLatestPricePerDay()
+    {
+        // Arrange
+        var day = new DateTime(2026, 2, 3, 0, 0, 0, DateTimeKind.Utc);
+        var prices = new List<StockPrice>
+        {
+            new()
+            {
+                Ticker = "AAPL",
+                PricePerUnit = 101m,
+                Currency = DefaultCurrency.PLN,
+                Date = day.AddHours(10)
+            },
+            new()
+            {
+                Ticker = "AAPL",
+                PricePerUnit = 103m,
+                Currency = DefaultCurrency.PLN,
+                Date = day.AddHours(15)
+            }
+        };
+
+        _currencyRepository.Setup(repo => repo.GetCurrency(DefaultCurrency.PLN.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DefaultCurrency.PLN);
+        _stockMarketService.Setup(service => service.GetStockPrices("AAPL", day, day.AddHours(23), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(prices);
+
+        // Act
+        var result = await _controller.GetStockPrices("AAPL", DefaultCurrency.PLN.Id, day, day.AddHours(23), TimeSpan.FromDays(1).Ticks,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var value = Assert.IsType<List<StockPrice>>(okResult.Value);
+        var price = Assert.Single(value);
+        Assert.Equal(103m, price.PricePerUnit);
+        Assert.Equal(day.AddHours(15), price.Date);
+    }
 }

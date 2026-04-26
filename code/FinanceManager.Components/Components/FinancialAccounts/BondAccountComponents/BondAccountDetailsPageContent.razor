@@ -8,11 +8,18 @@
     <AccountDetailsPageContent AccountName="@Account.Name" ChartData="ChartData" IsLoading="@IsLoading"
                                IsLoadingMore="@_isLoadingMore" LoadedAllData="@_loadedAllData" OnLoadMore="LoadMore">
         <ActionButtons>
-            <MudButton Variant="Variant.Text" Class="col-12" href="@($"Import/{Account.AccountId}")" Disabled>Import
-            </MudButton>
-            <MudButton Variant="Variant.Text" Class="col-12" href="@($"Export/{Account.AccountId}")">Export</MudButton>
-            <MudButton Variant="Variant.Text" Class="col-12" href="@($"ManageAccount/{Account.AccountId}")">Manage
-            </MudButton>
+            <MudTooltip Text="Import is not available for bonds yet">
+                <MudIconButton Icon="@Icons.Material.Filled.FileUpload" AriaLabel="Import" Color="Color.Primary"
+                               Href="@($"/Import/{Account.AccountId}")" Disabled />
+            </MudTooltip>
+            <MudTooltip Text="Export">
+                <MudIconButton Icon="@Icons.Material.Filled.FileDownload" AriaLabel="Export" Color="Color.Primary"
+                               Href="@($"/Export/{Account.AccountId}")" />
+            </MudTooltip>
+            <MudTooltip Text="Manage">
+                <MudIconButton Icon="@Icons.Material.Filled.Settings" AriaLabel="Manage" Color="Color.Primary"
+                               Href="@($"/ManageAccount/{Account.AccountId}")" />
+            </MudTooltip>
         </ActionButtons>
         <AddEntryOverlay>
             <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick=ShowOverlay
@@ -114,11 +121,11 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
 {
     <AddBondEntry BondAccount=Account ActionCompleted="HideOverlay">
         <CustomButton>
-            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.AccountId}")">
+            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"/Import/{Account.AccountId}")">
                 Import</MudButton>
             </CustomButton>
         </AddBondEntry>
-        <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.AccountId}")">
+        <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"/Import/{Account.AccountId}")">
             Import
         </MudButton>
     }

@@ -33,24 +33,23 @@ public partial class Export : ComponentBase
 
     private DateTime? _startDate;
     private DateTime? _endDate;
+    private DateTime? _availableStartDate;
+    private DateTime? _availableEndDate;
     private bool _isDownloading;
 
-    private bool CanDownload => _startDate.HasValue && _endDate.HasValue && _startDate.Value <= _endDate.Value;
+    private bool HasAvailableDateRange => _availableStartDate.HasValue && _availableEndDate.HasValue;
+    private bool CanDownload => HasAvailableDateRange && _startDate.HasValue && _endDate.HasValue && _startDate.Value.Date <= _endDate.Value.Date;
 
     protected override async Task OnParametersSetAsync()
     {
         accountType = null;
         AccountName = string.Empty;
         ErrorMessage = string.Empty;
-        SetDefaultDates();
+        _startDate = null;
+        _endDate = null;
+        _availableStartDate = null;
+        _availableEndDate = null;
         await UpdateAccountType();
-    }
-
-    private void SetDefaultDates()
-    {
-        var now = DateTime.UtcNow;
-        _startDate = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        _endDate = now.Date;
     }
 
     private async Task UpdateAccountType()
@@ -62,6 +61,7 @@ public partial class Export : ComponentBase
             {
                 accountType = accounts[AccountId];
                 await UpdateAccountName();
+                await UpdateAvailableDateRange();
             }
             else
                 ErrorMessage = $"Account {AccountId} was not found.";
@@ -95,6 +95,21 @@ public partial class Export : ComponentBase
         }
     }
 
+    private async Task UpdateAvailableDateRange()
+    {
+        var startDate = await FinancialAccountService.GetStartDate(AccountId);
+        var endDate = await FinancialAccountService.GetEndDate(AccountId);
+
+        if (!startDate.HasValue || !endDate.HasValue)
+            return;
+
+        _availableStartDate = NormalizePickerDate(startDate.Value);
+        _availableEndDate = NormalizePickerDate(endDate.Value);
+    }
+
+    private static DateTime NormalizePickerDate(DateTime dateTime) =>
+        dateTime.Kind == DateTimeKind.Utc ? dateTime.ToLocalTime().Date : dateTime.Date;
+
     private string GetAccountTypeLabel()
     {
         if (accountType == typeof(CurrencyAccount)) return "Currency";
@@ -113,7 +128,7 @@ public partial class Export : ComponentBase
         return null;
     }
 
-    private async Task Download()
+    private async Task DownloadSelected()
     {
         if (!CanDownload)
         {
@@ -121,6 +136,22 @@ public partial class Export : ComponentBase
             return;
         }
 
+        await Download(_startDate!.Value, _endDate!.Value);
+    }
+
+    private async Task DownloadAll()
+    {
+        if (!HasAvailableDateRange)
+        {
+            ErrorMessage = "This account has no entries available to export.";
+            return;
+        }
+
+        await Download(_availableStartDate!.Value, _availableEndDate!.Value);
+    }
+
+    private async Task Download(DateTime selectedStartDate, DateTime selectedEndDate)
+    {
         var endpoint = GetExportEndpoint();
         if (endpoint is null)
         {
@@ -134,8 +165,8 @@ public partial class Export : ComponentBase
         try
         {
             // Interpret selected dates as local calendar days and convert to UTC start/end-of-day.
-            var localStart = DateTime.SpecifyKind(_startDate!.Value.Date, DateTimeKind.Local);
-            var localEnd = DateTime.SpecifyKind(_endDate!.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Local);
+            var localStart = DateTime.SpecifyKind(selectedStartDate.Date, DateTimeKind.Local);
+            var localEnd = DateTime.SpecifyKind(selectedEndDate.Date.AddDays(1).AddTicks(-1), DateTimeKind.Local);
             var startDate = localStart.ToUniversalTime();
             var endDate = localEnd.ToUniversalTime();
 

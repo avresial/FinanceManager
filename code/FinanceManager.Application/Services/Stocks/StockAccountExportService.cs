@@ -31,8 +31,7 @@ public class StockAccountExportService(
                 ? entry.Value * await stockPriceProvider.GetPricePerUnitAsync(entry.Ticker, tickerCurrency, entry.PostingDate)
                 : 0m;
 
-            var labels = entry.Labels.Count > 0 ? string.Join(", ", entry.Labels.Select(l => l.Name)) : null;
-            yield return new StockAccountExportDto(entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Value, price, entry.Ticker, entry.InvestmentType, labels);
+            yield return new StockAccountExportDto(entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Value, price, entry.Ticker, entry.InvestmentType);
         }
     }
 }

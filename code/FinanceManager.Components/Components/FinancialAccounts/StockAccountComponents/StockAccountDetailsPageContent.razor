@@ -12,10 +12,22 @@ else if (Account is not null && Account.Entries is not null && (Account.Entries.
                                IsEntriesLoading="@_isEntriesLoading" IsChartLoading="@_isChartLoading" IsSidePanelLoading="@_isSidePanelLoading"
                                IsLoadingMore="@_isLoadingMore" LoadedAllData="@_loadedAllData" OnLoadMore="LoadMore">
         <ActionButtons>
-            <MudButton Variant="Variant.Text" href="@($"Import/{Account.AccountId}")">Import</MudButton>
-            <MudButton Variant="Variant.Text" href="@($"Export/{Account.AccountId}")">Export</MudButton>
-            <MudButton Variant="Variant.Text" href="@($"ManageAccount/{Account.AccountId}")">Manage</MudButton>
-            <MudButton Variant="Variant.Text" href="@($"StockPrices")">Stocks Prices</MudButton>
+            <MudTooltip Text="Import">
+                <MudIconButton Icon="@Icons.Material.Filled.FileUpload" AriaLabel="Import" Color="Color.Primary"
+                               Href="@($"/Import/{Account.AccountId}")" />
+            </MudTooltip>
+            <MudTooltip Text="Export">
+                <MudIconButton Icon="@Icons.Material.Filled.FileDownload" AriaLabel="Export" Color="Color.Primary"
+                               Href="@($"/Export/{Account.AccountId}")" />
+            </MudTooltip>
+            <MudTooltip Text="Manage">
+                <MudIconButton Icon="@Icons.Material.Filled.Settings" AriaLabel="Manage" Color="Color.Primary"
+                               Href="@($"/ManageAccount/{Account.AccountId}")" />
+            </MudTooltip>
+            <MudTooltip Text="Stock prices">
+                <MudIconButton Icon="@Icons.Material.Filled.ShowChart" AriaLabel="Stock prices" Color="Color.Primary"
+                               Href="/StockPrices" />
+            </MudTooltip>
         </ActionButtons>
         <AddEntryOverlay>
             <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick=ShowOverlay
@@ -125,7 +137,7 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
 {
     <AddStockEntry InvestmentAccount=Account ActionCompleted="HideOverlay" Tickers=@_availableStocks>
         <CustomButton>
-            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.Name}")">
+            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"/Import/{Account.AccountId}")">
                 Import
             </MudButton>
         </CustomButton>

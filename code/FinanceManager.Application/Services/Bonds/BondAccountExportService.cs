@@ -21,8 +21,7 @@ public class BondAccountExportService(IAccountRepository<BondAccount> bondAccoun
             .ThenBy(x => x.EntryId)
             .WithCancellation(cancellationToken))
         {
-            var labels = entry.Labels.Count > 0 ? string.Join(", ", entry.Labels.Select(l => l.Name)) : null;
-            yield return new BondAccountExportDto(entry.EntryId, entry.PostingDate, entry.ValueChange, entry.BondDetailsId, labels);
+            yield return new BondAccountExportDto(entry.EntryId, entry.PostingDate, entry.Value, entry.ValueChange, entry.BondDetailsId);
         }
     }
 }
