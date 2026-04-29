@@ -7,6 +7,7 @@ using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Readers;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
@@ -15,7 +16,7 @@ using System.Globalization;
 
 namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents;
 
-public partial class ImportCurrencyEntriesComponent : ComponentBase
+public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDisposable
 {
     private const string _defaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
     private string _dragClass = _defaultDragClass;
@@ -25,6 +26,7 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
     private List<string> _erorrs = [];
     private List<string> _warnings = [];
     private List<string> _summaryInfos = [];
+    private List<ImportJobConflict> _liveConflicts = [];
 
     private List<List<string>> _rawPreview = [];
     private List<string> _headers = [];
@@ -36,6 +38,11 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
 
     private ImportResult? _importResult = null;
     private string? _uploadedContent;
+    private Guid? _activeImportJobId;
+    private CurrencyImportJobStatusDto? _activeJobStatus;
+    private string? _jobError;
+    private HubConnection? _hubConnection;
+    private CancellationTokenSource? _jobPollingCts;
 
     private CancellationTokenSource? _regenCts;
 
@@ -81,6 +88,7 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
     [Inject] public required CurrencyAccountImportHttpClient AccountImportHttpClient { get; set; }
     [Inject] public required CurrencyAccountHttpClient AccountHttpClient { get; set; }
     [Inject] public required CsvHeaderMappingHttpClient MappingHttpClient { get; set; }
+    [Inject] public required NavigationManager NavigationManager { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -308,6 +316,10 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
 
         _summaryInfos.Clear();
         _warnings.Clear();
+        _jobError = null;
+        _liveConflicts.Clear();
+        _activeImportJobId = null;
+        _activeJobStatus = null;
 
         _stepIndex = 2;
         if (string.IsNullOrEmpty(_uploadedContent))
@@ -333,39 +345,22 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
                 _selectedContractorDetailsHeader, _selectedDescriptionHeader, Headers, Data);
             var entries = exportResult.Select(x => new CurrencyEntryImportRecordDto(x.PostingDate, x.ValueChange, x.ContractorDetails, x.Description)).ToList();
 
-            try
-            {
-                _importResult = await AccountImportHttpClient.ImportCurrencyEntriesAsync(new(AccountId, entries));
+            var startResponse = await AccountImportHttpClient.StartAsyncCurrencyImportAsync(new(AccountId, entries));
+            if (startResponse is null)
+                throw new Exception("Async import could not be started.");
 
-                if (_importResult is not null && _importResult.Imported != 0)
-                    _summaryInfos.Add($"Imported {_importResult.Imported} entries.");
+            _activeImportJobId = startResponse.JobId;
+            _summaryInfos.Add($"Import job started. Job id: {_activeImportJobId}");
 
-                if (_importResult is not null && _importResult.Conflicts.Count != 0)
-                {
-                    var exactMatches = _importResult.Conflicts.Count(x => x.IsExactMatch);
-                    var exactMatchesDays = _importResult.Conflicts.Where(x => !x.IsExactMatch)
-                        .DistinctBy(x => x.DateTime.Date)
-                        .Count();
-
-                    _warnings.Add($"Already uploaded rows {exactMatches}.");
-
-                    if (_importResult.Conflicts.Count - exactMatches > 0)
-                        _warnings.Add($"Conflicts to resolve {exactMatchesDays}.");
-                }
-
-            }
-            catch (Exception ex)
-            {
-                Logger?.LogError(ex, "Import failed");
-                _erorrs.Add($"Import failed - {ex.Message}");
-                _step3Complete = false;
-                _isImportingData = false;
-                return;
-            }
+            await EnsureHubConnection();
+            await JoinJobRoom();
+            await RefreshJobStatus();
+            StartStatusPolling();
         }
         catch (Exception ex)
         {
-            _erorrs.Add($"Export failed - {ex.Message}");
+            Logger?.LogError(ex, "Import start failed");
+            _erorrs.Add($"Import start failed - {ex.Message}");
             _step3Complete = false;
             _isImportingData = false;
             return;
@@ -380,6 +375,8 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
 
     public async Task Clear()
     {
+        await StopImportTracking();
+
         _loadedFiles?.Clear();
 
         _step1Complete = false;
@@ -398,6 +395,10 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
         _mappedPreview.Clear();
         _summaryInfos.Clear();
         _warnings.Clear();
+        _liveConflicts.Clear();
+        _activeImportJobId = null;
+        _activeJobStatus = null;
+        _jobError = null;
 
         _uploadedContent = null;
 
@@ -410,6 +411,162 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase
         catch { }
 
         await Task.CompletedTask;
+    }
+
+    private async Task EnsureHubConnection()
+    {
+        if (_hubConnection is not null)
+        {
+            if (_hubConnection.State == HubConnectionState.Disconnected)
+                await _hubConnection.StartAsync();
+
+            return;
+        }
+
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("hubs/currency-import"), options =>
+            {
+                options.AccessTokenProvider = async () => (await LoginService.GetLoggedUser())?.Token;
+            })
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<CurrencyImportJobStatusDto>("ImportStatusUpdated", status =>
+        {
+            if (_activeImportJobId != status.JobId)
+                return;
+
+            _activeJobStatus = status;
+            _liveConflicts = status.Conflicts.ToList();
+            _ = InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On<ImportJobConflict>("ConflictDiscovered", conflict =>
+        {
+            if (_activeImportJobId is null)
+                return;
+
+            if (_liveConflicts.Any(x => x.ConflictId == conflict.ConflictId))
+                return;
+
+            _liveConflicts.Add(conflict);
+            _ = InvokeAsync(StateHasChanged);
+        });
+
+        await _hubConnection.StartAsync();
+    }
+
+    private async Task JoinJobRoom()
+    {
+        if (_hubConnection is null || _activeImportJobId is null)
+            return;
+
+        await _hubConnection.InvokeAsync("JoinJob", _activeImportJobId.Value.ToString());
+    }
+
+    private void StartStatusPolling()
+    {
+        if (_activeImportJobId is null)
+            return;
+
+        _jobPollingCts?.Cancel();
+        _jobPollingCts?.Dispose();
+        _jobPollingCts = new CancellationTokenSource();
+
+        _ = PollStatus(_jobPollingCts.Token);
+    }
+
+    private async Task PollStatus(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var hasNext = await timer.WaitForNextTickAsync(cancellationToken);
+            if (!hasNext)
+                break;
+
+            await RefreshJobStatus();
+
+            if (_activeJobStatus?.IsCompleted == true)
+                break;
+        }
+    }
+
+    private async Task RefreshJobStatus()
+    {
+        if (_activeImportJobId is null)
+            return;
+
+        try
+        {
+            var status = await AccountImportHttpClient.GetCurrencyImportStatusAsync(_activeImportJobId.Value);
+            if (status is null)
+                return;
+
+            _activeJobStatus = status;
+            _liveConflicts = status.Conflicts.ToList();
+
+            if (status.IsCompleted)
+            {
+                _summaryInfos.RemoveAll(x => x.StartsWith("Import running", StringComparison.OrdinalIgnoreCase));
+                _summaryInfos.Add($"Import completed. Imported {status.Imported}, failed {status.Failed}.");
+
+                if (status.ConflictCount - status.ResolvedConflictCount > 0)
+                    _warnings.Add($"Conflicts to resolve: {status.ConflictCount - status.ResolvedConflictCount}.");
+            }
+            else
+            {
+                _summaryInfos.RemoveAll(x => x.StartsWith("Import running", StringComparison.OrdinalIgnoreCase));
+                _summaryInfos.Add($"Import running: {status.ProcessedEntries}/{status.TotalEntries} processed.");
+            }
+
+            _jobError = status.Errors.LastOrDefault();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogDebug(ex, "Unable to refresh import job status");
+        }
+    }
+
+    private Task OnConflictsResolved(IReadOnlyCollection<string> conflictIds)
+    {
+        if (conflictIds.Count == 0)
+            return Task.CompletedTask;
+
+        _liveConflicts = _liveConflicts
+            .Select(x => conflictIds.Contains(x.ConflictId) ? x with { IsResolved = true } : x)
+            .ToList();
+
+        return Task.CompletedTask;
+    }
+
+    private async Task StopImportTracking()
+    {
+        if (_jobPollingCts is not null)
+        {
+            _jobPollingCts.Cancel();
+            _jobPollingCts.Dispose();
+            _jobPollingCts = null;
+        }
+
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+            _hubConnection = null;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await StopImportTracking();
+        }
+        catch
+        {
+            // Best-effort cleanup for component disposal.
+        }
     }
 
     private async Task SaveMappingChoices()

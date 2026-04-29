@@ -3,10 +3,12 @@ using FinanceManager.Application;
 using FinanceManager.Application.Options;
 using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using ServiceDefaults;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -77,9 +79,23 @@ builder.Services.AddCors(options =>
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
     };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrWhiteSpace(accessToken) && path.StartsWithSegments("/hubs/currency-import"))
+                context.Token = accessToken;
+
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddMemoryCache();
+builder.Services.AddSignalR();
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddSingleton<IInsightsGenerationChannel, InsightsGenerationChannel>();
@@ -87,6 +103,9 @@ builder.Services.AddHostedService<InsightsGenerationBackgroundService>();
 builder.Services.AddSingleton<ILabelSetterChannel, LabelSetterChannel>();
 builder.Services.AddHostedService<LabelSetterBackgroundService>();
 builder.Services.AddHostedService<LabelSetterStartupService>();
+builder.Services.AddSingleton<ICurrencyImportJobChannel, CurrencyImportJobChannel>();
+builder.Services.AddSingleton<ICurrencyImportJobStore, CurrencyImportJobStore>();
+builder.Services.AddHostedService<CurrencyImportBackgroundService>();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
@@ -112,5 +131,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<FinanceManager.Api.Hubs.CurrencyImportHub>("/hubs/currency-import");
 app.MapFallbackToFile("index.html");
 app.Run();

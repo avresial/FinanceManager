@@ -22,11 +22,11 @@ else if (_conflictsByDay.Any() == true)
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var c in _selectedConflicts.Where(c => c.ImportEntry is not null))
+                    @foreach (var c in _selectedConflicts.Where(c => c.Conflict.ImportEntry is not null))
                     {
                         <tr>
-                            <td>@c.ImportEntry!.PostingDate.ToString("dd-MM-yyyy")</td>
-                            <td>@c.ImportEntry!.ValueChange.ToString("0.00")</td>
+                            <td>@c.Conflict.ImportEntry!.PostingDate.ToString("dd-MM-yyyy")</td>
+                            <td>@c.Conflict.ImportEntry!.ValueChange.ToString("0.00")</td>
                         </tr>
                     }
                 </tbody>
@@ -42,11 +42,11 @@ else if (_conflictsByDay.Any() == true)
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var c in _selectedConflicts.Where(c => c.ExistingEntry is not null))
+                    @foreach (var c in _selectedConflicts.Where(c => c.Conflict.ExistingEntry is not null))
                     {
                         <tr>
-                            <td>@c.ExistingEntry!.PostingDate.ToString("dd-MM-yyyy")</td>
-                            <td>@c.ExistingEntry!.ValueChange.ToString("0.00")</td>
+                            <td>@c.Conflict.ExistingEntry!.PostingDate.ToString("dd-MM-yyyy")</td>
+                            <td>@c.Conflict.ExistingEntry!.ValueChange.ToString("0.00")</td>
                         </tr>
                     }
                 </tbody>
@@ -59,7 +59,7 @@ else if (_conflictsByDay.Any() == true)
             </MudItem>
 
             <MudItem xs="6">
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnPickExisting" Disabled="_isLoading">pick
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@OnPickExisting" Disabled="_isLoading">pick
                     existing</MudButton>
                 </MudItem>
             </MudGrid>

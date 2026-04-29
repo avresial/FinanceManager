@@ -9,7 +9,12 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
     IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,
     IUserPlanVerifier userPlanVerifier, ILogger<CurrencyAccountImportService> logger) : ICurrencyAccountImportService
 {
-    public async Task<ImportResult> ImportEntries(int userId, int accountId, IEnumerable<CurrencyEntryImport> entries)
+    public async Task<ImportResult> ImportEntries(
+        int userId,
+        int accountId,
+        IEnumerable<CurrencyEntryImport> entries,
+        Func<IReadOnlyList<ImportConflict>, Task>? onConflicts = null,
+        Func<int, int, int, Task>? onProgress = null)
     {
         ArgumentNullException.ThrowIfNull(entries);
 
@@ -28,6 +33,7 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
 
         int imported = 0;
         int failed = 0;
+        int processed = 0;
         var errors = new List<string>();
         var conflicts = new List<ImportConflict>();
 
@@ -45,9 +51,19 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
 
             if (exactMatches.Count != 0 || existingOnlyConflicts.Count != 0)
             {
-                conflicts.AddRange(exactMatches.Select(x => new ImportConflict(accountId, x.Import, x.Existing, "Exact match")));
-                conflicts.AddRange(importsOnlyConflicts);
-                conflicts.AddRange(existingOnlyConflicts);
+                var dailyConflicts = new List<ImportConflict>();
+                dailyConflicts.AddRange(exactMatches.Select(x => new ImportConflict(accountId, x.Import, x.Existing, "Exact match")));
+                dailyConflicts.AddRange(importsOnlyConflicts);
+                dailyConflicts.AddRange(existingOnlyConflicts);
+
+                conflicts.AddRange(dailyConflicts);
+
+                if (onConflicts is not null)
+                    await onConflicts(dailyConflicts);
+
+                processed += importsThisDay.Count;
+                if (onProgress is not null)
+                    await onProgress(processed, imported, failed);
 
                 continue;
             }
@@ -82,6 +98,10 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                     failed++;
                     errors.Add(ex.Message);
                 }
+
+                processed++;
+                if (onProgress is not null)
+                    await onProgress(processed, imported, failed);
             }
         }
 

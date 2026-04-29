@@ -2,7 +2,7 @@ using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 
 namespace FinanceManager.Domain.Entities.Imports;
 
-public record ImportConflict(int AccountId, CurrencyEntryImport? ImportEntry, CurrencyAccountEntry? ExistingEntry, string Reason)
+public record ImportConflict(int AccountId, CurrencyEntryImport? ImportEntry, CurrencyAccountEntry? ExistingEntry, string Reason, string? ConflictId = null)
 {
     public bool IsExactMatch =>
         ImportEntry is not null && ExistingEntry is not null &&

@@ -208,68 +208,103 @@
                 </MudStep>
                 <MudStep Title="Summary" SecondaryText="Step3" @bind-Completed="_step3Complete"
                          Disabled="@(_step2Complete == false)">
-                    @if (_isImportingData)
+                    @if (_isImportingData || (_activeJobStatus is not null && !_activeJobStatus.IsCompleted))
                     {
-                        <div class="d-flex justify-content-center my-3">
-                            <MudProgressCircular Size="Size.Large" Indeterminate="true" Color="Color.Primary" />
-                        </div>
-                    }
-                    else
-                    {
-                        <MudText Class="my-5" Typo="Typo.h5">Summary</MudText>
                         <MudStack Spacing="2" Class="my-3">
-
-                            @foreach (var errorInfo in _erorrs)
+                            @if (_activeJobStatus is not null)
                             {
-                                <MudAlert Severity="Severity.Error" Variant="Variant.Text"> @errorInfo</MudAlert>
-                            }
+                                <MudText Typo="Typo.h6">Import in progress</MudText>
+                                <MudProgressLinear Color="Color.Primary"
+                                                   Value="@((_activeJobStatus.TotalEntries == 0 ? 0 : (double)_activeJobStatus.ProcessedEntries / _activeJobStatus.TotalEntries * 100d))"
+                                                   BufferValue="100" />
+                                <MudText Typo="Typo.body1">Processed @_activeJobStatus.ProcessedEntries /
+                                    @_activeJobStatus.TotalEntries</MudText>
+                                    <MudText Typo="Typo.body2">Imported @_activeJobStatus.Imported, failed @_activeJobStatus.Failed
+                                    </MudText>
+                                }
+                            else
+                                {
+                                    <div class="d-flex justify-content-center my-3">
+                                        <MudProgressCircular Size="Size.Large" Indeterminate="true" Color="Color.Primary" />
+                                    </div>
+                                }
+                            </MudStack>
+                        }
+                    else
+                        {
+                            <MudText Class="my-5" Typo="Typo.h5">Summary</MudText>
+                            <MudStack Spacing="2" Class="my-3">
 
-                            @foreach (var warningInfo in _warnings)
-                            {
-                                <MudAlert Severity="Severity.Warning" Variant="Variant.Text"> @warningInfo</MudAlert>
-                            }
+                                @foreach (var errorInfo in _erorrs)
+                                {
+                                    <MudAlert Severity="Severity.Error" Variant="Variant.Text"> @errorInfo</MudAlert>
+                                }
 
-                            @foreach (var summaryInfo in _summaryInfos)
-                            {
-                                <MudAlert Severity="Severity.Success" Variant="Variant.Text"> @summaryInfo</MudAlert>
-                            }
+                                @foreach (var warningInfo in _warnings)
+                                {
+                                    <MudAlert Severity="Severity.Warning" Variant="Variant.Text"> @warningInfo</MudAlert>
+                                }
 
-                            @if (_importResult is not null && _importResult.Conflicts.Any())
-                            {
-                                <CurrencyEntryConflictResolver Conflicts=_importResult.Conflicts AccountName=@AccountName />
-                            }
+                                @if (!string.IsNullOrWhiteSpace(_jobError))
+                                {
+                                    <MudAlert Severity="Severity.Error" Variant="Variant.Text">@_jobError</MudAlert>
+                                }
 
-                        </MudStack>
+                                @foreach (var summaryInfo in _summaryInfos)
+                                {
+                                    <MudAlert Severity="Severity.Success" Variant="Variant.Text"> @summaryInfo</MudAlert>
+                                }
+
+                                @if (_activeImportJobId.HasValue && _liveConflicts.Any(x => !x.IsResolved))
+                                {
+                                    <CurrencyEntryConflictResolver JobConflicts="@_liveConflicts.Where(x => !x.IsResolved).ToList()"
+                                                                   JobId="_activeImportJobId" AccountName="@AccountName"
+                                                                   OnConflictsResolved="OnConflictsResolved" />
+                                }
+                                else if (_importResult is not null && _importResult.Conflicts.Any())
+                                {
+                                    <CurrencyEntryConflictResolver Conflicts=_importResult.Conflicts AccountName=@AccountName />
+                                }
+
+                            </MudStack>
+                        }
+
+                    </MudStep>
+                </ChildContent>
+
+                <ActionContent Context="stepper">
+                    @if (_stepIndex != 2)
+                    {
+                        <MudButton Color="Color.Error" Disabled="@(_stepIndex == 3)" OnClick="@Clear"
+                                   Variant="Variant.Outlined">Clear</MudButton>
+                        <MudSpacer />
                     }
+                    @if (_stepIndex == 0)
+                    {
+                        <MudButton Disabled="@(!_rawPreview.Any() || _headers.Count < 2)" OnClick="GoToNextStep"
+                                   Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Next step</MudButton>
+                    }
+                    @if (_stepIndex == 1)
+                    {
+                        <MudButton @onclick=BeginImport Disabled="@(_erorrs.Any() || !_mappedPreview.Any())"
+                                   Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Begin import</MudButton>
+                    }
+                    @if (_stepIndex == 2 && !_activeImportJobId.HasValue && (_importResult is null || _importResult is not
+                                    null &&
+                                                                                                                    !_importResult.Conflicts.Any()))
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   Disabled="@(((_activeJobStatus?.IsCompleted ?? true) == false) || !_step3Complete)"
+                                   href="@($"AccountDetails/{AccountId}")" Class="ml-auto">@($"Go back to {AccountName}")</MudButton>
+                    }
+                    @if (_stepIndex == 2 && _activeImportJobId.HasValue && _liveConflicts.All(x => x.IsResolved) &&
+                                    (_activeJobStatus?.IsCompleted ?? false))
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_step3Complete)"
+                                   href="@($"AccountDetails/{AccountId}")" Class="ml-auto">@($"Go back to {AccountName}")</MudButton>
+                    }
+                </ActionContent>
+            </MudStepper>
+        </MudPaper>
 
-                </MudStep>
-            </ChildContent>
-
-            <ActionContent Context="stepper">
-                @if (_stepIndex != 2)
-                {
-                    <MudButton Color="Color.Error" Disabled="@(_stepIndex == 3)" OnClick="@Clear"
-                               Variant="Variant.Outlined">Clear</MudButton>
-                    <MudSpacer />
-                }
-                @if (_stepIndex == 0)
-                {
-                    <MudButton Disabled="@(!_rawPreview.Any() || _headers.Count < 2)" OnClick="GoToNextStep"
-                               Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Next step</MudButton>
-                }
-                @if (_stepIndex == 1)
-                {
-                    <MudButton @onclick=BeginImport Disabled="@(_erorrs.Any() || !_mappedPreview.Any())"
-                               Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Begin import</MudButton>
-                }
-                @if (_stepIndex == 2 && (_importResult is null || _importResult is not null &&
-                                                                                                !_importResult.Conflicts.Any()))
-                {
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_step3Complete)"
-                               href="@($"AccountDetails/{AccountId}")" Class="ml-auto">@($"Go back to {AccountName}")</MudButton>
-                }
-            </ActionContent>
-        </MudStepper>
-    </MudPaper>
-
-</MudContainer>
+    </MudContainer>

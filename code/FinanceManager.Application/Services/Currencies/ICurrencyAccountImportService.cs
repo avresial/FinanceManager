@@ -5,5 +5,10 @@ namespace FinanceManager.Application.Services.Currencies;
 public interface ICurrencyAccountImportService
 {
     Task ApplyResolvedConflicts(IEnumerable<ResolvedImportConflict> resolvedConflicts);
-    Task<ImportResult> ImportEntries(int userId, int accountId, IEnumerable<CurrencyEntryImport> entries);
+    Task<ImportResult> ImportEntries(
+        int userId,
+        int accountId,
+        IEnumerable<CurrencyEntryImport> entries,
+        Func<IReadOnlyList<ImportConflict>, Task>? onConflicts = null,
+        Func<int, int, int, Task>? onProgress = null);
 }
