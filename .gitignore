@@ -32,6 +32,25 @@ bld/
 [Ll]og/
 [Ll]ogs/
 
+# Root-level static publish output from the old GitHub Pages deployment.
+/_content/
+/_framework/
+/css/
+/imgs/
+/index.html
+/index.html.*
+/404.html
+/.nojekyll
+/FinanceManager*.styles.css
+/FinanceManager*.styles.css.*
+/appsettings*.json
+/appsettings*.json.*
+/favicon.ico
+/favicon.ico.*
+/android-chrome-*.png
+/sample-data/*.br
+/sample-data/*.gz
+
 # Visual Studio 2015/2017 cache/options directory
 .vs/
 # Uncomment if you have tasks that create the project's static files in wwwroot
