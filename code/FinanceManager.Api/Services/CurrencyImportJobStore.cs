@@ -64,13 +64,13 @@ public sealed class CurrencyImportJobStore : ICurrencyImportJobStore
 
         lock (state.Gate)
         {
-            state.Status = AsyncImportJobState.WaitingForResolution;
-
             state.NextConflictId++;
             var conflictId = $"{jobId:N}-{state.NextConflictId}";
             var withId = conflict with { ConflictId = conflictId };
-            var importJobConflict = new ImportJobConflict(conflictId, withId);
+            var importJobConflict = new ImportJobConflict(conflictId, withId, withId.IsExactMatch);
             state.Conflicts.Add(importJobConflict);
+            if (IsActionable(importJobConflict))
+                state.Status = AsyncImportJobState.WaitingForResolution;
             state.LastUpdatedUtc = DateTime.UtcNow;
             return importJobConflict;
         }
@@ -90,7 +90,7 @@ public sealed class CurrencyImportJobStore : ICurrencyImportJobStore
             state.Failed = result.Failed;
             state.Errors.Clear();
             state.Errors.AddRange(result.Errors);
-            state.Status = state.Conflicts.Any(x => !x.IsResolved)
+            state.Status = state.Conflicts.Any(IsActionableUnresolved)
                 ? AsyncImportJobState.CompletedWithConflicts
                 : AsyncImportJobState.Completed;
             state.LastUpdatedUtc = DateTime.UtcNow;
@@ -155,19 +155,19 @@ public sealed class CurrencyImportJobStore : ICurrencyImportJobStore
             var conflict = current.Conflict;
             if (decision.PickImported)
             {
-                if (conflict.ImportEntry is null)
+                if (conflict.ImportEntry is null && conflict.ExistingEntry is null)
                     return false;
 
                 resolvedConflict = new ResolvedImportConflict(
                     conflict.AccountId,
-                    true,
+                    conflict.ImportEntry is not null,
                     conflict.ImportEntry,
                     false,
                     conflict.ExistingEntry?.EntryId);
             }
             else if (decision.PickExisting)
             {
-                if (conflict.ExistingEntry is null)
+                if (conflict.ImportEntry is null && conflict.ExistingEntry is null)
                     return false;
 
                 resolvedConflict = new ResolvedImportConflict(
@@ -175,7 +175,7 @@ public sealed class CurrencyImportJobStore : ICurrencyImportJobStore
                     false,
                     conflict.ImportEntry,
                     true,
-                    conflict.ExistingEntry.EntryId);
+                    conflict.ExistingEntry?.EntryId);
             }
             else
             {
@@ -185,8 +185,10 @@ public sealed class CurrencyImportJobStore : ICurrencyImportJobStore
             state.Conflicts[index] = current with { IsResolved = true };
             state.LastUpdatedUtc = DateTime.UtcNow;
 
-            if (state.Status == AsyncImportJobState.WaitingForResolution && state.Conflicts.All(x => x.IsResolved))
-                state.Status = AsyncImportJobState.Completed;
+            if (state.Status == AsyncImportJobState.WaitingForResolution && state.Conflicts.All(x => !IsActionable(x) || x.IsResolved))
+                state.Status = state.ProcessedEntries >= state.TotalEntries
+                    ? AsyncImportJobState.Completed
+                    : AsyncImportJobState.Running;
 
             return true;
         }
@@ -233,7 +235,8 @@ public sealed class CurrencyImportJobStore : ICurrencyImportJobStore
     private static CurrencyImportJobStatusDto ToDto(CurrencyImportJobState state)
     {
         var isCompleted = state.Status is AsyncImportJobState.Completed or AsyncImportJobState.CompletedWithConflicts or AsyncImportJobState.Failed;
-        var resolvedCount = state.Conflicts.Count(x => x.IsResolved);
+        var actionableConflicts = state.Conflicts.Where(IsActionable).ToList();
+        var resolvedCount = actionableConflicts.Count(x => x.IsResolved);
 
         return new CurrencyImportJobStatusDto(
             state.JobId,
@@ -242,12 +245,16 @@ public sealed class CurrencyImportJobStore : ICurrencyImportJobStore
             state.ProcessedEntries,
             state.Imported,
             state.Failed,
-            state.Conflicts.Count,
+            actionableConflicts.Count,
             resolvedCount,
             state.Errors.ToList(),
             state.Conflicts.ToList(),
             isCompleted);
     }
+
+    private static bool IsActionable(ImportJobConflict conflict) => !conflict.Conflict.IsExactMatch;
+
+    private static bool IsActionableUnresolved(ImportJobConflict conflict) => IsActionable(conflict) && !conflict.IsResolved;
 
     private sealed class CurrencyImportJobState(Guid jobId, int userId, int accountId, int totalEntries)
     {

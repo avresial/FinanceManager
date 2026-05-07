@@ -10,7 +10,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Aspire.Hosting.PostgreSQL" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" />
 
@@ -22,8 +21,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\FinanceManager.Infrastructure\FinanceManager.Infrastructure.csproj" />
-		<ProjectReference Include="..\FinanceManager.Application\FinanceManager.Application.csproj" />
-	  	<ProjectReference Include="..\FinanceManager.Domain\FinanceManager.Domain.csproj" />
 		<ProjectReference Include="..\FinanceManager\FinanceManager.WebUi.csproj" />
 		<ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
 	</ItemGroup>

@@ -7,7 +7,7 @@
         <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
     </div>
 }
-else if (_conflictsByDay.Any() == true)
+else if (_conflictsByDay.Any() == true )
 {
     <MudText Typo="Typo.h5">@_conflictsByDay.Count() conflicts require resolving</MudText>
 
@@ -54,17 +54,21 @@ else if (_conflictsByDay.Any() == true)
         </MudItem>
 
         <MudItem xs="6">
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnPickImported" Disabled="_isLoading">pick
-                imported</MudButton>
-            </MudItem>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnPickImported" Disabled="_isLoading">
+                pick
+                imported
+            </MudButton>
+        </MudItem>
 
-            <MudItem xs="6">
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@OnPickExisting" Disabled="_isLoading">pick
-                    existing</MudButton>
-                </MudItem>
-            </MudGrid>
-        }
+        <MudItem xs="6">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@OnPickExisting" Disabled="_isLoading">
+                pick
+                existing
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+}
 else
-        {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">@($"Go back to {AccountName}")</MudButton>
-        }
+{
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">@($"Go back to {AccountName}")</MudButton>
+}

@@ -5,11 +5,10 @@ using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Services;
-using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Readers;
-using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 using System.Globalization;
@@ -45,6 +44,15 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
     private CancellationTokenSource? _jobPollingCts;
 
     private CancellationTokenSource? _regenCts;
+
+    private int UnresolvedConflictCount => Math.Max(0, (_activeJobStatus?.ConflictCount ?? 0) - (_activeJobStatus?.ResolvedConflictCount ?? 0));
+    private double ImportProgressValue => _activeJobStatus?.TotalEntries > 0
+        ? (double)_activeJobStatus.ProcessedEntries / _activeJobStatus.TotalEntries * 100d
+        : 0d;
+    private bool CanReturnToAccount => _activeImportJobId.HasValue &&
+        (_activeJobStatus?.IsCompleted ?? false) &&
+        UnresolvedConflictCount == 0 &&
+        _liveConflicts.All(x => x.IsResolved || x.Conflict.IsExactMatch);
 
     private string _delimiterBacking = ",";
     private string Delimiter
@@ -433,22 +441,18 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
 
         _hubConnection.On<CurrencyImportJobStatusDto>("ImportStatusUpdated", status =>
         {
-            if (_activeImportJobId != status.JobId)
-                return;
-
-            _activeJobStatus = status;
-            _liveConflicts = status.Conflicts.ToList();
-            _ = InvokeAsync(StateHasChanged);
+            if (ApplyJobStatus(status))
+                _ = InvokeAsync(StateHasChanged);
         });
 
         _hubConnection.On<ImportJobConflict>("ConflictDiscovered", conflict =>
         {
+            Logger.LogInformation($"new _liveConflicts {_liveConflicts.Count} ");
             if (_activeImportJobId is null)
                 return;
 
             if (_liveConflicts.Any(x => x.ConflictId == conflict.ConflictId))
                 return;
-
             _liveConflicts.Add(conflict);
             _ = InvokeAsync(StateHasChanged);
         });
@@ -503,16 +507,14 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
             if (status is null)
                 return;
 
-            _activeJobStatus = status;
-            _liveConflicts = status.Conflicts.ToList();
+            if (!ApplyJobStatus(status))
+                return;
 
             if (status.IsCompleted)
             {
                 _summaryInfos.RemoveAll(x => x.StartsWith("Import running", StringComparison.OrdinalIgnoreCase));
+                _summaryInfos.RemoveAll(x => x.StartsWith("Import completed", StringComparison.OrdinalIgnoreCase));
                 _summaryInfos.Add($"Import completed. Imported {status.Imported}, failed {status.Failed}.");
-
-                if (status.ConflictCount - status.ResolvedConflictCount > 0)
-                    _warnings.Add($"Conflicts to resolve: {status.ConflictCount - status.ResolvedConflictCount}.");
             }
             else
             {
@@ -538,7 +540,57 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
             .Select(x => conflictIds.Contains(x.ConflictId) ? x with { IsResolved = true } : x)
             .ToList();
 
+        if (_activeJobStatus is not null)
+        {
+            var resolvedCount = _liveConflicts.Count(x => !x.Conflict.IsExactMatch && x.IsResolved);
+            _activeJobStatus = _activeJobStatus with
+            {
+                ResolvedConflictCount = Math.Max(_activeJobStatus.ResolvedConflictCount, resolvedCount)
+            };
+        }
+
         return Task.CompletedTask;
+    }
+
+    private bool ApplyJobStatus(CurrencyImportJobStatusDto status)
+    {
+        if (_activeImportJobId != status.JobId)
+            return false;
+
+        if (_activeJobStatus is not null && status.ProcessedEntries < _activeJobStatus.ProcessedEntries)
+            return false;
+
+        _activeJobStatus = status;
+        _liveConflicts = MergeConflicts(_liveConflicts, status.Conflicts);
+        return true;
+    }
+
+    private static List<ImportJobConflict> MergeConflicts(
+        IReadOnlyCollection<ImportJobConflict> current,
+        IReadOnlyCollection<ImportJobConflict> incoming)
+    {
+        var currentById = current.ToDictionary(x => x.ConflictId);
+        var merged = new List<ImportJobConflict>();
+
+        foreach (var incomingConflict in incoming)
+        {
+            if (currentById.TryGetValue(incomingConflict.ConflictId, out var currentConflict) && currentConflict.IsResolved)
+            {
+                merged.Add(incomingConflict with { IsResolved = true });
+            }
+            else
+            {
+                merged.Add(incomingConflict);
+            }
+        }
+
+        foreach (var currentConflict in current)
+        {
+            if (!incoming.Any(x => x.ConflictId == currentConflict.ConflictId))
+                merged.Add(currentConflict);
+        }
+
+        return merged;
     }
 
     private async Task StopImportTracking()

@@ -8,7 +8,7 @@ namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccount
 
 public partial class CurrencyEntryConflictResolver
 {
-    [Inject] public required CurrencyAccountImportHttpClient accountImportHttpClient { get; set; }
+    [Inject] public required CurrencyAccountImportHttpClient AccountImportHttpClient { get; set; }
     [Inject] public required ILogger<CurrencyEntryConflictResolver> Logger { get; set; }
 
     [Parameter] public IReadOnlyCollection<ImportConflict> Conflicts { get; set; } = [];
@@ -31,8 +31,8 @@ public partial class CurrencyEntryConflictResolver
         {
             base.OnParametersSet();
 
+            var selectedDay = _selectedDay;
             _conflictsByDay.Clear();
-            _selectedDay = null;
             _selectedConflicts = [];
 
             var source = JobConflicts is { Count: > 0 }
@@ -57,9 +57,15 @@ public partial class CurrencyEntryConflictResolver
 
             if (_conflictsByDay.Count != 0)
             {
-                _selectedDay = _conflictsByDay.Keys.OrderBy(k => k).First();
+                _selectedDay = selectedDay.HasValue && _conflictsByDay.ContainsKey(selectedDay.Value)
+                    ? selectedDay.Value
+                    : _conflictsByDay.Keys.OrderBy(k => k).First();
                 _selectedConflicts = _selectedDay.HasValue ? _conflictsByDay[_selectedDay.Value] : [];
                 AccountId = _selectedConflicts.First().Conflict.AccountId;
+            }
+            else
+            {
+                _selectedDay = null;
             }
         }
         catch (Exception ex)
@@ -91,7 +97,7 @@ public partial class CurrencyEntryConflictResolver
                 };
 
                 if (request.Decisions.Count != 0)
-                    await accountImportHttpClient.ResolveAsyncCurrencyImportConflictsAsync(request);
+                    await AccountImportHttpClient.ResolveAsyncCurrencyImportConflictsAsync(request);
 
                 if (pickedConflictIds.Count != 0)
                     await OnConflictsResolved.InvokeAsync(pickedConflictIds);
@@ -102,7 +108,7 @@ public partial class CurrencyEntryConflictResolver
                     .Select(c => new ResolvedImportConflict(c.Conflict.AccountId, true, c.Conflict.ImportEntry, false, c.Conflict.ExistingEntry?.EntryId))
                     .ToList();
 
-                await accountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
+                await AccountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
             }
 
             RemoveSelectedDayAndAdvance();
@@ -136,7 +142,7 @@ public partial class CurrencyEntryConflictResolver
                 };
 
                 if (request.Decisions.Count != 0)
-                    await accountImportHttpClient.ResolveAsyncCurrencyImportConflictsAsync(request);
+                    await AccountImportHttpClient.ResolveAsyncCurrencyImportConflictsAsync(request);
 
                 if (pickedConflictIds.Count != 0)
                     await OnConflictsResolved.InvokeAsync(pickedConflictIds);
@@ -156,8 +162,9 @@ public partial class CurrencyEntryConflictResolver
         if (_selectedDay is null) return;
 
         var key = _selectedDay.Value;
+        Logger.LogInformation($"Removing {key} {_conflictsByDay.Count} {_selectedConflicts.Count}");
         _conflictsByDay.Remove(key);
-
+        Logger.LogInformation($"Removed {key} {_conflictsByDay.Count} {_selectedConflicts.Count}");
         if (_conflictsByDay.Count == 0)
         {
             _selectedDay = null;
@@ -168,6 +175,7 @@ public partial class CurrencyEntryConflictResolver
         var next = _conflictsByDay.Keys.OrderBy(k => k).First();
         _selectedDay = next;
         _selectedConflicts = _conflictsByDay[next];
+        Logger.LogInformation($"{next} {_conflictsByDay.Count} {_selectedConflicts.Count}");
     }
 
     private sealed record ResolverConflict(ImportConflict Conflict, string? ConflictId);

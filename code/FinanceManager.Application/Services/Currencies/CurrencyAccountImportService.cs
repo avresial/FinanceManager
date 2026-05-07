@@ -99,10 +99,11 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                     errors.Add(ex.Message);
                 }
 
-                processed++;
-                if (onProgress is not null)
-                    await onProgress(processed, imported, failed);
             }
+
+            processed += importsThisDay.Count;
+            if (onProgress is not null)
+                await onProgress(processed, imported, failed);
         }
 
         return new(accountId, imported, failed, errors, conflicts);

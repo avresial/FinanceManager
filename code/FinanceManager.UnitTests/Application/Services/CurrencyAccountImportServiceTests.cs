@@ -405,6 +405,92 @@ public class CurrencyAccountImportServiceTests
     }
 
     [Fact]
+    public async Task ImportEntries_ReportsProgressOncePerProcessedDay()
+    {
+        // Arrange
+        var userId = 1;
+        var accountId = 1;
+        var date = DateTime.UtcNow.Date;
+        var entries = new[]
+        {
+            new CurrencyEntryImport(date, 100m, "First"),
+            new CurrencyEntryImport(date, 200m, "Second"),
+            new CurrencyEntryImport(date.AddDays(1), 300m, "Third")
+        };
+
+        var account = new CurrencyAccount(userId, accountId, "Test");
+        _mockAccountRepository.Setup(x => x.Get(accountId)).ReturnsAsync(account);
+        _mockAccountRepository.Setup(x => x.GetAvailableAccounts(userId)).Returns(Array.Empty<AvailableAccount>().ToAsyncEnumerable());
+        _mockAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>()))
+            .ReturnsAsync(true);
+
+        var progressUpdates = new List<(int Processed, int Imported, int Failed)>();
+
+        // Act
+        var result = await _service.ImportEntries(
+            userId,
+            accountId,
+            entries,
+            onProgress: (processed, imported, failed) =>
+            {
+                progressUpdates.Add((processed, imported, failed));
+                return Task.CompletedTask;
+            });
+
+        // Assert
+        Assert.Equal(3, result.Imported);
+        Assert.Equal(2, progressUpdates.Count);
+        Assert.Equal((1, 1, 0), progressUpdates[0]);
+        Assert.Equal((3, 3, 0), progressUpdates[1]);
+    }
+
+    [Fact]
+    public async Task ImportEntries_ContinuesImportingLaterDaysAfterConflictDay()
+    {
+        // Arrange
+        var userId = 1;
+        var accountId = 1;
+        var date = DateTime.UtcNow.Date;
+        var conflictDay = date.AddDays(1);
+        var entries = new[]
+        {
+            new CurrencyEntryImport(date, 100m, "Imported"),
+            new CurrencyEntryImport(conflictDay, 200m, "Conflict")
+        };
+
+        var account = new CurrencyAccount(userId, accountId, "Test");
+        _mockAccountRepository.Setup(x => x.Get(accountId)).ReturnsAsync(account);
+        _mockAccountRepository.Setup(x => x.GetAvailableAccounts(userId)).Returns(Array.Empty<AvailableAccount>().ToAsyncEnumerable());
+
+        var existingEntry = new CurrencyAccountEntry(accountId, 10, conflictDay, 200m, 200m);
+        _mockAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { existingEntry }.ToAsyncEnumerable());
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>()))
+            .ReturnsAsync(true);
+
+        var conflictBatches = new List<IReadOnlyList<ImportConflict>>();
+
+        // Act
+        var result = await _service.ImportEntries(
+            userId,
+            accountId,
+            entries,
+            onConflicts: conflicts =>
+            {
+                conflictBatches.Add(conflicts);
+                return Task.CompletedTask;
+            });
+
+        // Assert
+        Assert.Equal(1, result.Imported);
+        Assert.Single(result.Conflicts);
+        Assert.Single(conflictBatches);
+        _mockAccountEntryRepository.Verify(x => x.Add(It.Is<CurrencyAccountEntry>(e => e.PostingDate.Date == date), It.IsAny<bool>()), Times.Once);
+    }
+
+    [Fact]
     public async Task ImportEntries_MixedSuccessAndFailure_TracksCorrectly()
     {
         // Arrange
