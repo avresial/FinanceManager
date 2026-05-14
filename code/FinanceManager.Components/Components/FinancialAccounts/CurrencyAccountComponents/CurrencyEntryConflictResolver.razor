@@ -7,68 +7,94 @@
         <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
     </div>
 }
-else if (_conflictsByDay.Any() == true )
+else if (_conflictsByDay.Any() == true)
 {
-    <MudText Typo="Typo.h5">@_conflictsByDay.Count() conflicts require resolving</MudText>
+    <MudStack Spacing="3">
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Text">@_errorMessage</MudAlert>
+        }
 
-    <MudGrid Class="mt-1">
-        <MudItem xs="6">
-            <MudText Typo="Typo.h6">Import data</MudText>
-            <MudSimpleTable Elevation="0">
-                <thead>
-                    <tr>
-                        <th>Posting date</th>
-                        <th>Value change</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var c in _selectedConflicts.Where(c => c.Conflict.ImportEntry is not null))
-                    {
-                        <tr>
-                            <td>@c.Conflict.ImportEntry!.PostingDate.ToString("dd-MM-yyyy")</td>
-                            <td>@c.Conflict.ImportEntry!.ValueChange.ToString("0.00")</td>
-                        </tr>
+        <MudStack Spacing="0" Class="m-1">
+            <MudText Typo="Typo.h5">Pick which data to keep</MudText>
+            <MudText style="opacity: 0.8;" Typo="Typo.subtitle1">We found @_conflictsByDay.Count() conflicts between
+                imported and existing data in
+                @AccountName</MudText>
+            </MudStack>
+
+            <MudGrid Spacing="3">
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="pa-2" Elevation="0" Style="@GetPanelStyle(ConflictPanel.Imported)" role="button"
+                              tabindex="0" @onclick="OnPickImported" @onmouseenter="@(() => SetHoveredPanel(ConflictPanel.Imported))"
+                              @onmouseleave="@(() => SetHoveredPanel(null))">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.h6">Import data</MudText>
+                            <MudSimpleTable Dense Elevation="0" Style="background-color: transparent;">
+                                <thead>
+                                    <tr style="background-color: transparent;">
+                                        <th style="background-color: transparent;">Posting date</th>
+                                        <th style="background-color: transparent;">Value change</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var c in _selectedConflicts.Where(c => c.Conflict.ImportEntry is not null))
+                                    {
+                                        <tr style="background-color: transparent;">
+                                            <td style="background-color: transparent;">
+                                                @c.Conflict.ImportEntry!.PostingDate.ToString("dd-MM-yyyy")</td>
+                                                <td style="background-color: transparent;">
+                                                    @c.Conflict.ImportEntry!.ValueChange.ToString("0.00")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </MudSimpleTable>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudPaper Class="pa-2" Elevation="0" Style="@GetPanelStyle(ConflictPanel.Existing)" role="button"
+                                      tabindex="0" @onclick="OnPickExisting" @onmouseenter="@(() => SetHoveredPanel(ConflictPanel.Existing))"
+                                      @onmouseleave="@(() => SetHoveredPanel(null))">
+                                <MudStack Spacing="2">
+                                    <MudText Typo="Typo.h6">Existing data</MudText>
+                                    <MudSimpleTable Dense Elevation="0" Style="background-color: transparent;">
+                                        <thead>
+                                            <tr style="background-color: transparent;">
+                                                <th style="background-color: transparent;">Posting date</th>
+                                                <th style="background-color: transparent;">Value change</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var c in _selectedConflicts.Where(c => c.Conflict.ExistingEntry is not null))
+                                            {
+                                                <tr style="background-color: transparent;">
+                                                    <td style="background-color: transparent;">
+                                                        @c.Conflict.ExistingEntry!.PostingDate.ToString("dd-MM-yyyy")</td>
+                                                        <td style="background-color: transparent;">
+                                                            @c.Conflict.ExistingEntry!.ValueChange.ToString("0.00")</td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </MudSimpleTable>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+                            </MudGrid>
+                        </MudStack>
                     }
-                </tbody>
-            </MudSimpleTable>
-        </MudItem>
-        <MudItem xs="6">
-            <MudText Typo="Typo.h6">Existing data</MudText>
-            <MudSimpleTable Elevation="0">
-                <thead>
-                    <tr>
-                        <th>Posting date</th>
-                        <th>Value change</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var c in _selectedConflicts.Where(c => c.Conflict.ExistingEntry is not null))
-                    {
-                        <tr>
-                            <td>@c.Conflict.ExistingEntry!.PostingDate.ToString("dd-MM-yyyy")</td>
-                            <td>@c.Conflict.ExistingEntry!.ValueChange.ToString("0.00")</td>
-                        </tr>
-                    }
-                </tbody>
-            </MudSimpleTable>
-        </MudItem>
-
-        <MudItem xs="6">
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnPickImported" Disabled="_isLoading">
-                pick
-                imported
-            </MudButton>
-        </MudItem>
-
-        <MudItem xs="6">
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@OnPickExisting" Disabled="_isLoading">
-                pick
-                existing
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-}
 else
-{
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">@($"Go back to {AccountName}")</MudButton>
-}
+                    {
+                        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                            <MudStack Spacing="2">
+                                <MudText Typo="Typo.h5">Import completed</MudText>
+                                <MudText Typo="Typo.body1">
+                                    All conflicts have been resolved. You can return to @AccountName details now.
+                                </MudText>
+                                <MudStack Row="true" Justify="Justify.FlexEnd">
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")">
+                                        @($"Go back to {AccountName}")
+                                    </MudButton>
+                                </MudStack>
+                            </MudStack>
+                        </MudPaper>
+                    }

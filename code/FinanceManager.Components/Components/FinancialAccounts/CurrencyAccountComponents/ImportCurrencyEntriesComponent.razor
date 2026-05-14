@@ -4,320 +4,315 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using System.Globalization
 
-<MudContainer>
-    <MudPaper Class="p-3" Elevation="0">
-        <MudText Typo="Typo.h2">Import data to <b>@AccountName</b> account</MudText>
-        <MudStepper @bind-ActiveIndex="_stepIndex" OnPreviewInteraction="OnPreviewInteraction">
-            <ChildContent>
-                <MudStep Title="Select file" SecondaryText="Step1" @bind-Completed="_step1Complete">
-                    <MudStack Style="width: 100%">
-                        <MudForm @bind-IsValid="_isFormValid" @bind-IsTouched="_isTouched">
-                            <MudItem xs="12">
+<MudContainer MaxWidth="MaxWidth.Large">
+    <MudPaper Class="pa-4" Elevation="0" Outlined>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.h2">Import data to <b>@AccountName</b> account</MudText>
 
-                                @foreach (var error in _erorrs)
-                                {
-                                    <MudAlert Severity="Severity.Error" Class="my-2">@error</MudAlert>
-                                }
+            <MudStepper @bind-ActiveIndex="_stepIndex" OnPreviewInteraction="OnPreviewInteraction">
+                <ChildContent>
+                    <MudStep Title="Select file" SecondaryText="Step1" @bind-Completed="_step1Complete">
+                        <MudStack Spacing="3">
+                            <MudForm @bind-IsValid="_isFormValid" @bind-IsTouched="_isTouched">
+                                <MudItem xs="12">
 
-                                @if (!_rawPreview.Any())
-                                {
-                                    <MudFileUpload Class="mt-3" T="IBrowserFile" Hidden="@false"
-                                                   InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
-                                                   InputStyle="opacity:0" ErrorText="@string.Empty" tabindex="-1"
-                                                   @ondrop="@ClearDragClass" @ondragenter="@SetDragClass"
-                                                   @ondragleave="@ClearDragClass" @ondragend="@ClearDragClass"
-                                                   OnFilesChanged="UploadFiles">
+                                    @foreach (var error in _erorrs)
+                                    {
+                                        <MudAlert Severity="Severity.Error" Class="my-2">@error</MudAlert>
+                                    }
 
-                                        <CustomContent>
-                                            <MudPaper Height="150px" Outlined="true" Class="@_dragClass">
-                                                <MudText Typo="Typo.h6"> Drag and drop file here or click </MudText>
-                                                @foreach (var item in _loadedFiles)
-                                                {
-                                                    <MudChip T="string" Color="Color.Dark" Text="@item.Name" />
-                                                }
+                                    @if (!_rawPreview.Any())
+                                    {
+                                        <MudFileUpload Class="mt-3" T="IBrowserFile" Hidden="@false"
+                                                       InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
+                                                       InputStyle="opacity:0" ErrorText="@string.Empty" tabindex="-1"
+                                                       @ondrop="@ClearDragClass" @ondragenter="@SetDragClass"
+                                                       @ondragleave="@ClearDragClass" @ondragend="@ClearDragClass"
+                                                       OnFilesChanged="UploadFiles">
 
-                                            </MudPaper>
-                                        </CustomContent>
-                                    </MudFileUpload>
-                                }
-                                else
-                                {
-                                    <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles">
-                                        <CustomContent>
-                                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                                                       StartIcon="@Icons.Material.Filled.CloudUpload">
-                                                Upload different file
-                                            </MudButton>
-                                        </CustomContent>
-                                    </MudFileUpload>
-
-                                    <MudGrid Justify="Justify.SpaceBetween" Class="my-2">
-                                        <MudItem>
-                                            <MudText Class="mt-3" Typo="Typo.h4">Preview</MudText>
-                                        </MudItem>
-
-                                        <MudItem xs="4">
-                                            @{
-                                                var _delimOptions = new List<(string Value, string Label)> { (",", "Comma (,)"),
+                                            <CustomContent>
+                                                <MudPaper Height="150px" Outlined Class="@_dragClass">
+                                                    <MudText Typo="Typo.h6"> Drag and drop file here or click </MudText>
+                                                </MudPaper>
+                                            </CustomContent>
+                                        </MudFileUpload>
+                                    }
+                                    else
+                                    {
+                                        <MudGrid Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                                            <MudItem xs="12" sm="4" md="3">
+                                                @{
+                                                    var _delimOptions = new List<(string Value, string Label)> { (",", "Comma (,)"),
                                         (";", "Semicolon (;)"), ("\t", "Tab (\\t)") };
-                                            }
-                                            <MudSelect T="string" Label="Delimiter" @bind-Value="Delimiter">
-                                                @foreach (var opt in _delimOptions)
+                                                }
+                                                <MudSelect T="string" Label="Delimiter" @bind-Value="Delimiter">
+                                                    @foreach (var opt in _delimOptions)
+                                                    {
+                                                        <MudSelectItem T="string" Value="@opt.Value">@opt.Label</MudSelectItem>
+                                                    }
+                                                </MudSelect>
+                                            </MudItem>
+                                        </MudGrid>
+
+                                        <MudPaper Outlined="true" Class="pa-2">
+                                            <MudSimpleTable Dense="true" Hover="true" Style="overflow-x: auto;"
+                                                            Elevation="0">
+                                                <thead>
+                                                    <tr>
+                                                        @foreach (var h in _headers)
+                                                        {
+                                                            <th>@h</th>
+                                                        }
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var row in _rawPreview)
+                                                    {
+                                                        <tr>
+                                                            @for (int i = 0; i < _headers.Count; i++)
+                                                            {
+                                                                <td>
+                                                                    @{
+                                                                        if (i < row.Count)
+                                                                        {
+                                                                            var rowContent = new string(row[i].Take(20).ToArray());
+                                                                            if (rowContent.Length == 20) rowContent += " ...";
+                                                                            @(rowContent)
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            @(string.Empty)
+                                                                        }
+                                                                    }
+                                                                </td>
+                                                            }
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </MudSimpleTable>
+                                        </MudPaper>
+                                    }
+
+                                </MudItem>
+                            </MudForm>
+                        </MudStack>
+                    </MudStep>
+
+                    <MudStep Title="Validate" SecondaryText="Step2" @bind-Completed="_step2Complete"
+                             Disabled="@(_step1Complete == false)">
+                        <MudGrid Class="mt-2">
+                            <MudItem xs="12">
+                                <MudStack Spacing="2">
+                                    <MudText Typo="Typo.h6">Select columns</MudText>
+                                    <MudGrid>
+                                        <MudItem xs="6">
+                                            <MudSelect T="string" Label="Posting date column"
+                                                       Value="_selectedPostingDateHeader"
+                                                       ValueChanged="@((string v) => { _selectedPostingDateHeader = v; OnMappingChanged(); })">
+                                                @foreach (var h in _headers)
                                                 {
-                                                    <MudSelectItem T="string" Value="@opt.Value">@opt.Label</MudSelectItem>
+                                                    <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="6">
+                                            <MudSelect T="string" Label="Value change column"
+                                                       Value="_selectedValueChangeHeader"
+                                                       ValueChanged="@((string v) => { _selectedValueChangeHeader = v; OnMappingChanged(); })">
+                                                @foreach (var h in _headers)
+                                                {
+                                                    <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
                                                 }
                                             </MudSelect>
                                         </MudItem>
                                     </MudGrid>
 
-                                    <div class="mt-2">
-                                        <MudSimpleTable Style="overflow-x: auto;" Elevation="0">
-                                            <thead>
-                                                <tr>
-                                                    @foreach (var h in _headers)
+                                    <MudText Typo="Typo.h6" Class="mt-3">Optional columns</MudText>
+                                    <MudGrid>
+                                        <MudItem xs="6">
+                                            <MudSelect T="string" Label="Contractor details column (optional)"
+                                                       Value="_selectedContractorDetailsHeader"
+                                                       ValueChanged="@((string v) => { _selectedContractorDetailsHeader = v; OnMappingChanged(); })"
+                                                       Clearable="true">
+                                                @foreach (var h in _headers)
+                                                {
+                                                    <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="6">
+                                            <MudSelect T="string" Label="Description column (optional)"
+                                                       Value="_selectedDescriptionHeader"
+                                                       ValueChanged="@((string v) => { _selectedDescriptionHeader = v; OnMappingChanged(); })"
+                                                       Clearable="true">
+                                                @foreach (var h in _headers)
+                                                {
+                                                    <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                    </MudGrid>
+
+                                    @if (_mappedPreview.Any())
+                                    {
+                                        <MudPaper Outlined="true" Class="pa-2 mt-3">
+                                            <MudSimpleTable Dense="true" Hover="true" Style="overflow-x: auto;"
+                                                            Elevation="0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Posting date</th>
+                                                        <th>Value change</th>
+                                                        <th>Contractor details</th>
+                                                        <th>Description</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var row in _mappedPreview)
                                                     {
-                                                        <th>@h</th>
+                                                        <tr>
+                                                            <td>@row.PostingDate.ToString("dd-MM-yyyy")</td>
+                                                            <td>@row.ValueChange.ToString("0.00")</td>
+                                                            <td>@(row.ContractorDetails ?? "-")</td>
+                                                            <td>@(row.Description ?? "-")</td>
+                                                        </tr>
                                                     }
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach (var row in _rawPreview)
-                                                {
-                                                    <tr>
-                                                        @for (int i = 0; i < _headers.Count; i++)
-                                                        {
-                                                            <td>
-                                                                @{
-                                                                    if (i < row.Count)
-                                                                    {
-                                                                        var rowContent = new string(row[i].Take(20).ToArray());
-                                                                        if (rowContent.Length == 20) rowContent += " ...";
-                                                                        @(rowContent)
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        @(string.Empty)
-                                                                    }
-                                                                }
-                                                            </td>
-                                                        }
-                                                    </tr>
-                                                }
-                                            </tbody>
-                                        </MudSimpleTable>
-                                    </div>
-                                }
+                                                </tbody>
+                                            </MudSimpleTable>
+                                        </MudPaper>
+                                    }
 
+                                    @foreach (var error in _erorrs)
+                                    {
+                                        <MudAlert Severity="Severity.Error">@error</MudAlert>
+                                    }
+
+                                </MudStack>
                             </MudItem>
-                        </MudForm>
-                    </MudStack>
-                </MudStep>
-
-                <MudStep Title="Validate" SecondaryText="Step2" @bind-Completed="_step2Complete"
-                         Disabled="@(_step1Complete == false)">
-                    <MudGrid Class="mb-2">
-                        <MudItem xs="12">
-                            <MudStack Spacing="2">
-                                <MudText Typo="Typo.h6">Select columns</MudText>
-                                <MudGrid>
-                                    <MudItem xs="6">
-                                        <MudSelect T="string" Label="Posting date column"
-                                                   Value="_selectedPostingDateHeader"
-                                                   ValueChanged="@((string v) => { _selectedPostingDateHeader = v; OnMappingChanged(); })">
-                                            @foreach (var h in _headers)
-                                            {
-                                                <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
-                                            }
-                                        </MudSelect>
-                                    </MudItem>
-                                    <MudItem xs="6">
-                                        <MudSelect T="string" Label="Value change column"
-                                                   Value="_selectedValueChangeHeader"
-                                                   ValueChanged="@((string v) => { _selectedValueChangeHeader = v; OnMappingChanged(); })">
-                                            @foreach (var h in _headers)
-                                            {
-                                                <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
-                                            }
-                                        </MudSelect>
-                                    </MudItem>
-                                </MudGrid>
-
-                                <MudText Typo="Typo.h6" Class="mt-3">Optional columns</MudText>
-                                <MudGrid>
-                                    <MudItem xs="6">
-                                        <MudSelect T="string" Label="Contractor details column (optional)"
-                                                   Value="_selectedContractorDetailsHeader"
-                                                   ValueChanged="@((string v) => { _selectedContractorDetailsHeader = v; OnMappingChanged(); })"
-                                                   Clearable="true">
-                                            @foreach (var h in _headers)
-                                            {
-                                                <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
-                                            }
-                                        </MudSelect>
-                                    </MudItem>
-                                    <MudItem xs="6">
-                                        <MudSelect T="string" Label="Description column (optional)"
-                                                   Value="_selectedDescriptionHeader"
-                                                   ValueChanged="@((string v) => { _selectedDescriptionHeader = v; OnMappingChanged(); })"
-                                                   Clearable="true">
-                                            @foreach (var h in _headers)
-                                            {
-                                                <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
-                                            }
-                                        </MudSelect>
-                                    </MudItem>
-                                </MudGrid>
-
-                                @if (_mappedPreview.Any())
+                        </MudGrid>
+                    </MudStep>
+                    <MudStep Title="Summary" SecondaryText="Step3" @bind-Completed="_step3Complete"
+                             Disabled="@(_step2Complete == false)">
+                        @if (_isImportingData || _activeImportJobId.HasValue || _activeJobStatus is not null)
+                        {
+                            <MudStack Spacing="3" Class="mt-2">
+                                @if (_activeJobStatus is not null && ShowImportProgress)
                                 {
-                                    <MudText Typo="Typo.h4" Class="mt-4">Preview</MudText>
-
-                                    <div class="my-2">
-                                        <MudSimpleTable Style="overflow-x: auto;" Elevation="0">
-                                            <thead>
-                                                <tr>
-                                                    <th>Posting date</th>
-                                                    <th>Value change</th>
-                                                    <th>Contractor details</th>
-                                                    <th>Description</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach (var row in _mappedPreview)
-                                                {
-                                                    <tr>
-                                                        <td>@row.PostingDate.ToString("dd-MM-yyyy")</td>
-                                                        <td>@row.ValueChange.ToString("0.00")</td>
-                                                        <td>@(row.ContractorDetails ?? "-")</td>
-                                                        <td>@(row.Description ?? "-")</td>
-                                                    </tr>
-                                                }
-                                            </tbody>
-                                        </MudSimpleTable>
+                                    <MudProgressLinear Color="Color.Primary" Value="@ImportProgressValue" BufferValue="100" />
+                                }
+                                else if (_activeJobStatus is null)
+                                {
+                                    <div class="d-flex justify-content-center my-3">
+                                        <MudProgressCircular Size="Size.Large" Indeterminate="true" Color="Color.Primary" />
                                     </div>
                                 }
 
-                                @foreach (var error in _erorrs)
+                                @foreach (var errorInfo in _erorrs)
                                 {
-                                    <MudAlert Severity="Severity.Error">@error</MudAlert>
+                                    <MudAlert Severity="Severity.Error" Variant="Variant.Text"> @errorInfo</MudAlert>
+                                }
+
+                                @foreach (var warningInfo in _warnings)
+                                {
+                                    <MudAlert Severity="Severity.Warning" Variant="Variant.Text"> @warningInfo</MudAlert>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(_jobError))
+                                {
+                                    <MudAlert Severity="Severity.Error" Variant="Variant.Text">@_jobError</MudAlert>
+                                }
+
+                                @if (_activeImportJobId.HasValue && _liveConflicts.Any(x => !x.IsResolved &&
+                                                                                            !x.Conflict.IsExactMatch))
+                                {
+                                    <CurrencyEntryConflictResolver
+                                    JobConflicts="@_liveConflicts.Where(x => !x.IsResolved && !x.Conflict.IsExactMatch).ToList()"
+                                    JobId="_activeImportJobId" AccountName="@AccountName"
+                                    OnConflictsResolved="OnConflictsResolved" />
+                                }
+                                else if (ShowAsyncImportCompletedMessage)
+                                {
+                                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                                        <MudStack Spacing="2">
+                                            <MudText Typo="Typo.h5">Import completed</MudText>
+                                            <MudText Typo="Typo.body1">
+                                                All conflicts have been resolved. You can return to @AccountName details now.
+                                            </MudText>
+                                            <MudStack Row="true" Justify="Justify.FlexEnd">
+                                                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                                           href="@($"AccountDetails/{AccountId}")">
+                                                    @($"Go back to {AccountName}")
+                                                </MudButton>
+                                            </MudStack>
+                                        </MudStack>
+                                    </MudPaper>
                                 }
 
                             </MudStack>
-                        </MudItem>
-                    </MudGrid>
-                </MudStep>
-                <MudStep Title="Summary" SecondaryText="Step3" @bind-Completed="_step3Complete"
-                         Disabled="@(_step2Complete == false)">
-                    @if (_isImportingData || _activeImportJobId.HasValue || _activeJobStatus is not null)
-                    {
-                        <MudStack Spacing="2" Class="my-3">
-                            @if (_activeJobStatus is not null)
-                            {
-                                <MudText Typo="Typo.h6">Import status: @_activeJobStatus.Status</MudText>
-                                <MudProgressLinear Color="Color.Primary"
-                                                   Value="@ImportProgressValue"
-                                                   BufferValue="100" />
-                                <MudGrid Class="mt-2">
-                                    <MudItem xs="12" sm="4">
-                                        <MudText Typo="Typo.body1">Processed @_activeJobStatus.ProcessedEntries / @_activeJobStatus.TotalEntries</MudText>
-                                    </MudItem>
-                                    <MudItem xs="12" sm="4">
-                                        <MudText Typo="Typo.body1">Imported @_activeJobStatus.Imported, failed @_activeJobStatus.Failed</MudText>
-                                    </MudItem>
-                                    <MudItem xs="12" sm="4">
-                                        <MudText Typo="Typo.body1">Conflicts @UnresolvedConflictCount unresolved / @_activeJobStatus.ResolvedConflictCount resolved</MudText>
-                                    </MudItem>
-                                </MudGrid>
-                            }
-                            else
-                            {
-                                <div class="d-flex justify-content-center my-3">
-                                    <MudProgressCircular Size="Size.Large" Indeterminate="true" Color="Color.Primary" />
-                                </div>
-                            }
+                        }
+                        else
+                        {
+                            <MudText Class="my-5" Typo="Typo.h5">Summary</MudText>
+                            <MudStack Spacing="2" Class="my-3">
 
-                            @foreach (var errorInfo in _erorrs)
-                            {
-                                <MudAlert Severity="Severity.Error" Variant="Variant.Text"> @errorInfo</MudAlert>
-                            }
+                                @foreach (var errorInfo in _erorrs)
+                                {
+                                    <MudAlert Severity="Severity.Error" Variant="Variant.Text"> @errorInfo</MudAlert>
+                                }
 
-                            @foreach (var warningInfo in _warnings)
-                            {
-                                <MudAlert Severity="Severity.Warning" Variant="Variant.Text"> @warningInfo</MudAlert>
-                            }
+                                @foreach (var warningInfo in _warnings)
+                                {
+                                    <MudAlert Severity="Severity.Warning" Variant="Variant.Text"> @warningInfo</MudAlert>
+                                }
 
-                            @if (!string.IsNullOrWhiteSpace(_jobError))
-                            {
-                                <MudAlert Severity="Severity.Error" Variant="Variant.Text">@_jobError</MudAlert>
-                            }
+                                @if (_importResult is not null && _importResult.Conflicts.Any())
+                                {
+                                    <CurrencyEntryConflictResolver Conflicts=_importResult.Conflicts AccountName=@AccountName />
+                                }
+                                else if (ShowSynchronousImportCompletedMessage)
+                                {
+                                    <MudPaper Class="pa-4" Elevation="0">
+                                        <MudStack Spacing="2">
+                                            <MudText Typo="Typo.h5">Import completed</MudText>
+                                            <MudText Typo="Typo.body1">
+                                                Import finished without conflicts. You can return to @AccountName details now.
+                                            </MudText>
+                                            <MudStack Row Justify="Justify.FlexStart">
+                                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-2"
+                                                           href="@($"AccountDetails/{AccountId}")">
+                                                    @($"Go back to {AccountName}")
+                                                </MudButton>
+                                            </MudStack>
+                                        </MudStack>
+                                    </MudPaper>
+                                }
 
-                            @if (_activeImportJobId.HasValue && _liveConflicts.Any(x => !x.IsResolved && !x.Conflict.IsExactMatch))
-                            {
-                                <CurrencyEntryConflictResolver JobConflicts="@_liveConflicts.Where(x => !x.IsResolved && !x.Conflict.IsExactMatch).ToList()"
-                                                               JobId="_activeImportJobId" AccountName="@AccountName"
-                                                               OnConflictsResolved="OnConflictsResolved" />
-                            }
-
-                        </MudStack>
-                    }
-                    else
-                    {
-                        <MudText Class="my-5" Typo="Typo.h5">Summary</MudText>
-                        <MudStack Spacing="2" Class="my-3">
-
-                            @foreach (var errorInfo in _erorrs)
-                            {
-                                <MudAlert Severity="Severity.Error" Variant="Variant.Text"> @errorInfo</MudAlert>
-                            }
-
-                            @foreach (var warningInfo in _warnings)
-                            {
-                                <MudAlert Severity="Severity.Warning" Variant="Variant.Text"> @warningInfo</MudAlert>
-                            }
-
-                            @if (_importResult is not null && _importResult.Conflicts.Any())
-                            {
-                                <CurrencyEntryConflictResolver Conflicts=_importResult.Conflicts AccountName=@AccountName />
-                            }
-
-                        </MudStack>
-                    }
+                            </MudStack>
+                        }
 
                     </MudStep>
                 </ChildContent>
 
                 <ActionContent Context="stepper">
-                    @if (_stepIndex != 2)
-                    {
-                        <MudButton Color="Color.Error" Disabled="@(_stepIndex == 3)" OnClick="@Clear"
-                                   Variant="Variant.Outlined">Clear</MudButton>
-                        <MudSpacer />
-                    }
-                    @if (_stepIndex == 0)
-                    {
-                        <MudButton Disabled="@(!_rawPreview.Any() || _headers.Count < 2)" OnClick="GoToNextStep"
-                                   Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Next step</MudButton>
-                    }
-                    @if (_stepIndex == 1)
-                    {
-                        <MudButton @onclick=BeginImport Disabled="@(_erorrs.Any() || !_mappedPreview.Any())"
-                                   Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Begin import</MudButton>
-                    }
-                    @if (_stepIndex == 2 && !_activeImportJobId.HasValue && (_importResult is null || _importResult is not
-                                    null &&
-                                                                                                                    !_importResult.Conflicts.Any()))
-                    {
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                                   Disabled="@(((_activeJobStatus?.IsCompleted ?? true) == false) || !_step3Complete)"
-                                   href="@($"AccountDetails/{AccountId}")" Class="ml-auto">@($"Go back to {AccountName}")</MudButton>
-                    }
-                    @if (_stepIndex == 2 && CanReturnToAccount)
-                    {
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_step3Complete)"
-                                   href="@($"AccountDetails/{AccountId}")" Class="ml-auto">@($"Go back to {AccountName}")</MudButton>
-                    }
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
+                              Class="mt-2 px-4 mud-width-full">
+                        @if (_stepIndex != 2)
+                        {
+                            <MudButton Color="Color.Error" Disabled="@(_stepIndex == 3)" OnClick="@Clear"
+                                       Variant="Variant.Outlined">Clear</MudButton>
+                        }
+                        @if (_stepIndex == 0)
+                        {
+                            <MudButton Disabled="@(!_rawPreview.Any() || _headers.Count < 2)" OnClick="GoToNextStep"
+                                       Variant="Variant.Filled" Color="Color.Primary">Next step</MudButton>
+                        }
+                        @if (_stepIndex == 1)
+                        {
+                            <MudButton @onclick=BeginImport Disabled="@(_erorrs.Any() || !_mappedPreview.Any())"
+                                       Variant="Variant.Filled" Color="Color.Primary">Begin import</MudButton>
+                        }
+                    </MudStack>
                 </ActionContent>
             </MudStepper>
-        </MudPaper>
-
-    </MudContainer>
+        </MudStack>
+    </MudPaper>
+</MudContainer>

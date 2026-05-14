@@ -19,10 +19,12 @@ public partial class CurrencyEntryConflictResolver
     [Parameter] public EventCallback<IReadOnlyCollection<string>> OnConflictsResolved { get; set; }
 
     private bool _isLoading = false;
+    private string? _errorMessage;
     private int AccountId { get; set; }
     private DateTime? _selectedDay = null;
     private List<ResolverConflict> _selectedConflicts = [];
     private Dictionary<DateTime, List<ResolverConflict>> _conflictsByDay = [];
+    private ConflictPanel? _hoveredPanel;
 
     protected override void OnParametersSet()
     {
@@ -78,11 +80,15 @@ public partial class CurrencyEntryConflictResolver
     private async Task OnPickImported()
     {
         _isLoading = true;
+        _errorMessage = null;
+        var selectedConflicts = _selectedConflicts.ToList();
+        var snapshot = CreateSnapshot();
+        RemoveSelectedDayAndAdvance();
         try
         {
             if (JobId.HasValue)
             {
-                var pickedConflictIds = _selectedConflicts
+                var pickedConflictIds = selectedConflicts
                     .Select(x => x.ConflictId)
                     .Where(x => !string.IsNullOrWhiteSpace(x))
                     .Cast<string>()
@@ -104,17 +110,17 @@ public partial class CurrencyEntryConflictResolver
             }
             else
             {
-                var resolvedImports = _selectedConflicts
+                var resolvedImports = selectedConflicts
                     .Select(c => new ResolvedImportConflict(c.Conflict.AccountId, true, c.Conflict.ImportEntry, false, c.Conflict.ExistingEntry?.EntryId))
                     .ToList();
 
                 await AccountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
             }
-
-            RemoveSelectedDayAndAdvance();
         }
         catch (Exception ex)
         {
+            RestoreSnapshot(snapshot);
+            _errorMessage = "Could not resolve this conflict. Please try again.";
             Logger.LogError(ex, "Error resolving import conflicts for account {AccountId}", AccountId);
         }
         _isLoading = false;
@@ -123,11 +129,15 @@ public partial class CurrencyEntryConflictResolver
     private async Task OnPickExisting()
     {
         _isLoading = true;
+        _errorMessage = null;
+        var selectedConflicts = _selectedConflicts.ToList();
+        var snapshot = CreateSnapshot();
+        RemoveSelectedDayAndAdvance();
         try
         {
             if (JobId.HasValue)
             {
-                var pickedConflictIds = _selectedConflicts
+                var pickedConflictIds = selectedConflicts
                     .Select(x => x.ConflictId)
                     .Where(x => !string.IsNullOrWhiteSpace(x))
                     .Cast<string>()
@@ -147,11 +157,11 @@ public partial class CurrencyEntryConflictResolver
                 if (pickedConflictIds.Count != 0)
                     await OnConflictsResolved.InvokeAsync(pickedConflictIds);
             }
-
-            RemoveSelectedDayAndAdvance();
         }
         catch (Exception ex)
         {
+            RestoreSnapshot(snapshot);
+            _errorMessage = "Could not resolve this conflict. Please try again.";
             Logger.LogError(ex, "Error resolving import conflicts for account {AccountId}", AccountId);
         }
         _isLoading = false;
@@ -162,9 +172,7 @@ public partial class CurrencyEntryConflictResolver
         if (_selectedDay is null) return;
 
         var key = _selectedDay.Value;
-        Logger.LogInformation($"Removing {key} {_conflictsByDay.Count} {_selectedConflicts.Count}");
         _conflictsByDay.Remove(key);
-        Logger.LogInformation($"Removed {key} {_conflictsByDay.Count} {_selectedConflicts.Count}");
         if (_conflictsByDay.Count == 0)
         {
             _selectedDay = null;
@@ -175,8 +183,45 @@ public partial class CurrencyEntryConflictResolver
         var next = _conflictsByDay.Keys.OrderBy(k => k).First();
         _selectedDay = next;
         _selectedConflicts = _conflictsByDay[next];
-        Logger.LogInformation($"{next} {_conflictsByDay.Count} {_selectedConflicts.Count}");
+    }
+
+    private ResolverStateSnapshot CreateSnapshot() =>
+        new(
+            _selectedDay,
+            _selectedConflicts.ToList(),
+            _conflictsByDay.ToDictionary(x => x.Key, x => x.Value.ToList()));
+
+    private void RestoreSnapshot(ResolverStateSnapshot snapshot)
+    {
+        _selectedDay = snapshot.SelectedDay;
+        _selectedConflicts = snapshot.SelectedConflicts;
+        _conflictsByDay = snapshot.ConflictsByDay;
+    }
+
+    private void SetHoveredPanel(ConflictPanel? panel) => _hoveredPanel = panel;
+
+    private string GetPanelStyle(ConflictPanel panel)
+    {
+        var isHovered = _hoveredPanel == panel;
+        var background = isHovered
+            ? "color-mix(in srgb, var(--mud-palette-primary) 10%, transparent)"
+            : "rgba(255,255,255,0.02)";
+        var border = isHovered
+            ? "color-mix(in srgb, var(--mud-palette-primary) 50%, transparent)"
+            : "rgba(255,255,255,0.08)";
+
+        return $"background-color: {background}; border: 1px solid {border}; cursor: pointer; transition: background-color 160ms ease, border-color 160ms ease;";
     }
 
     private sealed record ResolverConflict(ImportConflict Conflict, string? ConflictId);
+    private sealed record ResolverStateSnapshot(
+        DateTime? SelectedDay,
+        List<ResolverConflict> SelectedConflicts,
+        Dictionary<DateTime, List<ResolverConflict>> ConflictsByDay);
+
+    private enum ConflictPanel
+    {
+        Imported,
+        Existing
+    }
 }

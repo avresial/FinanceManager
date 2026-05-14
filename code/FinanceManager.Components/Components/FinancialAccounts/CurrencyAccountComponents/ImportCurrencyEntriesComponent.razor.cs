@@ -24,7 +24,6 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
     private List<IBrowserFile> _loadedFiles = [];
     private List<string> _erorrs = [];
     private List<string> _warnings = [];
-    private List<string> _summaryInfos = [];
     private List<ImportJobConflict> _liveConflicts = [];
 
     private List<List<string>> _rawPreview = [];
@@ -49,10 +48,18 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
     private double ImportProgressValue => _activeJobStatus?.TotalEntries > 0
         ? (double)_activeJobStatus.ProcessedEntries / _activeJobStatus.TotalEntries * 100d
         : 0d;
+    private bool ShowImportProgress => _activeJobStatus?.Status is AsyncImportJobState.Queued or AsyncImportJobState.Running;
     private bool CanReturnToAccount => _activeImportJobId.HasValue &&
         (_activeJobStatus?.IsCompleted ?? false) &&
         UnresolvedConflictCount == 0 &&
         _liveConflicts.All(x => x.IsResolved || x.Conflict.IsExactMatch);
+    private bool ShowAsyncImportCompletedMessage => _stepIndex == 2 && CanReturnToAccount;
+    private bool ShowSynchronousImportCompletedMessage => _stepIndex == 2 &&
+        !_activeImportJobId.HasValue &&
+        (_activeJobStatus?.IsCompleted ?? true) &&
+        _step3Complete &&
+        _importResult is not null &&
+        !_importResult.Conflicts.Any();
 
     private string _delimiterBacking = ",";
     private string Delimiter
@@ -322,7 +329,6 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
     {
         _isImportingData = true;
 
-        _summaryInfos.Clear();
         _warnings.Clear();
         _jobError = null;
         _liveConflicts.Clear();
@@ -358,7 +364,6 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
                 throw new Exception("Async import could not be started.");
 
             _activeImportJobId = startResponse.JobId;
-            _summaryInfos.Add($"Import job started. Job id: {_activeImportJobId}");
 
             await EnsureHubConnection();
             await JoinJobRoom();
@@ -401,7 +406,6 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
         _selectedContractorDetailsHeader = null;
         _selectedDescriptionHeader = null;
         _mappedPreview.Clear();
-        _summaryInfos.Clear();
         _warnings.Clear();
         _liveConflicts.Clear();
         _activeImportJobId = null;
@@ -447,7 +451,6 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
 
         _hubConnection.On<ImportJobConflict>("ConflictDiscovered", conflict =>
         {
-            Logger.LogInformation($"new _liveConflicts {_liveConflicts.Count} ");
             if (_activeImportJobId is null)
                 return;
 
@@ -512,17 +515,13 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
 
             if (status.IsCompleted)
             {
-                _summaryInfos.RemoveAll(x => x.StartsWith("Import running", StringComparison.OrdinalIgnoreCase));
-                _summaryInfos.RemoveAll(x => x.StartsWith("Import completed", StringComparison.OrdinalIgnoreCase));
-                _summaryInfos.Add($"Import completed. Imported {status.Imported}, failed {status.Failed}.");
-            }
-            else
-            {
-                _summaryInfos.RemoveAll(x => x.StartsWith("Import running", StringComparison.OrdinalIgnoreCase));
-                _summaryInfos.Add($"Import running: {status.ProcessedEntries}/{status.TotalEntries} processed.");
+                if (status.Failed > 0)
+                    _jobError = $"Import completed with {status.Failed} failed entr{(status.Failed == 1 ? "y" : "ies")}.";
             }
 
-            _jobError = status.Errors.LastOrDefault();
+            _jobError ??= status.Errors.LastOrDefault();
+            if (status.Errors.Count > 0)
+                _jobError = status.Errors.LastOrDefault();
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
