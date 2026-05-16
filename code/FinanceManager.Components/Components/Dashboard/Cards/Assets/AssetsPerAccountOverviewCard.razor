@@ -1,5 +1,4 @@
-﻿@using ApexCharts
-@using FinanceManager.Components.Components.SharedComponents
+﻿@using FinanceManager.Components.Components.SharedComponents
 @using FinanceManager.Domain.Entities
 @using FinanceManager.Domain.Entities.MoneyFlowModels
 @using FinanceManager.Domain.Providers
@@ -8,7 +7,7 @@
 @using FinanceManager.Domain.Services
 @using FinanceManager.Components.Helpers
 
-<MudCard Outlined Class="d-flex flex-nowrap " Style="@($"height:{Height};")">
+<MudCard Outlined Class="d-flex flex-nowrap" Style="@($"height:{Height};")">
     <MudPaper Class="flex-grow-0 p-3" Elevation="0">
         <MudText Typo=Typo.h5>Assets per wallet</MudText>
         @if (_isLoading)
@@ -19,10 +18,10 @@
         }
         else if (DisplayAsChart && Data.Any())
         {
-            <MudText Typo=Typo.h6 Class="mb-2 text-muted">@Math.Round(_totalAssets, 2) @_currency</MudText>
+            <MudText Typo=Typo.h6 Class="mb-2 text-muted">@Math.Round(_totalAssets, 2).ToString("0.00") @_currency</MudText>
         }
     </MudPaper>
-    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
+    <MudPaper Class="flex-grow-1 overflow-hidden d-flex align-center justify-center" Elevation="0">
         @if (_isLoading)
         {
             <div style="height:100%">
@@ -57,18 +56,9 @@
         }
         else if (Data.Any())
         {
-            <div>
-                <ApexChart @ref="_chart" Height="@("100%")" TItem="NameValueResult" Options="Options">
-
-                    <ApexPointSeries TItem="NameValueResult"
-                                     Items="Data"
-                                     Name="Assets"
-                                     XValue="e => e.Name.ToString()"
-                                     YAggregate="@(e => e.Sum(e => Math.Round(e.Value,2)))"
-                                     SeriesType="SeriesType.Pie"
-                                     OrderByDescending="@(e=>e.Y)" />
-
-                </ApexChart>
+            <div class="d-flex align-center justify-center" style="width:100%; height:100%;">
+                <MudChart T="double" ChartType="ChartType.Pie" ChartSeries="@_chartSeries" ChartLabels="@_chartLabels" Width="82%"
+                          Height="82%" ChartOptions="_chartOptions" Class="p-3" />
             </div>
         }
         else

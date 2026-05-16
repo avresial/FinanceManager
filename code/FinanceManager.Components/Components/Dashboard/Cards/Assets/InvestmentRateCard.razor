@@ -1,29 +1,39 @@
-﻿
-<MudCard Outlined Class="d-flex flex-nowrap" Style="@($"height:{Height};")">
-    <MudPaper Class="flex-grow-0 p-3" Elevation="0">
-        <MudText Typo=Typo.h5>Investment rate</MudText>
+﻿<MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
+    <MudPaper Class="p-3 pb-0" Elevation="0">
+        <div>
+            <MudText Typo="Typo.h5">Investment rate</MudText>
+            <MudText Typo="Typo.body2" Class="text-muted">Investment growth relative to salary.</MudText>
+        </div>
     </MudPaper>
-    <MudPaper Class="flex-grow-1 overflow-auto p-3" Elevation="0">
-        <MudText Typo=Typo.h3 class="card-subtitle text-muted">
-            @if (_isLoading)
-            {
-                <StringSpinner CharactersCount="4" />
-            }
-            else
-            {
-                @if (_investmentRates.Any())
-                {
-                    foreach (var _investmentRate in _investmentRates.Where(x => x.Salary != 0).Take(1))
-                    {
-                        @($"{(100 * _investmentRate.GetPercentage()).ToString("0.00")}%")
-                    }
-                }
-                else
-                {
-                    @("No data")
-                }
 
-            }
-        </MudText>
+    <MudPaper Class="flex-grow-1 p-3 pt-2 overflow-auto" Elevation="0">
+        @if (_isLoading)
+        {
+            <MudText Typo="Typo.h3" Class="mb-1 text-muted">
+                <StringSpinner CharactersCount="6" />
+            </MudText>
+        }
+        else if (LatestInvestmentRate is null)
+        {
+            <MudText Typo="Typo.h3" Color="Color.Primary">No data</MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.h3" Color="Color.Primary" Class="mb-3">
+                @FormatPercentage(LatestInvestmentRate.GetPercentage())
+            </MudText>
+
+            <div class="d-flex flex-wrap gap-1">
+                <div class="mr-2">
+                    <MudText Typo="Typo.caption" Class="text-muted">Salary</MudText>
+                    <MudText Typo="Typo.body1">@FormatAmount(LatestInvestmentRate.Salary)</MudText>
+                </div>
+                <div class="mr-2">
+                    <MudText Typo="Typo.caption" Class="text-muted">Investments change</MudText>
+                    <MudText Typo="Typo.body1">@FormatAmount(LatestInvestmentRate.InvestmentsChange)
+                    </MudText>
+                </div>
+            </div>
+        }
     </MudPaper>
 </MudCard>

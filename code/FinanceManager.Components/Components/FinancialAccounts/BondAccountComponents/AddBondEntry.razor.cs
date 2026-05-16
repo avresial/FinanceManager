@@ -27,7 +27,7 @@ public partial class AddBondEntry : ComponentBase
     private List<BondDetails> _possibleBonds = [];
 
     private string _labelValue = "Nothing selected";
-    private IEnumerable<string> _selectedLabels = [];
+    private IReadOnlyCollection<string> _selectedLabels = [];
     private List<FinancialLabel> _possibleLabels = [];
     [Parameter] public RenderFragment? CustomButton { get; set; }
     [Parameter] public Func<Task>? ActionCompleted { get; set; }

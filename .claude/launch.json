@@ -1,0 +1,16 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "AppHost (attach preview)",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": [
+        "-NoProfile",
+        "-Command",
+        "while ($true) { Start-Sleep -Seconds 3600 }"
+      ],
+      "port": 5001,
+      "url": "https://localhost:5001/"
+    }
+  ]
+}

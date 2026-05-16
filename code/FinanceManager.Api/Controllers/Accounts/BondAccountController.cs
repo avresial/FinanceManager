@@ -1,6 +1,7 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Bonds;
 using FinanceManager.Application.Services.Exports;
 using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Commands.Account;
@@ -18,7 +19,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Tags("Bond Accounts")]
 public class BondAccountController(IAccountRepository<BondAccount> bondAccountRepository,
-    IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository, IUserPlanVerifier userPlanVerifier,
+    IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository, IBondEntryProvider bondEntryProvider,
+    IUserPlanVerifier userPlanVerifier,
     IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService) : ControllerBase
 {
     [HttpGet]
@@ -47,20 +49,40 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
 
     [HttpGet("{accountId:int}/{startDate:DateTime}/{endDate:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BondAccountDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate)
+    public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate, [FromQuery] int minimumEntryCount = 0)
     {
         var account = await bondAccountRepository.Get(accountId);
 
         if (account is null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (minimumEntryCount < 0) return BadRequest("Minimum entry count cannot be negative.");
 
-        var entries = bondAccountEntryRepository.Get(accountId, startDate, endDate);
-        var nextOlderEntries = await bondAccountEntryRepository.GetNextOlder(accountId, startDate);
-        var nextYoungerEntries = await bondAccountEntryRepository.GetNextYounger(accountId, startDate);
+        var loadResult = await bondEntryProvider.GetEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
 
-        return Ok(account.ToDto(nextOlderEntries, nextYoungerEntries, await entries.ToListAsync()));
+        return Ok(await CreateDtoAsync(account, loadResult.Entries, loadResult.EffectiveStartDate, endDate));
+    }
+
+    [HttpGet("{accountId:int}/entries")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BondAccountDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Get(int accountId, [FromQuery] DateTime date, [FromQuery] int count, [FromQuery] bool olderThenDate = true)
+    {
+        var account = await bondAccountRepository.Get(accountId);
+
+        if (account is null) return NotFound();
+        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (count <= 0) return BadRequest("Count must be greater than 0.");
+
+        var entries = await bondAccountEntryRepository.Get(accountId, date, count, olderThenDate);
+        var nextOlderReferenceDate = entries.Any() ? entries.Min(x => x.PostingDate) : date;
+        var nextYoungerReferenceDate = entries.Any() ? entries.Max(x => x.PostingDate) : date;
+
+        return Ok(await CreateDtoAsync(account, entries, nextOlderReferenceDate, nextYoungerReferenceDate));
     }
 
     [HttpPost]
@@ -114,5 +136,19 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
         var fileName = $"bond-account-{accountId}-{startDate:yyyyMMdd}-{endDate:yyyyMMdd}.csv";
 
         return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", fileName);
+    }
+
+    private async Task<BondAccountDto> CreateDtoAsync(BondAccount account, IEnumerable<BondAccountEntry> entries,
+        DateTime nextOlderReferenceDate, DateTime nextYoungerReferenceDate)
+    {
+        var orderedEntries = entries
+            .OrderByDescending(x => x.PostingDate)
+            .ThenByDescending(x => x.EntryId)
+            .ToList();
+
+        return account.ToDto(
+            await bondAccountEntryRepository.GetNextOlder(account.AccountId, nextOlderReferenceDate),
+            await bondAccountEntryRepository.GetNextYounger(account.AccountId, nextYoungerReferenceDate),
+            orderedEntries);
     }
 }

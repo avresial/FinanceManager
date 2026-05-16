@@ -8,12 +8,14 @@ public class FinancialLabelSeeder(IFinancialLabelsRepository financialLabelsRepo
 {
     private readonly IReadOnlyCollection<string> _defaultLabels =
     [
-        "Salary",
+        "Undisclosed Expense",
         "Undisclosed Income",
+        "Salary",
         "Groceries",
         "Rent",
         "Utilities",
         "Entertainment",
+        "Subscription",
         "Transportation",
         "Healthcare",
         "Education",

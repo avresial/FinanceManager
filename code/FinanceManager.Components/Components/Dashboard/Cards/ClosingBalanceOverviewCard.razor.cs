@@ -1,5 +1,6 @@
 using FinanceManager.Components.Components.SharedComponents.Charts;
-using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Models;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -19,7 +20,7 @@ public partial class ClosingBalanceOverviewCard
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
     [Inject] public required ILogger<ClosingBalanceOverviewCard> Logger { get; set; }
-    [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
+    [Inject] public required DashboardOverviewCardsCacheService DashboardOverviewCardsCacheService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
@@ -39,10 +40,18 @@ public partial class ClosingBalanceOverviewCard
 
         try
         {
-            var closingBalance = await MoneyFlowHttpClient.GetClosingBalance(user.UserId, DefaultCurrency.PLN, StartDateTime.Date, EndDateTime);
-            var orderedSeries = closingBalance.OrderBy(x => x.DateTime).ToList();
+            var context = new DashboardOverviewCardsRefreshContext
+            {
+                UserId = user.UserId,
+                CurrencyId = _currency.Id,
+                StartDateTime = StartDateTime,
+                EndDateTime = EndDateTime,
+            };
 
-            _closingBalance = Math.Round(orderedSeries.LastOrDefault()?.Value ?? 0, 0);
+            var snapshot = await DashboardOverviewCardsCacheService.GetSnapshotAsync(context);
+            var orderedSeries = snapshot.ClosingBalanceSeries.OrderBy(x => x.DateTime).ToList();
+
+            _closingBalance = Math.Round(orderedSeries.LastOrDefault()?.Value ?? 0, 2);
             _series.Add(orderedSeries
                 .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), Math.Round(x.Value, 2)))
                 .ToList());

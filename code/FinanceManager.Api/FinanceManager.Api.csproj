@@ -13,6 +13,7 @@
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" />
 
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
 		<PackageReference Include="Scalar.AspNetCore" />
 
 		<PackageReference Include="System.Configuration.ConfigurationManager" />
@@ -20,6 +21,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\FinanceManager.Infrastructure\FinanceManager.Infrastructure.csproj" />
+		<ProjectReference Include="..\FinanceManager\FinanceManager.WebUi.csproj" />
 		<ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
 	</ItemGroup>
 

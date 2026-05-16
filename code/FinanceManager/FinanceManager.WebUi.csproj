@@ -2,6 +2,7 @@
 
 	<PropertyGroup>
 		<ApplicationIcon>wwwroot\favicon.ico</ApplicationIcon>
+		<WasmEnableHotReload>false</WasmEnableHotReload>
 	</PropertyGroup>
 
 	<ItemGroup>

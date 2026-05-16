@@ -1,16 +1,33 @@
-﻿@using FinanceManager.Components.Components.FinancialAccounts.Shared
+@using FinanceManager.Components.Components.FinancialAccounts.Shared
 @using FinanceManager.Components.Components.SharedComponents.Charts
 @using FinanceManager.Domain.Entities.MoneyFlowModels;
 
-@if (Account is not null && Account.Entries is not null && (IsLoading || Account.Entries.Any() || !_loadedAllData))
+@if (Account is null && _isEntriesLoading)
+{
+    <AccountDetailsPageContentSkeleton ChartContainerClass="col-12 mb-2" />
+}
+else if (Account is not null && Account.Entries is not null && (Account.Entries.Any() || !_loadedAllData))
 {
     <AccountDetailsPageContent AccountName="@Account.Name" ChartData="ChartData" ChartContainerClass="col-12 mb-2"
-                               IsLoading="@IsLoading" IsLoadingMore="@_isLoadingMore" LoadedAllData="@_loadedAllData" OnLoadMore="LoadMore">
+                               IsEntriesLoading="@_isEntriesLoading" IsChartLoading="@_isChartLoading" IsSidePanelLoading="@_isSidePanelLoading"
+                               IsLoadingMore="@_isLoadingMore" LoadedAllData="@_loadedAllData" OnLoadMore="LoadMore">
         <ActionButtons>
-            <MudButton Variant="Variant.Text" href="@($"Import/{Account.AccountId}")">Import</MudButton>
-            <MudButton Variant="Variant.Text" Disabled>Export</MudButton>
-            <MudButton Variant="Variant.Text" href="@($"ManageAccount/{Account.AccountId}")">Manage</MudButton>
-            <MudButton Variant="Variant.Text" href="@($"StockPrices")">Stocks Prices</MudButton>
+            <MudTooltip Text="Import">
+                <MudIconButton Icon="@Icons.Material.Filled.FileUpload" AriaLabel="Import" Color="Color.Primary"
+                               Href="@($"/Import/{Account.AccountId}")" />
+            </MudTooltip>
+            <MudTooltip Text="Export">
+                <MudIconButton Icon="@Icons.Material.Filled.FileDownload" AriaLabel="Export" Color="Color.Primary"
+                               Href="@($"/Export/{Account.AccountId}")" />
+            </MudTooltip>
+            <MudTooltip Text="Manage">
+                <MudIconButton Icon="@Icons.Material.Filled.Settings" AriaLabel="Manage" Color="Color.Primary"
+                               Href="@($"/ManageAccount/{Account.AccountId}")" />
+            </MudTooltip>
+            <MudTooltip Text="Stock prices">
+                <MudIconButton Icon="@Icons.Material.Filled.ShowChart" AriaLabel="Stock prices" Color="Color.Primary"
+                               Href="/StockPrices" />
+            </MudTooltip>
         </ActionButtons>
         <AddEntryOverlay>
             <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick=ShowOverlay
@@ -37,7 +54,8 @@
             {
                 @foreach (var entry in filteredEntries)
                 {
-                    <StockAccountDetailsRow InvestmentAccount=@Account InvestmentEntry=entry />
+                    <StockAccountDetailsRow @key="entry.EntryId" InvestmentAccount=@Account InvestmentEntry=entry
+                                            ResolvedPrice="GetResolvedPrice(entry)" UnrealizedGainLoss="GetUnrealizedForEntry(entry)" />
                 }
             }
         </Entries>
@@ -58,12 +76,49 @@
                         <AccountBalanceChangePanel BalanceChange="@_balanceChange.Value" Currency="@_currency" />
                     }
 
+                    @if (_unrealizedAccount is not null)
+                    {
+                        <MudPaper Class="pa-3" Elevation="1">
+                            <MudText Typo="Typo.caption" Color="Color.Default">Unrealized gain/loss</MudText>
+                            <MudText Typo="Typo.h6"
+                                     Color="@(_unrealizedAccount.UnrealizedGainLoss >= 0 ? Color.Success : Color.Error)">
+                                @_unrealizedAccount.UnrealizedGainLoss.ToString("0.00") @_currency
+                            </MudText>
+                            <MudText Typo="Typo.body2"
+                                     Color="@(_unrealizedAccount.UnrealizedGainLoss >= 0 ? Color.Success : Color.Error)">
+                                @_unrealizedAccount.UnrealizedGainLossPercent.ToString("0.00")%
+                            </MudText>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
+                                <MudTooltip Text="Base (amount spent)">
+                                    <MudText Typo="Typo.caption" Color="Color.Default">
+                                        @_unrealizedAccount.CostBasis.ToString("0.00") @_currency
+                                    </MudText>
+                                </MudTooltip>
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Color="Color.Default" />
+                                <MudTooltip Text="Current valuation">
+                                    <MudText Typo="Typo.caption" Color="Color.Default">
+                                        @_unrealizedAccount.CurrentValue.ToString("0.00") @_currency
+                                    </MudText>
+                                </MudTooltip>
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Default">
+                                As of @_unrealizedAccount.AsOfDate.ToLocalTime().ToString("dd-MM-yyyy HH:mm")
+                            </MudText>
+                            @if (_unrealizedAccount.ExcludedInstrumentsCount > 0)
+                            {
+                                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                                    @_unrealizedAccount.ExcludedInstrumentsCount instrument(s) excluded due to missing prices.
+                                </MudAlert>
+                            }
+                        </MudPaper>
+                    }
+
                     @if (_top5 is not null && _top5.Any())
                     {
                         <AccountTopBottomList Title="Top 5" Items="_top5 ?? []" ValueColor="Color.Success"
                                               ItemTitle="@(item => item.Item1.Ticker)"
                                               ItemValue="@(item => $"{item.Item2.ToString("0.00")} {_currency}")"
-                                              ItemDate="@(item => item.Item1.PostingDate.ToLocalTime().ToString("yyyy-MM-dd"))" />
+                                              ItemDate="@(item => item.Item1.PostingDate.ToLocalTime().ToString("dd-MM-yyyy"))" />
                     }
 
                     @if (_bottom5 is not null && _bottom5.Any())
@@ -71,7 +126,7 @@
                         <AccountTopBottomList Title="Bottom 5" Items="_bottom5 ?? []" ValueColor="Color.Error"
                                               ItemTitle="@(item => item.Item1.Ticker)"
                                               ItemValue="@(item => $"{item.Item2.ToString("0.00")} {_currency}")"
-                                              ItemDate="@(item => item.Item1.PostingDate.ToLocalTime().ToString("yyyy-MM-dd"))" />
+                                              ItemDate="@(item => item.Item1.PostingDate.ToLocalTime().ToString("dd-MM-yyyy"))" />
                     }
                 </MudStack>
             </MudPaper>
@@ -82,7 +137,7 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
 {
     <AddStockEntry InvestmentAccount=Account ActionCompleted="HideOverlay" Tickers=@_availableStocks>
         <CustomButton>
-            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.Name}")">
+            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"/Import/{Account.AccountId}")">
                 Import
             </MudButton>
         </CustomButton>

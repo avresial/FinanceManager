@@ -1,6 +1,9 @@
 ﻿using FinanceManager.Components.Helpers;
+using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Stocks;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;
@@ -22,7 +25,7 @@ public class StockPriceHttpClient(HttpClient httpClient, ILogger<StockPriceHttpC
         if (httpClient is null) return default;
         try
         {
-            var result = await httpClient.GetFromJsonAsync<StockPrice?>($"{httpClient.BaseAddress}api/StockPrice/get-stock-price?ticker={ticker.ToUpper()}&currencyId={currencyId}&date={date.ToRfc3339()}&step=1");
+            var result = await httpClient.GetFromJsonAsync<StockPrice?>($"{httpClient.BaseAddress}api/StockPrice/get-stock-price?ticker={ticker.ToUpper()}&currencyId={currencyId}&date={date.ToRfc3339()}");
 
             if (result is not null) return result;
         }
@@ -34,13 +37,13 @@ public class StockPriceHttpClient(HttpClient httpClient, ILogger<StockPriceHttpC
         return default;
 
     }
-    public async Task<IEnumerable<StockPrice>> GetStockPrices(string ticker, DateTime start, DateTime end, TimeSpan step)
+    public async Task<IEnumerable<StockPrice>> GetStockPrices(string ticker, int currencyId, DateTime start, DateTime end, TimeSpan step)
     {
         if (httpClient is null) return [];
 
         try
         {
-            var result = await httpClient.GetFromJsonAsync<IEnumerable<StockPrice>>($"{httpClient.BaseAddress}api/StockPrice/get-stock-prices?ticker={ticker.ToUpper()}&start={start.ToRfc3339()}&end={end.ToRfc3339()}&step={step.Ticks}");
+            var result = await httpClient.GetFromJsonAsync<IEnumerable<StockPrice>>($"{httpClient.BaseAddress}api/StockPrice/get-stock-prices?ticker={ticker.ToUpper()}&currencyId={currencyId}&start={start.ToRfc3339()}&end={end.ToRfc3339()}&step={step.Ticks}");
             if (result is not null) return result;
         }
         catch (Exception ex)
@@ -114,5 +117,26 @@ public class StockPriceHttpClient(HttpClient httpClient, ILogger<StockPriceHttpC
             logger?.LogError(ex, ex.Message);
             return false;
         }
+    }
+
+    public async Task<StockPriceBulkImportResultDto?> BulkImportClosePrices(IBrowserFile file, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+
+        using var fileStream = file.OpenReadStream(maxAllowedSize: 30 * 1024 * 1024, cancellationToken: cancellationToken);
+        using var streamContent = new StreamContent(fileStream);
+        streamContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(file.ContentType) ? "text/csv" : file.ContentType);
+
+        using var formData = new MultipartFormDataContent();
+        formData.Add(streamContent, "file", file.Name);
+
+        var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/StockPrice/bulk-import-close-prices", formData, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException(string.IsNullOrWhiteSpace(error) ? "Bulk import failed." : error);
+        }
+
+        return await response.Content.ReadFromJsonAsync<StockPriceBulkImportResultDto>(cancellationToken: cancellationToken);
     }
 }

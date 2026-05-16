@@ -1,3 +1,4 @@
+using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Bonds;
@@ -12,13 +13,15 @@ namespace FinanceManager.Components.Components.FinancialAccounts.BondAccountComp
 
 public partial class BondAccountDetailsPageContent : ComponentBase
 {
+    private const int _minimumEntryCount = 50;
+
     private bool _isLoadingMore = false;
     private decimal? _balanceChange = null;
+    private UnrealizedGainLossAccountResult? _unrealizedAccount;
+    private Dictionary<string, UnrealizedGainLossInstrumentResult> _unrealizedByBondId = [];
     private bool _loadedAllData = false;
     private DateTime _dateStart;
     private DateTime _dateEnd = DateTime.UtcNow;
-    private DateTime? _oldestEntryDate;
-    private DateTime? _youngestEntryDate;
 
     private bool _addEntryVisibility;
 
@@ -43,6 +46,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
+    [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<BondAccountDetailsPageContent> Logger { get; set; }
@@ -74,28 +78,23 @@ public partial class BondAccountDetailsPageContent : ComponentBase
     public async Task UpdateInfo()
     {
         if (Account is null || Account.Entries is null) return;
-        await UpdateDates();
 
         var bondIds = Account.GetStoredBondsIds();
         foreach (var id in bondIds)
         {
-            if (!_bondDetails.Any(x => x.Id == id))
-            {
-                var bond = await BondDetailsHttpClient.GetById(id);
-                if (bond is not null) _bondDetails.Add(bond);
-            }
+            if (_bondDetails.Any(x => x.Id == id)) continue;
+
+            var bond = await BondDetailsHttpClient.GetById(id);
+            if (bond is not null)
+                _bondDetails.Add(bond);
         }
 
-        if (Account.Entries is not null && Account.Entries.Any() && _oldestEntryDate is not null)
-            _loadedAllData = (_oldestEntryDate >= Account.Entries.Last().PostingDate);
-
+        UpdateLoadStateFromAccount();
         await UpdateChartData();
+        await UpdateUnrealizedGainLoss();
 
-        if (ChartData is not null && ChartData.Count >= 2)
+        if (ChartData.Count >= 2)
             _balanceChange = ChartData.Last().Value - ChartData.First().Value;
-
-
-        if (Account.Entries is null) return;
 
         var orderedByPrice = Account.Entries
             .OrderByDescending(x => x.ValueChange)
@@ -103,7 +102,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase
             .ToList();
 
         _top5 = orderedByPrice.Take(5).ToList();
-        _bottom5 = orderedByPrice.Skip(Account.Entries.Count - 5).Take(5).OrderBy(x => x.Item2).ToList();
+        _bottom5 = orderedByPrice.Skip(Math.Max(Account.Entries.Count - 5, 0)).Take(5).OrderBy(x => x.Item2).ToList();
     }
 
     public async Task LoadMore()
@@ -114,22 +113,15 @@ public partial class BondAccountDetailsPageContent : ComponentBase
             if (_user is null) return;
 
             _isLoadingMore = true;
-            _dateStart = _dateStart.AddMonths(-1);
 
-            int entriesCountBeforeUpdate = 0;
-            if (Account.Entries is not null) entriesCountBeforeUpdate = Account.Entries.Count();
+            var loadResult = await RecentEntriesLoader.LoadMoreAsync(
+                Account,
+                _dateStart,
+                _dateEnd,
+                CreateLoaderOptions());
 
-            Account = await FinancialAccountService.GetAccount<BondAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
-
-            if (Account is not null && Account.Entries is not null && Account.Entries.Count == entriesCountBeforeUpdate)
-            {
-                if (Account.NextOlderEntries is not null && Account.NextOlderEntries.Any())
-                {
-                    _dateStart = Account.NextOlderEntries.First().Value.PostingDate;
-                    Account = await FinancialAccountService.GetAccount<BondAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
-                }
-            }
-
+            Account = loadResult.Account;
+            _dateStart = loadResult.DateStart;
 
             await UpdateChartData();
             await UpdateInfo();
@@ -139,7 +131,10 @@ public partial class BondAccountDetailsPageContent : ComponentBase
             Logger.LogError(ex, "Error while loading more bond account details for account ID {AccountId}", AccountId);
             ErrorMessage = ex.Message;
         }
-        _isLoadingMore = false;
+        finally
+        {
+            _isLoadingMore = false;
+        }
     }
 
     protected override async Task OnInitializedAsync()
@@ -191,21 +186,15 @@ public partial class BondAccountDetailsPageContent : ComponentBase
     {
         try
         {
-            var accounts = await FinancialAccountService.GetAvailableAccounts();
-            if (accounts.ContainsKey(AccountId))
-            {
-                var accountType = accounts[AccountId];
-                if (accountType == typeof(BondAccount))
-                {
-                    await UpdateDates();
-                    if (_user is not null)
-                    {
-                        Account = await FinancialAccountService.GetAccount<BondAccount>(_user.UserId, AccountId, _dateStart, DateTime.UtcNow);
-                        if (Account is not null && Account.Entries is not null)
-                            await UpdateInfo();
-                    }
-                }
-            }
+            if (_user is null) return;
+
+            var requestedDateStart = _dateStart;
+            _dateEnd = DateTime.UtcNow;
+            Account = await FinancialAccountService.GetAccount<BondAccount>(_user.UserId, AccountId, requestedDateStart, _dateEnd, _minimumEntryCount);
+            UpdateDateStartFromLoadedEntries(requestedDateStart);
+
+            if (Account?.Entries is not null)
+                await UpdateInfo();
         }
         catch (Exception ex)
         {
@@ -223,14 +212,35 @@ public partial class BondAccountDetailsPageContent : ComponentBase
         ChartData.AddRange(await MoneyFlowHttpClient.GetClosingBalance(_user.UserId, _currency, _dateStart, _dateEnd, [AccountId]));
     }
 
-    private async Task UpdateDates()
+    private void UpdateLoadStateFromAccount()
     {
-        _oldestEntryDate = await FinancialAccountService.GetStartDate(AccountId);
-        _youngestEntryDate = await FinancialAccountService.GetEndDate(AccountId);
+        if (Account is null)
+        {
+            _loadedAllData = false;
+            return;
+        }
 
-        if (_youngestEntryDate is not null && _dateStart > _youngestEntryDate)
-            _dateStart = new DateTime(_youngestEntryDate.Value.Date.Year, _youngestEntryDate.Value.Date.Month, 1);
+        _loadedAllData = !Account.NextOlderEntries.Any();
     }
+
+    private async Task UpdateUnrealizedGainLoss()
+    {
+        _unrealizedAccount = null;
+        _unrealizedByBondId.Clear();
+
+        if (_user is null || Account is null) return;
+
+        var asOfDate = DateTime.UtcNow;
+        var accountResults = await AssetsHttpClient.GetUnrealizedGainLossPerAccount(_user.UserId, _currency, asOfDate);
+        _unrealizedAccount = accountResults.FirstOrDefault(x => x.AccountId == AccountId);
+
+        var instrumentResults = await AssetsHttpClient.GetUnrealizedGainLossPerInstrument(_user.UserId, _currency, asOfDate);
+        foreach (var result in instrumentResults.Where(x => x.AccountId == AccountId))
+            _unrealizedByBondId[result.InstrumentId] = result;
+    }
+
+    private UnrealizedGainLossInstrumentResult? GetUnrealizedForBond(int bondDetailsId) =>
+        _unrealizedByBondId.TryGetValue(bondDetailsId.ToString(), out var result) ? result : null;
 
     private async void AccountDataSynchronizationService_AccountsChanged()
     {
@@ -266,4 +276,23 @@ public partial class BondAccountDetailsPageContent : ComponentBase
         _filterFrom = filter.From;
         _filterTo = filter.To;
     }
+
+    private void UpdateDateStartFromLoadedEntries(DateTime requestedDateStart)
+    {
+        var oldestLoadedEntryDate = Account?.Entries.LastOrDefault()?.PostingDate;
+        _dateStart = oldestLoadedEntryDate is not null && oldestLoadedEntryDate.Value < requestedDateStart
+            ? oldestLoadedEntryDate.Value
+            : requestedDateStart;
+    }
+
+    private RecentEntriesLoaderOptions<BondAccount> CreateLoaderOptions() =>
+        new()
+        {
+            LoadByDateRangeAsync = (dateStart, dateEnd) => _user is null
+                ? Task.FromResult<BondAccount?>(null)
+                : FinancialAccountService.GetAccount<BondAccount>(_user.UserId, AccountId, dateStart, dateEnd),
+            GetEntryCount = account => account.Entries.Count,
+            GetNextOlderReferenceDate = account => account.NextOlderEntries.Values.Select(x => (DateTime?)x.PostingDate).Max(),
+            HasOlderEntries = account => account.NextOlderEntries.Any(),
+        };
 }

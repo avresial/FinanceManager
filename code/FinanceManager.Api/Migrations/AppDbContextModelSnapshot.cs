@@ -17,7 +17,7 @@ namespace FinanceManager.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.1")
+                .HasAnnotation("ProductVersion", "10.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -126,6 +126,12 @@ namespace FinanceManager.Api.Migrations
 
                     b.Property<int>("Type")
                         .HasColumnType("integer");
+
+                    b.Property<decimal>("UnitValue")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasDefaultValue(100m);
 
                     b.HasKey("Id");
 
@@ -475,7 +481,7 @@ namespace FinanceManager.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("StockTicker");
+                    b.HasIndex("StockTicker", "Date");
 
                     b.ToTable("StockPrices");
                 });

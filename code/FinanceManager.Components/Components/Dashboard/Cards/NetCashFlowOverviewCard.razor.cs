@@ -1,7 +1,7 @@
 using FinanceManager.Components.Components.SharedComponents.Charts;
-using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Models;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -20,7 +20,7 @@ public partial class NetCashFlowOverviewCard
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
     [Inject] public required ILogger<NetCashFlowOverviewCard> Logger { get; set; }
-    [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
+    [Inject] public required DashboardOverviewCardsCacheService DashboardOverviewCardsCacheService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
@@ -40,10 +40,18 @@ public partial class NetCashFlowOverviewCard
 
         try
         {
-            var netCashFlow = await MoneyFlowHttpClient.GetNetCashFlow(user.UserId, DefaultCurrency.PLN, StartDateTime.Date, EndDateTime);
-            var orderedSeries = netCashFlow.OrderBy(x => x.DateTime).ToList();
+            var context = new DashboardOverviewCardsRefreshContext
+            {
+                UserId = user.UserId,
+                CurrencyId = _currency.Id,
+                StartDateTime = StartDateTime,
+                EndDateTime = EndDateTime,
+            };
 
-            _totalNetCashFlow = Math.Round(orderedSeries.Sum(x => x.Value), 0);
+            var snapshot = await DashboardOverviewCardsCacheService.GetSnapshotAsync(context);
+            var orderedSeries = snapshot.NetCashFlowSeries.OrderBy(x => x.DateTime).ToList();
+
+            _totalNetCashFlow = Math.Round(orderedSeries.Sum(x => x.Value), 2);
             _series.Add(orderedSeries
                 .Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), Math.Round(x.Value, 2)))
                 .ToList());

@@ -4,14 +4,7 @@
 
 <MudContainer>
     <MudGrid Spacing="3">
-        <MudItem xs="12" lg="2">
-            <MudStack Spacing="2">
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="100%" Height="36px" />
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="100%" Height="36px" />
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="100%" Height="36px" />
-            </MudStack>
-        </MudItem>
-        <MudItem xs="12" lg="7">
+        <MudItem xs="12" lg="9">
             <MudGrid Spacing="0">
                 <MudItem xs="12">
                     <MudExpansionPanels Elevation="0" MultiExpansion>
@@ -32,7 +25,17 @@
         </MudItem>
         <MudItem xs="0" lg="3">
             <MudStack Spacing="2">
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Height="24px" Width="100%" />
+                <MudToolBar Dense="true">
+                    <MudSpacer />
+                    <MudSkeleton SkeletonType="SkeletonType.Circle" Animation="Animation.Wave" Width="40px"
+                                 Height="40px" />
+                    <MudSkeleton SkeletonType="SkeletonType.Circle" Animation="Animation.Wave" Width="40px"
+                                 Height="40px" />
+                    <MudSkeleton SkeletonType="SkeletonType.Circle" Animation="Animation.Wave" Width="40px"
+                                 Height="40px" />
+                </MudToolBar>
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Height="24px"
+                             Width="100%" />
                 <MudSkeleton SkeletonType="SkeletonType.Rectangle" Width="100%" Height="250px" />
                 <MudSkeleton SkeletonType="SkeletonType.Rectangle" Width="100%" Height="250px" />
             </MudStack>

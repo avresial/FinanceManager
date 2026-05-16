@@ -1,3 +1,4 @@
+using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
@@ -13,13 +14,13 @@ namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccount
 
 public partial class CurrencyAccountDetailsPageContent : ComponentBase
 {
+    private const int _minimumEntryCount = 50;
+
     private bool _isLoadingMore = false;
     private decimal _balanceChange = 100;
     private bool _loadedAllData = false;
     private DateTime _dateStart;
     private DateTime _dateEnd = DateTime.UtcNow;
-    private DateTime? _oldestEntryDate;
-    private DateTime? _youngestEntryDate;
 
     private bool _addEntryVisibility;
     private List<CurrencyAccountEntry>? _top5;
@@ -29,7 +30,6 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
 
     private decimal? _filterFrom;
     private decimal? _filterTo;
-
 
     public bool IsLoading = false;
     public CurrencyAccount? Account { get; set; }
@@ -51,26 +51,25 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
         StateHasChanged();
         await Task.CompletedTask;
     }
+
     public async Task HideOverlay()
     {
         _addEntryVisibility = false;
         StateHasChanged();
         await Task.CompletedTask;
     }
+
     public async Task UpdateInfo()
     {
         if (Account is null || Account.Entries is null) return;
 
-        await UpdateDates();
+        UpdateLoadStateFromAccount();
 
-        if (Account.Entries is not null && Account.Entries.Any() && _oldestEntryDate is not null)
-            _loadedAllData = (_oldestEntryDate >= Account.Entries.Last().PostingDate);
+        if (Account.Entries.Count == 0) return;
 
-        if (Account.Entries is null || Account.Entries.Count == 0) return;
-
-        var EntriesOrdered = Account.Entries.OrderByDescending(x => x.ValueChange);
-        _top5 = EntriesOrdered.Where(x => x.ValueChange > 0).Take(5).ToList();
-        _bottom5 = EntriesOrdered.Skip(Account.Entries.Count - 5)
+        var entriesOrdered = Account.Entries.OrderByDescending(x => x.ValueChange);
+        _top5 = entriesOrdered.Where(x => x.ValueChange > 0).Take(5).ToList();
+        _bottom5 = entriesOrdered.Skip(Math.Max(Account.Entries.Count - 5, 0))
                                 .Where(x => x.ValueChange < 0)
                                 .Take(5)
                                 .OrderBy(x => x.ValueChange)
@@ -79,33 +78,33 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
         _balanceChange = Account.Entries.First().Value - Account.Entries.Last().Value;
 
         await UpdateChartData();
-
     }
+
     public async Task LoadMore()
     {
         if (Account is null || Account.Start is null) return;
         if (_user is null) return;
 
         _isLoadingMore = true;
-        _dateStart = _dateStart.AddMonths(-1);
 
-        int entriesCountBeforeUpdate = 0;
-        if (Account.Entries is not null) entriesCountBeforeUpdate = Account.Entries.Count();
-
-        Account = await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
-
-        if (Account is not null && Account.Entries is not null && Account.Entries.Count == entriesCountBeforeUpdate)
+        try
         {
-            if (Account.NextOlderEntry is not null)
-            {
-                _dateStart = Account.NextOlderEntry.PostingDate;
-                Account = await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
-            }
-        }
-        await UpdateChartData();
+            var loadResult = await RecentEntriesLoader.LoadMoreAsync(
+                Account,
+                _dateStart,
+                _dateEnd,
+                CreateLoaderOptions());
 
-        await UpdateInfo();
-        _isLoadingMore = false;
+            Account = loadResult.Account;
+            _dateStart = loadResult.DateStart;
+
+            await UpdateChartData();
+            await UpdateInfo();
+        }
+        finally
+        {
+            _isLoadingMore = false;
+        }
     }
 
     protected override async Task OnInitializedAsync()
@@ -137,6 +136,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
             Logger.LogError(ex, "Error during initialization of CurrencyAccountDetailsPageContent for account ID {AccountId}", AccountId);
         }
     }
+
     protected override async Task OnParametersSetAsync()
     {
         try
@@ -160,19 +160,15 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
     {
         try
         {
-            var accounts = await FinancialAccountService.GetAvailableAccounts();
-            if (accounts.TryGetValue(AccountId, out Type? accountType))
-            {
-                if (accountType != typeof(CurrencyAccount)) return;
+            if (_user is null) return;
 
-                await UpdateDates();
-                if (_user is not null)
-                {
-                    Account = await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, _dateStart, DateTime.UtcNow);
-                    if (Account is not null && Account.Entries is not null)
-                        await UpdateInfo();
-                }
-            }
+            var requestedDateStart = _dateStart;
+            _dateEnd = DateTime.UtcNow;
+            Account = await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, requestedDateStart, _dateEnd, _minimumEntryCount);
+            UpdateDateStartFromLoadedEntries(requestedDateStart);
+
+            if (Account?.Entries is not null)
+                await UpdateInfo();
         }
         catch (Exception ex)
         {
@@ -180,6 +176,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
             Logger.LogError(ex, "Error while loading currency account details for account ID {AccountId}", AccountId);
         }
     }
+
     private async Task UpdateChartData()
     {
         ChartData.Clear();
@@ -188,16 +185,19 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
         _currency = SettingsService.GetCurrency();
         var chartData = await MoneyFlowHttpClient.GetClosingBalance(_user.UserId, _currency, _dateStart, _dateEnd, [AccountId]);
         ChartData.AddRange(chartData.SkipWhile(x => x.Value == 0));
-
     }
-    private async Task UpdateDates()
+
+    private void UpdateLoadStateFromAccount()
     {
-        _oldestEntryDate = await FinancialAccountService.GetStartDate(AccountId);
-        _youngestEntryDate = await FinancialAccountService.GetEndDate(AccountId);
+        if (Account is null)
+        {
+            _loadedAllData = false;
+            return;
+        }
 
-        if (_youngestEntryDate is not null && _dateStart > _youngestEntryDate)
-            _dateStart = new DateTime(_youngestEntryDate.Value.Date.Year, _youngestEntryDate.Value.Date.Month, 1);
+        _loadedAllData = Account.NextOlderEntry is null;
     }
+
     private void AccountDataSynchronizationService_AccountsChanged()
     {
         Task.Run(async () =>
@@ -228,4 +228,23 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
         _filterFrom = filter.From;
         _filterTo = filter.To;
     }
+
+    private void UpdateDateStartFromLoadedEntries(DateTime requestedDateStart)
+    {
+        var oldestLoadedEntryDate = Account?.Entries.LastOrDefault()?.PostingDate;
+        _dateStart = oldestLoadedEntryDate is not null && oldestLoadedEntryDate.Value < requestedDateStart
+            ? oldestLoadedEntryDate.Value
+            : requestedDateStart;
+    }
+
+    private RecentEntriesLoaderOptions<CurrencyAccount> CreateLoaderOptions() =>
+        new()
+        {
+            LoadByDateRangeAsync = (dateStart, dateEnd) => _user is null
+                ? Task.FromResult<CurrencyAccount?>(null)
+                : FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, dateStart, dateEnd),
+            GetEntryCount = account => account.Entries.Count,
+            GetNextOlderReferenceDate = account => account.NextOlderEntry?.PostingDate,
+            HasOlderEntries = account => account.NextOlderEntry is not null,
+        };
 }

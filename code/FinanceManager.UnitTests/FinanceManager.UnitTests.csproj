@@ -34,13 +34,12 @@
 		<PackageReference Include="xunit.runner.visualstudio">
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
-		<PackageReference Include="xunit.v3" />
+		<PackageReference Include="xunit.v3.mtp-v2" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\FinanceManager.Api\FinanceManager.Api.csproj" />
-		<ProjectReference Include="..\FinanceManager.Application\FinanceManager.Application.csproj" />
-		<ProjectReference Include="..\FinanceManager.Infrastructure\FinanceManager.Infrastructure.csproj" />
+		<ProjectReference Include="..\FinanceManager.Components\FinanceManager.Components.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

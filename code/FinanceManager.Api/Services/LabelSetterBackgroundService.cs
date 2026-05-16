@@ -20,9 +20,11 @@ public sealed class LabelSetterBackgroundService(
             if (request.EntryIds.Count == 0) continue;
 
             logger.LogDebug(
-                "Processing label assignment for account {AccountId} with {Count} entries.",
+                "Processing label assignment for account {AccountId} with {Count} entries. Entry IDs range: {FirstEntryId} - {LastEntryId}",
                 request.AccountId,
-                request.EntryIds.Count);
+                request.EntryIds.Count,
+                request.EntryIds.First(),
+                request.EntryIds.Last());
 
             try
             {
@@ -56,11 +58,13 @@ public sealed class LabelSetterBackgroundService(
                     totalProcessed += entryIdBatch.Length;
 
                     logger.LogInformation(
-                        "Batch {BatchNumber}/{TotalBatches} started for AccountId {AccountId}. Processing {BatchSize} entries.",
+                        "Batch {BatchNumber}/{TotalBatches} started for AccountId {AccountId}. Processing {BatchSize} entries, with Entry IDs range: {FirstEntryId} - {LastEntryId}.",
                         currentBatchNumber,
                         batches.Count,
                         request.AccountId,
-                        entryIdBatch.Length);
+                        entryIdBatch.Length,
+                        entryIdBatch.First(),
+                        entryIdBatch.Last());
 
                     // Get AI label assignments for this batch
                     var assignments = await labelSetterAiService.AssignLabels(entryIdBatch, stoppingToken);

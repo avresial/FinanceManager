@@ -23,7 +23,8 @@
         }
         else if (_insights.Any())
         {
-            <MudCarousel TData="FinancialInsight" Class="w-100" AutoCycle         AutoCycleTime="@TimeSpan.FromMinutes(2)">
+            <MudCarousel TData="FinancialInsight" Class="w-100" AutoCycle=false ShowArrows=true EnableSwipeGesture
+                         ShowBullets=false>
                 @foreach (var insight in _insights)
                 {
                     <MudCarouselItem Transition="Transition.Fade">

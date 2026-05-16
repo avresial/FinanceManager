@@ -38,22 +38,46 @@ internal class StockBalanceService(IFinancialAccountRepository financialAccountR
 
         Dictionary<DateTime, decimal> prices = [];
         var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
+        List<StockAccount> accounts = [];
 
         await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, start, end))
         {
             if (account is null) continue;
             if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
 
+            accounts.Add(account);
+        }
+
+        Dictionary<string, IReadOnlyDictionary<DateTime, decimal>> pricesByTicker = new(StringComparer.OrdinalIgnoreCase);
+        var tickers = accounts.SelectMany(x => x.GetStoredTickers()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (tickers.Count > 0)
+        {
+            var preloadTasks = tickers.ToDictionary(
+                ticker => ticker,
+                ticker => stockPriceProvider.GetPricePerUnitSeriesAsync(ticker, currency, start.Date, end.Date),
+                StringComparer.OrdinalIgnoreCase);
+
+            await Task.WhenAll(preloadTasks.Values);
+            foreach (var preloadTask in preloadTasks)
+                pricesByTicker[preloadTask.Key] = await preloadTask.Value;
+        }
+
+        foreach (var account in accounts)
+        {
+            var storedTickers = account.GetStoredTickers();
+
             for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
             {
                 if (!prices.ContainsKey(date)) prices[date] = 0;
 
-                foreach (var ticker in account.GetStoredTickers())
+                foreach (var ticker in storedTickers)
                 {
                     var entry = account.GetThisOrNextOlder(date, ticker);
                     if (entry is null) continue;
 
-                    var pricePerUnit = await stockPriceProvider.GetPricePerUnitAsync(ticker, currency, date);
+                    if (!pricesByTicker.TryGetValue(ticker, out var tickerPrices)) continue;
+                    if (!tickerPrices.TryGetValue(date, out var pricePerUnit)) continue;
+
                     prices[date] += entry.Value * pricePerUnit;
                 }
             }

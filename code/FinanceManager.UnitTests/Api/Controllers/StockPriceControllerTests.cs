@@ -19,7 +19,9 @@ public class StockPriceControllerTests
     private readonly Mock<ICurrencyExchangeService> _currencyExchangeService = new();
     private readonly Mock<ICurrencyRepository> _currencyRepository = new();
     private readonly Mock<IStockMarketService> _stockMarketService = new();
+    private readonly Mock<IStockPriceProvider> _stockPriceProvider = new();
     private readonly Mock<IStockDetailsRepository> _stockDetailsRepository = new();
+    private readonly Mock<IStockPriceBulkImportService> _stockPriceBulkImportService = new();
     private readonly StockPriceController _controller;
 
     public StockPriceControllerTests()
@@ -29,7 +31,39 @@ public class StockPriceControllerTests
             _currencyExchangeService.Object,
             _currencyRepository.Object,
             _stockMarketService.Object,
-            _stockDetailsRepository.Object);
+                _stockPriceProvider.Object,
+                _stockDetailsRepository.Object,
+                _stockPriceBulkImportService.Object);
+    }
+
+    [Fact]
+    public async Task GetStockPrice_ReturnsLatestOlderPrice_WhenExactDateMissing()
+    {
+        // Arrange
+        var requestedDate = new DateTime(2024, 12, 20, 9, 0, 45, DateTimeKind.Utc);
+        var storedDate = requestedDate.AddDays(-1).Date;
+        var storedPrice = new StockPrice
+        {
+            Ticker = "CSPX.LON",
+            PricePerUnit = 747.18m,
+            Currency = DefaultCurrency.PLN,
+            Date = storedDate
+        };
+
+        _currencyRepository.Setup(repo => repo.GetCurrency(DefaultCurrency.PLN.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DefaultCurrency.PLN);
+        _stockPriceRepository.Setup(repo => repo.GetThisOrNextOlder("CSPX.LON", requestedDate))
+            .ReturnsAsync(storedPrice);
+
+        // Act
+        var result = await _controller.GetStockPrice("CSPX.LON", DefaultCurrency.PLN.Id, requestedDate, TestContext.Current.CancellationToken);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var value = Assert.IsType<StockPrice>(okResult.Value);
+        Assert.Equal(storedDate, value.Date);
+        Assert.Equal(747.18m, value.PricePerUnit);
+        Assert.Equal(DefaultCurrency.PLN.Symbol, value.Currency.Symbol);
     }
 
     [Fact]
@@ -216,5 +250,45 @@ public class StockPriceControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         var value = Assert.IsType<StockDetails>(okResult.Value);
         Assert.Equal("CSPX.LON", value.Ticker);
+    }
+
+    [Fact]
+    public async Task GetStockPrices_WithDuplicateDatesAndStep_ReturnsLatestPricePerDay()
+    {
+        // Arrange
+        var day = new DateTime(2026, 2, 3, 0, 0, 0, DateTimeKind.Utc);
+        var prices = new List<StockPrice>
+        {
+            new()
+            {
+                Ticker = "AAPL",
+                PricePerUnit = 101m,
+                Currency = DefaultCurrency.PLN,
+                Date = day.AddHours(10)
+            },
+            new()
+            {
+                Ticker = "AAPL",
+                PricePerUnit = 103m,
+                Currency = DefaultCurrency.PLN,
+                Date = day.AddHours(15)
+            }
+        };
+
+        _currencyRepository.Setup(repo => repo.GetCurrency(DefaultCurrency.PLN.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DefaultCurrency.PLN);
+        _stockMarketService.Setup(service => service.GetStockPrices("AAPL", day, day.AddHours(23), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(prices);
+
+        // Act
+        var result = await _controller.GetStockPrices("AAPL", DefaultCurrency.PLN.Id, day, day.AddHours(23), TimeSpan.FromDays(1).Ticks,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var value = Assert.IsType<List<StockPrice>>(okResult.Value);
+        var price = Assert.Single(value);
+        Assert.Equal(103m, price.PricePerUnit);
+        Assert.Equal(day.AddHours(15), price.Date);
     }
 }

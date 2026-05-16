@@ -13,7 +13,8 @@ namespace FinanceManager.Api.Controllers;
 [ApiController]
 [Tags("Stock Prices")]
 public partial class StockPriceController(IStockPriceRepository stockPriceRepository, ICurrencyExchangeService currencyExchangeService,
-ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, IStockDetailsRepository stockDetailsRepository) : ControllerBase
+ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, IStockPriceProvider stockPriceProvider, IStockDetailsRepository stockDetailsRepository,
+IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
 {
 
     [Authorize]
@@ -59,13 +60,32 @@ ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, 
         if (string.IsNullOrWhiteSpace(ticker) || date == default)
             return BadRequest("Invalid input parameters.");
 
+        var normalizedTicker = ticker.Trim().ToUpperInvariant();
+
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null)
             return NotFound("Currency not found.");
 
-        var stockPrices = await stockMarketService.GetStockPrices(ticker, date, date, cancellationToken);
-        if (stockPrices.Count == 0) return NotFound("Stock price not found.");
-        var stockPrice = stockPrices.First(sp => sp.Date.Date == date.Date);
+        var stockPrice = await stockPriceRepository.GetThisOrNextOlder(normalizedTicker, date);
+        if (stockPrice is null)
+        {
+            var fetchedPrice = await stockPriceProvider.GetPricePerUnitAsync(normalizedTicker, currency, date);
+            if (fetchedPrice <= 0)
+                return NotFound("Stock price not found.");
+
+            stockPrice = await stockPriceRepository.GetThisOrNextOlder(normalizedTicker, date);
+            if (stockPrice is null)
+            {
+                return Ok(new StockPrice
+                {
+                    Ticker = normalizedTicker,
+                    PricePerUnit = fetchedPrice,
+                    Currency = currency,
+                    Date = date.Date
+                });
+            }
+        }
+
         if (currency == stockPrice.Currency)
             return Ok(stockPrice);
 
@@ -83,29 +103,68 @@ ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, 
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<StockPrice>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetStockPrices([FromQuery] string ticker, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long step = default, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetStockPrices([FromQuery] string ticker, [FromQuery] int currencyId, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long step = default, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(ticker) || start == default || end == default)
             return BadRequest("Invalid input parameters.");
+
+        var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
+        if (currency is null)
+            return NotFound("Currency not found.");
 
         var stockPrices = await stockMarketService.GetStockPrices(ticker, start, end, cancellationToken);
 
         if (stockPrices.Count == 0)
             return NotFound("Stock prices not found.");
 
+        Dictionary<DateTime, decimal?> ratesByDate = [];
+        var sourceCurrency = stockPrices.First().Currency;
+        if (sourceCurrency != currency)
+        {
+            var rangeRates = await currencyExchangeService.GetExchangeRateAsync(sourceCurrency, currency, start, end);
+            ratesByDate = rangeRates
+                .GroupBy(x => x.Date.Date)
+                .ToDictionary(x => x.Key, x => x.Last().Value);
+        }
+
+        List<StockPrice> result = [];
+        foreach (var price in stockPrices)
+        {
+            if (price.Currency == currency)
+                result.Add(price);
+            else
+            {
+                if (ratesByDate.TryGetValue(price.Date.Date, out var exchangeRate)
+                    && exchangeRate is not null)
+                {
+                    var convertedPrice = new StockPrice
+                    {
+                        Ticker = price.Ticker,
+                        PricePerUnit = price.PricePerUnit * exchangeRate.Value,
+                        Currency = currency,
+                        Date = price.Date
+                    };
+                    result.Add(convertedPrice);
+                }
+            }
+        }
+
         if (step > 0)
         {
+            var resultByDate = result
+                .GroupBy(sp => sp.Date.Date)
+                .ToDictionary(group => group.Key, group => group.OrderBy(sp => sp.Date).Last());
+
             List<StockPrice> filteredPrices = [];
             for (var i = start; i <= end; i = i.Add(new TimeSpan(step)))
             {
-                var priceOnDate = stockPrices.FirstOrDefault(sp => sp.Date.Date == i.Date);
-                if (priceOnDate is not null)
+                if (resultByDate.TryGetValue(i.Date, out var priceOnDate))
                     filteredPrices.Add(priceOnDate);
             }
             return Ok(filteredPrices);
         }
 
-        return Ok(stockPrices);
+        return Ok(result);
     }
 
     [HttpGet("search-ticker")]
@@ -246,5 +305,31 @@ ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, 
             return NotFound();
 
         return NoContent();
+    }
+
+    [HttpPost("bulk-import-close-prices")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockPriceBulkImportResultDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> BulkImportClosePrices([FromForm] IFormFile? file, CancellationToken cancellationToken = default)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest("CSV file is required.");
+
+        if (!Path.GetExtension(file.FileName).Equals(".csv", StringComparison.OrdinalIgnoreCase))
+            return BadRequest("Only .csv files are supported.");
+
+        await using var stream = file.OpenReadStream();
+        StockPriceBulkImportResultDto result;
+        try
+        {
+            result = await stockPriceBulkImportService.ImportClosePrices(stream, cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+
+        return Ok(result);
     }
 }

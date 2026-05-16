@@ -1,0 +1,66 @@
+@page "/Export/{AccountId:int}"
+@using FinanceManager.Domain.Entities.Bonds
+@using FinanceManager.Domain.Entities.FinancialAccounts.Currencies
+@using FinanceManager.Domain.Entities.Stocks
+
+@if (accountType is null && string.IsNullOrEmpty(ErrorMessage))
+{
+    <DisplaySpinner />
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Small" Class="mt-6">
+        <MudPaper Class="pa-4">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.h4">Export data</MudText>
+                <MudText Typo="Typo.subtitle1">@GetAccountTypeLabel() account</MudText>
+                @if (!string.IsNullOrWhiteSpace(AccountName))
+                {
+                    <MudText Typo="Typo.subtitle2">@AccountName</MudText>
+                }
+
+                @if (ErrorMessage != string.Empty)
+                {
+                    <MudAlert Severity="Severity.Error">@ErrorMessage</MudAlert>
+                }
+
+                @if (HasAvailableDateRange)
+                {
+                    <MudText Typo="Typo.body2">
+                        Available range: @_availableStartDate!.Value.ToString("dd-MM-yyyy") -
+                        @_availableEndDate!.Value.ToString("dd-MM-yyyy")
+                    </MudText>
+
+                    <MudDatePicker Label="Start date" @bind-Date="_startDate" MinDate="_availableStartDate"
+                                   MaxDate="_availableEndDate" />
+                    <MudDatePicker Label="End date" @bind-Date="_endDate" MinDate="_availableStartDate"
+                                   MaxDate="_availableEndDate" />
+                }
+                else if (string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <MudAlert Severity="Severity.Info">This account has no entries available to export.</MudAlert>
+                }
+
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!CanDownload || _isDownloading)"
+                               OnClick="DownloadSelected">
+                        @if (_isDownloading)
+                        {
+                            <MudProgressCircular Class="mr-2" Color="Color.Inherit" Size="Size.Small" Indeterminate="true" />
+                        }
+                        Export
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                               Disabled="@(!HasAvailableDateRange || _isDownloading)" OnClick="DownloadAll">
+                        Export all
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Text" Color="Color.Secondary" href="@($"/AccountDetails/{AccountId}")">
+                        Cancel
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+    </MudContainer>
+}

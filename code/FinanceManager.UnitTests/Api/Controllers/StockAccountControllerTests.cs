@@ -1,11 +1,14 @@
 using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.Commands.Account;
+using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Application.Services.Exports;
 using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Commands.Account;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
+using FinanceManager.Infrastructure.Dtos;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -28,7 +31,11 @@ public class StockAccountControllerTests
         _mockStockAccountRepository = new Mock<IAccountRepository<StockAccount>>();
         _mockStockAccountEntryRepository = new Mock<IStockAccountEntryRepository<StockAccountEntry>>();
         _mockStockAccountCsvExportService = new Mock<IAccountCsvExportService<StockAccountExportDto>>();
-        _controller = new StockAccountController(_mockStockAccountRepository.Object, _mockStockAccountEntryRepository.Object, _mockStockAccountCsvExportService.Object);
+        _controller = new StockAccountController(
+            _mockStockAccountRepository.Object,
+            _mockStockAccountEntryRepository.Object,
+            new StockEntryProvider(_mockStockAccountEntryRepository.Object),
+            _mockStockAccountCsvExportService.Object);
 
         // Mock user identity
         var user = new ClaimsPrincipal(new ClaimsIdentity(
@@ -208,5 +215,44 @@ public class StockAccountControllerTests
         Assert.Equal("text/csv", fileResult.ContentType);
         var content = System.Text.Encoding.UTF8.GetString(fileResult.FileContents);
         Assert.Equal(csvContent, content);
+    }
+
+    [Fact]
+    public async Task GetWithDateRange_BackfillsOlderEntriesUntilMinimumIsReached()
+    {
+        var accountId = 1;
+        var startDate = new DateTime(2026, 4, 1);
+        var endDate = new DateTime(2026, 4, 30);
+        var expandedStartDate = new DateTime(2026, 3, 15);
+        StockAccount account = new(TestUserId, accountId, "Test Account");
+        List<StockAccountEntry> initialEntries =
+        [
+            new(accountId, 2, new DateTime(2026, 4, 20), 10500m, 500m, "AAPL", InvestmentType.Stock),
+        ];
+        List<StockAccountEntry> expandedEntries =
+        [
+            new(accountId, 2, new DateTime(2026, 4, 20), 10500m, 500m, "AAPL", InvestmentType.Stock),
+            new(accountId, 1, expandedStartDate, 10000m, 10000m, "AAPL", InvestmentType.Stock),
+        ];
+
+        _mockStockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
+        _mockStockAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns(initialEntries.ToAsyncEnumerable());
+        _mockStockAccountEntryRepository
+            .Setup(repo => repo.GetNextOlder(accountId, new DateTime(2026, 4, 20)))
+            .ReturnsAsync(new Dictionary<string, StockAccountEntry> { ["AAPL"] = new(accountId, 1, expandedStartDate, 10000m, 10000m, "AAPL", InvestmentType.Stock) });
+        _mockStockAccountEntryRepository.Setup(repo => repo.Get(accountId, expandedStartDate, endDate)).Returns(expandedEntries.ToAsyncEnumerable());
+        _mockStockAccountEntryRepository
+            .Setup(repo => repo.GetNextOlder(accountId, expandedStartDate))
+            .ReturnsAsync(new Dictionary<string, StockAccountEntry>());
+        _mockStockAccountEntryRepository
+            .Setup(repo => repo.GetNextYounger(accountId, endDate))
+            .ReturnsAsync(new Dictionary<string, StockAccountEntry>());
+
+        var result = await _controller.Get(accountId, startDate, endDate, minimumEntryCount: 2);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnValue = Assert.IsType<StockAccountDto>(okResult.Value);
+        Assert.Equal(2, returnValue.Entries.Count());
+        Assert.Equal([2, 1], returnValue.Entries.Select(x => x.EntryId));
     }
 }

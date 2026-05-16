@@ -64,6 +64,7 @@ public class BondDetailsController(IBondDetailsRepository bondDetailsRepository,
 
         bond.Name = updateBondDetails.NameToUpdate;
         bond.Issuer = updateBondDetails.IssuerToUpdate;
+        bond.UnitValue = updateBondDetails.UnitValueToUpdate;
 
         if (!await bondDetailsRepository.UpdateAsync(bond, cancellationToken))
             return NotFound();

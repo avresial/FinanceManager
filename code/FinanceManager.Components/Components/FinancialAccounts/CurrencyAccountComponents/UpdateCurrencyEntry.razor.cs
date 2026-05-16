@@ -25,7 +25,7 @@ public partial class UpdateCurrencyEntry
     private decimal? _balanceChange = 0;
 
     private string _labelValue = "Nothing selected";
-    private IEnumerable<string> _selectedLabels = [];
+    private IReadOnlyCollection<string> _selectedLabels = [];
     private List<FinancialLabel> _possibleLabels = [];
 
     [Parameter] public Func<Task>? ActionCompleted { get; set; }

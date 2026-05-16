@@ -48,6 +48,12 @@ public class AssetsServiceTests
 
         mock.Setup(x => x.GetAssetsTimeSeries(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<InvestmentType>()))
             .ReturnsAsync([]);
+
+        mock.Setup(x => x.GetUnrealizedGainLossPerAccount(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([]);
+
+        mock.Setup(x => x.GetUnrealizedGainLossPerInstrument(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([]);
     }
     private static void SetupServiceReturnsPerAccount(Mock<IAssetsServiceTyped> mock, string name, decimal value)
     {
@@ -126,5 +132,75 @@ public class AssetsServiceTests
         // Assert
         Assert.Single(aggregated);
         Assert.Equal(10m, aggregated[0].Value);
+    }
+
+    [Fact]
+    public async Task GetAssetsTimeSeries_AggregatesSameDayValues_WithDifferentTimestamps()
+    {
+        // Arrange
+        var day = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var morning = day.AddHours(8);
+        var evening = day.AddHours(20);
+
+        _mockService1.Setup(x => x.GetAssetsTimeSeries(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([new TimeSeriesModel(morning, 10)]);
+        _mockService2.Setup(x => x.GetAssetsTimeSeries(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([new TimeSeriesModel(evening, 5)]);
+
+        // Act
+        var aggregated = await _assetsService.GetAssetsTimeSeries(1, DefaultCurrency.PLN, day, day.AddDays(1));
+
+        // Assert
+        Assert.Equal(2, aggregated.Count);
+        Assert.All(aggregated, point => Assert.Equal(15m, point.Value));
+        Assert.Contains(aggregated, point => point.DateTime == day.Date);
+        Assert.Contains(aggregated, point => point.DateTime == day.AddDays(1).Date);
+    }
+
+    [Fact]
+    public async Task GetAssetsTimeSeries_LongRange_UsesClosingBalancePerBucket_AfterSameDayAggregation()
+    {
+        // Arrange
+        var start = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var end = start.AddDays(95);
+        var firstDayMorning = start.AddHours(8);
+        var firstDayEvening = start.AddHours(20);
+        var laterInMonth = start.AddDays(30).AddHours(9);
+
+        _mockService1.Setup(x => x.GetAssetsTimeSeries(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([
+                new TimeSeriesModel(firstDayMorning, 10),
+                new TimeSeriesModel(laterInMonth, 20)
+            ]);
+        _mockService2.Setup(x => x.GetAssetsTimeSeries(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([new TimeSeriesModel(firstDayEvening, 5)]);
+
+        // Act
+        var aggregated = await _assetsService.GetAssetsTimeSeries(1, DefaultCurrency.PLN, start, end);
+
+        // Assert
+        var januaryBucket = aggregated.Single(x => x.DateTime == start.Date);
+        Assert.Equal(20m, januaryBucket.Value);
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLossPerAccount_MergesResultsFromAllTypedServices()
+    {
+        var asOfDate = new DateTime(2026, 3, 17, 0, 0, 0, DateTimeKind.Utc);
+
+        _mockService1.Setup(x => x.GetUnrealizedGainLossPerAccount(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([
+                new UnrealizedGainLossAccountResult(1, "Stock account", 100m, 120m, 20m, 20m, asOfDate, 0)
+            ]);
+        _mockService2.Setup(x => x.GetUnrealizedGainLossPerAccount(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([
+                new UnrealizedGainLossAccountResult(2, "Bond account", 200m, 180m, -20m, -10m, asOfDate, 1)
+            ]);
+
+        var results = await _assetsService.GetUnrealizedGainLossPerAccount(1, DefaultCurrency.PLN, asOfDate);
+
+        Assert.Equal(2, results.Count);
+        Assert.Contains(results, x => x.AccountName == "Stock account" && x.UnrealizedGainLoss == 20m);
+        Assert.Contains(results, x => x.AccountName == "Bond account" && x.UnrealizedGainLoss == -20m);
     }
 }

@@ -30,7 +30,8 @@ else
 
             <MudCollapse Expanded="_expanded">
                 <MudPaper Elevation="0" Style="max-width: 350px; min-height:50px">
-                    <MudDateRangePicker @bind-DateRange="dateRange" RelativeWidth="DropdownWidth.Ignore" Class="px-1 pt-1" />
+                    <MudDateRangePicker @bind-DateRange="dateRange" RelativeWidth="DropdownWidth.Ignore"
+                                        Class="px-1 pt-1" />
                 </MudPaper>
             </MudCollapse>
         </MudStack>
@@ -41,12 +42,13 @@ else
 @code {
     private bool _expanded;
 
-    private string _selectedStockTimeSpan="1M";
+    private string _selectedStockTimeSpan = "1M";
 
     public string selectedStockTimeSpan
     {
         get { return _selectedStockTimeSpan; }
-        set { 
+        set
+        {
             _selectedStockTimeSpan = value;
             StockTimeSpanChanged(value);
         }
@@ -132,15 +134,16 @@ else
 
         if (range is not null)
         {
-            _dateRange.Start = range.Value.Start;
-            _dateRange.End = range.Value.End < DateTime.UtcNow ? range.Value.End : DateTime.UtcNow;
+            var end = range.Value.End < DateTime.UtcNow ? range.Value.End : DateTime.UtcNow;
+            _dateRange = new DateRange(range.Value.Start, end);
         }
     }
-    
+
     public void SetRange((DateTime Start, DateTime End) range)
     {
-        _dateRange.Start = range.Start;
-        _dateRange.End = range.End;
+        _dateRange = new DateRange(range.Start, range.End);
+
+        if (_dateRange.Start is null || _dateRange.End is null) return;
 
         DateChanged((_dateRange.Start.Value, _dateRange.End.Value < DateTime.UtcNow ? _dateRange.End.Value : DateTime.UtcNow));
     }

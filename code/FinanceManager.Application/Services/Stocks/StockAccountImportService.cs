@@ -63,7 +63,7 @@ public class StockAccountImportService(
                     if (import.PostingDate.Kind != DateTimeKind.Utc)
                         throw new Exception($"Date kind of this entry posting date: {import.PostingDate}, value change: {import.ValueChange} is not UTC - {import.PostingDate.Kind}");
 
-                    var newEntry = new StockAccountEntry(accountId, 0, import.PostingDate, import.ValueChange, import.ValueChange, import.Ticker, InvestmentType.Stock);
+                    var newEntry = new StockAccountEntry(accountId, 0, ToSecond(import.PostingDate), import.ValueChange, import.ValueChange, import.Ticker, InvestmentType.Stock);
                     if (await stockAccountEntryRepository.Add(newEntry, recalculate: false))
                     {
                         imported++;
@@ -128,12 +128,18 @@ public class StockAccountImportService(
         }
     }
 
+    // Posting dates are stored and compared at second precision across the app.
+    // Truncating here keeps fractional-second legacy DB entries comparable with
+    // freshly imported / exported CSV rows, which carry second precision.
+    private static DateTime ToSecond(DateTime d) =>
+        new(d.Year, d.Month, d.Day, d.Hour, d.Minute, d.Second, d.Kind);
+
     private static IEnumerable<(StockEntryImport Import, StockAccountEntry Existing)> GetExactMatches(List<StockEntryImport> imports, List<StockAccountEntry> existing)
     {
-        foreach (var import in imports.GroupBy(x => (Date: x.PostingDate, ValueChange: x.ValueChange, Ticker: x.Ticker)))
+        foreach (var import in imports.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, Ticker: x.Ticker)))
         {
             var sameExisting = existing
-                .Where(e => e.PostingDate == import.Key.Date && e.ValueChange == import.Key.ValueChange &&
+                .Where(e => ToSecond(e.PostingDate) == import.Key.Date && e.ValueChange == import.Key.ValueChange &&
                             string.Equals(e.Ticker, import.Key.Ticker, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
@@ -148,10 +154,10 @@ public class StockAccountImportService(
 
     private static IEnumerable<StockImportConflict> GetImportsWhichAreMissingFromExisting(int accountId, IEnumerable<StockEntryImport> imports, IEnumerable<StockAccountEntry> existing)
     {
-        foreach (var import in imports.GroupBy(x => (Date: x.PostingDate, ValueChange: x.ValueChange, Ticker: x.Ticker)))
+        foreach (var import in imports.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, Ticker: x.Ticker)))
         {
             var importItemList = import.ToList();
-            var sameExistingCount = existing.Count(e => e.PostingDate == import.Key.Date && e.ValueChange == import.Key.ValueChange &&
+            var sameExistingCount = existing.Count(e => ToSecond(e.PostingDate) == import.Key.Date && e.ValueChange == import.Key.ValueChange &&
                 string.Equals(e.Ticker, import.Key.Ticker, StringComparison.OrdinalIgnoreCase));
 
             if (importItemList.Count > sameExistingCount && importItemList.Count != 0)
@@ -164,10 +170,10 @@ public class StockAccountImportService(
 
     private static IEnumerable<StockImportConflict> GetExistingWhichAreMissingFromImports(int accountId, IEnumerable<StockAccountEntry> existing, IEnumerable<StockEntryImport> imports)
     {
-        foreach (var existingItem in existing.GroupBy(x => (Date: x.PostingDate, ValueChange: x.ValueChange, Ticker: x.Ticker)))
+        foreach (var existingItem in existing.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, Ticker: x.Ticker)))
         {
             var existingItemList = existingItem.ToList();
-            var sameImportsCount = imports.Count(e => e.PostingDate == existingItem.Key.Date && e.ValueChange == existingItem.Key.ValueChange &&
+            var sameImportsCount = imports.Count(e => ToSecond(e.PostingDate) == existingItem.Key.Date && e.ValueChange == existingItem.Key.ValueChange &&
                 string.Equals(e.Ticker, existingItem.Key.Ticker, StringComparison.OrdinalIgnoreCase));
 
             if (existingItemList.Count <= sameImportsCount || existingItemList.Count == 0)

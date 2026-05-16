@@ -1,8 +1,5 @@
-﻿using FinanceManager.Components.HttpClients;
+﻿using FinanceManager.Components.Models;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -10,15 +7,15 @@ using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Components.Layout;
 
-public partial class NavMenu : ComponentBase
+public partial class NavMenu : ComponentBase, IDisposable
 {
     private bool _displayAssetsLink = false;
     private bool _displayLiabilitiesLink = false;
+    private int? _currentUserId;
+    private readonly CancellationTokenSource _disposeTokenSource = new();
 
     [Parameter] public bool DrawerIsOpen { get; set; }
-    [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
-    [Inject] public required LiabilitiesHttpClient LiabilitiesHttpClient { get; set; }
-    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required NavMenuStateCacheService NavMenuStateCacheService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<NavMenu> Logger { get; set; }
@@ -29,10 +26,15 @@ public partial class NavMenu : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+        AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
+        LoginService.LogginStateChanged += LoginService_LogginStateChanged;
+
         try
         {
-            await UpdateAccounts();
-            AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
+            await LoadCachedStateAndRefreshAsync(forceRefresh: false, _disposeTokenSource.Token);
+        }
+        catch (OperationCanceledException)
+        {
         }
         catch (Exception ex)
         {
@@ -40,90 +42,146 @@ public partial class NavMenu : ComponentBase
         }
     }
 
-    private async void AccountDataSynchronizationService_AccountsChanged() => await UpdateAccounts();
-    private async Task UpdateAccounts()
+    private void AccountDataSynchronizationService_AccountsChanged()
     {
-        UserSession? user = null;
+        if (_disposeTokenSource.IsCancellationRequested)
+            return;
 
-        try
+        _ = InvokeAsync(() => RefreshAfterAccountChangeAsync(_disposeTokenSource.Token));
+    }
+
+    private void LoginService_LogginStateChanged(bool isLoggedIn)
+    {
+        if (_disposeTokenSource.IsCancellationRequested)
+            return;
+
+        _ = InvokeAsync(() => HandleLoginStateChangedAsync(isLoggedIn, _disposeTokenSource.Token));
+    }
+
+    private async Task HandleLoginStateChangedAsync(bool isLoggedIn, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!isLoggedIn)
         {
-            user = await LoginService.GetLoggedUser();
-            if (user is null) return;
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = ex.Message;
+            _currentUserId = null;
+            ClearState();
+            cancellationToken.ThrowIfCancellationRequested();
+            await InvokeAsync(StateHasChanged);
             return;
         }
 
-        try
+        await LoadCachedStateAndRefreshAsync(forceRefresh: false, cancellationToken);
+    }
+
+    private async Task RefreshAfterAccountChangeAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (_currentUserId.HasValue)
+            await NavMenuStateCacheService.InvalidateAsync(_currentUserId.Value);
+
+        await LoadCachedStateAndRefreshAsync(forceRefresh: true, cancellationToken);
+    }
+
+    private async Task LoadCachedStateAndRefreshAsync(bool forceRefresh, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var user = await TryGetLoggedUserAsync(cancellationToken);
+        if (user is null)
         {
-            Accounts.Clear();
+            _currentUserId = null;
+            ClearState();
+            return;
+        }
 
-            var availableAccounts = await FinancialAccountService.GetAvailableAccounts();
-            foreach (var account in availableAccounts)
+        _currentUserId = user.UserId;
+
+        if (!forceRefresh)
+        {
+            var cachedSnapshot = await NavMenuStateCacheService.GetCachedSnapshotAsync(user.UserId);
+            if (cachedSnapshot is not null)
             {
-                var name = string.Empty;
-                if (account.Value == typeof(CurrencyAccount))
-                {
-                    var existingAccount = await FinancialAccountService.GetAccount<CurrencyAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
-                    if (existingAccount is not null)
-                        name = existingAccount.Name;
-                }
-                else if (account.Value == typeof(StockAccount))
-                {
-                    var existingAccount = await FinancialAccountService.GetAccount<StockAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
-                    if (existingAccount is not null)
-                        name = existingAccount.Name;
-                }
-                else if (account.Value == typeof(BondAccount))
-                {
-                    var existingAccount = await FinancialAccountService.GetAccount<BondAccount>(user.UserId, account.Key, DateTime.UtcNow, DateTime.UtcNow);
-                    if (existingAccount is not null)
-                        name = existingAccount.Name;
-                }
-                else
-                {
-                    Logger.LogError("account type {account.Name} can not be handled, Account id {account.Key}", account.Value.Name, account.Key);
-                    continue;
-                }
-
-                Accounts.TryAdd(account.Key, name);
+                ApplySnapshot(cachedSnapshot);
+                cancellationToken.ThrowIfCancellationRequested();
+                await InvokeAsync(StateHasChanged);
+                _ = RefreshSnapshotAsync(user, cancellationToken);
+                return;
             }
         }
-        catch (Exception ex)
-        {
-            ErrorMessage = ex.Message;
-            Logger.LogError(ex, "Error while getting available accounts");
-        }
+
+        await RefreshSnapshotAsync(user, cancellationToken);
+    }
+
+    private async Task<UserSession?> TryGetLoggedUserAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ErrorMessage = string.Empty;
 
         try
         {
-            _displayAssetsLink = await AssetsHttpClient.IsAnyAccountWithAssets(user.UserId);
+            return await LoginService.GetLoggedUser();
         }
-        catch (HttpRequestException ex)
+        catch (OperationCanceledException)
         {
-            Logger.LogError(ex, ex.Message);
+            throw;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error while checking if any account with assets");
             ErrorMessage = ex.Message;
+            Logger.LogError(ex, "Error while getting logged user for nav menu");
+            return null;
         }
+    }
 
+    private async Task RefreshSnapshotAsync(UserSession user, CancellationToken cancellationToken)
+    {
         try
         {
-            _displayLiabilitiesLink = await LiabilitiesHttpClient.IsAnyAccountWithLiabilities(user.UserId);
+            cancellationToken.ThrowIfCancellationRequested();
+            var snapshot = await NavMenuStateCacheService.RefreshAsync(user);
+            if (_currentUserId != user.UserId)
+                return;
+
+            cancellationToken.ThrowIfCancellationRequested();
+            ApplySnapshot(snapshot);
+            ErrorMessage = string.Empty;
         }
-        catch (HttpRequestException)
+        catch (OperationCanceledException)
         {
+            return;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error while checking if any account with liabilities");
             ErrorMessage = ex.Message;
+            Logger.LogError(ex, "Error while refreshing nav menu snapshot");
         }
 
-        await InvokeAsync(StateHasChanged);
+        if (!cancellationToken.IsCancellationRequested)
+            await InvokeAsync(StateHasChanged);
+    }
+
+    private void ApplySnapshot(NavMenuCacheSnapshot snapshot)
+    {
+        Accounts = snapshot.Accounts.ToDictionary(account => account.AccountId, account => account.Name);
+        _displayAssetsLink = snapshot.DisplayAssetsLink;
+        _displayLiabilitiesLink = snapshot.DisplayLiabilitiesLink;
+    }
+
+    private void ClearState()
+    {
+        ErrorMessage = string.Empty;
+        Accounts.Clear();
+        _displayAssetsLink = false;
+        _displayLiabilitiesLink = false;
+    }
+
+    public void Dispose()
+    {
+        _disposeTokenSource.Cancel();
+        AccountDataSynchronizationService.AccountsChanged -= AccountDataSynchronizationService_AccountsChanged;
+        LoginService.LogginStateChanged -= LoginService_LogginStateChanged;
+        _disposeTokenSource.Dispose();
     }
 }

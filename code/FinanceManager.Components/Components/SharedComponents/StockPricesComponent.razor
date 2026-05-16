@@ -11,10 +11,10 @@ Series="@([_stockPrices.Select(x => new ChartJsLineDataPoint(x.Date.ToLocalTime(
 <MudContainer Class="mt-3">
     <MudGrid>
         <MudItem xs="12" md="6">
-            <MudAutocomplete T="FinanceManager.Domain.Entities.Stocks.StockDetails"                  Value="_selectedStock"
-                             Label="Search Stock"        Placeholder="Search by ticker or name"   SearchFunc="SearchStocks"
-                             ToStringFunc="@(stock => stock?.Ticker ?? string.Empty)"           Variant="Variant.Outlined"      Immediate="true"
-                             ResetValueOnEmptyText="true"             CoerceText="false"       Clearable="true"  ValueChanged="OnStockSelected">
+            <MudAutocomplete T="FinanceManager.Domain.Entities.Stocks.StockDetails" Value="_selectedStock"
+                             Label="Search Stock" Placeholder="Search by ticker or name" SearchFunc="SearchStocks"
+                             ToStringFunc="@(stock => stock?.Ticker ?? string.Empty)" Variant="Variant.Outlined" Immediate="true"
+                             ResetValueOnEmptyText="true" CoerceText="false" Clearable="true" ValueChanged="OnStockSelected">
                 <ItemTemplate Context="stock">
                     <MudText>@stock.Ticker - @stock.Name</MudText>
                 </ItemTemplate>
@@ -60,8 +60,8 @@ Series="@([_stockPrices.Select(x => new ChartJsLineDataPoint(x.Date.ToLocalTime(
                                     </MudItem>
                                     <MudItem xs="12" sm="6" md="3">
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">Date Range</MudText>
-                                        <MudText Typo="Typo.body1">@_stockPrices.Last().Date.ToString("MMM dd") -
-                                            @_stockPrices.First().Date.ToString("MMM dd, yyyy")</MudText>
+                                        <MudText Typo="Typo.body1">@_stockPrices.Last().Date.ToString("dd-MM-yyyy") -
+                                            @_stockPrices.First().Date.ToString("dd-MM-yyyy")</MudText>
                                         </MudItem>
                                     }
                                 </MudGrid>

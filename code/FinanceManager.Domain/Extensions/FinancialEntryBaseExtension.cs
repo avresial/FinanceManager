@@ -15,7 +15,7 @@ public static class FinancialEntryBaseExtension
 
     public static IEnumerable<T> GetNextYounger<T>(this IEnumerable<T> entries, DateTime date) where T : FinancialEntryBase
     {
-        var lastEntry = entries.Where(x => x.PostingDate <= date).FirstOrDefault();
+        var lastEntry = entries.Where(x => x.PostingDate <= date).OrderByDescending(x => x.PostingDate).FirstOrDefault();
         if (lastEntry is null) return [];
 
         return [lastEntry];
@@ -23,7 +23,7 @@ public static class FinancialEntryBaseExtension
 
     public static T? GetNextOlder<T>(this IEnumerable<T> entries, DateTime date) where T : FinancialEntryBase
     {
-        var lastEntry = entries.FirstOrDefault(x => x.PostingDate < date);
+        var lastEntry = entries.Where(x => x.PostingDate < date).OrderByDescending(x => x.PostingDate).FirstOrDefault();
         if (lastEntry is null) return default;
 
         return lastEntry;

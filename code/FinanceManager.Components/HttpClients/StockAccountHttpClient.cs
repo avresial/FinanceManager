@@ -32,9 +32,22 @@ public class StockAccountHttpClient(HttpClient httpClient)
         return new StockAccount(result.UserId, result.AccountId, result.Name, []);
     }
 
-    public async Task<StockAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate)
+    public async Task<StockAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount = 0)
     {
-        var result = await httpClient.GetFromJsonAsync<StockAccountDto>($"{httpClient.BaseAddress}api/StockAccount/{accountId}&{startDate:O}&{endDate:O}");
+        var minimumEntryCountQuery = minimumEntryCount > 0 ? $"?minimumEntryCount={minimumEntryCount}" : string.Empty;
+        var result = await httpClient.GetFromJsonAsync<StockAccountDto>($"{httpClient.BaseAddress}api/StockAccount/{accountId}&{startDate:O}&{endDate:O}{minimumEntryCountQuery}");
+        return MapAccount(result);
+    }
+
+    public async Task<StockAccount?> GetAccountWithEntriesAsync(int accountId, DateTime date, int count, bool olderThenDate = true)
+    {
+        var encodedDate = Uri.EscapeDataString(date.ToString("O"));
+        var result = await httpClient.GetFromJsonAsync<StockAccountDto>($"{httpClient.BaseAddress}api/StockAccount/{accountId}/entries?date={encodedDate}&count={count}&olderThenDate={olderThenDate.ToString().ToLowerInvariant()}");
+        return MapAccount(result);
+    }
+
+    private static StockAccount? MapAccount(StockAccountDto? result)
+    {
         if (result is null) return null;
 
         Dictionary<string, StockAccountEntry> nextOlder = result.NextOlderEntries is null ? [] :
@@ -43,9 +56,12 @@ public class StockAccountHttpClient(HttpClient httpClient)
         Dictionary<string, StockAccountEntry> nextYounger = result.NextYoungerEntries is null ? [] :
             result.NextYoungerEntries.ToDictionary(x => x.Key, x => x.Value.ToStockAccountEntry());
 
-        return new(result.UserId, result.AccountId, result.Name, result.Entries
-            .Select(x => new StockAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.Ticker, x.InvestmentType)),
-            nextOlder, nextYounger);
+        var entries = result.Entries
+            .Select(x => new StockAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.Ticker, x.InvestmentType))
+            .OrderByDescending(x => x.PostingDate)
+            .ThenByDescending(x => x.EntryId);
+
+        return new(result.UserId, result.AccountId, result.Name, entries, nextOlder, nextYounger);
     }
 
     public async Task<int?> AddAccountAsync(AddAccount addAccount)

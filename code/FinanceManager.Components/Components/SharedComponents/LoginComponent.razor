@@ -25,7 +25,8 @@
                     <MudTextField @bind-Value="_loginModel.Password" T="string" Label="Password"
                                   Variant="Variant.Outlined" Class="mb-5" Immediate Required InputType="InputType.Password" />
 
-                    <MudButton Class="my-2" Variant="Variant.Filled" Color="Color.Primary" @onclick=Login Disabled="@_isProcessing">
+                    <MudButton Class="my-2" Variant="Variant.Filled" ButtonType="ButtonType.Submit"
+                               Color="Color.Primary" @onclick=Login Disabled="@_isProcessing">
                         <MudText Typo="Typo.h5">Login</MudText>
                     </MudButton>
                     <MudButton Href="register" Class="my-2" Variant="Variant.Outlined" Color="Color.Primary">

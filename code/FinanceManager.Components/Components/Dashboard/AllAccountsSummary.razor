@@ -2,7 +2,7 @@
 	<div class="row justify-content-center">
 
 
-		<div class="col my-4" >
+		<div class="col my-4">
 			<AccountTypeChart DataDictionary="@ExpensesTypesAgregate" Title="Wealth distribution"></AccountTypeChart>
 		</div>
 
@@ -22,7 +22,7 @@
 					</div>
 
 					<div class="col-auto">
-						@wealthCategory.Item2 zł
+						@wealthCategory.Item2.ToString("0.00") zł
 					</div>
 				</div>
 			}
@@ -35,13 +35,13 @@
 				@if (@Math.Round(WealthByCategory.Sum(x => x.Item2), 2) < 0)
 				{
 					<div class="col-auto" style="color:red">
-						@Math.Round(WealthByCategory.Sum(x => x.Item2), 2) zł
+						@Math.Round(WealthByCategory.Sum(x => x.Item2), 2).ToString("0.00") zł
 					</div>
 				}
 				else
 				{
 					<div class="col-auto" style="color:green">
-						@Math.Round(WealthByCategory.Sum(x => x.Item2), 2) zł
+						@Math.Round(WealthByCategory.Sum(x => x.Item2), 2).ToString("0.00") zł
 					</div>
 				}
 			</div>
@@ -53,7 +53,8 @@
 
 		<div class="col my-4">
 
-			<SpendingCathegoryChart Title="Spending distribution" DataDictionary="@ExpensesCathegoriesAgregate"></SpendingCathegoryChart>
+			<SpendingCathegoryChart Title="Spending distribution" DataDictionary="@ExpensesCathegoriesAgregate">
+			</SpendingCathegoryChart>
 
 		</div>
 
@@ -72,7 +73,7 @@
 					</div>
 
 					<div class="col-auto">
-						@spentCategory.Value zł
+						@spentCategory.Value.ToString("0.00") zł
 					</div>
 				</div>
 			}
@@ -86,14 +87,14 @@
 				@if (Math.Round(SpendingByCategory.Sum(x => x.Value), 2) < 0)
 				{
 					<div class="col-auto" style="color:red">
-						@Math.Round(SpendingByCategory.Sum(x => x.Value), 2) zł
+						@Math.Round(SpendingByCategory.Sum(x => x.Value), 2).ToString("0.00") zł
 					</div>
 
 				}
 				else
 				{
 					<div class="col-auto" style="color:green">
-						@Math.Round(SpendingByCategory.Sum(x => x.Value), 2) zł
+						@Math.Round(SpendingByCategory.Sum(x => x.Value), 2).ToString("0.00") zł
 					</div>
 				}
 			</div>

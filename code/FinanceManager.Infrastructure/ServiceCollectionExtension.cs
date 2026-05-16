@@ -8,6 +8,7 @@ using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Providers;
 using FinanceManager.Infrastructure.Repositories;
@@ -15,6 +16,7 @@ using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
 using FinanceManager.Infrastructure.Services;
 using FinanceManager.Infrastructure.Services.Ai;
+using FinanceManager.Infrastructure.Services.Currencies;
 using FinanceManager.Infrastructure.Services.Stocks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
@@ -29,6 +31,7 @@ public static class ServiceCollectionExtension
     public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
     {
         services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
+        services.AddHttpClient<ICurrencyExchangeRateProvider, FawazAhmedCurrencyApiClient>();
 
         services.AddAI();
 
@@ -71,14 +74,19 @@ public static class ServiceCollectionExtension
         }
         else
         {
-            var databaseProvider = configuration.GetValue("DatabaseProvider", "SqlServer") ?? "SqlServer";
+            var appHostConnectionString = configuration.GetConnectionString("FinanceManagerDb");
+            var developmentConnectionString = configuration.GetConnectionString("DefaultConnection");
+            var fallbackConnectionString = configuration.GetValue<string>("FINANCE_MANAGER_DB_KEY");
+
+            var connectionString = appHostConnectionString
+                ?? developmentConnectionString
+                ?? fallbackConnectionString;
+
+            var databaseProvider = InferDatabaseProvider(connectionString,
+                configuration.GetValue("DatabaseProvider", "SqlServer") ?? "SqlServer");
 
             services.AddDbContext<AppDbContext>(options =>
             {
-                var connectionString = configuration.GetValue<string>("FINANCE_MANAGER_DB_KEY");
-                if (configuration.GetSection("ConnectionStrings").Exists())
-                    connectionString = configuration.GetSection("ConnectionStrings").GetValue<string>("FinanceManagerDb");
-
                 if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) ||
                     databaseProvider.Equals("Supabase", StringComparison.OrdinalIgnoreCase))
                 {
@@ -92,6 +100,30 @@ public static class ServiceCollectionExtension
         }
         return services;
     }
+
+    private static string InferDatabaseProvider(string? connectionString, string configuredProvider)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return configuredProvider;
+
+        if (connectionString.Contains("Port=", StringComparison.OrdinalIgnoreCase)
+            || connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase)
+            || connectionString.Contains("Username=", StringComparison.OrdinalIgnoreCase))
+        {
+            return "PostgreSQL";
+        }
+
+        if (connectionString.Contains("Trusted_Connection=", StringComparison.OrdinalIgnoreCase)
+            || connectionString.Contains("TrustServerCertificate=", StringComparison.OrdinalIgnoreCase)
+            || connectionString.Contains("Initial Catalog=", StringComparison.OrdinalIgnoreCase)
+            || connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase))
+        {
+            return "SqlServer";
+        }
+
+        return configuredProvider;
+    }
+
     public static void ApplyMigrations(this IServiceScope scope)
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();

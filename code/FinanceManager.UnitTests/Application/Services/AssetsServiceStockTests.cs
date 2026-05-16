@@ -1,4 +1,5 @@
 using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
@@ -18,7 +19,10 @@ public class AssetsServiceStockTests
     private readonly DateTime _end = new(DateTime.UtcNow.Year, 1, 31);
     private readonly AssetsServiceStock _assetsServiceStock;
 
-    public AssetsServiceStockTests() => _assetsServiceStock = new(_financialAccountRepositoryMock.Object, _stockPriceProviderMock.Object);
+    public AssetsServiceStockTests() => _assetsServiceStock = new(
+        _financialAccountRepositoryMock.Object,
+        _stockPriceProviderMock.Object,
+        new StockUnrealizedGainLossCalculator(_stockPriceProviderMock.Object));
 
     [Fact]
     public async Task IsAnyAccountWithAssets_ReturnsTrue_WhenRepositoryHasStockAccountWithAssets()
@@ -103,5 +107,63 @@ public class AssetsServiceStockTests
 
         // assert
         Assert.NotEmpty(series);
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLossPerInstrument_UsesWeightedAverageCostBasis_ForOpenPosition()
+    {
+        var account = new StockAccount(1, 1, "inv-acc");
+        var buyDate = _end.AddDays(-10);
+        var sellDate = _end.AddDays(-5);
+
+        account.Add(new StockAccountEntry(1, 1, buyDate, 10, 10, "TICKER1", InvestmentType.Stock), false);
+        account.Add(new StockAccountEntry(1, 2, sellDate, 5, -5, "TICKER1", InvestmentType.Stock), false);
+
+        _financialAccountRepositoryMock
+            .Setup(x => x.GetAccounts<StockAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { account }.ToAsyncEnumerable());
+
+        _stockPriceProviderMock
+            .Setup(x => x.GetPricePerUnitAsync("TICKER1", It.IsAny<Currency>(), buyDate))
+            .ReturnsAsync(100m);
+        _stockPriceProviderMock
+            .Setup(x => x.GetPricePerUnitAsync("TICKER1", It.IsAny<Currency>(), _end))
+            .ReturnsAsync(130m);
+
+        var results = await _assetsServiceStock.GetUnrealizedGainLossPerInstrument(1, DefaultCurrency.PLN, _end);
+
+        var result = Assert.Single(results);
+        Assert.False(result.IsExcludedFromTotals);
+        Assert.Equal(5m, result.Quantity);
+        Assert.Equal(500m, result.CostBasis);
+        Assert.Equal(650m, result.CurrentValue);
+        Assert.Equal(150m, result.UnrealizedGainLoss);
+        Assert.Equal(30m, result.UnrealizedGainLossPercent);
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLossPerInstrument_ExcludesTicker_WhenCurrentPriceMissing()
+    {
+        var account = new StockAccount(1, 1, "inv-acc");
+        var buyDate = _end.AddDays(-10);
+
+        account.Add(new StockAccountEntry(1, 1, buyDate, 10, 10, "TICKER1", InvestmentType.Stock), false);
+
+        _financialAccountRepositoryMock
+            .Setup(x => x.GetAccounts<StockAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { account }.ToAsyncEnumerable());
+
+        _stockPriceProviderMock
+            .Setup(x => x.GetPricePerUnitAsync("TICKER1", It.IsAny<Currency>(), buyDate))
+            .ReturnsAsync(100m);
+        _stockPriceProviderMock
+            .Setup(x => x.GetPricePerUnitAsync("TICKER1", It.IsAny<Currency>(), _end))
+            .ReturnsAsync(0m);
+
+        var results = await _assetsServiceStock.GetUnrealizedGainLossPerInstrument(1, DefaultCurrency.PLN, _end);
+
+        var result = Assert.Single(results);
+        Assert.True(result.IsExcludedFromTotals);
+        Assert.Contains("Missing current price", result.WarningMessage);
     }
 }

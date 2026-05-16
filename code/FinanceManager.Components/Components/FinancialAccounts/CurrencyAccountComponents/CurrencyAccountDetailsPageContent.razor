@@ -1,4 +1,4 @@
-﻿@using FinanceManager.Components.Components.FinancialAccounts.Shared
+@using FinanceManager.Components.Components.FinancialAccounts.Shared
 @using FinanceManager.Components.Components.SharedComponents.Charts
 @using FinanceManager.Domain.Entities.MoneyFlowModels;
 
@@ -11,22 +11,27 @@
 }
 else if (IsLoading || Account.Entries.Any())
 {
-    <AccountDetailsPageContent AccountName="@Account.Name"
-                               ChartData="ChartData"
-                               IsLoading="@IsLoading"
-                               IsLoadingMore="@_isLoadingMore"
-                               LoadedAllData="@_loadedAllData"
-                               OnLoadMore="LoadMore">
+    <AccountDetailsPageContent AccountName="@Account.Name" ChartData="ChartData" IsLoading="@IsLoading"
+                               IsLoadingMore="@_isLoadingMore" LoadedAllData="@_loadedAllData" OnLoadMore="LoadMore">
 
         <ActionButtons>
-            <MudButton Variant="Variant.Text" Class="col-12" href="@($"Import/{Account.AccountId}")">Import</MudButton>
-            <MudButton Variant="Variant.Text" Class="col-12" Disabled>Export</MudButton>
-            <MudButton Variant="Variant.Text" Class="col-12" href="@($"ManageAccount/{Account.AccountId}")">Manage</MudButton>
+            <MudTooltip Text="Import">
+                <MudIconButton Icon="@Icons.Material.Filled.FileUpload" AriaLabel="Import" Color="Color.Primary"
+                               Href="@($"/Import/{Account.AccountId}")" />
+            </MudTooltip>
+            <MudTooltip Text="Export">
+                <MudIconButton Icon="@Icons.Material.Filled.FileDownload" AriaLabel="Export" Color="Color.Primary"
+                               Href="@($"/Export/{Account.AccountId}")" />
+            </MudTooltip>
+            <MudTooltip Text="Manage">
+                <MudIconButton Icon="@Icons.Material.Filled.Settings" AriaLabel="Manage" Color="Color.Primary"
+                               Href="@($"/ManageAccount/{Account.AccountId}")" />
+            </MudTooltip>
         </ActionButtons>
 
         <AddEntryOverlay>
-            <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add"
-                    OnClick=ShowOverlay Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:2;" />
+            <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick="ShowOverlay"
+                    Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:2;" />
 
             <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
                 <MudPaper Class="p-5">
@@ -59,24 +64,20 @@ else if (IsLoading || Account.Entries.Any())
 
                 @if (_top5 is not null && _top5.Any())
                 {
-                    <AccountTopBottomList Title="Top 5"
-                                          Items="_top5"
-                                          ValueColor="Color.Success"
+                    <AccountTopBottomList Title="Top 5" Items="_top5" ValueColor="Color.Success"
                                           ItemTitle="@(entry => entry.Labels.Any() ? entry.Labels.First().Name : "Transaction")"
                                           ItemDescription="@(entry => entry.Description)"
                                           ItemValue="@(entry => $"{entry.ValueChange} {_currency}")"
-                                          ItemDate="@(entry => entry.PostingDate.ToString("yyyy-MM-dd"))" />
+                                          ItemDate="@(entry => entry.PostingDate.ToString("dd-MM-yyyy"))" />
                 }
 
                 @if (_bottom5 is not null && _bottom5.Any())
                 {
-                    <AccountTopBottomList Title="Bottom 5"
-                                          Items="_bottom5"
-                                          ValueColor="Color.Error"
+                    <AccountTopBottomList Title="Bottom 5" Items="_bottom5" ValueColor="Color.Error"
                                           ItemTitle="@(entry => entry.Labels.Any() ? entry.Labels.First().Name : "Transaction")"
                                           ItemDescription="@(entry => entry.Description)"
                                           ItemValue="@(entry => $"{entry.ValueChange} {_currency}")"
-                                          ItemDate="@(entry => entry.PostingDate.ToString("yyyy-MM-dd"))" />
+                                          ItemDate="@(entry => entry.PostingDate.ToString("dd-MM-yyyy"))" />
                 }
             </MudStack>
         </SidePanel>
@@ -86,7 +87,7 @@ else if (!Account.Entries.Any())
 {
     <AddCurrencyEntry CurrencyAccount=Account ActionCompleted="HideOverlay">
         <CustomButton>
-            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.AccountId}")">
+            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"/Import/{Account.AccountId}")">
                 Import
             </MudButton>
         </CustomButton>

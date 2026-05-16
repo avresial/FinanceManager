@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Currencies;
 using FinanceManager.Application.Services.Exports;
 using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Commands.Account;
@@ -18,7 +19,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Tags("Currency Accounts")]
 public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccount> accountRepository,
-    IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository, IUserPlanVerifier userPlanVerifier,
+    IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository, ICurrencyEntryProvider currencyEntryProvider,
+    IUserPlanVerifier userPlanVerifier,
     IAccountCsvExportService<CurrencyAccountExportDto> currencyAccountCsvExportService) : ControllerBase
 {
     [HttpGet]
@@ -47,20 +49,40 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
 
     [HttpGet("{accountId:int}&{startDate:DateTime}&{endDate:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate)
+    public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate, [FromQuery] int minimumEntryCount = 0)
     {
         var account = await accountRepository.Get(accountId);
 
         if (account is null) return NotFound();
         if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (minimumEntryCount < 0) return BadRequest("Minimum entry count cannot be negative.");
 
-        var entries = accountEntryRepository.Get(accountId, startDate, endDate);
-        var olderEntry = await accountEntryRepository.GetNextOlder(accountId, startDate);
-        var youngerEntry = await accountEntryRepository.GetNextYounger(accountId, endDate);
+        var loadResult = await currencyEntryProvider.GetEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
 
-        return Ok(account.ToDto(olderEntry, youngerEntry, await entries.ToListAsync()));
+        return Ok(await CreateDtoAsync(account, loadResult.Entries, loadResult.EffectiveStartDate, endDate));
+    }
+
+    [HttpGet("{accountId:int}/entries")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Get(int accountId, [FromQuery] DateTime date, [FromQuery] int count, [FromQuery] bool olderThenDate = true)
+    {
+        var account = await accountRepository.Get(accountId);
+
+        if (account is null) return NotFound();
+        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (count <= 0) return BadRequest("Count must be greater than 0.");
+
+        var entries = await accountEntryRepository.Get(accountId, date, count, olderThenDate);
+        var nextOlderReferenceDate = entries.Any() ? entries.Min(x => x.PostingDate) : date;
+        var nextYoungerReferenceDate = entries.Any() ? entries.Max(x => x.PostingDate) : date;
+
+        return Ok(await CreateDtoAsync(account, entries, nextOlderReferenceDate, nextYoungerReferenceDate));
     }
 
     [HttpPost]
@@ -113,5 +135,19 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         var fileName = $"currency-account-{accountId}-{startDate:yyyyMMdd}-{endDate:yyyyMMdd}.csv";
 
         return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", fileName);
+    }
+
+    private async Task<CurrencyAccountDto> CreateDtoAsync(CurrencyAccount account, IEnumerable<CurrencyAccountEntry> entries,
+        DateTime nextOlderReferenceDate, DateTime nextYoungerReferenceDate)
+    {
+        var orderedEntries = entries
+            .OrderByDescending(x => x.PostingDate)
+            .ThenByDescending(x => x.EntryId)
+            .ToList();
+
+        return account.ToDto(
+            await accountEntryRepository.GetNextOlder(account.AccountId, nextOlderReferenceDate),
+            await accountEntryRepository.GetNextYounger(account.AccountId, nextYoungerReferenceDate),
+            orderedEntries);
     }
 }

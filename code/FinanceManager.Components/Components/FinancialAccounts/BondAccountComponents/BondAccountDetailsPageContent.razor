@@ -5,17 +5,24 @@
 
 @if (Account is not null && Account.Entries is not null && (IsLoading || Account.Entries.Any()))
 {
-    <AccountDetailsPageContent AccountName="@Account.Name"         ChartData="ChartData"              IsLoading="@IsLoading"
-                               IsLoadingMore="@_isLoadingMore"                  LoadedAllData="@_loadedAllData"                      OnLoadMore="LoadMore">
+    <AccountDetailsPageContent AccountName="@Account.Name" ChartData="ChartData" IsLoading="@IsLoading"
+                               IsLoadingMore="@_isLoadingMore" LoadedAllData="@_loadedAllData" OnLoadMore="LoadMore">
         <ActionButtons>
-            <MudButton Variant="Variant.Text" Class="col-12" href="@($"Import/{Account.AccountId}")" Disabled>Import
-            </MudButton>
-            <MudButton Variant="Variant.Text" Class="col-12" Disabled>Export</MudButton>
-            <MudButton Variant="Variant.Text" Class="col-12" href="@($"ManageAccount/{Account.AccountId}")">Manage
-            </MudButton>
+            <MudTooltip Text="Import">
+                <MudIconButton Icon="@Icons.Material.Filled.FileUpload" AriaLabel="Import" Color="Color.Primary"
+                               Href="@($"/Import/{Account.AccountId}")" />
+            </MudTooltip>
+            <MudTooltip Text="Export">
+                <MudIconButton Icon="@Icons.Material.Filled.FileDownload" AriaLabel="Export" Color="Color.Primary"
+                               Href="@($"/Export/{Account.AccountId}")" />
+            </MudTooltip>
+            <MudTooltip Text="Manage">
+                <MudIconButton Icon="@Icons.Material.Filled.Settings" AriaLabel="Manage" Color="Color.Primary"
+                               Href="@($"/ManageAccount/{Account.AccountId}")" />
+            </MudTooltip>
         </ActionButtons>
         <AddEntryOverlay>
-            <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add"       OnClick=ShowOverlay
+            <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick=ShowOverlay
                     Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:2;" />
 
             <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
@@ -40,7 +47,8 @@
                 @foreach (var entry in filteredEntries)
                 {
                     var bond = _bondDetails.FirstOrDefault(x => x.Id == entry.BondDetailsId);
-                    <BondAccountDetailsRow BondAccountEntry="@entry" BondAccount=Account BondDetails="bond" />
+                    <BondAccountDetailsRow BondAccountEntry="@entry" BondAccount=Account BondDetails="bond"
+                                           UnrealizedGainLoss="GetUnrealizedForBond(entry.BondDetailsId)" />
                 }
             }
         </Entries>
@@ -52,20 +60,57 @@
                         <AccountBalanceChangePanel BalanceChange="@_balanceChange.Value" Currency="@_currency" />
                     }
 
+                    @if (_unrealizedAccount is not null)
+                    {
+                        <MudPaper Class="pa-3" Elevation="1">
+                            <MudText Typo="Typo.caption" Color="Color.Default">Unrealized gain/loss</MudText>
+                            <MudText Typo="Typo.h6"
+                                     Color="@(_unrealizedAccount.UnrealizedGainLoss >= 0 ? Color.Success : Color.Error)">
+                                @_unrealizedAccount.UnrealizedGainLoss.ToString("0.00") @_currency
+                            </MudText>
+                            <MudText Typo="Typo.body2"
+                                     Color="@(_unrealizedAccount.UnrealizedGainLoss >= 0 ? Color.Success : Color.Error)">
+                                @_unrealizedAccount.UnrealizedGainLossPercent.ToString("0.00")%
+                            </MudText>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
+                                <MudTooltip Text="Base (amount spent)">
+                                    <MudText Typo="Typo.caption" Color="Color.Default">
+                                        @_unrealizedAccount.CostBasis.ToString("0.00") @_currency
+                                    </MudText>
+                                </MudTooltip>
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Color="Color.Default" />
+                                <MudTooltip Text="Current valuation">
+                                    <MudText Typo="Typo.caption" Color="Color.Default">
+                                        @_unrealizedAccount.CurrentValue.ToString("0.00") @_currency
+                                    </MudText>
+                                </MudTooltip>
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Default">
+                                As of @_unrealizedAccount.AsOfDate.ToLocalTime().ToString("dd-MM-yyyy HH:mm")
+                            </MudText>
+                            @if (_unrealizedAccount.ExcludedInstrumentsCount > 0)
+                            {
+                                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                                    @_unrealizedAccount.ExcludedInstrumentsCount instrument(s) excluded due to missing prices.
+                                </MudAlert>
+                            }
+                        </MudPaper>
+                    }
+
                     @if (_top5 is not null && _top5.Any())
                     {
-                        <AccountTopBottomList Title="Top 5"                         Items="_top5 ?? []"                                             ValueColor="Color.Success"
+                        <AccountTopBottomList Title="Top 5" Items="_top5 ?? []" ValueColor="Color.Success"
                                               ItemTitle="@(item => _bondDetails.FirstOrDefault(x => x.Id == item.Item1.BondDetailsId)?.Name ?? "Bond")"
-                                              ItemValue="@(item => $"{item.Item2} {_currency}")"
-                                              ItemDate="@(item => item.Item1.PostingDate.ToString("yyyy-MM-dd"))" />
+                                              ItemValue="@(item => $"{item.Item2} units")"
+                                              ItemDate="@(item => item.Item1.PostingDate.ToString("dd-MM-yyyy"))" />
                     }
 
                     @if (_bottom5 is not null && _bottom5.Any())
                     {
-                        <AccountTopBottomList Title="Bottom 5"                          Items="_bottom5 ?? []"                  ValueColor="Color.Error"
+                        <AccountTopBottomList Title="Bottom 5" Items="_bottom5 ?? []" ValueColor="Color.Error"
                                               ItemTitle="@(item => _bondDetails.FirstOrDefault(x => x.Id == item.Item1.BondDetailsId)?.Name ?? "Bond")"
-                                              ItemValue="@(item => $"{item.Item2} {_currency}")"
-                                              ItemDate="@(item => item.Item1.PostingDate.ToString("yyyy-MM-dd"))" />
+                                              ItemValue="@(item => $"{item.Item2} units")"
+                                              ItemDate="@(item => item.Item1.PostingDate.ToString("dd-MM-yyyy"))" />
                     }
                 </MudStack>
             </MudPaper>
@@ -76,11 +121,11 @@ else if (Account is not null && (Account.Entries is null || !Account.Entries.Any
 {
     <AddBondEntry BondAccount=Account ActionCompleted="HideOverlay">
         <CustomButton>
-            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.AccountId}")">
+            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"/Import/{Account.AccountId}")">
                 Import</MudButton>
             </CustomButton>
         </AddBondEntry>
-        <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"Import/{Account.AccountId}")">
+        <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"/Import/{Account.AccountId}")">
             Import
         </MudButton>
     }

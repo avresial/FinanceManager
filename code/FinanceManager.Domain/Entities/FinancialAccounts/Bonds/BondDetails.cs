@@ -14,6 +14,7 @@ public class BondDetails
     public DateOnly EndEmissionDate { get; set; }
     public required BondType Type { get; set; }
     public required Currency Currency { get; set; }
+    public decimal UnitValue { get; set; } = 100m;
     public List<BondCalculationMethod> CalculationMethods { get; set; } = [];
     public static Capitalization Capitalization => Capitalization.Annual;
 
@@ -24,7 +25,8 @@ public class BondDetails
     [SetsRequiredMembers]
     [JsonConstructor]
     public BondDetails(string name, string issuer, DateOnly startEmissionDate, DateOnly endEmissionDate,
-        List<BondCalculationMethod> calculationMethods, Currency? currency = null, BondType type = BondType.InflationBond)
+        List<BondCalculationMethod> calculationMethods, Currency? currency = null, BondType type = BondType.InflationBond,
+        decimal unitValue = 100m)
     {
         Name = name;
         Issuer = issuer;
@@ -32,6 +34,7 @@ public class BondDetails
         EndEmissionDate = endEmissionDate;
         Type = type;
         Currency = currency ?? DefaultCurrency.PLN;
+        UnitValue = unitValue;
 
         var methodsWithBackRefs = calculationMethods
             .Select(m => m with { BondDetails = this })

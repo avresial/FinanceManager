@@ -63,6 +63,26 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
+    private static BondDetails CreateBondDetails(int id, DateTime nowUtc, decimal unitValue = 1m)
+    {
+        var calculationMethod = new BondCalculationMethod
+        {
+            Id = id,
+            DateOperator = DateOperator.UntilDate,
+            DateValue = DateOnly.FromDateTime(nowUtc.AddYears(1)).ToString("yyyy-MM-dd"),
+            Rate = 0.0365m
+        };
+
+        return new BondDetails(
+            $"Bond {id}",
+            "Test Issuer",
+            DateOnly.FromDateTime(nowUtc.AddYears(-1)),
+            DateOnly.FromDateTime(nowUtc.AddYears(5)),
+            [calculationMethod],
+            unitValue: unitValue)
+        { Id = id };
+    }
+
     [Fact]
     public async Task IsAnyAccountWithAssets_ReturnsTrue()
     {
@@ -141,6 +161,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         };
 
         _testDatabase.Context.Accounts.AddRange(salaryAccount, bondAccount);
+        _testDatabase.Context.Bonds.Add(CreateBondDetails(1, _nowUtc));
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         _testDatabase.Context.CurrencyEntries.AddRange(
@@ -154,7 +175,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         var result = await new AssetsHttpClient(Client).GetInvestmentPaycheckEstimate(1, DefaultCurrency.USD, _nowUtc, 0.05m, 3);
 
         Assert.NotNull(result);
-        Assert.Equal(12000m, result.InvestableAssetsValue);
+        Assert.Equal(12001.20m, result.InvestableAssetsValue);
         Assert.Equal(50m, result.SustainableMonthlyPaycheck);
         Assert.Equal(3, result.SalaryMonthsRequested);
         Assert.Equal(1, result.SalaryMonthsUsed);

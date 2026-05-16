@@ -5,6 +5,7 @@ using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using System.Net;
 using System.Net.Http.Json;
 using Xunit;
 
@@ -53,5 +54,23 @@ public class LoginControllerTests(OptionsProvider optionsProvider) : ControllerT
         Assert.Equal(_testUserName, body.UserName);
         Assert.Equal(99, body.UserId);
         Assert.False(string.IsNullOrWhiteSpace(body.AccessToken));
+    }
+
+    [Fact]
+    public async Task Login_PreflightRequest_ReturnsCorsHeaders()
+    {
+        // arrange
+        using var request = new HttpRequestMessage(HttpMethod.Options, "api/Login");
+        request.Headers.Add("Origin", "https://localhost:7206");
+        request.Headers.Add("Access-Control-Request-Method", HttpMethod.Post.Method);
+        request.Headers.Add("Access-Control-Request-Headers", "content-type");
+
+        // act
+        using var response = await Client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        // assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal("https://localhost:7206", response.Headers.GetValues("Access-Control-Allow-Origin").Single());
+        Assert.Contains(HttpMethod.Post.Method, response.Headers.GetValues("Access-Control-Allow-Methods").Single(), StringComparison.OrdinalIgnoreCase);
     }
 }

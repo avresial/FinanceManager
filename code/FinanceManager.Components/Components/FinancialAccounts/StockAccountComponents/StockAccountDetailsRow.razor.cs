@@ -1,6 +1,6 @@
-using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -10,6 +10,7 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
 public partial class StockAccountDetailsRow
 {
     private decimal? _price = null;
+    private decimal? _priceChange = null;
     private bool _expanded = false;
     private bool _removeEntryVisibility;
     private bool _updateEntryVisibility;
@@ -17,36 +18,28 @@ public partial class StockAccountDetailsRow
 
     [Parameter] public required StockAccount InvestmentAccount { get; set; }
     [Parameter] public required StockAccountEntry InvestmentEntry { get; set; }
+    [Parameter] public StockPrice? ResolvedPrice { get; set; }
+    [Parameter] public UnrealizedGainLossInstrumentResult? UnrealizedGainLoss { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
-    [Inject] public required StockPriceHttpClient StockPriceHttpClient { get; set; }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        try
-        {
-            var price = await StockPriceHttpClient.GetStockPrice(InvestmentEntry.Ticker, _currency.Id, InvestmentEntry.PostingDate);
-            if (price is null)
-            {
-                _price = null;
-            }
-            else
-            {
-                _currency = price.Currency;
-                _price = price.PricePerUnit * InvestmentEntry.Value;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex);
-            _price = null;
-        }
-    }
 
     protected override void OnParametersSet()
     {
         _currency = SettingsService.GetCurrency();
+
+        if (ResolvedPrice is null)
+        {
+            _price = null;
+            _priceChange = null;
+            base.OnParametersSet();
+            return;
+        }
+
+        _currency = ResolvedPrice.Currency;
+        _price = ResolvedPrice.PricePerUnit * InvestmentEntry.Value;
+        _priceChange = ResolvedPrice.PricePerUnit * InvestmentEntry.ValueChange;
+
         base.OnParametersSet();
     }
 

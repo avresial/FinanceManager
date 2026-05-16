@@ -11,6 +11,8 @@ public static class ServiceCollectionExtension
 {
     public static IServiceCollection AddUIComponents(this IServiceCollection services)
     {
+        services.AddMemoryCache();
+
         services.AddScoped<ILoginService, LoginService>()
 
                 .AddScoped<StockPriceHttpClient>()
@@ -23,6 +25,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<CurrencyEntryHttpClient>()
 
                 .AddScoped<BondAccountHttpClient>()
+                .AddScoped<BondAccountImportHttpClient>()
                 .AddScoped<BondEntryHttpClient>()
                 .AddScoped<BondDetailsHttpClient>()
 
@@ -37,6 +40,10 @@ public static class ServiceCollectionExtension
                 .AddScoped<NewVisitorsHttpClient>()
                 .AddScoped<CsvHeaderMappingHttpClient>()
                 .AddScoped<AccountDataSynchronizationService>()
+                .AddScoped<NavMenuStateCacheService>()
+                .AddScoped<DashboardOverviewCardsCacheService>()
+                .AddScoped<AssetsPageCardsCacheService>()
+                .AddScoped<InvestmentPaycheckEstimateCacheService>()
                 .AddScoped<IUserService, UserService>()
                 .AddScoped<IFinancialAccountService, FinancialAccountService>()
                 .AddScoped<IUserRepository, UserLocalStorageRepository>();

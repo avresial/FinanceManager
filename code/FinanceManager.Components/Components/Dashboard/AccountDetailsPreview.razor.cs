@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Components.Components.Dashboard;
@@ -17,7 +17,7 @@ public partial class AccountDetailsPreview : ComponentBase
         if (firstEntry is null)
             return "";
 
-        return firstEntry.Value.ToString();
+        return firstEntry.Value.ToString("0.00");
     }
     public string GetLastBalance()
     {
@@ -29,7 +29,7 @@ public partial class AccountDetailsPreview : ComponentBase
         if (lastEntry is null)
             return "";
 
-        return lastEntry.Value.ToString();
+        return lastEntry.Value.ToString("0.00");
     }
 
     public string GetBalanceChange()
@@ -45,7 +45,7 @@ public partial class AccountDetailsPreview : ComponentBase
         var firstEntry = CurrencyAccountModel.Entries.FirstOrDefault();
         if (firstEntry is null)
             return "";
-        return Math.Round((lastEntry.Value - firstEntry.Value), 2).ToString();
+        return Math.Round((lastEntry.Value - firstEntry.Value), 2).ToString("0.00");
     }
 
     public string GetFirstPostingDate()
@@ -58,7 +58,7 @@ public partial class AccountDetailsPreview : ComponentBase
         if (firstEntry is null)
             return "";
 
-        return firstEntry.PostingDate.ToString("yyyy-MM-dd");
+        return firstEntry.PostingDate.ToString("dd-MM-yyyy");
     }
 
     public string GetLastPostingDate()
@@ -70,7 +70,7 @@ public partial class AccountDetailsPreview : ComponentBase
         if (lastEntry is null)
             return "";
 
-        return lastEntry.PostingDate.ToString("yyyy-MM-dd");
+        return lastEntry.PostingDate.ToString("dd-MM-yyyy");
     }
 
 }

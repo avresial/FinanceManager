@@ -4,14 +4,14 @@
         <MudText Typo=Typo.h3 class="card-subtitle text-muted">
             @if (_isLoading)
             {
-                <StringSpinner CharactersCount="4" /> 
+                <StringSpinner CharactersCount="4" />
                 @_currency
             }
             else
             {
                 @if (_totalNetWorth is not null)
                 {
-                    @_totalNetWorth
+                    @_totalNetWorth.Value.ToString("0.00")
                     @_currency
                 }
                 else

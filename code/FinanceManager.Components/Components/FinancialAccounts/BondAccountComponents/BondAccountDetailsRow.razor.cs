@@ -1,6 +1,7 @@
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -17,11 +18,15 @@ public partial class BondAccountDetailsRow : ComponentBase
     [Parameter] public required BondAccountEntry BondAccountEntry { get; set; }
     [Parameter] public required BondAccount BondAccount { get; set; }
     [Parameter] public BondDetails? BondDetails { get; set; }
+    [Parameter] public UnrealizedGainLossInstrumentResult? UnrealizedGainLoss { get; set; }
 
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILogger<BondAccountDetailsRow> Logger { get; set; }
+
+    private decimal? CurrentValue => BondDetails is null ? null : BondAccountEntry.Value * BondDetails.UnitValue;
+    private decimal? UnitsChangeValue => BondDetails is null ? null : BondAccountEntry.ValueChange * BondDetails.UnitValue;
 
     protected override void OnInitialized() => _currency = SettingsService.GetCurrency();
 

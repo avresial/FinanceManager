@@ -2,12 +2,11 @@
 @using FinanceManager.Components.Components.Dashboard.Cards.Assets
 @using FinanceManager.Components.Components.Dashboard.Cards.Liabilities
 
-
 <MudContainer Class="py-2">
     <MudGrid Spacing="2">
 
         <MudItem xs="12" md="12">
-            <NetWorthOverviewCard Height="@($"{_unitHeight}px")" EndDateTime="@EndDate" />
+            <NetWorthOverviewCard Height="@($"{_unitHeight}px")" StartDateTime="@StartDate" EndDateTime="@EndDate" />
         </MudItem>
 
         <MudItem xs="12" md="6">
@@ -36,15 +35,12 @@
         </MudItem>
 
         <MudItem xs="12" md="6" lg="4">
-            <FinancialInsightsCarousel Height="@($"{_unitHeight * 3}px")" Count="3" />
-        <MudItem xs="12" md="6" lg="4">
-            <FinancialLabelsListCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
-                                     EndDateTime="@EndDate" />
+            <ExpenseDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
+                                             EndDateTime="@EndDate" />
         </MudItem>
 
         <MudItem xs="12" md="6" lg="4">
-            <AssetsPerTypeOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
-                                       EndDateTime="@EndDate" />
+            <FinancialInsightsCarousel Height="@($"{_unitHeight * 3}px")" Count="3" />
         </MudItem>
 
     </MudGrid>

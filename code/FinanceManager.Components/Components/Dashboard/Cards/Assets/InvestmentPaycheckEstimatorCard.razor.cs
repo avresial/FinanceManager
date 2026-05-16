@@ -1,4 +1,5 @@
-using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Models;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
@@ -20,7 +21,7 @@ public partial class InvestmentPaycheckEstimatorCard
     [Parameter] public int SalaryMonths { get; set; } = 3;
 
     [Inject] public required ILogger<InvestmentPaycheckEstimatorCard> Logger { get; set; }
-    [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
+    [Inject] public required InvestmentPaycheckEstimateCacheService InvestmentPaycheckEstimateCacheService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
@@ -50,7 +51,17 @@ public partial class InvestmentPaycheckEstimatorCard
             }
 
             decimal withdrawalRate = Math.Round(_annualWithdrawalRate ?? 0.05m, 4);
-            _estimate = await AssetsHttpClient.GetInvestmentPaycheckEstimate(user.UserId, _currency, EndDateTime, withdrawalRate, SalaryMonths);
+            var context = new InvestmentPaycheckEstimateRefreshContext
+            {
+                UserId = user.UserId,
+                CurrencyId = _currency.Id,
+                EndDateTime = EndDateTime,
+                WithdrawalRate = withdrawalRate,
+                SalaryMonths = SalaryMonths,
+            };
+
+            var snapshot = await InvestmentPaycheckEstimateCacheService.GetSnapshotAsync(context);
+            _estimate = snapshot.Estimate;
         }
         catch (Exception ex)
         {

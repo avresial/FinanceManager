@@ -3,10 +3,12 @@ using FinanceManager.Application;
 using FinanceManager.Application.Options;
 using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using ServiceDefaults;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,15 +36,29 @@ builder.Services.Configure<OllamaOptions>(builder.Configuration.GetSection("Olla
 builder.Services.Configure<AiProviderOptions>(builder.Configuration.GetSection("AiProvider"));
 builder.Services.Configure<List<AiProviderFallbackStrategyOption>>(builder.Configuration.GetSection("AIProviderFallbackStrategies"));
 
+var allowedCorsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?.Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ApiCorsPolicy",
-        builder =>
+        corsPolicyBuilder =>
         {
-            builder.AllowAnyOrigin()
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+            if (allowedCorsOrigins is { Length: > 0 })
+            {
+                corsPolicyBuilder.WithOrigins(allowedCorsOrigins)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod();
+
+                return;
+            }
+
+            corsPolicyBuilder.AllowAnyOrigin()
+                .AllowAnyHeader()
+                .AllowAnyMethod();
         });
 }).AddAuthentication(options =>
 {
@@ -63,9 +79,23 @@ builder.Services.AddCors(options =>
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
     };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrWhiteSpace(accessToken) && path.StartsWithSegments("/hubs/currency-import"))
+                context.Token = accessToken;
+
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddMemoryCache();
+builder.Services.AddSignalR();
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddSingleton<IInsightsGenerationChannel, InsightsGenerationChannel>();
@@ -73,6 +103,9 @@ builder.Services.AddHostedService<InsightsGenerationBackgroundService>();
 builder.Services.AddSingleton<ILabelSetterChannel, LabelSetterChannel>();
 builder.Services.AddHostedService<LabelSetterBackgroundService>();
 builder.Services.AddHostedService<LabelSetterStartupService>();
+builder.Services.AddSingleton<ICurrencyImportJobChannel, CurrencyImportJobChannel>();
+builder.Services.AddSingleton<ICurrencyImportJobStore, CurrencyImportJobStore>();
+builder.Services.AddHostedService<CurrencyImportBackgroundService>();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
@@ -90,9 +123,14 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseBlazorFrameworkFiles();
+app.UseStaticFiles();
+
 app.UseCors("ApiCorsPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<FinanceManager.Api.Hubs.CurrencyImportHub>("/hubs/currency-import");
+app.MapFallbackToFile("index.html");
 app.Run();

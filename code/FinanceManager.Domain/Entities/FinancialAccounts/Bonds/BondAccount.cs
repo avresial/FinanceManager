@@ -149,20 +149,29 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         var result = new Dictionary<DateOnly, decimal>();
         if (Entries is null || start > end) return result;
 
-        var detailsIds = Entries.Select(e => e.BondDetailsId).Distinct().ToList();
-        if (!detailsIds.All(id => bondDetails.Any(bd => bd.Id == id)))
-            throw new ArgumentException("Not all BondDetails are provided for the entries in this account.");
+        var detailsById = bondDetails.ToDictionary(x => x.Id);
 
-        List<Dictionary<DateOnly, decimal>> pricesPerDetail = [];
-        foreach (var entry in Entries.Where(x => x.PostingDate <= end.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)))
-            pricesPerDetail.Add(entry.GetPrice(end, bondDetails.Single(bd => bd.Id == entry.BondDetailsId)));
+        var detailsIds = Entries.Select(e => e.BondDetailsId)
+            .Concat(NextOlderEntries.Keys)
+            .Distinct()
+            .ToList();
+        var missingDetailIds = detailsIds.Where(id => !detailsById.ContainsKey(id)).ToList();
+        if (missingDetailIds.Count != 0)
+            throw new InvalidOperationException($"Bond valuation requires details for bond ids: {string.Join(", ", missingDetailIds)}.");
 
-        foreach (var price in pricesPerDetail.SelectMany(dict => dict).OrderBy(x => x.Key))
+        for (var date = start; date <= end; date = date.AddDays(1))
         {
-            if (result.ContainsKey(price.Key))
-                result[price.Key] += price.Value;
-            else
-                result[price.Key] = price.Value;
+            decimal total = 0;
+            foreach (var detailId in detailsIds)
+            {
+                var currentEntry = GetThisOrNextOlder(date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), detailId);
+                if (currentEntry is null) continue;
+
+                total += currentEntry.GetPriceAt(date, detailsById[detailId]);
+            }
+
+            if (total != 0)
+                result[date] = total;
         }
 
         return result;
@@ -181,9 +190,10 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
 
     public List<int> GetStoredBondsIds()
     {
-        if (Entries is null) return [];
-
-        return Entries.DistinctBy(x => x.BondDetailsId).Select(x => x.BondDetailsId).ToList();
+        return Entries.Select(x => x.BondDetailsId)
+            .Concat(NextOlderEntries.Keys)
+            .Distinct()
+            .ToList();
     }
 
 }

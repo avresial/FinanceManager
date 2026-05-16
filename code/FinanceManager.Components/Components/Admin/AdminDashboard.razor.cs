@@ -1,6 +1,7 @@
 using FinanceManager.Components.HttpClients;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using MudBlazor.Charts;
 
 namespace FinanceManager.Components.Components.Admin;
 
@@ -16,16 +17,9 @@ public partial class AdminDashboard : ComponentBase
         ChartPalette = ["#ffab00"],
         ShowLegend = false,
         ShowToolTips = false,
-        ShowLabels = false,
-        ShowLegendLabels = false,
     };
-    private AxisChartOptions _axisChartOptions = new AxisChartOptions()
-    {
-        MatchBoundsToSize = true,
-    };
-
-    private List<ChartSeries>? _dailyActiveUsersSeries = null;
-    private List<ChartSeries>? _newUsersSeries = null;
+    private List<ChartSeries<double>>? _dailyActiveUsersSeries = null;
+    private List<ChartSeries<double>>? _newUsersSeries = null;
 
     [Inject] required public AdministrationUsersHttpClient AdministrationUsersHttpClient { get; set; }
     [Inject] required public NewVisitorsHttpClient NewVisitorsHttpClient { get; set; }
@@ -44,7 +38,7 @@ public partial class AdminDashboard : ComponentBase
             var dailyActiveUsers = await AdministrationUsersHttpClient.GetDailyActiveUsers();
             _dailyActiveUsersSeries =
             [
-                new ChartSeries()
+                new ChartSeries<double>()
                 {
                     Name = "Users count",
                     Data = dailyActiveUsers.Select(x =>  (double)x.Value).ToArray()
@@ -55,7 +49,7 @@ public partial class AdminDashboard : ComponentBase
             var newUsers = await AdministrationUsersHttpClient.GetNewUsersDaily();
             _newUsersSeries =
             [
-                new ChartSeries()
+                new ChartSeries<double>()
                 {
                     Name = "Users count",
                     Data = newUsers.Select(x =>  (double)x.Value).ToArray()
