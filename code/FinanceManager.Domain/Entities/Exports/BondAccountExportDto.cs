@@ -5,5 +5,5 @@ public record BondAccountExportDto(
     DateTime PostingDate,
     decimal Value,
     decimal ValueChange,
-    int BondDetailsId,
+    string BondName,
     string? Labels = null) : IAccountExportDto;

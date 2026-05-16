@@ -75,6 +75,7 @@ public partial class ImportStockEntriesComponent : ComponentBase
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<ImportStockEntriesComponent> Logger { get; set; }
     [Inject] public required StockAccountImportHttpClient AccountImportHttpClient { get; set; }
+    [Inject] public required CsvHeaderMappingHttpClient MappingHttpClient { get; set; }
 
     private StockEntryConflictResolver? _resolverRef;
     private bool HasUnresolvedConflicts =>
@@ -180,7 +181,68 @@ public partial class ImportStockEntriesComponent : ComponentBase
         if (!_step1Complete && _erorrs.Count == 0)
             _erorrs.Add("Step 1 can not be completed - loading files failed.");
 
+        if (_headers.Count > 0)
+            await ApplySuggestedMappings();
+
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ApplySuggestedMappings()
+    {
+        try
+        {
+            if (_headers.Count == 0) return;
+
+            var suggestions = await MappingHttpClient.GetSuggestedMappingsAsync(_headers);
+            if (suggestions is null || suggestions.Count == 0) return;
+
+            foreach (var suggestion in suggestions)
+            {
+                switch (suggestion.MappedFieldName)
+                {
+                    case "PostingDate":
+                        _selectedPostingDateHeader = suggestion.OriginalHeaderName;
+                        break;
+                    case "ValueChange":
+                        _selectedValueChangeHeader = suggestion.OriginalHeaderName;
+                        break;
+                    case "Ticker":
+                        _selectedTickerHeader = suggestion.OriginalHeaderName;
+                        break;
+                }
+            }
+
+            OnMappingChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogDebug(ex, "Failed to get mapping suggestions");
+        }
+    }
+
+    private async Task SaveMappingChoices()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(_selectedPostingDateHeader) ||
+                string.IsNullOrEmpty(_selectedValueChangeHeader) ||
+                string.IsNullOrEmpty(_selectedTickerHeader))
+                return;
+
+            var mappingItems = new List<HeaderMappingRequestItemDto>
+            {
+                new(_selectedPostingDateHeader, "PostingDate"),
+                new(_selectedValueChangeHeader, "ValueChange"),
+                new(_selectedTickerHeader, "Ticker"),
+            };
+
+            await MappingHttpClient.SaveMappingsAsync(new SaveMappingRequestDto(mappingItems));
+            Logger?.LogInformation("Stock mapping choices saved successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogDebug(ex, "Failed to save stock mapping choices");
+        }
     }
 
     private async Task UploadFiles(IBrowserFile? file)
@@ -355,6 +417,8 @@ public partial class ImportStockEntriesComponent : ComponentBase
             return;
         }
 
+        await SaveMappingChoices();
+
         _step3Complete = true;
         _isImportingData = false;
     }
@@ -514,8 +578,14 @@ public partial class ImportStockEntriesComponent : ComponentBase
                 "yyyy/MM/dd HH:mm:ss"
             };
 
+            // Try strict formats first, then fall back to flexible parsing for ISO 8601 variants
+            // (fractional seconds, timezone offsets, "Z" suffix, etc.).
+            // Note: RoundtripKind conflicts with AssumeUniversal — DateTime.TryParse handles
+            // ISO 8601 with explicit timezone (e.g. trailing Z) natively without it.
             if (!DateTime.TryParseExact(posting, allowedFormats, CultureInfo.InvariantCulture,
-                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var date))
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var date)
+                && !DateTime.TryParse(posting, CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out date))
                 throw new Exception($"Could not parse posting date: '{posting}'");
 
             if (!decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var valueChange))

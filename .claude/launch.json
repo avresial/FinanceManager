@@ -2,16 +2,15 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "AppHost",
-      "runtimeExecutable": "dotnet",
-      "runtimeArgs": ["run", "--project", "code/AppHost", "--launch-profile", "https"],
-      "port": 5001
-    },
-    {
       "name": "AppHost (attach preview)",
       "runtimeExecutable": "powershell",
-      "runtimeArgs": ["-NoProfile", "-Command", "while ($true) { Start-Sleep -Seconds 60 }"],
-      "port": 5001
+      "runtimeArgs": [
+        "-NoProfile",
+        "-Command",
+        "while ($true) { Start-Sleep -Seconds 3600 }"
+      ],
+      "port": 5001,
+      "url": "https://localhost:5001/"
     }
   ]
 }

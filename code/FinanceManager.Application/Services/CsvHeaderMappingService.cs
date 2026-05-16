@@ -14,7 +14,7 @@ public class CsvHeaderMappingService(ICsvHeaderMappingRepository mappingReposito
         var userMappings = await mappingRepository.GetAllMappings();
         var results = new List<HeaderMappingResultDto>();
 
-        var standardFields = new[] { "PostingDate", "ValueChange", "ContractorDetails", "Description" };
+        var standardFields = new[] { "PostingDate", "ValueChange", "ContractorDetails", "Description", "Ticker", "Bond" };
 
         foreach (var header in headers)
         {
