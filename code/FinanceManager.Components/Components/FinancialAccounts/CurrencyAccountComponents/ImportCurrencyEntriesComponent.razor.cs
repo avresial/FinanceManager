@@ -17,7 +17,7 @@ namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccount
 
 public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDisposable
 {
-    private const string _defaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
+    private const string _defaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mud-width-full mud-height-full";
     private string _dragClass = _defaultDragClass;
     private List<ImportCurrencyModel> _importModels = [];
 
@@ -36,6 +36,9 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
 
     private ImportResult? _importResult = null;
     private string? _uploadedContent;
+    private string? _fileName;
+    private long _fileSize;
+    private int _totalRowCount;
     private Guid? _activeImportJobId;
     private CurrencyImportJobStatusDto? _activeJobStatus;
     private string? _jobError;
@@ -60,6 +63,36 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
         _step3Complete &&
         _importResult is not null &&
         !_importResult.Conflicts.Any();
+    private bool ShowImportCompletedMessage => ShowAsyncImportCompletedMessage || ShowSynchronousImportCompletedMessage;
+
+    private CurrencyEntryConflictResolver? _resolverRef;
+    private bool HasUnresolvedConflicts =>
+        (_activeImportJobId.HasValue && _liveConflicts.Any(x => !x.IsResolved && !x.Conflict.IsExactMatch)) ||
+        (_importResult is not null && _importResult.Conflicts.Any());
+
+    private string PrimaryLabel => _stepIndex switch
+    {
+        0 => "Continue to mapping",
+        1 => "Begin import",
+        2 => "Begin import",
+        _ => "Continue"
+    };
+
+    private bool CanContinue => _stepIndex switch
+    {
+        0 => _rawPreview.Any() && _headers.Count >= 2,
+        1 => !_erorrs.Any() && _mappedPreview.Any(),
+        2 => _resolverRef?.AllResolved == true,
+        _ => false
+    };
+
+    private bool ShowPrimaryAction => _stepIndex switch
+    {
+        0 or 1 => true,
+        2 => HasUnresolvedConflicts,
+        _ => false
+    };
+    private bool ShowBackAction => _stepIndex > 0 && _stepIndex < 2 && CanContinue;
 
     private string _delimiterBacking = ",";
     private string Delimiter
@@ -89,9 +122,6 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
     private bool _step1Complete;
     private bool _step2Complete;
     private bool _step3Complete;
-
-    private bool _isFormValid;
-    private bool _isTouched;
 
     public required string AccountName { get; set; }
 
@@ -141,6 +171,7 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
 
             _headers = result.Value.Headers ?? [];
             var allParsedRows = result.Value.Data ?? [];
+            _totalRowCount = allParsedRows.Count;
 
             if (_headers.Count != 0 && allParsedRows.Count != 0)
                 _rawPreview = allParsedRows.Take(3).ToList();
@@ -218,6 +249,9 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
         }
 
         await Clear();
+
+        _fileName = file.Name;
+        _fileSize = file.Size;
 
         try
         {
@@ -335,7 +369,6 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
         _activeImportJobId = null;
         _activeJobStatus = null;
 
-        _stepIndex = 2;
         if (string.IsNullOrEmpty(_uploadedContent))
         {
             _erorrs.Add("No data to import.");
@@ -413,6 +446,9 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
         _jobError = null;
 
         _uploadedContent = null;
+        _fileName = null;
+        _fileSize = 0;
+        _totalRowCount = 0;
 
         try
         {
@@ -658,7 +694,27 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
 
     private void SetDragClass() => _dragClass = $"{_defaultDragClass} mud-border-primary";
     private void ClearDragClass() => _dragClass = _defaultDragClass;
-    private void GoToNextStep() => _stepIndex++;
+    private async Task OnPrimaryClick()
+    {
+        if (_stepIndex == 1)
+        {
+            _stepIndex = 2;
+            await BeginImport();
+        }
+        else if (_stepIndex == 2 && _resolverRef is not null)
+        {
+            await _resolverRef.SubmitAsync();
+        }
+        else
+        {
+            _stepIndex++;
+        }
+    }
+    private void GoToPreviousStep()
+    {
+        if (_stepIndex > 0)
+            _stepIndex--;
+    }
     private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
     {
         if (arg.Action == StepAction.Complete)

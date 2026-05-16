@@ -8,124 +8,126 @@ namespace FinanceManager.Components.Components.FinancialAccounts.BondAccountComp
 public partial class BondEntryConflictResolver
 {
     [Inject] public required BondAccountImportHttpClient AccountImportHttpClient { get; set; }
-    [Inject] public required ILogger<BondEntryConflictResolver> Logger { get; set; }
     [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
+    [Inject] public required ILogger<BondEntryConflictResolver> Logger { get; set; }
 
     [Parameter] public required IReadOnlyCollection<BondImportConflict> Conflicts { get; set; }
-    [Parameter] public required bool SkipExactMatches { get; set; } = true;
+    [Parameter] public bool SkipExactMatches { get; set; } = true;
     [Parameter] public required string AccountName { get; set; }
+    [Parameter] public EventCallback OnResolutionChanged { get; set; }
+    [Parameter] public EventCallback OnSubmitted { get; set; }
 
     private bool _isLoading;
-    private int AccountId { get; set; }
-    private DateTime? _selectedDay;
-    private List<BondImportConflict> _selectedConflicts = [];
-    private Dictionary<DateTime, List<BondImportConflict>> _conflictsByDay = [];
+    private string? _errorMessage;
+    private int _accountId;
+    private List<DayGroup> _dayGroups = [];
+    private readonly Dictionary<DateTime, ResolveChoice> _dayChoices = new();
     private Dictionary<int, string> _bondNamesById = [];
+
+    public int ResolvedCount => _dayChoices.Count;
+    public int UnresolvedCount => Math.Max(0, _dayGroups.Count - _dayChoices.Count);
+    public int ImportedCount => _dayChoices.Values.Count(c => c == ResolveChoice.Imported);
+    public int ExistingCount => _dayChoices.Values.Count(c => c == ResolveChoice.Existing);
+    public bool AllResolved => _dayGroups.Count > 0 && _dayChoices.Count == _dayGroups.Count;
 
     protected override async Task OnInitializedAsync()
     {
-        _isLoading = true;
-
         try
         {
             var bonds = await BondDetailsHttpClient.GetAll();
             _bondNamesById = bonds.ToDictionary(x => x.Id, x => x.Name);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to load bond details for name resolution");
+        }
+    }
 
-            _conflictsByDay.Clear();
-            _selectedDay = null;
-            _selectedConflicts = [];
-
-            _conflictsByDay = Conflicts
+    protected override void OnParametersSet()
+    {
+        _isLoading = true;
+        try
+        {
+            _dayGroups = Conflicts
                 .Where(c => c.ImportEntry is not null || c.ExistingEntry is not null)
+                .Where(c => !SkipExactMatches || !c.IsExactMatch)
                 .GroupBy(c => (c.ImportEntry?.PostingDate ?? c.ExistingEntry!.PostingDate).Date)
                 .OrderBy(g => g.Key)
-                .ToDictionary(g => g.Key, g => g.ToList());
+                .Select(g => new DayGroup(g.Key, g.ToList()))
+                .ToList();
 
-            if (SkipExactMatches)
-            {
-                var keysToRemove = _conflictsByDay.Where(x => x.Value.All(y => y.IsExactMatch))
-                    .Select(x => x.Key)
-                    .ToList();
+            if (_dayGroups.Count > 0)
+                _accountId = _dayGroups[0].Conflicts[0].AccountId;
 
-                foreach (var key in keysToRemove)
-                    _conflictsByDay.Remove(key);
-            }
-
-            if (_conflictsByDay.Count != 0)
-            {
-                _selectedDay = _conflictsByDay.Keys.OrderBy(k => k).First();
-                _selectedConflicts = _selectedDay.HasValue ? _conflictsByDay[_selectedDay.Value] : [];
-                AccountId = Conflicts.First().AccountId;
-            }
+            var presentDays = new HashSet<DateTime>(_dayGroups.Select(g => g.Date));
+            foreach (var key in _dayChoices.Keys.Where(k => !presentDays.Contains(k)).ToList())
+                _dayChoices.Remove(key);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error initializing {BondEntryConflictResolver} for account {AccountId}", nameof(BondEntryConflictResolver), AccountId);
+            Logger.LogError(ex, "Error initializing {Component} for account {AccountId}", nameof(BondEntryConflictResolver), _accountId);
         }
-
         _isLoading = false;
     }
 
-    private async Task OnPickImported()
+    public ResolveChoice? GetDayChoice(DateTime date) =>
+        _dayChoices.TryGetValue(date, out var c) ? c : null;
+
+    public async Task PickDay(DateTime date, ResolveChoice choice)
     {
-        _isLoading = true;
-
-        try
-        {
-            var resolvedImports = _selectedConflicts.Select(c =>
-                new ResolvedBondImportConflict(c.AccountId, true, c.ImportEntry, false, c.ExistingEntry?.EntryId)).ToList();
-
-            await AccountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
-            RemoveSelectedDayAndAdvance();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error resolving import conflicts for account {AccountId}", AccountId);
-        }
-
-        _isLoading = false;
+        _dayChoices[date] = choice;
+        await OnResolutionChanged.InvokeAsync();
+        StateHasChanged();
     }
 
-    private void OnPickExisting()
+    public async Task PickAll(ResolveChoice choice)
     {
-        _isLoading = true;
-
-        try
-        {
-            RemoveSelectedDayAndAdvance();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error resolving import conflicts for account {AccountId}", AccountId);
-        }
-
-        _isLoading = false;
+        foreach (var g in _dayGroups)
+            _dayChoices[g.Date] = choice;
+        await OnResolutionChanged.InvokeAsync();
+        StateHasChanged();
     }
 
-    private void RemoveSelectedDayAndAdvance()
+    public async Task SubmitAsync()
     {
-        if (_selectedDay is null)
+        if (_dayChoices.Count == 0)
             return;
 
-        var key = _selectedDay.Value;
-        _conflictsByDay.Remove(key);
-
-        if (_conflictsByDay.Count == 0)
+        _isLoading = true;
+        _errorMessage = null;
+        try
         {
-            _selectedDay = null;
-            _selectedConflicts = [];
-            return;
+            var resolvedImports = new List<ResolvedBondImportConflict>();
+            foreach (var g in _dayGroups)
+            {
+                if (!_dayChoices.TryGetValue(g.Date, out var choice)) continue;
+                if (choice != ResolveChoice.Imported) continue;
+                foreach (var c in g.Conflicts)
+                {
+                    resolvedImports.Add(new ResolvedBondImportConflict(
+                        c.AccountId, true, c.ImportEntry, false, c.ExistingEntry?.EntryId));
+                }
+            }
+
+            if (resolvedImports.Count > 0)
+                await AccountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
+
+            _dayChoices.Clear();
+            await OnSubmitted.InvokeAsync();
         }
-
-        var next = _conflictsByDay.Keys.OrderBy(k => k).First();
-        _selectedDay = next;
-        _selectedConflicts = _conflictsByDay[next];
+        catch (Exception ex)
+        {
+            _errorMessage = "Could not submit conflict decisions. Please try again.";
+            Logger.LogError(ex, "Error submitting conflict resolutions for account {AccountId}", _accountId);
+        }
+        _isLoading = false;
+        StateHasChanged();
     }
 
-    private string GetBondName(int bondDetailsId)
-    {
-        return _bondNamesById.TryGetValue(bondDetailsId, out var name)
-            ? name
-            : $"Bond #{bondDetailsId}";
-    }
+    public string GetBondName(int bondDetailsId) =>
+        _bondNamesById.TryGetValue(bondDetailsId, out var name) ? name : $"Bond #{bondDetailsId}";
+
+    public enum ResolveChoice { Imported, Existing }
+
+    private sealed record DayGroup(DateTime Date, List<BondImportConflict> Conflicts);
 }

@@ -3,72 +3,192 @@
 
 @if (_isLoading)
 {
-    <div style="display: flex; justify-content: center; align-items: center; min-height: 200px;">
+    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="py-8">
         <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-    </div>
+    </MudStack>
 }
-else if (_conflictsByDay.Any() == true)
+else if (_dayGroups.Any())
 {
-    <MudText Typo="Typo.h5">@_conflictsByDay.Count() conflicts require resolving</MudText>
+    <MudStack Spacing="3">
 
-    <MudGrid Class="mt-1">
-        <MudItem xs="6">
-            <MudText Typo="Typo.h6">Import data</MudText>
-            <MudSimpleTable Elevation="0">
-                <thead>
-                    <tr>
-                        <th>Posting date</th>
-                        <th>Value change</th>
-                        <th>Ticker</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var c in _selectedConflicts.Where(c => c.ImportEntry is not null))
-                    {
-                        <tr>
-                            <td>@c.ImportEntry!.PostingDate.ToString("dd-MM-yyyy")</td>
-                            <td>@c.ImportEntry!.ValueChange.ToString("0.00")</td>
-                            <td>@c.ImportEntry!.Ticker</td>
-                        </tr>
-                    }
-                </tbody>
-            </MudSimpleTable>
-        </MudItem>
-        <MudItem xs="6">
-            <MudText Typo="Typo.h6">Existing data</MudText>
-            <MudSimpleTable Elevation="0">
-                <thead>
-                    <tr>
-                        <th>Posting date</th>
-                        <th>Value change</th>
-                        <th>Ticker</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var c in _selectedConflicts.Where(c => c.ExistingEntry is not null))
-                    {
-                        <tr>
-                            <td>@c.ExistingEntry!.PostingDate.ToString("dd-MM-yyyy")</td>
-                            <td>@c.ExistingEntry!.ValueChange.ToString("0.00")</td>
-                            <td>@c.ExistingEntry!.Ticker</td>
-                        </tr>
-                    }
-                </tbody>
-            </MudSimpleTable>
-        </MudItem>
-
-        <MudItem xs="6">
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnPickImported" Disabled="_isLoading">pick
-                imported</MudButton>
-            </MudItem>
-
-            <MudItem xs="6">
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnPickExisting" Disabled="_isLoading">pick
-                    existing</MudButton>
-                </MudItem>
-            </MudGrid>
-        }
-else
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
         {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">@($"Go back to {AccountName}")</MudButton>
+            <MudAlert Severity="Severity.Error" Variant="Variant.Text" Dense="true">@_errorMessage</MudAlert>
         }
+
+        <MudStack Spacing="0">
+            <MudText Typo="Typo.subtitle2">Pick which data to keep</MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                We found <b>@_dayGroups.Count conflict@(_dayGroups.Count == 1 ? string.Empty : "s")</b>
+                between imported and existing data in <b>@AccountName</b>.
+                Choose what to keep for each day.
+            </MudText>
+        </MudStack>
+
+        <MudPaper Outlined="true" Elevation="0" Class="px-4 py-2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mud-width-full">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
+                    @ResolvedCount / @_dayGroups.Count
+                </MudChip>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">resolved</MudText>
+
+                <MudSpacer />
+
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Default"
+                           OnClick="@(() => PickAll(ResolveChoice.Imported))">Keep all imported</MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Default"
+                           OnClick="@(() => PickAll(ResolveChoice.Existing))">Keep all existing</MudButton>
+            </MudStack>
+        </MudPaper>
+
+        @for (int i = 0; i < _dayGroups.Count; i++)
+        {
+            var idx = i;
+            var day = _dayGroups[idx];
+            var choice = GetDayChoice(day.Date);
+            var resolved = choice is not null;
+            var importedSelected = choice == ResolveChoice.Imported;
+            var importedDimmed = choice == ResolveChoice.Existing;
+            var existingSelected = choice == ResolveChoice.Existing;
+            var existingDimmed = choice == ResolveChoice.Imported;
+
+            var importedEntries = day.Conflicts
+                .Where(c => c.ImportEntry is not null)
+                .Select(c => c.ImportEntry!)
+                .ToList();
+            var existingEntries = day.Conflicts
+                .Where(c => c.ExistingEntry is not null)
+                .Select(c => c.ExistingEntry!)
+                .ToList();
+
+            <MudStack Spacing="2">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mud-width-full">
+                    <MudText Typo="Typo.overline" Class="mud-text-secondary">
+                        Conflict @(idx + 1) · @day.Date.ToString("dd-MM-yyyy")
+                    </MudText>
+                    <MudSpacer />
+                    @if (resolved)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                        <MudText Typo="Typo.caption" Color="Color.Success"><b>RESOLVED</b></MudText>
+                    }
+                </MudStack>
+
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" md="6">
+                        <MudPaper Outlined="true" Elevation="0"
+                                  Class="@($"pa-4 cursor-pointer{(importedSelected ? " mud-border-primary" : string.Empty)}")"
+                                  Style="@(importedDimmed ? "opacity:0.55;" : null)"
+                                  @onclick="@(() => PickDay(day.Date, ResolveChoice.Imported))">
+                            <MudStack Spacing="3">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mud-width-full">
+                                    <MudText Typo="Typo.overline"><b>IMPORTED</b></MudText>
+                                    <MudSpacer />
+                                    <MudChip T="string" Size="Size.Small"
+                                             Variant="@(importedSelected ? Variant.Filled : Variant.Outlined)"
+                                             Color="@(importedSelected ? Color.Primary : Color.Default)">FROM CSV</MudChip>
+                                </MudStack>
+                                @if (importedEntries.Count == 0)
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary"><em>No imported entries for this day.</em></MudText>
+                                }
+                                else
+                                {
+                                    <MudSimpleTable Dense="true" Hover="false" Elevation="0">
+                                        <thead>
+                                            <tr>
+                                                <th>Posting date</th>
+                                                <th>Value change</th>
+                                                <th>Ticker</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var e in importedEntries)
+                                            {
+                                                <tr>
+                                                    <td>@e.PostingDate.ToString("dd-MM-yyyy")</td>
+                                                    <td>
+                                                        <MudText Inline="true" Typo="Typo.body2"
+                                                                 Color="@(e.ValueChange < 0 ? Color.Error : Color.Success)">
+                                                            @(e.ValueChange > 0 ? "+" : "")@e.ValueChange.ToString("0.00")
+                                                        </MudText>
+                                                    </td>
+                                                    <td>@e.Ticker</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </MudSimpleTable>
+                                }
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudPaper Outlined="true" Elevation="0"
+                                  Class="@($"pa-4 cursor-pointer{(existingSelected ? " mud-border-primary" : string.Empty)}")"
+                                  Style="@(existingDimmed ? "opacity:0.55;" : null)"
+                                  @onclick="@(() => PickDay(day.Date, ResolveChoice.Existing))">
+                            <MudStack Spacing="3">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mud-width-full">
+                                    <MudText Typo="Typo.overline"><b>EXISTING</b></MudText>
+                                    <MudSpacer />
+                                    <MudChip T="string" Size="Size.Small"
+                                             Variant="@(existingSelected ? Variant.Filled : Variant.Outlined)"
+                                             Color="@(existingSelected ? Color.Primary : Color.Default)">IN @AccountName.ToUpperInvariant()</MudChip>
+                                </MudStack>
+                                @if (existingEntries.Count == 0)
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary"><em>No existing entries for this day.</em></MudText>
+                                }
+                                else
+                                {
+                                    <MudSimpleTable Dense="true" Hover="false" Elevation="0">
+                                        <thead>
+                                            <tr>
+                                                <th>Posting date</th>
+                                                <th>Value change</th>
+                                                <th>Ticker</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var e in existingEntries)
+                                            {
+                                                <tr>
+                                                    <td>@e.PostingDate.ToString("dd-MM-yyyy")</td>
+                                                    <td>
+                                                        <MudText Inline="true" Typo="Typo.body2"
+                                                                 Color="@(e.ValueChange < 0 ? Color.Error : Color.Success)">
+                                                            @(e.ValueChange > 0 ? "+" : "")@e.ValueChange.ToString("0.00")
+                                                        </MudText>
+                                                    </td>
+                                                    <td>@e.Ticker</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </MudSimpleTable>
+                                }
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            </MudStack>
+        }
+
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-1">
+            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" Class="mud-text-secondary" />
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                When you're done, you'll keep imported data for
+                <b>@ImportedCount day@(ImportedCount == 1 ? string.Empty : "s")</b>
+                and existing data for
+                <b>@ExistingCount day@(ExistingCount == 1 ? string.Empty : "s")</b>.
+                @if (UnresolvedCount > 0)
+                {
+                    <MudText Inline="true" Typo="Typo.caption" Color="Color.Warning">
+                        · <b>@UnresolvedCount still need a choice.</b>
+                    </MudText>
+                }
+            </MudText>
+        </MudStack>
+
+    </MudStack>
+}
