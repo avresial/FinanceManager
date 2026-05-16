@@ -15,7 +15,7 @@ public sealed class CurrencyImportBackgroundService(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation("Currency import background service started.");
-
+        DateTime lastStatusUpdate = DateTime.MinValue;
         await foreach (var request in channel.ReadAll(stoppingToken))
         {
             try
@@ -37,14 +37,17 @@ public sealed class CurrencyImportBackgroundService(
                     domainEntries,
                     onConflicts: async conflicts =>
                     {
-                        foreach (var conflict in conflicts)
+                        foreach (var conflict in conflicts.Where(x => !x.IsExactMatch))
                         {
                             var added = jobStore.TryAddConflict(request.JobId, conflict);
                             if (added is null)
                                 continue;
 
-                            await hub.Clients.Group(CurrencyImportHub.GetJobGroupName(request.JobId))
-                                .SendAsync("ConflictDiscovered", added, stoppingToken);
+                            if (!added.IsResolved)
+                            {
+                                await hub.Clients.Group(CurrencyImportHub.GetJobGroupName(request.JobId))
+                                    .SendAsync("ConflictDiscovered", added, stoppingToken);
+                            }
                         }
 
                         await PublishStatus(request.JobId, request.UserId, stoppingToken);
@@ -53,11 +56,14 @@ public sealed class CurrencyImportBackgroundService(
                     {
                         jobStore.TryUpdateProgress(request.JobId, processed, imported, failed);
 
-                        if (processed % 10 == 0 || processed == domainEntries.Count)
+                        var timeSinceLastUpdate = DateTime.UtcNow - lastStatusUpdate;
+                        if (timeSinceLastUpdate >= TimeSpan.FromMilliseconds(200) || processed == domainEntries.Count)
+                        {
+                            lastStatusUpdate = DateTime.UtcNow;
                             await PublishStatus(request.JobId, request.UserId, stoppingToken);
+                        }
                     });
 
-                jobStore.TryMarkCompleted(request.JobId, result);
                 await PublishStatus(request.JobId, request.UserId, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

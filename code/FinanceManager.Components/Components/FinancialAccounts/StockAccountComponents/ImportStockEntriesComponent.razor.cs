@@ -15,7 +15,7 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
 
 public partial class ImportStockEntriesComponent : ComponentBase
 {
-    private const string _defaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
+    private const string _defaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mud-width-full mud-height-full";
     private string _dragClass = _defaultDragClass;
 
     private List<IBrowserFile> LoadedFiles = [];
@@ -32,6 +32,10 @@ public partial class ImportStockEntriesComponent : ComponentBase
 
     private StockImportResult? _importResult = null;
     private string? _uploadedContent;
+    private string? _fileName;
+    private long _fileSize;
+    private int _totalRowCount;
+    private bool _conflictsResolved;
     private CancellationTokenSource? _regenCts;
 
     private string _delimiterBacking = ",";
@@ -63,9 +67,6 @@ public partial class ImportStockEntriesComponent : ComponentBase
     private bool _step2Complete;
     private bool _step3Complete;
 
-    private bool _isFormValid;
-    private bool _isTouched;
-
     public required string AccountName { get; set; }
 
     [Parameter] public required int AccountId { get; set; }
@@ -74,6 +75,37 @@ public partial class ImportStockEntriesComponent : ComponentBase
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<ImportStockEntriesComponent> Logger { get; set; }
     [Inject] public required StockAccountImportHttpClient AccountImportHttpClient { get; set; }
+    [Inject] public required CsvHeaderMappingHttpClient MappingHttpClient { get; set; }
+
+    private StockEntryConflictResolver? _resolverRef;
+    private bool HasUnresolvedConflicts =>
+        !_conflictsResolved && _importResult is not null &&
+        _importResult.Conflicts.Any(c => !c.IsExactMatch);
+
+    private string PrimaryLabel => _stepIndex switch
+    {
+        0 => "Continue to mapping",
+        1 => "Begin import",
+        2 => "Begin import",
+        _ => "Continue"
+    };
+
+    private bool CanContinue => _stepIndex switch
+    {
+        0 => _rawPreview.Any() && _headers.Count >= 3,
+        1 => !_erorrs.Any() && _mappedPreview.Any(),
+        2 => _resolverRef?.AllResolved == true,
+        _ => false
+    };
+
+    private bool ShowPrimaryAction => _stepIndex switch
+    {
+        0 or 1 => true,
+        2 => HasUnresolvedConflicts,
+        _ => false
+    };
+    private bool ShowBackAction => _stepIndex > 0 && _stepIndex < 2 && CanContinue;
+    private bool ShowImportCompletedMessage => _stepIndex == 2 && _step3Complete && !HasUnresolvedConflicts;
 
     protected override async Task OnInitializedAsync()
     {
@@ -108,9 +140,11 @@ public partial class ImportStockEntriesComponent : ComponentBase
         try
         {
             var result = await ImportStockModelReader.Read(_uploadedContent, _delimiter, cancellationToken);
+            if (result is null) return;
 
             _headers = result.Value.Headers ?? [];
             var allParsedRows = result.Value.Data ?? [];
+            _totalRowCount = allParsedRows.Count;
 
             if (_headers.Count != 0 && allParsedRows.Count != 0)
                 _rawPreview = allParsedRows.Take(3).ToList();
@@ -148,7 +182,68 @@ public partial class ImportStockEntriesComponent : ComponentBase
         if (!_step1Complete && _erorrs.Count == 0)
             _erorrs.Add("Step 1 can not be completed - loading files failed.");
 
+        if (_headers.Count > 0)
+            await ApplySuggestedMappings();
+
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ApplySuggestedMappings()
+    {
+        try
+        {
+            if (_headers.Count == 0) return;
+
+            var suggestions = await MappingHttpClient.GetSuggestedMappingsAsync(_headers);
+            if (suggestions is null || suggestions.Count == 0) return;
+
+            foreach (var suggestion in suggestions)
+            {
+                switch (suggestion.MappedFieldName)
+                {
+                    case "PostingDate":
+                        _selectedPostingDateHeader = suggestion.OriginalHeaderName;
+                        break;
+                    case "ValueChange":
+                        _selectedValueChangeHeader = suggestion.OriginalHeaderName;
+                        break;
+                    case "Ticker":
+                        _selectedTickerHeader = suggestion.OriginalHeaderName;
+                        break;
+                }
+            }
+
+            OnMappingChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogDebug(ex, "Failed to get mapping suggestions");
+        }
+    }
+
+    private async Task SaveMappingChoices()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(_selectedPostingDateHeader) ||
+                string.IsNullOrEmpty(_selectedValueChangeHeader) ||
+                string.IsNullOrEmpty(_selectedTickerHeader))
+                return;
+
+            var mappingItems = new List<HeaderMappingRequestItemDto>
+            {
+                new(_selectedPostingDateHeader, "PostingDate"),
+                new(_selectedValueChangeHeader, "ValueChange"),
+                new(_selectedTickerHeader, "Ticker"),
+            };
+
+            await MappingHttpClient.SaveMappingsAsync(new SaveMappingRequestDto(mappingItems));
+            Logger?.LogInformation("Stock mapping choices saved successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogDebug(ex, "Failed to save stock mapping choices");
+        }
     }
 
     private async Task UploadFiles(IBrowserFile? file)
@@ -180,6 +275,9 @@ public partial class ImportStockEntriesComponent : ComponentBase
         }
 
         await Clear();
+
+        _fileName = file.Name;
+        _fileSize = file.Size;
 
         try
         {
@@ -255,8 +353,8 @@ public partial class ImportStockEntriesComponent : ComponentBase
 
         _summaryInfos.Clear();
         _warnings.Clear();
+        _conflictsResolved = false;
 
-        _stepIndex = 2;
         if (string.IsNullOrEmpty(_uploadedContent))
         {
             _erorrs.Add("No data to import.");
@@ -296,7 +394,8 @@ public partial class ImportStockEntriesComponent : ComponentBase
                         .DistinctBy(x => x.DateTime.Date)
                         .Count();
 
-                    _warnings.Add($"Already uploaded rows {exactMatches}.");
+                    if (exactMatches > 0)
+                        _warnings.Add($"Already uploaded rows {exactMatches}.");
 
                     if (_importResult.Conflicts.Count - exactMatches > 0)
                         _warnings.Add($"Conflicts to resolve {exactMatchesDays}.");
@@ -319,6 +418,8 @@ public partial class ImportStockEntriesComponent : ComponentBase
             return;
         }
 
+        await SaveMappingChoices();
+
         _step3Complete = true;
         _isImportingData = false;
     }
@@ -330,6 +431,7 @@ public partial class ImportStockEntriesComponent : ComponentBase
         _step1Complete = false;
         _step2Complete = false;
         _step3Complete = false;
+        _conflictsResolved = false;
 
         _stepIndex = 0;
 
@@ -344,6 +446,10 @@ public partial class ImportStockEntriesComponent : ComponentBase
         _warnings.Clear();
 
         _uploadedContent = null;
+        _fileName = null;
+        _fileSize = 0;
+        _totalRowCount = 0;
+        _importResult = null;
 
         try
         {
@@ -356,9 +462,36 @@ public partial class ImportStockEntriesComponent : ComponentBase
         await Task.CompletedTask;
     }
 
+    private void OnConflictsSubmitted()
+    {
+        _conflictsResolved = true;
+    }
+
     private void SetDragClass() => _dragClass = $"{_defaultDragClass} mud-border-primary";
     private void ClearDragClass() => _dragClass = _defaultDragClass;
-    private void GoToNextStep() => _stepIndex++;
+
+    private async Task OnPrimaryClick()
+    {
+        if (_stepIndex == 1)
+        {
+            _stepIndex = 2;
+            await BeginImport();
+        }
+        else if (_stepIndex == 2 && _resolverRef is not null)
+        {
+            await _resolverRef.SubmitAsync();
+        }
+        else
+        {
+            _stepIndex++;
+        }
+    }
+
+    private void GoToPreviousStep()
+    {
+        if (_stepIndex > 0)
+            _stepIndex--;
+    }
 
     private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
     {
@@ -446,8 +579,14 @@ public partial class ImportStockEntriesComponent : ComponentBase
                 "yyyy/MM/dd HH:mm:ss"
             };
 
+            // Try strict formats first, then fall back to flexible parsing for ISO 8601 variants
+            // (fractional seconds, timezone offsets, "Z" suffix, etc.).
+            // Note: RoundtripKind conflicts with AssumeUniversal — DateTime.TryParse handles
+            // ISO 8601 with explicit timezone (e.g. trailing Z) natively without it.
             if (!DateTime.TryParseExact(posting, allowedFormats, CultureInfo.InvariantCulture,
-                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var date))
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var date)
+                && !DateTime.TryParse(posting, CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out date))
                 throw new Exception($"Could not parse posting date: '{posting}'");
 
             if (!decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var valueChange))

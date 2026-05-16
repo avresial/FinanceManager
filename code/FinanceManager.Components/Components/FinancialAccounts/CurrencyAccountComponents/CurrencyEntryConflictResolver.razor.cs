@@ -8,7 +8,7 @@ namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccount
 
 public partial class CurrencyEntryConflictResolver
 {
-    [Inject] public required CurrencyAccountImportHttpClient accountImportHttpClient { get; set; }
+    [Inject] public required CurrencyAccountImportHttpClient AccountImportHttpClient { get; set; }
     [Inject] public required ILogger<CurrencyEntryConflictResolver> Logger { get; set; }
 
     [Parameter] public IReadOnlyCollection<ImportConflict> Conflicts { get; set; } = [];
@@ -17,158 +17,146 @@ public partial class CurrencyEntryConflictResolver
     [Parameter] public bool SkipExactMatches { get; set; } = true;
     [Parameter] public required string AccountName { get; set; }
     [Parameter] public EventCallback<IReadOnlyCollection<string>> OnConflictsResolved { get; set; }
+    [Parameter] public EventCallback OnResolutionChanged { get; set; }
 
     private bool _isLoading = false;
-    private int AccountId { get; set; }
-    private DateTime? _selectedDay = null;
-    private List<ResolverConflict> _selectedConflicts = [];
-    private Dictionary<DateTime, List<ResolverConflict>> _conflictsByDay = [];
+    private string? _errorMessage;
+    private int _accountId;
+    private List<DayGroup> _dayGroups = [];
+    private readonly Dictionary<DateTime, ResolveChoice> _dayChoices = new();
+
+    public int ResolvedCount => _dayChoices.Count;
+    public int UnresolvedCount => Math.Max(0, _dayGroups.Count - _dayChoices.Count);
+    public int ImportedCount => _dayChoices.Values.Count(c => c == ResolveChoice.Imported);
+    public int ExistingCount => _dayChoices.Values.Count(c => c == ResolveChoice.Existing);
+    public bool AllResolved => _dayGroups.Count > 0 && _dayChoices.Count == _dayGroups.Count;
 
     protected override void OnParametersSet()
     {
         _isLoading = true;
         try
         {
-            base.OnParametersSet();
-
-            _conflictsByDay.Clear();
-            _selectedDay = null;
-            _selectedConflicts = [];
-
             var source = JobConflicts is { Count: > 0 }
-                ? JobConflicts.Select(x => new ResolverConflict(x.Conflict, x.ConflictId))
-                : Conflicts.Select(x => new ResolverConflict(x, x.ConflictId));
+                ? JobConflicts
+                    .Where(jc => !string.IsNullOrWhiteSpace(jc.ConflictId))
+                    .Select(jc => new ResolverConflict(jc.Conflict, jc.ConflictId))
+                : Conflicts
+                    .Where(c => !string.IsNullOrWhiteSpace(c.ConflictId))
+                    .Select(c => new ResolverConflict(c, c.ConflictId!));
 
-            _conflictsByDay = source
+            _dayGroups = source
                 .Where(c => c.Conflict.ImportEntry is not null || c.Conflict.ExistingEntry is not null)
+                .Where(c => !SkipExactMatches || !c.Conflict.IsExactMatch)
                 .GroupBy(c => (c.Conflict.ImportEntry?.PostingDate ?? c.Conflict.ExistingEntry!.PostingDate).Date)
                 .OrderBy(g => g.Key)
-                .ToDictionary(g => g.Key, g => g.ToList());
+                .Select(g => new DayGroup(g.Key, g.ToList()))
+                .ToList();
 
-            if (SkipExactMatches)
-            {
-                var keysToRemove = _conflictsByDay.Where(x => x.Value.All(y => y.Conflict.IsExactMatch))
-                                        .Select(x => x.Key)
-                                        .ToList();
+            if (_dayGroups.Count > 0)
+                _accountId = _dayGroups[0].Conflicts[0].Conflict.AccountId;
 
-                foreach (var key in keysToRemove)
-                    _conflictsByDay.Remove(key);
-            }
-
-            if (_conflictsByDay.Count != 0)
-            {
-                _selectedDay = _conflictsByDay.Keys.OrderBy(k => k).First();
-                _selectedConflicts = _selectedDay.HasValue ? _conflictsByDay[_selectedDay.Value] : [];
-                AccountId = _selectedConflicts.First().Conflict.AccountId;
-            }
+            // Prune day choices for days that disappeared between renders.
+            var presentDays = new HashSet<DateTime>(_dayGroups.Select(g => g.Date));
+            foreach (var key in _dayChoices.Keys.Where(k => !presentDays.Contains(k)).ToList())
+                _dayChoices.Remove(key);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error initializing {CurrencyEntryConflictResolver} for account {AccountId}", nameof(CurrencyEntryConflictResolver), AccountId);
+            Logger.LogError(ex, "Error initializing {Component} for account {AccountId}", nameof(CurrencyEntryConflictResolver), _accountId);
         }
         _isLoading = false;
     }
 
-    private async Task OnPickImported()
+    public ResolveChoice? GetDayChoice(DateTime date) =>
+        _dayChoices.TryGetValue(date, out var c) ? c : null;
+
+    public async Task PickDay(DateTime date, ResolveChoice choice)
     {
+        _dayChoices[date] = choice;
+        await OnResolutionChanged.InvokeAsync();
+        StateHasChanged();
+    }
+
+    public async Task PickAll(ResolveChoice choice)
+    {
+        foreach (var g in _dayGroups)
+            _dayChoices[g.Date] = choice;
+        await OnResolutionChanged.InvokeAsync();
+        StateHasChanged();
+    }
+
+    public async Task SubmitAsync()
+    {
+        if (_dayChoices.Count == 0)
+            return;
+
         _isLoading = true;
+        _errorMessage = null;
+        var resolvedConflictIds = new List<string>();
         try
         {
             if (JobId.HasValue)
             {
-                var pickedConflictIds = _selectedConflicts
-                    .Select(x => x.ConflictId)
-                    .Where(x => !string.IsNullOrWhiteSpace(x))
-                    .Cast<string>()
-                    .ToList();
+                var decisions = new List<CurrencyImportConflictResolutionDecisionDto>();
+                foreach (var g in _dayGroups)
+                {
+                    if (!_dayChoices.TryGetValue(g.Date, out var choice)) continue;
+                    foreach (var c in g.Conflicts)
+                    {
+                        decisions.Add(new CurrencyImportConflictResolutionDecisionDto(
+                            c.ConflictId,
+                            choice == ResolveChoice.Imported,
+                            choice == ResolveChoice.Existing));
+                        resolvedConflictIds.Add(c.ConflictId);
+                    }
+                }
+
+                if (decisions.Count == 0)
+                {
+                    _isLoading = false;
+                    return;
+                }
 
                 var request = new CurrencyImportResolveConflictsRequestDto
                 {
                     JobId = JobId.Value,
-                    Decisions = pickedConflictIds
-                        .Select(id => new CurrencyImportConflictResolutionDecisionDto(id, true, false))
-                        .ToList()
+                    Decisions = decisions
                 };
-
-                if (request.Decisions.Count != 0)
-                    await accountImportHttpClient.ResolveAsyncCurrencyImportConflictsAsync(request);
-
-                if (pickedConflictIds.Count != 0)
-                    await OnConflictsResolved.InvokeAsync(pickedConflictIds);
+                await AccountImportHttpClient.ResolveAsyncCurrencyImportConflictsAsync(request);
+                await OnConflictsResolved.InvokeAsync(resolvedConflictIds);
             }
             else
             {
-                var resolvedImports = _selectedConflicts
-                    .Select(c => new ResolvedImportConflict(c.Conflict.AccountId, true, c.Conflict.ImportEntry, false, c.Conflict.ExistingEntry?.EntryId))
-                    .ToList();
-
-                await accountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
-            }
-
-            RemoveSelectedDayAndAdvance();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error resolving import conflicts for account {AccountId}", AccountId);
-        }
-        _isLoading = false;
-    }
-
-    private async Task OnPickExisting()
-    {
-        _isLoading = true;
-        try
-        {
-            if (JobId.HasValue)
-            {
-                var pickedConflictIds = _selectedConflicts
-                    .Select(x => x.ConflictId)
-                    .Where(x => !string.IsNullOrWhiteSpace(x))
-                    .Cast<string>()
-                    .ToList();
-
-                var request = new CurrencyImportResolveConflictsRequestDto
+                var resolvedImports = new List<ResolvedImportConflict>();
+                foreach (var g in _dayGroups)
                 {
-                    JobId = JobId.Value,
-                    Decisions = pickedConflictIds
-                        .Select(id => new CurrencyImportConflictResolutionDecisionDto(id, false, true))
-                        .ToList()
-                };
-
-                if (request.Decisions.Count != 0)
-                    await accountImportHttpClient.ResolveAsyncCurrencyImportConflictsAsync(request);
-
-                if (pickedConflictIds.Count != 0)
-                    await OnConflictsResolved.InvokeAsync(pickedConflictIds);
+                    if (!_dayChoices.TryGetValue(g.Date, out var choice)) continue;
+                    foreach (var c in g.Conflicts)
+                    {
+                        resolvedImports.Add(new ResolvedImportConflict(
+                            c.Conflict.AccountId,
+                            choice == ResolveChoice.Imported,
+                            c.Conflict.ImportEntry,
+                            choice == ResolveChoice.Existing,
+                            c.Conflict.ExistingEntry?.EntryId));
+                    }
+                }
+                await AccountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
             }
 
-            RemoveSelectedDayAndAdvance();
+            _dayChoices.Clear();
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error resolving import conflicts for account {AccountId}", AccountId);
+            _errorMessage = "Could not submit conflict decisions. Please try again.";
+            Logger.LogError(ex, "Error submitting conflict resolutions for account {AccountId}", _accountId);
         }
         _isLoading = false;
+        StateHasChanged();
     }
 
-    private void RemoveSelectedDayAndAdvance()
-    {
-        if (_selectedDay is null) return;
+    public enum ResolveChoice { Imported, Existing }
 
-        var key = _selectedDay.Value;
-        _conflictsByDay.Remove(key);
-
-        if (_conflictsByDay.Count == 0)
-        {
-            _selectedDay = null;
-            _selectedConflicts = [];
-            return;
-        }
-
-        var next = _conflictsByDay.Keys.OrderBy(k => k).First();
-        _selectedDay = next;
-        _selectedConflicts = _conflictsByDay[next];
-    }
-
-    private sealed record ResolverConflict(ImportConflict Conflict, string? ConflictId);
+    private sealed record ResolverConflict(ImportConflict Conflict, string ConflictId);
+    private sealed record DayGroup(DateTime Date, List<ResolverConflict> Conflicts);
 }

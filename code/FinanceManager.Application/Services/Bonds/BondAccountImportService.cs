@@ -62,7 +62,7 @@ public class BondAccountImportService(
                     if (import.PostingDate.Kind != DateTimeKind.Utc)
                         throw new Exception($"Date kind of this entry posting date: {import.PostingDate}, value change: {import.ValueChange} is not UTC - {import.PostingDate.Kind}");
 
-                    var newEntry = new BondAccountEntry(accountId, 0, import.PostingDate, import.ValueChange, import.ValueChange, import.BondDetailsId);
+                    var newEntry = new BondAccountEntry(accountId, 0, ToSecond(import.PostingDate), import.ValueChange, import.ValueChange, import.BondDetailsId);
                     if (await bondAccountEntryRepository.Add(newEntry, recalculate: false))
                     {
                         imported++;
@@ -126,12 +126,18 @@ public class BondAccountImportService(
         }
     }
 
+    // Posting dates are stored and compared at second precision across the app.
+    // Truncating here keeps fractional-second legacy DB entries comparable with
+    // freshly imported / exported CSV rows, which carry second precision.
+    private static DateTime ToSecond(DateTime d) =>
+        new(d.Year, d.Month, d.Day, d.Hour, d.Minute, d.Second, d.Kind);
+
     private static IEnumerable<(BondEntryImport Import, BondAccountEntry Existing)> GetExactMatches(List<BondEntryImport> imports, List<BondAccountEntry> existing)
     {
-        foreach (var import in imports.GroupBy(x => (Date: x.PostingDate, ValueChange: x.ValueChange, BondDetailsId: x.BondDetailsId)))
+        foreach (var import in imports.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, BondDetailsId: x.BondDetailsId)))
         {
             var sameExisting = existing
-                .Where(e => e.PostingDate == import.Key.Date && e.ValueChange == import.Key.ValueChange && e.BondDetailsId == import.Key.BondDetailsId)
+                .Where(e => ToSecond(e.PostingDate) == import.Key.Date && e.ValueChange == import.Key.ValueChange && e.BondDetailsId == import.Key.BondDetailsId)
                 .ToList();
 
             if (sameExisting.Count != 0 && import.Any())
@@ -145,11 +151,11 @@ public class BondAccountImportService(
 
     private static IEnumerable<BondImportConflict> GetImportsWhichAreMissingFromExisting(int accountId, IEnumerable<BondEntryImport> imports, IEnumerable<BondAccountEntry> existing)
     {
-        foreach (var import in imports.GroupBy(x => (Date: x.PostingDate, ValueChange: x.ValueChange, BondDetailsId: x.BondDetailsId)))
+        foreach (var import in imports.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, BondDetailsId: x.BondDetailsId)))
         {
             var importItemList = import.ToList();
             var sameExistingCount = existing.Count(e =>
-                e.PostingDate == import.Key.Date && e.ValueChange == import.Key.ValueChange && e.BondDetailsId == import.Key.BondDetailsId);
+                ToSecond(e.PostingDate) == import.Key.Date && e.ValueChange == import.Key.ValueChange && e.BondDetailsId == import.Key.BondDetailsId);
 
             if (importItemList.Count > sameExistingCount && importItemList.Count != 0)
             {
@@ -161,11 +167,11 @@ public class BondAccountImportService(
 
     private static IEnumerable<BondImportConflict> GetExistingWhichAreMissingFromImports(int accountId, IEnumerable<BondAccountEntry> existing, IEnumerable<BondEntryImport> imports)
     {
-        foreach (var existingItem in existing.GroupBy(x => (Date: x.PostingDate, ValueChange: x.ValueChange, BondDetailsId: x.BondDetailsId)))
+        foreach (var existingItem in existing.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, BondDetailsId: x.BondDetailsId)))
         {
             var existingItemList = existingItem.ToList();
             var sameImportsCount = imports.Count(e =>
-                e.PostingDate == existingItem.Key.Date && e.ValueChange == existingItem.Key.ValueChange && e.BondDetailsId == existingItem.Key.BondDetailsId);
+                ToSecond(e.PostingDate) == existingItem.Key.Date && e.ValueChange == existingItem.Key.ValueChange && e.BondDetailsId == existingItem.Key.BondDetailsId);
 
             if (existingItemList.Count <= sameImportsCount || existingItemList.Count == 0)
                 continue;

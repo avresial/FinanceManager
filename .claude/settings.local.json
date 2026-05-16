@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build *)",
+      "mcp__Claude_Preview__preview_start",
+      "PowerShell(\"done\")",
+      "PowerShell($ProgressPreference='SilentlyContinue'; $until=\\(Get-Date\\).AddSeconds\\(120\\); while\\(\\(Get-Date\\) -lt $until\\){ try { $r = Invoke-WebRequest -SkipCertificateCheck -UseBasicParsing -Uri https://localhost:5001/ -TimeoutSec 4; \"$\\($r.StatusCode\\)\"; break } catch { Start-Sleep 4 } })"
+    ]
+  }
+}

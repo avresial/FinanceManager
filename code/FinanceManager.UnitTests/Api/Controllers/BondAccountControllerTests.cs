@@ -51,7 +51,7 @@ public class BondAccountControllerTests
         var accountId = 1;
         var startDate = new DateTime(2026, 1, 1);
         var endDate = new DateTime(2026, 1, 31);
-        var csvContent = "PostingDate,ValueChange,BondDetailsId\n";
+        var csvContent = "PostingDate,ValueChange,Bond\n";
         BondAccount account = new(userId, accountId, "Bond Account", AccountLabel.Other);
 
         _mockBondAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
