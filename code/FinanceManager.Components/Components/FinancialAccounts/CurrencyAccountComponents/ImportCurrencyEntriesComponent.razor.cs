@@ -168,6 +168,7 @@ public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDispo
         try
         {
             var result = await ImportCurrencyModelReader.Read(_uploadedContent, Delimiter, cancellationToken);
+            if (result is null) return;
 
             _headers = result.Value.Headers ?? [];
             var allParsedRows = result.Value.Data ?? [];

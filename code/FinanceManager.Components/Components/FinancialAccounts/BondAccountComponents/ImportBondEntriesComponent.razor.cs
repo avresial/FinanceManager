@@ -146,6 +146,7 @@ public partial class ImportBondEntriesComponent : ComponentBase
         try
         {
             var result = await ImportStockModelReader.Read(_uploadedContent, _delimiter, cancellationToken);
+            if (result is null) return;
 
             _headers = result.Value.Headers ?? [];
             var allParsedRows = result.Value.Data ?? [];
