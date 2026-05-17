@@ -37,6 +37,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<FinancialLabelHttpClient>()
                 .AddScoped<FinancialInsightsHttpClient>()
                 .AddScoped<AdministrationUsersHttpClient>()
+                .AddScoped<AdminAiProvidersHttpClient>()
                 .AddScoped<NewVisitorsHttpClient>()
                 .AddScoped<CsvHeaderMappingHttpClient>()
                 .AddScoped<AccountDataSynchronizationService>()

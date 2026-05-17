@@ -1,17 +1,14 @@
+using FinanceManager.Application.Services.Ai;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using FinanceManager.Application.Options;
 
 namespace FinanceManager.Infrastructure.Services.Ai;
 
 internal sealed class FallbackChatClient(
     IEnumerable<INamedChatClient> namedClients,
-    IOptions<AiProviderOptions> providerOptions,
-    IOptions<List<AiProviderFallbackStrategyOption>> fallbackStrategiesOptions,
+    IAiConfigurationService configService,
     ILogger<FallbackChatClient> logger) : IChatClient
 {
-
     private sealed record ResolvedAttempt(string ProviderName, string ModelId, INamedChatClient Client);
 
     public async Task<ChatResponse> GetResponseAsync(
@@ -20,7 +17,7 @@ internal sealed class FallbackChatClient(
         CancellationToken cancellationToken = default)
     {
         List<Exception>? exceptions = null;
-        var attempts = ResolveAttempts(namedClients, providerOptions.Value, fallbackStrategiesOptions.Value ?? [], chatOptions);
+        var attempts = await ResolveAttemptsAsync(chatOptions, cancellationToken);
         foreach (var attempt in attempts)
         {
             var effectiveOptions = chatOptions ?? new ChatOptions();
@@ -34,7 +31,7 @@ internal sealed class FallbackChatClient(
                 logger.LogWarning(
                     "Chat provider {Provider} with model {Model} returned empty response. Trying fallback.",
                     attempt.ProviderName,
-                        attempt.ModelId);
+                    attempt.ModelId);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -66,7 +63,7 @@ internal sealed class FallbackChatClient(
         List<Exception>? exceptions = null;
         List<ChatResponseUpdate>? selectedUpdates = null;
 
-        var attempts = ResolveAttempts(namedClients, providerOptions.Value, fallbackStrategiesOptions.Value ?? [], chatOptions);
+        var attempts = await ResolveAttemptsAsync(chatOptions, cancellationToken);
         foreach (var entry in attempts)
         {
             var effectiveOptions = chatOptions ?? new ChatOptions();
@@ -87,7 +84,7 @@ internal sealed class FallbackChatClient(
                 logger.LogWarning(
                     "Streaming chat provider {Provider} with model {Model} yielded no updates. Trying fallback.",
                     entry.ProviderName,
-                        entry.ModelId);
+                    entry.ModelId);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -129,38 +126,33 @@ internal sealed class FallbackChatClient(
             entry.Dispose();
     }
 
-    private static IReadOnlyList<ResolvedAttempt> ResolveAttempts(
-        IEnumerable<INamedChatClient> clients,
-        AiProviderOptions providerOptions,
-        IReadOnlyCollection<AiProviderFallbackStrategyOption> fallbackStrategies,
-        ChatOptions? chatOptions)
+    private async Task<IReadOnlyList<ResolvedAttempt>> ResolveAttemptsAsync(
+        ChatOptions? chatOptions,
+        CancellationToken ct)
     {
-        var allClients = clients.ToList();
+        var allClients = namedClients.ToList();
         if (allClients.Count == 0)
             return [];
 
-        var selectedStrategy = fallbackStrategies.FirstOrDefault(x =>
-            x.Name.Equals("default", StringComparison.OrdinalIgnoreCase))
-            ?? fallbackStrategies.FirstOrDefault();
-
-        if (selectedStrategy is null)
+        var fallbackEntries = await configService.GetFallbackEntriesAsync(ct);
+        if (fallbackEntries.Count == 0)
             return [];
 
-        var requested = (selectedStrategy.Providers ?? [])
-            .Select(x => (Provider: (x.Provider ?? string.Empty).Trim(), Model: (x.Model ?? string.Empty).Trim()))
-            .Where(x => !string.IsNullOrWhiteSpace(x.Provider))
-            .ToList();
-
         var attempts = new List<ResolvedAttempt>();
-        foreach (var (Provider, Model) in requested)
+        foreach (var entry in fallbackEntries.OrderBy(e => e.Order))
         {
+            var provider = entry.ProviderName.Trim();
+            var model = entry.Model.Trim();
+            if (string.IsNullOrWhiteSpace(provider))
+                continue;
+
             var chatClient = allClients.FirstOrDefault(x =>
-                (x.ProviderName ?? string.Empty).Trim().Equals(Provider, StringComparison.OrdinalIgnoreCase));
+                (x.ProviderName ?? string.Empty).Trim().Equals(provider, StringComparison.OrdinalIgnoreCase));
 
             if (chatClient is null)
                 continue;
 
-            attempts.Add(new ResolvedAttempt(Provider, Model, chatClient));
+            attempts.Add(new ResolvedAttempt(provider, model, chatClient));
         }
 
         return attempts;

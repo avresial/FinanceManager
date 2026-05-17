@@ -1,13 +1,12 @@
-using FinanceManager.Application.Options;
+using FinanceManager.Application.Services.Ai;
 using GitHub.Copilot.SDK;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace FinanceManager.Infrastructure.Services.Ai;
 
 internal sealed class CopilotChatClient(
-    IOptions<GitHubModelsOptions> options,
+    IAiConfigurationService configService,
     ILogger<CopilotChatClient> logger) : INamedChatClient
 {
     public string ProviderName => "GitHub";
@@ -28,9 +27,8 @@ internal sealed class CopilotChatClient(
             return new ChatResponse(new ChatMessage(ChatRole.Assistant, string.Empty));
         }
 
-        var timeoutSeconds = options.Value.RequestTimeoutSeconds > 0
-            ? options.Value.RequestTimeoutSeconds
-            : 60;
+        var config = await configService.GetProviderAsync("GitHub", cancellationToken);
+        var timeoutSeconds = config.RequestTimeoutSeconds > 0 ? config.RequestTimeoutSeconds : 60;
 
         await using var client = new CopilotClient();
         string? sessionId = null;

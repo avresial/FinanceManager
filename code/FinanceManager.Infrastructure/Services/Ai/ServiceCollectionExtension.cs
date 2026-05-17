@@ -1,5 +1,4 @@
-﻿using FinanceManager.Application.Services.Stocks;
-using FinanceManager.Infrastructure.Services.Stocks;
+using FinanceManager.Application.Services.Ai;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -9,14 +8,13 @@ public static class ServiceCollectionExtension
 {
     public static IServiceCollection AddAI(this IServiceCollection services)
     {
-        services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
+        services.AddSingleton<IAiConfigurationService, AiConfigurationService>();
 
         services.AddScoped<INamedChatClient, LmStudioChatClient>();
         services.AddScoped<INamedChatClient, OpenRouterChatClient>();
         services.AddScoped<INamedChatClient, CopilotChatClient>();
         services.AddScoped<INamedChatClient, OllamaChatClient>();
         services.AddScoped<IChatClient, FallbackChatClient>();
-        ;
 
         return services;
     }
