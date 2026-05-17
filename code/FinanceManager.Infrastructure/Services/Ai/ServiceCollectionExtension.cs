@@ -11,6 +11,7 @@ public static class ServiceCollectionExtension
     {
         services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
 
+        services.AddScoped<INamedChatClient, LmStudioChatClient>();
         services.AddScoped<INamedChatClient, OpenRouterChatClient>();
         services.AddScoped<INamedChatClient, CopilotChatClient>();
         services.AddScoped<INamedChatClient, OllamaChatClient>();
