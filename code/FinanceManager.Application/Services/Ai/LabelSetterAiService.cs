@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.AI;
@@ -81,15 +82,30 @@ internal sealed class LabelSetterAiService(
 
             var result = new Dictionary<int, string>();
             var entryIdSet = new HashSet<int>(entryIds);
+            var hasNoMatchSentinel = labelNameSet.Contains(WellKnownFinancialLabels.NoMatch);
 
             foreach (var assignment in parsed)
             {
                 if (assignment.EntryId is null) continue;
-                if (string.IsNullOrWhiteSpace(assignment.LabelName)) continue;
                 if (!entryIdSet.Contains(assignment.EntryId.Value)) continue;
-                if (!labelNameSet.Contains(assignment.LabelName)) continue;
 
-                result[assignment.EntryId.Value] = assignment.LabelName;
+                // AI returned null / empty / unknown label → use the NoMatch sentinel so the entry
+                // still gets a label and won't be re-queued on the next startup scan.
+                var labelName = assignment.LabelName;
+                if (string.IsNullOrWhiteSpace(labelName) || !labelNameSet.Contains(labelName))
+                {
+                    if (!hasNoMatchSentinel)
+                    {
+                        logger.LogWarning(
+                            "AI returned no fitting label for entry {EntryId} and the '{Sentinel}' label is missing — entry will stay unlabelled and be re-queued.",
+                            assignment.EntryId.Value,
+                            WellKnownFinancialLabels.NoMatch);
+                        continue;
+                    }
+                    labelName = WellKnownFinancialLabels.NoMatch;
+                }
+
+                result[assignment.EntryId.Value] = labelName;
             }
 
             logger.LogDebug("Valid assignments after filtering: {Count} out of {ParsedCount}.", result.Count, parsed.Count);

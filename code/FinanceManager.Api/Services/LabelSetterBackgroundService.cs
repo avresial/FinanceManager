@@ -47,7 +47,7 @@ public sealed class LabelSetterBackgroundService(
                 progressTracker.StartJob(request.AccountId, account?.UserId, request.EntryIds.Count);
 
                 // Pre-calculate batch count
-                var batches = request.EntryIds.Chunk(50).ToList();
+                var batches = request.EntryIds.Chunk(20).ToList();
                 logger.LogInformation(
                     "Adding labels for AccountId {AccountId} started. Processing {TotalEntries} entries in {BatchCount} batches.",
                     request.AccountId,
