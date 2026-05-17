@@ -58,6 +58,7 @@ public static class ServiceCollectionExtension
 
                 .AddSingleton<IInsightsPromptProvider, InsightsPromptProvider>()
                 .AddSingleton<ILabelSetterPromptProvider, LabelSetterPromptProvider>()
+                .AddSingleton<ILabelSuggestionPromptProvider, LabelSuggestionPromptProvider>()
 
                 .AddHostedService<DatabaseInitializer>()
                 ;

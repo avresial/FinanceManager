@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Contexts;
@@ -276,6 +276,19 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         return await context.CurrencyEntries
             .Where(e => entryIds.Contains(e.EntryId))
             .Include(e => e.Labels)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<CurrencyAccountEntry>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default)
+    {
+        if (count <= 0) return [];
+
+        return await context.CurrencyEntries
+            .Where(e => !e.Labels.Any())
+            .Where(e => e.Description != null && e.Description != "")
+            .OrderByDescending(e => e.PostingDate)
+            .ThenByDescending(e => e.EntryId)
+            .Take(count)
             .ToListAsync(cancellationToken);
     }
 }

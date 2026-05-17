@@ -1,5 +1,3 @@
-using FinanceManager.Application.Services.Exports;
-using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
@@ -14,7 +12,6 @@ internal sealed class LabelSetterAiService(
     IAccountEntryRepository<CurrencyAccountEntry> currencyEntryRepository,
     IFinancialLabelsRepository financialLabelsRepository,
     ILabelSetterPromptProvider promptProvider,
-    IAccountCsvExportService<CurrencyAccountExportDto> csvExportService,
     IChatClient chatClient,
     ILogger<LabelSetterAiService> logger) : ILabelSetterAiService
 {
@@ -54,8 +51,7 @@ internal sealed class LabelSetterAiService(
 
         logger.LogTrace("Retrieved {Count} entries. Building CSV...", entries.Count);
 
-        var dtos = entries.Select(CurrencyAccountExportDto.FromEntity).ToList();
-        var csv = csvExportService.GetExportResults(dtos);
+        var csv = AiEntryCsvBuilder.BuildForCurrencyLabeling(entries);
         var prompt = await promptProvider.BuildPromptAsync(availableLabels, csv, cancellationToken);
 
         try

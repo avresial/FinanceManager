@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Domain.Repositories.Account;
+namespace FinanceManager.Domain.Repositories.Account;
 
 public interface IAccountEntryRepository<T>
 {
@@ -6,6 +6,7 @@ public interface IAccountEntryRepository<T>
     Task<List<T>> Get(int accountId, DateTime date, int count, bool olderThenDate = true);
     Task<T?> Get(int accountId, int entryId);
     Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default);
     Task<T?> GetYoungest(int accountId);
     Task<T?> GetNextYounger(int accountId, int entryId);
     Task<T?> GetNextYounger(int accountId, DateTime date);

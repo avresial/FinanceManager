@@ -315,6 +315,9 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             .ToListAsync(cancellationToken);
     }
 
+    public Task<IReadOnlyList<BondAccountEntry>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<BondAccountEntry>>([]);
+
     async Task<Dictionary<int, BondAccountEntry>> IBondAccountEntryRepository<BondAccountEntry>.GetNextOlder(int accountId, DateTime date)
     {
         Dictionary<int, BondAccountEntry> result = [];

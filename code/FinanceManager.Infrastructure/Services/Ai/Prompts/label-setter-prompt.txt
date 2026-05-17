@@ -10,7 +10,7 @@ Input format
 The input is:
 - available_labels: a comma-separated list of label names you MUST choose from
 - A CSV block of currency account entries with columns:
-  entryId (int), postingDate (ISO8601), valueChange (number), description (string), contractorDetails (string)
+  entryId (int), postingDate (YYYY-MM-DD), valueChange (number), description (string), contractorDetails (string)
 
 Rules
 - Base your classification on the description and contractorDetails fields.

@@ -292,5 +292,6 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
             .ToListAsync(cancellationToken);
     }
 
-
+    public Task<IReadOnlyList<StockAccountEntry>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<StockAccountEntry>>([]);
 }

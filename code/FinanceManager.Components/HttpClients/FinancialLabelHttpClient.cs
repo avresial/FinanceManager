@@ -86,4 +86,13 @@ public class FinancialLabelHttpClient(HttpClient httpClient)
 
         return result ?? [];
     }
+
+    public async Task<List<LabelSuggestion>> GetSuggestions(int sampleSize = 100, int maxSuggestions = 5, CancellationToken cancellationToken = default)
+    {
+        var result = await httpClient.GetFromJsonAsync<List<LabelSuggestion>>(
+            $"{httpClient.BaseAddress}api/FinancialLabel/suggestions?sampleSize={sampleSize}&maxSuggestions={maxSuggestions}",
+            cancellationToken);
+
+        return result ?? [];
+    }
 }
