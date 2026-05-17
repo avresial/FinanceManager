@@ -64,6 +64,7 @@ public sealed class CurrencyImportBackgroundService(
                         }
                     });
 
+                jobStore.TryMarkCompleted(request.JobId, result);
                 await PublishStatus(request.JobId, request.UserId, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

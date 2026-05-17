@@ -36,6 +36,7 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
         int processed = 0;
         var errors = new List<string>();
         var conflicts = new List<ImportConflict>();
+        CurrencyAccountEntry? oldestInserted = null;
 
         var existingAll = await currencyAccountEntryRepository.Get(accountId, minDay.AddDays(-1), maxDay.AddDays(1)).ToListAsync();
         for (var day = maxDay; day >= minDay; day = day.AddDays(-1))
@@ -82,10 +83,12 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                         Labels = []
                     };
 
-                    if (await currencyAccountEntryRepository.Add(newEntry, day == minDay))
+                    if (await currencyAccountEntryRepository.Add(newEntry, recalculate: false))
                     {
                         imported++;
                         existingAll.Add(newEntry);
+                        if (oldestInserted is null || newEntry.PostingDate < oldestInserted.PostingDate)
+                            oldestInserted = newEntry;
                     }
                     else
                     {
@@ -105,6 +108,9 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
             if (onProgress is not null)
                 await onProgress(processed, imported, failed);
         }
+
+        if (oldestInserted is not null)
+            await currencyAccountEntryRepository.RecalculateValues(accountId, oldestInserted.EntryId);
 
         return new(accountId, imported, failed, errors, conflicts);
     }
