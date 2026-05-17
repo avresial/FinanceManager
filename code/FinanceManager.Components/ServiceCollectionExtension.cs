@@ -1,4 +1,4 @@
-﻿using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
@@ -35,6 +35,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<LiabilitiesHttpClient>()
                 .AddScoped<UserHttpClient>()
                 .AddScoped<FinancialLabelHttpClient>()
+                .AddScoped<LabelSetterProgressHttpClient>()
                 .AddScoped<FinancialInsightsHttpClient>()
                 .AddScoped<AdministrationUsersHttpClient>()
                 .AddScoped<NewVisitorsHttpClient>()

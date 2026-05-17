@@ -9,6 +9,7 @@ namespace FinanceManager.Api.Services;
 public sealed class LabelSetterBackgroundService(
     ILabelSetterChannel channel,
     IServiceScopeFactory scopeFactory,
+    ILabelSetterProgressTracker progressTracker,
     ILogger<LabelSetterBackgroundService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -33,6 +34,7 @@ public sealed class LabelSetterBackgroundService(
                 var labelSetterAiService = scope.ServiceProvider.GetRequiredService<ILabelSetterAiService>();
                 var currencyEntryRepository = scope.ServiceProvider.GetRequiredService<IAccountEntryRepository<CurrencyAccountEntry>>();
                 var financialLabelsRepository = scope.ServiceProvider.GetRequiredService<IFinancialLabelsRepository>();
+                var currencyAccountRepository = scope.ServiceProvider.GetRequiredService<ICurrencyAccountRepository<CurrencyAccount>>();
 
                 // Build name → id lookup once
                 var allLabels = await financialLabelsRepository
@@ -40,6 +42,9 @@ public sealed class LabelSetterBackgroundService(
                     .ToListAsync(stoppingToken);
 
                 var labelsById = allLabels.ToDictionary(l => l.Name, l => l.Id, StringComparer.Ordinal);
+
+                var account = await currencyAccountRepository.Get(request.AccountId);
+                progressTracker.StartJob(request.AccountId, account?.UserId, request.EntryIds.Count);
 
                 // Pre-calculate batch count
                 var batches = request.EntryIds.Chunk(50).ToList();
@@ -107,6 +112,8 @@ public sealed class LabelSetterBackgroundService(
                             batches.Count,
                             request.AccountId);
                     }
+
+                    progressTracker.ReportBatchCompleted(entryIdBatch.Length);
                 }
 
                 logger.LogInformation(
@@ -127,6 +134,10 @@ public sealed class LabelSetterBackgroundService(
                     "Error occurred in label setter background worker for account {AccountId} and {Count} entries.",
                     request.AccountId,
                     request.EntryIds.Count);
+            }
+            finally
+            {
+                progressTracker.CompleteJob();
             }
         }
 
