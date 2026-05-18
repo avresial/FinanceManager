@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Bonds;
+﻿using FinanceManager.Domain.Entities.Ai;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Imports;
@@ -28,6 +29,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<FinancialLabelClassification> FinancialLabelClassifications { get; set; } = default!;
     public DbSet<BondDetails> Bonds { get; set; } = default!;
     public DbSet<CsvHeaderMapping> CsvHeaderMappings { get; set; } = default!;
+    public DbSet<AiProviderConfiguration> AiProviderConfigurations { get; set; } = default!;
+    public DbSet<AiFallbackEntry> AiFallbackEntries { get; set; } = default!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new ActiveUserConfiguration());
@@ -46,6 +50,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new CsvHeaderMappingConfiguration());
         modelBuilder.ApplyConfiguration(new FinancialLabelConfiguration());
         modelBuilder.ApplyConfiguration(new FinancialLabelClassificationConfiguration());
+        modelBuilder.ApplyConfiguration(new AiProviderConfigurationConfiguration());
+        modelBuilder.ApplyConfiguration(new AiFallbackEntryConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }
