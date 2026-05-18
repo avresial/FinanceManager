@@ -1,6 +1,8 @@
 ﻿using FinanceManager.Application.Commands.Account;
+using FinanceManager.Application.Services.Ai;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceManager.Api.Controllers;
@@ -8,7 +10,9 @@ namespace FinanceManager.Api.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Financial Labels")]
-public class FinancialLabelController(IFinancialLabelsRepository financialLabelsRepository) : ControllerBase
+public class FinancialLabelController(
+    IFinancialLabelsRepository financialLabelsRepository,
+    ILabelSuggestionAiService labelSuggestionAiService) : ControllerBase
 {
 
     [HttpGet("get-by-id")]
@@ -60,4 +64,13 @@ public class FinancialLabelController(IFinancialLabelsRepository financialLabels
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete([FromQuery] int id, CancellationToken cancellationToken = default) =>
     Ok(await financialLabelsRepository.Delete(id, cancellationToken));
+
+    [HttpGet("suggestions")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyList<LabelSuggestion>))]
+    public async Task<IActionResult> GetSuggestions(
+        [FromQuery] int sampleSize = 100,
+        [FromQuery] int maxSuggestions = 5,
+        CancellationToken cancellationToken = default) =>
+        Ok(await labelSuggestionAiService.SuggestLabels(sampleSize, maxSuggestions, cancellationToken));
 }

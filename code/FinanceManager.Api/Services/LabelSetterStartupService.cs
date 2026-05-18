@@ -11,8 +11,6 @@ internal sealed class LabelSetterStartupService(
     ILabelSetterChannel labelSetterChannel, IConfiguration configuration,
     ILogger<LabelSetterStartupService> logger) : IHostedService
 {
-    private const int _maxEntriesPerBatch = 200;
-
     public Task StartAsync(CancellationToken cancellationToken)
     {
         Task.Run(async () =>
@@ -53,21 +51,16 @@ internal sealed class LabelSetterStartupService(
                     return;
                 }
 
+                // One job per account — the background service already chunks into AI-sized
+                // batches internally, so pre-splitting here just multiplies queued-job count.
                 foreach (var group in unlabeledEntries.GroupBy(entry => entry.AccountId))
                 {
+                    var entryIds = group.Select(entry => entry.EntryId).ToList();
                     logger.LogDebug(
-                        "Queueing {Count} unlabeled entries for account {AccountId}.",
-                        group.Count(),
+                        "Queueing {Count} unlabeled entries as a single job for account {AccountId}.",
+                        entryIds.Count,
                         group.Key);
-                    var batches = group.Select(entry => entry.EntryId).Chunk(_maxEntriesPerBatch).ToList();
-                    foreach (var batch in batches)
-                    {
-                        logger.LogTrace(
-                            "Queueing label batch for account {AccountId} with {Count} entries.",
-                            group.Key,
-                            batch.Length);
-                        await labelSetterChannel.QueueEntries(group.Key, batch, cancellationToken);
-                    }
+                    await labelSetterChannel.QueueEntries(group.Key, entryIds, cancellationToken);
                 }
 
                 logger.LogInformation(

@@ -1,0 +1,12 @@
+using FinanceManager.Domain.Dtos;
+
+namespace FinanceManager.Api.Services;
+
+public interface ILabelSetterProgressTracker
+{
+    LabelSetterProgressSnapshot GetSnapshot();
+    void StartJob(int accountId, int? userId, int totalEntries);
+    void ReportBatchCompleted(int batchSize);
+    void CompleteJob();
+    void SetQueuedJobsCount(int count);
+}

@@ -37,6 +37,61 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("CurrencyAccountEntryFinancialLabel", (string)null);
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Ai.AiFallbackEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProviderName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Order");
+
+                    b.ToTable("AiFallbackEntries");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Ai.AiProviderConfiguration", b =>
+                {
+                    b.Property<string>("ProviderName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ApiKey")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("BaseUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("RequestTimeoutSeconds")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ProviderName");
+
+                    b.ToTable("AiProviderConfigurations");
+                });
+
             modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondAccountEntry", b =>
                 {
                     b.Property<int>("EntryId")

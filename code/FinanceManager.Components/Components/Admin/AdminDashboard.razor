@@ -1,4 +1,4 @@
-﻿@page "/Admin/Dashboard"
+@page "/Admin/Dashboard"
 @attribute [Authorize(Roles = "Admin")]
 @layout AdminLayout
 
@@ -152,5 +152,9 @@
                 }
             </MudCardContent>
         </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <LabelSetterProgressCard />
     </MudItem>
 </MudGrid>

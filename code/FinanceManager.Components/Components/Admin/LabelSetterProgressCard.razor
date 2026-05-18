@@ -1,0 +1,55 @@
+@using FinanceManager.Domain.Dtos
+@implements IAsyncDisposable
+
+<MudCard Outlined>
+    <MudCardContent>
+        <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Color="Color.Primary" />
+                <MudText>AI label setter</MudText>
+                <MudSpacer />
+                @if (_snapshot is not null && _snapshot.QueuedJobsCount > 0)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
+                        @_snapshot.QueuedJobsCount queued
+                    </MudChip>
+                }
+            </MudStack>
+
+            @if (_loadError is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense>@_loadError</MudAlert>
+            }
+            else if (_snapshot is null)
+            {
+                <StringSpinner CharactersCount="6" />
+            }
+            else if (_snapshot.CurrentJob is null)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    No active labelling job.
+                </MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Queue is empty — new entries will trigger this automatically.
+                </MudText>
+            }
+            else
+            {
+                var job = _snapshot.CurrentJob;
+                var percent = job.TotalEntries > 0
+                    ? Math.Round((double)job.ProcessedEntries / job.TotalEntries * 100d, 1)
+                    : 0d;
+
+                <MudText Typo="Typo.body2">
+                    <b>User #@(job.UserId?.ToString() ?? "?")</b> · Account #@job.AccountId
+                </MudText>
+                <MudProgressLinear Color="Color.Primary" Value="@percent" Class="my-1" Size="Size.Large" />
+                <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                    <MudText Typo="Typo.subtitle2">@job.ProcessedEntries / @job.TotalEntries</MudText>
+                    <MudSpacer />
+                    <MudText Typo="Typo.subtitle2">@percent%</MudText>
+                </MudStack>
+            }
+        </MudPaper>
+    </MudCardContent>
+</MudCard>

@@ -87,7 +87,8 @@ builder.Services.AddCors(options =>
         {
             var accessToken = context.Request.Query["access_token"];
             var path = context.HttpContext.Request.Path;
-            if (!string.IsNullOrWhiteSpace(accessToken) && path.StartsWithSegments("/hubs/currency-import"))
+            if (!string.IsNullOrWhiteSpace(accessToken) &&
+                (path.StartsWithSegments("/hubs/currency-import") || path.StartsWithSegments("/hubs/label-setter-progress")))
                 context.Token = accessToken;
 
             return Task.CompletedTask;
@@ -101,6 +102,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddSingleton<IInsightsGenerationChannel, InsightsGenerationChannel>();
 builder.Services.AddHostedService<InsightsGenerationBackgroundService>();
+builder.Services.AddSingleton<ILabelSetterProgressTracker, LabelSetterProgressTracker>();
 builder.Services.AddSingleton<ILabelSetterChannel, LabelSetterChannel>();
 builder.Services.AddHostedService<LabelSetterBackgroundService>();
 builder.Services.AddHostedService<LabelSetterStartupService>();
@@ -133,5 +135,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<FinanceManager.Api.Hubs.CurrencyImportHub>("/hubs/currency-import");
+app.MapHub<FinanceManager.Api.Hubs.LabelSetterProgressHub>("/hubs/label-setter-progress");
 app.MapFallbackToFile("index.html");
 app.Run();
