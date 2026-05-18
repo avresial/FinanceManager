@@ -11,28 +11,6 @@ namespace FinanceManager.Api.Controllers.Admin;
 [Tags("Admin - AI Providers")]
 public class AdminAiProvidersController(IAiConfigurationService configService) : ControllerBase
 {
-    public sealed record AiProviderDto(
-        string ProviderName,
-        string BaseUrl,
-        bool HasApiKey,
-        int RequestTimeoutSeconds,
-        bool IsEnabled);
-
-    public sealed record AiFallbackEntryDto(string ProviderName, string Model, int Order);
-
-    public sealed record AiConfigurationResponse(
-        IReadOnlyList<AiProviderDto> Providers,
-        IReadOnlyList<AiFallbackEntryDto> FallbackEntries);
-
-    public sealed record UpdateProviderRequest(
-        string BaseUrl,
-        string? ApiKey,
-        int RequestTimeoutSeconds,
-        bool IsEnabled);
-
-    public sealed record UpdateFallbackRequest(
-        IReadOnlyList<AiFallbackEntryDto> Entries);
-
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AiConfigurationResponse))]
     public async Task<IActionResult> GetConfiguration(CancellationToken ct)
@@ -63,7 +41,6 @@ public class AdminAiProvidersController(IAiConfigurationService configService) :
         if (string.IsNullOrWhiteSpace(request.BaseUrl))
             return BadRequest("BaseUrl is required.");
 
-        // Preserve existing ApiKey when request sends null (means: don't change it)
         string apiKey;
         if (request.ApiKey is null)
         {

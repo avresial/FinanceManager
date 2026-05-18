@@ -91,7 +91,7 @@ public partial class AdminAiProviders : ComponentBase
             // Send null ApiKey if the user left the field empty (preserve existing key)
             string? apiKey = string.IsNullOrEmpty(provider.NewApiKey) ? null : provider.NewApiKey;
 
-            await ApiClient.UpdateProviderAsync(provider.ProviderName, new AdminAiProvidersHttpClient.UpdateProviderRequest(
+            await ApiClient.UpdateProviderAsync(provider.ProviderName, new UpdateProviderRequest(
                 provider.BaseUrl,
                 apiKey,
                 provider.RequestTimeoutSeconds,
@@ -117,10 +117,10 @@ public partial class AdminAiProviders : ComponentBase
         try
         {
             var entries = _fallbackEntries
-                .Select((e, i) => new AdminAiProvidersHttpClient.AiFallbackEntryDto(e.ProviderName, e.Model, i))
+                .Select((e, i) => new AiFallbackEntryDto(e.ProviderName, e.Model, i))
                 .ToList();
 
-            await ApiClient.UpdateFallbackAsync(new AdminAiProvidersHttpClient.UpdateFallbackRequest(entries));
+            await ApiClient.UpdateFallbackAsync(new UpdateFallbackRequest(entries));
             Snackbar.Add("Fallback strategy saved.", Severity.Success);
         }
         catch (Exception ex)
