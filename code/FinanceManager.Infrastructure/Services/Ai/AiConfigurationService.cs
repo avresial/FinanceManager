@@ -12,7 +12,8 @@ internal sealed class AiConfigurationService(
     IOptions<OpenRouterOptions> openRouterDefaults,
     IOptions<OllamaOptions> ollamaDefaults,
     IOptions<LmStudioOptions> lmStudioDefaults,
-    IOptions<GitHubModelsOptions> gitHubModelsDefaults) : IAiConfigurationService
+    IOptions<GitHubModelsOptions> gitHubModelsDefaults,
+    IOptions<List<AiProviderFallbackStrategyOption>> fallbackStrategyDefaults) : IAiConfigurationService
 {
     private static readonly string[] KnownProviders = ["OpenRouter", "LmStudio", "Ollama", "GitHub"];
 
@@ -31,7 +32,27 @@ internal sealed class AiConfigurationService(
     public async ValueTask<IReadOnlyList<AiFallbackEntry>> GetFallbackEntriesAsync(CancellationToken ct = default)
     {
         await EnsureLoadedAsync(ct);
-        return _cachedFallback!;
+
+        if (_cachedFallback!.Count > 0)
+            return _cachedFallback;
+
+        // No DB entries yet — convert appsettings defaults so AI works out of the box
+        var defaultStrategy = (fallbackStrategyDefaults.Value ?? [])
+            .FirstOrDefault(s => s.Name.Equals("default", StringComparison.OrdinalIgnoreCase))
+            ?? (fallbackStrategyDefaults.Value ?? []).FirstOrDefault();
+
+        if (defaultStrategy is null)
+            return [];
+
+        return defaultStrategy.Providers
+            .Where(p => !string.IsNullOrWhiteSpace(p.Provider))
+            .Select((p, i) => new AiFallbackEntry
+            {
+                ProviderName = p.Provider.Trim(),
+                Model = p.Model.Trim(),
+                Order = i,
+            })
+            .ToList();
     }
 
     public async ValueTask<IReadOnlyList<AiProviderConfiguration>> GetAllProvidersAsync(CancellationToken ct = default)

@@ -138,12 +138,21 @@ internal sealed class FallbackChatClient(
         if (fallbackEntries.Count == 0)
             return [];
 
+        var providerConfigs = await configService.GetAllProvidersAsync(ct);
+        var enabledProviders = providerConfigs
+            .Where(p => p.IsEnabled)
+            .Select(p => p.ProviderName.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         var attempts = new List<ResolvedAttempt>();
         foreach (var entry in fallbackEntries.OrderBy(e => e.Order))
         {
             var provider = entry.ProviderName.Trim();
             var model = entry.Model.Trim();
             if (string.IsNullOrWhiteSpace(provider))
+                continue;
+
+            if (!enabledProviders.Contains(provider))
                 continue;
 
             var chatClient = allClients.FirstOrDefault(x =>
