@@ -40,7 +40,10 @@ else if (Account is not null && Account.Entries is not null && (Account.Entries.
             </MudOverlay>
         </AddEntryOverlay>
         <EntryFilter>
-            <ValueChangeRangeFilterBar From="_filterFrom" To="_filterTo" OnFilterChanged="OnFilterChanged" />
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                <DateRangeFilterBar From="_filterDateStart" To="_filterDateEnd" OnFilterChanged="OnDateFilterChanged" />
+                <ValueChangeRangeFilterBar From="_filterFrom" To="_filterTo" OnFilterChanged="OnFilterChanged" />
+            </MudStack>
         </EntryFilter>
         <Entries>
             @{
