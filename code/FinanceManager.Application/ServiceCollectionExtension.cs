@@ -81,6 +81,7 @@ public static class ServiceCollectionExtension
 
                 .AddScoped<IFinancialInsightsAiGenerator, FinancialInsightsAiGenerator>()
                 .AddScoped<ILabelSetterAiService, LabelSetterAiService>()
+                .AddScoped<ILabelSuggestionAiService, LabelSuggestionAiService>()
             ;
 
         return services;
