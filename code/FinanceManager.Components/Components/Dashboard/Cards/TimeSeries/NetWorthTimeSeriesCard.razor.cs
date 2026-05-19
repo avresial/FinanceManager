@@ -22,7 +22,11 @@ public partial class NetWorthTimeSeriesCard
     protected override async Task OnParametersSetAsync()
     {
         var user = await LoginService.GetLoggedUser();
-        if (user is null) return;
+        if (user is null)
+        {
+            ChartData = [];
+            return;
+        }
 
         _isLoading = true;
         StateHasChanged();
@@ -32,9 +36,12 @@ public partial class NetWorthTimeSeriesCard
         }
         catch (Exception ex)
         {
+            ChartData = [];
             Logger.LogError(ex, "Error getting net worth time series data");
         }
-
-        _isLoading = false;
+        finally
+        {
+            _isLoading = false;
+        }
     }
 }
