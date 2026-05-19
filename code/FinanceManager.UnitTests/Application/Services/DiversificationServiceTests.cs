@@ -152,6 +152,23 @@ public class DiversificationServiceTests
         Assert.Equal(expectedAssetClassScore, result.AssetClassScore);
     }
 
+    [Fact]
+    public async Task GetDiversificationScore_CurrencyAccountWithNegativeBalance_DoesNotCountAsCash()
+    {
+        // Liability-style account: latest balance is negative
+        var debtAccount = new CurrencyAccount(1, 1, "credit", AccountLabel.Other);
+        debtAccount.Add(new CurrencyAccountEntry(1, 1, _asOfDate, -500, -500), false);
+
+        SetupStockAccounts();
+        SetupBondAccounts();
+        SetupCurrencyAccounts(debtAccount);
+
+        var result = await _service.GetDiversificationScore(1, _asOfDate);
+
+        Assert.Equal(0, result.Score);
+        Assert.Equal("Limited", result.Band);
+    }
+
     [Theory]
     [InlineData(0, "Limited")]
     [InlineData(33, "Limited")]

@@ -45,7 +45,7 @@ public class DiversificationService(IFinancialAccountRepository financialAccount
         if (hasBonds) heldClasses.Add(InvestmentType.Bond);
 
         var hasCash = await financialAccountRepository.GetAccounts<CurrencyAccount>(userId, DateTime.MinValue, asOfDate)
-            .AnyAsync(account => account.Entries.Count > 0);
+            .AnyAsync(account => account.ContainsAssets);
         if (hasCash) heldClasses.Add(InvestmentType.Cash);
 
         return heldClasses;
@@ -64,7 +64,7 @@ public class DiversificationService(IFinancialAccountRepository financialAccount
                 uniqueTickers.Add($"bond_{entry.BondDetailsId}");
 
         var hasCash = await financialAccountRepository.GetAccounts<CurrencyAccount>(userId, DateTime.MinValue, asOfDate)
-            .AnyAsync(account => account.Entries.Count > 0);
+            .AnyAsync(account => account.ContainsAssets);
         if (hasCash) uniqueTickers.Add("cash");
 
         return uniqueTickers;
