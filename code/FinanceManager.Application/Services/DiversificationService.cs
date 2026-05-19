@@ -10,16 +10,6 @@ namespace FinanceManager.Application.Services;
 
 public class DiversificationService(IFinancialAccountRepository financialAccountRepository) : IDiversificationService
 {
-    private static readonly HashSet<InvestmentType> SupportedClasses =
-    [
-        InvestmentType.Cash,
-        InvestmentType.Stock,
-        InvestmentType.Bond,
-        InvestmentType.Property,
-        InvestmentType.Crypto,
-        InvestmentType.Commodities,
-    ];
-
     private const int TotalSupportedClasses = 6;
     private const int HoldingsBenchmark = 30;
 
@@ -30,12 +20,12 @@ public class DiversificationService(IFinancialAccountRepository financialAccount
 
         await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, DateTime.MinValue, asOfDate))
         {
-            foreach (var ticker in account.GetStoredTickers())
+            var tickers = account.GetStoredTickers();
+            foreach (var ticker in tickers)
                 uniqueTickers.Add(ticker);
 
-            foreach (var type in account.GetStoredTypes())
-                if (SupportedClasses.Contains(type))
-                    distinctClasses.Add(type);
+            if (tickers.Count > 0)
+                distinctClasses.Add(InvestmentType.Stock);
         }
 
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, DateTime.MinValue, asOfDate))
