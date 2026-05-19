@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git push*)",
+            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); echo \"$CMD\" | grep -qE '(--set-upstream|-u)' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"New branch pushed to remote. Immediately create a draft pull request for this branch using mcp__github__create_pull_request with draft=true. Do this before any other action.\"}}' || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
