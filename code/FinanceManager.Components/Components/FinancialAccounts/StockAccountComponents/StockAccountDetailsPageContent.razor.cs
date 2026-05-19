@@ -225,7 +225,7 @@ public partial class StockAccountDetailsPageContent : ComponentBase
             if (_user is null) return;
 
             var requestedDateStart = _dateStart;
-            _dateEnd = _filterDateEnd ?? DateTime.UtcNow;
+            _dateEnd = _filterDateEnd.HasValue ? _filterDateEnd.Value.Date.AddDays(1).AddTicks(-1) : DateTime.UtcNow;
             Account = await FinancialAccountService.GetAccount<StockAccount>(_user.UserId, AccountId, requestedDateStart, _dateEnd, _minimumEntryCount);
             UpdateDateStartFromLoadedEntries(requestedDateStart);
         }
@@ -378,9 +378,8 @@ public partial class StockAccountDetailsPageContent : ComponentBase
         _filterDateEnd = filter.To;
 
         var defaultDateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-        _dateStart = _filterDateStart ?? (_filterDateEnd.HasValue && _filterDateEnd.Value.Date < defaultDateStart
-            ? new DateTime(_filterDateEnd.Value.Year, _filterDateEnd.Value.Month, 1)
-            : defaultDateStart);
+        var fallbackStart = Account?.Start?.Date ?? defaultDateStart;
+        _dateStart = _filterDateStart ?? (_filterDateEnd.HasValue ? fallbackStart : defaultDateStart);
         _loadedAllData = false;
         await UpdateEntries();
         StateHasChanged();
