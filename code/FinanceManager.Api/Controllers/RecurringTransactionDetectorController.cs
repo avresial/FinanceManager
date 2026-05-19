@@ -14,6 +14,8 @@ public class RecurringTransactionDetectorController(IRecurringTransactionDetecto
 {
     [HttpGet("Get/{userId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<NameValueResult>))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get(int userId, CancellationToken cancellationToken = default)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);

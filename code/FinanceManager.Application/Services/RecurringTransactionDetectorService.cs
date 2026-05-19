@@ -18,7 +18,7 @@ public class RecurringTransactionDetectorService(IFinancialAccountRepository fin
             .ToList();
 
         var start = months.Min();
-        var end = currentMonthStart.AddDays(-1);
+        var end = currentMonthStart.AddTicks(-1);
 
         var merchantMonthSpend = new Dictionary<string, Dictionary<int, decimal>>();
 
@@ -29,7 +29,7 @@ public class RecurringTransactionDetectorService(IFinancialAccountRepository fin
             foreach (var entry in account.Entries)
             {
                 if (entry.ValueChange >= 0) continue;
-                if (entry.PostingDate < start || entry.PostingDate > end) continue;
+                if (entry.PostingDate < start || entry.PostingDate >= currentMonthStart) continue;
 
                 var merchantName = !string.IsNullOrEmpty(entry.ContractorDetails)
                     ? entry.ContractorDetails
