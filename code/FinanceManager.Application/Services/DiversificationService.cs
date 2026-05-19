@@ -55,8 +55,8 @@ public class DiversificationService(IFinancialAccountRepository financialAccount
             uniqueTickers.Add($"cash_{account.AccountId}");
         }
 
-        var assetClassScore = (int)(distinctClasses.Count / (double)TotalSupportedClasses * 50);
-        var holdingsScore = (int)(Math.Min(uniqueTickers.Count / (double)HoldingsBenchmark, 1.0) * 50);
+        var assetClassScore = CalculateAssetClassScore(distinctClasses.Count);
+        var holdingsScore = CalculateHoldingsScore(uniqueTickers.Count);
         var totalScore = assetClassScore + holdingsScore;
 
         var band = totalScore switch
@@ -68,4 +68,10 @@ public class DiversificationService(IFinancialAccountRepository financialAccount
 
         return new DiversificationScore(totalScore, assetClassScore, holdingsScore, band);
     }
+
+    private static int CalculateAssetClassScore(int distinctClassCount) =>
+        (int)(distinctClassCount / (double)TotalSupportedClasses * 50);
+
+    private static int CalculateHoldingsScore(int uniqueTickerCount) =>
+        (int)(Math.Min(uniqueTickerCount / (double)HoldingsBenchmark, 1.0) * 50);
 }
