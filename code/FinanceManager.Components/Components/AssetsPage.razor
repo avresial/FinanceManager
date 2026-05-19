@@ -1,11 +1,16 @@
 ﻿@page "/Assets"
 @using FinanceManager.Components.Components.Dashboard.Cards.Assets
+@using FinanceManager.Components.Components.Dashboard.Cards.TimeSeries
 
 <PageTitle>Assets</PageTitle>
 <MudContainer Class="py-2">
     <MudGrid Spacing="2">
         <MudItem xs="12">
             <AssetsTimeSeriesCard StartDateTime=StartDate EndDateTime="@EndDate" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <NetWorthTimeSeriesCard StartDateTime=StartDate EndDateTime="@EndDate" />
         </MudItem>
 
         <MudItem xs="12" lg="4">
