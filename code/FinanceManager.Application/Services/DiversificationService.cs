@@ -22,14 +22,7 @@ public class DiversificationService(IFinancialAccountRepository financialAccount
         var holdingsScore = CalculateHoldingsScore(uniqueHoldings.Count);
         var totalScore = assetClassScore + holdingsScore;
 
-        var band = totalScore switch
-        {
-            <= 33 => "Limited",
-            <= 66 => "Moderate",
-            _ => "Broad"
-        };
-
-        return new DiversificationScore(totalScore, assetClassScore, holdingsScore, band);
+        return new DiversificationScore(totalScore, assetClassScore, holdingsScore, GetBand(totalScore));
     }
 
     private async Task<HashSet<InvestmentType>> GetHeldAssetClasses(int userId, DateTime asOfDate)
@@ -69,6 +62,13 @@ public class DiversificationService(IFinancialAccountRepository financialAccount
 
         return uniqueTickers;
     }
+
+    internal static string GetBand(int totalScore) => totalScore switch
+    {
+        <= 33 => "Limited",
+        <= 66 => "Moderate",
+        _ => "Broad"
+    };
 
     private static int CalculateAssetClassScore(int distinctClassCount) =>
         (int)(distinctClassCount / (double)TotalSupportedClasses * 50);

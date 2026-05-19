@@ -7,14 +7,8 @@ public class DiversificationHttpClient(HttpClient httpClient)
 {
     public async Task<DiversificationScore?> GetDiversificationScore(int userId, DateTime asOfDate)
     {
-        try
-        {
-            return await httpClient.GetFromJsonAsync<DiversificationScore>(
-                $"{httpClient.BaseAddress}api/Diversification/{userId}/{asOfDate:O}");
-        }
-        catch
-        {
-            return null;
-        }
+        var result = await httpClient.GetFromJsonAsync<DiversificationScore>(
+            $"{httpClient.BaseAddress}api/Diversification/{userId}/{asOfDate:O}");
+        return result;
     }
 }

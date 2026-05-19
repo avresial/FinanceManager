@@ -176,9 +176,8 @@ public class DiversificationServiceTests
     [InlineData(66, "Moderate")]
     [InlineData(67, "Broad")]
     [InlineData(100, "Broad")]
-    public void Band_MatchesScoreRanges(int score, string expectedBand)
+    public void GetBand_MatchesScoreRanges(int score, string expectedBand)
     {
-        var result = new DiversificationScore(score, 0, score, expectedBand);
-        Assert.Equal(expectedBand, result.Band);
+        Assert.Equal(expectedBand, DiversificationService.GetBand(score));
     }
 }
