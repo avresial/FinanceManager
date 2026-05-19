@@ -1,0 +1,52 @@
+<MudCard Outlined Class="d-flex flex-nowrap" Style="@($"height:{Height};")">
+    <MudPaper Class="flex-grow-0 p-3" Elevation="0">
+        <MudText Typo=Typo.h5>Recurring transactions</MudText>
+        @if (_isLoading)
+        {
+            <MudText Typo=Typo.h6 Class="mb-2 text-muted">
+                <StringSpinner CharactersCount="4" />
+            </MudText>
+        }
+        else if (_data.Count > 0)
+        {
+            <MudText Typo=Typo.h6 Class="mb-2 text-muted">@_totalMonthlySpend.ToString("0.00") PLN/mo</MudText>
+        }
+    </MudPaper>
+
+    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
+        @if (_isLoading)
+        {
+            <div style="height:100%">
+                <ChartSpinner MaxHeight=@Height />
+            </div>
+        }
+        else if (_data.Count > 0)
+        {
+            <MudList T="string" ReadOnly Class="pa-3">
+                @foreach (var item in _data)
+                {
+                    <MudListItem Class="pa-2">
+                        <div class="d-flex align-items-center gap-3 w-100">
+                            <MudIcon Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" />
+                            <div class="flex-grow-1">
+                                <MudText Typo="Typo.body2" Class="font-weight-500">@item.Name</MudText>
+                                <MudProgressLinear Value="@GetPercentage(item.Value)" Color="Color.Warning"
+                                                  Class="mt-1" Size="Size.Small" />
+                            </div>
+                            <MudText Typo="Typo.body2" Color="Color.Warning" Class="font-weight-600"
+                                     Style="min-width: 120px; text-align: right;">
+                                @($"{item.Value:0.00} PLN/mo")
+                            </MudText>
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+        else
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                <MudText Typo="Typo.button" HtmlTag="h3">No recurring transactions</MudText>
+            </div>
+        }
+    </MudPaper>
+</MudCard>

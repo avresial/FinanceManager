@@ -37,6 +37,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<FinancialLabelHttpClient>()
                 .AddScoped<LabelSetterProgressHttpClient>()
                 .AddScoped<FinancialInsightsHttpClient>()
+                .AddScoped<RecurringTransactionDetectorHttpClient>()
                 .AddScoped<AdministrationUsersHttpClient>()
                 .AddScoped<AdminAiProvidersHttpClient>()
                 .AddScoped<NewVisitorsHttpClient>()
