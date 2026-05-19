@@ -1,0 +1,40 @@
+<MudCard Outlined Class="d-flex flex-nowrap" Style="@($"height:{Height};")">
+    <MudPaper Class="flex-grow-0 p-3" Elevation="0">
+        <div class="d-flex align-center gap-1">
+            <MudText Typo="Typo.h5">Diversification proxy</MudText>
+            <MudTooltip Text="Based on number of asset classes and unique holdings; not investment advice.">
+                <MudIconButton Icon="@Icons.Material.Filled.Info" Size="Size.Small" />
+            </MudTooltip>
+        </div>
+        @if (!_isLoading && _score is not null)
+        {
+            <MudText Typo="Typo.h6" Class="mb-2 text-muted">@_score.Band</MudText>
+        }
+    </MudPaper>
+
+    <MudPaper Class="flex-grow-1 overflow-hidden d-flex align-center justify-center" Elevation="0">
+        @if (_isLoading)
+        {
+            <div style="height:100%">
+                <ChartSpinner MaxHeight=@Height />
+            </div>
+        }
+        else if (_score is not null)
+        {
+            <div class="d-flex flex-column align-center justify-center gap-2 pa-4" style="width:100%;">
+                <MudText Typo="Typo.h2" Align="Align.Center">@_score.Score<MudText Typo="Typo.h5" Inline Style="opacity:0.5">/100</MudText></MudText>
+                <MudProgressLinear Value="@_score.Score" Max="100" Color="@_bandColor" Rounded Size="Size.Large" Style="width:80%;" />
+                <div class="d-flex justify-space-between" style="width:80%;">
+                    <MudText Typo="Typo.caption">0 — Limited</MudText>
+                    <MudText Typo="Typo.caption">Broad — 100</MudText>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
+            </div>
+        }
+    </MudPaper>
+</MudCard>

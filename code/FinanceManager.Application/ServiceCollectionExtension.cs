@@ -83,6 +83,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<ILabelSetterAiService, LabelSetterAiService>()
                 .AddScoped<ILabelSuggestionAiService, LabelSuggestionAiService>()
                 .AddScoped<IRecurringTransactionDetectorService, RecurringTransactionDetectorService>()
+                .AddScoped<IDiversificationService, DiversificationService>()
             ;
 
         return services;
