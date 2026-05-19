@@ -57,7 +57,7 @@ public class DiversificationService(IFinancialAccountRepository financialAccount
 
         await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, DateTime.MinValue, asOfDate))
             foreach (var ticker in account.GetStoredTickers())
-                uniqueTickers.Add(ticker);
+                uniqueTickers.Add($"stock_{ticker}");
 
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, DateTime.MinValue, asOfDate))
             foreach (var entry in account.Entries)
