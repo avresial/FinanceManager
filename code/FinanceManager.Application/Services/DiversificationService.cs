@@ -15,39 +15,11 @@ public class DiversificationService(IFinancialAccountRepository financialAccount
 
     public async Task<DiversificationScore> GetDiversificationScore(int userId, DateTime asOfDate)
     {
-        var distinctClasses = new HashSet<InvestmentType>();
-        var uniqueTickers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var heldAssetClasses = await GetHeldAssetClasses(userId, asOfDate);
+        var uniqueHoldings = await GetUniqueHoldingsPerType(userId, asOfDate);
 
-        await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, DateTime.MinValue, asOfDate))
-        {
-            var tickers = account.GetStoredTickers();
-            foreach (var ticker in tickers)
-                uniqueTickers.Add(ticker);
-
-            if (tickers.Count > 0)
-                distinctClasses.Add(InvestmentType.Stock);
-        }
-
-        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, DateTime.MinValue, asOfDate))
-        {
-            if (account.Entries.Count == 0) continue;
-
-            distinctClasses.Add(InvestmentType.Bond);
-            foreach (var entry in account.Entries)
-                uniqueTickers.Add($"bond_{entry.BondDetailsId}");
-        }
-
-        var hasCash = await financialAccountRepository.GetAccounts<CurrencyAccount>(userId, DateTime.MinValue, asOfDate)
-            .AnyAsync(account => account.Entries.Count > 0);
-
-        if (hasCash)
-        {
-            distinctClasses.Add(InvestmentType.Cash);
-            uniqueTickers.Add("cash");
-        }
-
-        var assetClassScore = CalculateAssetClassScore(distinctClasses.Count);
-        var holdingsScore = CalculateHoldingsScore(uniqueTickers.Count);
+        var assetClassScore = CalculateAssetClassScore(heldAssetClasses.Count);
+        var holdingsScore = CalculateHoldingsScore(uniqueHoldings.Count);
         var totalScore = assetClassScore + holdingsScore;
 
         var band = totalScore switch
@@ -58,6 +30,44 @@ public class DiversificationService(IFinancialAccountRepository financialAccount
         };
 
         return new DiversificationScore(totalScore, assetClassScore, holdingsScore, band);
+    }
+
+    private async Task<HashSet<InvestmentType>> GetHeldAssetClasses(int userId, DateTime asOfDate)
+    {
+        var heldClasses = new HashSet<InvestmentType>();
+
+        var hasStocks = await financialAccountRepository.GetAccounts<StockAccount>(userId, DateTime.MinValue, asOfDate)
+            .AnyAsync(account => account.Entries.Count > 0);
+        if (hasStocks) heldClasses.Add(InvestmentType.Stock);
+
+        var hasBonds = await financialAccountRepository.GetAccounts<BondAccount>(userId, DateTime.MinValue, asOfDate)
+            .AnyAsync(account => account.Entries.Count > 0);
+        if (hasBonds) heldClasses.Add(InvestmentType.Bond);
+
+        var hasCash = await financialAccountRepository.GetAccounts<CurrencyAccount>(userId, DateTime.MinValue, asOfDate)
+            .AnyAsync(account => account.Entries.Count > 0);
+        if (hasCash) heldClasses.Add(InvestmentType.Cash);
+
+        return heldClasses;
+    }
+
+    private async Task<HashSet<string>> GetUniqueHoldingsPerType(int userId, DateTime asOfDate)
+    {
+        var uniqueTickers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, DateTime.MinValue, asOfDate))
+            foreach (var ticker in account.GetStoredTickers())
+                uniqueTickers.Add(ticker);
+
+        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, DateTime.MinValue, asOfDate))
+            foreach (var entry in account.Entries)
+                uniqueTickers.Add($"bond_{entry.BondDetailsId}");
+
+        var hasCash = await financialAccountRepository.GetAccounts<CurrencyAccount>(userId, DateTime.MinValue, asOfDate)
+            .AnyAsync(account => account.Entries.Count > 0);
+        if (hasCash) uniqueTickers.Add("cash");
+
+        return uniqueTickers;
     }
 
     private static int CalculateAssetClassScore(int distinctClassCount) =>
