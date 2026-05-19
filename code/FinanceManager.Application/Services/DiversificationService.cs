@@ -37,12 +37,13 @@ public class DiversificationService(IFinancialAccountRepository financialAccount
                 uniqueTickers.Add($"bond_{entry.BondDetailsId}");
         }
 
-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, DateTime.MinValue, asOfDate))
-        {
-            if (account.Entries.Count == 0) continue;
+        var hasCash = await financialAccountRepository.GetAccounts<CurrencyAccount>(userId, DateTime.MinValue, asOfDate)
+            .AnyAsync(account => account.Entries.Count > 0);
 
+        if (hasCash)
+        {
             distinctClasses.Add(InvestmentType.Cash);
-            uniqueTickers.Add($"cash_{account.AccountId}");
+            uniqueTickers.Add("cash");
         }
 
         var assetClassScore = CalculateAssetClassScore(distinctClasses.Count);

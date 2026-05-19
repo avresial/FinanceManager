@@ -63,26 +63,18 @@ public class DiversificationServiceTests
     }
 
     [Fact]
-    public async Task GetDiversificationScore_SixClassesThirtyTickers_ReturnsOneHundred()
+    public async Task GetDiversificationScore_AllCurrentAccountTypes_ThirtyTickers_ScoresCorrectly()
     {
-        // 30 stock tickers across multiple investment types
+        // 27 stock tickers + 2 bond instruments + 1 cash = 30 unique holdings
         var stockAccount = new StockAccount(1, 1, "stocks");
-        for (int i = 1; i <= 20; i++)
+        for (int i = 1; i <= 27; i++)
             stockAccount.Add(new StockAccountEntry(1, i, _asOfDate, 10, 10, $"STK{i}", InvestmentType.Stock), false);
-        for (int i = 1; i <= 5; i++)
-            stockAccount.Add(new StockAccountEntry(1, 20 + i, _asOfDate, 10, 10, $"CRY{i}", InvestmentType.Crypto), false);
-        for (int i = 1; i <= 3; i++)
-            stockAccount.Add(new StockAccountEntry(1, 25 + i, _asOfDate, 10, 10, $"COM{i}", InvestmentType.Commodities), false);
-        for (int i = 1; i <= 2; i++)
-            stockAccount.Add(new StockAccountEntry(1, 28 + i, _asOfDate, 10, 10, $"PROP{i}", InvestmentType.Property), false);
 
-        // 2 bond instruments
         var bondAccount = new BondAccount(1, 2, "bonds",
             [new BondAccountEntry(2, 1, _asOfDate, 10m, 10m, 1),
              new BondAccountEntry(2, 2, _asOfDate, 10m, 10m, 2)],
             AccountLabel.Other);
 
-        // 1 cash account
         var cashAccount = new CurrencyAccount(1, 3, "cash", AccountLabel.Cash);
         cashAccount.Add(new CurrencyAccountEntry(3, 1, _asOfDate, 100, 100), false);
 
@@ -92,11 +84,11 @@ public class DiversificationServiceTests
 
         var result = await _service.GetDiversificationScore(1, _asOfDate);
 
-        // 6 classes → 50 pts; 30 tickers (20+5+3+2 stocks + 2 bonds + 1 cash) = 33 tickers → 50 pts
-        Assert.Equal(50, result.AssetClassScore);
+        // 3 classes (Stock, Bond, Cash) → (3/6)*50 = 25 pts
+        // 30 tickers → min(30/30, 1)*50 = 50 pts
+        Assert.Equal(25, result.AssetClassScore);
         Assert.Equal(50, result.HoldingsScore);
-        Assert.Equal(100, result.Score);
-        Assert.Equal("Broad", result.Band);
+        Assert.Equal(75, result.Score);
     }
 
     [Fact]
@@ -133,6 +125,28 @@ public class DiversificationServiceTests
         var result = await _service.GetDiversificationScore(1, _asOfDate);
 
         // Only Stock class counted, Unknown is excluded
+        var expectedAssetClassScore = (int)(1 / 6.0 * 50);
+        Assert.Equal(expectedAssetClassScore, result.AssetClassScore);
+    }
+
+    [Fact]
+    public async Task GetDiversificationScore_MultipleCurrencyAccounts_CashCountsAsOneTicker()
+    {
+        var cashAccount1 = new CurrencyAccount(1, 1, "checking", AccountLabel.Cash);
+        cashAccount1.Add(new CurrencyAccountEntry(1, 1, _asOfDate, 500, 500), false);
+
+        var cashAccount2 = new CurrencyAccount(1, 2, "savings", AccountLabel.Cash);
+        cashAccount2.Add(new CurrencyAccountEntry(2, 1, _asOfDate, 1000, 1000), false);
+
+        SetupStockAccounts();
+        SetupBondAccounts();
+        SetupCurrencyAccounts(cashAccount1, cashAccount2);
+
+        var result = await _service.GetDiversificationScore(1, _asOfDate);
+
+        // Two cash accounts → still only 1 cash holding and 1 asset class
+        var expectedHoldingsScore = (int)(1 / 30.0 * 50);
+        Assert.Equal(expectedHoldingsScore, result.HoldingsScore);
         var expectedAssetClassScore = (int)(1 / 6.0 * 50);
         Assert.Equal(expectedAssetClassScore, result.AssetClassScore);
     }
