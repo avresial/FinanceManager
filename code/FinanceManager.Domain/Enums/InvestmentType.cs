@@ -6,5 +6,7 @@ public enum InvestmentType
     Cash,
     Stock,
     Bond,
-    Property
+    Property,
+    Crypto,
+    Commodities
 }
