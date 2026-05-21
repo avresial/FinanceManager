@@ -169,6 +169,144 @@ public class DiversificationServiceTests
         Assert.Equal("Limited", result.Band);
     }
 
+    [Fact]
+    public async Task GetDiversificationScore_StockFullySold_NotCounted()
+    {
+        // Buy 10 shares, then sell all 10. Net position = 0 → not held.
+        var buyDate = _asOfDate.AddDays(-30);
+        var sellDate = _asOfDate.AddDays(-10);
+        var account = new StockAccount(1, 1, "stocks");
+        account.Add(new StockAccountEntry(1, 1, buyDate, 10, 10, "AAPL", InvestmentType.Stock), false);
+        account.Add(new StockAccountEntry(1, 2, sellDate, 0, -10, "AAPL", InvestmentType.Stock), false);
+
+        SetupStockAccounts(account);
+        SetupBondAccounts();
+        SetupCurrencyAccounts();
+
+        var result = await _service.GetDiversificationScore(1, _asOfDate);
+
+        Assert.Equal(0, result.HoldingsScore);
+        Assert.Equal(0, result.AssetClassScore);
+        Assert.Equal(0, result.Score);
+    }
+
+    [Fact]
+    public async Task GetDiversificationScore_StockFullySold_OneStillHeld_OnlyHeldCounts()
+    {
+        // AAPL fully sold, MSFT still held → only MSFT counts; Stock class still present.
+        var buyDate = _asOfDate.AddDays(-30);
+        var sellDate = _asOfDate.AddDays(-10);
+        var account = new StockAccount(1, 1, "stocks");
+        account.Add(new StockAccountEntry(1, 1, buyDate, 10, 10, "AAPL", InvestmentType.Stock), false);
+        account.Add(new StockAccountEntry(1, 2, sellDate, 0, -10, "AAPL", InvestmentType.Stock), false);
+        account.Add(new StockAccountEntry(1, 3, buyDate, 5, 5, "MSFT", InvestmentType.Stock), false);
+
+        SetupStockAccounts(account);
+        SetupBondAccounts();
+        SetupCurrencyAccounts();
+
+        var result = await _service.GetDiversificationScore(1, _asOfDate);
+
+        var expectedHoldingsScore = (int)(1 / 30.0 * 50);
+        var expectedAssetClassScore = (int)(1 / 6.0 * 50);
+        Assert.Equal(expectedHoldingsScore, result.HoldingsScore);
+        Assert.Equal(expectedAssetClassScore, result.AssetClassScore);
+    }
+
+    [Fact]
+    public async Task GetDiversificationScore_StockPartiallySold_StillCounted()
+    {
+        // Buy 10, sell 5. Net = 5 > 0 → still held.
+        var buyDate = _asOfDate.AddDays(-30);
+        var sellDate = _asOfDate.AddDays(-10);
+        var account = new StockAccount(1, 1, "stocks");
+        account.Add(new StockAccountEntry(1, 1, buyDate, 10, 10, "AAPL", InvestmentType.Stock), false);
+        account.Add(new StockAccountEntry(1, 2, sellDate, 5, -5, "AAPL", InvestmentType.Stock), false);
+
+        SetupStockAccounts(account);
+        SetupBondAccounts();
+        SetupCurrencyAccounts();
+
+        var result = await _service.GetDiversificationScore(1, _asOfDate);
+
+        var expectedHoldingsScore = (int)(1 / 30.0 * 50);
+        var expectedAssetClassScore = (int)(1 / 6.0 * 50);
+        Assert.Equal(expectedHoldingsScore, result.HoldingsScore);
+        Assert.Equal(expectedAssetClassScore, result.AssetClassScore);
+    }
+
+    [Fact]
+    public async Task GetDiversificationScore_BondFullyLiquidated_NotCounted()
+    {
+        // Bond 1 fully liquidated, bond 2 still held.
+        var buyDate = _asOfDate.AddDays(-30);
+        var sellDate = _asOfDate.AddDays(-10);
+        var bondAccount = new BondAccount(1, 1, "bonds",
+            [
+                new BondAccountEntry(1, 1, buyDate, 10m, 10m, 1),
+                new BondAccountEntry(1, 2, sellDate, 0m, -10m, 1),
+                new BondAccountEntry(1, 3, buyDate, 10m, 10m, 2),
+            ],
+            AccountLabel.Other);
+
+        SetupStockAccounts();
+        SetupBondAccounts(bondAccount);
+        SetupCurrencyAccounts();
+
+        var result = await _service.GetDiversificationScore(1, _asOfDate);
+
+        // Only bond 2 counts → 1 ticker, 1 asset class
+        var expectedHoldingsScore = (int)(1 / 30.0 * 50);
+        var expectedAssetClassScore = (int)(1 / 6.0 * 50);
+        Assert.Equal(expectedHoldingsScore, result.HoldingsScore);
+        Assert.Equal(expectedAssetClassScore, result.AssetClassScore);
+    }
+
+    [Fact]
+    public async Task GetDiversificationScore_AllBondsLiquidated_BondClassExcluded()
+    {
+        var buyDate = _asOfDate.AddDays(-30);
+        var sellDate = _asOfDate.AddDays(-10);
+        var bondAccount = new BondAccount(1, 1, "bonds",
+            [
+                new BondAccountEntry(1, 1, buyDate, 10m, 10m, 1),
+                new BondAccountEntry(1, 2, sellDate, 0m, -10m, 1),
+            ],
+            AccountLabel.Other);
+
+        SetupStockAccounts();
+        SetupBondAccounts(bondAccount);
+        SetupCurrencyAccounts();
+
+        var result = await _service.GetDiversificationScore(1, _asOfDate);
+
+        Assert.Equal(0, result.HoldingsScore);
+        Assert.Equal(0, result.AssetClassScore);
+    }
+
+    [Fact]
+    public async Task GetDiversificationScore_HoldingSoldInOneAccount_HeldInAnother_StillCounts()
+    {
+        // AAPL sold in account 1, but still held in account 2 → ticker is currently held.
+        var buyDate = _asOfDate.AddDays(-30);
+        var sellDate = _asOfDate.AddDays(-10);
+        var account1 = new StockAccount(1, 1, "stocks-a");
+        account1.Add(new StockAccountEntry(1, 1, buyDate, 10, 10, "AAPL", InvestmentType.Stock), false);
+        account1.Add(new StockAccountEntry(1, 2, sellDate, 0, -10, "AAPL", InvestmentType.Stock), false);
+
+        var account2 = new StockAccount(1, 2, "stocks-b");
+        account2.Add(new StockAccountEntry(2, 1, buyDate, 5, 5, "AAPL", InvestmentType.Stock), false);
+
+        SetupStockAccounts(account1, account2);
+        SetupBondAccounts();
+        SetupCurrencyAccounts();
+
+        var result = await _service.GetDiversificationScore(1, _asOfDate);
+
+        var expectedHoldingsScore = (int)(1 / 30.0 * 50);
+        Assert.Equal(expectedHoldingsScore, result.HoldingsScore);
+    }
+
     [Theory]
     [InlineData(0, "Limited")]
     [InlineData(33, "Limited")]

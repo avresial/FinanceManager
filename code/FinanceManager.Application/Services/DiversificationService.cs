@@ -15,8 +15,7 @@ public class DiversificationService(IFinancialAccountRepository financialAccount
 
     public async Task<DiversificationScore> GetDiversificationScore(int userId, DateTime asOfDate)
     {
-        var heldAssetClasses = await GetHeldAssetClasses(userId, asOfDate);
-        var uniqueHoldings = await GetUniqueHoldingsPerType(userId, asOfDate);
+        var (heldAssetClasses, uniqueHoldings) = await GetCurrentHoldings(userId, asOfDate);
 
         var assetClassScore = CalculateAssetClassScore(heldAssetClasses.Count);
         var holdingsScore = CalculateHoldingsScore(uniqueHoldings.Count);
@@ -25,42 +24,65 @@ public class DiversificationService(IFinancialAccountRepository financialAccount
         return new DiversificationScore(totalScore, assetClassScore, holdingsScore, GetBand(totalScore));
     }
 
-    private async Task<HashSet<InvestmentType>> GetHeldAssetClasses(int userId, DateTime asOfDate)
+    private async Task<(HashSet<InvestmentType> AssetClasses, HashSet<string> Holdings)> GetCurrentHoldings(int userId, DateTime asOfDate)
     {
         var heldClasses = new HashSet<InvestmentType>();
-
-        var hasStocks = await financialAccountRepository.GetAccounts<StockAccount>(userId, DateTime.MinValue, asOfDate)
-            .AnyAsync(account => account.Entries.Count > 0);
-        if (hasStocks) heldClasses.Add(InvestmentType.Stock);
-
-        var hasBonds = await financialAccountRepository.GetAccounts<BondAccount>(userId, DateTime.MinValue, asOfDate)
-            .AnyAsync(account => account.Entries.Count > 0);
-        if (hasBonds) heldClasses.Add(InvestmentType.Bond);
-
-        var hasCash = await financialAccountRepository.GetAccounts<CurrencyAccount>(userId, DateTime.MinValue, asOfDate)
-            .AnyAsync(account => account.ContainsAssets);
-        if (hasCash) heldClasses.Add(InvestmentType.Cash);
-
-        return heldClasses;
-    }
-
-    private async Task<HashSet<string>> GetUniqueHoldingsPerType(int userId, DateTime asOfDate)
-    {
-        var uniqueTickers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var uniqueHoldings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, DateTime.MinValue, asOfDate))
-            foreach (var ticker in account.GetStoredTickers())
-                uniqueTickers.Add($"stock_{ticker}");
+        {
+            foreach (var ticker in GetCurrentlyHeldTickers(account, asOfDate))
+            {
+                uniqueHoldings.Add($"stock_{ticker}");
+                heldClasses.Add(InvestmentType.Stock);
+            }
+        }
 
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, DateTime.MinValue, asOfDate))
-            foreach (var entry in account.Entries)
-                uniqueTickers.Add($"bond_{entry.BondDetailsId}");
+        {
+            foreach (var bondId in GetCurrentlyHeldBondIds(account, asOfDate))
+            {
+                uniqueHoldings.Add($"bond_{bondId}");
+                heldClasses.Add(InvestmentType.Bond);
+            }
+        }
 
-        var hasCash = await financialAccountRepository.GetAccounts<CurrencyAccount>(userId, DateTime.MinValue, asOfDate)
-            .AnyAsync(account => account.ContainsAssets);
-        if (hasCash) uniqueTickers.Add("cash");
+        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, DateTime.MinValue, asOfDate))
+        {
+            if (HasCurrentCash(account, asOfDate))
+            {
+                uniqueHoldings.Add("cash");
+                heldClasses.Add(InvestmentType.Cash);
+            }
+        }
 
-        return uniqueTickers;
+        return (heldClasses, uniqueHoldings);
+    }
+
+    private static IEnumerable<string> GetCurrentlyHeldTickers(StockAccount account, DateTime asOfDate)
+    {
+        foreach (var ticker in account.GetStoredTickers())
+        {
+            var entry = account.GetThisOrNextOlder(asOfDate, ticker);
+            if (entry is not null && entry.Value > 0)
+                yield return ticker;
+        }
+    }
+
+    private static IEnumerable<int> GetCurrentlyHeldBondIds(BondAccount account, DateTime asOfDate)
+    {
+        foreach (var bondId in account.GetStoredBondsIds())
+        {
+            var entry = account.GetThisOrNextOlder(asOfDate, bondId);
+            if (entry is not null && entry.Value > 0)
+                yield return bondId;
+        }
+    }
+
+    private static bool HasCurrentCash(CurrencyAccount account, DateTime asOfDate)
+    {
+        var entry = account.GetThisOrNextOlder(asOfDate);
+        return entry is not null && entry.Value > 0;
     }
 
     internal static string GetBand(int totalScore) => totalScore switch
