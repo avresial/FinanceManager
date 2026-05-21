@@ -64,7 +64,7 @@ public class DiversificationService(IFinancialAccountRepository financialAccount
         foreach (var ticker in account.GetStoredTickers())
         {
             var entry = account.GetThisOrNextOlder(asOfDate, ticker);
-            if (entry is not null && entry.Value > 0)
+            if (entry is { InvestmentType: InvestmentType.Stock } && entry.Value > 0)
                 yield return ticker;
         }
     }
