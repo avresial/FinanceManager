@@ -1,0 +1,44 @@
+@using FinanceManager.Domain.Entities.FinancialAccounts.Currencies
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-items-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" />
+            <MudText Typo="Typo.h6">@Name</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        @if (_isLoading)
+        {
+            <div class="d-flex justify-center pa-4">
+                <MudProgressCircular Indeterminate Color="Color.Warning" />
+            </div>
+        }
+        else if (_entries.Count > 0)
+        {
+            <MudTable Items="_entries" Dense Hover Striped Elevation="0">
+                <HeaderContent>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Description</MudTh>
+                    <MudTh Style="text-align:right">Amount</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Date">@context.PostingDate.ToString("yyyy-MM-dd")</MudTd>
+                    <MudTd DataLabel="Description">
+                        @(string.IsNullOrEmpty(context.ContractorDetails) ? context.Description : context.ContractorDetails)
+                    </MudTd>
+                    <MudTd DataLabel="Amount" Style="text-align:right">
+                        <MudText Color="Color.Error">@($"{Math.Abs(context.ValueChange):0.00} PLN")</MudText>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+        else
+        {
+            <MudText Class="pa-4">No entries found.</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Variant="Variant.Text">Close</MudButton>
+    </DialogActions>
+</MudDialog>

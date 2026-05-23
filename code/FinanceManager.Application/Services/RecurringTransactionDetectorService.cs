@@ -10,7 +10,7 @@ public class RecurringTransactionDetectorService(IFinancialAccountRepository fin
     private const decimal MinimumMonthlyAverage = 100m;
     private const double SimilarityThreshold = 0.75;
 
-    public async Task<List<NameValueResult>> GetRecurringTransactions(int userId, CancellationToken cancellationToken = default)
+    public async Task<List<RecurringTransactionResult>> GetRecurringTransactions(int userId, CancellationToken cancellationToken = default)
     {
         var currentMonthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
 
@@ -21,7 +21,7 @@ public class RecurringTransactionDetectorService(IFinancialAccountRepository fin
         var start = months.Min();
         var end = currentMonthStart.AddTicks(-1);
 
-        var rawEntries = new List<(string Merchant, int MonthIndex, decimal Amount)>();
+        var rawEntries = new List<(string Merchant, int MonthIndex, decimal Amount, int AccountId, int EntryId)>();
 
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
         {
@@ -41,14 +41,14 @@ public class RecurringTransactionDetectorService(IFinancialAccountRepository fin
                 var monthIndex = months.FindIndex(m => m.Year == entry.PostingDate.Year && m.Month == entry.PostingDate.Month);
                 if (monthIndex < 0) continue;
 
-                rawEntries.Add((merchantName, monthIndex, Math.Abs(entry.ValueChange)));
+                rawEntries.Add((merchantName, monthIndex, Math.Abs(entry.ValueChange), account.AccountId, entry.EntryId));
             }
         }
 
         var clusterRepresentatives = new List<string>();
         var clusterMap = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        foreach (var (merchant, _, _) in rawEntries)
+        foreach (var (merchant, _, _, _, _) in rawEntries)
         {
             if (clusterMap.ContainsKey(merchant)) continue;
 
@@ -71,8 +71,9 @@ public class RecurringTransactionDetectorService(IFinancialAccountRepository fin
         }
 
         var merchantMonthSpend = new Dictionary<string, Dictionary<int, decimal>>();
+        var clusterEntries = new Dictionary<string, List<RecurringTransactionEntryReference>>();
 
-        foreach (var (merchant, monthIndex, amount) in rawEntries)
+        foreach (var (merchant, monthIndex, amount, accountId, entryId) in rawEntries)
         {
             var cluster = clusterMap[merchant];
 
@@ -83,11 +84,24 @@ public class RecurringTransactionDetectorService(IFinancialAccountRepository fin
             }
 
             byMonth[monthIndex] = byMonth.GetValueOrDefault(monthIndex) + amount;
+
+            if (!clusterEntries.TryGetValue(cluster, out var entries))
+            {
+                entries = [];
+                clusterEntries[cluster] = entries;
+            }
+
+            entries.Add(new RecurringTransactionEntryReference(accountId, entryId));
         }
 
         return merchantMonthSpend
             .Where(kv => kv.Value.Count == 3)
-            .Select(kv => new NameValueResult(kv.Key, Math.Round(kv.Value.Values.Average(), 2)))
+            .Select(kv => new RecurringTransactionResult
+            {
+                Name = kv.Key,
+                Value = Math.Round(kv.Value.Values.Average(), 2),
+                Entries = clusterEntries.GetValueOrDefault(kv.Key, [])
+            })
             .Where(r => r.Value >= MinimumMonthlyAverage)
             .OrderByDescending(r => r.Value)
             .ToList();

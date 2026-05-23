@@ -3,20 +3,23 @@ using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using MudBlazor;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards;
 
 public partial class RecurringTransactionDetectorCard
 {
     private bool _isLoading;
-    private List<NameValueResult> _data = [];
+    private List<RecurringTransactionResult> _data = [];
     private decimal _totalMonthlySpend;
+    private int _userId;
 
     [Parameter] public string Height { get; set; } = "300px";
 
     [Inject] public required ILogger<RecurringTransactionDetectorCard> Logger { get; set; }
     [Inject] public required RecurringTransactionDetectorHttpClient RecurringTransactionDetectorHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required IDialogService DialogService { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -38,6 +41,7 @@ public partial class RecurringTransactionDetectorCard
                 return;
             }
 
+            _userId = user.UserId;
             _data = await RecurringTransactionDetectorHttpClient.GetRecurringTransactions(user.UserId);
             _totalMonthlySpend = _data.Count == 0 ? 0 : Math.Round(_data.Sum(x => x.Value), 2);
         }
@@ -50,6 +54,19 @@ public partial class RecurringTransactionDetectorCard
             _isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task ShowEntries(RecurringTransactionResult item)
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(RecurringTransactionEntriesDialog.Name), item.Name },
+            { nameof(RecurringTransactionEntriesDialog.UserId), _userId },
+            { nameof(RecurringTransactionEntriesDialog.EntryReferences), item.Entries }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = true };
+        await DialogService.ShowAsync<RecurringTransactionEntriesDialog>(item.Name, parameters, options);
     }
 
     private double GetPercentage(decimal value)

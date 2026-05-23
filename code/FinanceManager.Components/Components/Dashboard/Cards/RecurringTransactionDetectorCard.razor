@@ -22,10 +22,10 @@
         }
         else if (_data.Count > 0)
         {
-            <MudList T="string" ReadOnly Class="pa-3">
+            <MudList T="string" Class="pa-3">
                 @foreach (var item in _data)
                 {
-                    <MudListItem Class="pa-2">
+                    <MudListItem Class="pa-2 cursor-pointer" @onclick="() => ShowEntries(item)">
                         <div class="d-flex align-items-center gap-3 w-100">
                             <MudIcon Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" />
                             <div class="flex-grow-1">
