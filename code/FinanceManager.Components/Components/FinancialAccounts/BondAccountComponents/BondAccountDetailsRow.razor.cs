@@ -28,7 +28,13 @@ public partial class BondAccountDetailsRow : ComponentBase
     private decimal? CurrentValue => BondDetails is null ? null : BondAccountEntry.Value * BondDetails.UnitValue;
     private decimal? UnitsChangeValue => BondDetails is null ? null : BondAccountEntry.ValueChange * BondDetails.UnitValue;
 
-    protected override void OnInitialized() => _currency = SettingsService.GetCurrency();
+    protected override void OnParametersSet()
+    {
+        _currency = SettingsService.GetCurrency();
+        if (BondDetails is not null)
+            _currency = BondDetails.Currency;
+        base.OnParametersSet();
+    }
 
     public void ShowEditOverlay()
     {

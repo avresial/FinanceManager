@@ -8,6 +8,10 @@ FinanceManager is an online budgeting tool built with Blazor WebAssembly + ASP.N
 
 The solution file is `code/FinanceManager.slnx`. Target framework is `.NET 10`.
 
+## Commit Messages
+
+Always include the GitHub issue number being resolved in the commit message subject line using `#<number>` (e.g. `Fix bond UI display #174`).
+
 ## Branching Workflow
 
 **Feature branches merge into `develop`, never directly into `main`.** When opening a PR for a feature branch, the base must be `develop`. Only `develop` is promoted to `main` (e.g., for releases). If asked to open a PR against `main` from a feature branch, push back and switch the base to `develop`.
