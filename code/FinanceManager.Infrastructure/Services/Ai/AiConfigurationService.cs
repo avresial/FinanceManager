@@ -19,6 +19,7 @@ internal sealed class AiConfigurationService(
 
     private List<AiProviderConfiguration>? _cachedProviders;
     private List<AiFallbackEntry>? _cachedFallback;
+    private List<AiProviderModel>? _cachedModels;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     public async ValueTask<AiProviderConfiguration> GetProviderAsync(string providerName, CancellationToken ct = default)
@@ -58,13 +59,14 @@ internal sealed class AiConfigurationService(
     public async ValueTask<IReadOnlyList<AiProviderConfiguration>> GetAllProvidersAsync(CancellationToken ct = default)
     {
         await EnsureLoadedAsync(ct);
+        // Return only explicitly configured (DB-stored) providers
+        return _cachedProviders!.AsReadOnly();
+    }
 
-        // Return a merged list: DB row if present, otherwise default for each known provider
-        return KnownProviders
-            .Select(name => _cachedProviders!.FirstOrDefault(p =>
-                p.ProviderName.Equals(name, StringComparison.OrdinalIgnoreCase))
-                ?? BuildDefault(name))
-            .ToList();
+    public async ValueTask<IReadOnlyList<AiProviderModel>> GetAllModelsAsync(CancellationToken ct = default)
+    {
+        await EnsureLoadedAsync(ct);
+        return _cachedModels!.AsReadOnly();
     }
 
     public async Task SaveProviderAsync(AiProviderConfiguration config, CancellationToken ct = default)
@@ -75,11 +77,43 @@ internal sealed class AiConfigurationService(
         await InvalidateCacheAsync(ct);
     }
 
+    public async Task DeleteProviderAsync(string providerName, CancellationToken ct = default)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IAiProviderConfigRepository>();
+        await repo.DeleteProviderAsync(providerName, ct);
+        await InvalidateCacheAsync(ct);
+    }
+
     public async Task SaveFallbackEntriesAsync(IReadOnlyList<AiFallbackEntry> entries, CancellationToken ct = default)
     {
         using var scope = scopeFactory.CreateScope();
         var repo = scope.ServiceProvider.GetRequiredService<IAiProviderConfigRepository>();
         await repo.SaveFallbackEntriesAsync([.. entries], ct);
+        await InvalidateCacheAsync(ct);
+    }
+
+    public async Task AddModelAsync(AiProviderModel model, CancellationToken ct = default)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IAiProviderConfigRepository>();
+        await repo.AddModelAsync(model, ct);
+        await InvalidateCacheAsync(ct);
+    }
+
+    public async Task UpdateModelAsync(AiProviderModel model, CancellationToken ct = default)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IAiProviderConfigRepository>();
+        await repo.UpdateModelAsync(model, ct);
+        await InvalidateCacheAsync(ct);
+    }
+
+    public async Task DeleteModelAsync(int modelId, CancellationToken ct = default)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IAiProviderConfigRepository>();
+        await repo.DeleteModelAsync(modelId, ct);
         await InvalidateCacheAsync(ct);
     }
 
@@ -98,6 +132,7 @@ internal sealed class AiConfigurationService(
             var repo = scope.ServiceProvider.GetRequiredService<IAiProviderConfigRepository>();
             _cachedProviders = await repo.GetProvidersAsync(ct);
             _cachedFallback = await repo.GetFallbackEntriesAsync(ct);
+            _cachedModels = await repo.GetAllModelsAsync(ct);
         }
         finally
         {
@@ -112,6 +147,7 @@ internal sealed class AiConfigurationService(
         {
             _cachedProviders = null;
             _cachedFallback = null;
+            _cachedModels = null;
         }
         finally
         {

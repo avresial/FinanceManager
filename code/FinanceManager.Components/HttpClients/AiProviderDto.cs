@@ -5,4 +5,5 @@ public sealed record AiProviderDto(
     string BaseUrl,
     bool HasApiKey,
     int RequestTimeoutSeconds,
-    bool IsEnabled);
+    bool IsEnabled,
+    List<AiProviderModelDto> Models);

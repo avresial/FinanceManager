@@ -13,6 +13,9 @@ internal sealed class AiProviderConfigRepository(AppDbContext dbContext) : IAiPr
     public Task<List<AiFallbackEntry>> GetFallbackEntriesAsync(CancellationToken ct = default) =>
         dbContext.AiFallbackEntries.AsNoTracking().OrderBy(e => e.Order).ToListAsync(ct);
 
+    public Task<List<AiProviderModel>> GetAllModelsAsync(CancellationToken ct = default) =>
+        dbContext.AiProviderModels.AsNoTracking().OrderBy(m => m.ProviderName).ThenBy(m => m.ModelName).ToListAsync(ct);
+
     public async Task SaveProviderAsync(AiProviderConfiguration config, CancellationToken ct = default)
     {
         var existing = await dbContext.AiProviderConfigurations.FindAsync([config.ProviderName], ct);
@@ -30,6 +33,20 @@ internal sealed class AiProviderConfigRepository(AppDbContext dbContext) : IAiPr
         await dbContext.SaveChangesAsync(ct);
     }
 
+    public async Task DeleteProviderAsync(string providerName, CancellationToken ct = default)
+    {
+        var provider = await dbContext.AiProviderConfigurations.FindAsync([providerName], ct);
+        if (provider is not null)
+            dbContext.AiProviderConfigurations.Remove(provider);
+
+        var models = await dbContext.AiProviderModels
+            .Where(m => m.ProviderName == providerName)
+            .ToListAsync(ct);
+        dbContext.AiProviderModels.RemoveRange(models);
+
+        await dbContext.SaveChangesAsync(ct);
+    }
+
     public async Task SaveFallbackEntriesAsync(List<AiFallbackEntry> entries, CancellationToken ct = default)
     {
         var existing = await dbContext.AiFallbackEntries.ToListAsync(ct);
@@ -41,6 +58,31 @@ internal sealed class AiProviderConfigRepository(AppDbContext dbContext) : IAiPr
             entries[i].Id = 0;
         }
         dbContext.AiFallbackEntries.AddRange(entries);
+        await dbContext.SaveChangesAsync(ct);
+    }
+
+    public async Task AddModelAsync(AiProviderModel model, CancellationToken ct = default)
+    {
+        dbContext.AiProviderModels.Add(model);
+        await dbContext.SaveChangesAsync(ct);
+    }
+
+    public async Task UpdateModelAsync(AiProviderModel model, CancellationToken ct = default)
+    {
+        var existing = await dbContext.AiProviderModels.FindAsync([model.Id], ct);
+        if (existing is null)
+            return;
+
+        existing.ModelName = model.ModelName;
+        existing.IsEnabled = model.IsEnabled;
+        await dbContext.SaveChangesAsync(ct);
+    }
+
+    public async Task DeleteModelAsync(int modelId, CancellationToken ct = default)
+    {
+        var existing = await dbContext.AiProviderModels.FindAsync([modelId], ct);
+        if (existing is not null)
+            dbContext.AiProviderModels.Remove(existing);
         await dbContext.SaveChangesAsync(ct);
     }
 }
