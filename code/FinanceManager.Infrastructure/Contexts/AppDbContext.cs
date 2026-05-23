@@ -31,6 +31,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CsvHeaderMapping> CsvHeaderMappings { get; set; } = default!;
     public DbSet<AiProviderConfiguration> AiProviderConfigurations { get; set; } = default!;
     public DbSet<AiFallbackEntry> AiFallbackEntries { get; set; } = default!;
+    public DbSet<AiProviderModel> AiProviderModels { get; set; } = default!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -52,6 +53,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new FinancialLabelClassificationConfiguration());
         modelBuilder.ApplyConfiguration(new AiProviderConfigurationConfiguration());
         modelBuilder.ApplyConfiguration(new AiFallbackEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new AiProviderModelConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }
