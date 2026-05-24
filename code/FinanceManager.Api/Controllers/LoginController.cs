@@ -69,7 +69,11 @@ public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepositor
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to seed guest sandbox for {GuestUserId}", guestUserId);
+            // A half-seeded sandbox would still authenticate (the session is in the store, the token would be valid),
+            // and the guest would land in a broken-looking app. Roll the session back and surface a hard failure.
+            logger.LogError(ex, "Failed to seed guest sandbox for {GuestUserId}; aborting guest login.", guestUserId);
+            guestSessionStore.Remove(guestUserId);
+            return StatusCode(StatusCodes.Status500InternalServerError);
         }
 
         var token = jwtTokenGenerator.GenerateToken(_guestLogin, guestUserId, UserRole.User, isGuest: true);

@@ -1,11 +1,13 @@
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Guest;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace FinanceManager.Api.Services.Guest;
 
 internal sealed class GuestSessionCleanupService(
     IGuestSessionStore sessionStore,
+    InMemoryDatabaseRoot inMemoryDatabaseRoot,
     ILogger<GuestSessionCleanupService> logger) : BackgroundService
 {
     private static readonly TimeSpan _sessionTtl = TimeSpan.FromHours(1);
@@ -61,10 +63,13 @@ internal sealed class GuestSessionCleanupService(
         logger.LogInformation("Cleared {Count} expired guest session(s).", expired.Count);
     }
 
-    private static void DropGuestDatabase(int guestUserId)
+    // The shared InMemoryDatabaseRoot is required: by default EF Core's InMemory provider keeps a separate store
+    // per internal service provider, so a standalone DbContext built here would otherwise target a different
+    // store than the DI-resolved contexts and silently fail to clear anything.
+    private void DropGuestDatabase(int guestUserId)
     {
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(GuestDatabaseNaming.DatabaseNameFor(guestUserId));
+            .UseInMemoryDatabase(GuestDatabaseNaming.DatabaseNameFor(guestUserId), inMemoryDatabaseRoot);
 
         using var context = new AppDbContext(optionsBuilder.Options);
         context.Database.EnsureDeleted();
