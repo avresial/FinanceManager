@@ -24,6 +24,23 @@ public class UserRepository(AppDbContext context) : IUserRepository
 
         return true;
     }
+
+    public async Task<bool> AddUserWithId(int userId, string login, string password, PricingLevel pricingLevel, UserRole userRole)
+    {
+        context.Add(new UserDto
+        {
+            Id = userId,
+            Login = login,
+            Password = password,
+            PricingLevel = pricingLevel,
+            UserRole = userRole,
+            CreationDate = DateTime.UtcNow,
+        });
+
+        await context.SaveChangesAsync();
+
+        return true;
+    }
     public async Task<User?> GetUser(string login, string password)
     {
         var userDto = await context.Users.FirstOrDefaultAsync(x => x.Login == login);

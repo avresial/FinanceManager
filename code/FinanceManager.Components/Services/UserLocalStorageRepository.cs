@@ -78,6 +78,9 @@ public class UserLocalStorageRepository(ILocalStorageService localStorageService
         return true;
     }
 
+    Task<bool> IUserRepository.AddUserWithId(int userId, string login, string password, PricingLevel pricingLevel, UserRole userRole)
+        => throw new NotImplementedException();
+
     async Task<bool> IUserRepository.RemoveUser(int userId)
     {
         var databaseUserDtos = await localStorageService.GetItemAsync<List<UserDto>>("Users");

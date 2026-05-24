@@ -10,6 +10,7 @@ using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Contexts;
+using FinanceManager.Infrastructure.Guest;
 using FinanceManager.Infrastructure.Providers;
 using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
@@ -19,6 +20,7 @@ using FinanceManager.Infrastructure.Services.Ai;
 using FinanceManager.Infrastructure.Services.Currencies;
 using FinanceManager.Infrastructure.Services.Stocks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -68,10 +70,18 @@ public static class ServiceCollectionExtension
 
     public static IServiceCollection AddDatabase(this IServiceCollection services, IConfigurationManager configuration)
     {
+        // The cleanup service builds standalone AppDbContexts to drop expired guest sandboxes; without a shared
+        // root, EF Core's InMemory provider uses a per-internal-provider singleton, so the standalone context
+        // would target a different store than the DI-resolved one and EnsureDeleted() would silently miss.
+        services.AddSingleton<InMemoryDatabaseRoot>();
+
         if (configuration.GetValue("UseInMemoryDatabase", false))
         {
-            services.AddDbContext<AppDbContext>(options =>
-                options.UseInMemoryDatabase(databaseName: "Db"));
+            services.AddDbContext<AppDbContext>((sp, options) =>
+            {
+                var dbName = GuestDatabaseNaming.ResolveDatabaseName(sp, defaultName: "Db");
+                options.UseInMemoryDatabase(databaseName: dbName, sp.GetRequiredService<InMemoryDatabaseRoot>());
+            });
         }
         else
         {
@@ -86,8 +96,15 @@ public static class ServiceCollectionExtension
             var databaseProvider = InferDatabaseProvider(connectionString,
                 configuration.GetValue("DatabaseProvider", "SqlServer") ?? "SqlServer");
 
-            services.AddDbContext<AppDbContext>(options =>
+            services.AddDbContext<AppDbContext>((sp, options) =>
             {
+                var guestDbName = GuestDatabaseNaming.TryGetGuestDatabaseName(sp);
+                if (guestDbName is not null)
+                {
+                    options.UseInMemoryDatabase(databaseName: guestDbName, sp.GetRequiredService<InMemoryDatabaseRoot>());
+                    return;
+                }
+
                 if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) ||
                     databaseProvider.Equals("Supabase", StringComparison.OrdinalIgnoreCase))
                 {

@@ -1,10 +1,14 @@
-﻿using FinanceManager.Api.Services;
+using FinanceManager.Api.Services;
+using FinanceManager.Api.Services.Guest;
 using FinanceManager.Application.Commands.Login;
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services.Seeders;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FinanceManager.Api.Controllers;
 
@@ -12,9 +16,11 @@ namespace FinanceManager.Api.Controllers;
 [ApiController]
 [Tags("Authentication")]
 public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepository userRepository, IActiveUsersRepository activeUsersRepository,
-    GuestAccountSeeder guestAccountSeeder, IInsightsGenerationChannel insightsGenerationChannel,
+    IGuestSessionStore guestSessionStore, IServiceScopeFactory scopeFactory,
+    IInsightsGenerationChannel insightsGenerationChannel,
     ILogger<LoginController> logger) : ControllerBase
 {
+    private const string _guestLogin = "guest";
 
     [AllowAnonymous]
     [HttpPost(Name = "Login")]
@@ -22,15 +28,9 @@ public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepositor
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Login(LoginRequestModel requestModel, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            if (requestModel.UserName == "guest")
-                await guestAccountSeeder.Seed(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error occurred while seeding guest account data");
-        }
+        if (string.Equals(requestModel.UserName, _guestLogin, StringComparison.OrdinalIgnoreCase))
+            return await LoginAsGuest(cancellationToken);
+
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(requestModel.Password);
         var user = await userRepository.GetUser(requestModel.UserName, encryptedPassword);
 
@@ -57,5 +57,36 @@ public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepositor
         }
 
         return Ok(token);
+    }
+
+    private async Task<IActionResult> LoginAsGuest(CancellationToken cancellationToken)
+    {
+        var guestUserId = guestSessionStore.CreateSession();
+
+        try
+        {
+            await SeedGuestSandbox(guestUserId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // A half-seeded sandbox would still authenticate (the session is in the store, the token would be valid),
+            // and the guest would land in a broken-looking app. Roll the session back and surface a hard failure.
+            logger.LogError(ex, "Failed to seed guest sandbox for {GuestUserId}; aborting guest login.", guestUserId);
+            guestSessionStore.Remove(guestUserId);
+            return StatusCode(StatusCodes.Status500InternalServerError);
+        }
+
+        var token = jwtTokenGenerator.GenerateToken(_guestLogin, guestUserId, UserRole.User, isGuest: true);
+        return Ok(token);
+    }
+
+    // Seeding runs before the request principal carries an isGuest claim, so we open a fresh scope and pin the
+    // ambient guest accessor to route AppDbContext to the per-session in-memory database.
+    private async Task SeedGuestSandbox(int guestUserId, CancellationToken cancellationToken)
+    {
+        using var scope = scopeFactory.CreateScope();
+        scope.ServiceProvider.GetRequiredService<IGuestSessionAccessor>().SetGuestUserId(guestUserId);
+        var seeder = scope.ServiceProvider.GetRequiredService<GuestAccountSeeder>();
+        await seeder.SeedForGuest(guestUserId, cancellationToken);
     }
 }

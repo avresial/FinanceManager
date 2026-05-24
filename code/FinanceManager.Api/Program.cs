@@ -1,6 +1,8 @@
 using FinanceManager.Api.Services;
+using FinanceManager.Api.Services.Guest;
 using FinanceManager.Application;
 using FinanceManager.Application.Options;
+using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
@@ -92,14 +94,38 @@ builder.Services.AddCors(options =>
                 context.Token = accessToken;
 
             return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            var principal = context.Principal;
+            var isGuestClaim = principal?.FindFirst(GuestClaims.IsGuest)?.Value;
+            if (!string.Equals(isGuestClaim, "true", StringComparison.OrdinalIgnoreCase))
+                return Task.CompletedTask;
+
+            var idClaim = principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(idClaim, out var guestUserId))
+            {
+                context.Fail("Guest token is missing a user id.");
+                return Task.CompletedTask;
+            }
+
+            var store = context.HttpContext.RequestServices.GetRequiredService<IGuestSessionStore>();
+            if (!store.IsActive(guestUserId))
+                context.Fail("Guest session has expired.");
+
+            return Task.CompletedTask;
         }
     };
 });
 
 builder.Services.AddMemoryCache();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSignalR();
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenGenerator>();
+builder.Services.AddSingleton<IGuestSessionStore, GuestSessionStore>();
+builder.Services.AddScoped<IGuestSessionAccessor, GuestSessionAccessor>();
+builder.Services.AddHostedService<GuestSessionCleanupService>();
 builder.Services.AddSingleton<IInsightsGenerationChannel, InsightsGenerationChannel>();
 builder.Services.AddHostedService<InsightsGenerationBackgroundService>();
 builder.Services.AddSingleton<ILabelSetterProgressTracker, LabelSetterProgressTracker>();
