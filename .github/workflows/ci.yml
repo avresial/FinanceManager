@@ -140,8 +140,9 @@ jobs:
         run: chmod +x -R ./code/**/bin/Release/net10.0/*
 
       - name: Run unit tests
-        working-directory: ./code
-        run: dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --no-build --configuration Release --results-directory ${{ github.workspace }}/TestResults -- --report-xunit-trx --report-xunit-trx-filename unit-test-results.trx
+        run: |
+          mkdir -p ${{ github.workspace }}/TestResults
+          ./code/FinanceManager.UnitTests/bin/Release/net10.0/FinanceManager.UnitTests -trx ${{ github.workspace }}/TestResults/unit-test-results.trx
 
       - name: Publish unit test results
         uses: dorny/test-reporter@v1
@@ -175,8 +176,10 @@ jobs:
         run: dotnet build ./code --configuration Release
 
       - name: Run integration tests
-        working-directory: ./code
-        run: dotnet test --project ./FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --configuration Release --results-directory ${{ github.workspace }}/TestResults -- --report-xunit-trx --report-xunit-trx-filename integration-test-results.trx
+        run: |
+          mkdir -p ${{ github.workspace }}/TestResults
+          chmod +x ./code/FinanceManager.IntegrationTests/bin/Release/net10.0/FinanceManager.IntegrationTests
+          ./code/FinanceManager.IntegrationTests/bin/Release/net10.0/FinanceManager.IntegrationTests -trx ${{ github.workspace }}/TestResults/integration-test-results.trx
 
       - name: Publish integration test results
         uses: dorny/test-reporter@v1
