@@ -15,10 +15,9 @@ public partial class RecurringTransactionEntriesDialog
     [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
 
     [Parameter] public required string Name { get; set; }
-    [Parameter] public required int UserId { get; set; }
     [Parameter] public required List<RecurringTransactionEntryReference> EntryReferences { get; set; }
 
-    [Inject] public required RecurringTransactionDetectorHttpClient RecurringTransactionDetectorHttpClient { get; set; }
+    [Inject] public required CurrencyEntryHttpClient CurrencyEntryHttpClient { get; set; }
     [Inject] public required ILogger<RecurringTransactionEntriesDialog> Logger { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -27,8 +26,9 @@ public partial class RecurringTransactionEntriesDialog
 
         try
         {
-            _entries = await RecurringTransactionDetectorHttpClient.GetEntries(UserId, EntryReferences);
-            _entries = [.. _entries.OrderByDescending(e => e.PostingDate)];
+            var tasks = EntryReferences.Select(r => CurrencyEntryHttpClient.GetEntry(r.AccountId, r.EntryId));
+            var results = await Task.WhenAll(tasks);
+            _entries = [.. results.OfType<CurrencyAccountEntry>().OrderByDescending(e => e.PostingDate)];
         }
         catch (Exception ex)
         {
