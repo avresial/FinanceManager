@@ -7,6 +7,7 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: 'FinanceManagerApi'
+  AZURE_WEBAPP_NAME_DEV: 'FinanceManagerApi-dev'
   AZURE_WEBAPP_PACKAGE_PATH: './code/FinanceManager.Api/publish'
   DOTNET_VERSION: '10.x'
   SOLUTION_PATH: './code/FinanceManager.slx'
@@ -152,7 +153,7 @@ jobs:
   integration-tests:
     runs-on: ubuntu-latest
     needs: [build, unit-tests]
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     env:
       FINANCE_MANAGER_DB_KEY: ${{ secrets.FINANCE_MANAGER_DB_KEY }}
       UseInMemoryDatabase: true
@@ -186,7 +187,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: [integration-tests, code-quality, security-scan]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' 
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
 
     steps:
       - name: Checkout code
@@ -217,10 +218,13 @@ jobs:
           retention-days: 30
 
   deploy:
-    name: Deploy to azure Web App
+    name: Deploy to Azure Web App (production)
     runs-on: ubuntu-latest
     needs: publish
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net
 
     steps:
       - name: Download publish artifact
@@ -234,4 +238,27 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+  deploy-dev:
+    name: Deploy to Azure Web App (develop)
+    runs-on: ubuntu-latest
+    needs: publish
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    environment:
+      name: development
+      url: https://${{ env.AZURE_WEBAPP_NAME_DEV }}.azurewebsites.net
+
+    steps:
+      - name: Download publish artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: finance-manager-api
+          path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+      - name: Deploy to Azure Web App (dev)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME_DEV }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV }}
           package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
