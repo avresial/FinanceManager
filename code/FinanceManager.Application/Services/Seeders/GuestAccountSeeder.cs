@@ -11,7 +11,9 @@ namespace FinanceManager.Application.Services.Seeders;
 public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, IFinancialLabelsRepository financialLabelsRepository,
     IAccountRepository<StockAccount> stockAccountRepository, ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
     IAccountRepository<BondAccount> bondAccountRepository,
+    IBondDetailsRepository bondDetailsRepository,
     IUserRepository userRepository, FinancialLabelSeeder financialLabelSeeder,
+    BondDetailsSeeder bondDetailsSeeder,
     ILogger<GuestAccountSeeder> logger)
 {
     public async Task SeedForGuest(int guestUserId, CancellationToken cancellationToken = default)
@@ -20,10 +22,11 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
         var end = DateTime.UtcNow;
 
         await EnsureGuestUserRecord(guestUserId);
-        // The per-session in-memory DB starts empty, so the label seeder needs to run before account seeding
-        // populates entries with randomly-sampled labels.
+        // The per-session in-memory DB starts empty, so the label and bond-details seeders need to run before
+        // account seeding populates entries with randomly-sampled labels and references to bond details.
         await financialLabelSeeder.Seed(cancellationToken);
-        await SeedNewData(guestUserId, start, end);
+        await bondDetailsSeeder.Seed(cancellationToken);
+        await SeedNewData(guestUserId, start, end, cancellationToken);
     }
 
     // Pricing-tier checks (UserPlanVerifier etc.) look up the user by id. The guest's per-session in-memory DB
@@ -34,7 +37,7 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
         await userRepository.AddUserWithId(guestUserId, login: $"guest-{guestUserId}", password: string.Empty, PricingLevel.Basic, UserRole.User);
     }
 
-    private async Task SeedNewData(int userId, DateTime start, DateTime end)
+    private async Task SeedNewData(int userId, DateTime start, DateTime end, CancellationToken cancellationToken)
     {
         logger.LogTrace("Seeding guest demo data for user {UserId}.", userId);
         if (!await currencyAccountRepository.GetAvailableAccounts(userId).AnyAsync())
@@ -53,7 +56,15 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
 
         logger.LogTrace("Seeding bond accounts.");
         if (!await bondAccountRepository.GetAvailableAccounts(userId).AnyAsync())
-            await accountRepository.AddBondAccount(userId, start, end);
+        {
+            var bondDetailsId = await bondDetailsRepository.GetAllAsync(cancellationToken)
+                .Select(x => x.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (bondDetailsId == 0)
+                logger.LogWarning("No bond details available for guest {UserId}; skipping bond account seeding.", userId);
+            else
+                await accountRepository.AddBondAccount(userId, bondDetailsId, start, end);
+        }
 
         logger.LogTrace("Seeding finished.");
     }

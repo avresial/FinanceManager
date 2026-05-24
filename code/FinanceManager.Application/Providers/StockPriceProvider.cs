@@ -17,6 +17,7 @@ public class StockPriceProvider(
     IMemoryCache cache) : IStockPriceProvider
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _detailsLocks = new();
 
     public async Task<decimal> GetPricePerUnitAsync(string ticker, Currency targetCurrency, DateTime asOf)
     {
@@ -194,26 +195,39 @@ public class StockPriceProvider(
         if (existing is not null && !NeedsEnrichment(existing))
             return existing;
 
-        var matches = await apiClient.SearchTicker(ticker, ct);
-        var exact = matches?.FirstOrDefault(x => string.Equals(x.Symbol, ticker, StringComparison.OrdinalIgnoreCase));
-        var selected = exact ?? matches?.FirstOrDefault();
-
-        Currency currency;
-        if (selected is not null && !string.IsNullOrWhiteSpace(selected.Currency))
-            currency = await currencyRepository.GetOrAdd(selected.Currency, selected.Currency, ct);
-        else
-            currency = existing?.Currency ?? await currencyRepository.GetOrAdd(DefaultCurrency.USD.ShortName, DefaultCurrency.USD.Symbol, ct);
-
-        var details = new StockDetails
+        var detailsLock = _detailsLocks.GetOrAdd(ticker, _ => new SemaphoreSlim(1, 1));
+        await detailsLock.WaitAsync(ct);
+        try
         {
-            Ticker = ticker,
-            Name = selected?.Name ?? existing?.Name ?? string.Empty,
-            Type = selected?.Type ?? existing?.Type ?? string.Empty,
-            Region = selected?.Region ?? existing?.Region ?? string.Empty,
-            Currency = currency
-        };
+            existing = await stockDetailsRepository.Get(ticker, ct);
+            if (existing is not null && !NeedsEnrichment(existing))
+                return existing;
 
-        return await stockDetailsRepository.Add(details, ct);
+            var matches = await apiClient.SearchTicker(ticker, ct);
+            var exact = matches?.FirstOrDefault(x => string.Equals(x.Symbol, ticker, StringComparison.OrdinalIgnoreCase));
+            var selected = exact ?? matches?.FirstOrDefault();
+
+            Currency currency;
+            if (selected is not null && !string.IsNullOrWhiteSpace(selected.Currency))
+                currency = await currencyRepository.GetOrAdd(selected.Currency, selected.Currency, ct);
+            else
+                currency = existing?.Currency ?? await currencyRepository.GetOrAdd(DefaultCurrency.USD.ShortName, DefaultCurrency.USD.Symbol, ct);
+
+            var details = new StockDetails
+            {
+                Ticker = ticker,
+                Name = selected?.Name ?? existing?.Name ?? string.Empty,
+                Type = selected?.Type ?? existing?.Type ?? string.Empty,
+                Region = selected?.Region ?? existing?.Region ?? string.Empty,
+                Currency = currency
+            };
+
+            return await stockDetailsRepository.Add(details, ct);
+        }
+        finally
+        {
+            detailsLock.Release();
+        }
     }
 
     private static bool NeedsEnrichment(StockDetails details)
