@@ -4,5 +4,5 @@ namespace FinanceManager.Domain.Services;
 
 public interface IRecurringTransactionDetectorService
 {
-    Task<List<NameValueResult>> GetRecurringTransactions(int userId, CancellationToken cancellationToken = default);
+    Task<List<RecurringTransactionResult>> GetRecurringTransactions(int userId, CancellationToken cancellationToken = default);
 }

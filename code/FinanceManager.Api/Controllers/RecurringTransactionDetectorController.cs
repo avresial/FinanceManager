@@ -13,7 +13,7 @@ namespace FinanceManager.Api.Controllers;
 public class RecurringTransactionDetectorController(IRecurringTransactionDetectorService recurringTransactionDetectorService) : ControllerBase
 {
     [HttpGet("Get/{userId:int}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<NameValueResult>))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<RecurringTransactionResult>))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get(int userId, CancellationToken cancellationToken = default)

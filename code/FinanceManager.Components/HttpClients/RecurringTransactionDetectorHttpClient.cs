@@ -5,10 +5,10 @@ namespace FinanceManager.Components.HttpClients;
 
 public class RecurringTransactionDetectorHttpClient(HttpClient httpClient)
 {
-    public async Task<List<NameValueResult>> GetRecurringTransactions(int userId)
+    public async Task<List<RecurringTransactionResult>> GetRecurringTransactions(int userId)
     {
         string endpoint = $"{httpClient.BaseAddress}api/RecurringTransactionDetector/Get/{userId}";
-        var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>(endpoint);
+        var result = await httpClient.GetFromJsonAsync<List<RecurringTransactionResult>>(endpoint);
         return result ?? [];
     }
 }
