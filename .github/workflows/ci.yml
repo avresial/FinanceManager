@@ -139,8 +139,9 @@ jobs:
       - name: Restore execute permissions
         run: chmod +x -R ./code/**/bin/Release/net10.0/*
 
-      - name: Run unit tests with coverage
-        run: dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --no-build --configuration Release --logger "trx;LogFileName=unit-test-results.trx" --results-directory ${{ github.workspace }}/TestResults --collect:"XPlat Code Coverage"
+      - name: Run unit tests
+        working-directory: ./code
+        run: dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --no-build --configuration Release --results-directory ${{ github.workspace }}/TestResults -- --report-xunit-trx --report-xunit-trx-filename unit-test-results.trx
 
       - name: Publish unit test results
         uses: dorny/test-reporter@v1
@@ -173,8 +174,9 @@ jobs:
       - name: Build solution
         run: dotnet build ./code --configuration Release
 
-      - name: Run integration tests with coverage
-        run: dotnet test ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --configuration Release --logger "trx;LogFileName=integration-test-results.trx" --results-directory ${{ github.workspace }}/TestResults --collect:"XPlat Code Coverage"
+      - name: Run integration tests
+        working-directory: ./code
+        run: dotnet test --project ./FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj --configuration Release --results-directory ${{ github.workspace }}/TestResults -- --report-xunit-trx --report-xunit-trx-filename integration-test-results.trx
 
       - name: Publish integration test results
         uses: dorny/test-reporter@v1
