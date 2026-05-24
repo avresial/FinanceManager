@@ -9,9 +9,13 @@ namespace FinanceManager.Components.Components.Dashboard.Cards;
 
 public partial class DiversificationProxyCard
 {
+    private const int LowSubScoreThreshold = 16;
+    private const int HighSubScoreThreshold = 34;
+
     private bool _isLoading;
     private DiversificationScore? _score;
     private Color _bandColor = Color.Default;
+    private List<string> _explanations = [];
 
     [Parameter] public string Height { get; set; } = "300px";
 
@@ -45,6 +49,7 @@ public partial class DiversificationProxyCard
                 "Moderate" => Color.Warning,
                 _ => Color.Error
             };
+            _explanations = _score is null ? [] : BuildExplanations(_score);
         }
         catch (Exception ex)
         {
@@ -55,5 +60,28 @@ public partial class DiversificationProxyCard
             _isLoading = false;
             StateHasChanged();
         }
+    }
+
+    internal static List<string> BuildExplanations(DiversificationScore score)
+    {
+        var explanations = new List<string>();
+
+        switch (score.Band)
+        {
+            case "Limited":
+                if (score.AssetClassScore <= LowSubScoreThreshold)
+                    explanations.Add("Limited asset-class spread — most holdings sit in one or two classes.");
+                if (score.HoldingsScore <= LowSubScoreThreshold)
+                    explanations.Add("Few unique holdings — concentration risk on a small number of positions.");
+                break;
+            case "Broad":
+                if (score.AssetClassScore >= HighSubScoreThreshold)
+                    explanations.Add("Broad asset-class spread — holdings span many investment types.");
+                if (score.HoldingsScore >= HighSubScoreThreshold)
+                    explanations.Add("Many unique holdings — wide breadth across individual positions.");
+                break;
+        }
+
+        return explanations;
     }
 }
