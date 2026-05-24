@@ -75,8 +75,12 @@ IStockPriceProvider stockPriceProvider, IBondDetailsRepository bondDetailsReposi
         await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, start, end))
             stockAccounts.Add(account);
 
+        Dictionary<int, List<string>> tickersByAccount = stockAccounts.ToDictionary(
+            x => x.AccountId,
+            x => x.GetStoredTickers().Concat(x.NextOlderEntries.Keys).Distinct(StringComparer.OrdinalIgnoreCase).ToList());
+
         Dictionary<string, IReadOnlyDictionary<DateTime, decimal>> pricesByTicker = new(StringComparer.OrdinalIgnoreCase);
-        var tickers = stockAccounts.SelectMany(x => x.GetStoredTickers()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var tickers = tickersByAccount.Values.SelectMany(x => x).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (tickers.Count > 0)
         {
             var preloadTasks = tickers.ToDictionary(
@@ -115,7 +119,7 @@ IStockPriceProvider stockPriceProvider, IBondDetailsRepository bondDetailsReposi
 
             foreach (var account in stockAccounts)
             {
-                foreach (var ticker in account.GetStoredTickers())
+                foreach (var ticker in tickersByAccount[account.AccountId])
                 {
                     var entry = account.GetThisOrNextOlder(date, ticker);
                     if (entry is null) continue;
