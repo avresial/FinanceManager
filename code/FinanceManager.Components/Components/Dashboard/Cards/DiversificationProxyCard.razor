@@ -9,6 +9,17 @@
         @if (!_isLoading && _score is not null)
         {
             <MudText Typo="Typo.h6" Class="mb-2 text-muted">@_score.Band</MudText>
+            @if (_explanations.Count > 0)
+            {
+                <ul class="pl-4 my-0">
+                    @foreach (var explanation in _explanations)
+                    {
+                        <li>
+                            <MudText Typo="Typo.caption" Class="text-muted">@explanation</MudText>
+                        </li>
+                    }
+                </ul>
+            }
         }
     </MudPaper>
 
