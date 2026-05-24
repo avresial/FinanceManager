@@ -22,6 +22,11 @@ Always include the GitHub issue number being resolved in the commit message subj
 
 When opening a pull request that resolves a GitHub issue, the PR body must include a GitHub auto-close keyword referencing the issue (e.g. `closes #123`) so that merging the PR automatically closes the linked issue.
 
+## Agent Requirements
+
+- **Install the .NET SDK before coding.** Any task that involves code changes requires the .NET 10 SDK to be installed first so that `dotnet build`, `dotnet format`, and `dotnet test` can run. If `dotnet --list-sdks` does not show a `10.*` SDK, install it before making changes (e.g. via the official installer script: `curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0`, then ensure `dotnet` is on `PATH`).
+- **Run unit tests after every change.** Every code change must end with `dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj` passing. Do not commit, push, or report a task as complete until unit tests are green.
+
 ## Build and Validation
 
 ```bash
