@@ -3,9 +3,9 @@ using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
 using FinanceManager.Application.Services.Currencies;
 using FinanceManager.Application.Services.Exports;
-using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
@@ -170,12 +170,12 @@ public class CurrencyAccountControllerTests
         // Arrange
         var userId = 1;
         DeleteAccount deleteAccount = new(1);
-        CurrencyAccount account = new(userId, deleteAccount.accountId, "Test Account");
-        _mockAccountRepository.Setup(repo => repo.Get(deleteAccount.accountId)).ReturnsAsync(account);
-        _mockAccountRepository.Setup(repo => repo.Delete(deleteAccount.accountId)).ReturnsAsync(true);
+        CurrencyAccount account = new(userId, deleteAccount.AccountId, "Test Account");
+        _mockAccountRepository.Setup(repo => repo.Get(deleteAccount.AccountId)).ReturnsAsync(account);
+        _mockAccountRepository.Setup(repo => repo.Delete(deleteAccount.AccountId)).ReturnsAsync(true);
 
         // Act
-        var result = await _controller.Delete(deleteAccount.accountId);
+        var result = await _controller.Delete(deleteAccount.AccountId);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);

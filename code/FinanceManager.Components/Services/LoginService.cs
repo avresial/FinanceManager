@@ -24,7 +24,7 @@ public class LoginService : ILoginService
 
     public event Action<bool>? LogginStateChanged;
 
-    private AuthenticationStateProvider _authStateProvider { get; set; }
+    private AuthenticationStateProvider _authStateProvider;
     public LoginService(ISessionStorageService sessionStorageService, ILocalStorageService localStorageService,
         AuthenticationStateProvider authState, IUserRepository loginRepository, HttpClient httpClient)
     {

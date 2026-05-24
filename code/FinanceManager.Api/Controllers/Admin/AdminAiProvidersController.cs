@@ -11,7 +11,7 @@ namespace FinanceManager.Api.Controllers.Admin;
 [Tags("Admin - AI Providers")]
 public class AdminAiProvidersController(IAiConfigurationService configService) : ControllerBase
 {
-    private static readonly string[] KnownProviders = ["OpenRouter", "LmStudio", "Ollama", "GitHub"];
+    private static readonly string[] _knownProviders = ["OpenRouter", "LmStudio", "Ollama", "GitHub"];
 
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AiConfigurationResponse))]
@@ -35,7 +35,7 @@ public class AdminAiProvidersController(IAiConfigurationService configService) :
 
         var fallbackDtos = fallback.Select(e => new AiFallbackEntryDto(e.ProviderName, e.Model, e.Order)).ToList();
 
-        return Ok(new AiConfigurationResponse(providerDtos, fallbackDtos, KnownProviders));
+        return Ok(new AiConfigurationResponse(providerDtos, fallbackDtos, _knownProviders));
     }
 
     [HttpPost]
@@ -47,8 +47,8 @@ public class AdminAiProvidersController(IAiConfigurationService configService) :
         if (string.IsNullOrWhiteSpace(request.ProviderName))
             return BadRequest("Provider name is required.");
 
-        if (!KnownProviders.Contains(request.ProviderName, StringComparer.OrdinalIgnoreCase))
-            return BadRequest($"Unknown provider '{request.ProviderName}'. Supported: {string.Join(", ", KnownProviders)}.");
+        if (!_knownProviders.Contains(request.ProviderName, StringComparer.OrdinalIgnoreCase))
+            return BadRequest($"Unknown provider '{request.ProviderName}'. Supported: {string.Join(", ", _knownProviders)}.");
 
         var existing = await configService.GetAllProvidersAsync(ct);
         if (existing.Any(p => p.ProviderName.Equals(request.ProviderName, StringComparison.OrdinalIgnoreCase)))

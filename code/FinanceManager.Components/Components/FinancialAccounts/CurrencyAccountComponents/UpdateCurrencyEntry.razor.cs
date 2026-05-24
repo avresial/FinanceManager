@@ -18,7 +18,7 @@ public partial class UpdateCurrencyEntry
     private MudForm? _form;
 
     private DateTime? _postingDate = DateTime.Today;
-    private TimeSpan? _time { get; set; } = new TimeSpan(01, 00, 00);
+    private TimeSpan? _time = new TimeSpan(01, 00, 00);
 
     private string? _description = string.Empty;
     private string? _contractorDetails;

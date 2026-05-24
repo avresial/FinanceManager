@@ -8,7 +8,7 @@
 @using MudBlazor.Utilities
 @using static MudBlazor.CategoryTypes
 
-<MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors" FieldChanged=OnFieldChanged>
+<MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors" FieldChanged=OnFieldChanged>
     <MudContainer MaxWidth="MaxWidth.Medium" onchange="">
 
         <MudGrid Justify="Justify.Center">
@@ -18,12 +18,12 @@
                 <MudText Typo="Typo.subtitle1">@InvestmentAccount.Name</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudDatePicker Label="Posting date" @bind-Date="PostingDate"
+                <MudDatePicker Label="Posting date" @bind-Date="_postingDate"
                                Validation="@(new NotInFutureAttribute())" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTimePicker Label="Time" @bind-Time="Time"
-                               Validation="@(new NotInFutureAttributeTime(PostingDate))" />
+                <MudTimePicker Label="Time" @bind-Time="_time"
+                               Validation="@(new NotInFutureAttributeTime(_postingDate))" />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudAutocomplete T="string" Label="Ticker" @bind-Value="Ticker" SearchFunc="@SearchTicker"

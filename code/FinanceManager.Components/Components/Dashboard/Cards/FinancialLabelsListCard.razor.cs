@@ -10,7 +10,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards;
 public partial class FinancialLabelsListCard
 {
     private bool _isLoading;
-    private Currency currency = DefaultCurrency.PLN;
+    private Currency _currency = DefaultCurrency.PLN;
 
     public List<NameValueResult> _data = [];
 
@@ -26,7 +26,7 @@ public partial class FinancialLabelsListCard
     protected override async Task OnParametersSetAsync()
     {
         _isLoading = true;
-        currency = SettingsService.GetCurrency();
+        _currency = SettingsService.GetCurrency();
         var userId = await LoginService.GetLoggedUser();
 
         try
@@ -43,7 +43,7 @@ public partial class FinancialLabelsListCard
     protected override async Task OnInitializedAsync()
     {
         _isLoading = true;
-        currency = SettingsService.GetCurrency();
+        _currency = SettingsService.GetCurrency();
         var userId = await LoginService.GetLoggedUser();
 
         try

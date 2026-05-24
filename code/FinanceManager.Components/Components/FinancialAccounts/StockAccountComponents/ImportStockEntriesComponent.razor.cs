@@ -18,7 +18,7 @@ public partial class ImportStockEntriesComponent : ComponentBase
     private const string _defaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mud-width-full mud-height-full";
     private string _dragClass = _defaultDragClass;
 
-    private List<IBrowserFile> LoadedFiles = [];
+    private List<IBrowserFile> _loadedFiles = [];
     private List<string> _erorrs = [];
     private List<string> _warnings = [];
     private List<string> _summaryInfos = [];
@@ -39,7 +39,7 @@ public partial class ImportStockEntriesComponent : ComponentBase
     private CancellationTokenSource? _regenCts;
 
     private string _delimiterBacking = ",";
-    private string _delimiter
+    private string Delimiter
     {
         get => _delimiterBacking;
         set
@@ -139,7 +139,7 @@ public partial class ImportStockEntriesComponent : ComponentBase
 
         try
         {
-            var result = await ImportStockModelReader.Read(_uploadedContent, _delimiter, cancellationToken);
+            var result = await ImportStockModelReader.Read(_uploadedContent, Delimiter, cancellationToken);
             if (result is null) return;
 
             _headers = result.Value.Headers ?? [];
@@ -171,7 +171,7 @@ public partial class ImportStockEntriesComponent : ComponentBase
         }
         catch (Exception ex)
         {
-            Logger?.LogDebug(ex, "CsvHelper attempt failed for delimiter {delimiter}", _delimiter);
+            Logger?.LogDebug(ex, "CsvHelper attempt failed for delimiter {delimiter}", Delimiter);
         }
 
         if (_headers.Count == 0)
@@ -266,7 +266,7 @@ public partial class ImportStockEntriesComponent : ComponentBase
             return;
         }
 
-        LoadedFiles = [file];
+        _loadedFiles = [file];
         if (file is null)
         {
             _erorrs.Add("Failed to load file.");
@@ -374,7 +374,7 @@ public partial class ImportStockEntriesComponent : ComponentBase
             if (string.IsNullOrEmpty(_selectedTickerHeader))
                 throw new Exception("Ticker header is not selected.");
 
-            var (Headers, Data) = await ImportStockModelReader.Read(_uploadedContent!, _delimiter, CancellationToken.None) ??
+            var (Headers, Data) = await ImportStockModelReader.Read(_uploadedContent!, Delimiter, CancellationToken.None) ??
                 throw new Exception("Failed to read data for import.");
 
             var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, _selectedTickerHeader, Headers, Data);
@@ -426,7 +426,7 @@ public partial class ImportStockEntriesComponent : ComponentBase
 
     public async Task Clear()
     {
-        LoadedFiles?.Clear();
+        _loadedFiles?.Clear();
 
         _step1Complete = false;
         _step2Complete = false;

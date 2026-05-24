@@ -9,8 +9,8 @@ namespace FinanceManager.Components.Components.Dashboard.Cards;
 
 public partial class DiversificationProxyCard
 {
-    private const int LowSubScoreThreshold = 16;
-    private const int HighSubScoreThreshold = 34;
+    private const int _lowSubScoreThreshold = 16;
+    private const int _highSubScoreThreshold = 34;
 
     private bool _isLoading;
     private DiversificationScore? _score;
@@ -69,15 +69,15 @@ public partial class DiversificationProxyCard
         switch (score.Band)
         {
             case "Limited":
-                if (score.AssetClassScore <= LowSubScoreThreshold)
+                if (score.AssetClassScore <= _lowSubScoreThreshold)
                     explanations.Add("Limited asset-class spread — most holdings sit in one or two classes.");
-                if (score.HoldingsScore <= LowSubScoreThreshold)
+                if (score.HoldingsScore <= _lowSubScoreThreshold)
                     explanations.Add("Few unique holdings — concentration risk on a small number of positions.");
                 break;
             case "Broad":
-                if (score.AssetClassScore >= HighSubScoreThreshold)
+                if (score.AssetClassScore >= _highSubScoreThreshold)
                     explanations.Add("Broad asset-class spread — holdings span many investment types.");
-                if (score.HoldingsScore >= HighSubScoreThreshold)
+                if (score.HoldingsScore >= _highSubScoreThreshold)
                     explanations.Add("Many unique holdings — wide breadth across individual positions.");
                 break;
         }
