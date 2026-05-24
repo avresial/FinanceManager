@@ -15,8 +15,6 @@ internal sealed class AiConfigurationService(
     IOptions<GitHubModelsOptions> gitHubModelsDefaults,
     IOptions<List<AiProviderFallbackStrategyOption>> fallbackStrategyDefaults) : IAiConfigurationService
 {
-    private static readonly string[] KnownProviders = ["OpenRouter", "LmStudio", "Ollama", "GitHub"];
-
     private List<AiProviderConfiguration>? _cachedProviders;
     private List<AiFallbackEntry>? _cachedFallback;
     private List<AiProviderModel>? _cachedModels;

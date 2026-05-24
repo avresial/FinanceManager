@@ -2,4 +2,4 @@
 
 namespace FinanceManager.Application.Commands.User;
 
-public record AddUser(string userName, string password, PricingLevel pricingLevel);
+public record AddUser(string UserName, string Password, PricingLevel PricingLevel);

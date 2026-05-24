@@ -19,7 +19,7 @@ public partial class EditUserPage : ComponentBase
     private bool _success;
     private string _selectedPlan = $"{PricingLevel.Free}";
     private string? _selectedUserRole;
-    private string? _confirmPassword { get; set; }
+    private string? _confirmPassword;
     private MudForm? _passwordForm;
     private MudTextField<string>? _passwordField;
     private List<string> _plans = [$"{PricingLevel.Free}", $"{PricingLevel.Basic}", $"{PricingLevel.Premium}"];

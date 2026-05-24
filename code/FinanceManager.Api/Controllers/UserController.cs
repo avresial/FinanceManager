@@ -23,11 +23,11 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Add(AddUser addUserCommand, CancellationToken cancellationToken = default)
     {
-        var existingUser = await userRepository.GetUser(addUserCommand.userName);
+        var existingUser = await userRepository.GetUser(addUserCommand.UserName);
         if (existingUser is not null) return BadRequest();
 
-        var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(addUserCommand.password);
-        var result = await userRepository.AddUser(addUserCommand.userName, encryptedPassword, addUserCommand.pricingLevel, UserRole.User);
+        var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(addUserCommand.Password);
+        var result = await userRepository.AddUser(addUserCommand.UserName, encryptedPassword, addUserCommand.PricingLevel, UserRole.User);
 
         return result ? Ok(result) : BadRequest();
     }

@@ -14,7 +14,7 @@ namespace FinanceManager.UnitTests.Api.Controllers;
 [Trait("Category", "Unit")]
 public class AssetsControllerTests
 {
-    private const int TestUserId = 1;
+    private const int _testUserId = 1;
 
     private readonly Mock<IAssetsService> _assetsServiceMock = new();
     private readonly Mock<IInvestmentPaycheckEstimatorService> _investmentPaycheckEstimatorServiceMock = new();
@@ -33,7 +33,7 @@ public class AssetsControllerTests
             {
                 HttpContext = new DefaultHttpContext
                 {
-                    User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, TestUserId.ToString())], "mock"))
+                    User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, _testUserId.ToString())], "mock"))
                 }
             }
         };
@@ -56,10 +56,10 @@ public class AssetsControllerTests
         };
 
         _investmentPaycheckEstimatorServiceMock
-            .Setup(x => x.GetEstimate(TestUserId, DefaultCurrency.PLN, asOfDate, 0.05m, 3))
+            .Setup(x => x.GetEstimate(_testUserId, DefaultCurrency.PLN, asOfDate, 0.05m, 3))
             .ReturnsAsync(expected);
 
-        var result = await _controller.GetInvestmentPaycheckEstimate(TestUserId, DefaultCurrency.PLN.Id, asOfDate, 0.05m, 3, TestContext.Current.CancellationToken);
+        var result = await _controller.GetInvestmentPaycheckEstimate(_testUserId, DefaultCurrency.PLN.Id, asOfDate, 0.05m, 3, TestContext.Current.CancellationToken);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
         var returnValue = Assert.IsType<InvestmentPaycheckEstimate>(okResult.Value);

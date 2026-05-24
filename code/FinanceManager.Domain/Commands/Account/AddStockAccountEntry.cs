@@ -2,4 +2,4 @@
 
 namespace FinanceManager.Application.Commands.Account;
 
-public record AddStockAccountEntry(StockAccountEntry entry);
+public record AddStockAccountEntry(StockAccountEntry Entry);

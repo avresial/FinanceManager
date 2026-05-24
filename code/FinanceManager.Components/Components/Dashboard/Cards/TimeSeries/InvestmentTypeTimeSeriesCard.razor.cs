@@ -14,7 +14,7 @@ public partial class InvestmentTypeTimeSeriesCard
 {
     private ApexChart<TimeSeriesModel>? _chart;
     private List<TimeSeriesModel> _priceTimeseries = [];
-    private ApexChartOptions<TimeSeriesModel> _options { get; set; } = new()
+    private ApexChartOptions<TimeSeriesModel> _options = new()
     {
         Chart = new Chart
         {

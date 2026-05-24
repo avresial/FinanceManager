@@ -22,7 +22,7 @@ dynamically skipped instead with a message about the current OS not being suppor
 public sealed class SupportedOSAttribute(params SupportedOS[] supportedOSes) :
     BeforeAfterTestAttribute
 {
-    private static readonly Dictionary<SupportedOS, OSPlatform> osMappings = new()
+    private static readonly Dictionary<SupportedOS, OSPlatform> _osMappings = new()
     {
         { SupportedOS.FreeBSD, OSPlatform.Create("FreeBSD") },
         { SupportedOS.Linux, OSPlatform.Linux },
@@ -36,7 +36,7 @@ public sealed class SupportedOSAttribute(params SupportedOS[] supportedOSes) :
 
         foreach (var supportedOS in supportedOSes)
         {
-            if (!osMappings.TryGetValue(supportedOS, out var osPlatform))
+            if (!_osMappings.TryGetValue(supportedOS, out var osPlatform))
                 throw new ArgumentException($"Supported OS value '{supportedOS}' is not a known OS", nameof(supportedOSes));
 
             if (RuntimeInformation.IsOSPlatform(osPlatform))

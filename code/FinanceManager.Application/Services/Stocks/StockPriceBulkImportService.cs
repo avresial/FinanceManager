@@ -11,9 +11,9 @@ internal sealed class StockPriceBulkImportService(
     IStockDetailsRepository stockDetailsRepository,
     IStockPriceRepository stockPriceRepository) : IStockPriceBulkImportService
 {
-    private const string TickerHeader = "TICKER";
-    private const string DateHeader = "DATE";
-    private const string CloseHeader = "CLOSE";
+    private const string _tickerHeader = "TICKER";
+    private const string _dateHeader = "DATE";
+    private const string _closeHeader = "CLOSE";
 
     public async Task<StockPriceBulkImportResultDto> ImportClosePrices(Stream csvStream, CancellationToken ct = default)
     {
@@ -42,9 +42,9 @@ internal sealed class StockPriceBulkImportService(
         if (headers is null || headers.Length == 0)
             throw new InvalidOperationException("CSV headers are missing.");
 
-        var tickerIndex = FindHeaderIndex(headers, TickerHeader);
-        var dateIndex = FindHeaderIndex(headers, DateHeader);
-        var closeIndex = FindHeaderIndex(headers, CloseHeader);
+        var tickerIndex = FindHeaderIndex(headers, _tickerHeader);
+        var dateIndex = FindHeaderIndex(headers, _dateHeader);
+        var closeIndex = FindHeaderIndex(headers, _closeHeader);
 
         if (tickerIndex < 0 || dateIndex < 0 || closeIndex < 0)
             throw new InvalidOperationException("CSV must contain TICKER, DATE and CLOSE columns.");

@@ -7,8 +7,8 @@ namespace FinanceManager.Application.Services;
 
 public class RecurringTransactionDetectorService(IFinancialAccountRepository financialAccountRepository) : IRecurringTransactionDetectorService
 {
-    private const decimal MinimumMonthlyAverage = 100m;
-    private const double SimilarityThreshold = 0.75;
+    private const decimal _minimumMonthlyAverage = 100m;
+    private const double _similarityThreshold = 0.75;
 
     public async Task<List<RecurringTransactionResult>> GetRecurringTransactions(int userId, CancellationToken cancellationToken = default)
     {
@@ -55,7 +55,7 @@ public class RecurringTransactionDetectorService(IFinancialAccountRepository fin
             var matched = false;
             foreach (var rep in clusterRepresentatives)
             {
-                if (CalculateSimilarity(rep, merchant) >= SimilarityThreshold)
+                if (CalculateSimilarity(rep, merchant) >= _similarityThreshold)
                 {
                     clusterMap[merchant] = rep;
                     matched = true;
@@ -102,7 +102,7 @@ public class RecurringTransactionDetectorService(IFinancialAccountRepository fin
                 Value = Math.Round(kv.Value.Values.Average(), 2),
                 Entries = clusterEntries.GetValueOrDefault(kv.Key, [])
             })
-            .Where(r => r.Value >= MinimumMonthlyAverage)
+            .Where(r => r.Value >= _minimumMonthlyAverage)
             .OrderByDescending(r => r.Value)
             .ToList();
     }

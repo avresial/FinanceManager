@@ -1,3 +1,3 @@
 ﻿namespace FinanceManager.Domain.Commands.Account;
 
-public record AddCurrencyAccount(string accountName);
+public record AddCurrencyAccount(string AccountName);

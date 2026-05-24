@@ -20,14 +20,14 @@ public partial class AddStockEntry
     }
 
     private Currency _currency = DefaultCurrency.PLN;
-    private bool success;
-    private string[] errors = [];
-    private MudForm? form;
+    private bool _success;
+    private string[] _errors = [];
+    private MudForm? _form;
 
-    private List<string> InvestmentType = Enum.GetValues(typeof(InvestmentType)).Cast<InvestmentType>().Select(x => x.ToString()).ToList();
+    private List<string> _investmentType = Enum.GetValues(typeof(InvestmentType)).Cast<InvestmentType>().Select(x => x.ToString()).ToList();
 
-    private DateTime? PostingDate = DateTime.Today;
-    private TimeSpan? Time = new TimeSpan(01, 00, 00);
+    private DateTime? _postingDate = DateTime.Today;
+    private TimeSpan? _time = new TimeSpan(01, 00, 00);
     public string ExpenseType { get; set; } = FinanceManager.Domain.Enums.InvestmentType.Stock.ToString();
     public string Ticker { get; set; } = string.Empty;
     public decimal? BalanceChange;
@@ -45,7 +45,7 @@ public partial class AddStockEntry
     protected async Task OnFieldChanged(FormFieldChangedEventArgs args)
     {
         if (string.IsNullOrEmpty(Ticker)) return;
-        if (!PostingDate.HasValue) return;
+        if (!_postingDate.HasValue) return;
         if (args.Field is MudTextField<decimal?> textField)
         {
             if (textField is null || textField.Label is null) return;
@@ -58,7 +58,7 @@ public partial class AddStockEntry
             if (!numericField.Label.ToLower().Contains("change")) return;
         }
 
-        var pricePerUnit = await StockPriceHttpClient.GetStockPrice(Ticker, DefaultCurrency.PLN.Id, PostingDate.Value);
+        var pricePerUnit = await StockPriceHttpClient.GetStockPrice(Ticker, DefaultCurrency.PLN.Id, _postingDate.Value);
         if (pricePerUnit is null) return;
 
         PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;
@@ -71,15 +71,15 @@ public partial class AddStockEntry
 
     public async Task Add()
     {
-        if (form is null) return;
-        await form.Validate();
+        if (_form is null) return;
+        await _form.Validate();
 
-        if (!form.IsValid) return;
+        if (!_form.IsValid) return;
         if (!BalanceChange.HasValue) return;
-        if (!PostingDate.HasValue) return;
-        if (!Time.HasValue) return;
+        if (!_postingDate.HasValue) return;
+        if (!_time.HasValue) return;
 
-        DateTime date = new(PostingDate.Value.Year, PostingDate.Value.Month, PostingDate.Value.Day, Time.Value.Hours, Time.Value.Minutes, Time.Value.Seconds);
+        DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes, _time.Value.Seconds);
         InvestmentType investmentType = Domain.Enums.InvestmentType.Stock;
 
         try
@@ -105,7 +105,7 @@ public partial class AddStockEntry
         }
         catch (Exception ex)
         {
-            errors = [ex.ToString()];
+            _errors = [ex.ToString()];
         }
 
         if (ActionCompleted is not null)
@@ -121,9 +121,9 @@ public partial class AddStockEntry
     private async Task<IEnumerable<string>> Search(string value, CancellationToken token)
     {
         if (string.IsNullOrEmpty(value))
-            return InvestmentType;
+            return _investmentType;
 
-        return await Task.FromResult(InvestmentType.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase)));
+        return await Task.FromResult(_investmentType.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase)));
     }
 
 

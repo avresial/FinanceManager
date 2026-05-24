@@ -9,7 +9,7 @@ namespace FinanceManager.Application.Services.Currencies;
 
 public class CurrencyEssentialSpendingService(IFinancialAccountRepository financialAccountRepository) : IEssentialSpendingServiceTyped
 {
-    private static readonly TimeSpan OneDay = TimeSpan.FromDays(1);
+    private static readonly TimeSpan _oneDay = TimeSpan.FromDays(1);
 
     public bool IsOfType<T>() => typeof(T) == typeof(CurrencyAccount);
 
@@ -34,7 +34,7 @@ public class CurrencyEssentialSpendingService(IFinancialAccountRepository financ
             if (account?.Entries is null) continue;
             if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
 
-            for (var date = end.Date; date >= start.Date; date = date.Add(-OneDay))
+            for (var date = end.Date; date >= start.Date; date = date.Add(-_oneDay))
             {
                 if (!result.ContainsKey(date)) result.Add(date, 0);
 

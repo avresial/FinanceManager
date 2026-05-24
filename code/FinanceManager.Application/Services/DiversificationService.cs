@@ -10,8 +10,8 @@ namespace FinanceManager.Application.Services;
 
 public class DiversificationService(IFinancialAccountRepository financialAccountRepository) : IDiversificationService
 {
-    private const int TotalSupportedClasses = 6;
-    private const int HoldingsBenchmark = 30;
+    private const int _totalSupportedClasses = 6;
+    private const int _holdingsBenchmark = 30;
 
     public async Task<DiversificationScore> GetDiversificationScore(int userId, DateTime asOfDate)
     {
@@ -93,8 +93,8 @@ public class DiversificationService(IFinancialAccountRepository financialAccount
     };
 
     private static int CalculateAssetClassScore(int distinctClassCount) =>
-        (int)(distinctClassCount / (double)TotalSupportedClasses * 50);
+        (int)(distinctClassCount / (double)_totalSupportedClasses * 50);
 
     private static int CalculateHoldingsScore(int uniqueTickerCount) =>
-        (int)(Math.Min(uniqueTickerCount / (double)HoldingsBenchmark, 1.0) * 50);
+        (int)(Math.Min(uniqueTickerCount / (double)_holdingsBenchmark, 1.0) * 50);
 }

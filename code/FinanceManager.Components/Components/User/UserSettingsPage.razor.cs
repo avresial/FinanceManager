@@ -21,7 +21,7 @@ public partial class UserSettingsPage : ComponentBase, IBrowserViewportObserver,
     private bool _isLoadingPage;
     private bool _success;
     private string _selectedPlan = $"{PricingLevel.Free}";
-    private string? _confirmPassword { get; set; }
+    private string? _confirmPassword;
     private string? _deleteConfirmation;
     private MudForm? _passwordForm;
     private MudTextField<string>? _passwordField;
@@ -30,18 +30,18 @@ public partial class UserSettingsPage : ComponentBase, IBrowserViewportObserver,
 
 
 
-    private int _ActiveIndex;
+    private int _activeIndex;
     public int ActiveIndex
     {
-        get { return _ActiveIndex; }
+        get { return _activeIndex; }
         set
         {
-            if (_ActiveIndex == value)
+            if (_activeIndex == value)
                 return;
             _errors.Clear();
             _warnings.Clear();
             _info.Clear();
-            _ActiveIndex = value;
+            _activeIndex = value;
         }
     }
 

@@ -7,7 +7,7 @@ namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountCom
 
 public partial class StockEntryConflictResolver
 {
-    [Inject] public required StockAccountImportHttpClient accountImportHttpClient { get; set; }
+    [Inject] public required StockAccountImportHttpClient AccountImportHttpClient { get; set; }
     [Inject] public required ILogger<StockEntryConflictResolver> Logger { get; set; }
 
     [Parameter] public required IReadOnlyCollection<StockImportConflict> Conflicts { get; set; }
@@ -95,7 +95,7 @@ public partial class StockEntryConflictResolver
             }
 
             if (resolvedImports.Count > 0)
-                await accountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
+                await AccountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
 
             _dayChoices.Clear();
             await OnSubmitted.InvokeAsync();

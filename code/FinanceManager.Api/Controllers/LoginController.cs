@@ -24,19 +24,19 @@ public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepositor
     {
         try
         {
-            if (requestModel.userName == "guest")
+            if (requestModel.UserName == "guest")
                 await guestAccountSeeder.Seed(cancellationToken);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error occurred while seeding guest account data");
         }
-        var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(requestModel.password);
-        var user = await userRepository.GetUser(requestModel.userName, encryptedPassword);
+        var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(requestModel.Password);
+        var user = await userRepository.GetUser(requestModel.UserName, encryptedPassword);
 
         if (user is null) return Forbid();
 
-        var token = jwtTokenGenerator.GenerateToken(requestModel.userName, user.UserId, user.UserRole);
+        var token = jwtTokenGenerator.GenerateToken(requestModel.UserName, user.UserId, user.UserRole);
 
         try
         {

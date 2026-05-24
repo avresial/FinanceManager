@@ -6,8 +6,8 @@ namespace FinanceManager.Api.Services;
 
 public sealed class CurrencyImportJobStore : ICurrencyImportJobStore
 {
-    private static readonly TimeSpan CompletedJobRetention = TimeSpan.FromHours(5);
-    private static readonly TimeSpan CleanupInterval = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan _completedJobRetention = TimeSpan.FromHours(5);
+    private static readonly TimeSpan _cleanupInterval = TimeSpan.FromMinutes(15);
 
     private readonly ConcurrentDictionary<Guid, CurrencyImportJobState> _jobs = new();
     private readonly object _cleanupGate = new();
@@ -203,17 +203,17 @@ public sealed class CurrencyImportJobStore : ICurrencyImportJobStore
     private void CleanupExpiredCompletedJobs()
     {
         var now = DateTime.UtcNow;
-        if (now - _lastCleanupUtc < CleanupInterval)
+        if (now - _lastCleanupUtc < _cleanupInterval)
             return;
 
         lock (_cleanupGate)
         {
             now = DateTime.UtcNow;
-            if (now - _lastCleanupUtc < CleanupInterval)
+            if (now - _lastCleanupUtc < _cleanupInterval)
                 return;
 
             _lastCleanupUtc = now;
-            var expireBefore = now - CompletedJobRetention;
+            var expireBefore = now - _completedJobRetention;
 
             foreach (var pair in _jobs)
             {

@@ -1,11 +1,11 @@
 using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.Commands.Account;
-using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Application.Services.Exports;
-using FinanceManager.Domain.Entities.Exports;
+using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
 using FinanceManager.Infrastructure.Dtos;
@@ -24,7 +24,7 @@ public class StockAccountControllerTests
     private readonly Mock<IStockAccountEntryRepository<StockAccountEntry>> _mockStockAccountEntryRepository;
     private readonly Mock<IAccountCsvExportService<StockAccountExportDto>> _mockStockAccountCsvExportService;
     private readonly StockAccountController _controller;
-    private const int TestUserId = 1;
+    private const int _testUserId = 1;
 
     public StockAccountControllerTests()
     {
@@ -40,7 +40,7 @@ public class StockAccountControllerTests
         // Mock user identity
         var user = new ClaimsPrincipal(new ClaimsIdentity(
         [
-            new(ClaimTypes.NameIdentifier, TestUserId.ToString()),
+            new(ClaimTypes.NameIdentifier, _testUserId.ToString()),
         ], "mock"));
 
         _controller.ControllerContext = new ControllerContext
@@ -53,7 +53,7 @@ public class StockAccountControllerTests
     public async Task GetAllAccounts_ReturnsNotFound_WhenNoAccounts()
     {
         // Arrange
-        _mockStockAccountRepository.Setup(repo => repo.GetAvailableAccounts(TestUserId))
+        _mockStockAccountRepository.Setup(repo => repo.GetAvailableAccounts(_testUserId))
             .Returns(new List<AvailableAccount>().ToAsyncEnumerable());
 
         // Act
@@ -68,7 +68,7 @@ public class StockAccountControllerTests
     {
         // Arrange
         List<AvailableAccount> accounts = [new(1, "Test Account")];
-        _mockStockAccountRepository.Setup(repo => repo.GetAvailableAccounts(TestUserId))
+        _mockStockAccountRepository.Setup(repo => repo.GetAvailableAccounts(_testUserId))
             .Returns(accounts.ToAsyncEnumerable());
 
         // Act
@@ -85,7 +85,7 @@ public class StockAccountControllerTests
     {
         // Arrange
         var accountId = 1;
-        StockAccount account = new(TestUserId, accountId, "Test Account");
+        StockAccount account = new(_testUserId, accountId, "Test Account");
         _mockStockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
 
         // Act
@@ -133,7 +133,7 @@ public class StockAccountControllerTests
         // Arrange
         var newAccountId = 1;
         AddAccount addAccount = new("New Account");
-        _mockStockAccountRepository.Setup(repo => repo.Add(TestUserId, addAccount.AccountName))
+        _mockStockAccountRepository.Setup(repo => repo.Add(_testUserId, addAccount.AccountName))
             .ReturnsAsync(newAccountId);
 
         // Act
@@ -150,13 +150,13 @@ public class StockAccountControllerTests
         // Arrange
         var accountId = 1;
         DeleteAccount deleteAccount = new(accountId);
-        StockAccount account = new(TestUserId, accountId, "Test Account");
+        StockAccount account = new(_testUserId, accountId, "Test Account");
         _mockStockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
         _mockStockAccountRepository.Setup(repo => repo.Delete(accountId)).ReturnsAsync(true);
         _mockStockAccountEntryRepository.Setup(repo => repo.Delete(accountId)).ReturnsAsync(true);
 
         // Act
-        var result = await _controller.Delete(deleteAccount.accountId);
+        var result = await _controller.Delete(deleteAccount.AccountId);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -174,7 +174,7 @@ public class StockAccountControllerTests
         _mockStockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
 
         // Act
-        var result = await _controller.Delete(deleteAccount.accountId);
+        var result = await _controller.Delete(deleteAccount.AccountId);
 
         // Assert
         Assert.IsType<ForbidResult>(result);
@@ -189,7 +189,7 @@ public class StockAccountControllerTests
         _mockStockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync((StockAccount?)null);
 
         // Act
-        var result = await _controller.Delete(deleteAccount.accountId);
+        var result = await _controller.Delete(deleteAccount.AccountId);
 
         // Assert
         Assert.IsType<NotFoundObjectResult>(result);
@@ -202,11 +202,11 @@ public class StockAccountControllerTests
         var startDate = new DateTime(2026, 1, 1);
         var endDate = new DateTime(2026, 1, 31);
         var csvContent = "PostingDate,ValueChange,Ticker,InvestmentType\n";
-        StockAccount account = new(TestUserId, accountId, "Test Account");
+        StockAccount account = new(_testUserId, accountId, "Test Account");
 
         _mockStockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
         _mockStockAccountCsvExportService
-            .Setup(s => s.GetExportResults(TestUserId, accountId, startDate, endDate, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetExportResults(_testUserId, accountId, startDate, endDate, It.IsAny<CancellationToken>()))
             .ReturnsAsync(csvContent);
 
         var result = await _controller.ExportCsv(accountId, startDate, endDate, TestContext.Current.CancellationToken);
@@ -224,7 +224,7 @@ public class StockAccountControllerTests
         var startDate = new DateTime(2026, 4, 1);
         var endDate = new DateTime(2026, 4, 30);
         var expandedStartDate = new DateTime(2026, 3, 15);
-        StockAccount account = new(TestUserId, accountId, "Test Account");
+        StockAccount account = new(_testUserId, accountId, "Test Account");
         List<StockAccountEntry> initialEntries =
         [
             new(accountId, 2, new DateTime(2026, 4, 20), 10500m, 500m, "AAPL", InvestmentType.Stock),

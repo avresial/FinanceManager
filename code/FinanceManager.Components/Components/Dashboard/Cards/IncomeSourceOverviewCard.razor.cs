@@ -17,7 +17,7 @@ public partial class IncomeSourceOverviewCard
     private Currency _currency = DefaultCurrency.PLN;
     private ApexChart<IncomeSourceOverviewEntry>? _chart;
 
-    private ApexChartOptions<IncomeSourceOverviewEntry> options = new();
+    private ApexChartOptions<IncomeSourceOverviewEntry> _options = new();
 
     public List<IncomeSourceOverviewEntry> ChartData { get; set; } =
     [
@@ -33,16 +33,16 @@ public partial class IncomeSourceOverviewCard
 
     [Inject] public required ILogger<IncomeSourceOverviewCard> Logger { get; set; }
     [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
-    [Inject] public required ISettingsService settingsService { get; set; }
-    [Inject] public required ILoginService loginService { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
+    [Inject] public required ILoginService LoginService { get; set; }
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
 
     protected override void OnInitialized()
     {
-        _currency = settingsService.GetCurrency();
-        options.Chart = new Chart
+        _currency = SettingsService.GetCurrency();
+        _options.Chart = new Chart
         {
             Toolbar = new ApexCharts.Toolbar
             {
@@ -52,7 +52,7 @@ public partial class IncomeSourceOverviewCard
         };
 
 
-        options.Xaxis = new XAxis()
+        _options.Xaxis = new XAxis()
         {
             AxisTicks = new AxisTicks()
             {
@@ -67,7 +67,7 @@ public partial class IncomeSourceOverviewCard
 
         };
 
-        options.Yaxis =
+        _options.Yaxis =
         [
             new YAxis
             {
@@ -82,18 +82,18 @@ public partial class IncomeSourceOverviewCard
             },
         ];
 
-        options.Tooltip = new ApexCharts.Tooltip
+        _options.Tooltip = new ApexCharts.Tooltip
         {
             Y = new TooltipY
             {
-                Formatter = ChartHelper.GetCurrencyFormatter(settingsService.GetCurrency().ShortName)
+                Formatter = ChartHelper.GetCurrencyFormatter(SettingsService.GetCurrency().ShortName)
             }
         };
 
     }
     protected override async Task OnParametersSetAsync()
     {
-        var user = await loginService.GetLoggedUser();
+        var user = await LoginService.GetLoggedUser();
         if (user is null) return;
 
         ChartData.Clear();

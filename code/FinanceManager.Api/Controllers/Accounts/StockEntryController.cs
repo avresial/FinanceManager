@@ -57,7 +57,7 @@ public class StockEntryController(
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockAccountEntryDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Add(AddStockAccountEntry addEntry) =>
-        Ok(await stockAccountEntryRepository.Add(addEntry.entry));
+        Ok(await stockAccountEntryRepository.Add(addEntry.Entry));
 
     [HttpDelete("Delete/{accountId:int}/{entryId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
@@ -86,7 +86,7 @@ public class StockEntryController(
         if (entryToUpdate is null) return NotFound();
 
         entryToUpdate.Update(new(updateCommand.AccountId, updateCommand.EntryId, updateCommand.PostingDate, updateCommand.Value,
-            updateCommand.ValueChange, updateCommand.Ticker, updateCommand.investmentType));
+            updateCommand.ValueChange, updateCommand.Ticker, updateCommand.InvestmentType));
 
         return Ok(await stockAccountEntryRepository.Update(entryToUpdate));
     }

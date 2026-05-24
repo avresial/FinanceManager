@@ -8,7 +8,7 @@ namespace FinanceManager.Components.Components.FinancialAccounts;
 
 public partial class AddAccount : ComponentBase
 {
-    private string _accountName { get; set; } = string.Empty;
+    private string _accountName = string.Empty;
     private string _selectedAccountType = "Currency account";
 
     private int? _addedAccountId = null;

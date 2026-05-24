@@ -1,6 +1,6 @@
-﻿using FinanceManager.Api.Services;
+﻿using FinanceManager.Api;
+using FinanceManager.Api.Services;
 using FinanceManager.Infrastructure.Services;
-using FinanceManager.Api;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;

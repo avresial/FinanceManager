@@ -1,8 +1,8 @@
 using FinanceManager.Application.Services;
-using FinanceManager.Infrastructure.Services.Currencies;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Services;
+using FinanceManager.Infrastructure.Services.Currencies;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
