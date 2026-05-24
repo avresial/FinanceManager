@@ -1,6 +1,6 @@
-using System.Security.Claims;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 
 namespace FinanceManager.Api.Services.Guest;
 
