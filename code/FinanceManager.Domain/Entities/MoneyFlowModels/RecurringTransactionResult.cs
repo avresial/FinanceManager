@@ -2,17 +2,12 @@ namespace FinanceManager.Domain.Entities.MoneyFlowModels;
 
 public record RecurringTransactionEntryReference(int AccountId, int EntryId);
 
-public class RecurringTransactionResult
+public class RecurringTransactionResult(string name, decimal value)
 {
-    public string Name { get; set; } = string.Empty;
-    public decimal Value { get; set; }
+    public string Name { get; set; } = name;
+    public decimal Value { get; set; } = value;
     public List<RecurringTransactionEntryReference> Entries { get; set; } = [];
 
-    public RecurringTransactionResult() { }
-
-    public RecurringTransactionResult(string name, decimal value)
-    {
-        Name = name;
-        Value = value;
-    }
+    // Required for JSON deserialization.
+    public RecurringTransactionResult() : this(string.Empty, 0m) { }
 }

@@ -15,6 +15,7 @@ public partial class RecurringTransactionDetectorCard
     private decimal _totalMonthlySpend;
     private RecurringTransactionResult? _selectedItem;
     private List<CurrencyAccountEntry> _detailEntries = [];
+    private int _detailRequestVersion;
 
     [Parameter] public string Height { get; set; } = "300px";
 
@@ -59,6 +60,7 @@ public partial class RecurringTransactionDetectorCard
 
     private async Task SelectItem(RecurringTransactionResult item)
     {
+        var requestVersion = Interlocked.Increment(ref _detailRequestVersion);
         _selectedItem = item;
         _detailEntries = [];
         _isLoadingDetail = true;
@@ -68,6 +70,9 @@ public partial class RecurringTransactionDetectorCard
         {
             var tasks = item.Entries.Select(r => CurrencyEntryHttpClient.GetEntry(r.AccountId, r.EntryId));
             var results = await Task.WhenAll(tasks);
+
+            if (requestVersion != _detailRequestVersion) return;
+
             _detailEntries = [.. results.OfType<CurrencyAccountEntry>().OrderByDescending(e => e.PostingDate)];
         }
         catch (Exception ex)
@@ -76,15 +81,20 @@ public partial class RecurringTransactionDetectorCard
         }
         finally
         {
-            _isLoadingDetail = false;
-            StateHasChanged();
+            if (requestVersion == _detailRequestVersion)
+            {
+                _isLoadingDetail = false;
+                StateHasChanged();
+            }
         }
     }
 
     private void Back()
     {
+        Interlocked.Increment(ref _detailRequestVersion);
         _selectedItem = null;
         _detailEntries = [];
+        _isLoadingDetail = false;
     }
 
     private double GetPercentage(decimal value)
