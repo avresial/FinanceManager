@@ -40,7 +40,7 @@ jobs:
         run: dotnet build ./code --no-restore --configuration Release
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: build-output
           path: |
@@ -216,7 +216,7 @@ jobs:
         run: dotnet publish ${{ env.API_PROJECT_PATH }} --configuration Release --output ${{ env.PUBLISH_DIR }} --no-build
 
       - name: Upload publish artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: finance-manager-api
           path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
