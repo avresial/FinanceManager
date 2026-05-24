@@ -5,6 +5,7 @@ using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Json;
 using Xunit;
@@ -54,6 +55,42 @@ public class LoginControllerTests(OptionsProvider optionsProvider) : ControllerT
         Assert.Equal(_testUserName, body.UserName);
         Assert.Equal(99, body.UserId);
         Assert.False(string.IsNullOrWhiteSpace(body.AccessToken));
+    }
+
+    [Theory]
+    [InlineData("guest")]
+    [InlineData("Guest")]
+    [InlineData("GUEST")]
+    public async Task Login_AsGuest_IssuesEphemeralTokenWithGuestClaim(string guestLogin)
+    {
+        LoginRequestModel request = new(guestLogin, "anything");
+
+        var response = await Client.PostAsJsonAsync("api/Login", request, cancellationToken: TestContext.Current.CancellationToken);
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<LoginResponseModel>(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(body);
+        Assert.False(string.IsNullOrWhiteSpace(body.AccessToken));
+        // Guest ids are minted as negative ints by the session store to avoid colliding with real identity-column ids.
+        Assert.True(body.UserId < 0, $"Expected negative ephemeral guest id, got {body.UserId}");
+
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(body.AccessToken);
+        Assert.Equal("true", jwt.Claims.SingleOrDefault(c => c.Type == "isGuest")?.Value);
+    }
+
+    [Fact]
+    public async Task Login_AsGuest_AllocatesDistinctSandboxPerLogin()
+    {
+        var first = await Client.PostAsJsonAsync("api/Login", new LoginRequestModel("guest", "x"), cancellationToken: TestContext.Current.CancellationToken);
+        var second = await Client.PostAsJsonAsync("api/Login", new LoginRequestModel("guest", "x"), cancellationToken: TestContext.Current.CancellationToken);
+
+        var firstBody = await first.Content.ReadFromJsonAsync<LoginResponseModel>(cancellationToken: TestContext.Current.CancellationToken);
+        var secondBody = await second.Content.ReadFromJsonAsync<LoginResponseModel>(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(firstBody);
+        Assert.NotNull(secondBody);
+        Assert.NotEqual(firstBody.UserId, secondBody.UserId);
     }
 
     [Fact]

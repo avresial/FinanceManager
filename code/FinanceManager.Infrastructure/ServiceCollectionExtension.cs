@@ -10,6 +10,7 @@ using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Contexts;
+using FinanceManager.Infrastructure.Guest;
 using FinanceManager.Infrastructure.Providers;
 using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
@@ -70,8 +71,11 @@ public static class ServiceCollectionExtension
     {
         if (configuration.GetValue("UseInMemoryDatabase", false))
         {
-            services.AddDbContext<AppDbContext>(options =>
-                options.UseInMemoryDatabase(databaseName: "Db"));
+            services.AddDbContext<AppDbContext>((sp, options) =>
+            {
+                var dbName = GuestDatabaseNaming.ResolveDatabaseName(sp, defaultName: "Db");
+                options.UseInMemoryDatabase(databaseName: dbName);
+            });
         }
         else
         {
@@ -86,8 +90,15 @@ public static class ServiceCollectionExtension
             var databaseProvider = InferDatabaseProvider(connectionString,
                 configuration.GetValue("DatabaseProvider", "SqlServer") ?? "SqlServer");
 
-            services.AddDbContext<AppDbContext>(options =>
+            services.AddDbContext<AppDbContext>((sp, options) =>
             {
+                var guestDbName = GuestDatabaseNaming.TryGetGuestDatabaseName(sp);
+                if (guestDbName is not null)
+                {
+                    options.UseInMemoryDatabase(databaseName: guestDbName);
+                    return;
+                }
+
                 if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) ||
                     databaseProvider.Equals("Supabase", StringComparison.OrdinalIgnoreCase))
                 {

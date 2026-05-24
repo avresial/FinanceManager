@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Application.Commands.Login;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -10,22 +11,24 @@ namespace FinanceManager.Api.Services;
 
 public partial class JwtTokenGenerator(IOptions<JwtAuthOptions> jwtOptions)
 {
-    public LoginResponseModel GenerateToken(string userName, int userId, UserRole userRole)
+    public LoginResponseModel GenerateToken(string userName, int userId, UserRole userRole, bool isGuest = false)
     {
         ArgumentNullException.ThrowIfNull(userName);
 
         var tokenExpiryTimeStamp = DateTime.UtcNow.AddMinutes(jwtOptions.Value.TokenValidityMins);
 
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Name, userName),
+            new(ClaimTypes.NameIdentifier, userId.ToString()),
+            new(ClaimTypes.Role, userRole.ToString()),
+        };
+        if (isGuest)
+            claims.Add(new(GuestClaims.IsGuest, "true"));
+
         var tokenDescriptor = new SecurityTokenDescriptor()
         {
-
-            Subject = new(
-            [
-                new(JwtRegisteredClaimNames.Name, userName),
-                new(ClaimTypes.NameIdentifier, userId.ToString()),
-                new(ClaimTypes.Role, userRole.ToString()),
-            ]),
-
+            Subject = new(claims),
             Expires = tokenExpiryTimeStamp,
             Issuer = jwtOptions.Value.Issuer,
             Audience = jwtOptions.Value.Audience,
