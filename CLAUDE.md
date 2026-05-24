@@ -16,6 +16,12 @@ Always include the GitHub issue number being resolved in the commit message subj
 
 **Feature branches merge into `develop`, never directly into `main`.** When opening a PR for a feature branch, the base must be `develop`. Only `develop` is promoted to `main` (e.g., for releases). If asked to open a PR against `main` from a feature branch, push back and switch the base to `develop`.
 
+**Branch naming**: name branches with the issue name only — nothing more. Use the issue's title/identifier as the branch name, with no prefixes, suffixes, or extra descriptors.
+
+## Pull Requests
+
+When opening a pull request that resolves a GitHub issue, the PR body must include a GitHub auto-close keyword referencing the issue (e.g. `closes #123`) so that merging the PR automatically closes the linked issue.
+
 ## Build and Validation
 
 ```bash
