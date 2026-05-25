@@ -22,6 +22,10 @@ Always include the GitHub issue number being resolved in the commit message subj
 
 When opening a pull request that resolves a GitHub issue, the PR body must include a GitHub auto-close keyword referencing the issue (e.g. `closes #123`) so that merging the PR automatically closes the linked issue.
 
+## Changelog
+
+Every code change that has a user-visible effect must add an entry to `CHANGELOG.md` (Keep a Changelog format, CalVer `YY.M.D`). The rules — section headings, wording, issue references, and how to promote `[Unreleased]` — live in [`.claude/skills/changelog/SKILL.md`](./.claude/skills/changelog/SKILL.md). Stage the changelog edit in the same commit as the code change. Pure refactors, test-only changes, CI tweaks, and dependency bumps without behavioural impact do not need a changelog entry.
+
 ## Agent Requirements
 
 - **Install the .NET SDK before coding.** Any task that involves code changes requires the .NET 10 SDK to be installed first so that `dotnet build`, `dotnet format`, and `dotnet test` can run. If `dotnet --list-sdks` does not show a `10.*` SDK, install it before making changes — see "Installing the .NET SDK" below for the path that works in the cloud sandbox.
