@@ -41,34 +41,41 @@ If the install fails with `404 Not Found` on `.deb` files, the apt index is stal
 
 ### Running tests
 
-The project's `code/global.json` opts into the new Microsoft.Testing.Platform runner (`xunit.v3.mtp-v2`). On .NET 10 SDK, the legacy `dotnet test <csproj>` invocation fails with *"Testing with VSTest target is no longer supported"*. Use **`--project`** instead, and run from the repo root (or anywhere — `--project` takes a full path):
+The project's `code/global.json` opts into the new Microsoft.Testing.Platform runner (`xunit.v3.mtp-v2`). Two things together must be right or `dotnet test` falls back to the deprecated VSTest runner and fails:
+
+1. **Run from inside `code/`** (or any subdirectory of it). `global.json` is discovered upward from the current directory; from the repo root it isn't visible, so the SDK uses the legacy runner and rejects `--project` with `MSBUILD : error MSB1001: Unknown switch ... --project`.
+2. **Pass `--project`, not a bare path.** The bare `dotnet test ./path/to.csproj` form errors with *"Specifying a project for 'dotnet test' should be via '--project'"*.
 
 ```bash
-dotnet test --project ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
-dotnet test --project ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
+cd code
+dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
+dotnet test --project ./FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
 ```
 
-The bare `dotnet test ./path/to.csproj` form errors with *"Specifying a project for 'dotnet test' should be via '--project'"* — always pass `--project`.
+If you see *"Testing with VSTest target is no longer supported by Microsoft.Testing.Platform on .NET 10 SDK"*, you're outside `code/` — `cd code` and retry.
 
 ## Build and Validation
 
 ```bash
-# Restore, build, format-check
+# Restore, build, format-check (from repo root is fine)
 dotnet restore ./code
 dotnet build ./code/FinanceManager.slnx
 dotnet format ./code --verify-no-changes --verbosity diagnostic
 
+# Tests must be run from inside code/ (see "Running tests" above)
+cd code
+
 # Run all tests
-dotnet test --project ./code/FinanceManager.slnx
+dotnet test --project ./FinanceManager.slnx
 
 # Run only unit tests
-dotnet test --project ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
+dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
 
 # Run only integration tests (requires UseInMemoryDatabase=true env var in CI)
-dotnet test --project ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
+dotnet test --project ./FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
 
 # Run a single test project with coverage
-dotnet test --project ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --collect:"XPlat Code Coverage"
+dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --collect:"XPlat Code Coverage"
 ```
 
 **Build is strict**: warnings are treated as errors (`Directory.Build.props`). Always run `dotnet build` before committing.

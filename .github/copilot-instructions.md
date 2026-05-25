@@ -28,14 +28,18 @@ Notes:
 - If the install hits `404 Not Found` on `.deb` URLs, the apt index is stale — re-run `sudo apt-get update` and retry.
 - PPA fetch errors (`deadsnakes`, `ondrej/php`) during `apt-get update` are unrelated and can be ignored.
 
-The project's `code/global.json` opts into the new Microsoft.Testing.Platform runner (`xunit.v3.mtp-v2`). On .NET 10 SDK, the legacy `dotnet test <csproj>` form fails with *"Testing with VSTest target is no longer supported"*. Always pass **`--project`**:
+The project's `code/global.json` opts into the new Microsoft.Testing.Platform runner (`xunit.v3.mtp-v2`). Two things must both be right or `dotnet test` falls back to the deprecated VSTest runner:
+
+1. Run from inside `code/` (or any subdirectory of it). `global.json` is discovered upward from the current directory; from the repo root it isn't visible.
+2. Pass `--project`, not a bare path.
 
 ```bash
-dotnet test --project ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
-dotnet test --project ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
+cd code
+dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
+dotnet test --project ./FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
 ```
 
-The bare `dotnet test ./path/to.csproj` form errors with *"Specifying a project for 'dotnet test' should be via '--project'"*.
+If you see *"Testing with VSTest target is no longer supported"* or *"MSBUILD : error MSB1001: Unknown switch ... --project"*, you're outside `code/`. `cd code` and retry.
 
 ## C# style preferences (important)
 - Prefer primary constructor syntax for classes, records, and structs when supported by the configured C# language version.

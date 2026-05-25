@@ -1,9 +1,11 @@
+@using ApexCharts
+
 <MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
     <MudPaper Class="pa-3 pb-0" Elevation="0">
         <div class="d-flex align-center gap-1">
             <MudText Typo="Typo.h5">Diversification proxy</MudText>
             <MudTooltip Text="Based on number of asset classes and unique holdings; not investment advice.">
-                <MudIconButton Icon="@Icons.Material.Filled.Info" Size="Size.Small" AriaLabel="Diversification proxy information" />
+                <MudIconButton Icon="@Icons.Material.Filled.Info" Size="MudBlazor.Size.Small" AriaLabel="Diversification proxy information" />
             </MudTooltip>
         </div>
     </MudPaper>
@@ -13,44 +15,25 @@
         {
             <ChartSpinner MaxHeight=@Height />
         }
-        else if (_score is not null)
+        else if (_score is not null && _chartOptions is not null)
         {
-            <svg viewBox="0 0 200 130" width="100%" style="max-width:320px;display:block;" role="img" aria-label="@($"Diversification score {_score.Score} out of 100, {_score.Band}")">
-                <path d="M 20 110 A 80 80 0 0 1 180 110"
-                      fill="none"
-                      stroke="var(--mud-palette-lines-default)"
-                      stroke-width="16"
-                      stroke-linecap="round"
-                      pathLength="100" />
-                <path d="M 20 110 A 80 80 0 0 1 180 110"
-                      fill="none"
-                      stroke="@_bandStroke"
-                      stroke-width="16"
-                      stroke-linecap="round"
-                      pathLength="100"
-                      stroke-dasharray="@($"{_score.Score} 100")" />
-                <text x="100" y="88" text-anchor="middle"
-                      font-size="44" font-weight="700"
-                      fill="var(--mud-palette-text-primary)"
-                      style="font-variant-numeric: tabular-nums;">@_score.Score</text>
-                <text x="100" y="108" text-anchor="middle"
-                      font-size="14" font-weight="500"
-                      fill="@_bandStroke"
-                      style="letter-spacing:0.08em;text-transform:uppercase;">@_score.Band</text>
-                <text x="20" y="128" text-anchor="middle"
-                      font-size="10"
-                      fill="var(--mud-palette-text-secondary)">0</text>
-                <text x="180" y="128" text-anchor="middle"
-                      font-size="10"
-                      fill="var(--mud-palette-text-secondary)">100</text>
-            </svg>
+            <div style="width:100%;max-width:320px;">
+                <ApexChart TItem="ScorePoint" Options="@_chartOptions" Height="220">
+                    <ApexPointSeries TItem="ScorePoint"
+                                     Items="@_series"
+                                     Name="Diversification"
+                                     SeriesType="SeriesType.RadialBar"
+                                     XValue="@(p => (object)p.Label)"
+                                     YValue="@(p => (decimal?)p.Value)" />
+                </ApexChart>
+            </div>
 
             @if (_explanations.Count > 0)
             {
                 <div class="d-flex flex-wrap justify-center gap-2 mt-2" style="width:100%;">
                     @foreach (var explanation in _explanations)
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@_bandColor">@explanation</MudChip>
+                        <MudChip T="string" Size="MudBlazor.Size.Small" Variant="Variant.Outlined" Color="@_bandColor">@explanation</MudChip>
                     }
                 </div>
             }

@@ -1,3 +1,4 @@
+using ApexCharts;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
@@ -14,9 +15,10 @@ public partial class DiversificationProxyCard
 
     private bool _isLoading;
     private DiversificationScore? _score;
-    private Color _bandColor = Color.Default;
-    private string _bandStroke = "var(--mud-palette-text-secondary)";
+    private MudBlazor.Color _bandColor = MudBlazor.Color.Default;
     private List<string> _explanations = [];
+    private List<ScorePoint> _series = [];
+    private ApexChartOptions<ScorePoint>? _chartOptions;
 
     [Parameter] public string Height { get; set; } = "300px";
 
@@ -44,19 +46,23 @@ public partial class DiversificationProxyCard
             }
 
             _score = await DiversificationHttpClient.GetDiversificationScore(user.UserId, DateTime.UtcNow);
-            _bandColor = _score?.Band switch
+            if (_score is null) return;
+
+            _bandColor = _score.Band switch
             {
-                "Broad" => Color.Success,
-                "Moderate" => Color.Warning,
-                _ => Color.Error
+                "Broad" => MudBlazor.Color.Success,
+                "Moderate" => MudBlazor.Color.Warning,
+                _ => MudBlazor.Color.Error
             };
-            _bandStroke = _score?.Band switch
+            var arcColor = _score.Band switch
             {
                 "Broad" => "var(--mud-palette-success)",
                 "Moderate" => "var(--mud-palette-warning)",
                 _ => "var(--mud-palette-error)"
             };
-            _explanations = _score is null ? [] : BuildExplanations(_score);
+            _series = [new ScorePoint(_score.Band, _score.Score)];
+            _chartOptions = BuildChartOptions(arcColor);
+            _explanations = BuildExplanations(_score);
         }
         catch (Exception ex)
         {
@@ -68,6 +74,48 @@ public partial class DiversificationProxyCard
             StateHasChanged();
         }
     }
+
+    private static ApexChartOptions<ScorePoint> BuildChartOptions(string arcColor) => new()
+    {
+        Chart = new Chart
+        {
+            FontFamily = "Roboto, sans-serif"
+        },
+        PlotOptions = new PlotOptions
+        {
+            RadialBar = new PlotOptionsRadialBar
+            {
+                StartAngle = -135,
+                EndAngle = 135,
+                Hollow = new Hollow { Size = "62%" },
+                Track = new Track
+                {
+                    Background = "var(--mud-palette-lines-default)",
+                    StrokeWidth = "100%"
+                },
+                DataLabels = new RadialBarDataLabels
+                {
+                    Name = new RadialBarDataLabelsName
+                    {
+                        Show = true,
+                        FontSize = "13px",
+                        OffsetY = 22,
+                        Color = "var(--mud-palette-text-secondary)"
+                    },
+                    Value = new RadialBarDataLabelsValue
+                    {
+                        Show = true,
+                        FontSize = "40px",
+                        FontWeight = "700",
+                        OffsetY = -10,
+                        Color = "var(--mud-palette-text-primary)"
+                    }
+                }
+            }
+        },
+        Stroke = new Stroke { LineCap = LineCap.Round },
+        Colors = [arcColor]
+    };
 
     internal static List<string> BuildExplanations(DiversificationScore score)
     {
@@ -91,4 +139,6 @@ public partial class DiversificationProxyCard
 
         return explanations;
     }
+
+    internal record ScorePoint(string Label, int Value);
 }
