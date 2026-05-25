@@ -32,6 +32,7 @@ public static class ServiceCollectionExtension
     public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
     {
         services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
+        services.AddHttpClient<IIsinResolver, OpenFigiClient>();
         services.AddHttpClient<ICurrencyExchangeRateProvider, FawazAhmedCurrencyApiClient>();
 
         services.AddAI();

@@ -32,6 +32,7 @@ builder.Services
 
 builder.Services.Configure<JwtAuthOptions>(builder.Configuration.GetSection("JwtConfig"));
 builder.Services.Configure<StockApiOptions>(builder.Configuration.GetSection("StockApi"));
+builder.Services.Configure<OpenFigiOptions>(builder.Configuration.GetSection("OpenFigi"));
 builder.Services.Configure<LmStudioOptions>(builder.Configuration.GetSection("LmStudio"));
 builder.Services.Configure<OpenRouterOptions>(builder.Configuration.GetSection("OpenRouter"));
 builder.Services.Configure<GitHubModelsOptions>(builder.Configuration.GetSection("GitHubModels"));
