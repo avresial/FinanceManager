@@ -16,11 +16,35 @@ Always include the GitHub issue number being resolved in the commit message subj
 
 **Feature branches merge into `develop`, never directly into `main`.** When opening a PR for a feature branch, the base must be `develop`. Only `develop` is promoted to `main` (e.g., for releases). If asked to open a PR against `main` from a feature branch, push back and switch the base to `develop`.
 
-**Branch naming**: name branches with the issue name only — nothing more. Use the issue's title/identifier as the branch name, with no prefixes, suffixes, or extra descriptors.
+### Branch naming
+
+Branch naming is **critical for the changelog to work**. Every changelog entry ends with `#<issue>` (see [`.claude/skills/changelog/SKILL.md`](./.claude/skills/changelog/SKILL.md)), and that number is sourced from the branch → commit → PR chain. If the branch doesn't carry the issue number, the link breaks and the entry can't be written correctly.
+
+**Format**: `<issue-number>-<kebab-issue-title>`
+
+- `<issue-number>` — the GitHub issue number, no `#`, no `issue-` prefix.
+- `<kebab-issue-title>` — the issue's title, lower-case, words joined by hyphens, punctuation stripped. Truncate at a word boundary if it would otherwise exceed ~60 characters total.
+- No prefixes (`feature/`, `fix/`, `claude/`, your username, etc.) and no suffixes (`-v2`, `-wip`, random tokens).
+
+**Examples**:
+
+| Issue | Branch |
+|---|---|
+| #128 "Add investment paycheck estimator" | `128-add-investment-paycheck-estimator` |
+| #174 "Improve bond UI display" | `174-improve-bond-ui-display` |
+| #19 "Date range filter on account transactions" | `19-date-range-filter-on-account-transactions` |
+
+**One issue per branch.** A branch must cover exactly one issue so the resulting commit, PR, and changelog entry all share a single `#<issue>` reference. If the work splits across multiple issues, split the branch.
+
+**No issue? Don't open the branch yet** — create the GitHub issue first so the number exists. Tiny, non-user-visible chores (CI tweaks, dependency bumps, doc typos) that won't get a changelog entry are the only acceptable exception; in that case use a short kebab-case description (`fix-ci-dotnet-test-mtp`) and skip the changelog edit.
 
 ## Pull Requests
 
 When opening a pull request that resolves a GitHub issue, the PR body must include a GitHub auto-close keyword referencing the issue (e.g. `closes #123`) so that merging the PR automatically closes the linked issue.
+
+## Changelog
+
+Every code change that has a user-visible effect must add an entry to `CHANGELOG.md` (Keep a Changelog format, CalVer `YY.M.D`). The rules — section headings, wording, issue references, and how to promote `[Unreleased]` — live in [`.claude/skills/changelog/SKILL.md`](./.claude/skills/changelog/SKILL.md). Stage the changelog edit in the same commit as the code change. Pure refactors, test-only changes, CI tweaks, and dependency bumps without behavioural impact do not need a changelog entry.
 
 ## Agent Requirements
 
