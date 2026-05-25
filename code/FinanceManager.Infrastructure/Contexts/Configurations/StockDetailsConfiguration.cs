@@ -8,7 +8,8 @@ public class StockDetailsConfiguration : IEntityTypeConfiguration<StockDetails>
 {
     public void Configure(EntityTypeBuilder<StockDetails> builder)
     {
-        builder.HasKey(x => x.Ticker);
+        builder.HasKey(x => x.Isin);
+        builder.Property(x => x.Isin).HasMaxLength(12).IsRequired();
         builder.Property(x => x.Ticker).HasMaxLength(32).IsRequired();
         builder.Property(x => x.Name).HasMaxLength(256);
         builder.Property(x => x.Type).HasMaxLength(64);

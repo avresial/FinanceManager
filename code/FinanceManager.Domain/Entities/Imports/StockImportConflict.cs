@@ -11,7 +11,7 @@ public record StockImportConflict(int AccountId, StockEntryImport? ImportEntry, 
         ImportEntry is not null && ExistingEntry is not null &&
         TruncateToSecond(ImportEntry.PostingDate) == TruncateToSecond(ExistingEntry.PostingDate) &&
         ImportEntry.ValueChange == ExistingEntry.ValueChange &&
-        string.Equals(ImportEntry.Ticker, ExistingEntry.Ticker, StringComparison.OrdinalIgnoreCase);
+        string.Equals(ImportEntry.Isin, ExistingEntry.Isin, StringComparison.OrdinalIgnoreCase);
 
     public DateTime DateTime => ImportEntry?.PostingDate ?? ExistingEntry!.PostingDate;
 

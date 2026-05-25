@@ -14,13 +14,13 @@ public class StockPriceDtoConfiguration : IEntityTypeConfiguration<StockPriceDto
 
         builder.HasOne(e => e.StockDetails)
             .WithMany()
-            .HasForeignKey("StockTicker")
+            .HasForeignKey("StockIsin")
             .IsRequired();
 
-        builder.Property<string>("StockTicker")
-            .HasMaxLength(32);
+        builder.Property<string>("StockIsin")
+            .HasMaxLength(12);
 
-        builder.HasIndex("StockTicker", nameof(StockPriceDto.Date));
+        builder.HasIndex("StockIsin", nameof(StockPriceDto.Date));
 
         builder.Property(e => e.PricePerUnit)
             .HasPrecision(18, 8);
