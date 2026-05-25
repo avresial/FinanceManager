@@ -10,4 +10,17 @@
 		<LangVersion>latest</LangVersion>
 		<CopilotCliDownloadTimeout>600000</CopilotCliDownloadTimeout>
 	</PropertyGroup>
+
+	<!-- CalVer (YY.MM.DD) stamped automatically at build time. See issue #183. -->
+	<PropertyGroup>
+		<CalVerYear>$([System.DateTime]::UtcNow.ToString("yy"))</CalVerYear>
+		<CalVerMonth>$([System.DateTime]::UtcNow.ToString("MM"))</CalVerMonth>
+		<CalVerDay>$([System.DateTime]::UtcNow.ToString("dd"))</CalVerDay>
+		<CalVerNumericMonth>$([System.DateTime]::UtcNow.Month)</CalVerNumericMonth>
+		<CalVerNumericDay>$([System.DateTime]::UtcNow.Day)</CalVerNumericDay>
+		<Version>$(CalVerYear).$(CalVerNumericMonth).$(CalVerNumericDay)</Version>
+		<AssemblyVersion>$(CalVerYear).$(CalVerNumericMonth).$(CalVerNumericDay).0</AssemblyVersion>
+		<FileVersion>$(CalVerYear).$(CalVerNumericMonth).$(CalVerNumericDay).0</FileVersion>
+		<InformationalVersion>$(CalVerYear).$(CalVerMonth).$(CalVerDay)</InformationalVersion>
+	</PropertyGroup>
 </Project>
