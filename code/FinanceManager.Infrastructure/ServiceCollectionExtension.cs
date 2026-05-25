@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Application.Options;
+using FinanceManager.Application.Services;
 using FinanceManager.Application.Services.Ai;
 using FinanceManager.Application.Services.FinancialInsights;
 using FinanceManager.Application.Services.Stocks;
@@ -38,6 +39,7 @@ public static class ServiceCollectionExtension
         services.AddAI();
 
         services
+                .AddScoped<IDataBackfillService, DataBackfillService>()
                 .AddScoped<IStockPriceRepository, StockPriceRepository>()
                 .AddScoped<IStockDetailsRepository, StockDetailsRepository>()
                 .AddScoped<IFinancialAccountRepository, AccountRepository>()
