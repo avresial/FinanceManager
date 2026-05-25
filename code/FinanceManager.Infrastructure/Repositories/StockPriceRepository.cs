@@ -12,6 +12,9 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
     public async Task<StockPrice> Add(string ticker, decimal pricePerUnit, Currency currency, DateTime date)
     {
         var stockDetails = await GetOrCreateStockDetails(ticker, currency);
+        if (stockDetails is null)
+            throw new Exception("StockDetails not found for ticker: " + ticker);
+
         StockPriceDto stockPriceDto = new(
             0, // Id is autoincremented, will be set by the database
             stockDetails,
@@ -86,11 +89,11 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
             .FirstOrDefaultAsync();
     }
 
-    public async Task<Currency?> GetTickerCurrency(string ticker)
+    public async Task<Currency?> GetStockCurrency(string isin)
     {
         var stockDetails = await context.StockDetails
             .Include(x => x.Currency)
-            .FirstOrDefaultAsync(x => x.Ticker == ticker);
+            .FirstOrDefaultAsync(x => x.Isin == isin);
 
         return stockDetails?.Currency;
     }
@@ -102,13 +105,13 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
             if (context.Entry(price.Currency).State == EntityState.Detached)
                 context.Attach(price.Currency);
 
-            var normalizedTicker = price.Ticker.Trim().ToUpperInvariant();
-            var stockDetails = await GetOrCreateStockDetails(normalizedTicker, price.Currency);
+            var stockDetails = await context.StockDetails.FirstOrDefaultAsync(x => x.Isin == price.Isin);
+            if (stockDetails is null) continue;
 
             var date = price.Date.Date;
             var existing = await context.StockPrices
                 .Include(x => x.StockDetails)
-                .FirstOrDefaultAsync(x => EF.Property<string>(x, "StockTicker") == normalizedTicker && x.Date.Date == date);
+                .FirstOrDefaultAsync(x => x.StockDetails!.Isin == price.Isin && x.Date.Date == date);
             if (existing is null)
             {
                 var dto = new StockPriceDto(0, stockDetails, price.PricePerUnit, date);
@@ -139,10 +142,12 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         var normalizedTicker = ticker.Trim().ToUpperInvariant();
         var stockPrice = await context.StockPrices
             .Include(x => x.StockDetails)
-            .FirstOrDefaultAsync(x => EF.Property<string>(x, "StockTicker") == normalizedTicker && x.Date.Date == date.Date)
+            .FirstOrDefaultAsync(x => x.StockDetails!.Ticker == normalizedTicker && x.Date.Date == date.Date)
             ?? throw new Exception("Update failed");
 
         var stockDetails = await GetOrCreateStockDetails(normalizedTicker, currency);
+        if (stockDetails is null)
+            throw new Exception("StockDetails not found");
 
         stockPrice.PricePerUnit = pricePerUnit;
         stockPrice.StockDetails = stockDetails;
@@ -152,7 +157,7 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         return stockPrice.ToStockPrice();
     }
 
-    private async Task<StockDetails> GetOrCreateStockDetails(string ticker, Currency currency)
+    private async Task<StockDetails?> GetOrCreateStockDetails(string ticker, Currency currency)
     {
         var normalized = ticker.Trim().ToUpperInvariant();
         var existing = await context.StockDetails.Include(x => x.Currency).FirstOrDefaultAsync(x => x.Ticker == normalized);
@@ -163,17 +168,6 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
             return existing;
         }
 
-        var created = new StockDetails
-        {
-            Ticker = normalized,
-            Currency = currency,
-            Name = string.Empty,
-            Type = string.Empty,
-            Region = string.Empty
-        };
-
-        context.StockDetails.Add(created);
-        await context.SaveChangesAsync();
-        return created;
+        return null;
     }
 }

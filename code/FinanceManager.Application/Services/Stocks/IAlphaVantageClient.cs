@@ -8,5 +8,6 @@ public interface IAlphaVantageClient
 {
     Task<IReadOnlyList<TickerSearchMatch>> SearchTicker(string keywords, CancellationToken ct = default);
     Task<IReadOnlyList<StockPrice>> GetDailySeries(string ticker, DateTime start, DateTime end, Currency currency, CancellationToken ct = default);
+    Task<IReadOnlyList<StockPrice>> GetDailySeries(string ticker, string isin, DateTime start, DateTime end, Currency currency, CancellationToken ct = default);
     Task<IReadOnlyList<StockListing>> GetListings(CancellationToken ct = default);
 }

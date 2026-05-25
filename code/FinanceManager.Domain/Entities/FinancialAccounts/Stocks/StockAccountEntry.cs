@@ -6,12 +6,14 @@ namespace FinanceManager.Domain.Entities.Stocks;
 public class StockAccountEntry : FinancialEntryBase
 {
     public string Isin { get; set; }
+    public string Ticker { get; set; }
     public InvestmentType InvestmentType { get; set; }
 
     public StockAccountEntry(int accountId, int entryId, DateTime postingDate, decimal value, decimal valueChange, string isin, InvestmentType investmentType)
         : base(accountId, entryId, postingDate, value, valueChange)
     {
         Isin = isin;
+        Ticker = string.Empty;
         InvestmentType = investmentType;
     }
 
@@ -24,6 +26,7 @@ public class StockAccountEntry : FinancialEntryBase
 
         ValueChange = entry.ValueChange;
         Isin = entry.Isin;
+        Ticker = entry.Ticker;
         InvestmentType = entry.InvestmentType;
     }
 

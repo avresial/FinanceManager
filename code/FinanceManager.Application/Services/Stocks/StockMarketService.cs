@@ -9,7 +9,8 @@ namespace FinanceManager.Application.Services.Stocks;
 internal class StockMarketService(
     IAlphaVantageClient apiClient,
     IStockPriceProvider stockPriceProvider,
-    ICurrencyRepository currencyRepository) : IStockMarketService
+    ICurrencyRepository currencyRepository,
+    IIsinResolver isinResolver) : IStockMarketService
 {
     public Task<IReadOnlyList<TickerSearchMatch>> SearchTicker(string keywords, CancellationToken ct = default)
     {
@@ -32,8 +33,12 @@ internal class StockMarketService(
         {
             if (string.IsNullOrWhiteSpace(listing.Symbol)) continue;
 
+            var isin = await isinResolver.ResolveAsync(listing.Symbol, ct: ct);
+            if (isin is null) continue;
+
             stockDetailsList.Add(new StockDetails
             {
+                Isin = isin,
                 Ticker = listing.Symbol,
                 Name = listing.Name ?? string.Empty,
                 Type = listing.AssetType ?? string.Empty,

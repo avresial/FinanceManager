@@ -14,7 +14,7 @@ namespace FinanceManager.Api.Controllers;
 [Tags("Stock Prices")]
 public partial class StockPriceController(IStockPriceRepository stockPriceRepository, ICurrencyExchangeService currencyExchangeService,
 ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, IStockPriceProvider stockPriceProvider, IStockDetailsRepository stockDetailsRepository,
-IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
+IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinResolver) : ControllerBase
 {
 
     [Authorize]
@@ -76,13 +76,7 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
             stockPrice = await stockPriceRepository.GetThisOrNextOlder(normalizedTicker, date);
             if (stockPrice is null)
             {
-                return Ok(new StockPrice
-                {
-                    Ticker = normalizedTicker,
-                    PricePerUnit = fetchedPrice,
-                    Currency = currency,
-                    Date = date.Date
-                });
+                return NotFound("Stock price not found in database.");
             }
         }
 
@@ -139,7 +133,7 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
                 {
                     var convertedPrice = new StockPrice
                     {
-                        Ticker = price.Ticker,
+                        Isin = price.Isin,
                         PricePerUnit = price.PricePerUnit * exchangeRate.Value,
                         Currency = currency,
                         Date = price.Date
@@ -236,8 +230,13 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
 
         var normalizedCurrency = request.Currency.Trim().ToUpperInvariant();
         var currency = await currencyRepository.GetOrAdd(normalizedCurrency, normalizedCurrency, cancellationToken);
+        var isin = await isinResolver.ResolveAsync(request.Ticker.Trim(), ct: cancellationToken);
+        if (isin is null)
+            return BadRequest("Could not resolve ticker to ISIN");
+
         var details = new StockDetails
         {
+            Isin = isin,
             Ticker = request.Ticker.Trim().ToUpperInvariant(),
             Name = request.Name.Trim(),
             Type = request.Type.Trim(),
@@ -263,8 +262,13 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
 
         var normalizedCurrency = request.Currency.Trim().ToUpperInvariant();
         var currency = await currencyRepository.GetOrAdd(normalizedCurrency, normalizedCurrency, cancellationToken);
+        var isin = await isinResolver.ResolveAsync(request.Ticker.Trim(), ct: cancellationToken);
+        if (isin is null)
+            return BadRequest("Could not resolve ticker to ISIN");
+
         var details = new StockDetails
         {
+            Isin = isin,
             Ticker = request.Ticker.Trim().ToUpperInvariant(),
             Name = request.Name.Trim(),
             Type = request.Type.Trim(),

@@ -176,7 +176,7 @@ IStockPriceProvider stockPriceProvider, IBondDetailsRepository bondDetailsReposi
         decimal investmentsChange = 0;
         await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, start, end))
             foreach (var entry in account.Entries)
-                investmentsChange += entry.ValueChange * await stockPriceProvider.GetPricePerUnitAsync(entry.Ticker, currency, entry.PostingDate);
+                investmentsChange += entry.ValueChange * await stockPriceProvider.GetPricePerUnitAsync(entry.Isin, currency, entry.PostingDate);
 
         yield return new()
         {

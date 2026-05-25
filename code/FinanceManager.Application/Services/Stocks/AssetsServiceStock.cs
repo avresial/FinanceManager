@@ -82,7 +82,7 @@ internal class AssetsServiceStock(
             foreach (var ticker in account.GetStoredTickers())
             {
                 var pricePerUnit = await stockPriceProvider.GetPricePerUnitAsync(ticker, currency, asOfDate);
-                var latestEntry = account.Entries.First(x => x.Ticker == ticker);
+                var latestEntry = account.Entries.First(x => x.Isin == ticker);
 
                 if (!investmentTypeResults.TryGetValue(latestEntry.InvestmentType, out NameValueResult? existingResult))
                     investmentTypeResults.Add(latestEntry.InvestmentType, new(latestEntry.InvestmentType.ToString(), latestEntry.Value * pricePerUnit));
