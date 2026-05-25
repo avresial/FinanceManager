@@ -45,7 +45,7 @@ public class InvestmentPaycheckEstimatorServiceTests
                 Region = "US"
             });
         var isinResolverMock = new Mock<IIsinResolver>();
-        isinResolverMock.Setup(x => x.ResolveAsync("MSFT", It.IsAny<CancellationToken>()))
+        isinResolverMock.Setup(x => x.ResolveAsync("MSFT", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("US5949181045");
         var stockPriceProvider = new StockPriceProvider(
             _stockRepositoryMock.Object,

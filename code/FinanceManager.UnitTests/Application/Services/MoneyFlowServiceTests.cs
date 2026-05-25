@@ -77,20 +77,22 @@ public class MoneyFlowServiceTests
                 Region = "US"
             });
         var isinResolverMock = new Mock<IIsinResolver>();
-        isinResolverMock.Setup(x => x.ResolveAsync("TESTSTOCK1", It.IsAny<CancellationToken>()))
+        isinResolverMock.Setup(x => x.ResolveAsync("TESTSTOCK1", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("US0000000002");
-        isinResolverMock.Setup(x => x.ResolveAsync("TESTSTOCK2", It.IsAny<CancellationToken>()))
+        isinResolverMock.Setup(x => x.ResolveAsync("TESTSTOCK2", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("US0000000003");
-        isinResolverMock.Setup(x => x.ResolveAsync("MSFT", It.IsAny<CancellationToken>()))
+        isinResolverMock.Setup(x => x.ResolveAsync("MSFT", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("US5949181045");
-        isinResolverMock.Setup(x => x.ResolveAsync("AAPL", It.IsAny<CancellationToken>()))
+        isinResolverMock.Setup(x => x.ResolveAsync("AAPL", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("US0378331005");
-        isinResolverMock.Setup(x => x.ResolveAsync("GOOGL", It.IsAny<CancellationToken>()))
+        isinResolverMock.Setup(x => x.ResolveAsync("GOOGL", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("US02079K3059");
-        isinResolverMock.Setup(x => x.ResolveAsync("MEGA", It.IsAny<CancellationToken>()))
+        isinResolverMock.Setup(x => x.ResolveAsync("MEGA", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("US5949181045");
-        isinResolverMock.Setup(x => x.ResolveAsync("UNKNOWN", It.IsAny<CancellationToken>()))
+        isinResolverMock.Setup(x => x.ResolveAsync("UNKNOWN", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
+        isinResolverMock.Setup(x => x.ResolveAsync("TICKER", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("US0000000001");
         var stockPriceProvider = new StockPriceProvider(
             _stockRepository.Object,
             new Mock<IAlphaVantageClient>().Object,
@@ -209,7 +211,7 @@ public class MoneyFlowServiceTests
         stockAccount.Add(new StockAccountEntry(1, 1, _startDate, 10, 10, "TICKER", InvestmentType.Stock), false);
 
         // Setup mock for TICKER
-        _stockRepository.Setup(x => x.GetThisOrNextOlder("TICKER", It.IsAny<DateTime>()))
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("US0000000001", It.IsAny<DateTime>()))
             .ReturnsAsync(new StockPrice() { Isin = "US0000000001", Currency = DefaultCurrency.PLN, PricePerUnit = 1m });
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
@@ -254,7 +256,7 @@ public class MoneyFlowServiceTests
         _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .Returns(new[] { CreateBondDetails(1, date) }.ToAsyncEnumerable());
 
-        _stockRepository.Setup(x => x.GetThisOrNextOlder("MSFT", It.IsAny<DateTime>()))
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("US5949181045", It.IsAny<DateTime>()))
             .ReturnsAsync(new StockPrice { Isin = "US5949181045", Currency = DefaultCurrency.PLN, PricePerUnit = 100m });
 
         // Act

@@ -28,6 +28,20 @@ public class StockPriceControllerTests
     public StockPriceControllerTests()
     {
         var isinResolverMock = new Mock<IIsinResolver>();
+        // Setup mock to return realistic ISINs for common tickers
+        isinResolverMock
+            .Setup(resolver => resolver.ResolveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string ticker, string region, CancellationToken ct) =>
+            {
+                return ticker.ToUpper() switch
+                {
+                    "CSPX.LON" => "IE00B4L5Y983",
+                    "AAPL" => "US0378331005",
+                    "MSFT" => "US5949181045",
+                    "GOOGL" => "US02079K3059",
+                    _ => ticker.Length == 12 ? ticker : "IE00B4L5Y983" // Return ISIN if already looks like one
+                };
+            });
         _controller = new StockPriceController(
             _stockPriceRepository.Object,
             _currencyExchangeService.Object,
@@ -47,7 +61,7 @@ public class StockPriceControllerTests
         var storedDate = requestedDate.AddDays(-1).Date;
         var storedPrice = new StockPrice
         {
-            Isin = "GB0002374006",
+            Isin = "IE00B4L5Y983", // Use the ISIN that "CSPX.LON" resolves to
             PricePerUnit = 747.18m,
             Currency = DefaultCurrency.PLN,
             Date = storedDate
@@ -55,7 +69,7 @@ public class StockPriceControllerTests
 
         _currencyRepository.Setup(repo => repo.GetCurrency(DefaultCurrency.PLN.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(DefaultCurrency.PLN);
-        _stockPriceRepository.Setup(repo => repo.GetThisOrNextOlder("CSPX.LON", requestedDate))
+        _stockPriceRepository.Setup(repo => repo.GetThisOrNextOlder("IE00B4L5Y983", requestedDate))
             .ReturnsAsync(storedPrice);
 
         // Act
@@ -167,7 +181,7 @@ public class StockPriceControllerTests
     public async Task DeleteStock_ReturnsNoContent_WhenDeleted()
     {
         // Arrange
-        _stockDetailsRepository.Setup(repo => repo.Delete("CSPX.LON", It.IsAny<CancellationToken>()))
+        _stockDetailsRepository.Setup(repo => repo.Delete("IE00B4L5Y983", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         // Act
@@ -211,14 +225,14 @@ public class StockPriceControllerTests
         // Arrange
         var details = new StockDetails
         {
-            Isin = "GB0002374006",
+            Isin = "IE00B4L5Y983", // Use the ISIN that "CSPX.LON" resolves to
             Ticker = "CSPX.LON",
             Name = "Test",
             Type = "ETF",
             Region = "UK",
             Currency = DefaultCurrency.USD
         };
-        _stockDetailsRepository.Setup(repo => repo.Get("CSPX.LON", It.IsAny<CancellationToken>()))
+        _stockDetailsRepository.Setup(repo => repo.Get("IE00B4L5Y983", It.IsAny<CancellationToken>()))
             .ReturnsAsync(details);
 
         // Act
@@ -228,6 +242,7 @@ public class StockPriceControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         var value = Assert.IsType<StockDetails>(okResult.Value);
         Assert.Equal("CSPX.LON", value.Ticker);
+        Assert.Equal("IE00B4L5Y983", value.Isin);
     }
 
     [Fact]
@@ -236,7 +251,7 @@ public class StockPriceControllerTests
         // Arrange
         var details = new StockDetails
         {
-            Isin = "GB0002374006",
+            Isin = "IE00B4L5Y983",
             Ticker = "CSPX.LON",
             Name = "Test",
             Type = "ETF",
@@ -249,12 +264,15 @@ public class StockPriceControllerTests
             .ReturnsAsync(details);
 
         // Act
+        _currencyRepository.Setup(repo => repo.GetOrAdd("USD", "USD", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Currency { Id = 1, Symbol = "USD", ShortName = "USD" });
         var request = new UpdateStockRequest("CSPX.LON", "Test", "ETF", "UK", "USD");
         var result = await _controller.UpdateStockDetails(request, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
         var value = Assert.IsType<StockDetails>(okResult.Value);
+        Assert.Equal("IE00B4L5Y983", value.Isin);
         Assert.Equal("CSPX.LON", value.Ticker);
     }
 
