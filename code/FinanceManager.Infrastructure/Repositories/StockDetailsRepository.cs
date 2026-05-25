@@ -7,12 +7,11 @@ namespace FinanceManager.Infrastructure.Repositories;
 
 internal class StockDetailsRepository(AppDbContext context) : IStockDetailsRepository
 {
-    public async Task<StockDetails?> Get(string ticker, CancellationToken ct = default)
+    public async Task<StockDetails?> Get(string isin, CancellationToken ct = default)
     {
-        var normalized = ticker.Trim().ToUpperInvariant();
         return await context.StockDetails
             .Include(x => x.Currency)
-            .FirstOrDefaultAsync(x => x.Ticker == normalized, ct);
+            .FirstOrDefaultAsync(x => x.Isin == isin, ct);
     }
 
     public async Task<IReadOnlyList<StockDetails>> GetAll(CancellationToken ct = default)
@@ -26,6 +25,7 @@ internal class StockDetailsRepository(AppDbContext context) : IStockDetailsRepos
 
     public async Task<StockDetails> Add(StockDetails details, CancellationToken ct = default)
     {
+        // Normalize ticker for consistency
         var normalized = details.Ticker.Trim().ToUpperInvariant();
         details.Ticker = normalized;
 
@@ -34,7 +34,7 @@ internal class StockDetailsRepository(AppDbContext context) : IStockDetailsRepos
 
         var existing = await context.StockDetails
             .Include(x => x.Currency)
-            .FirstOrDefaultAsync(x => x.Ticker == normalized, ct);
+            .FirstOrDefaultAsync(x => x.Isin == details.Isin, ct);
 
         if (existing is null)
         {
@@ -46,21 +46,21 @@ internal class StockDetailsRepository(AppDbContext context) : IStockDetailsRepos
             existing.Type = details.Type;
             existing.Region = details.Region;
             existing.Currency = details.Currency;
+            existing.Ticker = normalized;
         }
 
         await context.SaveChangesAsync(ct);
         return existing ?? details;
     }
 
-    public async Task<bool> Delete(string ticker, CancellationToken ct = default)
+    public async Task<bool> Delete(string isin, CancellationToken ct = default)
     {
-        var normalized = ticker.Trim().ToUpperInvariant();
-        var stockDetails = await context.StockDetails.FirstOrDefaultAsync(x => x.Ticker == normalized, ct);
+        var stockDetails = await context.StockDetails.FirstOrDefaultAsync(x => x.Isin == isin, ct);
         if (stockDetails is null) return false;
 
         var prices = await context.StockPrices
             .Include(x => x.StockDetails)
-            .Where(x => x.StockDetails!.Ticker == normalized)
+            .Where(x => x.StockDetails!.Isin == isin)
             .ToListAsync(ct);
 
         if (prices.Count > 0)
