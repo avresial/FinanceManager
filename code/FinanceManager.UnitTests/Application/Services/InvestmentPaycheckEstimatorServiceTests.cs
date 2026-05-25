@@ -37,19 +37,24 @@ public class InvestmentPaycheckEstimatorServiceTests
         stockDetailsRepoMock.Setup(x => x.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string ticker, CancellationToken _) => new StockDetails
             {
+                Isin = "US0000000001",
                 Ticker = ticker,
                 Currency = DefaultCurrency.PLN,
                 Name = ticker,
                 Type = "Stock",
                 Region = "US"
             });
+        var isinResolverMock = new Mock<IIsinResolver>();
+        isinResolverMock.Setup(x => x.ResolveAsync("MSFT", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("US5949181045");
         var stockPriceProvider = new StockPriceProvider(
             _stockRepositoryMock.Object,
             new Mock<IAlphaVantageClient>().Object,
             stockDetailsRepoMock.Object,
             new Mock<ICurrencyRepository>().Object,
             _currencyExchangeServiceMock.Object,
-            cache);
+            cache,
+            isinResolverMock.Object);
         _service = new InvestmentPaycheckEstimatorService(_financialAccountRepositoryMock.Object, _financialLabelsRepositoryMock.Object, stockPriceProvider, _bondDetailsRepositoryMock.Object);
     }
 
@@ -102,8 +107,8 @@ public class InvestmentPaycheckEstimatorServiceTests
             }.ToAsyncEnumerable());
 
         _stockRepositoryMock
-            .Setup(x => x.GetThisOrNextOlder("MSFT", It.IsAny<DateTime>()))
-            .ReturnsAsync(new StockPrice { Ticker = "MSFT", Currency = DefaultCurrency.PLN, PricePerUnit = 10m, Date = asOfDate });
+            .Setup(x => x.GetThisOrNextOlder("US5949181045", It.IsAny<DateTime>()))
+            .ReturnsAsync(new StockPrice { Isin = "US5949181045", Currency = DefaultCurrency.PLN, PricePerUnit = 10m, Date = asOfDate });
 
         var result = await _service.GetEstimate(userId, DefaultCurrency.PLN, asOfDate, 0.05m, 3);
 

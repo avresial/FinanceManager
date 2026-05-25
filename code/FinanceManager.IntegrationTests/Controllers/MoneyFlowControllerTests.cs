@@ -269,6 +269,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
 
         var stockDetails = new StockDetails
         {
+            Isin = "US0378331005",
             Ticker = "AAPL",
             Name = "Apple Inc.",
             Type = "Stock",
@@ -514,6 +515,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
 
         var stockDetails = new StockDetails
         {
+            Isin = "US7372711613",
             Ticker = "RNGM",
             Name = "Range Match Inc.",
             Type = "Stock",
