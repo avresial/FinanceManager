@@ -30,7 +30,10 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return NotFound("Currency not found.");
 
-        var stockPrice = await stockPriceRepository.Add(ticker.ToUpper(), pricePerUnit, currency, date);
+        var isin = await isinResolver.ResolveAsync(ticker.ToUpper(), ct: cancellationToken);
+        if (isin is null) return BadRequest("Could not resolve ticker to ISIN");
+
+        var stockPrice = await stockPriceRepository.Add(isin, pricePerUnit, currency, date);
         return Ok(stockPrice);
     }
 
@@ -47,7 +50,10 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return NotFound("Currency not found.");
 
-        var stockPrice = await stockPriceRepository.Update(ticker.ToUpper(), pricePerUnit, currency, date);
+        var isin = await isinResolver.ResolveAsync(ticker.ToUpper(), ct: cancellationToken);
+        if (isin is null) return BadRequest("Could not resolve ticker to ISIN");
+
+        var stockPrice = await stockPriceRepository.Update(isin, pricePerUnit, currency, date);
         return Ok(stockPrice);
     }
 
@@ -60,20 +66,21 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
         if (string.IsNullOrWhiteSpace(ticker) || date == default)
             return BadRequest("Invalid input parameters.");
 
-        var normalizedTicker = ticker.Trim().ToUpperInvariant();
-
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null)
             return NotFound("Currency not found.");
 
-        var stockPrice = await stockPriceRepository.GetThisOrNextOlder(normalizedTicker, date);
+        var isin = await isinResolver.ResolveAsync(ticker.Trim().ToUpperInvariant(), ct: cancellationToken);
+        if (isin is null) return BadRequest("Could not resolve ticker to ISIN");
+
+        var stockPrice = await stockPriceRepository.GetThisOrNextOlder(isin, date);
         if (stockPrice is null)
         {
-            var fetchedPrice = await stockPriceProvider.GetPricePerUnitAsync(normalizedTicker, currency, date);
+            var fetchedPrice = await stockPriceProvider.GetPricePerUnitAsync(ticker, currency, date);
             if (fetchedPrice <= 0)
                 return NotFound("Stock price not found.");
 
-            stockPrice = await stockPriceRepository.GetThisOrNextOlder(normalizedTicker, date);
+            stockPrice = await stockPriceRepository.GetThisOrNextOlder(isin, date);
             if (stockPrice is null)
             {
                 return NotFound("Stock price not found in database.");
