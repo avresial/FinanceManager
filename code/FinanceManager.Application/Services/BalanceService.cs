@@ -35,9 +35,12 @@ public class BalanceService(IEnumerable<IBalanceServiceTyped> typedBalanceServic
     {
         Dictionary<DateTime, decimal> aggregated = [];
 
-        foreach (var service in typedBalanceServices)
+        var tasks = typedBalanceServices.Select(getter);
+        var results = await Task.WhenAll(tasks);
+
+        foreach (var serviceResults in results)
         {
-            foreach (var point in await getter(service))
+            foreach (var point in serviceResults)
             {
                 if (aggregated.ContainsKey(point.DateTime))
                     aggregated[point.DateTime] += point.Value;

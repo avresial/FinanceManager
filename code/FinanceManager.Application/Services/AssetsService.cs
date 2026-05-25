@@ -35,9 +35,12 @@ public class AssetsService(IEnumerable<IAssetsServiceTyped> typedAssetServices) 
 
         Dictionary<DateTime, decimal> prices = [];
 
-        foreach (var service in typedAssetServices)
+        var tasks = typedAssetServices.Select(s => s.GetAssetsTimeSeries(userId, currency, start, end));
+        var results = await Task.WhenAll(tasks);
+
+        foreach (var serviceResults in results)
         {
-            foreach (var result in await service.GetAssetsTimeSeries(userId, currency, start, end))
+            foreach (var result in serviceResults)
             {
                 if (prices.ContainsKey(result.DateTime))
                     prices[result.DateTime] += result.Value;
@@ -52,9 +55,13 @@ public class AssetsService(IEnumerable<IAssetsServiceTyped> typedAssetServices) 
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         Dictionary<DateTime, decimal> prices = [];
-        foreach (var service in typedAssetServices)
+
+        var tasks = typedAssetServices.Select(s => s.GetAssetsTimeSeries(userId, currency, start, end, investmentType));
+        var results = await Task.WhenAll(tasks);
+
+        foreach (var serviceResults in results)
         {
-            foreach (var result in await service.GetAssetsTimeSeries(userId, currency, start, end, investmentType))
+            foreach (var result in serviceResults)
             {
                 if (prices.ContainsKey(result.DateTime))
                     prices[result.DateTime] += result.Value;
@@ -68,20 +75,26 @@ public class AssetsService(IEnumerable<IAssetsServiceTyped> typedAssetServices) 
 
     public async Task<List<UnrealizedGainLossAccountResult>> GetUnrealizedGainLossPerAccount(int userId, Currency currency, DateTime asOfDate)
     {
-        List<UnrealizedGainLossAccountResult> results = [];
-        foreach (var service in typedAssetServices)
-            results.AddRange(await service.GetUnrealizedGainLossPerAccount(userId, currency, asOfDate));
+        var tasks = typedAssetServices.Select(s => s.GetUnrealizedGainLossPerAccount(userId, currency, asOfDate));
+        var results = await Task.WhenAll(tasks);
 
-        return results.OrderByDescending(x => x.UnrealizedGainLoss).ToList();
+        var aggregated = new List<UnrealizedGainLossAccountResult>();
+        foreach (var serviceResults in results)
+            aggregated.AddRange(serviceResults);
+
+        return aggregated.OrderByDescending(x => x.UnrealizedGainLoss).ToList();
     }
 
     public async Task<List<UnrealizedGainLossInstrumentResult>> GetUnrealizedGainLossPerInstrument(int userId, Currency currency, DateTime asOfDate)
     {
-        List<UnrealizedGainLossInstrumentResult> results = [];
-        foreach (var service in typedAssetServices)
-            results.AddRange(await service.GetUnrealizedGainLossPerInstrument(userId, currency, asOfDate));
+        var tasks = typedAssetServices.Select(s => s.GetUnrealizedGainLossPerInstrument(userId, currency, asOfDate));
+        var results = await Task.WhenAll(tasks);
 
-        return results.OrderByDescending(x => x.UnrealizedGainLoss).ToList();
+        var aggregated = new List<UnrealizedGainLossInstrumentResult>();
+        foreach (var serviceResults in results)
+            aggregated.AddRange(serviceResults);
+
+        return aggregated.OrderByDescending(x => x.UnrealizedGainLoss).ToList();
     }
 
     private static List<TimeSeriesModel> BucketToClosingBalanceSeries(Dictionary<DateTime, decimal> data, DateTime start, DateTime end)
