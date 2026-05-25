@@ -105,7 +105,7 @@ internal class StockBalanceService(IFinancialAccountRepository financialAccountR
                 if (entry.PostingDate.Date < start.Date || entry.PostingDate.Date > end.Date) continue;
                 if (!predicate(entry)) continue;
 
-                var pricePerUnit = await stockPriceProvider.GetPricePerUnitAsync(entry.Ticker, currency, entry.PostingDate);
+                var pricePerUnit = await stockPriceProvider.GetPricePerUnitAsync(entry.Isin, currency, entry.PostingDate);
                 if (!result.ContainsKey(entry.PostingDate.Date)) result[entry.PostingDate.Date] = 0;
 
                 result[entry.PostingDate.Date] += entry.ValueChange * pricePerUnit;

@@ -14,7 +14,8 @@ public class StockPriceProvider(
     IStockDetailsRepository stockDetailsRepository,
     ICurrencyRepository currencyRepository,
     ICurrencyExchangeService currencyExchangeService,
-    IMemoryCache cache) : IStockPriceProvider
+    IMemoryCache cache,
+    IIsinResolver isinResolver) : IStockPriceProvider
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> _detailsLocks = new();
@@ -24,18 +25,20 @@ public class StockPriceProvider(
         if (string.IsNullOrWhiteSpace(ticker)) throw new ArgumentException("{ticker}", nameof(ticker));
 
         var normalizedTicker = ticker.Trim().ToUpperInvariant();
+        var isin = await isinResolver.ResolveAsync(normalizedTicker, ct: CancellationToken.None);
+        if (isin is null) return 0m;
 
-        var key = $"STOCK_PRICE_{targetCurrency.ShortName}_{asOf:yyyyMMdd}_{normalizedTicker}";
+        var key = $"STOCK_PRICE_{targetCurrency.ShortName}_{asOf:yyyyMMdd}_{isin}";
         if (cache.TryGetValue(key, out decimal cached)) return cached;
 
-        var stockDetails = await stockDetailsRepository.Get(normalizedTicker) ??
-                   await ResolveStockDetailsAsync(normalizedTicker, CancellationToken.None);
+        var stockDetails = await stockDetailsRepository.Get(isin) ??
+                   await ResolveStockDetailsAsync(normalizedTicker, isin, CancellationToken.None);
 
         if (stockDetails is null)
             return 0m;
 
         StockPrice? stockPrice = null;
-        var originalKey = $"STOCK_PRICE_{stockDetails.Currency.ShortName}_{asOf:yyyyMMdd}_{normalizedTicker}";
+        var originalKey = $"STOCK_PRICE_{stockDetails.Currency.ShortName}_{asOf:yyyyMMdd}_{isin}";
         if (cache.TryGetValue(originalKey, out StockPrice? cachedOriginal))
             stockPrice = cachedOriginal;
 
@@ -51,10 +54,10 @@ public class StockPriceProvider(
                 }
                 else
                 {
-                    stockPrice = await stockRepository.GetThisOrNextOlder(normalizedTicker, asOf);
+                    stockPrice = await stockRepository.GetThisOrNextOlder(isin, asOf);
                     if (stockPrice is null)
                     {
-                        var fetched = await TryFetchFromApiAsync(normalizedTicker, asOf.AddDays(-7), asOf, CancellationToken.None);
+                        var fetched = await TryFetchFromApiAsync(normalizedTicker, isin, asOf.AddDays(-7), asOf, CancellationToken.None);
                         stockPrice = fetched?.Where(x => x.Date.Date <= asOf.Date).OrderByDescending(x => x.Date).FirstOrDefault();
                     }
 
@@ -89,22 +92,25 @@ public class StockPriceProvider(
         if (end < start) return [];
 
         var normalizedTicker = ticker.Trim().ToUpperInvariant();
+        var isin = await isinResolver.ResolveAsync(normalizedTicker, ct: ct);
+        if (isin is null) return [];
+
         IReadOnlyList<StockPrice> existing = [];
 
         if (start.Date == end.Date)
         {
-            var price = await stockRepository.Get(normalizedTicker, start);
+            var price = await stockRepository.Get(isin, start);
             if (price is not null)
                 return [price];
         }
         else
         {
-            existing = await stockRepository.GetRange(normalizedTicker, start, end);
+            existing = await stockRepository.GetRange(isin, start, end);
         }
 
         if (NeedsFetch(existing, start, end))
         {
-            var fetched = await TryFetchFromApiAsync(normalizedTicker, start, end, ct);
+            var fetched = await TryFetchFromApiAsync(normalizedTicker, isin, start, end, ct);
             if (fetched.Count > 0)
                 existing = MergeByDate(existing, fetched);
         }
@@ -125,13 +131,15 @@ public class StockPriceProvider(
         var startDate = start.Date;
         var endDate = end.Date;
         var normalizedTicker = ticker.Trim().ToUpperInvariant();
+        var isin = await isinResolver.ResolveAsync(normalizedTicker, ct: ct);
+        if (isin is null) return new Dictionary<DateTime, decimal>();
 
         var inRangePrices = await GetPricesAsync(normalizedTicker, startDate, endDate, ct);
         var latestByDate = inRangePrices
             .GroupBy(x => x.Date.Date)
             .ToDictionary(x => x.Key, x => x.OrderByDescending(p => p.Date).First());
 
-        var seedPrice = await stockRepository.GetThisOrNextOlder(normalizedTicker, startDate);
+        var seedPrice = await stockRepository.GetThisOrNextOlder(isin, startDate);
         var series = new Dictionary<DateTime, decimal>((endDate - startDate).Days + 1);
         StockPrice? latestKnownPrice = seedPrice;
 
@@ -153,31 +161,31 @@ public class StockPriceProvider(
         return series;
     }
 
-    private async Task<IReadOnlyList<StockPrice>> TryFetchFromApiAsync(string ticker, DateTime start, DateTime end, CancellationToken ct)
+    private async Task<IReadOnlyList<StockPrice>> TryFetchFromApiAsync(string ticker, string isin, DateTime start, DateTime end, CancellationToken ct)
     {
-        var fetchKey = $"STOCK_AV_FETCH_{ticker}_{start:yyyyMMdd}_{end:yyyyMMdd}";
+        var fetchKey = $"STOCK_AV_FETCH_{isin}_{start:yyyyMMdd}_{end:yyyyMMdd}";
         var fetchLock = _locks.GetOrAdd(fetchKey, _ => new SemaphoreSlim(1, 1));
         await fetchLock.WaitAsync(ct);
         try
         {
             if (start.Date == end.Date)
             {
-                var existingSingle = await stockRepository.Get(ticker, start);
+                var existingSingle = await stockRepository.Get(isin, start);
                 if (existingSingle is not null)
                     return [existingSingle];
             }
             else
             {
-                var existingRange = await stockRepository.GetRange(ticker, start, end);
+                var existingRange = await stockRepository.GetRange(isin, start, end);
                 if (existingRange is not null && !NeedsFetch(existingRange, start, end))
                     return existingRange;
             }
 
-            var details = await ResolveStockDetailsAsync(ticker, ct);
+            var details = await ResolveStockDetailsAsync(ticker, isin, ct);
             if (details is null)
                 return [];
 
-            var apiPrices = await apiClient.GetDailySeries(ticker, start, end, details.Currency, ct);
+            var apiPrices = await apiClient.GetDailySeries(ticker, isin, start, end, details.Currency, ct);
             if (apiPrices is not null && apiPrices.Count > 0)
                 await stockRepository.Add(apiPrices);
 
@@ -189,17 +197,17 @@ public class StockPriceProvider(
         }
     }
 
-    private async Task<StockDetails> ResolveStockDetailsAsync(string ticker, CancellationToken ct)
+    private async Task<StockDetails> ResolveStockDetailsAsync(string ticker, string isin, CancellationToken ct)
     {
-        var existing = await stockDetailsRepository.Get(ticker, ct);
+        var existing = await stockDetailsRepository.Get(isin, ct);
         if (existing is not null && !NeedsEnrichment(existing))
             return existing;
 
-        var detailsLock = _detailsLocks.GetOrAdd(ticker, _ => new SemaphoreSlim(1, 1));
+        var detailsLock = _detailsLocks.GetOrAdd(isin, _ => new SemaphoreSlim(1, 1));
         await detailsLock.WaitAsync(ct);
         try
         {
-            existing = await stockDetailsRepository.Get(ticker, ct);
+            existing = await stockDetailsRepository.Get(isin, ct);
             if (existing is not null && !NeedsEnrichment(existing))
                 return existing;
 
@@ -215,6 +223,7 @@ public class StockPriceProvider(
 
             var details = new StockDetails
             {
+                Isin = isin,
                 Ticker = ticker,
                 Name = selected?.Name ?? existing?.Name ?? string.Empty,
                 Type = selected?.Type ?? existing?.Type ?? string.Empty,

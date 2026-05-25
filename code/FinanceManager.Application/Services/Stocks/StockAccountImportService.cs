@@ -1,6 +1,7 @@
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Logging;
@@ -10,6 +11,7 @@ namespace FinanceManager.Application.Services.Stocks;
 public class StockAccountImportService(
     IAccountRepository<StockAccount> stockAccountRepository,
     IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository,
+    IStockDetailsRepository stockDetailsRepository,
     IUserPlanVerifier userPlanVerifier,
     ILogger<StockAccountImportService> logger) : IStockAccountImportService
 {
@@ -63,7 +65,13 @@ public class StockAccountImportService(
                     if (import.PostingDate.Kind != DateTimeKind.Utc)
                         throw new Exception($"Date kind of this entry posting date: {import.PostingDate}, value change: {import.ValueChange} is not UTC - {import.PostingDate.Kind}");
 
-                    var newEntry = new StockAccountEntry(accountId, 0, ToSecond(import.PostingDate), import.ValueChange, import.ValueChange, import.Ticker, InvestmentType.Stock);
+                    var stockDetails = await stockDetailsRepository.Get(import.Isin);
+                    var ticker = stockDetails?.Ticker ?? string.Empty;
+
+                    var newEntry = new StockAccountEntry(accountId, 0, ToSecond(import.PostingDate), import.ValueChange, import.ValueChange, import.Isin, InvestmentType.Stock)
+                    {
+                        Ticker = ticker
+                    };
                     if (await stockAccountEntryRepository.Add(newEntry, recalculate: false))
                     {
                         imported++;
@@ -119,7 +127,7 @@ public class StockAccountImportService(
         var entriesToRecalc = await stockAccountEntryRepository.Get(accountId, minDay.AddDays(-1), maxDay.AddDays(1))
             .ToListAsync();
 
-        foreach (var tickerGroup in entriesToRecalc.GroupBy(e => e.Ticker, StringComparer.OrdinalIgnoreCase))
+        foreach (var tickerGroup in entriesToRecalc.GroupBy(e => e.Isin, StringComparer.OrdinalIgnoreCase))
         {
             var earliest = tickerGroup.OrderBy(e => e.PostingDate).ThenBy(e => e.EntryId).FirstOrDefault();
             if (earliest is null) continue;
@@ -136,11 +144,11 @@ public class StockAccountImportService(
 
     private static IEnumerable<(StockEntryImport Import, StockAccountEntry Existing)> GetExactMatches(List<StockEntryImport> imports, List<StockAccountEntry> existing)
     {
-        foreach (var import in imports.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, Ticker: x.Ticker)))
+        foreach (var import in imports.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, Isin: x.Isin)))
         {
             var sameExisting = existing
                 .Where(e => ToSecond(e.PostingDate) == import.Key.Date && e.ValueChange == import.Key.ValueChange &&
-                            string.Equals(e.Ticker, import.Key.Ticker, StringComparison.OrdinalIgnoreCase))
+                            string.Equals(e.Isin, import.Key.Isin, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             if (sameExisting.Count != 0 && import.Any())
@@ -154,11 +162,11 @@ public class StockAccountImportService(
 
     private static IEnumerable<StockImportConflict> GetImportsWhichAreMissingFromExisting(int accountId, IEnumerable<StockEntryImport> imports, IEnumerable<StockAccountEntry> existing)
     {
-        foreach (var import in imports.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, Ticker: x.Ticker)))
+        foreach (var import in imports.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, Isin: x.Isin)))
         {
             var importItemList = import.ToList();
             var sameExistingCount = existing.Count(e => ToSecond(e.PostingDate) == import.Key.Date && e.ValueChange == import.Key.ValueChange &&
-                string.Equals(e.Ticker, import.Key.Ticker, StringComparison.OrdinalIgnoreCase));
+                string.Equals(e.Isin, import.Key.Isin, StringComparison.OrdinalIgnoreCase));
 
             if (importItemList.Count > sameExistingCount && importItemList.Count != 0)
             {
@@ -170,11 +178,11 @@ public class StockAccountImportService(
 
     private static IEnumerable<StockImportConflict> GetExistingWhichAreMissingFromImports(int accountId, IEnumerable<StockAccountEntry> existing, IEnumerable<StockEntryImport> imports)
     {
-        foreach (var existingItem in existing.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, Ticker: x.Ticker)))
+        foreach (var existingItem in existing.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, Isin: x.Isin)))
         {
             var existingItemList = existingItem.ToList();
             var sameImportsCount = imports.Count(e => ToSecond(e.PostingDate) == existingItem.Key.Date && e.ValueChange == existingItem.Key.ValueChange &&
-                string.Equals(e.Ticker, existingItem.Key.Ticker, StringComparison.OrdinalIgnoreCase));
+                string.Equals(e.Isin, existingItem.Key.Isin, StringComparison.OrdinalIgnoreCase));
 
             if (existingItemList.Count <= sameImportsCount || existingItemList.Count == 0)
                 continue;

@@ -34,6 +34,6 @@ public class ResolvedStockImportConflict
     {
         return ImportData is null
             ? throw new ArgumentNullException($"{nameof(ImportData)} is null")
-            : new StockAccountEntry(AccountId, 0, ImportData.PostingDate, ImportData.ValueChange, ImportData.ValueChange, ImportData.Ticker, InvestmentType.Stock);
+            : new StockAccountEntry(AccountId, 0, ImportData.PostingDate, ImportData.ValueChange, ImportData.ValueChange, ImportData.Isin, InvestmentType.Stock);
     }
 }

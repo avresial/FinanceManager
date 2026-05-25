@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Application.Options;
+using FinanceManager.Application.Services;
 using FinanceManager.Application.Services.Ai;
 using FinanceManager.Application.Services.FinancialInsights;
 using FinanceManager.Application.Services.Stocks;
@@ -32,11 +33,13 @@ public static class ServiceCollectionExtension
     public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
     {
         services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
+        services.AddHttpClient<IIsinResolver, OpenFigiClient>();
         services.AddHttpClient<ICurrencyExchangeRateProvider, FawazAhmedCurrencyApiClient>();
 
         services.AddAI();
 
         services
+                .AddScoped<IDataBackfillService, DataBackfillService>()
                 .AddScoped<IStockPriceRepository, StockPriceRepository>()
                 .AddScoped<IStockDetailsRepository, StockDetailsRepository>()
                 .AddScoped<IFinancialAccountRepository, AccountRepository>()

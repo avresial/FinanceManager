@@ -162,7 +162,7 @@ public partial class StockAccountDetailsPageContent : ComponentBase
         foreach (var ticker in _stocks)
         {
             var prices = await priceTasksByTicker[ticker];
-            Account.Entries.Where(x => x.Ticker.Equals(ticker, StringComparison.OrdinalIgnoreCase)).ToList().ForEach(entry =>
+            Account.Entries.Where(x => x.Isin.Equals(ticker, StringComparison.OrdinalIgnoreCase)).ToList().ForEach(entry =>
             {
                 var price = GetLatestPriceOnOrBefore(prices, entry.PostingDate.Date);
                 if (price is not null)

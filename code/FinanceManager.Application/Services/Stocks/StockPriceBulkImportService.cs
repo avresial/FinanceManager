@@ -89,7 +89,7 @@ internal sealed class StockPriceBulkImportService(
 
             pricesToUpsert.Add(new StockPrice
             {
-                Ticker = ticker,
+                Isin = stockDetailsForTicker.Isin,
                 Date = parsedDate,
                 PricePerUnit = closePrice,
                 Currency = stockDetailsForTicker.Currency

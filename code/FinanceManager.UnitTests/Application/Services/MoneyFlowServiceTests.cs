@@ -51,14 +51,14 @@ public class MoneyFlowServiceTests
 
         _investmentAccountAccounts = [investmentAccount1];
 
-        _stockRepository.Setup(x => x.GetThisOrNextOlder("TESTSTOCK1", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "TESTSTOCK1", PricePerUnit = 2 });
-        _stockRepository.Setup(x => x.GetThisOrNextOlder("TESTSTOCK2", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "TESTSTOCK2", PricePerUnit = 4 });
-        _stockRepository.Setup(x => x.Get("TESTSTOCK1", It.IsAny<DateTime>()))
-                       .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "TESTSTOCK1", PricePerUnit = 2 });
-        _stockRepository.Setup(x => x.Get("TESTSTOCK2", It.IsAny<DateTime>()))
-                        .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "TESTSTOCK2", PricePerUnit = 4 });
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("US0000000002", It.IsAny<DateTime>()))
+                        .ReturnsAsync(new StockPrice() { Isin = "US0000000002", Currency = DefaultCurrency.PLN, PricePerUnit = 2 });
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("US0000000003", It.IsAny<DateTime>()))
+                        .ReturnsAsync(new StockPrice() { Isin = "US0000000003", Currency = DefaultCurrency.PLN, PricePerUnit = 4 });
+        _stockRepository.Setup(x => x.Get("US0000000002", It.IsAny<DateTime>()))
+                       .ReturnsAsync(new StockPrice() { Isin = "US0000000002", Currency = DefaultCurrency.PLN, PricePerUnit = 2 });
+        _stockRepository.Setup(x => x.Get("US0000000003", It.IsAny<DateTime>()))
+                        .ReturnsAsync(new StockPrice() { Isin = "US0000000003", Currency = DefaultCurrency.PLN, PricePerUnit = 4 });
         _stockRepository.Setup(x => x.GetRange(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                         .ReturnsAsync((IReadOnlyList<StockPrice>)[]);
 
@@ -69,19 +69,38 @@ public class MoneyFlowServiceTests
         stockDetailsRepoMock.Setup(x => x.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string ticker, CancellationToken _) => new StockDetails
             {
+                Isin = "US0000000001",
                 Ticker = ticker,
                 Currency = DefaultCurrency.PLN,
                 Name = ticker,
                 Type = "Stock",
                 Region = "US"
             });
+        var isinResolverMock = new Mock<IIsinResolver>();
+        isinResolverMock.Setup(x => x.ResolveAsync("TESTSTOCK1", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("US0000000002");
+        isinResolverMock.Setup(x => x.ResolveAsync("TESTSTOCK2", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("US0000000003");
+        isinResolverMock.Setup(x => x.ResolveAsync("MSFT", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("US5949181045");
+        isinResolverMock.Setup(x => x.ResolveAsync("AAPL", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("US0378331005");
+        isinResolverMock.Setup(x => x.ResolveAsync("GOOGL", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("US02079K3059");
+        isinResolverMock.Setup(x => x.ResolveAsync("MEGA", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("US5949181045");
+        isinResolverMock.Setup(x => x.ResolveAsync("UNKNOWN", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+        isinResolverMock.Setup(x => x.ResolveAsync("TICKER", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("US0000000001");
         var stockPriceProvider = new StockPriceProvider(
             _stockRepository.Object,
             new Mock<IAlphaVantageClient>().Object,
             stockDetailsRepoMock.Object,
             new Mock<ICurrencyRepository>().Object,
             _currencyExchangeService.Object,
-            cache);
+            cache,
+            isinResolverMock.Object);
 
         _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>())).Returns(AsyncEnumerable.Empty<BondDetails>());
 
@@ -192,8 +211,8 @@ public class MoneyFlowServiceTests
         stockAccount.Add(new StockAccountEntry(1, 1, _startDate, 10, 10, "TICKER", InvestmentType.Stock), false);
 
         // Setup mock for TICKER
-        _stockRepository.Setup(x => x.GetThisOrNextOlder("TICKER", It.IsAny<DateTime>()))
-            .ReturnsAsync(new StockPrice() { Currency = DefaultCurrency.PLN, Ticker = "TICKER", PricePerUnit = 1m });
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("US0000000001", It.IsAny<DateTime>()))
+            .ReturnsAsync(new StockPrice() { Isin = "US0000000001", Currency = DefaultCurrency.PLN, PricePerUnit = 1m });
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(new[] { currencyAccount }.ToAsyncEnumerable());
@@ -237,8 +256,8 @@ public class MoneyFlowServiceTests
         _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .Returns(new[] { CreateBondDetails(1, date) }.ToAsyncEnumerable());
 
-        _stockRepository.Setup(x => x.GetThisOrNextOlder("MSFT", It.IsAny<DateTime>()))
-            .ReturnsAsync(new StockPrice { Currency = DefaultCurrency.PLN, Ticker = "MSFT", PricePerUnit = 100m });
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("US5949181045", It.IsAny<DateTime>()))
+            .ReturnsAsync(new StockPrice { Isin = "US5949181045", Currency = DefaultCurrency.PLN, PricePerUnit = 100m });
 
         // Act
         var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
@@ -355,8 +374,8 @@ public class MoneyFlowServiceTests
         _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .Returns(new[] { CreateBondDetails(1, date) }.ToAsyncEnumerable());
 
-        _stockRepository.Setup(x => x.GetThisOrNextOlder("MEGA", It.IsAny<DateTime>()))
-            .ReturnsAsync(new StockPrice { Currency = DefaultCurrency.PLN, Ticker = "MEGA", PricePerUnit = 1.11m });
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("US5949181045", It.IsAny<DateTime>()))
+            .ReturnsAsync(new StockPrice { Isin = "US5949181045", Currency = DefaultCurrency.PLN, PricePerUnit = 1.11m });
 
         // Act
         var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
@@ -386,12 +405,12 @@ public class MoneyFlowServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(AsyncEnumerable.Empty<BondAccount>());
 
-        _stockRepository.Setup(x => x.GetThisOrNextOlder("AAPL", It.IsAny<DateTime>()))
-            .ReturnsAsync(new StockPrice { Currency = DefaultCurrency.PLN, Ticker = "AAPL", PricePerUnit = 150m });
-        _stockRepository.Setup(x => x.GetThisOrNextOlder("GOOGL", It.IsAny<DateTime>()))
-            .ReturnsAsync(new StockPrice { Currency = DefaultCurrency.PLN, Ticker = "GOOGL", PricePerUnit = 100m });
-        _stockRepository.Setup(x => x.GetThisOrNextOlder("MSFT", It.IsAny<DateTime>()))
-            .ReturnsAsync(new StockPrice { Currency = DefaultCurrency.PLN, Ticker = "MSFT", PricePerUnit = 200m });
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("US0378331005", It.IsAny<DateTime>()))
+            .ReturnsAsync(new StockPrice { Isin = "US0378331005", Currency = DefaultCurrency.PLN, PricePerUnit = 150m });
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("US02079K3059", It.IsAny<DateTime>()))
+            .ReturnsAsync(new StockPrice { Isin = "US02079K3059", Currency = DefaultCurrency.PLN, PricePerUnit = 100m });
+        _stockRepository.Setup(x => x.GetThisOrNextOlder("US5949181045", It.IsAny<DateTime>()))
+            .ReturnsAsync(new StockPrice { Isin = "US5949181045", Currency = DefaultCurrency.PLN, PricePerUnit = 200m });
 
         // Act
         var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);

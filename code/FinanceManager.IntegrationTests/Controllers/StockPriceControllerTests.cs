@@ -54,6 +54,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         {
             stockDetails = new StockDetails
             {
+                Isin = "US0378331005",
                 Ticker = ticker,
                 Name = "Test",
                 Type = "Stock",
@@ -114,7 +115,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         var result = await new StockPriceHttpClient(Client, null!).GetStockPrice("AAPL", 0, DateTime.UtcNow);
 
         Assert.NotNull(result);
-        Assert.Equal("AAPL", result.Ticker);
+        Assert.Equal("US0378331005", result.Isin);
         Assert.Equal(100, result.PricePerUnit);
     }
 
