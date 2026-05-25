@@ -42,7 +42,7 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
         logger.LogTrace("Seeding guest demo data for user {UserId}.", userId);
         if (!await currencyAccountRepository.GetAvailableAccounts(userId).AnyAsync())
         {
-            var labels = await CurrencyAccountSeeder.GetRandomLabels(financialLabelsRepository).ToListAsync();
+            var labels = await CurrencyAccountSeeder.GetSeedableLabels(financialLabelsRepository);
             logger.LogTrace("Seeding currency accounts.");
             await accountRepository.AddAccount(userId, AccountLabel.Cash, labels, start, end);
 

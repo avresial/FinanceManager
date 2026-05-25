@@ -30,10 +30,13 @@
 
             @if (_explanations.Count > 0)
             {
-                <div class="d-flex flex-wrap justify-center gap-2 mt-2" style="width:100%;">
+                <div class="d-flex flex-column gap-1 mt-3" style="width:100%;">
                     @foreach (var explanation in _explanations)
                     {
-                        <MudChip T="string" Size="MudBlazor.Size.Small" Variant="Variant.Outlined" Color="@_bandColor">@explanation</MudChip>
+                        <div class="d-flex align-start gap-2">
+                            <MudIcon Icon="@Icons.Material.Outlined.Info" Color="@_bandColor" Size="MudBlazor.Size.Small" />
+                            <MudText Typo="Typo.caption" Class="text-muted" Style="line-height:1.3;">@explanation</MudText>
+                        </div>
                     }
                 </div>
             }
