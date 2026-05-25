@@ -85,8 +85,11 @@ public class StockEntryController(
 
         if (entryToUpdate is null) return NotFound();
 
-        entryToUpdate.Update(new(updateCommand.AccountId, updateCommand.EntryId, updateCommand.PostingDate, updateCommand.Value,
-            updateCommand.ValueChange, updateCommand.Ticker, updateCommand.InvestmentType));
+        entryToUpdate.Update(new StockAccountEntry(updateCommand.AccountId, updateCommand.EntryId, updateCommand.PostingDate, updateCommand.Value,
+            updateCommand.ValueChange, entryToUpdate.Isin, updateCommand.InvestmentType)
+        {
+            Ticker = updateCommand.Ticker
+        });
 
         return Ok(await stockAccountEntryRepository.Update(entryToUpdate));
     }

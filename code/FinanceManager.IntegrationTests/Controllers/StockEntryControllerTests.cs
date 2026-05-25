@@ -58,9 +58,9 @@ public class StockEntryControllerTests(OptionsProvider optionsProvider) : Contro
         await SeedAccount();
         if (_testDatabase is null) return;
 
-        var entry1 = new StockAccountEntry(_testAccountId, 1, DateTime.UtcNow.Date.AddDays(-10), 10000m, 10000m, "MSFT", InvestmentType.Stock);
-        var entry2 = new StockAccountEntry(_testAccountId, 2, DateTime.UtcNow.Date.AddDays(-5), 10500m, 500m, "MSFT", InvestmentType.Stock);
-        var entry3 = new StockAccountEntry(_testAccountId, 3, DateTime.UtcNow.Date.AddDays(-2), 11000m, 500m, "MSFT", InvestmentType.Stock);
+        var entry1 = new StockAccountEntry(_testAccountId, 1, DateTime.UtcNow.Date.AddDays(-10), 10000m, 10000m, "US5949181045", InvestmentType.Stock) { Ticker = "MSFT" };
+        var entry2 = new StockAccountEntry(_testAccountId, 2, DateTime.UtcNow.Date.AddDays(-5), 10500m, 500m, "US5949181045", InvestmentType.Stock) { Ticker = "MSFT" };
+        var entry3 = new StockAccountEntry(_testAccountId, 3, DateTime.UtcNow.Date.AddDays(-2), 11000m, 500m, "US5949181045", InvestmentType.Stock) { Ticker = "MSFT" };
 
         _testDatabase.Context.StockEntries.AddRange(entry1, entry2, entry3);
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -105,7 +105,7 @@ public class StockEntryControllerTests(OptionsProvider optionsProvider) : Contro
         await SeedAccount();
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new StockEntryHttpClient(Client);
-        var newEntry = new StockAccountEntry(_testAccountId, 0, DateTime.UtcNow.Date, 5000m, 5000m, "GOOGL", InvestmentType.Stock);
+        var newEntry = new StockAccountEntry(_testAccountId, 0, DateTime.UtcNow.Date, 5000m, 5000m, "US02079K3059", InvestmentType.Stock) { Ticker = "GOOGL" };
         var addCmd = new AddStockAccountEntry(newEntry);
 
         // act

@@ -57,7 +57,7 @@ public class StockAccountHttpClient(HttpClient httpClient)
             result.NextYoungerEntries.ToDictionary(x => x.Key, x => x.Value.ToStockAccountEntry());
 
         var entries = result.Entries
-            .Select(x => new StockAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.Ticker, x.InvestmentType))
+            .Select(x => new StockAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.Isin, x.InvestmentType) { Ticker = x.Ticker })
             .OrderByDescending(x => x.PostingDate)
             .ThenByDescending(x => x.EntryId);
 

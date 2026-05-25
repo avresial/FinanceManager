@@ -59,9 +59,9 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
         await SeedAccount();
         if (_testDatabase is null) return;
 
-        var entry1 = new StockAccountEntry(_testAccountId, 1, DateTime.UtcNow.Date.AddDays(-10), 10000m, 10000m, "AAPL", InvestmentType.Stock);
-        var entry2 = new StockAccountEntry(_testAccountId, 2, DateTime.UtcNow.Date.AddDays(-5), 10500m, 500m, "AAPL", InvestmentType.Stock);
-        var entry3 = new StockAccountEntry(_testAccountId, 3, DateTime.UtcNow.Date.AddDays(-2), 11000m, 500m, "AAPL", InvestmentType.Stock);
+        var entry1 = new StockAccountEntry(_testAccountId, 1, DateTime.UtcNow.Date.AddDays(-10), 10000m, 10000m, "US0378331005", InvestmentType.Stock) { Ticker = "AAPL" };
+        var entry2 = new StockAccountEntry(_testAccountId, 2, DateTime.UtcNow.Date.AddDays(-5), 10500m, 500m, "US0378331005", InvestmentType.Stock) { Ticker = "AAPL" };
+        var entry3 = new StockAccountEntry(_testAccountId, 3, DateTime.UtcNow.Date.AddDays(-2), 11000m, 500m, "US0378331005", InvestmentType.Stock) { Ticker = "AAPL" };
 
         _testDatabase.Context.StockEntries.AddRange(entry1, entry2, entry3);
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);

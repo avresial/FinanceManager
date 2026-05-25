@@ -16,8 +16,10 @@ namespace FinanceManager.IntegrationTests.Controllers;
 [Trait("Category", "Integration")]
 public class StockPriceControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
+    private const string _aaplIsin = "US0378331005";
     private TestDatabase? _testDatabase;
     Mock<ICurrencyExchangeService> _currencyExchangeMock = new();
+    Mock<IIsinResolver> _isinResolverMock = new();
 
     protected override void ConfigureServices(IServiceCollection services)
     {
@@ -34,6 +36,15 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
             .ReturnsAsync(1.1m);
 
         services.AddSingleton(_currencyExchangeMock.Object);
+
+        _isinResolverMock.Setup(x => x.ResolveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string ticker, string? _, CancellationToken _) =>
+                string.Equals(ticker?.Trim(), "AAPL", StringComparison.OrdinalIgnoreCase) ? _aaplIsin : null);
+
+        var isinResolverDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IIsinResolver));
+        if (isinResolverDescriptor != null)
+            services.Remove(isinResolverDescriptor);
+        services.AddSingleton(_isinResolverMock.Object);
     }
 
     private async Task SeedWithTestStockPrice(string ticker = "AAPL", decimal price = 100, Currency? currency = null, DateTime date = default)

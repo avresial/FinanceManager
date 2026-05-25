@@ -9,11 +9,9 @@ namespace FinanceManager.Infrastructure.Repositories;
 
 public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
 {
-    public async Task<StockPrice> Add(string ticker, decimal pricePerUnit, Currency currency, DateTime date)
+    public async Task<StockPrice> Add(string isin, decimal pricePerUnit, Currency currency, DateTime date)
     {
-        var stockDetails = await GetOrCreateStockDetails(ticker, currency);
-        if (stockDetails is null)
-            throw new Exception("StockDetails not found for ticker: " + ticker);
+        var stockDetails = await GetOrCreateStockDetails(isin, currency);
 
         StockPriceDto stockPriceDto = new(
             0, // Id is autoincremented, will be set by the database
@@ -133,17 +131,14 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         return true;
     }
 
-    public async Task<StockPrice> Update(string ticker, decimal pricePerUnit, Currency currency, DateTime date)
+    public async Task<StockPrice> Update(string isin, decimal pricePerUnit, Currency currency, DateTime date)
     {
-        var normalizedTicker = ticker.Trim().ToUpperInvariant();
         var stockPrice = await context.StockPrices
             .Include(x => x.StockDetails)
-            .FirstOrDefaultAsync(x => x.StockDetails!.Ticker == normalizedTicker && x.Date.Date == date.Date)
+            .FirstOrDefaultAsync(x => x.StockDetails!.Isin == isin && x.Date.Date == date.Date)
             ?? throw new Exception("Update failed");
 
-        var stockDetails = await GetOrCreateStockDetails(normalizedTicker, currency);
-        if (stockDetails is null)
-            throw new Exception("StockDetails not found");
+        var stockDetails = await GetOrCreateStockDetails(isin, currency);
 
         stockPrice.PricePerUnit = pricePerUnit;
         stockPrice.StockDetails = stockDetails;
@@ -153,10 +148,9 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         return stockPrice.ToStockPrice();
     }
 
-    private async Task<StockDetails?> GetOrCreateStockDetails(string ticker, Currency currency)
+    private async Task<StockDetails> GetOrCreateStockDetails(string isin, Currency currency)
     {
-        var normalized = ticker.Trim().ToUpperInvariant();
-        var existing = await context.StockDetails.Include(x => x.Currency).FirstOrDefaultAsync(x => x.Ticker == normalized);
+        var existing = await context.StockDetails.Include(x => x.Currency).FirstOrDefaultAsync(x => x.Isin == isin);
         if (existing is not null)
         {
             if (existing.Currency.Id != currency.Id)
@@ -164,6 +158,18 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
             return existing;
         }
 
-        return null;
+        var created = new StockDetails
+        {
+            Isin = isin,
+            Ticker = string.Empty,
+            Currency = currency,
+            Name = string.Empty,
+            Type = string.Empty,
+            Region = string.Empty
+        };
+
+        context.StockDetails.Add(created);
+        await context.SaveChangesAsync();
+        return created;
     }
 }
