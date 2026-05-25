@@ -416,17 +416,12 @@ namespace FinanceManager.Api.Migrations
 
             modelBuilder.Entity("FinanceManager.Domain.Entities.Stocks.StockDetails", b =>
                 {
-                    b.Property<string>("Ticker")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                    b.Property<string>("Isin")
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)");
 
                     b.Property<int>("CurrencyId")
                         .HasColumnType("integer");
-
-                    b.Property<string>("Isin")
-                        .IsRequired()
-                        .HasMaxLength(12)
-                        .HasColumnType("character varying(12)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -438,16 +433,21 @@ namespace FinanceManager.Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<string>("Ticker")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.HasKey("Ticker");
+                    b.HasKey("Isin");
 
                     b.HasIndex("CurrencyId");
 
-                    b.HasIndex("Isin");
+                    b.HasIndex("Ticker");
 
                     b.ToTable("StockDetails");
                 });
