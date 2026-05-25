@@ -15,6 +15,7 @@ public partial class DiversificationProxyCard
     private bool _isLoading;
     private DiversificationScore? _score;
     private Color _bandColor = Color.Default;
+    private string _bandStroke = "var(--mud-palette-text-secondary)";
     private List<string> _explanations = [];
 
     [Parameter] public string Height { get; set; } = "300px";
@@ -48,6 +49,12 @@ public partial class DiversificationProxyCard
                 "Broad" => Color.Success,
                 "Moderate" => Color.Warning,
                 _ => Color.Error
+            };
+            _bandStroke = _score?.Band switch
+            {
+                "Broad" => "var(--mud-palette-success)",
+                "Moderate" => "var(--mud-palette-warning)",
+                _ => "var(--mud-palette-error)"
             };
             _explanations = _score is null ? [] : BuildExplanations(_score);
         }

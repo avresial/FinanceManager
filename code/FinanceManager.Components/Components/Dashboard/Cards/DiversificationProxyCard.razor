@@ -1,51 +1,63 @@
-<MudCard Outlined Class="d-flex flex-nowrap" Style="@($"height:{Height};")">
-    <MudPaper Class="flex-grow-0 p-3" Elevation="0">
+<MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
+    <MudPaper Class="pa-3 pb-0" Elevation="0">
         <div class="d-flex align-center gap-1">
             <MudText Typo="Typo.h5">Diversification proxy</MudText>
             <MudTooltip Text="Based on number of asset classes and unique holdings; not investment advice.">
                 <MudIconButton Icon="@Icons.Material.Filled.Info" Size="Size.Small" AriaLabel="Diversification proxy information" />
             </MudTooltip>
         </div>
-        @if (!_isLoading && _score is not null)
-        {
-            <MudText Typo="Typo.h6" Class="mb-2 text-muted">@_score.Band</MudText>
-            @if (_explanations.Count > 0)
-            {
-                <ul class="pl-4 my-0">
-                    @foreach (var explanation in _explanations)
-                    {
-                        <li>
-                            <MudText Typo="Typo.caption" Class="text-muted">@explanation</MudText>
-                        </li>
-                    }
-                </ul>
-            }
-        }
     </MudPaper>
 
-    <MudPaper Class="flex-grow-1 overflow-hidden d-flex align-center justify-center" Elevation="0">
+    <MudPaper Class="flex-grow-1 d-flex flex-column align-center justify-center pa-3 pt-0" Elevation="0">
         @if (_isLoading)
         {
-            <div style="height:100%">
-                <ChartSpinner MaxHeight=@Height />
-            </div>
+            <ChartSpinner MaxHeight=@Height />
         }
         else if (_score is not null)
         {
-            <div class="d-flex flex-column align-center justify-center gap-2 pa-4" style="width:100%;">
-                <MudText Typo="Typo.h2" Align="Align.Center">@_score.Score<MudText Typo="Typo.h5" Inline Style="opacity:0.5">/100</MudText></MudText>
-                <MudProgressLinear Value="@_score.Score" Max="100" Color="@_bandColor" Rounded Size="Size.Large" Style="width:80%;" />
-                <div class="d-flex justify-space-between" style="width:80%;">
-                    <MudText Typo="Typo.caption">0 — Limited</MudText>
-                    <MudText Typo="Typo.caption">Broad — 100</MudText>
+            <svg viewBox="0 0 200 130" width="100%" style="max-width:320px;display:block;" role="img" aria-label="@($"Diversification score {_score.Score} out of 100, {_score.Band}")">
+                <path d="M 20 110 A 80 80 0 0 1 180 110"
+                      fill="none"
+                      stroke="var(--mud-palette-lines-default)"
+                      stroke-width="16"
+                      stroke-linecap="round"
+                      pathLength="100" />
+                <path d="M 20 110 A 80 80 0 0 1 180 110"
+                      fill="none"
+                      stroke="@_bandStroke"
+                      stroke-width="16"
+                      stroke-linecap="round"
+                      pathLength="100"
+                      stroke-dasharray="@($"{_score.Score} 100")" />
+                <text x="100" y="88" text-anchor="middle"
+                      font-size="44" font-weight="700"
+                      fill="var(--mud-palette-text-primary)"
+                      style="font-variant-numeric: tabular-nums;">@_score.Score</text>
+                <text x="100" y="108" text-anchor="middle"
+                      font-size="14" font-weight="500"
+                      fill="@_bandStroke"
+                      style="letter-spacing:0.08em;text-transform:uppercase;">@_score.Band</text>
+                <text x="20" y="128" text-anchor="middle"
+                      font-size="10"
+                      fill="var(--mud-palette-text-secondary)">0</text>
+                <text x="180" y="128" text-anchor="middle"
+                      font-size="10"
+                      fill="var(--mud-palette-text-secondary)">100</text>
+            </svg>
+
+            @if (_explanations.Count > 0)
+            {
+                <div class="d-flex flex-wrap justify-center gap-2 mt-2" style="width:100%;">
+                    @foreach (var explanation in _explanations)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@_bandColor">@explanation</MudChip>
+                    }
                 </div>
-            </div>
+            }
         }
         else
         {
-            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
-                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
-            </div>
+            <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
         }
     </MudPaper>
 </MudCard>
