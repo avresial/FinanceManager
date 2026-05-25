@@ -8,6 +8,7 @@ using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using IIsinResolver = FinanceManager.Domain.Services.IIsinResolver;
 
 namespace FinanceManager.UnitTests.Api.Controllers;
 
@@ -26,6 +27,7 @@ public class StockPriceControllerTests
 
     public StockPriceControllerTests()
     {
+        var isinResolverMock = new Mock<IIsinResolver>();
         _controller = new StockPriceController(
             _stockPriceRepository.Object,
             _currencyExchangeService.Object,
@@ -33,7 +35,8 @@ public class StockPriceControllerTests
             _stockMarketService.Object,
                 _stockPriceProvider.Object,
                 _stockDetailsRepository.Object,
-                _stockPriceBulkImportService.Object);
+                _stockPriceBulkImportService.Object,
+                isinResolverMock.Object);
     }
 
     [Fact]
@@ -44,7 +47,7 @@ public class StockPriceControllerTests
         var storedDate = requestedDate.AddDays(-1).Date;
         var storedPrice = new StockPrice
         {
-            Ticker = "CSPX.LON",
+            Isin = "GB0002374006",
             PricePerUnit = 747.18m,
             Currency = DefaultCurrency.PLN,
             Date = storedDate
@@ -118,7 +121,7 @@ public class StockPriceControllerTests
         // Arrange
         var stocks = new List<StockDetails>
         {
-            new() { Ticker = "CSPX.LON", Name = "Test", Type = "ETF", Region = "UK", Currency = DefaultCurrency.USD }
+            new() { Isin = "GB0002374006", Ticker = "CSPX.LON", Name = "Test", Type = "ETF", Region = "UK", Currency = DefaultCurrency.USD }
         };
         _stockDetailsRepository.Setup(repo => repo.GetAll(It.IsAny<CancellationToken>()))
             .ReturnsAsync(stocks);
@@ -138,6 +141,7 @@ public class StockPriceControllerTests
         // Arrange
         var details = new StockDetails
         {
+            Isin = "GB0002374006",
             Ticker = "CSPX.LON",
             Name = "Test",
             Type = "ETF",
@@ -207,6 +211,7 @@ public class StockPriceControllerTests
         // Arrange
         var details = new StockDetails
         {
+            Isin = "GB0002374006",
             Ticker = "CSPX.LON",
             Name = "Test",
             Type = "ETF",
@@ -231,6 +236,7 @@ public class StockPriceControllerTests
         // Arrange
         var details = new StockDetails
         {
+            Isin = "GB0002374006",
             Ticker = "CSPX.LON",
             Name = "Test",
             Type = "ETF",
@@ -261,14 +267,14 @@ public class StockPriceControllerTests
         {
             new()
             {
-                Ticker = "AAPL",
+                Isin = "US0378331005",
                 PricePerUnit = 101m,
                 Currency = DefaultCurrency.PLN,
                 Date = day.AddHours(10)
             },
             new()
             {
-                Ticker = "AAPL",
+                Isin = "US0378331005",
                 PricePerUnit = 103m,
                 Currency = DefaultCurrency.PLN,
                 Date = day.AddHours(15)

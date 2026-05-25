@@ -24,7 +24,7 @@
                 <MudTimePicker Label="Time" @bind-Time="Time" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="Ticker" T="string" Label="Ticker" Variant="Variant.Text" MaxLines="5" AutoGrow="true" Immediate />
+                <MudTextField Value="Isin" T="string" Label="ISIN" Variant="Variant.Text" ReadOnly />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudNumericField ReadOnly HideSpinButtons="true" @bind-Value="PricePerUnit" Label="Price per unit" Variant="Variant.Text" AdornmentText="@_currency.ShortName" Adornment="Adornment.End" />
@@ -57,7 +57,7 @@
     [Required] private DateTime? SelectedPostingDate = DateTime.Today;
     private TimeSpan? Time = new TimeSpan(01, 00, 00);
     public string ExpenseType { get; set; } = FinanceManager.Domain.Enums.InvestmentType.Stock.ToString();
-    public string Ticker { get; set; } = string.Empty;
+    public string Isin { get; set; } = string.Empty;
     public decimal? BalanceChange;
     public decimal? PricePerUnit { get; set; } = null;
 
@@ -71,12 +71,12 @@
 
     protected async Task OnFieldChanged(FormFieldChangedEventArgs args)
     {
-        if (string.IsNullOrEmpty(Ticker)) return;
+        if (string.IsNullOrEmpty(Isin)) return;
         if (!SelectedPostingDate.HasValue) return;
         if (args.Field is MudTextField<decimal?> textField)
         {
             if (textField is null || textField.Label is null) return;
-            if (!textField.Label.ToLower().Contains("ticker")) return;
+            if (!textField.Label.ToLower().Contains("isin")) return;
         }
 
         if (args.Field is MudNumericField<decimal?> numericField)
@@ -98,7 +98,7 @@
         SelectedPostingDate = InvestmentEntry.PostingDate.ToLocalTime();
         Time = new TimeSpan(SelectedPostingDate.Value.Hour, SelectedPostingDate.Value.Minute, SelectedPostingDate.Value.Second);
         ExpenseType = InvestmentEntry.InvestmentType.ToString();
-        Ticker = InvestmentEntry.Ticker;
+        Isin = InvestmentEntry.Isin;
         BalanceChange = InvestmentEntry.ValueChange;
 
         await UpdatePricePerUnit();
@@ -126,7 +126,7 @@
             Console.WriteLine(ex);
         }
 
-        StockAccountEntry currencyAccountEntry = new(InvestmentEntry.AccountId, InvestmentEntry.EntryId, date, -1, BalanceChange.Value, Ticker, investmentType);
+        StockAccountEntry currencyAccountEntry = new(InvestmentEntry.AccountId, InvestmentEntry.EntryId, date, -1, BalanceChange.Value, Isin, investmentType);
 
         try
         {
@@ -152,7 +152,7 @@
     {
         if (SelectedPostingDate is null) return;
 
-        var pricePerUnit = await _StockPriceHttpClient.GetStockPrice(Ticker, DefaultCurrency.PLN.Id, SelectedPostingDate.Value.Date.ToUniversalTime());
+        var pricePerUnit = await _StockPriceHttpClient.GetStockPrice(Isin, DefaultCurrency.PLN.Id, SelectedPostingDate.Value.Date.ToUniversalTime());
         if (pricePerUnit is null) return;
 
         PricePerUnit = BalanceChange * pricePerUnit.PricePerUnit;

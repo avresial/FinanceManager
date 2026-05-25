@@ -209,7 +209,11 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
         if (string.IsNullOrWhiteSpace(ticker))
             return BadRequest("Invalid input parameters.");
 
-        var details = await stockDetailsRepository.Get(ticker, cancellationToken);
+        var isin = await isinResolver.ResolveAsync(ticker.Trim(), ct: cancellationToken);
+        if (isin is null)
+            return BadRequest("Could not resolve ticker to ISIN");
+
+        var details = await stockDetailsRepository.Get(isin, cancellationToken);
         if (details is null)
             return NotFound();
 
@@ -312,7 +316,11 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
         if (string.IsNullOrWhiteSpace(ticker))
             return BadRequest("Invalid input parameters.");
 
-        if (!await stockDetailsRepository.Delete(ticker, cancellationToken))
+        var isin = await isinResolver.ResolveAsync(ticker.Trim(), ct: cancellationToken);
+        if (isin is null)
+            return BadRequest("Could not resolve ticker to ISIN");
+
+        if (!await stockDetailsRepository.Delete(isin, cancellationToken))
             return NotFound();
 
         return NoContent();

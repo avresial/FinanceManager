@@ -20,7 +20,7 @@ public partial class AdminEditStock : ComponentBase
     private string _region = string.Empty;
     private string _currency = string.Empty;
 
-    [Parameter] public required string Ticker { get; set; }
+    [Parameter] public required string Isin { get; set; }
 
     [Inject] public required StockPriceHttpClient StockPriceHttpClient { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
@@ -32,7 +32,7 @@ public partial class AdminEditStock : ComponentBase
 
         try
         {
-            _details = await StockPriceHttpClient.GetStockDetails(Ticker);
+            _details = await StockPriceHttpClient.GetStockDetails(Isin);
             if (_details is null)
             {
                 _isLoading = false;

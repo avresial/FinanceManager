@@ -12,7 +12,7 @@
             </MudItem>
 
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="ticker" T="string" Label="ticker" Variant="Variant.Text" MaxLines="5" AutoGrow="true" ReadOnly />
+                <MudTextField @bind-Value="isin" T="string" Label="ISIN" Variant="Variant.Text" MaxLines="5" AutoGrow="true" ReadOnly />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="balanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@currency.ShortName" Adornment="Adornment.End" ReadOnly />
@@ -35,7 +35,7 @@
     private DateTime? date = new DateTime();
     private decimal balanceChange = 0;
     private Currency currency = DefaultCurrency.PLN;
-    private string ticker = "Ticker";
+    private string isin = "ISIN";
     private string investmentType = "InvestmentType";
 
     [Parameter] public required Func<Task> Confirm { get; set; }
@@ -50,7 +50,7 @@
         date = InvestmentEntry.PostingDate;
         balanceChange = InvestmentEntry.ValueChange;
         currency = SettingsService.GetCurrency();
-        ticker = InvestmentEntry.Ticker;
+        isin = InvestmentEntry.Isin;
         investmentType = InvestmentEntry.InvestmentType.ToString();
 
         base.OnParametersSet();

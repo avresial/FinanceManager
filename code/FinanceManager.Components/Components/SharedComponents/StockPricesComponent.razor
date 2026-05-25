@@ -1,7 +1,7 @@
 ﻿@using FinanceManager.Components.Components.SharedComponents.Charts
 @using FinanceManager.Components.Components.Dashboard
 
-<MudText Typo="Typo.h3" Class="mx-2" style="position: absolute; z-index: 50; display: inline-block;">@Ticker.ToUpper()
+<MudText Typo="Typo.h3" Class="mx-2" style="position: absolute; z-index: 50; display: inline-block;">@Isin.ToUpper()
 </MudText>
 <LineChartJs
 Series="@([_stockPrices.Select(x => new ChartJsLineDataPoint(x.Date.ToLocalTime(), x.PricePerUnit)).ToList()])" />
@@ -12,11 +12,11 @@ Series="@([_stockPrices.Select(x => new ChartJsLineDataPoint(x.Date.ToLocalTime(
     <MudGrid>
         <MudItem xs="12" md="6">
             <MudAutocomplete T="FinanceManager.Domain.Entities.Stocks.StockDetails" Value="_selectedStock"
-                             Label="Search Stock" Placeholder="Search by ticker or name" SearchFunc="SearchStocks"
-                             ToStringFunc="@(stock => stock?.Ticker ?? string.Empty)" Variant="Variant.Outlined" Immediate="true"
+                             Label="Search Stock" Placeholder="Search by ISIN or name" SearchFunc="SearchStocks"
+                             ToStringFunc="@(stock => stock?.Isin ?? string.Empty)" Variant="Variant.Outlined" Immediate="true"
                              ResetValueOnEmptyText="true" CoerceText="false" Clearable="true" ValueChanged="OnStockSelected">
                 <ItemTemplate Context="stock">
-                    <MudText>@stock.Ticker - @stock.Name</MudText>
+                    <MudText>@stock.Isin - @stock.Name</MudText>
                 </ItemTemplate>
             </MudAutocomplete>
         </MudItem>
@@ -28,8 +28,12 @@ Series="@([_stockPrices.Select(x => new ChartJsLineDataPoint(x.Date.ToLocalTime(
                     <MudCardContent>
                         <MudGrid>
                             <MudItem xs="12" sm="6" md="3">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">ISIN</MudText>
+                                <MudText Typo="Typo.body1"><strong>@_selectedStock.Isin</strong></MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Ticker</MudText>
-                                <MudText Typo="Typo.body1"><strong>@_selectedStock.Ticker</strong></MudText>
+                                <MudText Typo="Typo.body1">@_selectedStock.Ticker</MudText>
                             </MudItem>
                             <MudItem xs="12" sm="6" md="3">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Name</MudText>
