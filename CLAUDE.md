@@ -24,28 +24,58 @@ When opening a pull request that resolves a GitHub issue, the PR body must inclu
 
 ## Agent Requirements
 
-- **Install the .NET SDK before coding.** Any task that involves code changes requires the .NET 10 SDK to be installed first so that `dotnet build`, `dotnet format`, and `dotnet test` can run. If `dotnet --list-sdks` does not show a `10.*` SDK, install it before making changes (e.g. via the official installer script: `curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0`, then ensure `dotnet` is on `PATH`).
-- **Run unit tests after every change.** Every code change must end with `dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj` passing. Do not commit, push, or report a task as complete until unit tests are green.
+- **Install the .NET SDK before coding.** Any task that involves code changes requires the .NET 10 SDK to be installed first so that `dotnet build`, `dotnet format`, and `dotnet test` can run. If `dotnet --list-sdks` does not show a `10.*` SDK, install it before making changes — see "Installing the .NET SDK" below for the path that works in the cloud sandbox.
+- **Run unit tests after every change.** Every code change must end with `dotnet test --project ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj` passing (see "Running tests" below for the correct invocation). Do not commit, push, or report a task as complete until unit tests are green.
+
+### Installing the .NET SDK (cloud sandbox)
+
+The Microsoft installer hosts (`dot.net`, `aka.ms`, `dotnetcli.azureedge.net`, `builds.dotnet.microsoft.com`) are **not** on the cloud sandbox's network allowlist, so `curl https://dot.net/v1/dotnet-install.sh | bash` fails with `Host not in allowlist`. Use Ubuntu's apt packages instead — Ubuntu 24.04 ships `dotnet-sdk-10.0` directly:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y dotnet-sdk-10.0
+dotnet --list-sdks   # should show 10.0.*
+```
+
+If the install fails with `404 Not Found` on `.deb` files, the apt index is stale — re-run `sudo apt-get update` and retry. PPA fetch errors (`deadsnakes`, `ondrej/php`) during `apt-get update` are unrelated and can be ignored.
+
+### Running tests
+
+The project's `code/global.json` opts into the new Microsoft.Testing.Platform runner (`xunit.v3.mtp-v2`). Two things together must be right or `dotnet test` falls back to the deprecated VSTest runner and fails:
+
+1. **Run from inside `code/`** (or any subdirectory of it). `global.json` is discovered upward from the current directory; from the repo root it isn't visible, so the SDK uses the legacy runner and rejects `--project` with `MSBUILD : error MSB1001: Unknown switch ... --project`.
+2. **Pass `--project`, not a bare path.** The bare `dotnet test ./path/to.csproj` form errors with *"Specifying a project for 'dotnet test' should be via '--project'"*.
+
+```bash
+cd code
+dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
+dotnet test --project ./FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
+```
+
+If you see *"Testing with VSTest target is no longer supported by Microsoft.Testing.Platform on .NET 10 SDK"*, you're outside `code/` — `cd code` and retry.
 
 ## Build and Validation
 
 ```bash
-# Restore, build, format-check
+# Restore, build, format-check (from repo root is fine)
 dotnet restore ./code
 dotnet build ./code/FinanceManager.slnx
 dotnet format ./code --verify-no-changes --verbosity diagnostic
 
+# Tests must be run from inside code/ (see "Running tests" above)
+cd code
+
 # Run all tests
-dotnet test ./code/FinanceManager.slnx
+dotnet test --project ./FinanceManager.slnx
 
 # Run only unit tests
-dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
+dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
 
 # Run only integration tests (requires UseInMemoryDatabase=true env var in CI)
-dotnet test ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
+dotnet test --project ./FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
 
 # Run a single test project with coverage
-dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --collect:"XPlat Code Coverage"
+dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --collect:"XPlat Code Coverage"
 ```
 
 **Build is strict**: warnings are treated as errors (`Directory.Build.props`). Always run `dotnet build` before committing.

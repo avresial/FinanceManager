@@ -14,6 +14,33 @@ Use these instructions for all repository-scoped Copilot work.
 - If tests are available for touched areas, run relevant tests and report what was executed.
 - If validation cannot be completed, explicitly state what was not run and why.
 
+## Cloud sandbox environment (.NET SDK install + running tests)
+
+If you are running in a cloud sandbox without a preinstalled .NET SDK, install it via apt — **not** the official installer script. The Microsoft installer hosts (`dot.net`, `aka.ms`, `dotnetcli.azureedge.net`, `builds.dotnet.microsoft.com`) are blocked by the sandbox network allowlist, so `curl https://dot.net/v1/dotnet-install.sh | bash` fails with `Host not in allowlist`. Ubuntu 24.04 ships `dotnet-sdk-10.0` directly in its repos:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y dotnet-sdk-10.0
+dotnet --list-sdks   # should show 10.0.*
+```
+
+Notes:
+- If the install hits `404 Not Found` on `.deb` URLs, the apt index is stale — re-run `sudo apt-get update` and retry.
+- PPA fetch errors (`deadsnakes`, `ondrej/php`) during `apt-get update` are unrelated and can be ignored.
+
+The project's `code/global.json` opts into the new Microsoft.Testing.Platform runner (`xunit.v3.mtp-v2`). Two things must both be right or `dotnet test` falls back to the deprecated VSTest runner:
+
+1. Run from inside `code/` (or any subdirectory of it). `global.json` is discovered upward from the current directory; from the repo root it isn't visible.
+2. Pass `--project`, not a bare path.
+
+```bash
+cd code
+dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
+dotnet test --project ./FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
+```
+
+If you see *"Testing with VSTest target is no longer supported"* or *"MSBUILD : error MSB1001: Unknown switch ... --project"*, you're outside `code/`. `cd code` and retry.
+
 ## C# style preferences (important)
 - Prefer primary constructor syntax for classes, records, and structs when supported by the configured C# language version.
 - For records, prefer positional records, for example: `public record Person(string Name, int Age);`
