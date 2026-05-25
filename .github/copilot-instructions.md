@@ -14,6 +14,29 @@ Use these instructions for all repository-scoped Copilot work.
 - If tests are available for touched areas, run relevant tests and report what was executed.
 - If validation cannot be completed, explicitly state what was not run and why.
 
+## Cloud sandbox environment (.NET SDK install + running tests)
+
+If you are running in a cloud sandbox without a preinstalled .NET SDK, install it via apt — **not** the official installer script. The Microsoft installer hosts (`dot.net`, `aka.ms`, `dotnetcli.azureedge.net`, `builds.dotnet.microsoft.com`) are blocked by the sandbox network allowlist, so `curl https://dot.net/v1/dotnet-install.sh | bash` fails with `Host not in allowlist`. Ubuntu 24.04 ships `dotnet-sdk-10.0` directly in its repos:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y dotnet-sdk-10.0
+dotnet --list-sdks   # should show 10.0.*
+```
+
+Notes:
+- If the install hits `404 Not Found` on `.deb` URLs, the apt index is stale — re-run `sudo apt-get update` and retry.
+- PPA fetch errors (`deadsnakes`, `ondrej/php`) during `apt-get update` are unrelated and can be ignored.
+
+The project's `code/global.json` opts into the new Microsoft.Testing.Platform runner (`xunit.v3.mtp-v2`). On .NET 10 SDK, the legacy `dotnet test <csproj>` form fails with *"Testing with VSTest target is no longer supported"*. Always pass **`--project`**:
+
+```bash
+dotnet test --project ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
+dotnet test --project ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
+```
+
+The bare `dotnet test ./path/to.csproj` form errors with *"Specifying a project for 'dotnet test' should be via '--project'"*.
+
 ## C# style preferences (important)
 - Prefer primary constructor syntax for classes, records, and structs when supported by the configured C# language version.
 - For records, prefer positional records, for example: `public record Person(string Name, int Age);`
