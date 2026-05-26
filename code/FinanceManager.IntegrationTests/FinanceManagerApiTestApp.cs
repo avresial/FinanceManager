@@ -12,6 +12,16 @@ namespace FinanceManager.IntegrationTests;
 
 internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<ApiEntryPoint>
 {
+    static FinanceManagerApiTestApp()
+    {
+        // Each host built by WebApplicationFactory loads appsettings*.json with reloadOnChange=true,
+        // which registers FileSystemWatchers (one inotify instance each). On Linux sandboxes the
+        // 128-instance limit is exhausted part-way through a full integration run, and later
+        // WebApplicationFactory constructions throw at host build time. The hosting builder honours
+        // this env var to skip the watcher entirely.
+        Environment.SetEnvironmentVariable("DOTNET_hostBuilder__reloadConfigOnChange", "false");
+    }
+
     public HttpClient Client { get; }
 
     public FinanceManagerApiTestApp(Action<IServiceCollection>? services = null)
