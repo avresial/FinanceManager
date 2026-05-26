@@ -20,6 +20,10 @@
         {
             <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" OnClick="Back" aria-label="Back to recurring transactions" />
             <MudText Typo=Typo.h5 Class="mt-1">@_selectedItem.Name</MudText>
+            @if (_detailEntries.Count > 0)
+            {
+                <MudText Typo=Typo.caption Class="text-muted">@_detailEntries.First().PostingDate.Year</MudText>
+            }
         }
     </MudPaper>
 
@@ -78,9 +82,16 @@
                         <MudTh Style="text-align:right">Amount</MudTh>
                     </HeaderContent>
                     <RowTemplate>
-                        <MudTd DataLabel="Date">@context.PostingDate.ToString("yyyy-MM-dd")</MudTd>
+                        <MudTd DataLabel="Date">@context.PostingDate.ToString("MM-dd")</MudTd>
                         <MudTd DataLabel="Description">
-                            @(string.IsNullOrEmpty(context.ContractorDetails) ? context.Description : context.ContractorDetails)
+                            @{
+                                var desc = string.IsNullOrEmpty(context.ContractorDetails) ? context.Description : context.ContractorDetails;
+                                var maxLength = 30;
+                                var displayDesc = desc.Length > maxLength ? desc.Substring(0, maxLength) + "..." : desc;
+                            }
+                            <MudTooltip Text="@desc" Arrow Placement="Placement.Bottom">
+                                <MudText>@displayDesc</MudText>
+                            </MudTooltip>
                         </MudTd>
                         <MudTd DataLabel="Amount" Style="text-align:right">
                             <MudText Color="Color.Error">@($"{Math.Abs(context.ValueChange):0.00} PLN")</MudText>
