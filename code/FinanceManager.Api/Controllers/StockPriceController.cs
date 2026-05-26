@@ -90,7 +90,7 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
         if (currency == stockPrice.Currency)
             return Ok(stockPrice);
 
-        var exchangeRate = await currencyExchangeService.GetExchangeRateAsync(stockPrice.Currency, currency, date); // TODO add cache
+        var exchangeRate = await currencyExchangeService.GetExchangeRateAsync(stockPrice.Currency, currency, date);
         if (exchangeRate is null)
             return NotFound($"Exchange rate from {stockPrice.Currency} to {currency} not found for the specified date.");
 
