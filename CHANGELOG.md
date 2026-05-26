@@ -9,6 +9,9 @@ rules agents must follow when updating this file.
 
 ## [Unreleased]
 
+### Fixed
+- Guest dashboard's net cash flow card no longer times out — stock price lookups now preload in bulk per ticker instead of one external resolve per entry. #208
+
 ## [26.5.25] - 2026-05-25
 
 ### Added
