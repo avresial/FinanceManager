@@ -6,7 +6,7 @@
     @if (_userData is not null)
     {
         <MudGrid>
-            <MudItem xs="12" md="3">
+            <MudItem xs="12" md="3" Class="d-none d-md-block">
                 <div style="position:sticky; top:16px;">
                     <MudList T="string"
                              SelectionMode="SelectionMode.SingleSelection"
@@ -34,16 +34,19 @@
                         Your public identity within Finance Manager.
                     </MudText>
 
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mb-4">
-                        <MudAvatar Color="Color.Primary" Size="Size.Large">@_userData.Login.ToUpper()[0]</MudAvatar>
-                        <MudStack Spacing="0">
-                            <MudText Typo="Typo.subtitle1">@_userData.Login</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@_userData.Login</MudText>
+                    <div class="d-flex flex-column flex-md-row align-md-center gap-3 mb-4">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mud-width-full" Style="min-width:0;">
+                            <MudAvatar Color="Color.Primary" Size="Size.Large">@_userData.Login.ToUpper()[0]</MudAvatar>
+                            <MudStack Spacing="0" Style="min-width:0;">
+                                <MudText Typo="Typo.subtitle1" Style="word-break:break-word;">@_userData.Login</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Style="word-break:break-word;">@_userData.Login</MudText>
+                            </MudStack>
                         </MudStack>
-                        <MudSpacer />
-                        <MudButton Variant="Variant.Outlined" Disabled="true">Upload photo</MudButton>
-                        <MudButton Variant="Variant.Text" Disabled="true">Remove</MudButton>
-                    </MudStack>
+                        <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                            <MudButton Variant="Variant.Outlined" Disabled="true">Upload photo</MudButton>
+                            <MudButton Variant="Variant.Text" Disabled="true">Remove</MudButton>
+                        </MudStack>
+                    </div>
 
                     <MudGrid>
                         <MudItem xs="12" md="6">
@@ -162,7 +165,7 @@
                         Permanently delete this account and all associated financial data. This cannot be undone.
                     </MudText>
 
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                    <div class="d-flex flex-column flex-sm-row align-sm-center gap-3">
                         <MudTextField T="string"
                                       @bind-Value="_deleteConfirmation"
                                       Immediate="true"
@@ -178,7 +181,7 @@
                                    OnClick="DeleteMyAccount">
                             Delete account
                         </MudButton>
-                    </MudStack>
+                    </div>
                 </section>
 
                 @if (_errors.Count > 0 || _warnings.Count > 0 || _info.Count > 0)
@@ -204,12 +207,11 @@
         @if (_isDirty)
         {
             <MudPaper Elevation="8" Square="true"
-                      Style="position:sticky; bottom:0; left:0; right:0;
-                             display:flex; align-items:center; gap:12px;
-                             padding:12px 24px; z-index:5;
+                      Class="d-flex flex-wrap align-center gap-2 py-2 px-3 px-sm-6"
+                      Style="position:sticky; bottom:0; left:0; right:0; z-index:5;
                              background:var(--mud-palette-surface);
                              border-top:1px solid var(--mud-palette-divider);">
-                <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Primary" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Primary" Size="Size.Small" Class="d-none d-sm-flex" />
                 <MudText Typo="Typo.body2">You have unsaved changes.</MudText>
                 <MudSpacer />
                 <MudButton OnClick="DiscardChanges">Discard</MudButton>
