@@ -25,10 +25,10 @@ public class BondAccountSeeder(
         }
 
         logger.LogTrace("Seeding bond account.");
-        await SeedBondAccount(userId, bondDetailsId, start, end);
+        await SeedBondAccount(userId, bondDetailsId, start, end, cancellationToken);
     }
 
-    private async Task SeedBondAccount(int userId, int bondDetailsId, DateTime start, DateTime end)
+    private async Task SeedBondAccount(int userId, int bondDetailsId, DateTime start, DateTime end, CancellationToken cancellationToken)
     {
         var account = new BondAccount(userId, 0, "Bond 1");
 
@@ -37,6 +37,7 @@ public class BondAccountSeeder(
 
         for (var date = start; date <= end; date = date.AddDays(1))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var roll = Random.Shared.Next(0, 100);
 
             decimal change;

@@ -20,13 +20,13 @@ public class StockAccountSeeder(
         if (await stockAccountRepository.GetAvailableAccounts(userId).AnyAsync(cancellationToken)) return;
 
         logger.LogTrace("Seeding stock account.");
-        await SeedStockAccount(userId, start, end);
+        await SeedStockAccount(userId, start, end, cancellationToken);
 
         logger.LogTrace("Prefilling stock prices for {Isin}.", DemoIsin);
         await SeedStockPrices(DemoIsin, start, end, cancellationToken);
     }
 
-    private async Task SeedStockAccount(int userId, DateTime start, DateTime end)
+    private async Task SeedStockAccount(int userId, DateTime start, DateTime end, CancellationToken cancellationToken)
     {
         var account = new StockAccount(userId, 0, "Stock 1");
 
@@ -35,6 +35,7 @@ public class StockAccountSeeder(
 
         for (var date = start; date <= end; date = date.AddDays(1))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             // Roughly 70% buy days, 20% sell days, 10% no-op so the seeded history has texture.
             var roll = Random.Shared.Next(0, 100);
 
@@ -71,6 +72,7 @@ public class StockAccountSeeder(
         decimal price = 400m;
         for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var driftPercent = (decimal)((Random.Shared.NextDouble() - 0.48) * 0.04);
             price = Math.Clamp(price * (1 + driftPercent), 250m, 600m);
             price = Math.Round(price, 2);

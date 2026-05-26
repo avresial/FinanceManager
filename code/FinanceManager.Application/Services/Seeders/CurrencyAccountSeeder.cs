@@ -44,13 +44,13 @@ public class CurrencyAccountSeeder(
         var labels = await GetSeedableLabels(cancellationToken);
 
         logger.LogTrace("Seeding cash currency account.");
-        await SeedCashAccount(userId, labels, start, end);
+        await SeedCashAccount(userId, labels, start, end, cancellationToken);
 
         logger.LogTrace("Seeding loan currency account.");
-        await SeedLoanAccount(userId, labels, start, end);
+        await SeedLoanAccount(userId, labels, start, end, cancellationToken);
     }
 
-    private async Task SeedCashAccount(int userId, IReadOnlyList<FinancialLabel> labels, DateTime start, DateTime end)
+    private async Task SeedCashAccount(int userId, IReadOnlyList<FinancialLabel> labels, DateTime start, DateTime end, CancellationToken cancellationToken)
     {
         var account = new CurrencyAccount(userId, 0, $"{AccountLabel.Cash} 1", AccountLabel.Cash);
 
@@ -59,6 +59,7 @@ public class CurrencyAccountSeeder(
 
         for (var date = start.AddDays(1); date <= end; date = date.AddDays(1))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             // Monthly salary on the 1st.
             if (date.Day == 1)
             {
@@ -78,7 +79,7 @@ public class CurrencyAccountSeeder(
         await accountRepository.AddAccount(account);
     }
 
-    private async Task SeedLoanAccount(int userId, IReadOnlyList<FinancialLabel> labels, DateTime start, DateTime end)
+    private async Task SeedLoanAccount(int userId, IReadOnlyList<FinancialLabel> labels, DateTime start, DateTime end, CancellationToken cancellationToken)
     {
         var account = new CurrencyAccount(userId, 0, $"{AccountLabel.Loan} 1", AccountLabel.Loan);
         var days = Math.Max(1, (int)(end - start).TotalDays);
@@ -88,6 +89,7 @@ public class CurrencyAccountSeeder(
 
         for (var date = start.AddDays(1); date <= end; date = date.AddDays(1))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var repayment = Random.Shared.Next(10, 100);
             account.AddEntry(new AddCurrencyEntryDto(date, repayment, "Repayment", null, PickLabels(labels, repayment)), false);
         }
