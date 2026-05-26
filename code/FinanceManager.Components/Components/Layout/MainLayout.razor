@@ -1,8 +1,7 @@
 ﻿@using FinanceManager.Domain.Services
 
 @inherits LayoutComponentBase
-@inject NavigationManager Navigation
-@inject ILoginService LoginService
+@implements IAsyncDisposable
 
 <AuthorizeView>
     <NotAuthorized>
@@ -11,10 +10,10 @@
     <Authorized>
         <MudLayout>
             <MudAppBar Dense Elevation="0">
-                <MudIconButton Icon="@Icons.Material.Filled.Menu" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+                <MudIconButton Icon="@Icons.Material.Filled.Menu" Edge="Edge.Start" OnClick="@DrawerToggle" />
             </MudAppBar>
 
-            <MudDrawer @bind-Open="_drawerOpen" Variant="@DrawerVariant.Mini" Elevation="0">
+            <MudDrawer @bind-Open="_drawerOpen" Variant="@_drawerVariant" Elevation="0">
                 <NavMenu DrawerIsOpen=_drawerOpen />
                 <MudSpacer />
                 <MudNavMenu>
@@ -31,16 +30,46 @@
 </AuthorizeView>
 
 @code {
+    [Inject] public NavigationManager Navigation { get; set; } = default!;
+    [Inject] public ILoginService LoginService { get; set; } = default!;
+    [Inject] public IBrowserViewportService BrowserViewportService { get; set; } = default!;
 
-    bool _drawerOpen = true;
+    private readonly Guid _viewportSubscriptionId = Guid.NewGuid();
+    private bool _drawerOpen = true;
+    private bool _isMobile;
+    private DrawerVariant _drawerVariant = DrawerVariant.Mini;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        await BrowserViewportService.SubscribeAsync(_viewportSubscriptionId, async args =>
+        {
+            ApplyBreakpoint(args.Breakpoint);
+            await InvokeAsync(StateHasChanged);
+        }, fireImmediately: true);
+    }
+
+    private void ApplyBreakpoint(Breakpoint breakpoint)
+    {
+        var isMobile = breakpoint is Breakpoint.Xs or Breakpoint.Sm;
+        if (isMobile == _isMobile) return;
+
+        _isMobile = isMobile;
+        _drawerVariant = isMobile ? DrawerVariant.Temporary : DrawerVariant.Mini;
+        _drawerOpen = !isMobile;
+    }
+
+    private void DrawerToggle() => _drawerOpen = !_drawerOpen;
 
     private async Task LogOut()
     {
         await LoginService.Logout();
         Navigation.NavigateTo("login");
     }
-    void DrawerToggle()
+
+    public async ValueTask DisposeAsync()
     {
-        _drawerOpen = !_drawerOpen;
+        await BrowserViewportService.UnsubscribeAsync(_viewportSubscriptionId);
     }
 }
