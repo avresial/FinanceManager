@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.Logs;
+using FinanceManager.Domain.Entities.Logging;
 using System.Threading.Channels;
 
 namespace FinanceManager.Api.Logging;

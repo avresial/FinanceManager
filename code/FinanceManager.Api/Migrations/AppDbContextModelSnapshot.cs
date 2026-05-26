@@ -317,7 +317,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("CsvHeaderMappings");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Logs.LogEntry", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Logging.LogEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
