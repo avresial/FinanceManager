@@ -51,6 +51,7 @@ jobs:
   code-quality:
     runs-on: ubuntu-latest
     needs: build
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
 
     steps:
       - name: Checkout code
@@ -81,6 +82,7 @@ jobs:
   security-scan:
     runs-on: ubuntu-latest
     needs: build
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
 
     steps:
       - name: Checkout code
@@ -118,6 +120,7 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     needs: build
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     env:
       FINANCE_MANAGER_DB_KEY: ${{ secrets.FINANCE_MANAGER_DB_KEY }}
 
@@ -155,7 +158,7 @@ jobs:
   integration-tests:
     runs-on: ubuntu-latest
     needs: [build, unit-tests]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     env:
       FINANCE_MANAGER_DB_KEY: ${{ secrets.FINANCE_MANAGER_DB_KEY }}
       UseInMemoryDatabase: true
@@ -191,8 +194,16 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
-    needs: [integration-tests, code-quality, security-scan]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    needs: [build, unit-tests, integration-tests, code-quality, security-scan]
+    if: |
+      always()
+      && github.event_name == 'push'
+      && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+      && needs.build.result == 'success'
+      && (needs.unit-tests.result == 'success' || needs.unit-tests.result == 'skipped')
+      && (needs.integration-tests.result == 'success' || needs.integration-tests.result == 'skipped')
+      && (needs.code-quality.result == 'success' || needs.code-quality.result == 'skipped')
+      && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped')
 
     steps:
       - name: Checkout code
