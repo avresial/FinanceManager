@@ -1,19 +1,16 @@
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Services.Seeders;
 
-public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, IFinancialLabelsRepository financialLabelsRepository,
-    IAccountRepository<StockAccount> stockAccountRepository, ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
-    IAccountRepository<BondAccount> bondAccountRepository,
-    IBondDetailsRepository bondDetailsRepository,
-    IUserRepository userRepository, FinancialLabelSeeder financialLabelSeeder,
+public class GuestAccountSeeder(
+    IUserRepository userRepository,
+    FinancialLabelSeeder financialLabelSeeder,
     BondDetailsSeeder bondDetailsSeeder,
+    CurrencyAccountSeeder currencyAccountSeeder,
+    StockAccountSeeder stockAccountSeeder,
+    BondAccountSeeder bondAccountSeeder,
     ILogger<GuestAccountSeeder> logger)
 {
     public async Task SeedForGuest(int guestUserId, CancellationToken cancellationToken = default)
@@ -26,7 +23,12 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
         // account seeding populates entries with randomly-sampled labels and references to bond details.
         await financialLabelSeeder.Seed(cancellationToken);
         await bondDetailsSeeder.Seed(cancellationToken);
-        await SeedNewData(guestUserId, start, end, cancellationToken);
+
+        logger.LogTrace("Seeding guest demo data for user {UserId}.", guestUserId);
+        await currencyAccountSeeder.Seed(guestUserId, start, end, cancellationToken);
+        await stockAccountSeeder.Seed(guestUserId, start, end, cancellationToken);
+        await bondAccountSeeder.Seed(guestUserId, start, end, cancellationToken);
+        logger.LogTrace("Seeding finished.");
     }
 
     // Pricing-tier checks (UserPlanVerifier etc.) look up the user by id. The guest's per-session in-memory DB
@@ -35,37 +37,5 @@ public class GuestAccountSeeder(IFinancialAccountRepository accountRepository, I
     {
         if (await userRepository.GetUser(guestUserId) is not null) return;
         await userRepository.AddUserWithId(guestUserId, login: $"guest-{guestUserId}", password: string.Empty, PricingLevel.Basic, UserRole.User);
-    }
-
-    private async Task SeedNewData(int userId, DateTime start, DateTime end, CancellationToken cancellationToken)
-    {
-        logger.LogTrace("Seeding guest demo data for user {UserId}.", userId);
-        if (!await currencyAccountRepository.GetAvailableAccounts(userId).AnyAsync())
-        {
-            var labels = await CurrencyAccountSeeder.GetSeedableLabels(financialLabelsRepository);
-            logger.LogTrace("Seeding currency accounts.");
-            await accountRepository.AddAccount(userId, AccountLabel.Cash, labels, start, end);
-
-            logger.LogTrace("Seeding loan accounts.");
-            await accountRepository.AddAccount(userId, AccountLabel.Loan, labels, start, end);
-        }
-
-        logger.LogTrace("Seeding stock accounts.");
-        if (!await stockAccountRepository.GetAvailableAccounts(userId).AnyAsync())
-            await accountRepository.AddStockAccount(userId, start, end);
-
-        logger.LogTrace("Seeding bond accounts.");
-        if (!await bondAccountRepository.GetAvailableAccounts(userId).AnyAsync())
-        {
-            var bondDetailsId = await bondDetailsRepository.GetAllAsync(cancellationToken)
-                .Select(x => x.Id)
-                .FirstOrDefaultAsync(cancellationToken);
-            if (bondDetailsId == 0)
-                logger.LogWarning("No bond details available for guest {UserId}; skipping bond account seeding.", userId);
-            else
-                await accountRepository.AddBondAccount(userId, bondDetailsId, start, end);
-        }
-
-        logger.LogTrace("Seeding finished.");
     }
 }
