@@ -152,32 +152,14 @@ public partial class StockAccountDetailsPageContent : ComponentBase
     {
         if (Account?.Entries is null) return;
 
-        await UpdateUnrealizedGainLoss();
-
-        var topTickersByValue = _unrealizedByTicker
-            .OrderByDescending(x => x.Value.CurrentValue)
-            .Take(5)
-            .Select(x => x.Key)
-            .ToHashSet();
-
-        var bottomTickersByValue = _unrealizedByTicker
-            .OrderBy(x => x.Value.CurrentValue)
-            .Take(5)
-            .Select(x => x.Key)
-            .ToHashSet();
-
-        var tickersToFetch = topTickersByValue.Union(bottomTickersByValue).ToList();
-
         var priceTasksByTicker = new Dictionary<string, Task<IEnumerable<StockPrice>>>();
-        foreach (var ticker in tickersToFetch)
+        foreach (var ticker in _stocks)
         {
             priceTasksByTicker[ticker] = StockPriceHttpClient.GetStockPrices(ticker, _currency.Id, _dateStart, _dateEnd, TimeSpan.FromDays(1));
         }
+        await Task.WhenAll(priceTasksByTicker.Values);
 
-        if (priceTasksByTicker.Count > 0)
-            await Task.WhenAll(priceTasksByTicker.Values);
-
-        foreach (var ticker in priceTasksByTicker.Keys)
+        foreach (var ticker in _stocks)
         {
             var prices = await priceTasksByTicker[ticker];
             Account.Entries.Where(x => x.Isin.Equals(ticker, StringComparison.OrdinalIgnoreCase)).ToList().ForEach(entry =>
@@ -187,6 +169,8 @@ public partial class StockAccountDetailsPageContent : ComponentBase
                     _prices.Add(entry, price);
             });
         }
+
+        await UpdateUnrealizedGainLoss();
 
         List<(StockAccountEntry, decimal)> orderedByPrice = [];
         foreach (var entry in Account.Entries)
