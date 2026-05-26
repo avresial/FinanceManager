@@ -39,16 +39,23 @@ public class AdminLogsControllerTests
     }
 
     [Fact]
-    public async Task GetLatest_CapsCountAt50()
+    public async Task GetLatest_CountAbove50IsBadRequest()
     {
-        _repository
-            .Setup(r => r.GetLatest(50, It.IsAny<IReadOnlyCollection<LogSeverity>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([])
-            .Verifiable();
+        var result = await _controller.GetLatest(9999, TestContext.Current.CancellationToken);
+        Assert.IsType<BadRequestObjectResult>(result);
+        _repository.Verify(
+            r => r.GetLatest(It.IsAny<int>(), It.IsAny<IReadOnlyCollection<LogSeverity>?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 
-        await _controller.GetLatest(9999, TestContext.Current.CancellationToken);
-
-        _repository.Verify();
+    [Fact]
+    public async Task GetPaged_TakeAbove200IsBadRequest()
+    {
+        var result = await _controller.GetPaged(0, 500, null, TestContext.Current.CancellationToken);
+        Assert.IsType<BadRequestObjectResult>(result);
+        _repository.Verify(
+            r => r.GetPaged(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IReadOnlyCollection<LogSeverity>?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]

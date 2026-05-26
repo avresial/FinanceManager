@@ -21,7 +21,7 @@ public class AdminLogsController(ILogEntryRepository repository) : ControllerBas
     public async Task<IActionResult> GetLatest([FromQuery] int count = 5, CancellationToken cancellationToken = default)
     {
         if (count <= 0) return BadRequest("count must be greater than zero.");
-        if (count > 50) count = 50;
+        if (count > 50) return BadRequest("count must be 50 or less.");
 
         var entries = await repository.GetLatest(count, _warningAndError, cancellationToken);
         return Ok(entries.Select(Map).ToList());
@@ -37,7 +37,7 @@ public class AdminLogsController(ILogEntryRepository repository) : ControllerBas
     {
         if (skip < 0) return BadRequest("skip must be non-negative.");
         if (take <= 0) return BadRequest("take must be greater than zero.");
-        if (take > 200) take = 200;
+        if (take > 200) return BadRequest("take must be 200 or less.");
 
         var levels = ParseLevels(level);
         var (items, total) = await repository.GetPaged(skip, take, levels, cancellationToken);

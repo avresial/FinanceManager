@@ -44,6 +44,11 @@ public sealed class DatabaseLogger(string category, ILogEntryQueue queue) : ILog
             EventName = string.IsNullOrEmpty(eventId.Name) ? null : Truncate(eventId.Name, 256),
         };
 
+        // The queue is bounded with FullMode = DropOldest, so TryEnqueue only fails
+        // when the channel is closed (process shutdown). We intentionally don't
+        // surface that — a logger that throws or re-logs from inside Log() would
+        // either crash callers or recurse. Dropping the oldest pending entry under
+        // sustained load is the explicit trade-off for back-pressure-free logging.
         queue.TryEnqueue(entry);
     }
 
