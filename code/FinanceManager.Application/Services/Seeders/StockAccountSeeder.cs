@@ -1,3 +1,4 @@
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
@@ -10,20 +11,44 @@ public class StockAccountSeeder(
     IFinancialAccountRepository accountRepository,
     IAccountRepository<StockAccount> stockAccountRepository,
     IStockPriceRepository stockPriceRepository,
+    IStockDetailsRepository stockDetailsRepository,
     ICurrencyRepository currencyRepository,
     ILogger<StockAccountSeeder> logger)
 {
-    private const string DemoIsin = "CSPX.LON";
+    // CSPX.LON is iShares Core S&P 500 UCITS ETF; its real ISIN is IE00B5BMR087.
+    // Seeding a matching StockDetails row lets CachingIsinResolver resolve the ticker
+    // from the local DB instead of falling through to OpenFIGI on every price lookup.
+    private const string DemoTicker = "CSPX.LON";
+    private const string DemoIsin = "IE00B5BMR087";
 
     public async Task Seed(int userId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
     {
         if (await stockAccountRepository.GetAvailableAccounts(userId).AnyAsync(cancellationToken)) return;
 
         logger.LogTrace("Seeding stock account.");
+        var currency = await currencyRepository.GetByCode("USD", cancellationToken)
+            ?? await currencyRepository.GetOrAdd("USD", "$", cancellationToken);
+
+        await SeedStockDetails(currency, cancellationToken);
         await SeedStockAccount(userId, start, end, cancellationToken);
 
         logger.LogTrace("Prefilling stock prices for {Isin}.", DemoIsin);
-        await SeedStockPrices(DemoIsin, start, end, cancellationToken);
+        await SeedStockPrices(DemoIsin, currency, start, end, cancellationToken);
+    }
+
+    private async Task SeedStockDetails(Currency currency, CancellationToken cancellationToken)
+    {
+        if (await stockDetailsRepository.Get(DemoIsin, cancellationToken) is not null) return;
+
+        await stockDetailsRepository.Add(new StockDetails
+        {
+            Isin = DemoIsin,
+            Ticker = DemoTicker,
+            Name = "iShares Core S&P 500 UCITS ETF",
+            Type = "ETF",
+            Region = "LSE",
+            Currency = currency
+        }, cancellationToken);
     }
 
     private async Task SeedStockAccount(int userId, DateTime start, DateTime end, CancellationToken cancellationToken)
@@ -63,11 +88,8 @@ public class StockAccountSeeder(
         await accountRepository.AddAccount(account);
     }
 
-    private async Task SeedStockPrices(string isin, DateTime start, DateTime end, CancellationToken cancellationToken)
+    private async Task SeedStockPrices(string isin, Currency currency, DateTime start, DateTime end, CancellationToken cancellationToken)
     {
-        var currency = await currencyRepository.GetByCode("USD", cancellationToken)
-            ?? await currencyRepository.GetOrAdd("USD", "$", cancellationToken);
-
         // Random-walk price seed: start near a plausible CSPX.LON value and jitter daily so the guest UI shows life-like valuations.
         decimal price = 400m;
         for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
