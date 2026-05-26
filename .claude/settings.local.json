@@ -4,7 +4,8 @@
       "Bash(dotnet build *)",
       "mcp__Claude_Preview__preview_start",
       "PowerShell(\"done\")",
-      "PowerShell($ProgressPreference='SilentlyContinue'; $until=\\(Get-Date\\).AddSeconds\\(120\\); while\\(\\(Get-Date\\) -lt $until\\){ try { $r = Invoke-WebRequest -SkipCertificateCheck -UseBasicParsing -Uri https://localhost:5001/ -TimeoutSec 4; \"$\\($r.StatusCode\\)\"; break } catch { Start-Sleep 4 } })"
+      "PowerShell($ProgressPreference='SilentlyContinue'; $until=\\(Get-Date\\).AddSeconds\\(120\\); while\\(\\(Get-Date\\) -lt $until\\){ try { $r = Invoke-WebRequest -SkipCertificateCheck -UseBasicParsing -Uri https://localhost:5001/ -TimeoutSec 4; \"$\\($r.StatusCode\\)\"; break } catch { Start-Sleep 4 } })",
+      "mcp__b1838a51-7e97-4ec4-944c-571647e8c754__microsoft_docs_search"
     ]
   }
 }
