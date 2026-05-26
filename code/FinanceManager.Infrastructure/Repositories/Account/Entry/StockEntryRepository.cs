@@ -97,8 +97,8 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
             .ToList();
     }
 
-    public IAsyncEnumerable<StockAccountEntry> Get(int accountId, string ticker, DateTime startDate, DateTime endDate) => context.StockEntries
-            .Where(e => e.AccountId == accountId && e.Ticker == ticker && e.PostingDate >= startDate && e.PostingDate <= endDate)
+    public IAsyncEnumerable<StockAccountEntry> Get(int accountId, string isin, DateTime startDate, DateTime endDate) => context.StockEntries
+            .Where(e => e.AccountId == accountId && e.Isin == isin && e.PostingDate >= startDate && e.PostingDate <= endDate)
             .AsAsyncEnumerable();
 
 
@@ -129,22 +129,22 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
     {
         Dictionary<string, StockAccountEntry> result = [];
 
-        var tickers = await context.StockEntries
+        var isins = await context.StockEntries
                                 .Where(e => e.AccountId == accountId)
-                                .Select(m => m.Ticker)
+                                .Select(m => m.Isin)
                                 .Distinct()
                                 .ToListAsync();
 
-        foreach (var ticker in tickers)
+        foreach (var isin in isins)
         {
             var nextOlder = await context.StockEntries
-                   .Where(e => e.Ticker == ticker && e.AccountId == accountId && e.PostingDate < date)
+                   .Where(e => e.Isin == isin && e.AccountId == accountId && e.PostingDate < date)
                    .OrderByDescending(e => e.PostingDate)
                    .FirstOrDefaultAsync();
 
             if (nextOlder is null) continue;
 
-            result.Add(ticker, nextOlder);
+            result.Add(isin, nextOlder);
         }
 
         return result;
@@ -169,18 +169,18 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
     async Task<Dictionary<string, StockAccountEntry>> IStockAccountEntryRepository<StockAccountEntry>.GetNextYounger(int accountId, DateTime date)
     {
         Dictionary<string, StockAccountEntry> result = [];
-        var tickers = await context.StockEntries.Select(m => m.Ticker).Distinct().ToListAsync();
+        var isins = await context.StockEntries.Select(m => m.Isin).Distinct().ToListAsync();
 
-        foreach (var ticker in tickers)
+        foreach (var isin in isins)
         {
             var nextOlder = await context.StockEntries
-                   .Where(e => e.Ticker == ticker && e.AccountId == accountId && e.PostingDate > date)
+                   .Where(e => e.Isin == isin && e.AccountId == accountId && e.PostingDate > date)
                    .OrderBy(e => e.PostingDate)
                    .FirstOrDefaultAsync();
 
             if (nextOlder is null) continue;
 
-            result.Add(ticker, nextOlder);
+            result.Add(isin, nextOlder);
         }
 
         return result;
@@ -218,9 +218,9 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
 
         var previousEntries = await ((IStockAccountEntryRepository<StockAccountEntry>)this).GetNextOlder(accountId, entry.PostingDate);
 
-        StockAccountEntry? previousEntry = previousEntries.ContainsKey(entry.Ticker) ? previousEntries[entry.Ticker] : null;
+        StockAccountEntry? previousEntry = previousEntries.ContainsKey(entry.Isin) ? previousEntries[entry.Isin] : null;
 
-        await foreach (var entryToUpdate in Get(accountId, entry.Ticker, entry.PostingDate, DateTime.UtcNow).OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
+        await foreach (var entryToUpdate in Get(accountId, entry.Isin, entry.PostingDate, DateTime.UtcNow).OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
         {
             if (previousEntry is not null)
                 entryToUpdate.Value = previousEntry.Value + entryToUpdate.ValueChange;
