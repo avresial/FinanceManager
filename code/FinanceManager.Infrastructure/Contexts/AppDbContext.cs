@@ -3,6 +3,7 @@ using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Imports;
+using FinanceManager.Domain.Entities.Logging;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
@@ -32,6 +33,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AiProviderConfiguration> AiProviderConfigurations { get; set; } = default!;
     public DbSet<AiFallbackEntry> AiFallbackEntries { get; set; } = default!;
     public DbSet<AiProviderModel> AiProviderModels { get; set; } = default!;
+    public DbSet<LogEntry> LogEntries { get; set; } = default!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -54,6 +56,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new AiProviderConfigurationConfiguration());
         modelBuilder.ApplyConfiguration(new AiFallbackEntryConfiguration());
         modelBuilder.ApplyConfiguration(new AiProviderModelConfiguration());
+        modelBuilder.ApplyConfiguration(new LogEntryConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }

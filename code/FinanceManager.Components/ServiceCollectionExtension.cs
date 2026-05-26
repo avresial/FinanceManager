@@ -41,6 +41,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<DiversificationHttpClient>()
                 .AddScoped<AdministrationUsersHttpClient>()
                 .AddScoped<AdminAiProvidersHttpClient>()
+                .AddScoped<AdminLogsHttpClient>()
                 .AddScoped<NewVisitorsHttpClient>()
                 .AddScoped<CsvHeaderMappingHttpClient>()
                 .AddScoped<AccountDataSynchronizationService>()

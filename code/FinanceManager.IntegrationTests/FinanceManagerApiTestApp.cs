@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Api;
+using FinanceManager.Api.Logging;
 using FinanceManager.Api.Services;
 using FinanceManager.Infrastructure.Services;
 using Microsoft.AspNetCore.Hosting;
@@ -28,6 +29,14 @@ internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<ApiEntryP
                 var labelSetterDescriptor = s.FirstOrDefault(d => d.ImplementationType == typeof(LabelSetterStartupService));
                 if (labelSetterDescriptor != null)
                     s.Remove(labelSetterDescriptor);
+
+                var logPersistenceDescriptor = s.FirstOrDefault(d => d.ImplementationType == typeof(LogEntryPersistenceBackgroundService));
+                if (logPersistenceDescriptor != null)
+                    s.Remove(logPersistenceDescriptor);
+
+                var logRetentionDescriptor = s.FirstOrDefault(d => d.ImplementationType == typeof(LogRetentionBackgroundService));
+                if (logRetentionDescriptor != null)
+                    s.Remove(logRetentionDescriptor);
 
                 services?.Invoke(s);
             });

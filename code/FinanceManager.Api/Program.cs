@@ -1,3 +1,4 @@
+using FinanceManager.Api.Logging;
 using FinanceManager.Api.Services;
 using FinanceManager.Api.Services.Guest;
 using FinanceManager.Application;
@@ -91,7 +92,9 @@ builder.Services.AddCors(options =>
             var accessToken = context.Request.Query["access_token"];
             var path = context.HttpContext.Request.Path;
             if (!string.IsNullOrWhiteSpace(accessToken) &&
-                (path.StartsWithSegments("/hubs/currency-import") || path.StartsWithSegments("/hubs/label-setter-progress")))
+                (path.StartsWithSegments("/hubs/currency-import")
+                 || path.StartsWithSegments("/hubs/label-setter-progress")
+                 || path.StartsWithSegments("/hubs/admin-logs")))
                 context.Token = accessToken;
 
             return Task.CompletedTask;
@@ -137,6 +140,15 @@ builder.Services.AddSingleton<ICurrencyImportJobChannel, CurrencyImportJobChanne
 builder.Services.AddSingleton<ICurrencyImportJobStore, CurrencyImportJobStore>();
 builder.Services.AddHostedService<CurrencyImportBackgroundService>();
 
+builder.Services.Configure<LogRetentionOptions>(builder.Configuration.GetSection(LogRetentionOptions.SectionName));
+builder.Services.AddSingleton<ILogEntryQueue, LogEntryQueue>();
+builder.Services.AddSingleton<ILoggerProvider>(sp => new DatabaseLoggerProvider(sp.GetRequiredService<ILogEntryQueue>()));
+builder.Logging.AddFilter<DatabaseLoggerProvider>("Microsoft.EntityFrameworkCore", LogLevel.None);
+builder.Logging.AddFilter<DatabaseLoggerProvider>("Microsoft.AspNetCore.SignalR", LogLevel.None);
+builder.Logging.AddFilter<DatabaseLoggerProvider>("Microsoft.AspNetCore.Http.Connections", LogLevel.None);
+builder.Services.AddHostedService<LogEntryPersistenceBackgroundService>();
+builder.Services.AddHostedService<LogRetentionBackgroundService>();
+
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
@@ -163,5 +175,6 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<FinanceManager.Api.Hubs.CurrencyImportHub>("/hubs/currency-import");
 app.MapHub<FinanceManager.Api.Hubs.LabelSetterProgressHub>("/hubs/label-setter-progress");
+app.MapHub<FinanceManager.Api.Hubs.AdminLogsHub>("/hubs/admin-logs");
 app.MapFallbackToFile("index.html");
 app.Run();
