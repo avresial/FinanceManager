@@ -1,44 +1,41 @@
 <MudPaper Elevation="0" Style="background-color:transparent;">
     <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
-        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
-            <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
-                <MudMenu Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" @ref="_menu">
-                    <ActivatorContent>
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Style="text-transform: none; padding: 0;">
-                            <span class="mud-typography-caption">Value change</span>
-                            @if (HasActiveFilter)
-                            {
-                                <span class="mud-typography-caption ms-1">@GetRangeLabel()</span>
-                            }
-                        </MudButton>
-                    </ActivatorContent>
-                    <ChildContent>
-                        <MudPaper Class="pa-3" Elevation="0" Style="min-width: 260px;">
-                            <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                                <MudText Typo="Typo.subtitle2">Filter entries by value change range</MudText>
-                            </MudStack>
-                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
-                                <MudNumericField T="decimal?" Value="From" ValueChanged="OnFromChanged" Label="From"
-                                                 Variant="Variant.Outlined" Margin="Margin.Dense" Clearable
-                                                 Style="max-width: 140px;" />
-                                <MudNumericField T="decimal?" Value="To" ValueChanged="OnToChanged" Label="To"
-                                                 Variant="Variant.Outlined" Margin="Margin.Dense" Clearable
-                                                 Style="max-width: 140px;" />
-                            </MudStack>
-                            @if (!string.IsNullOrEmpty(_validationError))
-                            {
-                                <MudText Color="Color.Error" Typo="Typo.caption" Class="mt-1">@_validationError</MudText>
-                            }
-                        </MudPaper>
-                    </ChildContent>
-                </MudMenu>
-                @if (HasActiveFilter)
-                {
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Default"
-                                   @onclick="ResetFilter" />
-                }
-            </MudStack>
-        </MudChip>
+        <MudMenu Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" @ref="_menu">
+            <ActivatorContent>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default"
+                         Style="cursor: pointer;">
+                    <span class="mud-typography-caption">Value change</span>
+                    @if (HasActiveFilter)
+                    {
+                        <span class="mud-typography-caption ms-1">@GetRangeLabel()</span>
+                    }
+                </MudChip>
+            </ActivatorContent>
+            <ChildContent>
+                <MudPaper Class="pa-3" Elevation="0" Style="min-width: 260px;">
+                    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.subtitle2">Filter entries by value change range</MudText>
+                    </MudStack>
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                        <MudNumericField T="decimal?" Value="From" ValueChanged="OnFromChanged" Label="From"
+                                         Variant="Variant.Outlined" Margin="Margin.Dense" Clearable
+                                         Style="max-width: 140px;" />
+                        <MudNumericField T="decimal?" Value="To" ValueChanged="OnToChanged" Label="To"
+                                         Variant="Variant.Outlined" Margin="Margin.Dense" Clearable
+                                         Style="max-width: 140px;" />
+                    </MudStack>
+                    @if (!string.IsNullOrEmpty(_validationError))
+                    {
+                        <MudText Color="Color.Error" Typo="Typo.caption" Class="mt-1">@_validationError</MudText>
+                    }
+                </MudPaper>
+            </ChildContent>
+        </MudMenu>
+        @if (HasActiveFilter)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Default"
+                           @onclick="ResetFilter" />
+        }
     </MudStack>
 </MudPaper>
 

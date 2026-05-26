@@ -188,8 +188,10 @@ public partial class LineChartJs : ComponentBase, IAsyncDisposable
 
 public class ChartJsLineDataPoint(DateTime x, decimal y)
 {
+#pragma warning disable IDE1006 // Naming Styles - lowercase required for Chart.js JSON serialization
     public string x { get; set; } = x.ToString("yyyy-MM-dd");
     public decimal y { get; set; } = y;
+#pragma warning restore IDE1006
 }
 
 public class Dataset

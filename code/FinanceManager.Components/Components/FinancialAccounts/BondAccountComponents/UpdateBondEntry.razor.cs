@@ -18,7 +18,7 @@ public partial class UpdateBondEntry
     private MudForm? _form;
 
     private DateTime? _postingDate = DateTime.Today;
-    private TimeSpan? _time { get; set; } = new TimeSpan(01, 00, 00);
+    private TimeSpan? _time = new TimeSpan(01, 00, 00);
 
     private decimal? _valueChange = 0;
 

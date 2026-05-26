@@ -1,6 +1,9 @@
+using FinanceManager.Api.Logging;
 using FinanceManager.Api.Services;
+using FinanceManager.Api.Services.Guest;
 using FinanceManager.Application;
 using FinanceManager.Application.Options;
+using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
@@ -30,6 +33,7 @@ builder.Services
 
 builder.Services.Configure<JwtAuthOptions>(builder.Configuration.GetSection("JwtConfig"));
 builder.Services.Configure<StockApiOptions>(builder.Configuration.GetSection("StockApi"));
+builder.Services.Configure<OpenFigiOptions>(builder.Configuration.GetSection("OpenFigi"));
 builder.Services.Configure<LmStudioOptions>(builder.Configuration.GetSection("LmStudio"));
 builder.Services.Configure<OpenRouterOptions>(builder.Configuration.GetSection("OpenRouter"));
 builder.Services.Configure<GitHubModelsOptions>(builder.Configuration.GetSection("GitHubModels"));
@@ -88,8 +92,30 @@ builder.Services.AddCors(options =>
             var accessToken = context.Request.Query["access_token"];
             var path = context.HttpContext.Request.Path;
             if (!string.IsNullOrWhiteSpace(accessToken) &&
-                (path.StartsWithSegments("/hubs/currency-import") || path.StartsWithSegments("/hubs/label-setter-progress")))
+                (path.StartsWithSegments("/hubs/currency-import")
+                 || path.StartsWithSegments("/hubs/label-setter-progress")
+                 || path.StartsWithSegments("/hubs/admin-logs")))
                 context.Token = accessToken;
+
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            var principal = context.Principal;
+            var isGuestClaim = principal?.FindFirst(GuestClaims.IsGuest)?.Value;
+            if (!string.Equals(isGuestClaim, "true", StringComparison.OrdinalIgnoreCase))
+                return Task.CompletedTask;
+
+            var idClaim = principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(idClaim, out var guestUserId))
+            {
+                context.Fail("Guest token is missing a user id.");
+                return Task.CompletedTask;
+            }
+
+            var store = context.HttpContext.RequestServices.GetRequiredService<IGuestSessionStore>();
+            if (!store.IsActive(guestUserId))
+                context.Fail("Guest session has expired.");
 
             return Task.CompletedTask;
         }
@@ -97,9 +123,13 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddMemoryCache();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSignalR();
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenGenerator>();
+builder.Services.AddSingleton<IGuestSessionStore, GuestSessionStore>();
+builder.Services.AddScoped<IGuestSessionAccessor, GuestSessionAccessor>();
+builder.Services.AddHostedService<GuestSessionCleanupService>();
 builder.Services.AddSingleton<IInsightsGenerationChannel, InsightsGenerationChannel>();
 builder.Services.AddHostedService<InsightsGenerationBackgroundService>();
 builder.Services.AddSingleton<ILabelSetterProgressTracker, LabelSetterProgressTracker>();
@@ -109,6 +139,15 @@ builder.Services.AddHostedService<LabelSetterStartupService>();
 builder.Services.AddSingleton<ICurrencyImportJobChannel, CurrencyImportJobChannel>();
 builder.Services.AddSingleton<ICurrencyImportJobStore, CurrencyImportJobStore>();
 builder.Services.AddHostedService<CurrencyImportBackgroundService>();
+
+builder.Services.Configure<LogRetentionOptions>(builder.Configuration.GetSection(LogRetentionOptions.SectionName));
+builder.Services.AddSingleton<ILogEntryQueue, LogEntryQueue>();
+builder.Services.AddSingleton<ILoggerProvider>(sp => new DatabaseLoggerProvider(sp.GetRequiredService<ILogEntryQueue>()));
+builder.Logging.AddFilter<DatabaseLoggerProvider>("Microsoft.EntityFrameworkCore", LogLevel.None);
+builder.Logging.AddFilter<DatabaseLoggerProvider>("Microsoft.AspNetCore.SignalR", LogLevel.None);
+builder.Logging.AddFilter<DatabaseLoggerProvider>("Microsoft.AspNetCore.Http.Connections", LogLevel.None);
+builder.Services.AddHostedService<LogEntryPersistenceBackgroundService>();
+builder.Services.AddHostedService<LogRetentionBackgroundService>();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
@@ -136,5 +175,6 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<FinanceManager.Api.Hubs.CurrencyImportHub>("/hubs/currency-import");
 app.MapHub<FinanceManager.Api.Hubs.LabelSetterProgressHub>("/hubs/label-setter-progress");
+app.MapHub<FinanceManager.Api.Hubs.AdminLogsHub>("/hubs/admin-logs");
 app.MapFallbackToFile("index.html");
 app.Run();

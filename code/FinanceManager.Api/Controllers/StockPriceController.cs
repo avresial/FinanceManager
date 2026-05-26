@@ -14,7 +14,7 @@ namespace FinanceManager.Api.Controllers;
 [Tags("Stock Prices")]
 public partial class StockPriceController(IStockPriceRepository stockPriceRepository, ICurrencyExchangeService currencyExchangeService,
 ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, IStockPriceProvider stockPriceProvider, IStockDetailsRepository stockDetailsRepository,
-IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
+IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinResolver) : ControllerBase
 {
 
     [Authorize]
@@ -30,7 +30,10 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return NotFound("Currency not found.");
 
-        var stockPrice = await stockPriceRepository.Add(ticker.ToUpper(), pricePerUnit, currency, date);
+        var isin = await isinResolver.ResolveAsync(ticker.ToUpper(), ct: cancellationToken);
+        if (isin is null) return BadRequest("Could not resolve ticker to ISIN");
+
+        var stockPrice = await stockPriceRepository.Add(isin, pricePerUnit, currency, date);
         return Ok(stockPrice);
     }
 
@@ -47,7 +50,10 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return NotFound("Currency not found.");
 
-        var stockPrice = await stockPriceRepository.Update(ticker.ToUpper(), pricePerUnit, currency, date);
+        var isin = await isinResolver.ResolveAsync(ticker.ToUpper(), ct: cancellationToken);
+        if (isin is null) return BadRequest("Could not resolve ticker to ISIN");
+
+        var stockPrice = await stockPriceRepository.Update(isin, pricePerUnit, currency, date);
         return Ok(stockPrice);
     }
 
@@ -60,36 +66,31 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
         if (string.IsNullOrWhiteSpace(ticker) || date == default)
             return BadRequest("Invalid input parameters.");
 
-        var normalizedTicker = ticker.Trim().ToUpperInvariant();
-
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null)
             return NotFound("Currency not found.");
 
-        var stockPrice = await stockPriceRepository.GetThisOrNextOlder(normalizedTicker, date);
+        var isin = await isinResolver.ResolveAsync(ticker.Trim().ToUpperInvariant(), ct: cancellationToken);
+        if (isin is null) return BadRequest("Could not resolve ticker to ISIN");
+
+        var stockPrice = await stockPriceRepository.GetThisOrNextOlder(isin, date);
         if (stockPrice is null)
         {
-            var fetchedPrice = await stockPriceProvider.GetPricePerUnitAsync(normalizedTicker, currency, date);
+            var fetchedPrice = await stockPriceProvider.GetPricePerUnitAsync(ticker, currency, date);
             if (fetchedPrice <= 0)
                 return NotFound("Stock price not found.");
 
-            stockPrice = await stockPriceRepository.GetThisOrNextOlder(normalizedTicker, date);
+            stockPrice = await stockPriceRepository.GetThisOrNextOlder(isin, date);
             if (stockPrice is null)
             {
-                return Ok(new StockPrice
-                {
-                    Ticker = normalizedTicker,
-                    PricePerUnit = fetchedPrice,
-                    Currency = currency,
-                    Date = date.Date
-                });
+                return NotFound("Stock price not found in database.");
             }
         }
 
         if (currency == stockPrice.Currency)
             return Ok(stockPrice);
 
-        var exchangeRate = await currencyExchangeService.GetExchangeRateAsync(stockPrice.Currency, currency, date); // TODO add cache
+        var exchangeRate = await currencyExchangeService.GetExchangeRateAsync(stockPrice.Currency, currency, date);
         if (exchangeRate is null)
             return NotFound($"Exchange rate from {stockPrice.Currency} to {currency} not found for the specified date.");
 
@@ -139,7 +140,7 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
                 {
                     var convertedPrice = new StockPrice
                     {
-                        Ticker = price.Ticker,
+                        Isin = price.Isin,
                         PricePerUnit = price.PricePerUnit * exchangeRate.Value,
                         Currency = currency,
                         Date = price.Date
@@ -208,7 +209,11 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
         if (string.IsNullOrWhiteSpace(ticker))
             return BadRequest("Invalid input parameters.");
 
-        var details = await stockDetailsRepository.Get(ticker, cancellationToken);
+        var isin = await isinResolver.ResolveAsync(ticker.Trim(), ct: cancellationToken);
+        if (isin is null)
+            return BadRequest("Could not resolve ticker to ISIN");
+
+        var details = await stockDetailsRepository.Get(isin, cancellationToken);
         if (details is null)
             return NotFound();
 
@@ -236,8 +241,13 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
 
         var normalizedCurrency = request.Currency.Trim().ToUpperInvariant();
         var currency = await currencyRepository.GetOrAdd(normalizedCurrency, normalizedCurrency, cancellationToken);
+        var isin = await isinResolver.ResolveAsync(request.Ticker.Trim(), ct: cancellationToken);
+        if (isin is null)
+            return BadRequest("Could not resolve ticker to ISIN");
+
         var details = new StockDetails
         {
+            Isin = isin,
             Ticker = request.Ticker.Trim().ToUpperInvariant(),
             Name = request.Name.Trim(),
             Type = request.Type.Trim(),
@@ -263,8 +273,13 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
 
         var normalizedCurrency = request.Currency.Trim().ToUpperInvariant();
         var currency = await currencyRepository.GetOrAdd(normalizedCurrency, normalizedCurrency, cancellationToken);
+        var isin = await isinResolver.ResolveAsync(request.Ticker.Trim(), ct: cancellationToken);
+        if (isin is null)
+            return BadRequest("Could not resolve ticker to ISIN");
+
         var details = new StockDetails
         {
+            Isin = isin,
             Ticker = request.Ticker.Trim().ToUpperInvariant(),
             Name = request.Name.Trim(),
             Type = request.Type.Trim(),
@@ -301,7 +316,11 @@ IStockPriceBulkImportService stockPriceBulkImportService) : ControllerBase
         if (string.IsNullOrWhiteSpace(ticker))
             return BadRequest("Invalid input parameters.");
 
-        if (!await stockDetailsRepository.Delete(ticker, cancellationToken))
+        var isin = await isinResolver.ResolveAsync(ticker.Trim(), ct: cancellationToken);
+        if (isin is null)
+            return BadRequest("Could not resolve ticker to ISIN");
+
+        if (!await stockDetailsRepository.Delete(isin, cancellationToken))
             return NotFound();
 
         return NoContent();

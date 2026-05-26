@@ -15,7 +15,7 @@ public partial class StockPricesComponent
 
     public DateRange DateRange { get; set; } = new(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
 
-    [Parameter] public string Ticker { get; set; } = string.Empty;
+    [Parameter] public string Isin { get; set; } = string.Empty;
 
     [Inject] private StockPriceHttpClient StockPriceHttpClient { get; set; } = default!;
     [Inject] private ISettingsService SettingsService { get; set; } = default!;
@@ -39,7 +39,7 @@ public partial class StockPricesComponent
 
         var searchValue = value.ToUpperInvariant();
         return await Task.FromResult(_allStocks
-            .Where(x => x.Ticker.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ||
+            .Where(x => x.Isin.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ||
                        x.Name.Contains(searchValue, StringComparison.OrdinalIgnoreCase))
             .Take(50)
             .ToList());
@@ -51,13 +51,13 @@ public partial class StockPricesComponent
 
         if (stock is null)
         {
-            Ticker = string.Empty;
+            Isin = string.Empty;
             _stockPrices = [];
             StateHasChanged();
             return;
         }
 
-        Ticker = stock.Ticker;
+        Isin = stock.Isin;
         await GetStockPriceAsync();
     }
 
@@ -65,7 +65,7 @@ public partial class StockPricesComponent
     {
         DateRange = new DateRange(dates.Start, dates.End);
 
-        if (!string.IsNullOrWhiteSpace(Ticker))
+        if (!string.IsNullOrWhiteSpace(Isin))
             _ = GetStockPriceAsync();
     }
 
@@ -73,13 +73,13 @@ public partial class StockPricesComponent
     {
         TimeSpan timeSpan = TimeSpan.FromDays(1);
 
-        if (string.IsNullOrWhiteSpace(Ticker) || DateRange is null || DateRange.Start is null || DateRange.End is null)
+        if (string.IsNullOrWhiteSpace(Isin) || DateRange is null || DateRange.Start is null || DateRange.End is null)
             return;
 
         try
         {
             var currency = SettingsService.GetCurrency();
-            _stockPrices = [.. await StockPriceHttpClient.GetStockPrices(Ticker, currency.Id, DateRange.Start.Value, DateRange.End.Value, timeSpan)];
+            _stockPrices = [.. await StockPriceHttpClient.GetStockPrices(Isin, currency.Id, DateRange.Start.Value, DateRange.End.Value, timeSpan)];
         }
         catch (Exception ex)
         {

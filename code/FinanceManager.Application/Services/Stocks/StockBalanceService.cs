@@ -94,18 +94,40 @@ internal class StockBalanceService(IFinancialAccountRepository financialAccountR
 
         Dictionary<DateTime, decimal> result = [];
         var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
+        List<StockAccount> accounts = [];
 
         await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, start, end))
         {
             if (account?.Entries is null) continue;
             if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
 
+            accounts.Add(account);
+        }
+
+        Dictionary<string, IReadOnlyDictionary<DateTime, decimal>> pricesByTicker = new(StringComparer.OrdinalIgnoreCase);
+        var tickers = accounts.SelectMany(x => x.GetStoredTickers()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (tickers.Count > 0)
+        {
+            var preloadTasks = tickers.ToDictionary(
+                ticker => ticker,
+                ticker => stockPriceProvider.GetPricePerUnitSeriesAsync(ticker, currency, start.Date, end.Date),
+                StringComparer.OrdinalIgnoreCase);
+
+            await Task.WhenAll(preloadTasks.Values);
+            foreach (var preloadTask in preloadTasks)
+                pricesByTicker[preloadTask.Key] = await preloadTask.Value;
+        }
+
+        foreach (var account in accounts)
+        {
             foreach (var entry in account.Entries)
             {
                 if (entry.PostingDate.Date < start.Date || entry.PostingDate.Date > end.Date) continue;
                 if (!predicate(entry)) continue;
 
-                var pricePerUnit = await stockPriceProvider.GetPricePerUnitAsync(entry.Ticker, currency, entry.PostingDate);
+                if (!pricesByTicker.TryGetValue(entry.Isin, out var tickerPrices)) continue;
+                if (!tickerPrices.TryGetValue(entry.PostingDate.Date, out var pricePerUnit)) continue;
+
                 if (!result.ContainsKey(entry.PostingDate.Date)) result[entry.PostingDate.Date] = 0;
 
                 result[entry.PostingDate.Date] += entry.ValueChange * pricePerUnit;

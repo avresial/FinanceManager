@@ -26,12 +26,12 @@ public class StockAccountExportService(
             .ThenBy(x => x.EntryId)
             .WithCancellation(cancellationToken))
         {
-            var tickerCurrency = await stockPriceRepository.GetTickerCurrency(entry.Ticker);
-            var price = tickerCurrency is not null
-                ? entry.Value * await stockPriceProvider.GetPricePerUnitAsync(entry.Ticker, tickerCurrency, entry.PostingDate)
+            var stockCurrency = await stockPriceRepository.GetStockCurrency(entry.Isin);
+            var price = stockCurrency is not null
+                ? entry.Value * await stockPriceProvider.GetPricePerUnitAsync(entry.Isin, stockCurrency, entry.PostingDate)
                 : 0m;
 
-            yield return new StockAccountExportDto(entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Value, price, entry.Ticker, entry.InvestmentType);
+            yield return new StockAccountExportDto(entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Value, price, entry.Isin, entry.InvestmentType);
         }
     }
 }

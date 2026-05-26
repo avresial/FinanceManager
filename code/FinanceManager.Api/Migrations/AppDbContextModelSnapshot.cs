@@ -17,7 +17,7 @@ namespace FinanceManager.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.5")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -90,6 +90,34 @@ namespace FinanceManager.Api.Migrations
                     b.HasKey("ProviderName");
 
                     b.ToTable("AiProviderConfigurations");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Ai.AiProviderModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ModelName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ProviderName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderName");
+
+                    b.ToTable("AiProviderModels");
                 });
 
             modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondAccountEntry", b =>
@@ -289,6 +317,49 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("CsvHeaderMappings");
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Logging.LogEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<int?>("EventId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EventName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Exception")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<DateTime>("TimestampUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TimestampUtc");
+
+                    b.HasIndex("Level", "TimestampUtc");
+
+                    b.ToTable("LogEntries");
+                });
+
             modelBuilder.Entity("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabel", b =>
                 {
                     b.Property<int>("Id")
@@ -360,12 +431,18 @@ namespace FinanceManager.Api.Migrations
                     b.Property<int>("InvestmentType")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Isin")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)");
+
                     b.Property<DateTime>("PostingDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Ticker")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<decimal>("Value")
                         .HasPrecision(18, 8)
@@ -382,9 +459,9 @@ namespace FinanceManager.Api.Migrations
 
             modelBuilder.Entity("FinanceManager.Domain.Entities.Stocks.StockDetails", b =>
                 {
-                    b.Property<string>("Ticker")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                    b.Property<string>("Isin")
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)");
 
                     b.Property<int>("CurrencyId")
                         .HasColumnType("integer");
@@ -399,14 +476,21 @@ namespace FinanceManager.Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<string>("Ticker")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.HasKey("Ticker");
+                    b.HasKey("Isin");
 
                     b.HasIndex("CurrencyId");
+
+                    b.HasIndex("Ticker");
 
                     b.ToTable("StockDetails");
                 });
@@ -529,14 +613,14 @@ namespace FinanceManager.Api.Migrations
                         .HasPrecision(18, 8)
                         .HasColumnType("numeric(18,8)");
 
-                    b.Property<string>("StockTicker")
+                    b.Property<string>("StockIsin")
                         .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("StockTicker", "Date");
+                    b.HasIndex("StockIsin", "Date");
 
                     b.ToTable("StockPrices");
                 });
@@ -643,7 +727,7 @@ namespace FinanceManager.Api.Migrations
                 {
                     b.HasOne("FinanceManager.Domain.Entities.Stocks.StockDetails", "StockDetails")
                         .WithMany()
-                        .HasForeignKey("StockTicker")
+                        .HasForeignKey("StockIsin")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

@@ -84,20 +84,20 @@ public class InvestmentAccountTests
     public void UpdateEntries_SingleTicker()
     {
         // Arrange
-        StockAccountEntry investmentEntry0 = new(1, 2, new(2000, 1, 3), 0, 100, "Ticker1", InvestmentType.Stock);
-        StockAccountEntry investmentEntry1 = new(1, 3, new(2000, 1, 3), 0, 99, "TickerToUpdate", InvestmentType.Stock);
-        StockAccountEntry investmentEntry2 = new(1, 4, new(2000, 1, 2), 0, 100, "Ticker1", InvestmentType.Stock);
+        StockAccountEntry investmentEntry0 = new(1, 2, new(2000, 1, 3), 0, 100, "US0378331005", InvestmentType.Stock);
+        StockAccountEntry investmentEntry1 = new(1, 3, new(2000, 1, 3), 0, 99, "IE00B4L5Y983", InvestmentType.Stock);
+        StockAccountEntry investmentEntry2 = new(1, 4, new(2000, 1, 2), 0, 100, "US0378331005", InvestmentType.Stock);
 
         _investmentAccount.Add(investmentEntry0);
         _investmentAccount.Add(investmentEntry1);
         _investmentAccount.Add(investmentEntry2);
 
         // Act
-        var test = _investmentAccount.Get(new(2000, 1, 3)).First(x => x.Ticker == "TickerToUpdate");
-        test.Update(new(1, 3, new(2000, 1, 3), 0, 50, "TickerToUpdate_TickerChanged", InvestmentType.Stock));
+        var test = _investmentAccount.Get(new(2000, 1, 3)).First(x => x.Isin == "IE00B4L5Y983");
+        test.Update(new(1, 3, new(2000, 1, 3), 0, 50, "IE00B4L5Y983", InvestmentType.Stock));
 
         // Assert
-        var updateResult = _investmentAccount.Get(new(2000, 1, 3)).First(x => x.Ticker == "TickerToUpdate_TickerChanged");
+        var updateResult = _investmentAccount.Get(new(2000, 1, 3)).First(x => x.Isin == "IE00B4L5Y983");
         Assert.Equal(50, updateResult.ValueChange);
     }
 

@@ -8,8 +8,8 @@
     <TitleContent>
         <MudGrid>
             <MudItem xs="3">
-                <MudText Typo="Typo.caption" Color="Color.Default">Ticker</MudText>
-                <MudText Typo="Typo.body1">@InvestmentEntry.Ticker</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Default">ISIN</MudText>
+                <MudText Typo="Typo.body1">@InvestmentEntry.Isin</MudText>
             </MudItem>
            
             <MudItem xs="5">
@@ -30,8 +30,8 @@
                 else
                 {
                     <MudButton Color="Color.Warning" Variant="Variant.Text"
-                               Href=@($"StockPrices/{InvestmentEntry.Ticker}/{InvestmentEntry.PostingDate.ToRfc3339()}")>
-                        Ticker price unavailable
+                               Href=@($"StockPrices/{InvestmentEntry.Isin}/{InvestmentEntry.PostingDate.ToRfc3339()}")>
+                        Stock price unavailable
                     </MudButton>
                 }
             </MudItem>

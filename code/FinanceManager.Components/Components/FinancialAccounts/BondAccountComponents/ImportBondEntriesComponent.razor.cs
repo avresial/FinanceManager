@@ -41,7 +41,7 @@ public partial class ImportBondEntriesComponent : ComponentBase
     private List<BondDetails> _possibleBonds = [];
 
     private string _delimiterBacking = ",";
-    private string _delimiter
+    private string Delimiter
     {
         get => _delimiterBacking;
         set
@@ -145,7 +145,7 @@ public partial class ImportBondEntriesComponent : ComponentBase
 
         try
         {
-            var result = await ImportStockModelReader.Read(_uploadedContent, _delimiter, cancellationToken);
+            var result = await ImportStockModelReader.Read(_uploadedContent, Delimiter, cancellationToken);
             if (result is null) return;
 
             _headers = result.Value.Headers ?? [];
@@ -177,7 +177,7 @@ public partial class ImportBondEntriesComponent : ComponentBase
         }
         catch (Exception ex)
         {
-            Logger?.LogDebug(ex, "CsvHelper attempt failed for delimiter {delimiter}", _delimiter);
+            Logger?.LogDebug(ex, "CsvHelper attempt failed for delimiter {delimiter}", Delimiter);
         }
 
         if (_headers.Count == 0)
@@ -380,7 +380,7 @@ public partial class ImportBondEntriesComponent : ComponentBase
             if (string.IsNullOrEmpty(_selectedBondHeader))
                 throw new Exception("Bond column is not selected.");
 
-            var (headers, data) = await ImportStockModelReader.Read(_uploadedContent, _delimiter, CancellationToken.None)
+            var (headers, data) = await ImportStockModelReader.Read(_uploadedContent, Delimiter, CancellationToken.None)
                 ?? throw new Exception("Failed to read data for import.");
 
             var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, _selectedBondHeader, headers, data);

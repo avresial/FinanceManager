@@ -75,6 +75,11 @@ internal sealed class AlphaVantageClient(
 
     public async Task<IReadOnlyList<StockPrice>> GetDailySeries(string ticker, DateTime start, DateTime end, Currency currency, CancellationToken ct = default)
     {
+        return await GetDailySeries(ticker, string.Empty, start, end, currency, ct);
+    }
+
+    public async Task<IReadOnlyList<StockPrice>> GetDailySeries(string ticker, string isin, DateTime start, DateTime end, Currency currency, CancellationToken ct = default)
+    {
         if (string.IsNullOrWhiteSpace(ticker)) return [];
 
         var apiKey = options.Value.ApiKey;
@@ -111,7 +116,7 @@ internal sealed class AlphaVantageClient(
 
                 prices.Add(new StockPrice
                 {
-                    Ticker = ticker,
+                    Isin = isin,
                     PricePerUnit = close,
                     Currency = currency,
                     Date = date

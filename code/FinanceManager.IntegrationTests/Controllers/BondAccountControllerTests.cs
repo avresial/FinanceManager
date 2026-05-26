@@ -249,7 +249,7 @@ public class BondAccountControllerTests(OptionsProvider optionsProvider) : Contr
 
         var csv = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains("PostingDate", csv, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("BondDetailsId", csv, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Bond", csv, StringComparison.OrdinalIgnoreCase);
     }
 
     public override void Dispose()

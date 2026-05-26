@@ -1,5 +1,5 @@
-using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Helpers;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
@@ -39,6 +39,8 @@ public partial class StockAccountDetailsPageContent : ComponentBase
 
     private decimal? _filterFrom;
     private decimal? _filterTo;
+    private DateTime? _filterDateStart;
+    private DateTime? _filterDateEnd;
 
 
     public StockAccount? Account { get; set; }
@@ -160,7 +162,7 @@ public partial class StockAccountDetailsPageContent : ComponentBase
         foreach (var ticker in _stocks)
         {
             var prices = await priceTasksByTicker[ticker];
-            Account.Entries.Where(x => x.Ticker.Equals(ticker, StringComparison.OrdinalIgnoreCase)).ToList().ForEach(entry =>
+            Account.Entries.Where(x => x.Isin.Equals(ticker, StringComparison.OrdinalIgnoreCase)).ToList().ForEach(entry =>
             {
                 var price = GetLatestPriceOnOrBefore(prices, entry.PostingDate.Date);
                 if (price is not null)
@@ -223,7 +225,7 @@ public partial class StockAccountDetailsPageContent : ComponentBase
             if (_user is null) return;
 
             var requestedDateStart = _dateStart;
-            _dateEnd = DateTime.UtcNow;
+            _dateEnd = _filterDateEnd.HasValue ? _filterDateEnd.Value.Date.AddDays(1).AddTicks(-1) : DateTime.UtcNow;
             Account = await FinancialAccountService.GetAccount<StockAccount>(_user.UserId, AccountId, requestedDateStart, _dateEnd, _minimumEntryCount);
             UpdateDateStartFromLoadedEntries(requestedDateStart);
         }
@@ -344,7 +346,7 @@ public partial class StockAccountDetailsPageContent : ComponentBase
         });
     }
 
-    private bool HasActiveFilter => _filterFrom.HasValue || _filterTo.HasValue;
+    private bool HasActiveFilter => _filterFrom.HasValue || _filterTo.HasValue || _filterDateStart.HasValue || _filterDateEnd.HasValue;
 
     private List<StockAccountEntry> GetFilteredEntries()
     {
@@ -356,6 +358,10 @@ public partial class StockAccountDetailsPageContent : ComponentBase
             entries = entries.Where(x => x.ValueChange >= _filterFrom.Value);
         if (_filterTo.HasValue)
             entries = entries.Where(x => x.ValueChange <= _filterTo.Value);
+        if (_filterDateStart.HasValue)
+            entries = entries.Where(x => x.PostingDate.Date >= _filterDateStart.Value.Date);
+        if (_filterDateEnd.HasValue)
+            entries = entries.Where(x => x.PostingDate.Date <= _filterDateEnd.Value.Date);
 
         return entries.OrderByDescending(x => x.PostingDate).ToList();
     }
@@ -364,6 +370,19 @@ public partial class StockAccountDetailsPageContent : ComponentBase
     {
         _filterFrom = filter.From;
         _filterTo = filter.To;
+    }
+
+    private async Task OnDateFilterChanged((DateTime? From, DateTime? To) filter)
+    {
+        _filterDateStart = filter.From;
+        _filterDateEnd = filter.To;
+
+        var defaultDateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+        var fallbackStart = Account?.Start?.Date ?? defaultDateStart;
+        _dateStart = _filterDateStart ?? (_filterDateEnd.HasValue ? fallbackStart : defaultDateStart);
+        _loadedAllData = false;
+        await UpdateEntries();
+        StateHasChanged();
     }
 
     private void UpdateDateStartFromLoadedEntries(DateTime requestedDateStart)

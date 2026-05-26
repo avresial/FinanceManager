@@ -1,0 +1,95 @@
+<MudPaper Elevation="0" Style="background-color:transparent;">
+    <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+        <MudMenu Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" @ref="_menu">
+            <ActivatorContent>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default"
+                         Style="cursor: pointer;">
+                    <span class="mud-typography-caption">Date range</span>
+                    @if (HasActiveFilter)
+                    {
+                        <span class="mud-typography-caption ms-1">@GetRangeLabel()</span>
+                    }
+                </MudChip>
+            </ActivatorContent>
+            <ChildContent>
+                <MudPaper Class="pa-3" Elevation="0" Style="min-width: 260px;">
+                    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.subtitle2">Filter entries by date range</MudText>
+                    </MudStack>
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                        <MudDatePicker Date="From" DateChanged="OnFromChanged" Label="From"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable
+                                       Style="max-width: 140px;" />
+                        <MudDatePicker Date="To" DateChanged="OnToChanged" Label="To"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable
+                                       Style="max-width: 140px;" />
+                    </MudStack>
+                    @if (!string.IsNullOrEmpty(_validationError))
+                    {
+                        <MudText Color="Color.Error" Typo="Typo.caption" Class="mt-1">@_validationError</MudText>
+                    }
+                </MudPaper>
+            </ChildContent>
+        </MudMenu>
+        @if (HasActiveFilter)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Default"
+                           @onclick="ResetFilter" />
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    private string? _validationError;
+    private MudMenu? _menu;
+
+    [Parameter] public DateTime? From { get; set; }
+    [Parameter] public DateTime? To { get; set; }
+    [Parameter] public EventCallback<(DateTime? From, DateTime? To)> OnFilterChanged { get; set; }
+
+    private bool HasActiveFilter => From.HasValue || To.HasValue;
+
+    private string GetRangeLabel()
+    {
+        if (From.HasValue && To.HasValue)
+            return $"{From.Value:dd/MM}..{To.Value:dd/MM}";
+        if (From.HasValue)
+            return $">= {From.Value:dd/MM}";
+        if (To.HasValue)
+            return $"<= {To.Value:dd/MM}";
+
+        return string.Empty;
+    }
+
+    private async Task OnFromChanged(DateTime? value)
+    {
+        From = value;
+        await ApplyFilter();
+    }
+
+    private async Task OnToChanged(DateTime? value)
+    {
+        To = value;
+        await ApplyFilter();
+    }
+
+    private async Task ApplyFilter()
+    {
+        if (From.HasValue && To.HasValue && From.Value.Date > To.Value.Date)
+        {
+            _validationError = "'From' must be less than or equal to 'To'";
+            return;
+        }
+
+        _validationError = null;
+        await OnFilterChanged.InvokeAsync((From, To));
+    }
+
+    private async Task ResetFilter(MouseEventArgs args)
+    {
+        From = null;
+        To = null;
+        _validationError = null;
+        await OnFilterChanged.InvokeAsync((null, null));
+    }
+}

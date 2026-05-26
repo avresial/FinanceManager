@@ -68,13 +68,18 @@ public class StockBalanceServiceTests
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
-        _stockPriceProviderMock.Setup(x => x.GetPricePerUnitAsync("AAPL", DefaultCurrency.PLN, startDate)).ReturnsAsync(10);
-        _stockPriceProviderMock.Setup(x => x.GetPricePerUnitAsync("AAPL", DefaultCurrency.PLN, endDate)).ReturnsAsync(12);
+        _stockPriceProviderMock.Setup(x => x.GetPricePerUnitSeriesAsync("AAPL", DefaultCurrency.PLN, startDate, endDate, It.IsAny<CancellationToken>()))
+                               .ReturnsAsync(new Dictionary<DateTime, decimal>
+                               {
+                                   [startDate] = 10,
+                                   [endDate] = 12
+                               });
 
         var result = await _service.GetNetCashFlow(userId, DefaultCurrency.PLN, startDate, endDate);
 
         Assert.Equal(2, result.Count);
         Assert.Equal(20, result.Single(x => x.DateTime == startDate).Value);
         Assert.Equal(-12, result.Single(x => x.DateTime == endDate).Value);
+        _stockPriceProviderMock.Verify(x => x.GetPricePerUnitAsync("AAPL", DefaultCurrency.PLN, It.IsAny<DateTime>()), Times.Never);
     }
 }

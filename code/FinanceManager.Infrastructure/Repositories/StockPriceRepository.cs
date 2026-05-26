@@ -9,9 +9,10 @@ namespace FinanceManager.Infrastructure.Repositories;
 
 public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
 {
-    public async Task<StockPrice> Add(string ticker, decimal pricePerUnit, Currency currency, DateTime date)
+    public async Task<StockPrice> Add(string isin, decimal pricePerUnit, Currency currency, DateTime date)
     {
-        var stockDetails = await GetOrCreateStockDetails(ticker, currency);
+        var stockDetails = await GetOrCreateStockDetails(isin, currency);
+
         StockPriceDto stockPriceDto = new(
             0, // Id is autoincremented, will be set by the database
             stockDetails,
@@ -25,72 +26,74 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         return entry.Entity.ToStockPrice();
     }
 
-    public async Task<DateTime?> GetLatestMissing(string ticker)
+    public async Task<DateTime?> GetLatestMissing(string isin)
     {
-        var normalizedTicker = ticker.Trim().ToUpperInvariant();
-        var searchDate = DateTime.UtcNow.Date;
-        var stockPrice = await context.StockPrices
-            .Include(x => x.StockDetails)
-            .FirstOrDefaultAsync(x => EF.Property<string>(x, "StockTicker") == normalizedTicker && x.Date.Date == searchDate.Date);
-        if (stockPrice is null) return searchDate;
+        var today = DateTime.UtcNow.Date;
+        var ninetyNineYearsAgo = today.AddYears(-99);
 
-        int tries = 365 * 99;
-        do
+        var stockPrices = await context.StockPrices
+            .Where(x => x.StockDetails!.Isin == isin && x.Date >= ninetyNineYearsAgo)
+            .Select(x => x.Date.Date)
+            .Distinct()
+            .OrderByDescending(x => x)
+            .ToListAsync();
+
+        if (stockPrices.Count == 0 || stockPrices[0] < today)
+            return today;
+
+        for (int i = 0; i < stockPrices.Count - 1; i++)
         {
-            searchDate = searchDate.AddDays(-1);
-            stockPrice = await context.StockPrices
-                .Include(x => x.StockDetails)
-                .FirstOrDefaultAsync(x => EF.Property<string>(x, "StockTicker") == normalizedTicker && x.Date.Date == searchDate.Date);
-            if (stockPrice is null) return searchDate;
+            var currentDate = stockPrices[i];
+            var nextDate = stockPrices[i + 1];
+            var expectedNextDate = currentDate.AddDays(-1);
 
-        } while (stockPrice is not null && --tries > 0);
+            if (nextDate < expectedNextDate)
+                return expectedNextDate;
+        }
 
         return null;
     }
 
-    public async Task<StockPrice?> Get(string ticker, DateTime date)
+    public async Task<StockPrice?> Get(string isin, DateTime date)
     {
-        var normalizedTicker = ticker.Trim().ToUpperInvariant();
         var stockPrice = await context.StockPrices
             .Include(x => x.StockDetails)
             .ThenInclude(x => x.Currency)
-            .FirstOrDefaultAsync(x => EF.Property<string>(x, "StockTicker") == normalizedTicker && x.Date.Date == date.Date);
+            .FirstOrDefaultAsync(x => x.StockDetails!.Isin == isin && x.Date.Date == date.Date);
         if (stockPrice is null || stockPrice.StockDetails is null) return null;
 
         return stockPrice.ToStockPrice();
     }
 
-    public async Task<IReadOnlyList<StockPrice>> GetRange(string ticker, DateTime start, DateTime end)
+    public async Task<IReadOnlyList<StockPrice>> GetRange(string isin, DateTime start, DateTime end)
     {
-        var normalizedTicker = ticker.Trim().ToUpperInvariant();
         return await context.StockPrices
             .Include(x => x.StockDetails)
             .ThenInclude(x => x.Currency)
-            .Where(x => EF.Property<string>(x, "StockTicker") == normalizedTicker && x.Date.Date >= start.Date && x.Date.Date <= end.Date)
+            .Where(x => x.StockDetails!.Isin == isin && x.Date.Date >= start.Date && x.Date.Date <= end.Date)
             .OrderByDescending(x => x.Date)
             .Select(x => x.ToStockPrice())
             .ToListAsync();
     }
-    public async Task<StockPrice?> GetThisOrNextOlder(string ticker, DateTime date)
+    public async Task<StockPrice?> GetThisOrNextOlder(string isin, DateTime date)
     {
-        var result = await Get(ticker, date);
+        var result = await Get(isin, date);
         if (result is not null) return result;
 
-        var normalizedTicker = ticker.Trim().ToUpperInvariant();
         return await context.StockPrices
             .Include(x => x.StockDetails)
             .ThenInclude(x => x.Currency)
-            .Where(x => EF.Property<string>(x, "StockTicker") == normalizedTicker && x.Date < date)
+            .Where(x => x.StockDetails!.Isin == isin && x.Date < date)
             .OrderByDescending(x => x.Date)
             .Select(x => x.ToStockPrice())
             .FirstOrDefaultAsync();
     }
 
-    public async Task<Currency?> GetTickerCurrency(string ticker)
+    public async Task<Currency?> GetStockCurrency(string isin)
     {
         var stockDetails = await context.StockDetails
             .Include(x => x.Currency)
-            .FirstOrDefaultAsync(x => x.Ticker == ticker);
+            .FirstOrDefaultAsync(x => x.Isin == isin);
 
         return stockDetails?.Currency;
     }
@@ -102,13 +105,13 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
             if (context.Entry(price.Currency).State == EntityState.Detached)
                 context.Attach(price.Currency);
 
-            var normalizedTicker = price.Ticker.Trim().ToUpperInvariant();
-            var stockDetails = await GetOrCreateStockDetails(normalizedTicker, price.Currency);
+            var stockDetails = await context.StockDetails.FirstOrDefaultAsync(x => x.Isin == price.Isin);
+            if (stockDetails is null) continue;
 
             var date = price.Date.Date;
             var existing = await context.StockPrices
                 .Include(x => x.StockDetails)
-                .FirstOrDefaultAsync(x => EF.Property<string>(x, "StockTicker") == normalizedTicker && x.Date.Date == date);
+                .FirstOrDefaultAsync(x => x.StockDetails!.Isin == price.Isin && x.Date.Date == date);
             if (existing is null)
             {
                 var dto = new StockPriceDto(0, stockDetails, price.PricePerUnit, date);
@@ -134,15 +137,14 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         return true;
     }
 
-    public async Task<StockPrice> Update(string ticker, decimal pricePerUnit, Currency currency, DateTime date)
+    public async Task<StockPrice> Update(string isin, decimal pricePerUnit, Currency currency, DateTime date)
     {
-        var normalizedTicker = ticker.Trim().ToUpperInvariant();
         var stockPrice = await context.StockPrices
             .Include(x => x.StockDetails)
-            .FirstOrDefaultAsync(x => EF.Property<string>(x, "StockTicker") == normalizedTicker && x.Date.Date == date.Date)
+            .FirstOrDefaultAsync(x => x.StockDetails!.Isin == isin && x.Date.Date == date.Date)
             ?? throw new Exception("Update failed");
 
-        var stockDetails = await GetOrCreateStockDetails(normalizedTicker, currency);
+        var stockDetails = await GetOrCreateStockDetails(isin, currency);
 
         stockPrice.PricePerUnit = pricePerUnit;
         stockPrice.StockDetails = stockDetails;
@@ -152,10 +154,9 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         return stockPrice.ToStockPrice();
     }
 
-    private async Task<StockDetails> GetOrCreateStockDetails(string ticker, Currency currency)
+    private async Task<StockDetails> GetOrCreateStockDetails(string isin, Currency currency)
     {
-        var normalized = ticker.Trim().ToUpperInvariant();
-        var existing = await context.StockDetails.Include(x => x.Currency).FirstOrDefaultAsync(x => x.Ticker == normalized);
+        var existing = await context.StockDetails.Include(x => x.Currency).FirstOrDefaultAsync(x => x.Isin == isin);
         if (existing is not null)
         {
             if (existing.Currency.Id != currency.Id)
@@ -165,7 +166,8 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
 
         var created = new StockDetails
         {
-            Ticker = normalized,
+            Isin = isin,
+            Ticker = string.Empty,
             Currency = currency,
             Name = string.Empty,
             Type = string.Empty,

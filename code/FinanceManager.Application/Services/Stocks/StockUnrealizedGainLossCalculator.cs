@@ -14,7 +14,7 @@ internal class StockUnrealizedGainLossCalculator(IStockPriceProvider stockPriceP
 
         decimal lastPurchuaseQuantity = latestEntry.Value;
         var buyEntries = account.Entries
-            .Where(x => x.Ticker == ticker && x.PostingDate <= asOfDate && x.ValueChange > 0)
+            .Where(x => x.Isin == ticker && x.PostingDate <= asOfDate && x.ValueChange > 0)
             .ToList();
 
         decimal totalBoughtUnits = 0;

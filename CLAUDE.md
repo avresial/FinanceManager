@@ -8,29 +8,98 @@ FinanceManager is an online budgeting tool built with Blazor WebAssembly + ASP.N
 
 The solution file is `code/FinanceManager.slnx`. Target framework is `.NET 10`.
 
+## Commit Messages
+
+Always include the GitHub issue number being resolved in the commit message subject line using `#<number>` (e.g. `Fix bond UI display #174`).
+
 ## Branching Workflow
 
 **Feature branches merge into `develop`, never directly into `main`.** When opening a PR for a feature branch, the base must be `develop`. Only `develop` is promoted to `main` (e.g., for releases). If asked to open a PR against `main` from a feature branch, push back and switch the base to `develop`.
 
+### Branch naming
+
+Branch naming is **critical for the changelog to work**. Every changelog entry ends with `#<issue>` (see [`.claude/skills/changelog/SKILL.md`](./.claude/skills/changelog/SKILL.md)), and that number is sourced from the branch → commit → PR chain. If the branch doesn't carry the issue number, the link breaks and the entry can't be written correctly.
+
+**Format**: `<issue-number>-<kebab-issue-title>`
+
+- `<issue-number>` — the GitHub issue number, no `#`, no `issue-` prefix.
+- `<kebab-issue-title>` — the issue's title, lower-case, words joined by hyphens, punctuation stripped. Truncate at a word boundary if it would otherwise exceed ~60 characters total.
+- No prefixes (`feature/`, `fix/`, `claude/`, your username, etc.) and no suffixes (`-v2`, `-wip`, random tokens).
+
+**Examples**:
+
+| Issue | Branch |
+|---|---|
+| #128 "Add investment paycheck estimator" | `128-add-investment-paycheck-estimator` |
+| #174 "Improve bond UI display" | `174-improve-bond-ui-display` |
+| #19 "Date range filter on account transactions" | `19-date-range-filter-on-account-transactions` |
+
+**One issue per branch.** A branch must cover exactly one issue so the resulting commit, PR, and changelog entry all share a single `#<issue>` reference. If the work splits across multiple issues, split the branch.
+
+**No issue? Don't open the branch yet** — create the GitHub issue first so the number exists. Tiny, non-user-visible chores (CI tweaks, dependency bumps, doc typos) that won't get a changelog entry are the only acceptable exception; in that case use a short kebab-case description (`fix-ci-dotnet-test-mtp`) and skip the changelog edit.
+
+## Pull Requests
+
+When opening a pull request that resolves a GitHub issue, the PR body must include a GitHub auto-close keyword referencing the issue (e.g. `closes #123`) so that merging the PR automatically closes the linked issue.
+
+## Changelog
+
+Every code change that has a user-visible effect must add an entry to `CHANGELOG.md` (Keep a Changelog format, CalVer `YY.M.D`). The rules — section headings, wording, issue references, and how to promote `[Unreleased]` — live in [`.claude/skills/changelog/SKILL.md`](./.claude/skills/changelog/SKILL.md). Stage the changelog edit in the same commit as the code change. Pure refactors, test-only changes, CI tweaks, and dependency bumps without behavioural impact do not need a changelog entry.
+
+## Agent Requirements
+
+- **Install the .NET SDK before coding.** Any task that involves code changes requires the .NET 10 SDK to be installed first so that `dotnet build`, `dotnet format`, and `dotnet test` can run. If `dotnet --list-sdks` does not show a `10.*` SDK, install it before making changes — see "Installing the .NET SDK" below for the path that works in the cloud sandbox.
+- **Run unit tests after every change.** Every code change must end with `dotnet test --project ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj` passing (see "Running tests" below for the correct invocation). Do not commit, push, or report a task as complete until unit tests are green.
+
+### Installing the .NET SDK (cloud sandbox)
+
+The Microsoft installer hosts (`dot.net`, `aka.ms`, `dotnetcli.azureedge.net`, `builds.dotnet.microsoft.com`) are **not** on the cloud sandbox's network allowlist, so `curl https://dot.net/v1/dotnet-install.sh | bash` fails with `Host not in allowlist`. Use Ubuntu's apt packages instead — Ubuntu 24.04 ships `dotnet-sdk-10.0` directly:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y dotnet-sdk-10.0
+dotnet --list-sdks   # should show 10.0.*
+```
+
+If the install fails with `404 Not Found` on `.deb` files, the apt index is stale — re-run `sudo apt-get update` and retry. PPA fetch errors (`deadsnakes`, `ondrej/php`) during `apt-get update` are unrelated and can be ignored.
+
+### Running tests
+
+The project's `code/global.json` opts into the new Microsoft.Testing.Platform runner (`xunit.v3.mtp-v2`). Two things together must be right or `dotnet test` falls back to the deprecated VSTest runner and fails:
+
+1. **Run from inside `code/`** (or any subdirectory of it). `global.json` is discovered upward from the current directory; from the repo root it isn't visible, so the SDK uses the legacy runner and rejects `--project` with `MSBUILD : error MSB1001: Unknown switch ... --project`.
+2. **Pass `--project`, not a bare path.** The bare `dotnet test ./path/to.csproj` form errors with *"Specifying a project for 'dotnet test' should be via '--project'"*.
+
+```bash
+cd code
+dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
+dotnet test --project ./FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
+```
+
+If you see *"Testing with VSTest target is no longer supported by Microsoft.Testing.Platform on .NET 10 SDK"*, you're outside `code/` — `cd code` and retry.
+
 ## Build and Validation
 
 ```bash
-# Restore, build, format-check
+# Restore, build, format-check (from repo root is fine)
 dotnet restore ./code
 dotnet build ./code/FinanceManager.slnx
 dotnet format ./code --verify-no-changes --verbosity diagnostic
 
+# Tests must be run from inside code/ (see "Running tests" above)
+cd code
+
 # Run all tests
-dotnet test ./code/FinanceManager.slnx
+dotnet test --project ./FinanceManager.slnx
 
 # Run only unit tests
-dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
+dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
 
 # Run only integration tests (requires UseInMemoryDatabase=true env var in CI)
-dotnet test ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
+dotnet test --project ./FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
 
 # Run a single test project with coverage
-dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --collect:"XPlat Code Coverage"
+dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --collect:"XPlat Code Coverage"
 ```
 
 **Build is strict**: warnings are treated as errors (`Directory.Build.props`). Always run `dotnet build` before committing.

@@ -11,7 +11,6 @@ public class StockPriceDto
 
     public StockPriceDto()
     {
-
     }
 
     public StockPriceDto(int id, StockDetails stockDetails, decimal pricePerUnit, DateTime date)
@@ -24,7 +23,7 @@ public class StockPriceDto
 
     public StockPrice ToStockPrice() => new()
     {
-        Ticker = StockDetails.Ticker,
+        Isin = StockDetails.Isin,
         PricePerUnit = PricePerUnit,
         Currency = StockDetails.Currency,
         Date = Date

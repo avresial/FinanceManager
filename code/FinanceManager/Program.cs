@@ -2,6 +2,7 @@ using Blazored.LocalStorage;
 using Blazored.SessionStorage;
 using FinanceManager.Application;
 using FinanceManager.Components;
+using FinanceManager.Components.Services;
 using FinanceManager.WebUi;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -17,13 +18,13 @@ builder.Services.AddMudServices();
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddBlazoredSessionStorage();
 
-var apiBaseAddress = builder.Configuration["Api:BaseAddress"];
-if (string.IsNullOrWhiteSpace(apiBaseAddress))
+builder.Services.AddTransient<UnauthorizedRedirectHandler>();
+builder.Services.AddScoped(sp =>
 {
-    throw new InvalidOperationException("API base address is not configured.");
-}
-
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
+    var handler = sp.GetRequiredService<UnauthorizedRedirectHandler>();
+    handler.InnerHandler = new HttpClientHandler();
+    return new HttpClient(handler) { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
+});
 
 builder.Services.AddApplication().AddUIComponents();
 

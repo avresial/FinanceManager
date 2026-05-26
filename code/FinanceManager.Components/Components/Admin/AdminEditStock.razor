@@ -1,4 +1,4 @@
-@page "/Admin/EditStock/{Ticker}"
+@page "/Admin/EditStock/{Isin}"
 @using FinanceManager.Domain.Entities.Stocks
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = "Admin")]
@@ -9,14 +9,18 @@
 }
 else if (_details is null)
 {
-    <MudAlert Severity="Severity.Error">Stock @Ticker could not be found.</MudAlert>
+    <MudAlert Severity="Severity.Error">Stock @Isin could not be found.</MudAlert>
 }
 else
 {
     <MudForm @ref="_form" @bind-IsValid="_isValid">
         <MudGrid Spacing="4">
             <MudItem xs="12">
-                <MudText Typo="Typo.h4">Edit stock @_details.Ticker</MudText>
+                <MudText Typo="Typo.h4">Edit stock @_details.Isin</MudText>
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string" Label="ISIN" Value="@_details.Isin" Disabled="true" />
             </MudItem>
 
             <MudItem xs="12" sm="6">

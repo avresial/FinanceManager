@@ -32,7 +32,10 @@
             </MudOverlay>
         </AddEntryOverlay>
         <EntryFilter>
-            <ValueChangeRangeFilterBar From="_filterFrom" To="_filterTo" OnFilterChanged="OnFilterChanged" />
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                <DateRangeFilterBar From="_filterDateStart" To="_filterDateEnd" OnFilterChanged="OnDateFilterChanged" />
+                <ValueChangeRangeFilterBar From="_filterFrom" To="_filterTo" OnFilterChanged="OnFilterChanged" />
+            </MudStack>
         </EntryFilter>
         <Entries>
             @{

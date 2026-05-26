@@ -32,7 +32,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
     {
         if (Entries is null) return [];
 
-        return Entries.DistinctBy(x => x.Ticker).Select(x => x.Ticker).ToList();
+        return Entries.DistinctBy(x => x.Isin).Select(x => x.Isin).ToList();
     }
     public async Task<Dictionary<DateOnly, decimal>> GetDailyPrice(Func<string, DateTime, Task<StockPrice?>> getStockPrice)
     {
@@ -51,17 +51,17 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
             var countedTicker = GetStoredTickers();
             foreach (var entry in entriesOfTheDay)
             {
-                countedTicker.RemoveAll(x => x == entry.Ticker);
+                countedTicker.RemoveAll(x => x == entry.Isin);
 
                 decimal price = entry.Value;
-                var stockPrice = await getStockPrice(entry.Ticker, index.ToDateTime(new TimeOnly(), DateTimeKind.Utc));
+                var stockPrice = await getStockPrice(entry.Isin, index.ToDateTime(new TimeOnly(), DateTimeKind.Utc));
                 if (stockPrice is not null)
                     price = entry.Value * stockPrice.PricePerUnit;
 
-                if (!lastTickerValue.ContainsKey(entry.Ticker))
-                    lastTickerValue.Add(entry.Ticker, price);
+                if (!lastTickerValue.ContainsKey(entry.Isin))
+                    lastTickerValue.Add(entry.Isin, price);
                 else
-                    lastTickerValue[entry.Ticker] = price;
+                    lastTickerValue[entry.Isin] = price;
                 dailyPrice += price;
             }
 
@@ -100,7 +100,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
         return 0;
     }
     public void Add(AddInvestmentEntryDto entry, bool recalculateValues = true) =>
-        Add(new StockAccountEntry(AccountId, -1, entry.PostingDate, -1, entry.ValueChange, entry.Ticker, entry.InvestmentType), recalculateValues);
+        Add(new StockAccountEntry(AccountId, -1, entry.PostingDate, -1, entry.ValueChange, entry.Isin, entry.InvestmentType), recalculateValues);
 
     public override void Add(IEnumerable<StockAccountEntry> entries, bool recalculateValues = true)
     {
@@ -109,11 +109,11 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
     }
     public override void Add(StockAccountEntry entry, bool recalculateValues = true)
     {
-        var alreadyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.Ticker == entry.Ticker && x.ValueChange == entry.ValueChange);
+        var alreadyExistingEntry = Entries.FirstOrDefault(x => x.PostingDate == entry.PostingDate && x.Isin == entry.Isin && x.ValueChange == entry.ValueChange);
         if (alreadyExistingEntry is not null)
         {
             throw new Exception($"WARNING -  Entry already exist, can not be added: Id:{alreadyExistingEntry.EntryId}, Posting date{alreadyExistingEntry.PostingDate}, " +
-                $"Ticker {alreadyExistingEntry.Ticker}, Value change {alreadyExistingEntry.ValueChange}");
+                $"Isin {alreadyExistingEntry.Isin}, Value change {alreadyExistingEntry.ValueChange}");
         }
 
         // Find the correct position in the list (youngest entry older than the new one)
@@ -183,7 +183,7 @@ public class StockAccount : FinancialAccountBase<StockAccountEntry>
         {
             if (Entries.Count < i) continue;
 
-            var previousElements = Entries.GetNextOlder(Entries[i].PostingDate, Entries[i].Ticker);
+            var previousElements = Entries.GetNextOlder(Entries[i].PostingDate, Entries[i].Isin);
             if (previousElements is not null && previousElements.Any())
                 previousIterationEntry = previousElements.FirstOrDefault();
 

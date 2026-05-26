@@ -1,110 +1,225 @@
-﻿@page "/UserSettings"
+@page "/UserSettings"
+@using FinanceManager.Application.Providers
+@using FinanceManager.Domain.Enums
 
-<MudContainer MaxWidth="MaxWidth.Medium">
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
     @if (_userData is not null)
     {
         <MudGrid>
-            <MudItem xs="12">
-                <MudStack Row>
-                    <MudAvatar Color="Color.Primary">@_userData.Login.ToUpper()[0]</MudAvatar>
-                    <MudText Typo="Typo.h6">@_userData.Login</MudText>
-                </MudStack>
+            <MudItem xs="12" md="3" Class="d-none d-md-block">
+                <div style="position:sticky; top:16px;">
+                    <MudList T="string"
+                             SelectionMode="SelectionMode.SingleSelection"
+                             @bind-SelectedValue="_selectedSection"
+                             @bind-SelectedValue:after="OnSectionSelectedAfter">
+                        <MudListItem T="string" Value="@("profile")" Text="Profile" />
+                        <MudListItem T="string" Value="@("password")" Text="Password" />
+                        <MudListItem T="string" Value="@("subscription")" Text="Subscription" />
+                        <MudListItem T="string" Value="@("danger")" Text="Danger zone" />
+                    </MudList>
+                </div>
             </MudItem>
-            <MudItem xs="12">
-                <MudTabs ApplyEffectsToContainer="true" PanelClass="px-6" Position=@(_currentBrakePoint == Breakpoint.Xs ? Position.Top : Position.Left) Border @bind-ActivePanelIndex="ActiveIndex">
 
-                    <MudTabPanel Text="Plan">
-                        <MudGrid Spacing="6" Class="mt-4">
+            <MudItem xs="12" md="9" Style="max-width:720px;">
+                <MudText Typo="Typo.h4">Account settings</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Manage your Finance Manager account, security, and subscription.
+                </MudText>
+
+                <MudDivider Class="my-6" />
+
+                <section id="profile">
+                    <MudText Typo="Typo.h6">Profile</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                        Your public identity within Finance Manager.
+                    </MudText>
+
+                    <div class="d-flex flex-column flex-md-row align-md-center gap-3 mb-4">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mud-width-full" Style="min-width:0;">
+                            <MudAvatar Color="Color.Primary" Size="Size.Large">@_userData.Login.ToUpper()[0]</MudAvatar>
+                            <MudStack Spacing="0" Style="min-width:0;">
+                                <MudText Typo="Typo.subtitle1" Style="word-break:break-word;">@_userData.Login</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Style="word-break:break-word;">@_userData.Login</MudText>
+                            </MudStack>
+                        </MudStack>
+                        <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                            <MudButton Variant="Variant.Outlined" Disabled="true">Upload photo</MudButton>
+                            <MudButton Variant="Variant.Text" Disabled="true">Remove</MudButton>
+                        </MudStack>
+                    </div>
+
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string"
+                                          Label="Display name"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          Value="@_displayName"
+                                          ValueChanged="@(v => { _displayName = v; MarkDirty(); })" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string"
+                                          Label="Email"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          Value="@_email"
+                                          Disabled="true" />
+                        </MudItem>
+                    </MudGrid>
+                </section>
+
+                <MudDivider Class="my-6" />
+
+                <section id="password">
+                    <MudText Typo="Typo.h6">Password</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                        Use at least 12 characters with a mix of letters, numbers, and symbols.
+                    </MudText>
+
+                    <MudForm @ref="_passwordForm" @bind-IsValid="@_passwordValid">
+                        <MudGrid>
                             <MudItem xs="12">
-                                @if (_recordCapacity is not null)
-                                {
-                                    <MudText Typo="Typo.h6">Storage Usage</MudText>
-                                    <MudProgressLinear Color=GetStorageIndicatorColor() Size="Size.Medium" Value=_recordCapacity.GetStorageUsedPercentage() Class="mt-2 mb-1" />
-                                    <MudText Typo="Typo.subtitle2">@($"{_recordCapacity.UsedCapacity} of {_recordCapacity.TotalCapacity} records")</MudText>
-                                }
+                                <MudTextField T="string"
+                                              @bind-Value="_currentPassword"
+                                              @bind-Value:after="MarkDirty"
+                                              Label="Current password"
+                                              Variant="Variant.Outlined"
+                                              Margin="Margin.Dense"
+                                              InputType="InputType.Password" />
                             </MudItem>
-
-                            <MudItem xs="12">
-                                <MudText Typo="Typo.h6">Change Plan</MudText>
-                                <MudGrid>
-                                    <MudItem xs="8">
-                                        <MudSelect T="string" Label="Select Plan" @bind-Value="_selectedPlan">
-                                            @foreach (var plan in _plans)
-                                            {
-                                                <MudSelectItem Value="@plan">@plan</MudSelectItem>
-                                            }
-                                        </MudSelect>
-                                    </MudItem>
-                                    <MudItem xs="4">
-                                        <MudButton @onclick=UpgradePricingPlan Variant="Variant.Text" Color="Color.Primary" Class="mt-4" FullWidth Disabled=@(_userData?.PricingLevel.ToString() == _selectedPlan)>Upgrade Plan</MudButton>
-                                    </MudItem>
-                                </MudGrid>
+                            <MudItem xs="12" md="6">
+                                <MudTextField T="string"
+                                              @ref="_passwordField"
+                                              @bind-Value="_newPassword"
+                                              @bind-Value:after="MarkDirty"
+                                              Label="New password"
+                                              Variant="Variant.Outlined"
+                                              Margin="Margin.Dense"
+                                              InputType="InputType.Password"
+                                              Validation="@(new Func<string, IEnumerable<string>>(PasswordStrength))" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudTextField T="string"
+                                              @bind-Value="_confirmPassword"
+                                              @bind-Value:after="MarkDirty"
+                                              Label="Repeat new password"
+                                              Variant="Variant.Outlined"
+                                              Margin="Margin.Dense"
+                                              InputType="InputType.Password"
+                                              Validation="@(new Func<string, string?>(PasswordMatch))" />
                             </MudItem>
                         </MudGrid>
-                    </MudTabPanel>
+                    </MudForm>
+                </section>
 
-                    <MudTabPanel Text="User">
-                        <MudGrid Spacing="6" Class="mt-4">
-                            <MudItem xs="12">
-                                <MudText Typo="Typo.h6">Change Password</MudText>
-                                <MudForm @ref="_passwordForm" @bind-IsValid="@_success" Spacing="3">
+                <MudDivider Class="my-6" />
 
-                                    <MudTextField T="string" Label="Password" HelperText="Choose a strong password" @ref="_passwordField"
-                                                  InputType="InputType.Password"
-                                                  Validation="@(new Func<string, IEnumerable<string>>(PasswordStrength))" Required
-                                                  RequiredError="Password is required!" />
+                <section id="subscription">
+                    <MudText Typo="Typo.h6">Subscription</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                        You're on @_userData.PricingLevel.
+                    </MudText>
 
-                                    <MudTextField T="string" @bind-Value="_confirmPassword" Immediate Required
-                                                  Label="Password" HelperText="Repeat the password" InputType="InputType.Password"
-                                                  Validation="@(new Func<string, string?>(PasswordMatch))" />
+                    @if (_recordCapacity is not null)
+                    {
+                        <MudText Typo="Typo.body2" Class="mb-1">Storage usage</MudText>
+                        <MudProgressLinear Color="@GetStorageIndicatorColor()" Size="Size.Medium" Value="@_recordCapacity.GetStorageUsedPercentage()" Class="mb-1" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
+                            @($"{_recordCapacity.UsedCapacity} of {_recordCapacity.TotalCapacity} records")
+                        </MudText>
+                    }
 
-                                    <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-4" OnClick="ChangePasswordAsync" Disabled="@(!_success)">Update Password</MudButton>
-                                </MudForm>
-
-                                <MudDivider Class="my-3" />
+                    <MudGrid>
+                        @foreach (var plan in _planOptions)
+                        {
+                            var isSelected = plan.Level.ToString() == _selectedPlan;
+                            var isCurrent = plan.Level == _userData.PricingLevel;
+                            <MudItem xs="12" md="4">
+                                <MudPaper Outlined="true" Class="pa-4" Style="@(isSelected ? "border-color: var(--mud-palette-primary); cursor: pointer; position: relative;" : "cursor: pointer; position: relative;")"
+                                          @onclick="@(() => SelectPlan(plan.Level))">
+                                    @if (isCurrent)
+                                    {
+                                        <div style="position:absolute; top:8px; right:8px;">
+                                            <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Text">Current</MudChip>
+                                        </div>
+                                    }
+                                    <MudText Typo="Typo.subtitle1" Color="@(isSelected ? Color.Primary : Color.Default)">@plan.DisplayName</MudText>
+                                    <MudText Typo="Typo.h5" Class="mb-2">@plan.Price</MudText>
+                                    <MudStack Spacing="1">
+                                        @foreach (var feature in plan.Features)
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">• @feature</MudText>
+                                        }
+                                    </MudStack>
+                                </MudPaper>
                             </MudItem>
-                            <MudItem xs="12">
-                                <MudGrid Spacing="4">
-                                    <MudItem xs="12">
-                                        <MudText Typo="Typo.h6">Delete Account</MudText>
-                                    </MudItem>
+                        }
+                    </MudGrid>
+                </section>
 
-                                    <MudItem xs="12" md="8">
-                                        <MudTextField Variant="Variant.Text" Immediate @bind-Value="_deleteConfirmation" Label=@($"Confirm by typing '{_requiredDeleteConfirmation}'") InputType="InputType.Text" Class="p-0 m-0" />
-                                    </MudItem>
+                <MudDivider Class="my-6" />
 
-                                    <MudItem xs="12" md="4" Class="d-flex align-content-end flex-wrap flex-grow-1 gap-4">
-                                        <MudButton @onclick=DeleteMyAccount Variant="Variant.Text" Color="Color.Error" Disabled=@(_deleteConfirmation != _requiredDeleteConfirmation) FullWidth>
-                                            Delete
-                                        </MudButton>
-                                    </MudItem>
-                                </MudGrid>
-                                <MudDivider Class="my-3" />
-                            </MudItem>
-                        </MudGrid>
-                    </MudTabPanel>
-                </MudTabs>
-            </MudItem>
-            <MudItem xs="12">
-                <MudStack Spacing="2">
+                <section id="danger">
+                    <MudText Typo="Typo.h6" Color="Color.Error">Danger zone</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                        Permanently delete this account and all associated financial data. This cannot be undone.
+                    </MudText>
 
-                    @foreach (var message in _errors)
-                    {
-                        <MudAlert Severity="Severity.Error">@message</MudAlert>
-                    }
+                    <div class="d-flex flex-column flex-sm-row align-sm-center gap-3">
+                        <MudTextField T="string"
+                                      @bind-Value="_deleteConfirmation"
+                                      Immediate="true"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Label="@($"Type '{_requiredDeleteConfirmation}' to confirm")"
+                                      Error="@(!string.IsNullOrEmpty(_deleteConfirmation) && _deleteConfirmation != _requiredDeleteConfirmation)"
+                                      HelperText="@($"Type '{_requiredDeleteConfirmation}' to confirm")"
+                                      Class="flex-grow-1" />
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Error"
+                                   Disabled="@(_deleteConfirmation != _requiredDeleteConfirmation)"
+                                   OnClick="DeleteMyAccount">
+                            Delete account
+                        </MudButton>
+                    </div>
+                </section>
 
-                    @foreach (var message in _warnings)
-                    {
-                        <MudAlert Severity="Severity.Warning">@message</MudAlert>
-                    }
-
-                    @foreach (var message in _info)
-                    {
-                        <MudAlert Severity="Severity.Info">@message</MudAlert>
-                    }
-                </MudStack>
+                @if (_errors.Count > 0 || _warnings.Count > 0 || _info.Count > 0)
+                {
+                    <MudStack Spacing="2" Class="mt-6">
+                        @foreach (var message in _errors)
+                        {
+                            <MudAlert Severity="Severity.Error">@message</MudAlert>
+                        }
+                        @foreach (var message in _warnings)
+                        {
+                            <MudAlert Severity="Severity.Warning">@message</MudAlert>
+                        }
+                        @foreach (var message in _info)
+                        {
+                            <MudAlert Severity="Severity.Info">@message</MudAlert>
+                        }
+                    </MudStack>
+                }
             </MudItem>
         </MudGrid>
+
+        @if (_isDirty)
+        {
+            <MudPaper Elevation="8" Square="true"
+                      Class="d-flex flex-wrap align-center gap-2 py-2 px-3 px-sm-6"
+                      Style="position:sticky; bottom:0; left:0; right:0; z-index:5;
+                             background:var(--mud-palette-surface);
+                             border-top:1px solid var(--mud-palette-divider);">
+                <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Primary" Size="Size.Small" Class="d-none d-sm-flex" />
+                <MudText Typo="Typo.body2">You have unsaved changes.</MudText>
+                <MudSpacer />
+                <MudButton OnClick="DiscardChanges">Discard</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Check"
+                           OnClick="SaveAll">Save changes</MudButton>
+            </MudPaper>
+        }
     }
     else if (_isLoadingPage)
     {

@@ -16,20 +16,50 @@
                     }
                 </MudText>
             </MudItem>
-            <MudItem xs="3">
-                <MudText Typo="Typo.caption" Color="Color.Default">Balance units</MudText>
-                <MudText Typo="Typo.body1">@BondAccountEntry.Value</MudText>
+
+            <MudItem xs="5">
+                @if (CurrentValue.HasValue)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Default">Total evaluation</MudText>
+                    <MudStack Row Spacing="1" Class="d-flex align-center justify-start">
+                        <MudText Typo="Typo.body1">@($"{CurrentValue.Value.ToString("0.00")}")</MudText>
+                        <MudText Typo="Typo.body1">@_currency</MudText>
+                        @if (UnitsChangeValue.HasValue)
+                        {
+                            <MudText Typo="Typo.caption" Color="@(UnitsChangeValue.Value >= 0 ? Color.Success : Color.Error)">
+                                (@(UnitsChangeValue.Value >= 0 ? "+" : "-")@Math.Abs(UnitsChangeValue.Value).ToString("0.00"))
+                            </MudText>
+                        }
+                    </MudStack>
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Default">Balance units</MudText>
+                    <MudStack Row Spacing="1" Class="d-flex align-center justify-start">
+                        <MudText Typo="Typo.body1">@BondAccountEntry.Value.ToString("G29")</MudText>
+                        <MudText Typo="Typo.caption" Color="@(BondAccountEntry.ValueChange >= 0 ? Color.Success : Color.Error)">
+                            (@(BondAccountEntry.ValueChange >= 0 ? "+" : "")@BondAccountEntry.ValueChange.ToString("G29"))
+                        </MudText>
+                    </MudStack>
+                }
             </MudItem>
-            <MudItem xs="3">
-                <MudText Typo="Typo.caption" Color="Color.Default">Change units</MudText>
-                <MudText Typo="Typo.body1" Color="@(BondAccountEntry.ValueChange > 0 ? Color.Success : Color.Error)">
-                    @BondAccountEntry.ValueChange
-                </MudText>
-            </MudItem>
-            <MudItem xs="3">
-                <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
-                <MudText Typo="Typo.body1">@BondAccountEntry.PostingDate.ToString("dd-MM-yyyy")</MudText>
-            </MudItem>
+
+            @if (UnrealizedGainLoss is not null)
+            {
+                <MudItem xs="4">
+                    <MudText Typo="Typo.caption" Color="Color.Default">Unrealized gain/loss</MudText>
+                    <MudStack Row Spacing="1" Class="d-flex align-center justify-start">
+                        <MudText Typo="Typo.body1"
+                                 Color="@(UnrealizedGainLoss.UnrealizedGainLoss >= 0 ? Color.Success : Color.Error)">
+                            @UnrealizedGainLoss.UnrealizedGainLoss.ToString("0.00") @_currency
+                        </MudText>
+                        <MudText Typo="Typo.caption"
+                                 Color="@(UnrealizedGainLoss.UnrealizedGainLoss >= 0 ? Color.Success : Color.Error)">
+                            (@UnrealizedGainLoss.UnrealizedGainLossPercent.ToString("0.00")%)
+                        </MudText>
+                    </MudStack>
+                </MudItem>
+            }
         </MudGrid>
     </TitleContent>
 
@@ -56,6 +86,17 @@
                                 </MudStack>
                             </MudItem>
                         }
+                        <MudItem xs="5">
+                            <MudText Typo="Typo.caption" Color="Color.Default">Units</MudText>
+                            <MudStack Row Spacing="1" Class="d-flex align-center justify-start">
+                                <MudText Typo="Typo.body1">@BondAccountEntry.Value.ToString("G29")</MudText>
+                                <MudText Typo="Typo.caption"
+                                         Color="@(BondAccountEntry.ValueChange >= 0 ? Color.Success : Color.Error)">
+                                    (@(BondAccountEntry.ValueChange >= 0 ? "+" : "")@BondAccountEntry.ValueChange.ToString("G29"))
+                                </MudText>
+                            </MudStack>
+                        </MudItem>
+
                         @if (BondDetails is not null)
                         {
                             <MudItem xs="12">
@@ -65,17 +106,6 @@
                             <MudItem xs="6">
                                 <MudText Typo="Typo.caption" Color="Color.Default">Unit value</MudText>
                                 <MudText Typo="Typo.body1">@BondDetails.UnitValue.ToString("0.00") @BondDetails.Currency.ShortName</MudText>
-                            </MudItem>
-                            <MudItem xs="6">
-                                <MudText Typo="Typo.caption" Color="Color.Default">Current value</MudText>
-                                <MudText Typo="Typo.body1">@(CurrentValue.HasValue ? CurrentValue.Value.ToString("0.00") : "-") @_currency</MudText>
-                            </MudItem>
-                        }
-                        @if (UnitsChangeValue.HasValue)
-                        {
-                            <MudItem xs="12">
-                                <MudText Typo="Typo.caption" Color="Color.Default">Change value</MudText>
-                                <MudText Typo="Typo.body1">@UnitsChangeValue.Value.ToString("0.00") @_currency</MudText>
                             </MudItem>
                         }
                         @if (UnrealizedGainLoss is not null)

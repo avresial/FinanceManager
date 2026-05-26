@@ -68,8 +68,8 @@ public class StockMarketServiceTests : IDisposable
         var end = new DateTime(2026, 2, 10);
         var expected = new List<StockPrice>
         {
-            new() { Ticker = "CSPX.LON", PricePerUnit = 747.18m, Currency = new Currency(1, "USD", "$"), Date = end },
-            new() { Ticker = "CSPX.LON", PricePerUnit = 747.02m, Currency = new Currency(1, "USD", "$"), Date = start }
+            new() { Isin = "GB0002374006", PricePerUnit = 747.18m, Currency = new Currency(1, "USD", "$"), Date = end },
+            new() { Isin = "GB0002374006", PricePerUnit = 747.02m, Currency = new Currency(1, "USD", "$"), Date = start }
         };
         _stockPriceProvider.Setup(p => p.GetPricesAsync("CSPX.LON", start, end, It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
@@ -83,10 +83,15 @@ public class StockMarketServiceTests : IDisposable
         _stockPriceProvider.Verify(p => p.GetPricesAsync("CSPX.LON", start, end, It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    private StockMarketService CreateService() => new(
-        _apiClient.Object,
-        _stockPriceProvider.Object,
-        _currencyRepository.Object);
+    private StockMarketService CreateService()
+    {
+        var isinResolverMock = new Mock<IIsinResolver>();
+        return new(
+            _apiClient.Object,
+            _stockPriceProvider.Object,
+            _currencyRepository.Object,
+            isinResolverMock.Object);
+    }
 
     public void Dispose() { }
 }

@@ -55,7 +55,8 @@ internal sealed class LmStudioChatClient(
 
         var openAiClient = await CreateOpenAiClientAsync(cancellationToken);
         var chatClient = openAiClient.GetChatClient(modelId).AsIChatClient();
-        return chatClient.GetStreamingResponseAsync(messages, SanitizeOptions(chatOptions), cancellationToken);
+        await foreach (var update in chatClient.GetStreamingResponseAsync(messages, SanitizeOptions(chatOptions), cancellationToken))
+            yield return update;
     }
 
     // Default token budget for LM Studio reasoning models (e.g. qwen3 thinking variants), which

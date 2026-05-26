@@ -269,6 +269,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
 
         var stockDetails = new StockDetails
         {
+            Isin = "US0378331005",
             Ticker = "AAPL",
             Name = "Apple Inc.",
             Type = "Stock",
@@ -475,6 +476,130 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
 
         Assert.NotNull(resultAtLast);
         Assert.True(resultAtLast >= 1500m, $"At last date, expected >= 1500, got {resultAtLast}");
+    }
+
+    [Fact]
+    public async Task GetNetWorth_RangeVersion_MatchesSingleDateResults()
+    {
+        // Arrange - Currency + Bond + Stock accounts spanning multiple dates
+        await SeedWithTestCurrencyAccount("Range Match Currency");
+
+        var bondAccount = new FinancialAccountBaseDto
+        {
+            UserId = 1,
+            AccountId = 30,
+            Name = "Range Match Bonds",
+            AccountLabel = AccountLabel.Other,
+            AccountType = AccountType.Bond
+        };
+        _testDatabase!.Context.Accounts.Add(bondAccount);
+        _testDatabase.Context.Bonds.Add(CreateBondDetails(30, _nowUtc));
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        _testDatabase.Context.BondEntries.Add(new BondAccountEntry(30, 1, _nowUtc.AddDays(-9), 1000m, 1000m, 30));
+        _testDatabase.Context.BondEntries.Add(new BondAccountEntry(30, 2, _nowUtc.AddDays(-4), 1500m, 500m, 30));
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var stockAccount = new FinancialAccountBaseDto
+        {
+            UserId = 1,
+            AccountId = 31,
+            Name = "Range Match Stocks",
+            AccountLabel = AccountLabel.Other,
+            AccountType = AccountType.Stock
+        };
+        _testDatabase.Context.Accounts.Add(stockAccount);
+
+        var usdCurrency = await _testDatabase.Context.Currencies.FindAsync([1], TestContext.Current.CancellationToken)
+            ?? _testDatabase.Context.Currencies.Add(new Currency(1, "USD", "$")).Entity;
+
+        var stockDetails = new StockDetails
+        {
+            Isin = "US7372711613",
+            Ticker = "RNGM",
+            Name = "Range Match Inc.",
+            Type = "Stock",
+            Region = "US",
+            Currency = usdCurrency
+        };
+        _testDatabase.Context.StockDetails.Add(stockDetails);
+        for (int i = 0; i <= 10; i++)
+            _testDatabase.Context.StockPrices.Add(new StockPriceDto
+            {
+                PricePerUnit = 50m + i,
+                StockDetails = stockDetails,
+                Date = _nowUtc.AddDays(-i)
+            });
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        _testDatabase.Context.StockEntries.Add(new StockAccountEntry(31, 1, _nowUtc.AddDays(-8), 5m, 5m, "RNGM", InvestmentType.Stock));
+        _testDatabase.Context.StockEntries.Add(new StockAccountEntry(31, 2, _nowUtc.AddDays(-3), 10m, 5m, "RNGM", InvestmentType.Stock));
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        Authorize("TestUser", 1, UserRole.User);
+
+        var client = new MoneyFlowHttpClient(Client);
+        var rangeStart = _nowUtc.AddDays(-7);
+        var rangeEnd = _nowUtc;
+
+        // Act - call range endpoint once and compare against per-day single-date calls
+        var rangeResult = await client.GetNetWorth(1, DefaultCurrency.USD, rangeStart, rangeEnd);
+
+        var expected = new Dictionary<DateTime, decimal?>();
+        for (DateTime date = rangeEnd; date >= rangeStart; date = date.AddDays(-1))
+            expected[date] = await client.GetNetWorth(1, DefaultCurrency.USD, date);
+
+        // Assert - same days, same values
+        Assert.NotNull(rangeResult);
+        Assert.Equal(expected.Count, rangeResult.Count);
+        foreach (var (date, singleValue) in expected)
+        {
+            Assert.True(rangeResult.ContainsKey(date), $"Range result missing date {date:o}");
+            Assert.True(singleValue.HasValue, $"Single-date result missing value for {date:o}");
+            Assert.Equal(singleValue!.Value, rangeResult[date]);
+        }
+    }
+
+    [Fact]
+    public async Task GetNetWorth_RangeVersion_PerformsEfficiently()
+    {
+        // Arrange - 500 entries over 500 days (mirrors GetNetWorth_LargePortfolio_PerformsEfficiently)
+        var accountName = "Range Perf Portfolio";
+        if (!await _testDatabase!.Context.Accounts.AnyAsync(x => x.Name == accountName, TestContext.Current.CancellationToken))
+        {
+            var account = new FinancialAccountBaseDto
+            {
+                UserId = 1,
+                AccountId = 40,
+                Name = accountName,
+                AccountLabel = AccountLabel.Cash,
+                AccountType = AccountType.Currency
+            };
+            _testDatabase.Context.Accounts.Add(account);
+            await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            decimal runningValue = 0;
+            for (int i = 0; i < 500; i++)
+            {
+                runningValue += 100m;
+                _testDatabase.Context.CurrencyEntries.Add(
+                    new CurrencyAccountEntry(40, i + 1, _nowUtc.AddDays(-500 + i), runningValue, 100m) { Labels = [] });
+            }
+            await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        Authorize("TestUser", 1, UserRole.User);
+
+        // Act - 365-day range
+        var startTime = DateTime.UtcNow;
+        var result = await new MoneyFlowHttpClient(Client).GetNetWorth(1, DefaultCurrency.USD, _nowUtc.AddDays(-365), _nowUtc);
+        var duration = DateTime.UtcNow - startTime;
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.True(duration.TotalSeconds < 5,
+            $"GetNetWorth range took {duration.TotalSeconds}s, expected < 5s");
     }
 
     [Fact]

@@ -19,6 +19,12 @@ public class StockAccountEntryConfiguration : IEntityTypeConfiguration<StockAcco
         builder.Property(e => e.ValueChange)
          .HasPrecision(18, 8);
 
+        builder.Property(e => e.Ticker)
+            .HasMaxLength(32);
+
+        builder.Property(e => e.Isin)
+            .HasMaxLength(12);
+
         // Ensure PostingDate is always returned as UTC
         var dateTimeConverter = new ValueConverter<DateTime, DateTime>(
             v => v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime(),

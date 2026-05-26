@@ -61,11 +61,76 @@ IStockPriceProvider stockPriceProvider, IBondDetailsRepository bondDetailsReposi
 
         Dictionary<DateTime, decimal> result = [];
 
+        var bondDetails = await bondDetailsRepository.GetAllAsync().ToDictionaryAsync(x => x.Id);
+
+        List<CurrencyAccount> currencyAccounts = [];
+        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
+            currencyAccounts.Add(account);
+
+        List<BondAccount> bondAccounts = [];
+        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end))
+            bondAccounts.Add(account);
+
+        List<StockAccount> stockAccounts = [];
+        await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, start, end))
+            stockAccounts.Add(account);
+
+        Dictionary<int, List<string>> tickersByAccount = stockAccounts.ToDictionary(
+            x => x.AccountId,
+            x => x.GetStoredTickers().Concat(x.NextOlderEntries.Keys).Distinct(StringComparer.OrdinalIgnoreCase).ToList());
+
+        Dictionary<string, IReadOnlyDictionary<DateTime, decimal>> pricesByTicker = new(StringComparer.OrdinalIgnoreCase);
+        var tickers = tickersByAccount.Values.SelectMany(x => x).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (tickers.Count > 0)
+        {
+            var preloadTasks = tickers.ToDictionary(
+                ticker => ticker,
+                ticker => stockPriceProvider.GetPricePerUnitSeriesAsync(ticker, currency, start.Date, end.Date),
+                StringComparer.OrdinalIgnoreCase);
+
+            await Task.WhenAll(preloadTasks.Values);
+            foreach (var preloadTask in preloadTasks)
+                pricesByTicker[preloadTask.Key] = await preloadTask.Value;
+        }
+
         for (DateTime date = end; date >= start; date = date.AddDays(-1))
         {
-            var netWorth = await GetNetWorth(userId, currency, date);
-            if (netWorth is null) continue;
-            result.Add(date, netWorth.Value);
+            decimal dailyTotal = 0;
+
+            foreach (var account in currencyAccounts)
+            {
+                var entry = account.GetThisOrNextOlder(date);
+                if (entry is null) continue;
+                dailyTotal += entry.Value;
+            }
+
+            foreach (var account in bondAccounts)
+            {
+                foreach (var detailsId in account.GetStoredBondsIds())
+                {
+                    var entry = account.GetThisOrNextOlder(date, detailsId);
+                    if (entry is null) continue;
+                    if (!bondDetails.TryGetValue(detailsId, out var details))
+                        throw new InvalidOperationException($"Bond valuation requires details for bond id {detailsId}.");
+
+                    dailyTotal += entry.GetPriceAt(DateOnly.FromDateTime(date), details);
+                }
+            }
+
+            foreach (var account in stockAccounts)
+            {
+                foreach (var ticker in tickersByAccount[account.AccountId])
+                {
+                    var entry = account.GetThisOrNextOlder(date, ticker);
+                    if (entry is null) continue;
+                    if (!pricesByTicker.TryGetValue(ticker, out var tickerPrices)) continue;
+                    if (!tickerPrices.TryGetValue(date.Date, out var pricePerUnit)) continue;
+
+                    dailyTotal += entry.Value * pricePerUnit;
+                }
+            }
+
+            result.Add(date, Math.Round(dailyTotal, 2));
         }
         return result;
     }
@@ -111,7 +176,7 @@ IStockPriceProvider stockPriceProvider, IBondDetailsRepository bondDetailsReposi
         decimal investmentsChange = 0;
         await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, start, end))
             foreach (var entry in account.Entries)
-                investmentsChange += entry.ValueChange * await stockPriceProvider.GetPricePerUnitAsync(entry.Ticker, currency, entry.PostingDate);
+                investmentsChange += entry.ValueChange * await stockPriceProvider.GetPricePerUnitAsync(entry.Isin, currency, entry.PostingDate);
 
         yield return new()
         {

@@ -11,7 +11,9 @@ public static class StockAccountEntryExtension
         EntryId = stockAccountEntry.EntryId,
         ValueChange = stockAccountEntry.ValueChange,
         Value = stockAccountEntry.Value,
+        Isin = stockAccountEntry.Isin,
         Ticker = stockAccountEntry.Ticker,
+        InvestmentType = stockAccountEntry.InvestmentType,
         PostingDate = stockAccountEntry.PostingDate,
     };
 }

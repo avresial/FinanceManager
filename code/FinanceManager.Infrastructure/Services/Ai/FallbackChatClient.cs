@@ -144,6 +144,13 @@ internal sealed class FallbackChatClient(
             .Select(p => p.ProviderName.Trim())
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+        var allModels = await configService.GetAllModelsAsync(ct);
+        // Build a set of disabled model keys (provider:modelName) for fast lookup
+        var disabledModelKeys = allModels
+            .Where(m => !m.IsEnabled)
+            .Select(m => $"{m.ProviderName.Trim().ToUpperInvariant()}:{m.ModelName.Trim().ToUpperInvariant()}")
+            .ToHashSet(StringComparer.Ordinal);
+
         var attempts = new List<ResolvedAttempt>();
         foreach (var entry in fallbackEntries.OrderBy(e => e.Order))
         {
@@ -153,6 +160,10 @@ internal sealed class FallbackChatClient(
                 continue;
 
             if (!enabledProviders.Contains(provider))
+                continue;
+
+            var modelKey = $"{provider.ToUpperInvariant()}:{model.ToUpperInvariant()}";
+            if (disabledModelKeys.Contains(modelKey))
                 continue;
 
             var chatClient = allClients.FirstOrDefault(x =>

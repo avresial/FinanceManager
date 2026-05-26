@@ -29,7 +29,7 @@ public partial class LiabilitiesPerAccountOverviewCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    private ApexChartOptions<NameValueResult> _options { get; set; } = new()
+    private ApexChartOptions<NameValueResult> _options = new()
     {
         Chart = new Chart
         {

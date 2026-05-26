@@ -1,8 +1,8 @@
 using FinanceManager.Application.Services;
-using FinanceManager.Infrastructure.Services.Currencies;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Services;
+using FinanceManager.Infrastructure.Services.Currencies;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -163,7 +163,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         var toCurrency = new Currency(2, toCurrencyCode, "€");
         var date = new DateTime(2024, 1, 15);
 
-        var stockPrice = new StockPrice { Ticker = "TEST", PricePerUnit = pricePerUnit, Currency = fromCurrency };
+        var stockPrice = new StockPrice { Isin = "US0000000001", PricePerUnit = pricePerUnit, Currency = fromCurrency };
         var jsonResponse = $@"{{""{fromCurrencyCode.ToLower()}"": {{""{toCurrencyCode.ToLower()}"": {exchangeRate}}}}}";
         SetupHttpResponse(HttpStatusCode.OK, jsonResponse);
 
@@ -181,7 +181,7 @@ public class CurrencyExchangeServiceTests : IDisposable
     {
         // Arrange
         var currency = new Currency(1, "USD", "$");
-        var stockPrice = new StockPrice { Ticker = "AAPL", PricePerUnit = 150.75m, Currency = currency };
+        var stockPrice = new StockPrice { Isin = "US0378331005", PricePerUnit = 150.75m, Currency = currency };
         var date = new DateTime(2024, 1, 15);
 
         var service = CreateService();
@@ -215,7 +215,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
-        var stockPrice = new StockPrice { Ticker = "MSFT", PricePerUnit = 100m, Currency = fromCurrency };
+        var stockPrice = new StockPrice { Isin = "US5949181045", PricePerUnit = 100m, Currency = fromCurrency };
         var date = new DateTime(2024, 1, 15);
 
         _httpMessageHandlerMock.Protected()
@@ -279,7 +279,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
-        var stockPrice = new StockPrice { Ticker = "GOOGL", PricePerUnit = 100m, Currency = fromCurrency };
+        var stockPrice = new StockPrice { Isin = "US02079K3059", PricePerUnit = 100m, Currency = fromCurrency };
         var date = new DateTime(2024, 1, 15);
 
         var jsonResponse = @"{""usd"": {""eur"": 0}}";

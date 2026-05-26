@@ -17,7 +17,7 @@
     <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
         @if (ChartData.Any())
         {
-            <ApexChart @ref="_chart" TItem="IncomeSourceOverviewEntry" Height="@("100%")" Options="options">
+            <ApexChart @ref="_chart" TItem="IncomeSourceOverviewEntry" Height="@("100%")" Options="_options">
                 <ApexPointSeries TItem="IncomeSourceOverviewEntry" Items="ChartData"            Name="Inflow"                        XValue="@(e => e.Source)"
                                  YValue="e=> e.Value"                              SeriesType="SeriesType.Bar" />
 

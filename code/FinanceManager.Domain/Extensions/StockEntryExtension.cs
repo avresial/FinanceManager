@@ -18,9 +18,9 @@ public static class StockEntryExtension
             foreach (var ticker in tickers)
             {
                 var entries = accountEntries.Get(i);
-                var newestEntry = accountEntries.Get(i).OrderByDescending(x => x.PostingDate).FirstOrDefault(x => x.Ticker == ticker);
+                var newestEntry = accountEntries.Get(i).OrderByDescending(x => x.PostingDate).FirstOrDefault(x => x.Isin == ticker);
                 if (newestEntry is null) continue;
-                var pricePerUnit = await getStockPrice(newestEntry.Ticker, currency, newestEntry.PostingDate);
+                var pricePerUnit = await getStockPrice(newestEntry.Isin, currency, newestEntry.PostingDate);
                 price += newestEntry.Value * pricePerUnit;
             }
             result.Add((i, price));
@@ -41,9 +41,9 @@ public static class StockEntryExtension
             foreach (var ticker in tickers)
             {
                 var entries = accountEntries.Get(i);
-                var newestEntry = accountEntries.Get(i).OrderByDescending(x => x.PostingDate).FirstOrDefault(x => x.Ticker == ticker);
+                var newestEntry = accountEntries.Get(i).OrderByDescending(x => x.PostingDate).FirstOrDefault(x => x.Isin == ticker);
                 if (newestEntry is null) continue;
-                var stockPrice = await getStockPrice(newestEntry.Ticker, currency, newestEntry.PostingDate);
+                var stockPrice = await getStockPrice(newestEntry.Isin, currency, newestEntry.PostingDate);
                 if (stockPrice is null) continue;
                 price += newestEntry.Value * stockPrice.PricePerUnit;
             }
@@ -63,11 +63,11 @@ public static class StockEntryExtension
     {
         if (accountEntries is null) return [];
 
-        return accountEntries.DistinctBy(x => x.Ticker).Select(x => x.Ticker).ToList();
+        return accountEntries.DistinctBy(x => x.Isin).Select(x => x.Isin).ToList();
     }
     public static IEnumerable<StockAccountEntry> GetNextOlder(this IEnumerable<StockAccountEntry> entries, DateTime date, string ticker)
     {
-        var lastEntry = entries.Where(x => x.PostingDate < date && x.Ticker == ticker).OrderByDescending(x => x.PostingDate).FirstOrDefault();
+        var lastEntry = entries.Where(x => x.PostingDate < date && x.Isin == ticker).OrderByDescending(x => x.PostingDate).FirstOrDefault();
         if (lastEntry is null) return [];
 
         return [lastEntry];
@@ -85,20 +85,20 @@ public static class StockEntryExtension
         if (accountEntries is null) return default;
 
         return accountEntries.Where(x => x.PostingDate.Year == date.Year && x.PostingDate.Month == date.Month && x.PostingDate.Day == date.Day &&
-         x.Ticker == ticker).OrderByDescending(x => x.PostingDate).FirstOrDefault();
+         x.Isin == ticker).OrderByDescending(x => x.PostingDate).FirstOrDefault();
     }
     public static IEnumerable<StockAccountEntry> Get(this IEnumerable<StockAccountEntry> accountEntries, DateTime date) // needs to be upgraded
     {
         if (accountEntries is null) return [];
 
         var entries = accountEntries.Where(x => x.PostingDate.Year == date.Year && x.PostingDate.Month == date.Month && x.PostingDate.Day == date.Day).ToList();
-        if (entries.DistinctBy(x => x.Ticker).Count() == accountEntries.GetStoredTickers().Count())
+        if (entries.DistinctBy(x => x.Isin).Count() == accountEntries.GetStoredTickers().Count())
             return entries;
 
         foreach (var storedTicker in accountEntries.GetStoredTickers())
         {
-            if (entries.Any(x => x.Ticker == storedTicker)) continue;
-            var newEntry = accountEntries.FirstOrDefault(x => x.Ticker == storedTicker && x.PostingDate <= date);
+            if (entries.Any(x => x.Isin == storedTicker)) continue;
+            var newEntry = accountEntries.FirstOrDefault(x => x.Isin == storedTicker && x.PostingDate <= date);
 
             if (newEntry is not null)
                 entries.Add(newEntry);

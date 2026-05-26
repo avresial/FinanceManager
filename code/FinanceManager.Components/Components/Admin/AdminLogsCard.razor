@@ -1,0 +1,54 @@
+@using FinanceManager.Domain.Dtos
+@using FinanceManager.Domain.Enums
+@implements IAsyncDisposable
+
+<MudCard Outlined>
+    <MudCardContent>
+        <MudPaper Class="d-flex justify-start gap-2 flex-grow-1 flex-column px-3 py-1" Elevation="0">
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.ReportProblem" Color="Color.Warning" />
+                <MudText>Recent warnings & errors</MudText>
+                <MudSpacer />
+                <MudLink Href="Admin/Logs">View all</MudLink>
+            </MudStack>
+
+            @if (_loadError is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense>@_loadError</MudAlert>
+            }
+            else if (_entries is null)
+            {
+                <StringSpinner CharactersCount="6" />
+            }
+            else if (_entries.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    No warnings or errors recorded.
+                </MudText>
+            }
+            else
+            {
+                <MudList T="LogEntryDto" Dense DisablePadding>
+                    @foreach (var entry in _entries)
+                    {
+                        <MudListItem T="LogEntryDto">
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="w-100">
+                                <MudChip T="string" Size="Size.Small" Color="@LevelColor(entry.Level)" Variant="Variant.Filled">
+                                    @entry.Level.ToString()
+                                </MudChip>
+                                <MudStack Spacing="0" Class="flex-grow-1" Style="min-width:0">
+                                    <MudText Typo="Typo.body2" Style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                                        @entry.Message
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @entry.Category · @entry.TimestampUtc.ToLocalTime().ToString("g")
+                                    </MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+        </MudPaper>
+    </MudCardContent>
+</MudCard>

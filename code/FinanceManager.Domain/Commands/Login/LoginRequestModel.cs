@@ -1,3 +1,3 @@
 ﻿namespace FinanceManager.Application.Commands.Login;
 
-public record LoginRequestModel(string userName, string password);
+public record LoginRequestModel(string UserName, string Password);

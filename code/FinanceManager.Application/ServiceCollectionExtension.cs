@@ -47,11 +47,16 @@ public static class ServiceCollectionExtension
                 .AddScoped<ILiabilitiesService, LiabilitiesService>()
                 .AddScoped<PricingProvider>()
                 .AddScoped<GuestAccountSeeder>()
-                .AddScoped<ISeeder, GuestAccountSeeder>()
+                .AddScoped<CurrencyAccountSeeder>()
+                .AddScoped<StockAccountSeeder>()
+                .AddScoped<BondAccountSeeder>()
+                .AddScoped<FinancialLabelSeeder>()
+                .AddScoped<BondDetailsSeeder>()
                 .AddScoped<ISeeder, AdminAccountSeeder>()
-                .AddScoped<ISeeder, BondDetailsSeeder>()
+                .AddScoped<ISeeder, TestUserAccountSeeder>()
+                .AddScoped<ISeeder, BondDetailsSeeder>(sp => sp.GetRequiredService<BondDetailsSeeder>())
                 .AddScoped<ISeeder, StockDetailsSeeder>()
-                .AddScoped<ISeeder, FinancialLabelSeeder>()
+                .AddScoped<ISeeder, FinancialLabelSeeder>(sp => sp.GetRequiredService<FinancialLabelSeeder>())
                 // .AddScoped<ISeeder, FinancialInsightsSeeder>()
                 .AddScoped<IUserPlanVerifier, UserPlanVerifier>()
                 .AddScoped<IAdministrationUsersService, AdministrationUsersService>()
@@ -82,6 +87,8 @@ public static class ServiceCollectionExtension
                 .AddScoped<IFinancialInsightsAiGenerator, FinancialInsightsAiGenerator>()
                 .AddScoped<ILabelSetterAiService, LabelSetterAiService>()
                 .AddScoped<ILabelSuggestionAiService, LabelSuggestionAiService>()
+                .AddScoped<IRecurringTransactionDetectorService, RecurringTransactionDetectorService>()
+                .AddScoped<IDiversificationService, DiversificationService>()
             ;
 
         return services;

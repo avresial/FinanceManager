@@ -14,7 +14,7 @@
     </MudStack>
 
     <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="mt-2">
-        <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearchChanged" Placeholder="Search by ticker or name"
+        <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearchChanged" Placeholder="Search by ISIN or name"
                       Immediate="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true"
                       Class="flex-grow-1" />
         <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="Admin/Stocks/BulkImport"
@@ -29,6 +29,7 @@
         <MudTable @ref="@Table" Items="@_pagedElements" RowsPerPage="@_elementsPerPage" Dense Breakpoint="Breakpoint.Md"
                   LoadingProgressColor="Color.Info" Elevation="0" Class="my-3">
             <HeaderContent>
+                <MudTh>ISIN</MudTh>
                 <MudTh>Ticker</MudTh>
                 <MudTh>Name</MudTh>
                 <MudTh>Type</MudTh>
@@ -37,6 +38,7 @@
                 <MudTh>Action</MudTh>
             </HeaderContent>
             <RowTemplate>
+                <MudTd DataLabel="ISIN">@context.Isin</MudTd>
                 <MudTd DataLabel="Ticker">@context.Ticker</MudTd>
                 <MudTd DataLabel="Name">@context.Name</MudTd>
                 <MudTd DataLabel="Type">@context.Type</MudTd>
@@ -45,7 +47,7 @@
                 <MudTd DataLabel="Action">
                     <MudStack Row Spacing="1">
                         <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary"
-                                       Href="@($"Admin/EditStock/{context.Ticker}")" />
+                                       Href="@($"Admin/EditStock/{context.Isin}")" />
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
                                        OnClick="@(() => DeleteStock(context))" />
                     </MudStack>
