@@ -53,6 +53,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<FinancialLabelSeeder>()
                 .AddScoped<BondDetailsSeeder>()
                 .AddScoped<ISeeder, AdminAccountSeeder>()
+                .AddScoped<ISeeder, TestUserAccountSeeder>()
                 .AddScoped<ISeeder, BondDetailsSeeder>(sp => sp.GetRequiredService<BondDetailsSeeder>())
                 .AddScoped<ISeeder, StockDetailsSeeder>()
                 .AddScoped<ISeeder, FinancialLabelSeeder>(sp => sp.GetRequiredService<FinancialLabelSeeder>())
