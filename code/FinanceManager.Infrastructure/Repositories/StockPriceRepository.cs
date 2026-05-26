@@ -28,22 +28,28 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
 
     public async Task<DateTime?> GetLatestMissing(string isin)
     {
-        var searchDate = DateTime.UtcNow.Date;
-        var stockPrice = await context.StockPrices
-            .Include(x => x.StockDetails)
-            .FirstOrDefaultAsync(x => x.StockDetails!.Isin == isin && x.Date.Date == searchDate.Date);
-        if (stockPrice is null) return searchDate;
+        var today = DateTime.UtcNow.Date;
+        var ninetyNineYearsAgo = today.AddYears(-99);
 
-        int tries = 365 * 99;
-        do
+        var stockPrices = await context.StockPrices
+            .Where(x => x.StockDetails!.Isin == isin && x.Date >= ninetyNineYearsAgo)
+            .Select(x => x.Date.Date)
+            .Distinct()
+            .OrderByDescending(x => x)
+            .ToListAsync();
+
+        if (stockPrices.Count == 0 || stockPrices[0] < today)
+            return today;
+
+        for (int i = 0; i < stockPrices.Count - 1; i++)
         {
-            searchDate = searchDate.AddDays(-1);
-            stockPrice = await context.StockPrices
-                .Include(x => x.StockDetails)
-                .FirstOrDefaultAsync(x => x.StockDetails!.Isin == isin && x.Date.Date == searchDate.Date);
-            if (stockPrice is null) return searchDate;
+            var currentDate = stockPrices[i];
+            var nextDate = stockPrices[i + 1];
+            var expectedNextDate = currentDate.AddDays(-1);
 
-        } while (stockPrice is not null && --tries > 0);
+            if (nextDate < expectedNextDate)
+                return expectedNextDate;
+        }
 
         return null;
     }
