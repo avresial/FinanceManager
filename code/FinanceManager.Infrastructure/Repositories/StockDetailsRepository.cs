@@ -14,6 +14,16 @@ internal class StockDetailsRepository(AppDbContext context) : IStockDetailsRepos
             .FirstOrDefaultAsync(x => x.Isin == isin, ct);
     }
 
+    public async Task<StockDetails?> GetByTicker(string ticker, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(ticker)) return null;
+        var normalized = ticker.Trim().ToUpperInvariant();
+        return await context.StockDetails
+            .Include(x => x.Currency)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Ticker == normalized, ct);
+    }
+
     public async Task<IReadOnlyList<StockDetails>> GetAll(CancellationToken ct = default)
     {
         return await context.StockDetails
