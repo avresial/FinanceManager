@@ -1,3 +1,4 @@
+using ApexCharts;
 using FinanceManager.Components.Models;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
@@ -11,9 +12,14 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Assets;
 
 public partial class InvestmentRateCard
 {
-    private const string _barColor = "#FFAB00";
-    private const int _chromeHeightPx = 260;
+    private const string _highlightColor = "#FF9800";
+    private const string _mutedBarColor = "#5F6368";
+    private const string _mutedLabelColor = "var(--mud-palette-text-secondary)";
+    private const int _chromeHeightPx = 240;
     private const int _minChartHeightPx = 110;
+
+    private static readonly string[] _singleLetterMonths =
+        ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 
     private bool _isLoading;
     private Currency _currency = DefaultCurrency.PLN;
@@ -27,24 +33,14 @@ public partial class InvestmentRateCard
     private decimal _currentMonthPercentage;
     private decimal _ytdAveragePercentage;
     private decimal? _endOfYearProjection;
-    private List<ChartSeries<double>> _chartSeries = [];
-    private BarChartOptions _chartOptions = new();
-    private string[] _chartLabels = [];
+    private List<MonthBar> _series = [];
+    private ApexChartOptions<MonthBar>? _chartOptions;
 
     [Parameter] public string Height { get; set; } = "300px";
-
-    private string ChartHeight => $"{Math.Max(_minChartHeightPx, ParseHeightPx(Height) - _chromeHeightPx)}px";
-
-    private static int ParseHeightPx(string height)
-    {
-        if (height.EndsWith("px", StringComparison.Ordinal)
-            && int.TryParse(height.AsSpan(0, height.Length - 2), out var px))
-            return px;
-        return 380;
-    }
-
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
+
+    private string ChartHeightPx => $"{Math.Max(_minChartHeightPx, ParseHeightPx(Height) - _chromeHeightPx)}px";
 
     [Inject] public required ILogger<InvestmentRateCard> Logger { get; set; }
     [Inject] public required AssetsPageCardsCacheService AssetsPageCardsCacheService { get; set; }
@@ -121,40 +117,105 @@ public partial class InvestmentRateCard
 
     private void BuildChart()
     {
-        var data = MonthlyInvestmentRates
-            .Select(r => (double)(r.GetPercentage() * 100m))
+        var bars = new List<MonthBar>(12);
+        for (int i = 0; i < 12; i++)
+        {
+            var rate = i < MonthlyInvestmentRates.Count ? MonthlyInvestmentRates[i] : null;
+            var monthIndex = rate is not null ? rate.Start.Month - 1 : i;
+            var label = _singleLetterMonths[monthIndex];
+            var pct = rate is not null ? (decimal)rate.GetPercentage() * 100m : 0m;
+            bars.Add(new MonthBar(label, pct, IsCurrent: i == 11, Key: $"{i}-{label}"));
+        }
+
+        _series = bars;
+
+        var labelColors = bars
+            .Select(b => b.IsCurrent ? _highlightColor : _mutedLabelColor)
             .ToArray();
 
-        if (data.Length == 0)
-            data = new double[12];
-
-        _chartLabels = [.. MonthlyInvestmentRates.Select(r => r.Start.ToString("MMM"))];
-        if (_chartLabels.Length == 0)
-            _chartLabels = new string[12];
-
-        _chartSeries =
-        [
-            new ChartSeries<double> { Name = "Rate", Data = data },
-        ];
-
-        _chartOptions = new BarChartOptions
+        _chartOptions = new ApexChartOptions<MonthBar>
         {
-            ChartPalette = [_barColor],
-            ShowLegend = false,
-            ShowToolTips = false,
-            XAxisLines = false,
-            YAxisLines = false,
-            MaxNumYAxisTicks = 2,
-            YAxisToStringFunc = _ => string.Empty,
-            BarWidthRatio = 0.85,
-            XAxisLabelRotation = 0,
+            Chart = new Chart
+            {
+                Toolbar = new Toolbar { Show = false },
+                Animations = new Animations { Enabled = false },
+                FontFamily = "Roboto, sans-serif",
+                Background = "transparent",
+                ParentHeightOffset = 0,
+                Sparkline = new ChartSparkline { Enabled = false },
+            },
+            PlotOptions = new PlotOptions
+            {
+                Bar = new PlotOptionsBar
+                {
+                    BorderRadius = 6,
+                    BorderRadiusApplication = BorderRadiusApplication.End,
+                    ColumnWidth = "78%",
+                },
+            },
+            DataLabels = new DataLabels { Enabled = false },
+            Grid = new Grid
+            {
+                Show = false,
+                Padding = new Padding { Top = 0, Right = 0, Bottom = 0, Left = 0 },
+            },
+            Legend = new Legend { Show = false },
+            Tooltip = new Tooltip { Enabled = false },
+            Stroke = new Stroke { Show = false },
+            Xaxis = new XAxis
+            {
+                AxisBorder = new AxisBorder { Show = false },
+                AxisTicks = new AxisTicks { Show = false },
+                Labels = new XAxisLabels
+                {
+                    Style = new AxisLabelStyle
+                    {
+                        FontSize = "11px",
+                        Colors = new ApexCharts.Color(labelColors),
+                    },
+                },
+                Tooltip = new XAxisTooltip { Enabled = false },
+            },
+            Yaxis = [new YAxis { Show = false }],
         };
+
+        if (_ytdAveragePercentage != 0m)
+        {
+            _chartOptions.Annotations = new Annotations
+            {
+                Yaxis =
+                [
+                    new AnnotationsYAxis
+                    {
+                        Y = _ytdAveragePercentage * 100m,
+                        BorderColor = _mutedLabelColor,
+                        StrokeDashArray = 4,
+                        BorderWidth = 1,
+                    },
+                ],
+            };
+        }
     }
 
-    private string FormatPercentage(decimal value) => $"{value * 100m:0.00}%";
-    private string FormatAveragePercentage(decimal value) => $"{value * 100m:0.0}%";
-    private string FormatAmount(decimal value) => $"{value:0.00} {_currency.ShortName}";
+    private static int ParseHeightPx(string height)
+    {
+        if (height.EndsWith("px", StringComparison.Ordinal)
+            && int.TryParse(height.AsSpan(0, height.Length - 2), out var px))
+            return px;
+        return 380;
+    }
+
+    private static string FormatRateNumber(decimal value) => $"{value * 100m:0.00}";
+    private static string FormatAveragePercentage(decimal value) => $"{value * 100m:0.0}%";
+    private string FormatAmount(decimal value) => $"{value:N2} {_currency.ShortName}";
+    private string FormatChange(decimal value)
+    {
+        var sign = value > 0 ? "+" : value < 0 ? "-" : string.Empty;
+        return $"{sign}{Math.Abs(value):N2} {_currency.ShortName}";
+    }
     private string FormatProjection() => _endOfYearProjection is null
         ? "—"
         : $"{_endOfYearProjection.Value:N0} {_currency.ShortName}";
+
+    internal record MonthBar(string Label, decimal Percentage, bool IsCurrent, string Key);
 }
