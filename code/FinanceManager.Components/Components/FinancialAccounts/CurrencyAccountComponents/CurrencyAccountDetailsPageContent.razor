@@ -1,6 +1,5 @@
 @using FinanceManager.Components.Components.FinancialAccounts.Shared
-@using FinanceManager.Components.Components.SharedComponents.Charts
-@using FinanceManager.Domain.Entities.MoneyFlowModels;
+@using FinanceManager.Domain.Entities.FinancialAccounts.Currencies
 
 @if (Account is null)
 {
@@ -11,84 +10,107 @@
 }
 else if (IsLoading || Account.Entries.Any())
 {
-    <AccountDetailsPageContent AccountName="@Account.Name" ChartData="ChartData" IsLoading="@IsLoading"
-                               IsLoadingMore="@_isLoadingMore" LoadedAllData="@_loadedAllData" OnLoadMore="LoadMore">
+    <AccountDetailsHero AccountName="@Account.Name"
+                        AccountTypeLabel="@_accountTypeLabel"
+                        Currency="@_currency.ShortName"
+                        Balance="@_currentBalance"
+                        BalanceChange="@_balanceChange"
+                        BalanceChangePercent="@_balanceChangePercent"
+                        SelectedRange="@_selectedRange"
+                        SelectedRangeChanged="OnRangeChanged"
+                        CustomDateRange="@_customDateRange"
+                        CustomDateRangeChanged="OnCustomDateRangeChanged"
+                        IsChartLoading="@IsLoading"
+                        ChartData="@ChartData" />
 
-        <ActionButtons>
-            <MudTooltip Text="Import">
-                <MudIconButton Icon="@Icons.Material.Filled.FileUpload" AriaLabel="Import" Color="Color.Primary"
-                               Href="@($"/Import/{Account.AccountId}")" />
-            </MudTooltip>
-            <MudTooltip Text="Export">
-                <MudIconButton Icon="@Icons.Material.Filled.FileDownload" AriaLabel="Export" Color="Color.Primary"
-                               Href="@($"/Export/{Account.AccountId}")" />
-            </MudTooltip>
-            <MudTooltip Text="Manage">
-                <MudIconButton Icon="@Icons.Material.Filled.Settings" AriaLabel="Manage" Color="Color.Primary"
-                               Href="@($"/ManageAccount/{Account.AccountId}")" />
-            </MudTooltip>
-        </ActionButtons>
+    <MudContainer MaxWidth="MaxWidth.Large" Class="px-0">
+        <MudGrid Spacing="3">
+            <MudItem xs="12" lg="8">
+                <AccountHistoryToolbar AccountId="@Account.AccountId"
+                                       SearchText="@_searchText"
+                                       SearchTextChanged="OnSearchChanged"
+                                       ActiveFilter="@_activeFilter"
+                                       ActiveFilterChanged="OnTxFilterChanged"
+                                       AvailableCategories="@_availableCategories"
+                                       SelectedCategory="@_selectedCategory"
+                                       SelectedCategoryChanged="OnCategoryChanged"
+                                       OnAddEntry="ShowAddOverlay"
+                                       ShowInsightsButton="@_isMobile"
+                                       OnInsightsClick="ToggleInsightsDrawer"
+                                       IsMobile="@_isMobile" />
 
-        <AddEntryOverlay>
-            <MudFab Color="MudBlazor.Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="Add" OnClick="ShowOverlay"
-                    Style="margin-left: 30px; position: fixed; bottom: 3vh; z-index:2;" />
+                @{
+                    var filteredEntries = GetFilteredEntries();
+                    var dayGroups = filteredEntries
+                        .GroupBy(e => e.PostingDate.Date)
+                        .OrderByDescending(g => g.Key)
+                        .ToList();
+                }
 
-            <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
-                <MudPaper Class="p-5">
-                    <AddCurrencyEntry CurrencyAccount=Account ActionCompleted="HideOverlay" />
-                </MudPaper>
-            </MudOverlay>
-        </AddEntryOverlay>
-        <EntryFilter>
-            <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
-                <DateRangeFilterBar From="_filterDateStart" To="_filterDateEnd" OnFilterChanged="OnDateFilterChanged" />
-                <ValueChangeRangeFilterBar From="_filterFrom" To="_filterTo" OnFilterChanged="OnFilterChanged" />
-            </MudStack>
-        </EntryFilter>
-        <Entries>
-            @{
-                var filteredEntries = GetFilteredEntries();
-            }
-            @if (HasActiveFilter && !filteredEntries.Any())
+                @if (HasActiveFilter && !filteredEntries.Any())
+                {
+                    <MudAlert Severity="Severity.Info" Class="my-3">No entries match the current filter.</MudAlert>
+                }
+                else if (!filteredEntries.Any())
+                {
+                    <MudAlert Severity="Severity.Info" Class="my-3">No entries in the selected range.</MudAlert>
+                }
+                else
+                {
+                    @foreach (var group in dayGroups)
+                    {
+                        <DayGroupCard Day="@group.Key" Account="Account" Entries="@group"
+                                      Currency="@_currency.ShortName" />
+                    }
+                }
+            </MudItem>
+
+            @if (!_isMobile)
             {
-                <MudAlert Severity="Severity.Info" Class="my-3">No entries match the current filter.</MudAlert>
-            }
-            else
-            {
-                @foreach (var entry in filteredEntries)
-                {
-                    <CurrencyAccountDetailsRow CurrencyAccountEntry="@entry" CurrencyAccount=Account />
-                }
-            }
-        </Entries>
-        <SidePanel>
-            <MudStack>
-                <AccountBalanceChangePanel BalanceChange="@_balanceChange" Currency="@_currency" />
+                <MudItem lg="4">
+                    <MudStack Spacing="4">
+                        <BalanceChangeCard BalanceChange="@_balanceChange" Currency="@_currency.ShortName"
+                                           RangeLabel="@_selectedRange"
+                                           FromDate="@_dateStart" ToDate="@_dateEnd" />
 
-                @if (_top5 is not null && _top5.Any())
-                {
-                    <AccountTopBottomList Title="Top 5" Items="_top5" ValueColor="Color.Success"
-                                          ItemTitle="@(entry => entry.Labels.Any() ? entry.Labels.First().Name : "Transaction")"
-                                          ItemDescription="@(entry => entry.Description)"
-                                          ItemValue="@(entry => $"{entry.ValueChange} {_currency}")"
-                                          ItemDate="@(entry => entry.PostingDate.ToString("dd-MM-yyyy"))" />
-                }
+                        <AccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])"
+                                           Currency="@_currency.ShortName" />
+                    </MudStack>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudContainer>
 
-                @if (_bottom5 is not null && _bottom5.Any())
-                {
-                    <AccountTopBottomList Title="Bottom 5" Items="_bottom5" ValueColor="Color.Error"
-                                          ItemTitle="@(entry => entry.Labels.Any() ? entry.Labels.First().Name : "Transaction")"
-                                          ItemDescription="@(entry => entry.Description)"
-                                          ItemValue="@(entry => $"{entry.ValueChange} {_currency}")"
-                                          ItemDate="@(entry => entry.PostingDate.ToString("dd-MM-yyyy"))" />
-                }
+    @if (_isMobile)
+    {
+        <MudOverlay Visible="@_insightsDrawerOpen" OnClick="CloseInsightsDrawer" DarkBackground="true"
+                    ZIndex="1300" />
+        <div style="@($"position: fixed; top: 0; right: 0; bottom: 0; width: min(360px, 90vw); background: var(--mud-palette-surface); box-shadow: -4px 0 16px rgba(0,0,0,0.4); overflow-y: auto; z-index: 1301; transform: translateX({( _insightsDrawerOpen ? "0" : "100%")}); transition: transform 225ms cubic-bezier(0,0,0.2,1);")">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="pa-3">
+                <MudText Typo="Typo.h6">Insights</MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="CloseInsightsDrawer" />
             </MudStack>
-        </SidePanel>
-    </AccountDetailsPageContent>
+            <MudDivider />
+            <MudStack Spacing="4" Class="pa-4">
+                <BalanceChangeCard BalanceChange="@_balanceChange" Currency="@_currency.ShortName"
+                                   RangeLabel="@_selectedRange"
+                                   FromDate="@_dateStart" ToDate="@_dateEnd" />
+
+                <AccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])"
+                                   Currency="@_currency.ShortName" />
+            </MudStack>
+        </div>
+    }
+
+    <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
+        <MudPaper Class="p-5">
+            <AddCurrencyEntry CurrencyAccount=Account ActionCompleted="HideAddOverlay" />
+        </MudPaper>
+    </MudOverlay>
 }
 else if (!Account.Entries.Any())
 {
-    <AddCurrencyEntry CurrencyAccount=Account ActionCompleted="HideOverlay">
+    <AddCurrencyEntry CurrencyAccount=Account ActionCompleted="HideAddOverlay">
         <CustomButton>
             <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"/Import/{Account.AccountId}")">
                 Import
@@ -101,3 +123,9 @@ else if (!Account.Entries.Any())
 {
     <MudAlert Severity="Severity.Error">@ErrorMessage</MudAlert>
 }
+
+<MudScrollToTop TopOffset="400" ScrollBehavior="ScrollBehavior.Smooth">
+    <MudFab Color="Color.Primary" Size="Size.Medium"
+            StartIcon="@Icons.Material.Filled.KeyboardArrowUp"
+            aria-label="Scroll to top" />
+</MudScrollToTop>

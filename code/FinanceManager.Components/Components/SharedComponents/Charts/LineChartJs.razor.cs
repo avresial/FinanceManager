@@ -9,6 +9,7 @@ public partial class LineChartJs : ComponentBase, IAsyncDisposable
 {
     private IJSObjectReference? _chartInstance;
     private CancellationTokenSource _cancellationTokenSource = new();
+    private List<List<ChartJsLineDataPoint>>? _lastRenderedSeries;
 
     [Inject] public required IJSRuntime JSRunTime { get; set; }
     [Inject] public required ILogger<LineChartJs> Logger { get; set; }
@@ -96,6 +97,7 @@ public partial class LineChartJs : ComponentBase, IAsyncDisposable
             }
 
             _chartInstance = await JSRunTime.InvokeAsync<IJSObjectReference>("setupChart", _cancellationTokenSource.Token, Id, config, datasets);
+            _lastRenderedSeries = Series;
 
 
             List<List<ChartJsLineDataPoint>> newSeries = [];
@@ -121,6 +123,13 @@ public partial class LineChartJs : ComponentBase, IAsyncDisposable
     protected override async Task OnParametersSetAsync()
     {
         if (_chartInstance is null) return;
+
+        // Skip the redraw when the parent passed the exact same Series instance we already
+        // rendered. Without this, every parent re-render (even unrelated state changes)
+        // restarts the chart animation. Callers that build the Series inline get a new
+        // reference each render, so they're unaffected.
+        if (ReferenceEquals(_lastRenderedSeries, Series)) return;
+        _lastRenderedSeries = Series;
 
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource = new CancellationTokenSource();

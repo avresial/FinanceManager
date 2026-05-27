@@ -1,0 +1,111 @@
+@using FinanceManager.Domain.Entities.Shared.Accounts
+
+<div class="px-0 mb-2">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
+        <div style="@(IsMobile ? "flex: 1 1 100%; min-width: 0;" : "flex: 1 1 280px; min-width: 0;")">
+            <MudTextField T="string" Value="SearchText" ValueChanged="OnSearchChanged"
+                          Placeholder="Search transactions, notes, categories…" Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Immediate="true" DebounceInterval="150" Clearable="true" />
+        </div>
+
+        <MudChipSet T="TxFilter?" SelectedValue="ActiveFilter" SelectedValueChanged="OnFilterChanged"
+                    SelectionMode="SelectionMode.ToggleSelection">
+            <MudChip T="TxFilter?" Value="@((TxFilter?)TxFilter.Income)" Color="Color.Default"
+                     Variant="Variant.Outlined" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowUpward"
+                     SelectedColor="Color.Success">Income</MudChip>
+            <MudChip T="TxFilter?" Value="@((TxFilter?)TxFilter.Expense)" Color="Color.Default"
+                     Variant="Variant.Outlined" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowDownward"
+                     SelectedColor="Color.Error">Expense</MudChip>
+        </MudChipSet>
+
+        @if (AvailableCategories is not null && AvailableCategories.Any())
+        {
+            <MudMenu Label="@(SelectedCategory ?? "Category")" StartIcon="@Icons.Material.Filled.FilterList"
+                     Variant="Variant.Text" Color="Color.Default" Size="Size.Small" Dense="true">
+                @if (SelectedCategory is not null)
+                {
+                    <MudMenuItem Icon="@Icons.Material.Filled.Close" OnClick="OnClearCategory">Clear filter</MudMenuItem>
+                    <MudDivider />
+                }
+                @foreach (var category in AvailableCategories)
+                {
+                    <MudMenuItem OnClick="@(() => OnCategoryChanged(category))">@category</MudMenuItem>
+                }
+            </MudMenu>
+        }
+
+        <div class="ml-auto">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
+                @if (ShowInsightsButton)
+                {
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Insights"
+                               Size="Size.Small" OnClick="OnInsightsClick">
+                        Insights
+                    </MudButton>
+                }
+                <MudTooltip Text="Import">
+                    <MudIconButton Icon="@Icons.Material.Filled.FileUpload" Size="Size.Small" Color="Color.Default"
+                                   Href="@($"/Import/{AccountId}")" />
+                </MudTooltip>
+                <MudTooltip Text="Export">
+                    <MudIconButton Icon="@Icons.Material.Filled.FileDownload" Size="Size.Small" Color="Color.Default"
+                                   Href="@($"/Export/{AccountId}")" />
+                </MudTooltip>
+                <MudTooltip Text="Manage">
+                    <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Color="Color.Default"
+                                   Href="@($"/ManageAccount/{AccountId}")" />
+                </MudTooltip>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           Size="Size.Small" OnClick="OnAddEntry">
+                    Add entry
+                </MudButton>
+            </MudStack>
+        </div>
+    </MudStack>
+</div>
+
+@code {
+    public enum TxFilter
+    {
+        Income,
+        Expense
+    }
+
+    [Parameter] public required int AccountId { get; set; }
+    [Parameter] public string? SearchText { get; set; }
+    [Parameter] public EventCallback<string?> SearchTextChanged { get; set; }
+    [Parameter] public TxFilter? ActiveFilter { get; set; }
+    [Parameter] public EventCallback<TxFilter?> ActiveFilterChanged { get; set; }
+    [Parameter] public IEnumerable<string>? AvailableCategories { get; set; }
+    [Parameter] public string? SelectedCategory { get; set; }
+    [Parameter] public EventCallback<string?> SelectedCategoryChanged { get; set; }
+    [Parameter] public EventCallback OnAddEntry { get; set; }
+    [Parameter] public bool ShowInsightsButton { get; set; }
+    [Parameter] public EventCallback OnInsightsClick { get; set; }
+    [Parameter] public bool IsMobile { get; set; }
+
+    private async Task OnSearchChanged(string? value)
+    {
+        SearchText = value;
+        await SearchTextChanged.InvokeAsync(value);
+    }
+
+    private async Task OnFilterChanged(TxFilter? value)
+    {
+        ActiveFilter = value;
+        await ActiveFilterChanged.InvokeAsync(value);
+    }
+
+    private async Task OnCategoryChanged(string category)
+    {
+        SelectedCategory = category;
+        await SelectedCategoryChanged.InvokeAsync(category);
+    }
+
+    private async Task OnClearCategory()
+    {
+        SelectedCategory = null;
+        await SelectedCategoryChanged.InvokeAsync(null);
+    }
+}

@@ -1,0 +1,39 @@
+@using FinanceManager.Domain.Entities.FinancialAccounts.Currencies
+
+<MudCard Outlined="true" Class="mb-3" Style="background-color: transparent;">
+    <MudCardHeader Class="py-1 px-4">
+        <CardHeaderContent>
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Baseline">
+                    <MudText Typo="Typo.subtitle2">@Day.ToString("dd MMM")</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">@Day.ToString("dddd")</MudText>
+                </MudStack>
+                <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Baseline">
+                    <MudText Typo="Typo.caption" Color="Color.Default">@Entries.Count() @(Entries.Count() == 1 ? "entry" : "entries")</MudText>
+                    <MudText Typo="Typo.caption" Class="fm-tabular"
+                             Color="@(DailyNet >= 0 ? Color.Success : Color.Error)">
+                        @(DailyNet >= 0 ? "+" : "")@DailyNet.ToString("N2") @Currency
+                    </MudText>
+                </MudStack>
+            </MudStack>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent Class="pa-0">
+        <MudStack Spacing="0">
+            @foreach (var entry in Entries)
+            {
+                <TransactionRow Account="Account" Entry="entry" Currency="@Currency" />
+                <MudDivider />
+            }
+        </MudStack>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public DateTime Day { get; set; }
+    [Parameter] public required FinanceManager.Domain.Entities.FinancialAccounts.Currencies.CurrencyAccount Account { get; set; }
+    [Parameter] public required IEnumerable<CurrencyAccountEntry> Entries { get; set; }
+    [Parameter] public required string Currency { get; set; }
+
+    private decimal DailyNet => Entries.Sum(e => e.ValueChange);
+}
