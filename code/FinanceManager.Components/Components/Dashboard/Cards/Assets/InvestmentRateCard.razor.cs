@@ -11,8 +11,7 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Assets;
 
 public partial class InvestmentRateCard
 {
-    private const string _mutedBarColor = "#33FFFFFF";
-    private const string _highlightBarColor = "#FF8F00";
+    private const string _barColor = "#FFAB00";
 
     private bool _isLoading;
     private Currency _currency = DefaultCurrency.PLN;
@@ -27,7 +26,7 @@ public partial class InvestmentRateCard
     private decimal _ytdAveragePercentage;
     private decimal? _endOfYearProjection;
     private List<ChartSeries<double>> _chartSeries = [];
-    private ChartOptions _chartOptions = new();
+    private BarChartOptions _chartOptions = new();
     private string[] _chartLabels = [];
 
     [Parameter] public string Height { get; set; } = "300px";
@@ -125,17 +124,16 @@ public partial class InvestmentRateCard
             new ChartSeries<double> { Name = "Rate", Data = data },
         ];
 
-        var palette = new string[data.Length];
-        for (int i = 0; i < data.Length; i++)
-            palette[i] = _mutedBarColor;
-        if (data.Length > 0 && CurrentMonthRate is { Salary: not 0 })
-            palette[^1] = _highlightBarColor;
-
-        _chartOptions = new ChartOptions
+        _chartOptions = new BarChartOptions
         {
-            ChartPalette = palette,
+            ChartPalette = [_barColor],
             ShowLegend = false,
             ShowToolTips = false,
+            XAxisLines = false,
+            YAxisLines = false,
+            YAxisTicks = 0,
+            BarWidthRatio = 0.65,
+            XAxisLabelRotation = 0,
         };
     }
 
