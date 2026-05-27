@@ -80,7 +80,11 @@ public class StockAccountSeeder(
                 continue;
             }
 
-            account.Add(new StockAccountEntry(account.AccountId, 0, date, 0, change, DemoIsin, InvestmentType.Stock), false);
+            var entry = new StockAccountEntry(account.AccountId, 0, date, 0, change, DemoIsin, InvestmentType.Stock)
+            {
+                Ticker = DemoTicker
+            };
+            account.Add(entry, false);
             heldUnits += change;
         }
 

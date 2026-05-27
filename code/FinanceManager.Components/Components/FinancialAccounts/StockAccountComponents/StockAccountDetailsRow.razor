@@ -8,8 +8,8 @@
     <TitleContent>
         <MudGrid>
             <MudItem xs="3">
-                <MudText Typo="Typo.caption" Color="Color.Default">ISIN</MudText>
-                <MudText Typo="Typo.body1">@InvestmentEntry.Isin</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Default">Ticker</MudText>
+                <MudText Typo="Typo.body1">@(string.IsNullOrWhiteSpace(InvestmentEntry.Ticker) ? InvestmentEntry.Isin : InvestmentEntry.Ticker)</MudText>
             </MudItem>
            
             <MudItem xs="5">
@@ -83,6 +83,11 @@
                         <MudItem xs="4">
                             <MudText Typo="Typo.caption" Color="Color.Default">Investment type</MudText>
                             <MudText Typo="Typo.body1">@InvestmentEntry.InvestmentType</MudText>
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.caption" Color="Color.Default">ISIN</MudText>
+                            <MudText Typo="Typo.body1">@InvestmentEntry.Isin</MudText>
                         </MudItem>
 
                         @if (UnrealizedGainLoss is not null && UnrealizedGainLoss.IsExcludedFromTotals &&
