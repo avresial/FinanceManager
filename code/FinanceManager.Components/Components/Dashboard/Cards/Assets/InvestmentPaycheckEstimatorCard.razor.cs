@@ -10,11 +10,23 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Assets;
 
 public partial class InvestmentPaycheckEstimatorCard
 {
+    private const decimal _defaultRate = 0.04m;
+    private const decimal _rateMin = 0.02m;
+    private const decimal _rateMax = 0.08m;
+    private const decimal _rateStep = 0.001m;
+
+    private readonly RatePreset[] _presets =
+    [
+        new(0.03m, "Conservative"),
+        new(0.04m, "Standard"),
+        new(0.05m, "Aggressive"),
+    ];
+
     private bool _isLoading;
     private Currency _currency = DefaultCurrency.PLN;
-    private InvestmentPaycheckEstimate _estimate = new() { AnnualWithdrawalRate = 0.05m, SalaryMonthsRequested = 3 };
-    private decimal? _annualWithdrawalRate = 0.05m;
-    private bool ShowRecalculateButton => !_isLoading && Math.Round(_annualWithdrawalRate ?? 0.05m, 4) != Math.Round(_estimate.AnnualWithdrawalRate, 4);
+    private InvestmentPaycheckEstimate _estimate = new() { AnnualWithdrawalRate = _defaultRate, SalaryMonthsRequested = 3 };
+    private decimal _annualWithdrawalRate = _defaultRate;
+    private CancellationTokenSource? _persistCts;
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
@@ -25,10 +37,22 @@ public partial class InvestmentPaycheckEstimatorCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    private decimal MonthlyPaycheck => _estimate.InvestableAssetsValue * _annualWithdrawalRate / 12m;
+
+    private decimal? ReplacementRatio
+    {
+        get
+        {
+            if (_estimate.AverageMonthlySalary is not { } avg || avg == 0m)
+                return null;
+            return MonthlyPaycheck / avg;
+        }
+    }
+
+    protected override Task OnInitializedAsync()
     {
         _currency = SettingsService.GetCurrency();
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     protected override async Task OnParametersSetAsync()
@@ -46,11 +70,11 @@ public partial class InvestmentPaycheckEstimatorCard
             var user = await LoginService.GetLoggedUser();
             if (user is null)
             {
-                _estimate = new InvestmentPaycheckEstimate { AnnualWithdrawalRate = 0.05m, SalaryMonthsRequested = SalaryMonths };
+                _estimate = new InvestmentPaycheckEstimate { AnnualWithdrawalRate = _defaultRate, SalaryMonthsRequested = SalaryMonths };
                 return;
             }
 
-            decimal withdrawalRate = Math.Round(_annualWithdrawalRate ?? 0.05m, 4);
+            var withdrawalRate = Math.Round(_annualWithdrawalRate, 4);
             var context = new InvestmentPaycheckEstimateRefreshContext
             {
                 UserId = user.UserId,
@@ -62,11 +86,12 @@ public partial class InvestmentPaycheckEstimatorCard
 
             var snapshot = await InvestmentPaycheckEstimateCacheService.GetSnapshotAsync(context);
             _estimate = snapshot.Estimate;
+            _annualWithdrawalRate = _estimate.AnnualWithdrawalRate;
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error while getting investment paycheck estimate");
-            _estimate = new InvestmentPaycheckEstimate { AnnualWithdrawalRate = 0.05m, SalaryMonthsRequested = SalaryMonths };
+            _estimate = new InvestmentPaycheckEstimate { AnnualWithdrawalRate = _defaultRate, SalaryMonthsRequested = SalaryMonths };
         }
         finally
         {
@@ -75,9 +100,49 @@ public partial class InvestmentPaycheckEstimatorCard
         }
     }
 
+    private void OnRateChanged(decimal value)
+    {
+        _annualWithdrawalRate = value;
+        SchedulePersist();
+    }
+
+    private void OnPresetSelected(decimal rate)
+    {
+        _annualWithdrawalRate = rate;
+        SchedulePersist();
+    }
+
+    private void SchedulePersist()
+    {
+        _persistCts?.Cancel();
+        _persistCts = new CancellationTokenSource();
+        var token = _persistCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(350), token);
+                if (token.IsCancellationRequested)
+                    return;
+                await InvokeAsync(RefreshEstimate);
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        });
+    }
+
     private string FormatCurrency(decimal value) => $"{value:0.00} {_currency.ShortName}";
 
-    private string FormatCurrency(decimal? value) => value.HasValue ? FormatCurrency(value.Value) : "No data";
+    private string FormatMonthly(decimal value) => value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
 
-    private static string FormatRatio(decimal? value) => value.HasValue ? $"{value.Value * 100m:0.00}%" : "No data";
+    private static string FormatNumber(decimal value, int decimals)
+        => value.ToString($"N{decimals}", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static string FormatRate(decimal value) => $"{value * 100m:0.0}%";
+
+    private static string FormatReplacement(decimal? value) => value.HasValue ? $"{value.Value * 100m:0.00}%" : "—";
+
+    private readonly record struct RatePreset(decimal Rate, string Label);
 }

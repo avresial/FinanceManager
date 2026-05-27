@@ -1,59 +1,106 @@
-<MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
-    <MudPaper Class="p-3 pb-0" Elevation="0">
-        <div>
-            <MudText Typo="Typo.h5">Investment paycheck</MudText>
-            <MudText Typo="Typo.body2" Class="text-muted">Sustainable monthly liquidation based on assets. </MudText>
-        </div>
-    </MudPaper>
+@using FinanceManager.Domain.Entities.MoneyFlowModels
 
-    <MudPaper Class="flex-grow-1 p-3 pt-2 overflow-auto" Elevation="0">
+<MudCard Outlined Class="pc-card d-flex flex-column" Style="@($"height:{Height};")">
+    <MudCardContent Class="pc-card-content d-flex flex-column flex-grow-1">
+        <div class="pc-head">
+            <div class="pc-title-row">
+                <MudText Typo="Typo.h6" Class="pc-title">Investment paycheck</MudText>
+                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                         PopoverClass="pc-info-popover" Dense="true">
+                    <ActivatorContent>
+                        <MudIconButton Icon="@Icons.Material.Outlined.Info" Size="Size.Small" Color="Color.Default"
+                                       aria-label="What do these numbers mean?" Class="pc-info-btn" />
+                    </ActivatorContent>
+                    <ChildContent>
+                        <div class="pc-info-pop">
+                            <div class="pc-info-head">What's in this card</div>
+                            <dl class="pc-info-list">
+                                <dt>Investment paycheck</dt>
+                                <dd>The monthly amount your portfolio could sustainably pay you if your salary stopped today.</dd>
+                                <dt>Withdrawal rate</dt>
+                                <dd>The annual share of your portfolio you'd draw down. 4% is the classic "safe withdrawal rate" — historically tested to last 30+ years of retirement.</dd>
+                                <dt>Conservative / Standard / Aggressive</dt>
+                                <dd>Presets at 3% / 4% / 5%. Lower rates reduce the risk of running out; higher rates pay more but deplete faster.</dd>
+                                <dt>Replacement %</dt>
+                                <dd>What share of your average monthly salary this paycheck would cover.</dd>
+                                <dt>Investments value</dt>
+                                <dd>Current market value of your investable assets (stocks, bonds, funds). Cash and liabilities are excluded.</dd>
+                                <dt>@_estimate.SalaryMonthsUsed of @_estimate.SalaryMonthsRequested months</dt>
+                                <dd>Months of salary history the average is calculated from.</dd>
+                            </dl>
+                        </div>
+                    </ChildContent>
+                </MudMenu>
+            </div>
+            <MudText Typo="Typo.body2" Class="pc-sub">
+                If you stopped earning today, your portfolio could pay you:
+            </MudText>
+        </div>
+
         @if (_isLoading)
         {
-            <MudText Typo="Typo.h3" Class="mb-1 text-muted">
-                <StringSpinner CharactersCount="6" />
-            </MudText>
+            <div class="pc-hero">
+                <MudText Typo="Typo.h3" Class="pc-hero-num pc-hero-num--loading">
+                    <StringSpinner CharactersCount="4" />
+                </MudText>
+            </div>
         }
         else
         {
-            <div class="d-flex align-end gap-1 mb-3">
-                <MudText Typo="Typo.h3" Color="Color.Primary">@FormatCurrency(_estimate.SustainableMonthlyPaycheck)
-                </MudText>
-                <MudText Typo="Typo.body2" Class="text-muted mb-1">/mo</MudText>
+            <div class="pc-hero">
+                <span class="pc-hero-num">@FormatMonthly(MonthlyPaycheck)</span>
+                <span class="pc-hero-cur">@_currency.ShortName</span>
+                <span class="pc-hero-per">/mo</span>
             </div>
 
-
-            <div class="d-flex flex-wrap gap-1">
-                <div class="mr-2">
-                    <MudText Typo="Typo.caption" Class="text-muted">Investable assets</MudText>
-                    <MudText Typo="Typo.body1">@FormatCurrency(_estimate.InvestableAssetsValue)</MudText>
+            @if (_estimate.HasSalaryData && _estimate.AverageMonthlySalary is { } avgSalary)
+            {
+                <div class="pc-vs">
+                    Covers
+                    <button type="button" class="pc-vs-pill" title="Click to expand">
+                        @FormatReplacement(ReplacementRatio)
+                    </button>
+                    of your average @FormatNumber(avgSalary, 0)&nbsp;@_currency.ShortName salary.
                 </div>
-                <div class="mr-2">
-                    <MudText Typo="Typo.caption" Class="text-muted">Average salary</MudText>
-                    <MudText Typo="Typo.body1">@FormatCurrency(_estimate.AverageMonthlySalary)</MudText>
+            }
+            else
+            {
+                <div class="pc-vs pc-vs--muted">
+                    No salary history yet — replacement % will appear once income entries are recorded.
                 </div>
-                <div class="mr-2">
-                    <MudText Typo="Typo.caption" Class="text-muted">Income replacement</MudText>
-                    <MudText Typo="Typo.body1">@FormatRatio(_estimate.IncomeReplacementRatio)</MudText>
-                </div>
-
-                <div class="mr-2">
-                    <MudText Typo="Typo.caption" Class="text-muted">Withdrawal rate</MudText>
-                    <div class="d-flex align-end gap-1">
-                    <MudNumericField T="decimal?" Variant="Variant.Text" Min="0.001m" Max="0.2m" Immediate HideSpinButtons
-                                     Style="max-width: 70px;" @bind-Value="_annualWithdrawalRate" />
-                        @if (ShowRecalculateButton)
-                        {
-                            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Variant="Variant.Text" Color="Color.Default"
-                                           Class="mb-0 p-1" OnClick="RefreshEstimate" />
-                        }
-                    </div>
-                </div>
-            </div>
-            
-            <MudText Typo="Typo.body2"
-                    Class="@(_estimate.SalaryMonthsUsed < _estimate.SalaryMonthsRequested ? "mud-warning-text" : "text-muted")">
-                Based on @_estimate.SalaryMonthsUsed of @_estimate.SalaryMonthsRequested requested months.
-            </MudText>
+            }
         }
-    </MudPaper>
+
+        <div class="pc-slider-block">
+            <div class="pc-slider-head">
+                <span class="pc-slider-label">Withdrawal rate</span>
+                <span class="pc-slider-val">@FormatRate(_annualWithdrawalRate)</span>
+            </div>
+            <MudSlider T="decimal" Value="_annualWithdrawalRate" ValueChanged="OnRateChanged"
+                       Min="_rateMin" Max="_rateMax" Step="_rateStep" Immediate="true"
+                       Color="Color.Primary" Class="pc-slider" />
+            <div class="pc-named-chips">
+                @foreach (var preset in _presets)
+                {
+                    var isOn = Math.Abs(preset.Rate - _annualWithdrawalRate) < 0.0005m;
+                    <button type="button"
+                            class="@($"pc-named-chip {(isOn ? "pc-named-chip--on" : string.Empty)}")"
+                            @onclick="() => OnPresetSelected(preset.Rate)">
+                        <span class="pc-named-chip-label">@preset.Label</span>
+                        <span class="pc-named-chip-rate">@($"{preset.Rate * 100:0}%")</span>
+                    </button>
+                }
+            </div>
+        </div>
+
+        <div class="pc-foot">
+            <span>
+                Investments value:
+                <span class="pc-foot-num">@FormatCurrency(_estimate.InvestableAssetsValue)</span>
+            </span>
+            <span class="@(_estimate.HasPartialSalaryHistory ? "pc-foot-meta pc-foot-meta--warn" : "pc-foot-meta")">
+                @_estimate.SalaryMonthsUsed of @_estimate.SalaryMonthsRequested mo
+            </span>
+        </div>
+    </MudCardContent>
 </MudCard>
