@@ -97,7 +97,8 @@ else if (!Account.Entries.Any())
     <MudAlert Severity="Severity.Error">@ErrorMessage</MudAlert>
 }
 
-<MudScrollToTop TopOffset="400" Selector=".mud-main-content"
-                Style="position: fixed; bottom: 32px; right: 32px; z-index: 5;">
-    <MudFab Color="Color.Primary" Size="Size.Medium" StartIcon="@Icons.Material.Filled.KeyboardArrowUp" />
+<MudScrollToTop TopOffset="400" ScrollBehavior="ScrollBehavior.Smooth">
+    <MudFab Color="Color.Primary" Size="Size.Medium"
+            StartIcon="@Icons.Material.Filled.KeyboardArrowUp"
+            aria-label="Scroll to top" />
 </MudScrollToTop>
