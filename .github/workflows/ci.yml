@@ -237,7 +237,11 @@ jobs:
     name: Deploy to Azure Web App (production)
     runs-on: ubuntu-latest
     needs: publish
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: |
+      always()
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/main'
+      && needs.publish.result == 'success'
     environment:
       name: production
       url: https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net
@@ -260,7 +264,11 @@ jobs:
     name: Deploy to Azure Web App (develop)
     runs-on: ubuntu-latest
     needs: publish
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    if: |
+      always()
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/develop'
+      && needs.publish.result == 'success'
     environment:
       name: development
       url: https://${{ env.AZURE_WEBAPP_NAME_DEV }}.azurewebsites.net
