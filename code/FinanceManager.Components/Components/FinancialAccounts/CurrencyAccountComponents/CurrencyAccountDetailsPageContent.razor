@@ -21,7 +21,8 @@ else if (IsLoading || Account.Entries.Any())
                         CustomDateRange="@_customDateRange"
                         CustomDateRangeChanged="OnCustomDateRangeChanged"
                         IsChartLoading="@IsLoading"
-                        ChartData="@ChartData" />
+                        ChartData="@ChartData"
+                        IsMobile="@_isMobile" />
 
     <MudContainer MaxWidth="MaxWidth.Large" Class="px-0">
         <MudGrid Spacing="3">
@@ -60,7 +61,7 @@ else if (IsLoading || Account.Entries.Any())
                     @foreach (var group in dayGroups)
                     {
                         <DayGroupCard Day="@group.Key" Account="Account" Entries="@group"
-                                      Currency="@_currency.ShortName" />
+                                      Currency="@_currency.ShortName" IsMobile="@_isMobile" />
                     }
                 }
             </MudItem>

@@ -22,7 +22,7 @@
         <MudStack Spacing="0">
             @foreach (var entry in Entries)
             {
-                <TransactionRow Account="Account" Entry="entry" Currency="@Currency" />
+                <TransactionRow Account="Account" Entry="entry" Currency="@Currency" IsMobile="@IsMobile" />
                 <MudDivider />
             }
         </MudStack>
@@ -34,6 +34,7 @@
     [Parameter] public required FinanceManager.Domain.Entities.FinancialAccounts.Currencies.CurrencyAccount Account { get; set; }
     [Parameter] public required IEnumerable<CurrencyAccountEntry> Entries { get; set; }
     [Parameter] public required string Currency { get; set; }
+    [Parameter] public bool IsMobile { get; set; }
 
     private decimal DailyNet => Entries.Sum(e => e.ValueChange);
 }
