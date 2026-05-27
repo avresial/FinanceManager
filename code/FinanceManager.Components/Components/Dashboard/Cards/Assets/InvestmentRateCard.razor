@@ -1,39 +1,51 @@
-﻿<MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
-    <MudPaper Class="p-3 pb-0" Elevation="0">
-        <div>
-            <MudText Typo="Typo.h5">Investment rate</MudText>
-            <MudText Typo="Typo.body2" Class="text-muted">Investment growth relative to salary.</MudText>
+<MudCard Outlined Class="rounded-lg d-flex flex-column" Style="@($"height:{Height};")">
+    <MudCardContent Class="d-flex flex-column flex-grow-1 pa-4">
+        <div class="mb-3">
+            <MudText Typo="Typo.h6">Investment rate</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Investment growth relative to salary.</MudText>
         </div>
-    </MudPaper>
 
-    <MudPaper Class="flex-grow-1 p-3 pt-2 overflow-auto" Elevation="0">
         @if (_isLoading)
         {
             <MudText Typo="Typo.h3" Class="mb-1 text-muted">
                 <StringSpinner CharactersCount="6" />
             </MudText>
         }
-        else if (LatestInvestmentRate is null)
-        {
-            <MudText Typo="Typo.h3" Color="Color.Primary">No data</MudText>
-        }
         else
         {
-            <MudText Typo="Typo.h3" Color="Color.Primary" Class="mb-3">
-                @FormatPercentage(LatestInvestmentRate.GetPercentage())
-            </MudText>
-
-            <div class="d-flex flex-wrap gap-1">
-                <div class="mr-2">
-                    <MudText Typo="Typo.caption" Class="text-muted">Salary</MudText>
-                    <MudText Typo="Typo.body1">@FormatAmount(LatestInvestmentRate.Salary)</MudText>
-                </div>
-                <div class="mr-2">
-                    <MudText Typo="Typo.caption" Class="text-muted">Investments change</MudText>
-                    <MudText Typo="Typo.body1">@FormatAmount(LatestInvestmentRate.InvestmentsChange)
-                    </MudText>
+            <div class="d-flex justify-space-between align-end mb-3">
+                <MudText Typo="Typo.h3" Color="Color.Primary">@FormatPercentage(_currentMonthPercentage)</MudText>
+                <div class="d-flex flex-column align-end">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">ON TRACK FOR</MudText>
+                    <MudText Typo="Typo.h6">@FormatProjection()</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">by year end</MudText>
                 </div>
             </div>
+
+            <div class="d-flex justify-space-between mb-1">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Rate by month</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">avg @FormatAveragePercentage(_ytdAveragePercentage)</MudText>
+            </div>
+            <div class="flex-grow-1" style="min-height: 0;">
+                <MudChart T="double" ChartType="ChartType.Bar" ChartSeries="@_chartSeries"
+                          XAxisLabels="@_chartLabels" ChartOptions="@_chartOptions"
+                          Width="100%" Height="100%" />
+            </div>
+
+            <MudDivider Class="my-2" />
+            <MudGrid Spacing="2">
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Salary</MudText>
+                    <MudText Typo="Typo.body1">@FormatAmount(LatestInvestmentRate?.Salary ?? 0)</MudText>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Investments change</MudText>
+                    <MudText Typo="Typo.body1"
+                             Color="@(LatestInvestmentRate?.InvestmentsChange > 0 ? Color.Success : Color.Default)">
+                        @FormatAmount(LatestInvestmentRate?.InvestmentsChange ?? 0)
+                    </MudText>
+                </MudItem>
+            </MudGrid>
         }
-    </MudPaper>
+    </MudCardContent>
 </MudCard>
