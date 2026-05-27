@@ -41,6 +41,11 @@ a:hover {
     color: inherit; /* takes color from parent element */
 }
 
+.fm-tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+}
+
 #blazor-error-ui {
     background: lightyellow;
     bottom: 0;

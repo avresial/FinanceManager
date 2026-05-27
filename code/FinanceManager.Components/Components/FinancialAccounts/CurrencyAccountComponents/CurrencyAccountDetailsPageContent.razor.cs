@@ -1,10 +1,10 @@
-using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Entities.Users;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -14,24 +14,26 @@ namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccount
 
 public partial class CurrencyAccountDetailsPageContent : ComponentBase
 {
-    private const int _minimumEntryCount = 50;
-
-    private bool _isLoadingMore = false;
-    private decimal _balanceChange = 100;
-    private bool _loadedAllData = false;
+    private string _selectedRange = "3M";
     private DateTime _dateStart;
     private DateTime _dateEnd = DateTime.UtcNow;
+    private DateRange? _customDateRange;
 
     private bool _addEntryVisibility;
+
+    private string? _searchText;
+    private AccountHistoryToolbar.TxFilter? _activeFilter;
+    private string? _selectedCategory;
+    private IEnumerable<string> _availableCategories = [];
+
+    private decimal _currentBalance;
+    private decimal _balanceChange;
+    private decimal? _balanceChangePercent;
     private List<CurrencyAccountEntry>? _top5;
     private List<CurrencyAccountEntry>? _bottom5;
     private Currency _currency = DefaultCurrency.PLN;
+    private string _accountTypeLabel = "Cash account";
     private UserSession? _user;
-
-    private decimal? _filterFrom;
-    private decimal? _filterTo;
-    private DateTime? _filterDateStart;
-    private DateTime? _filterDateEnd;
 
     public bool IsLoading = false;
     public CurrencyAccount? Account { get; set; }
@@ -47,79 +49,83 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required ILogger<CurrencyAccountDetailsPageContent> Logger { get; set; }
 
-    public async Task ShowOverlay()
+    public Task ShowAddOverlay()
     {
         _addEntryVisibility = true;
         StateHasChanged();
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
-    public async Task HideOverlay()
+    public Task HideAddOverlay()
     {
         _addEntryVisibility = false;
         StateHasChanged();
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     public async Task UpdateInfo()
     {
         if (Account is null || Account.Entries is null) return;
 
-        UpdateLoadStateFromAccount();
+        if (Account.Entries.Count == 0)
+        {
+            _currentBalance = 0;
+            _balanceChange = 0;
+            _balanceChangePercent = null;
+            _top5 = [];
+            _bottom5 = [];
+            return;
+        }
 
-        if (Account.Entries.Count == 0) return;
+        var filteredEntries = GetFilteredEntries();
 
-        var entriesOrdered = Account.Entries.OrderByDescending(x => x.ValueChange);
+        var entriesOrdered = filteredEntries.OrderByDescending(x => x.ValueChange).ToList();
         _top5 = entriesOrdered.Where(x => x.ValueChange > 0).Take(5).ToList();
-        _bottom5 = entriesOrdered.Skip(Math.Max(Account.Entries.Count - 5, 0))
-                                .Where(x => x.ValueChange < 0)
-                                .Take(5)
-                                .OrderBy(x => x.ValueChange)
-                                .ToList();
+        _bottom5 = entriesOrdered.Where(x => x.ValueChange < 0)
+                                 .OrderBy(x => x.ValueChange)
+                                 .Take(5)
+                                 .ToList();
 
-        _balanceChange = Account.Entries.First().Value - Account.Entries.Last().Value;
+        _currentBalance = Account.Entries.First().Value;
+        _balanceChange = filteredEntries.Sum(e => e.ValueChange);
+
+        var startBalance = _currentBalance - _balanceChange;
+        _balanceChangePercent = startBalance == 0 ? null : _balanceChange / startBalance * 100m;
+
+        _availableCategories = Account.Entries
+            .SelectMany(e => e.Labels ?? [])
+            .Where(l => l is not null)
+            .Select(l => l.Name)
+            .Distinct()
+            .OrderBy(n => n)
+            .ToList();
+
+        _accountTypeLabel = Account.AccountType switch
+        {
+            AccountLabel.Cash => "Cash account",
+            AccountLabel.Stock => "Stock account",
+            AccountLabel.Bond => "Bond account",
+            AccountLabel.Crypto => "Crypto account",
+            AccountLabel.Loan => "Loan account",
+            AccountLabel.RealEstate => "Real estate account",
+            _ => "Account"
+        };
 
         await UpdateChartData();
-    }
-
-    public async Task LoadMore()
-    {
-        if (Account is null || Account.Start is null) return;
-        if (_user is null) return;
-
-        _isLoadingMore = true;
-
-        try
-        {
-            var loadResult = await RecentEntriesLoader.LoadMoreAsync(
-                Account,
-                _dateStart,
-                _dateEnd,
-                CreateLoaderOptions());
-
-            Account = loadResult.Account;
-            _dateStart = loadResult.DateStart;
-
-            await UpdateChartData();
-            await UpdateInfo();
-        }
-        finally
-        {
-            _isLoadingMore = false;
-        }
     }
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            _dateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
             _user = await LoginService.GetLoggedUser();
             if (_user is null)
             {
                 IsLoading = false;
                 return;
             }
+
+            SetDateRangeForSelection();
 
             var loadTask = UpdateEntries();
             var delayTask = Task.Delay(2000);
@@ -145,7 +151,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
         {
             if (Account is not null && Account.AccountId == AccountId) return;
             IsLoading = true;
-            _loadedAllData = false;
+            SetDateRangeForSelection();
             await UpdateEntries();
         }
         catch (Exception ex)
@@ -164,10 +170,8 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
         {
             if (_user is null) return;
 
-            var requestedDateStart = _dateStart;
-            _dateEnd = _filterDateEnd.HasValue ? _filterDateEnd.Value.Date.AddDays(1).AddTicks(-1) : DateTime.UtcNow;
-            Account = await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, requestedDateStart, _dateEnd, _minimumEntryCount);
-            UpdateDateStartFromLoadedEntries(requestedDateStart);
+            _dateEnd = DateTime.UtcNow;
+            Account = await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
 
             if (Account?.Entries is not null)
                 await UpdateInfo();
@@ -189,17 +193,6 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
         ChartData.AddRange(chartData.SkipWhile(x => x.Value == 0));
     }
 
-    private void UpdateLoadStateFromAccount()
-    {
-        if (Account is null)
-        {
-            _loadedAllData = false;
-            return;
-        }
-
-        _loadedAllData = Account.NextOlderEntry is null;
-    }
-
     private void AccountDataSynchronizationService_AccountsChanged()
     {
         Task.Run(async () =>
@@ -209,7 +202,64 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
         });
     }
 
-    private bool HasActiveFilter => _filterFrom.HasValue || _filterTo.HasValue || _filterDateStart.HasValue || _filterDateEnd.HasValue;
+    private async Task OnRangeChanged(string value)
+    {
+        _selectedRange = value;
+        SetDateRangeForSelection();
+        IsLoading = true;
+        StateHasChanged();
+        try
+        {
+            await UpdateEntries();
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnCustomDateRangeChanged(DateRange? range)
+    {
+        _customDateRange = range;
+        if (_selectedRange != "Range") return;
+        SetDateRangeForSelection();
+        IsLoading = true;
+        StateHasChanged();
+        try
+        {
+            await UpdateEntries();
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnSearchChanged(string? value)
+    {
+        _searchText = value;
+        await UpdateInfo();
+        StateHasChanged();
+    }
+
+    private async Task OnTxFilterChanged(AccountHistoryToolbar.TxFilter? value)
+    {
+        _activeFilter = value;
+        await UpdateInfo();
+        StateHasChanged();
+    }
+
+    private async Task OnCategoryChanged(string? value)
+    {
+        _selectedCategory = value;
+        await UpdateInfo();
+        StateHasChanged();
+    }
+
+    private bool HasActiveFilter =>
+        !string.IsNullOrWhiteSpace(_searchText) || _activeFilter.HasValue || _selectedCategory is not null;
 
     private List<CurrencyAccountEntry> GetFilteredEntries()
     {
@@ -217,53 +267,45 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
 
         IEnumerable<CurrencyAccountEntry> entries = Account.Entries;
 
-        if (_filterFrom.HasValue)
-            entries = entries.Where(x => x.ValueChange >= _filterFrom.Value);
-        if (_filterTo.HasValue)
-            entries = entries.Where(x => x.ValueChange <= _filterTo.Value);
-        if (_filterDateStart.HasValue)
-            entries = entries.Where(x => x.PostingDate.Date >= _filterDateStart.Value.Date);
-        if (_filterDateEnd.HasValue)
-            entries = entries.Where(x => x.PostingDate.Date <= _filterDateEnd.Value.Date);
+        if (_activeFilter == AccountHistoryToolbar.TxFilter.Income)
+            entries = entries.Where(x => x.ValueChange > 0);
+        else if (_activeFilter == AccountHistoryToolbar.TxFilter.Expense)
+            entries = entries.Where(x => x.ValueChange < 0);
+
+        if (!string.IsNullOrWhiteSpace(_selectedCategory))
+            entries = entries.Where(x => x.Labels is not null
+                && x.Labels.Any(l => string.Equals(l.Name, _selectedCategory, StringComparison.OrdinalIgnoreCase)));
+
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var needle = _searchText.Trim();
+            entries = entries.Where(x =>
+                (!string.IsNullOrEmpty(x.Description) && x.Description.Contains(needle, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrEmpty(x.ContractorDetails) && x.ContractorDetails.Contains(needle, StringComparison.OrdinalIgnoreCase))
+                || (x.Labels is not null && x.Labels.Any(l => l.Name.Contains(needle, StringComparison.OrdinalIgnoreCase))));
+        }
 
         return entries.OrderByDescending(x => x.PostingDate).ToList();
     }
 
-    private void OnFilterChanged((decimal? From, decimal? To) filter)
+    private void SetDateRangeForSelection()
     {
-        _filterFrom = filter.From;
-        _filterTo = filter.To;
-    }
-
-    private async Task OnDateFilterChanged((DateTime? From, DateTime? To) filter)
-    {
-        _filterDateStart = filter.From;
-        _filterDateEnd = filter.To;
-
-        var defaultDateStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-        var fallbackStart = Account?.Start?.Date ?? defaultDateStart;
-        _dateStart = _filterDateStart ?? (_filterDateEnd.HasValue ? fallbackStart : defaultDateStart);
-        _loadedAllData = false;
-        await UpdateEntries();
-        StateHasChanged();
-    }
-
-    private void UpdateDateStartFromLoadedEntries(DateTime requestedDateStart)
-    {
-        var oldestLoadedEntryDate = Account?.Entries.LastOrDefault()?.PostingDate;
-        _dateStart = oldestLoadedEntryDate is not null && oldestLoadedEntryDate.Value < requestedDateStart
-            ? oldestLoadedEntryDate.Value
-            : requestedDateStart;
-    }
-
-    private RecentEntriesLoaderOptions<CurrencyAccount> CreateLoaderOptions() =>
-        new()
+        var today = DateTime.UtcNow;
+        if (_selectedRange == "Range")
         {
-            LoadByDateRangeAsync = (dateStart, dateEnd) => _user is null
-                ? Task.FromResult<CurrencyAccount?>(null)
-                : FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, dateStart, dateEnd),
-            GetEntryCount = account => account.Entries.Count,
-            GetNextOlderReferenceDate = account => account.NextOlderEntry?.PostingDate,
-            HasOlderEntries = account => account.NextOlderEntry is not null,
+            _dateStart = _customDateRange?.Start ?? Account?.Start ?? today.AddMonths(-3);
+            _dateEnd = _customDateRange?.End ?? today;
+            return;
+        }
+
+        _dateStart = _selectedRange switch
+        {
+            "1M" => today.AddMonths(-1),
+            "3M" => today.AddMonths(-3),
+            "6M" => today.AddMonths(-6),
+            "1Y" => today.AddYears(-1),
+            _ => today.AddMonths(-3)
         };
+        _dateEnd = today;
+    }
 }
