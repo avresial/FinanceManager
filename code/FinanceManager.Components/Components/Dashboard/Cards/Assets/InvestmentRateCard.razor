@@ -1,4 +1,4 @@
-<MudCard Outlined Class="rounded-lg d-flex flex-column" Style="@($"height:{Height};")">
+<MudCard Outlined Class="rounded-lg d-flex flex-column investment-rate-card" Style="@($"height:{Height};")">
     <MudCardContent Class="d-flex flex-column flex-grow-1 pa-4">
         <div class="mb-3">
             <MudText Typo="Typo.h6">Investment rate</MudText>
@@ -13,8 +13,10 @@
         }
         else
         {
-            <div class="d-flex justify-space-between align-end mb-3">
-                <MudText Typo="Typo.h3" Color="Color.Primary">@FormatPercentage(_currentMonthPercentage)</MudText>
+            <div class="d-flex flex-wrap align-end gap-3 mb-3" style="row-gap:4px;">
+                <MudText Typo="Typo.h3" Color="Color.Primary" Class="mr-auto">
+                    @FormatPercentage(_currentMonthPercentage)
+                </MudText>
                 <div class="d-flex flex-column align-end">
                     <MudText Typo="Typo.caption" Color="Color.Secondary">ON TRACK FOR</MudText>
                     <MudText Typo="Typo.h6">@FormatProjection()</MudText>
@@ -26,9 +28,9 @@
                 <MudText Typo="Typo.caption" Color="Color.Secondary">Rate by month</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">avg @FormatAveragePercentage(_ytdAveragePercentage)</MudText>
             </div>
-            <div class="flex-grow-1" style="min-height: 0;">
+            <div class="investment-rate-card__chart flex-grow-1" style="min-height: 0;">
                 <MudChart T="double" ChartType="ChartType.Bar" ChartSeries="@_chartSeries"
-                          XAxisLabels="@_chartLabels" ChartOptions="@_chartOptions"
+                          ChartLabels="@_chartLabels" ChartOptions="@_chartOptions"
                           Width="100%" Height="100%" />
             </div>
 
