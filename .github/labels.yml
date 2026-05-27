@@ -1,0 +1,26 @@
+# T-shirt size labels for issue/PR complexity estimation.
+# Synced to the repository by `.github/workflows/sync-labels.yml`
+# using EndBug/label-sync.
+#
+# See CLAUDE.md ("T-Shirt Size Estimation") for the rubric agents and
+# humans should use when picking a size.
+
+- name: size/XS
+  color: c2e0c6
+  description: "Trivial change (< 1 hour). One file, no logic, no tests needed."
+
+- name: size/S
+  color: 0e8a16
+  description: "Small change (a few hours). One layer, narrow blast radius, light tests."
+
+- name: size/M
+  color: fbca04
+  description: "Medium change (0.5–2 days). Multi-file, may cross layers, real test coverage."
+
+- name: size/L
+  color: d93f0b
+  description: "Large change (2–5 days). Multiple layers, new abstractions, broad test coverage."
+
+- name: size/XL
+  color: b60205
+  description: "Extra large (> 5 days). Should likely be split into smaller issues before starting."
