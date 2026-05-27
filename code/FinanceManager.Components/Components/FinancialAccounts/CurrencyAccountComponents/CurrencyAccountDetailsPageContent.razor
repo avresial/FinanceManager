@@ -24,7 +24,7 @@ else if (IsLoading || Account.Entries.Any())
                         ChartData="@ChartData" />
 
     <MudContainer MaxWidth="MaxWidth.Large" Class="px-0">
-        <MudGrid Spacing="6">
+        <MudGrid Spacing="3">
             <MudItem xs="12" lg="8">
                 <AccountHistoryToolbar AccountId="@Account.AccountId"
                                        SearchText="@_searchText"
@@ -34,7 +34,10 @@ else if (IsLoading || Account.Entries.Any())
                                        AvailableCategories="@_availableCategories"
                                        SelectedCategory="@_selectedCategory"
                                        SelectedCategoryChanged="OnCategoryChanged"
-                                       OnAddEntry="ShowAddOverlay" />
+                                       OnAddEntry="ShowAddOverlay"
+                                       ShowInsightsButton="@_isMobile"
+                                       OnInsightsClick="ToggleInsightsDrawer"
+                                       IsMobile="@_isMobile" />
 
                 @{
                     var filteredEntries = GetFilteredEntries();
@@ -62,18 +65,42 @@ else if (IsLoading || Account.Entries.Any())
                 }
             </MudItem>
 
-            <MudItem xs="12" lg="4">
-                <MudStack Spacing="4">
-                    <BalanceChangeCard BalanceChange="@_balanceChange" Currency="@_currency.ShortName"
-                                       RangeLabel="@_selectedRange"
-                                       FromDate="@_dateStart" ToDate="@_dateEnd" />
+            @if (!_isMobile)
+            {
+                <MudItem lg="4">
+                    <MudStack Spacing="4">
+                        <BalanceChangeCard BalanceChange="@_balanceChange" Currency="@_currency.ShortName"
+                                           RangeLabel="@_selectedRange"
+                                           FromDate="@_dateStart" ToDate="@_dateEnd" />
 
-                    <AccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])"
-                                       Currency="@_currency.ShortName" />
-                </MudStack>
-            </MudItem>
+                        <AccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])"
+                                           Currency="@_currency.ShortName" />
+                    </MudStack>
+                </MudItem>
+            }
         </MudGrid>
     </MudContainer>
+
+    @if (_isMobile)
+    {
+        <MudOverlay Visible="@_insightsDrawerOpen" OnClick="CloseInsightsDrawer" DarkBackground="true"
+                    ZIndex="1300" />
+        <div style="@($"position: fixed; top: 0; right: 0; bottom: 0; width: min(360px, 90vw); background: var(--mud-palette-surface); box-shadow: -4px 0 16px rgba(0,0,0,0.4); overflow-y: auto; z-index: 1301; transform: translateX({( _insightsDrawerOpen ? "0" : "100%")}); transition: transform 225ms cubic-bezier(0,0,0.2,1);")">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="pa-3">
+                <MudText Typo="Typo.h6">Insights</MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="CloseInsightsDrawer" />
+            </MudStack>
+            <MudDivider />
+            <MudStack Spacing="4" Class="pa-4">
+                <BalanceChangeCard BalanceChange="@_balanceChange" Currency="@_currency.ShortName"
+                                   RangeLabel="@_selectedRange"
+                                   FromDate="@_dateStart" ToDate="@_dateEnd" />
+
+                <AccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])"
+                                   Currency="@_currency.ShortName" />
+            </MudStack>
+        </div>
+    }
 
     <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
         <MudPaper Class="p-5">

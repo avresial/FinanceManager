@@ -1,26 +1,28 @@
 @using FinanceManager.Domain.Entities.Shared.Accounts
 
-<div class="pa-3 mb-4">
-    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-        <MudTextField T="string" Value="SearchText" ValueChanged="OnSearchChanged"
-                      Placeholder="Search transactions, notes, categories…"
-                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
-                      DebounceInterval="150" Clearable="true" Class="flex-grow-1" />
+<div class="px-0 mb-2">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
+        <div style="@(IsMobile ? "flex: 1 1 100%; min-width: 0;" : "flex: 1 1 280px; min-width: 0;")">
+            <MudTextField T="string" Value="SearchText" ValueChanged="OnSearchChanged"
+                          Placeholder="Search transactions, notes, categories…" Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Immediate="true" DebounceInterval="150" Clearable="true" />
+        </div>
 
         <MudChipSet T="TxFilter?" SelectedValue="ActiveFilter" SelectedValueChanged="OnFilterChanged"
                     SelectionMode="SelectionMode.ToggleSelection">
-            <MudChip T="TxFilter?" Value="@((TxFilter?)TxFilter.Income)" Color="Color.Success" Variant="Variant.Text"
-                     Icon="@Icons.Material.Filled.ArrowDownward">Income</MudChip>
-            <MudChip T="TxFilter?" Value="@((TxFilter?)TxFilter.Expense)" Color="Color.Error" Variant="Variant.Text"
-                     Icon="@Icons.Material.Filled.ArrowUpward">Expense</MudChip>
+            <MudChip T="TxFilter?" Value="@((TxFilter?)TxFilter.Income)" Color="Color.Default"
+                     Variant="Variant.Outlined" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowUpward"
+                     SelectedColor="Color.Success">Income</MudChip>
+            <MudChip T="TxFilter?" Value="@((TxFilter?)TxFilter.Expense)" Color="Color.Default"
+                     Variant="Variant.Outlined" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowDownward"
+                     SelectedColor="Color.Error">Expense</MudChip>
         </MudChipSet>
 
         @if (AvailableCategories is not null && AvailableCategories.Any())
         {
-            <MudMenu Label="@(SelectedCategory ?? "Category")"
-                     StartIcon="@Icons.Material.Filled.FilterList"
-                     Variant="Variant.Outlined" Size="Size.Small" Dense="true">
+            <MudMenu Label="@(SelectedCategory ?? "Category")" StartIcon="@Icons.Material.Filled.FilterList"
+                     Variant="Variant.Text" Color="Color.Default" Size="Size.Small" Dense="true">
                 @if (SelectedCategory is not null)
                 {
                     <MudMenuItem Icon="@Icons.Material.Filled.Close" OnClick="OnClearCategory">Clear filter</MudMenuItem>
@@ -34,7 +36,14 @@
         }
 
         <div class="ml-auto">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
+                @if (ShowInsightsButton)
+                {
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Insights"
+                               Size="Size.Small" OnClick="OnInsightsClick">
+                        Insights
+                    </MudButton>
+                }
                 <MudTooltip Text="Import">
                     <MudIconButton Icon="@Icons.Material.Filled.FileUpload" Size="Size.Small" Color="Color.Default"
                                    Href="@($"/Import/{AccountId}")" />
@@ -72,6 +81,9 @@
     [Parameter] public string? SelectedCategory { get; set; }
     [Parameter] public EventCallback<string?> SelectedCategoryChanged { get; set; }
     [Parameter] public EventCallback OnAddEntry { get; set; }
+    [Parameter] public bool ShowInsightsButton { get; set; }
+    [Parameter] public EventCallback OnInsightsClick { get; set; }
+    [Parameter] public bool IsMobile { get; set; }
 
     private async Task OnSearchChanged(string? value)
     {

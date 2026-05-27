@@ -1,7 +1,7 @@
 @using FinanceManager.Components.Components.SharedComponents.Charts
 @using FinanceManager.Domain.Entities.MoneyFlowModels
 
-<MudPaper Elevation="0" Class="pa-6 mb-4" Style="background-color: transparent;">
+<MudPaper Elevation="0" Class="pa-6 pb-0 mb-0" Style="background-color: transparent;">
     <MudStack Spacing="4">
         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="3">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
@@ -26,10 +26,14 @@
                 </MudToggleGroup>
                 @if (SelectedRange == "Range")
                 {
-                    <MudDateRangePicker DateRange="CustomDateRange" DateRangeChanged="OnCustomDateRangeChanged"
-                                        Variant="Variant.Outlined" Margin="Margin.Dense"
-                                        Style="max-width: 260px;" Clearable="true"
-                                        PlaceholderStart="From" PlaceholderEnd="To" />
+                    <div style="width: 260px;">
+                        <MudDateRangePicker DateRange="CustomDateRange" DateRangeChanged="OnCustomDateRangeChanged"
+                                            Variant="Variant.Outlined" Margin="Margin.Dense"
+                                            PickerVariant="PickerVariant.Dialog"
+                                            DisplayMonths="2" Orientation="Orientation.Landscape"
+                                            Clearable="true"
+                                            PlaceholderStart="From" PlaceholderEnd="To" />
+                    </div>
                 }
             </MudStack>
         </MudStack>
@@ -62,14 +66,14 @@
         </MudStack>
 
     </MudStack>
-    <div class="mx-n6 mb-n6 mt-4" style="min-height: 200px; position: relative;">
+    <div class="mx-n6 mt-2" style="min-height: 200px; position: relative;">
         @if (IsChartLoading)
         {
             <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Height="200px" Width="100%" />
         }
         else
         {
-            <LineChartJs Series="@([ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()])" />
+            <LineChartJs Series="@_chartSeries" />
         }
     </div>
 </MudPaper>
@@ -87,6 +91,25 @@
     [Parameter] public EventCallback<DateRange?> CustomDateRangeChanged { get; set; }
     [Parameter] public bool IsChartLoading { get; set; }
     [Parameter] public List<TimeSeriesModel> ChartData { get; set; } = [];
+
+    private List<List<ChartJsLineDataPoint>> _chartSeries = [];
+    private List<TimeSeriesModel>? _lastChartData;
+    private int _lastChartDataCount = -1;
+
+    protected override void OnParametersSet()
+    {
+        // Rebuild the chart series only when the underlying ChartData actually changes — the
+        // parent re-renders for unrelated state (e.g. the mobile insights drawer toggle), and
+        // recreating the series list every time would force LineChartJs to re-run its draw
+        // animation for no reason. Reference equality + count covers the in-place mutation
+        // the page does (Clear + AddRange).
+        if (!ReferenceEquals(ChartData, _lastChartData) || ChartData.Count != _lastChartDataCount)
+        {
+            _lastChartData = ChartData;
+            _lastChartDataCount = ChartData.Count;
+            _chartSeries = [ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()];
+        }
+    }
 
     private string GetInitial() => string.IsNullOrWhiteSpace(AccountName) ? "?" : AccountName.Trim()[..1].ToUpperInvariant();
 

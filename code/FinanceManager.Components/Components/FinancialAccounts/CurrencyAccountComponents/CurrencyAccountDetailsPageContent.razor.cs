@@ -12,8 +12,12 @@ using MudBlazor;
 
 namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents;
 
-public partial class CurrencyAccountDetailsPageContent : ComponentBase
+public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDisposable
 {
+    private readonly Guid _viewportSubscriptionId = Guid.NewGuid();
+    private bool _isMobile;
+    private bool _insightsDrawerOpen;
+
     private string _selectedRange = "3M";
     private DateTime _dateStart;
     private DateTime _dateEnd = DateTime.UtcNow;
@@ -48,12 +52,45 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required ILogger<CurrencyAccountDetailsPageContent> Logger { get; set; }
+    [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
 
     public Task ShowAddOverlay()
     {
         _addEntryVisibility = true;
         StateHasChanged();
         return Task.CompletedTask;
+    }
+
+    private void ToggleInsightsDrawer() => _insightsDrawerOpen = !_insightsDrawerOpen;
+
+    private void CloseInsightsDrawer() => _insightsDrawerOpen = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        await BrowserViewportService.SubscribeAsync(_viewportSubscriptionId, async args =>
+        {
+            var isMobile = args.Breakpoint is Breakpoint.Xs or Breakpoint.Sm or Breakpoint.Md;
+            if (isMobile == _isMobile) return;
+            _isMobile = isMobile;
+            if (!_isMobile) _insightsDrawerOpen = false;
+            await InvokeAsync(StateHasChanged);
+        }, fireImmediately: true);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await BrowserViewportService.UnsubscribeAsync(_viewportSubscriptionId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to unsubscribe from BrowserViewportService");
+        }
+        AccountDataSynchronizationService.AccountsChanged -= AccountDataSynchronizationService_AccountsChanged;
+        GC.SuppressFinalize(this);
     }
 
     public Task HideAddOverlay()
