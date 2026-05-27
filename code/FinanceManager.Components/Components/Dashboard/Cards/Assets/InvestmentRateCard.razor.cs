@@ -12,6 +12,8 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Assets;
 public partial class InvestmentRateCard
 {
     private const string _barColor = "#FFAB00";
+    private const int _chromeHeightPx = 260;
+    private const int _minChartHeightPx = 110;
 
     private bool _isLoading;
     private Currency _currency = DefaultCurrency.PLN;
@@ -30,6 +32,17 @@ public partial class InvestmentRateCard
     private string[] _chartLabels = [];
 
     [Parameter] public string Height { get; set; } = "300px";
+
+    private string ChartHeight => $"{Math.Max(_minChartHeightPx, ParseHeightPx(Height) - _chromeHeightPx)}px";
+
+    private static int ParseHeightPx(string height)
+    {
+        if (height.EndsWith("px", StringComparison.Ordinal)
+            && int.TryParse(height.AsSpan(0, height.Length - 2), out var px))
+            return px;
+        return 380;
+    }
+
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
@@ -131,8 +144,9 @@ public partial class InvestmentRateCard
             ShowToolTips = false,
             XAxisLines = false,
             YAxisLines = false,
-            YAxisTicks = 0,
-            BarWidthRatio = 0.65,
+            MaxNumYAxisTicks = 2,
+            YAxisToStringFunc = _ => string.Empty,
+            BarWidthRatio = 0.85,
             XAxisLabelRotation = 0,
         };
     }
