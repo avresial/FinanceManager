@@ -42,6 +42,56 @@ Branch naming is **critical for the changelog to work**. Every changelog entry e
 
 When opening a pull request that resolves a GitHub issue, the PR body must include a GitHub auto-close keyword referencing the issue (e.g. `closes #123`) so that merging the PR automatically closes the linked issue.
 
+## T-Shirt Size Estimation
+
+Every issue (and the PR that resolves it) carries exactly one `size/*` label so the team — and agents picking up work — know the rough scope before opening the diff. Labels are defined in [`.github/labels.yml`](./.github/labels.yml) and synced to GitHub by the `sync-labels` workflow.
+
+### Sizes
+
+| Label | Effort | What it looks like |
+|---|---|---|
+| `size/XS` | < 1 hour | Typo, config tweak, one-line fix, doc edit. No new tests. |
+| `size/S` | a few hours | One file or one component. Single layer (e.g. just a Razor component, or just one repository method). Light targeted tests. |
+| `size/M` | 0.5–2 days | A few files across one or two layers (e.g. controller + service + a repo method). New or significantly updated unit tests. No new external dependency. |
+| `size/L` | 2–5 days | Touches most layers of the stack (Domain → Infrastructure → Application → Api → Components), introduces a new abstraction, a new background service, or a new external provider. Needs both unit and integration tests. |
+| `size/XL` | > 5 days | Large vertical slice, migration, or architectural change. **Stop and split** into smaller issues before estimating further — XL is a signal, not a target. |
+
+### How agents should estimate
+
+When triaging or creating an issue, pick a size by walking these checks in order — the **highest** matching tier wins:
+
+1. **Surface area.** How many projects under `code/` need to change?
+   - 1 project → XS/S
+   - 2–3 projects → M
+   - 4+ projects, or any change to Domain that ripples through Infrastructure + Application + Api + Components → L
+2. **Layer crossings.** Does it cross the layered-monolith boundary (Razor → typed HttpClient → controller → service → repository)?
+   - Stays in one layer → XS/S
+   - Crosses one boundary → M
+   - Crosses two or more boundaries (e.g. new endpoint that needs a new domain entity, EF migration, and a new component) → L
+3. **Data layer impact.** Does it need an EF Core migration, a new entity, or a new repository?
+   - No → keep current tier
+   - Yes → at least M, bump to L if the migration is not trivial (renames, data backfill, new indexes on hot tables).
+4. **External dependencies.** Does it add or change a third-party provider (Alpha Vantage, OpenRouter, GitHub Models, Ollama, currency provider)?
+   - No → keep current tier
+   - Adds a new provider or fallback path → at least L.
+5. **Test footprint.** What does "done" require?
+   - No new tests → XS
+   - One or two unit tests → S
+   - New unit tests across multiple files → M
+   - New unit **and** integration tests, or new `WebApplicationFactory` overrides → L
+6. **Risk / high-churn files.** Does it modify anything from the "High-Churn Files" list below, or `Program.cs`, or any `ServiceCollectionExtension.cs`?
+   - Bump one tier up from whatever the previous checks produced (S → M, M → L).
+7. **Uncertainty.** Are the requirements vague, or does the change require a design decision before coding?
+   - If yes, do **not** estimate yet — ask a clarifying question on the issue first, then size.
+
+If after walking these checks the result is XL, **do not start coding**. Comment on the issue proposing a split (typically: one issue per layer, or one per user-visible feature slice), and re-estimate the children.
+
+### Applying the label
+
+- When creating an issue: include the `size/*` label in the `labels` array.
+- When picking up an existing issue with no size label: estimate using the rubric above and add the label as your first action, before opening a branch.
+- One size label per issue/PR. If scope changes mid-flight, update the label rather than stacking new ones.
+
 ## Changelog
 
 Every code change that has a user-visible effect must add an entry to `CHANGELOG.md` (Keep a Changelog format, CalVer `YY.M.D`). The rules — section headings, wording, issue references, and how to promote `[Unreleased]` — live in [`.claude/skills/changelog/SKILL.md`](./.claude/skills/changelog/SKILL.md). Stage the changelog edit in the same commit as the code change. Pure refactors, test-only changes, CI tweaks, and dependency bumps without behavioural impact do not need a changelog entry.
