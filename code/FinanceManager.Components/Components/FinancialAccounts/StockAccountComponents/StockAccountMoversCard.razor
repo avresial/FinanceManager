@@ -1,0 +1,90 @@
+@using FinanceManager.Domain.Entities.Stocks
+
+<MudCard Outlined="true" Style="background-color: transparent;">
+    <MudCardHeader Class="py-2 px-4">
+        <CardHeaderContent>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100">
+                <MudText Typo="Typo.subtitle2">Top movers</MudText>
+                <MudToggleGroup T="MoverMode" Value="_mode" ValueChanged="OnModeChanged"
+                                SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary"
+                                Outlined="true" Dense="true">
+                    <MudToggleItem Value="@MoverMode.Combined" Text="Combined" />
+                    <MudToggleItem Value="@MoverMode.Top" Text="Top" />
+                    <MudToggleItem Value="@MoverMode.Bottom" Text="Bottom" />
+                </MudToggleGroup>
+            </MudStack>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (_mode is MoverMode.Combined or MoverMode.Top)
+        {
+            @if (_mode == MoverMode.Combined)
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
+                    <MudIcon Size="Size.Small" Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Success" />
+                    <MudText Typo="Typo.caption" Color="Color.Default">Top 5 income</MudText>
+                </MudStack>
+            }
+            @RenderList(TopEntries, Color.Success)
+        }
+
+        @if (_mode is MoverMode.Combined or MoverMode.Bottom)
+        {
+            @if (_mode == MoverMode.Combined)
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2 mt-4">
+                    <MudIcon Size="Size.Small" Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Error" />
+                    <MudText Typo="Typo.caption" Color="Color.Default">Bottom 5 expenses</MudText>
+                </MudStack>
+            }
+            @RenderList(BottomEntries, Color.Error)
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    public enum MoverMode { Combined, Top, Bottom }
+
+    private MoverMode _mode = MoverMode.Combined;
+
+    [Parameter] public required IEnumerable<StockAccountEntry> TopEntries { get; set; }
+    [Parameter] public required IEnumerable<StockAccountEntry> BottomEntries { get; set; }
+
+    private void OnModeChanged(MoverMode mode) => _mode = mode;
+
+    private RenderFragment RenderList(IEnumerable<StockAccountEntry> entries, Color accent) => __builder =>
+    {
+        if (entries is null || !entries.Any())
+        {
+            <MudText Typo="Typo.caption" Color="Color.Default">No entries in range.</MudText>
+            return;
+        }
+
+        <MudStack Spacing="2">
+            @{
+                var rank = 0;
+            }
+            @foreach (var entry in entries)
+            {
+                rank++;
+                var entryRank = rank;
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.caption" Color="Color.Default" Class="fm-tabular">@entryRank.ToString("00")</MudText>
+                    <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
+                        <MudText Typo="Typo.body2">@GetTitle(entry)</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Default">
+                            @entry.PostingDate.ToString("dd MMM") · @entry.InvestmentType
+                        </MudText>
+                    </MudStack>
+                    <MudText Typo="Typo.body2" Class="fm-tabular ml-auto" Color="@accent">
+                        @(entry.ValueChange >= 0 ? "+" : "")@entry.ValueChange.ToString("0.####") units
+                    </MudText>
+                </MudStack>
+            }
+        </MudStack>
+    };
+
+    private static string GetTitle(StockAccountEntry entry) =>
+        !string.IsNullOrWhiteSpace(entry.Ticker) ? entry.Ticker
+            : !string.IsNullOrWhiteSpace(entry.Isin) ? entry.Isin : "Stock";
+}
