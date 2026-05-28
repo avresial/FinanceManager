@@ -22,6 +22,7 @@ public class FinancialLabelSeeder(IFinancialLabelsRepository financialLabelsRepo
         "Dining Out",
         "Travel",
         "Investment",
+        "Loan",
         WellKnownFinancialLabels.NoMatch,
     ];
 
@@ -56,4 +57,4 @@ public class FinancialLabelSeeder(IFinancialLabelsRepository financialLabelsRepo
             logger.LogError(ex, "Error seeding financial labels");
         }
     }
-}
+}

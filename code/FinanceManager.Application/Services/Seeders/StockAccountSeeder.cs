@@ -64,10 +64,10 @@ public class StockAccountSeeder(
         for (var date = start.AddDays(1); date <= end; date = date.AddDays(1))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!GuestInvestmentPlan.IsInvestmentDay(date)) continue;
+            if (!GuestInvestmentPlan.IsStockInvestmentDay(date)) continue;
             if (!prices.TryGetValue(date.Date, out var price) || price <= 0) continue;
 
-            var units = Math.Round(GuestInvestmentPlan.MonthlyAmount / price, 4, MidpointRounding.AwayFromZero);
+            var units = Math.Round(GuestInvestmentPlan.StockMonthlyAmount / price, 4, MidpointRounding.AwayFromZero);
             if (units <= 0) continue;
 
             var entry = new StockAccountEntry(account.AccountId, 0, date, 0, units, DemoIsin, InvestmentType.Stock)
