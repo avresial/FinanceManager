@@ -66,24 +66,32 @@ public class CurrencyAccountSeederTests
     }
 
     [Fact]
-    public async Task Seed_PaysSalaryOnFirstOfEachMonth()
+    public async Task Seed_PaysSalaryExactlyOncePerMonth_At5000_WithSalaryLabel()
     {
         var start = new DateTime(2026, 1, 15);
-        var end = new DateTime(2026, 4, 20);
+        var end = new DateTime(2026, 7, 20);
 
         await _seeder.Seed(userId: 1, start, end, TestContext.Current.CancellationToken);
 
         var cashEntries = GetCashEntries();
         var salaryEntries = cashEntries
-            .Where(e => e.PostingDate.Day == 1 && e.ValueChange > 0)
+            .Where(e => e.Description == "Monthly salary")
             .ToList();
 
-        Assert.Equal(3, salaryEntries.Count); // Feb 1, Mar 1, Apr 1.
+        // Feb–Jul: one salary per complete month in the window.
+        Assert.Equal(6, salaryEntries.Count);
         Assert.All(salaryEntries, e =>
         {
+            Assert.Equal(1, e.PostingDate.Day);
             Assert.Equal(MonthlySalary, e.ValueChange);
-            Assert.Contains(e.Labels, l => l.Name == "Salary");
+            Assert.Equal("Salary", Assert.Single(e.Labels).Name);
         });
+
+        // Each month appears exactly once — no month carries a second salary.
+        var months = salaryEntries
+            .Select(e => new DateTime(e.PostingDate.Year, e.PostingDate.Month, 1))
+            .ToList();
+        Assert.Equal(months.Count, months.Distinct().Count());
     }
 
     [Fact]
