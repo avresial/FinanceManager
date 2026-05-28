@@ -30,9 +30,9 @@ public class BondAccountSeeder(
     {
         var account = new BondAccount(userId, 0, "Bond 1");
 
-        // Bonds trade in whole units of UnitValue, so each month buys the same number of units the recurring
-        // bond investment pays for — matching the cash outflow CurrencyAccountSeeder books on the same day.
-        var unitsPerPurchase = Math.Floor(GuestInvestmentPlan.BondMonthlyAmount / bondDetails.UnitValue);
+        // Each month buys the fractional number of units the recurring bond investment pays for, so the value
+        // of the units acquired matches the cash outflow CurrencyAccountSeeder books on the same day.
+        var unitsPerPurchase = Math.Round(GuestInvestmentPlan.BondMonthlyAmount / bondDetails.UnitValue, 4, MidpointRounding.AwayFromZero);
         if (unitsPerPurchase <= 0) return;
 
         // BondAccount.Add dedups by EntryId, so each seeded entry needs a distinct id to survive. The loop starts
