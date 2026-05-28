@@ -1,6 +1,7 @@
 @using FinanceManager.Domain.Entities.Bonds
 
-<div class="d-flex align-start pa-2 mud-list-item-clickable" style="cursor: pointer;" @onclick="ToggleExpanded">
+<div class="d-flex align-start pa-2 mud-list-item-clickable" style="cursor: pointer;"
+     role="button" tabindex="0" @onclick="ToggleExpanded" @onkeydown="OnKeyDown">
     <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Start" Class="w-100">
         @if (!IsMobile)
         {
@@ -99,7 +100,6 @@
     [Parameter] public required BondAccount Account { get; set; }
     [Parameter] public required BondAccountEntry Entry { get; set; }
     [Parameter] public BondDetails? BondDetails { get; set; }
-    [Parameter] public EventCallback OnEntryChanged { get; set; }
     [Parameter] public bool IsMobile { get; set; }
 
     [Inject] public required FinanceManager.Components.Services.IFinancialAccountService FinancialAccountService { get; set; }
@@ -107,6 +107,12 @@
     [Inject] public required Microsoft.Extensions.Logging.ILogger<BondTransactionRow> Logger { get; set; }
 
     private void ToggleExpanded() => _expanded = !_expanded;
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or " " or "Spacebar")
+            ToggleExpanded();
+    }
 
     private string GetTitle() =>
         BondDetails is not null && !string.IsNullOrWhiteSpace(BondDetails.Name) ? BondDetails.Name : "Bond";
@@ -155,7 +161,6 @@
         }
 
         await AccountDataSynchronizationService.AccountChanged();
-        await OnEntryChanged.InvokeAsync();
         await InvokeAsync(StateHasChanged);
     }
 }

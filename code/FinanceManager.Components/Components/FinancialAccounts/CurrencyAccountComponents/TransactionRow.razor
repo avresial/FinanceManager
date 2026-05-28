@@ -2,7 +2,8 @@
 @using FinanceManager.Domain.Entities.FinancialAccounts.Currencies
 @using FinanceManager.Domain.Entities.Shared.Accounts
 
-<div class="d-flex align-start pa-2 mud-list-item-clickable" style="cursor: pointer;" @onclick="ToggleExpanded">
+<div class="d-flex align-start pa-2 mud-list-item-clickable" style="cursor: pointer;"
+     role="button" tabindex="0" @onclick="ToggleExpanded" @onkeydown="OnKeyDown">
     <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Start" Class="w-100">
         @if (!IsMobile)
         {
@@ -101,7 +102,6 @@
     [Parameter] public required CurrencyAccount Account { get; set; }
     [Parameter] public required CurrencyAccountEntry Entry { get; set; }
     [Parameter] public required string Currency { get; set; }
-    [Parameter] public EventCallback OnEntryChanged { get; set; }
     [Parameter] public bool IsMobile { get; set; }
 
     [Inject] public required FinanceManager.Components.Services.IFinancialAccountService FinancialAccountService { get; set; }
@@ -109,6 +109,12 @@
     [Inject] public required Microsoft.Extensions.Logging.ILogger<TransactionRow> Logger { get; set; }
 
     private void ToggleExpanded() => _expanded = !_expanded;
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or " " or "Spacebar")
+            ToggleExpanded();
+    }
 
     private string GetTitle()
     {
@@ -167,7 +173,6 @@
         }
 
         await AccountDataSynchronizationService.AccountChanged();
-        await OnEntryChanged.InvokeAsync();
         await InvokeAsync(StateHasChanged);
     }
 }

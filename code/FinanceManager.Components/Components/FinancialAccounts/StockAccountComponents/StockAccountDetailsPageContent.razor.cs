@@ -236,10 +236,17 @@ public partial class StockAccountDetailsPageContent : ComponentBase, IAsyncDispo
 
     private void AccountDataSynchronizationService_AccountsChanged()
     {
-        Task.Run(async () =>
+        _ = InvokeAsync(async () =>
         {
-            await UpdateEntries();
-            await InvokeAsync(StateHasChanged);
+            try
+            {
+                await UpdateEntries();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error while refreshing stock account details after data sync for account ID {AccountId}", AccountId);
+            }
         });
     }
 
