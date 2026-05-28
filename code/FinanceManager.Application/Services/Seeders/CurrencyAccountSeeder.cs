@@ -14,7 +14,6 @@ public class CurrencyAccountSeeder(
     ILogger<CurrencyAccountSeeder> logger)
 {
     private const decimal MonthlySalary = 5_000m;
-    private const decimal MonthlyInvestment = 500m;
     private const decimal MonthlyRent = 1_000m;
     private const decimal MonthlyUtilities = 100m;
     private const int MaxRandomTransactionsPerDay = 10;
@@ -128,9 +127,9 @@ public class CurrencyAccountSeeder(
                 case 1:
                     account.AddEntry(new AddCurrencyEntryDto(date, MonthlySalary, "Monthly salary", null, salaryLabels), false);
                     break;
-                case 3:
-                    account.AddEntry(new AddCurrencyEntryDto(date, -MonthlyInvestment, "Monthly investment", null, investmentLabels), false);
-                    negativesThisMonth += MonthlyInvestment;
+                case GuestInvestmentPlan.DayOfMonth:
+                    account.AddEntry(new AddCurrencyEntryDto(date, -GuestInvestmentPlan.MonthlyAmount, "Monthly investment", null, investmentLabels), false);
+                    negativesThisMonth += GuestInvestmentPlan.MonthlyAmount;
                     break;
                 case 4:
                     account.AddEntry(new AddCurrencyEntryDto(date, -MonthlyRent, "Rent payment", null, rentLabels), false);

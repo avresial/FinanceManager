@@ -23,6 +23,7 @@ rules agents must follow when updating this file.
 - Mobile navigation drawer is now hidden by default and slides in as a temporary overlay when the app-bar hamburger is tapped, freeing horizontal space for page content; desktop keeps the existing mini-rail behavior. #216
 - Currency account details page tightened on mobile: the hero hides the avatar, balance, and balance-change blocks (range toggle, account name, and chart stay), and transaction rows drop the avatar and inline `HH:mm` timestamp; desktop layout unchanged. #238
 - Guest cash currency seeder now mirrors a realistic monthly budget: a single 5,000 PLN salary on the 1st, recurring 500 PLN investment on the 3rd, 1,000 PLN rent and 100 PLN utilities on the 4th, and 0–10 randomized everyday purchases per remaining day drawn from a list of plausible merchants, capped so monthly outflows never reach the salary. #240
+- Guest stock seeder now buys shares in sync with the cash account's monthly investment: each 3rd-of-the-month investment purchases the matching value of the demo ETF at that day's price, so the holding's value reflects real invested cash plus market movement instead of random unit counts. #240
 
 ### Fixed
 - Guest stock account no longer shows "Stock price unavailable" on every entry — the demo seeder now stores a real ISIN and a matching `StockDetails` row so the ticker resolves from the local sandbox instead of falling through to OpenFIGI. #222
