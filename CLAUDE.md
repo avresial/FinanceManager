@@ -100,6 +100,7 @@ Every code change that has a user-visible effect must add an entry to `CHANGELOG
 
 - **Install the .NET SDK before coding.** Any task that involves code changes requires the .NET 10 SDK to be installed first so that `dotnet build`, `dotnet format`, and `dotnet test` can run. If `dotnet --list-sdks` does not show a `10.*` SDK, install it before making changes — see "Installing the .NET SDK" below for the path that works in the cloud sandbox.
 - **Run unit tests after every change.** Every code change must end with `dotnet test --project ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj` passing (see "Running tests" below for the correct invocation). Do not commit, push, or report a task as complete until unit tests are green.
+- **Render and screenshot any UI change on the guest account.** A green build is not proof the UI looks right. Whenever a change touches the Blazor UI (any `.razor`/`.razor.cs`/`.razor.css`, layouts, or styling), boot the app, log in via the built-in **"Check out demo"** guest account, and screenshot the affected page on both a mobile and a desktop viewport before reporting the task complete. Follow [`.claude/skills/ui-testing/SKILL.md`](./.claude/skills/ui-testing/SKILL.md) for the exact steps and sandbox gotchas (blocked chart CDN, light-vs-dark theme, SPA navigation).
 
 ### Installing the .NET SDK (cloud sandbox)
 
