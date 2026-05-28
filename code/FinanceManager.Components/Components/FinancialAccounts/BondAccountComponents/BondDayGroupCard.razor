@@ -1,0 +1,44 @@
+@using FinanceManager.Domain.Entities.Bonds
+
+<MudCard Outlined="true" Class="mb-3" Style="background-color: transparent;">
+    <MudCardHeader Class="py-1 px-4">
+        <CardHeaderContent>
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Baseline">
+                    <MudText Typo="Typo.subtitle2">@Day.ToString("dd MMM")</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">@Day.ToString("dddd")</MudText>
+                </MudStack>
+                <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Baseline">
+                    <MudText Typo="Typo.caption" Color="Color.Default">@Entries.Count() @(Entries.Count() == 1 ? "entry" : "entries")</MudText>
+                    <MudText Typo="Typo.caption" Class="fm-tabular"
+                             Color="@(DailyNet >= 0 ? Color.Success : Color.Error)">
+                        @(DailyNet >= 0 ? "+" : "")@DailyNet.ToString("0.####") units
+                    </MudText>
+                </MudStack>
+            </MudStack>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent Class="pa-0">
+        <MudStack Spacing="0">
+            @foreach (var entry in Entries)
+            {
+                <BondTransactionRow Account="Account" Entry="entry"
+                                    Bond="@ResolveBond(entry.BondDetailsId)" IsMobile="@IsMobile" />
+                <MudDivider />
+            }
+        </MudStack>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public DateTime Day { get; set; }
+    [Parameter] public required BondAccount Account { get; set; }
+    [Parameter] public required IEnumerable<BondAccountEntry> Entries { get; set; }
+    [Parameter] public IEnumerable<BondDetails> BondDetails { get; set; } = [];
+    [Parameter] public bool IsMobile { get; set; }
+
+    private decimal DailyNet => Entries.Sum(e => e.ValueChange);
+
+    private BondDetails? ResolveBond(int bondDetailsId) =>
+        BondDetails.FirstOrDefault(x => x.Id == bondDetailsId);
+}
