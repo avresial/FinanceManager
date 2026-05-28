@@ -74,7 +74,7 @@
                     <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
                         <MudText Typo="Typo.body2">@GetTitle(entry)</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Default">
-                            @entry.PostingDate.ToString("dd MMM") · @GetIssuer(entry)
+                            @entry.PostingDate.ToString("dd MMM") · @GetCategory(entry)
                         </MudText>
                     </MudStack>
                     <MudText Typo="Typo.body2" Class="fm-tabular ml-auto" Color="@accent">
@@ -87,13 +87,11 @@
 
     private string GetTitle(BondAccountEntry entry)
     {
-        var bond = BondDetails.FirstOrDefault(b => b.Id == entry.BondDetailsId);
-        return bond is not null && !string.IsNullOrWhiteSpace(bond.Name) ? bond.Name : "Bond";
+        var name = BondDetails.FirstOrDefault(b => b.Id == entry.BondDetailsId)?.Name;
+        if (string.IsNullOrWhiteSpace(name)) return "Bond";
+        return name.Length > 40 ? name[..40] + "…" : name;
     }
 
-    private string GetIssuer(BondAccountEntry entry)
-    {
-        var bond = BondDetails.FirstOrDefault(b => b.Id == entry.BondDetailsId);
-        return bond is not null && !string.IsNullOrWhiteSpace(bond.Issuer) ? bond.Issuer : "Unknown issuer";
-    }
+    private static string GetCategory(BondAccountEntry entry) =>
+        entry.Labels is not null && entry.Labels.Any() ? entry.Labels.First().Name : "Uncategorised";
 }

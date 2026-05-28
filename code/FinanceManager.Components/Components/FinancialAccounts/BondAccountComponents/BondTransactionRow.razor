@@ -47,6 +47,16 @@
                 <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
                 <MudText Typo="Typo.body2">@Entry.PostingDate.ToLocalTime().ToString("dd-MM-yyyy HH:mm")</MudText>
             </MudItem>
+            <MudItem xs="6">
+                <MudText Typo="Typo.caption" Color="Color.Default">Units</MudText>
+                <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@FormatUnits(Entry.Value)</MudText>
+                    <MudText Typo="Typo.caption" Class="fm-tabular"
+                             Color="@(Entry.ValueChange >= 0 ? Color.Success : Color.Error)">
+                        (@(Entry.ValueChange >= 0 ? "+" : "")@FormatUnits(Entry.ValueChange))
+                    </MudText>
+                </MudStack>
+            </MudItem>
             @if (BondDetails is not null)
             {
                 <MudItem xs="6">
