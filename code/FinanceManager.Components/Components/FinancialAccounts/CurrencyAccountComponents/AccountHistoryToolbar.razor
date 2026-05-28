@@ -31,15 +31,17 @@
         @* Row 2 — filters grouped on the left, a single quiet overflow on the right.
            Every control here is outlined/quiet so the orange "Add" above is the only accent. *@
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
-            <MudChipSet T="TxFilter?" SelectedValue="ActiveFilter" SelectedValueChanged="OnFilterChanged"
-                        SelectionMode="SelectionMode.ToggleSelection">
-                <MudChip T="TxFilter?" Value="@((TxFilter?)TxFilter.Income)" Color="Color.Default"
-                         Variant="Variant.Outlined" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowUpward"
-                         SelectedColor="Color.Success">Income</MudChip>
-                <MudChip T="TxFilter?" Value="@((TxFilter?)TxFilter.Expense)" Color="Color.Default"
-                         Variant="Variant.Outlined" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowDownward"
-                         SelectedColor="Color.Error">Expense</MudChip>
-            </MudChipSet>
+            <MudToggleGroup T="string" Value="@TypeValue" ValueChanged="OnTypeChanged"
+                            SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary"
+                            Outlined="true" Dense="true">
+                <MudToggleItem Value="@("All")" Text="All" />
+                <MudToggleItem Value="@("Income")">
+                    <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Class="mr-1" />Income
+                </MudToggleItem>
+                <MudToggleItem Value="@("Expense")">
+                    <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Class="mr-1" />Expense
+                </MudToggleItem>
+            </MudToggleGroup>
 
             @if (AvailableCategories is not null && AvailableCategories.Any())
             {
@@ -101,10 +103,25 @@
         await SearchTextChanged.InvokeAsync(value);
     }
 
-    private async Task OnFilterChanged(TxFilter? value)
+    // The segmented control speaks strings ("All"/"Income"/"Expense"); map to the nullable
+    // TxFilter the rest of the page already understands (null == no type filter).
+    private string TypeValue => ActiveFilter switch
     {
-        ActiveFilter = value;
-        await ActiveFilterChanged.InvokeAsync(value);
+        TxFilter.Income => "Income",
+        TxFilter.Expense => "Expense",
+        _ => "All"
+    };
+
+    private async Task OnTypeChanged(string? value)
+    {
+        TxFilter? filter = value switch
+        {
+            "Income" => TxFilter.Income,
+            "Expense" => TxFilter.Expense,
+            _ => null
+        };
+        ActiveFilter = filter;
+        await ActiveFilterChanged.InvokeAsync(filter);
     }
 
     private async Task OnCategoryChanged(string category)
