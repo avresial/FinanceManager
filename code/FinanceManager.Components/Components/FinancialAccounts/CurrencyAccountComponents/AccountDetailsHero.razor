@@ -12,7 +12,10 @@
                     </MudAvatar>
                 }
                 <MudStack Spacing="0">
-                    <MudText Typo="Typo.overline" Color="Color.Default">@AccountTypeLabel · @Currency</MudText>
+                    @if (!IsMobile)
+                    {
+                        <MudText Typo="Typo.overline" Color="Color.Default">@AccountTypeLabel · @Currency</MudText>
+                    }
                     <MudText Typo="Typo.h5">@AccountName</MudText>
                 </MudStack>
             </MudStack>

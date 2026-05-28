@@ -22,7 +22,8 @@
         @if (AvailableCategories is not null && AvailableCategories.Any())
         {
             <MudMenu Label="@(SelectedCategory ?? "Category")" StartIcon="@Icons.Material.Filled.FilterList"
-                     Variant="Variant.Text" Color="Color.Default" Size="Size.Small" Dense="true">
+                     Variant="Variant.Outlined" Color="@(SelectedCategory is null ? Color.Default : Color.Primary)"
+                     Size="Size.Small" Dense="true">
                 @if (SelectedCategory is not null)
                 {
                     <MudMenuItem Icon="@Icons.Material.Filled.Close" OnClick="OnClearCategory">Clear filter</MudMenuItem>
@@ -36,30 +37,48 @@
         }
 
         <div class="ml-auto">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="@(IsMobile ? 1 : 2)" Wrap="Wrap.NoWrap">
                 @if (ShowInsightsButton)
                 {
-                    <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Insights"
-                               Size="Size.Small" OnClick="OnInsightsClick">
-                        Insights
+                    <MudTooltip Text="Insights">
+                        <MudIconButton Icon="@Icons.Material.Filled.Insights" Variant="Variant.Outlined"
+                                       Color="Color.Default" Size="Size.Small" OnClick="OnInsightsClick" />
+                    </MudTooltip>
+                }
+                @if (IsMobile)
+                {
+                    @* Collapse the secondary utilities into a single overflow menu so the mobile
+                       action row stays a tidy three-button group: Insights · ⋮ · Add. *@
+                    <MudMenu Icon="@Icons.Material.Filled.MoreVert" Variant="Variant.Outlined"
+                             Color="Color.Default" Size="Size.Small" Dense="true">
+                        <MudMenuItem Icon="@Icons.Material.Filled.FileUpload" Href="@($"/Import/{AccountId}")">Import</MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.FileDownload" Href="@($"/Export/{AccountId}")">Export</MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="@($"/ManageAccount/{AccountId}")">Manage</MudMenuItem>
+                    </MudMenu>
+                    <MudTooltip Text="Add entry">
+                        <MudIconButton Icon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary"
+                                       Size="Size.Small" OnClick="OnAddEntry" />
+                    </MudTooltip>
+                }
+                else
+                {
+                    <MudTooltip Text="Import">
+                        <MudIconButton Icon="@Icons.Material.Filled.FileUpload" Variant="Variant.Outlined" Size="Size.Small"
+                                       Color="Color.Default" Href="@($"/Import/{AccountId}")" />
+                    </MudTooltip>
+                    <MudTooltip Text="Export">
+                        <MudIconButton Icon="@Icons.Material.Filled.FileDownload" Variant="Variant.Outlined" Size="Size.Small"
+                                       Color="Color.Default" Href="@($"/Export/{AccountId}")" />
+                    </MudTooltip>
+                    <MudTooltip Text="Manage">
+                        <MudIconButton Icon="@Icons.Material.Filled.Settings" Variant="Variant.Outlined" Size="Size.Small"
+                                       Color="Color.Default" Href="@($"/ManageAccount/{AccountId}")" />
+                    </MudTooltip>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                               Size="Size.Small" OnClick="OnAddEntry">
+                        Add entry
                     </MudButton>
                 }
-                <MudTooltip Text="Import">
-                    <MudIconButton Icon="@Icons.Material.Filled.FileUpload" Size="Size.Small" Color="Color.Default"
-                                   Href="@($"/Import/{AccountId}")" />
-                </MudTooltip>
-                <MudTooltip Text="Export">
-                    <MudIconButton Icon="@Icons.Material.Filled.FileDownload" Size="Size.Small" Color="Color.Default"
-                                   Href="@($"/Export/{AccountId}")" />
-                </MudTooltip>
-                <MudTooltip Text="Manage">
-                    <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Color="Color.Default"
-                                   Href="@($"/ManageAccount/{AccountId}")" />
-                </MudTooltip>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-                           Size="Size.Small" OnClick="OnAddEntry">
-                    Add entry
-                </MudButton>
             </MudStack>
         </div>
     </MudStack>
