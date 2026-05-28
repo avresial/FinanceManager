@@ -15,49 +15,35 @@ public class BondAccountSeeder(
     {
         if (await bondAccountRepository.GetAvailableAccounts(userId).AnyAsync(cancellationToken)) return;
 
-        var bondDetailsId = await bondDetailsRepository.GetAllAsync(cancellationToken)
-            .Select(x => x.Id)
-            .FirstOrDefaultAsync(cancellationToken);
-        if (bondDetailsId == 0)
+        var bondDetails = await bondDetailsRepository.GetAllAsync(cancellationToken).FirstOrDefaultAsync(cancellationToken);
+        if (bondDetails is null || bondDetails.Id == 0 || bondDetails.UnitValue <= 0)
         {
-            logger.LogWarning("No bond details available for guest {UserId}; skipping bond account seeding.", userId);
+            logger.LogWarning("No usable bond details available for guest {UserId}; skipping bond account seeding.", userId);
             return;
         }
 
         logger.LogTrace("Seeding bond account.");
-        await SeedBondAccount(userId, bondDetailsId, start, end, cancellationToken);
+        await SeedBondAccount(userId, bondDetails, start, end, cancellationToken);
     }
 
-    private async Task SeedBondAccount(int userId, int bondDetailsId, DateTime start, DateTime end, CancellationToken cancellationToken)
+    private async Task SeedBondAccount(int userId, BondDetails bondDetails, DateTime start, DateTime end, CancellationToken cancellationToken)
     {
         var account = new BondAccount(userId, 0, "Bond 1");
 
-        // Track running units held so a sell never drives the balance below zero.
-        decimal heldUnits = 0;
+        // Each month buys the fractional number of units the recurring bond investment pays for, so the value
+        // of the units acquired matches the cash outflow CurrencyAccountSeeder books on the same day.
+        var unitsPerPurchase = Math.Round(GuestInvestmentPlan.BondMonthlyAmount / bondDetails.UnitValue, 4, MidpointRounding.AwayFromZero);
+        if (unitsPerPurchase <= 0) return;
 
-        for (var date = start; date <= end; date = date.AddDays(1))
+        // BondAccount.Add dedups by EntryId, so each seeded entry needs a distinct id to survive. The loop starts
+        // a day after `start` to align with the cash seeder, whose opening entries occupy the first day.
+        var entryId = 0;
+        for (var date = start.AddDays(1); date <= end; date = date.AddDays(1))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var roll = Random.Shared.Next(0, 100);
+            if (!GuestInvestmentPlan.IsBondInvestmentDay(date)) continue;
 
-            decimal change;
-            if (roll < 70 || heldUnits <= 0)
-            {
-                change = Random.Shared.Next(1, 10);
-            }
-            else if (roll < 90)
-            {
-                var maxSell = (int)Math.Min(heldUnits, 8);
-                if (maxSell <= 0) continue;
-                change = -Random.Shared.Next(1, maxSell + 1);
-            }
-            else
-            {
-                continue;
-            }
-
-            account.Add(new BondAccountEntry(account.AccountId, 0, date, 0, change, bondDetailsId), false);
-            heldUnits += change;
+            account.Add(new BondAccountEntry(account.AccountId, entryId++, date, 0, unitsPerPurchase, bondDetails.Id), false);
         }
 
         account.RecalculateEntryValues(account.Entries.Count - 1);
