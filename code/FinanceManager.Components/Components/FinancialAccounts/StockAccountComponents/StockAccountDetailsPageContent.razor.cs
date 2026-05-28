@@ -102,7 +102,7 @@ public partial class StockAccountDetailsPageContent : ComponentBase, IAsyncDispo
         return Task.CompletedTask;
     }
 
-    public async Task UpdateInfo()
+    public async Task UpdateInfo(bool refreshChart = true)
     {
         if (Account is null || Account.Entries is null) return;
 
@@ -125,7 +125,11 @@ public partial class StockAccountDetailsPageContent : ComponentBase, IAsyncDispo
                                  .Take(5)
                                  .ToList();
 
-        await UpdateChartData();
+        // Text filters (search/income-expense/category) narrow the list and movers only;
+        // the chart and hero balance track the selected date range, so skip the network
+        // refetch when only a filter changed.
+        if (refreshChart)
+            await UpdateChartData();
 
         // Stock entry Value/ValueChange are unit-denominated, so the hero balance and
         // change come from the currency-denominated closing-balance series (the same data
@@ -204,7 +208,10 @@ public partial class StockAccountDetailsPageContent : ComponentBase, IAsyncDispo
         {
             if (_user is null) return;
 
-            _dateEnd = DateTime.UtcNow;
+            // Preset ranges always end "now"; a custom RANGE keeps the end picked in the hero
+            // (already set by SetDateRangeForSelection), so don't overwrite it here.
+            if (_selectedRange != "Range")
+                _dateEnd = DateTime.UtcNow;
             Account = await FinancialAccountService.GetAccount<StockAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
 
             if (Account?.Entries is not null)
@@ -274,21 +281,21 @@ public partial class StockAccountDetailsPageContent : ComponentBase, IAsyncDispo
     private async Task OnSearchChanged(string? value)
     {
         _searchText = value;
-        await UpdateInfo();
+        await UpdateInfo(refreshChart: false);
         StateHasChanged();
     }
 
     private async Task OnTxFilterChanged(AccountHistoryToolbar.TxFilter? value)
     {
         _activeFilter = value;
-        await UpdateInfo();
+        await UpdateInfo(refreshChart: false);
         StateHasChanged();
     }
 
     private async Task OnCategoryChanged(string? value)
     {
         _selectedCategory = value;
-        await UpdateInfo();
+        await UpdateInfo(refreshChart: false);
         StateHasChanged();
     }
 
