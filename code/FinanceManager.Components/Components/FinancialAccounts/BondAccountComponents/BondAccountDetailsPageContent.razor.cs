@@ -242,10 +242,17 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
 
     private void AccountDataSynchronizationService_AccountsChanged()
     {
-        Task.Run(async () =>
+        _ = InvokeAsync(async () =>
         {
-            await UpdateEntries();
-            await InvokeAsync(StateHasChanged);
+            try
+            {
+                await UpdateEntries();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error while refreshing bond account details after data sync for account ID {AccountId}", AccountId);
+            }
         });
     }
 

@@ -8,7 +8,7 @@
         <AccountDetailsPageContentSkeleton />
     }
 }
-else if (IsLoading || Account.Entries.Any())
+else if (IsLoading || Account.Entries?.Any() == true)
 {
     <AccountDetailsHero AccountName="@Account.Name"
                         AccountTypeLabel="@_accountTypeLabel"
@@ -109,7 +109,7 @@ else if (IsLoading || Account.Entries.Any())
         </MudPaper>
     </MudOverlay>
 }
-else if (!Account.Entries.Any())
+else if (Account.Entries?.Any() != true)
 {
     <AddCurrencyEntry CurrencyAccount=Account ActionCompleted="HideAddOverlay">
         <CustomButton>
