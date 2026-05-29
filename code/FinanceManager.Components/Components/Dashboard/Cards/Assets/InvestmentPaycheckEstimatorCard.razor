@@ -7,9 +7,10 @@
                 <MudText Typo="Typo.h6" Class="pc-title">Investment paycheck</MudText>
                 <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
                          PopoverClass="pc-info-popover" Dense="true">
-                    <ActivatorContent>
+                    <ActivatorContent Context="menuContext">
                         <MudIconButton Icon="@Icons.Material.Outlined.Info" Size="Size.Small" Color="Color.Default"
-                                       aria-label="What do these numbers mean?" Class="pc-info-btn" />
+                                       aria-label="What do these numbers mean?" Class="pc-info-btn"
+                                       OnClick="@menuContext.ToggleAsync" />
                     </ActivatorContent>
                     <ChildContent>
                         <div class="pc-info-pop">
