@@ -50,6 +50,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<CurrencyAccountSeeder>()
                 .AddScoped<StockAccountSeeder>()
                 .AddScoped<BondAccountSeeder>()
+                .AddScoped<FinancialInsightsSeeder>()
                 .AddScoped<FinancialLabelSeeder>()
                 .AddScoped<BondDetailsSeeder>()
                 .AddScoped<ISeeder, AdminAccountSeeder>()
