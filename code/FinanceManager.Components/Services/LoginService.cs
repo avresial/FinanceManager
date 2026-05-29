@@ -26,6 +26,10 @@ public class LoginService : ILoginService
     // every GetLoggedUser call, and an explicit logout flips this on so we never auto-revive a deliberately ended session.
     private bool _initialRefreshAttempted;
 
+    // Holds the single in-flight initial refresh so concurrent first-load callers all await the same restore
+    // instead of the second caller seeing the "attempted" flag and returning a null (unauthenticated) session.
+    private Task? _initialRefreshTask;
+
     public event Action<bool>? LogginStateChanged;
 
     private readonly AuthenticationStateProvider _authStateProvider;
@@ -44,14 +48,28 @@ public class LoginService : ILoginService
     public async Task<UserSession?> GetLoggedUser()
     {
         // On a fresh page load nothing is in memory yet; try once to revive the session from the refresh cookie so
-        // deep links keep working after a reload without bouncing through the login page.
+        // deep links keep working after a reload without bouncing through the login page. Concurrent callers share
+        // the same in-flight task, and the "attempted" flag is only set once that task has actually completed — so
+        // no caller can observe a null session while the restore is still running.
         if (_loggedUser is null && !_initialRefreshAttempted)
         {
-            _initialRefreshAttempted = true;
-            await TryRefresh();
+            _initialRefreshTask ??= InitialRefresh();
+            await _initialRefreshTask;
         }
 
         return _loggedUser;
+    }
+
+    private async Task InitialRefresh()
+    {
+        try
+        {
+            await TryRefresh();
+        }
+        finally
+        {
+            _initialRefreshAttempted = true;
+        }
     }
 
     public async Task<bool> Login(UserSession userSession)

@@ -66,8 +66,8 @@ public class RefreshTokenService(IRefreshTokenRepository repository, IOptions<Re
         existing.RevokedAt = now;
         existing.ReplacedByTokenHash = replacement.TokenHash;
 
-        await repository.Update(existing);
-        await repository.Add(replacement);
+        // Revoke-and-replace in one commit so a failure can't strand the old token revoked without a successor.
+        await repository.Rotate(existing, replacement);
 
         return RefreshTokenRotationResult.Ok(existing.UserId, newRawToken);
     }

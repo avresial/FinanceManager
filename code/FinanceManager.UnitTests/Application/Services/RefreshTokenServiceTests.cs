@@ -60,9 +60,11 @@ public class RefreshTokenServiceTests
         };
         _repository.Setup(r => r.GetByHash(It.IsAny<string>())).ReturnsAsync(existing);
 
+        RefreshToken? revoked = null;
         RefreshToken? added = null;
-        _repository.Setup(r => r.Add(It.IsAny<RefreshToken>())).Callback<RefreshToken>(t => added = t).Returns(Task.CompletedTask);
-        _repository.Setup(r => r.Update(It.IsAny<RefreshToken>())).Returns(Task.CompletedTask);
+        _repository.Setup(r => r.Rotate(It.IsAny<RefreshToken>(), It.IsAny<RefreshToken>()))
+            .Callback<RefreshToken, RefreshToken>((rev, rep) => { revoked = rev; added = rep; })
+            .Returns(Task.CompletedTask);
 
         var result = await _service.ValidateAndRotate("anything", TestContext.Current.CancellationToken);
 
@@ -70,10 +72,11 @@ public class RefreshTokenServiceTests
         Assert.Equal(7, result.UserId);
         Assert.False(string.IsNullOrWhiteSpace(result.NewRefreshToken));
 
-        // Old token revoked and linked to its replacement.
+        // Old token revoked and linked to its replacement, committed atomically with the replacement insert.
         Assert.NotNull(existing.RevokedAt);
         Assert.Equal(Hash(result.NewRefreshToken!), existing.ReplacedByTokenHash);
-        _repository.Verify(r => r.Update(existing), Times.Once);
+        _repository.Verify(r => r.Rotate(existing, It.IsAny<RefreshToken>()), Times.Once);
+        Assert.Same(existing, revoked);
 
         // New token shares the family and keeps the absolute cap.
         Assert.NotNull(added);
@@ -98,8 +101,9 @@ public class RefreshTokenServiceTests
         };
         _repository.Setup(r => r.GetByHash(It.IsAny<string>())).ReturnsAsync(existing);
         RefreshToken? added = null;
-        _repository.Setup(r => r.Add(It.IsAny<RefreshToken>())).Callback<RefreshToken>(t => added = t).Returns(Task.CompletedTask);
-        _repository.Setup(r => r.Update(It.IsAny<RefreshToken>())).Returns(Task.CompletedTask);
+        _repository.Setup(r => r.Rotate(It.IsAny<RefreshToken>(), It.IsAny<RefreshToken>()))
+            .Callback<RefreshToken, RefreshToken>((_, rep) => added = rep)
+            .Returns(Task.CompletedTask);
 
         var result = await _service.ValidateAndRotate("x", TestContext.Current.CancellationToken);
 
@@ -116,7 +120,7 @@ public class RefreshTokenServiceTests
         var result = await _service.ValidateAndRotate("ghost", TestContext.Current.CancellationToken);
 
         Assert.Equal(RefreshTokenStatus.NotFound, result.Status);
-        _repository.Verify(r => r.Add(It.IsAny<RefreshToken>()), Times.Never);
+        _repository.Verify(r => r.Rotate(It.IsAny<RefreshToken>(), It.IsAny<RefreshToken>()), Times.Never);
     }
 
     [Fact]
@@ -136,7 +140,7 @@ public class RefreshTokenServiceTests
         var result = await _service.ValidateAndRotate("old", TestContext.Current.CancellationToken);
 
         Assert.Equal(RefreshTokenStatus.Expired, result.Status);
-        _repository.Verify(r => r.Add(It.IsAny<RefreshToken>()), Times.Never);
+        _repository.Verify(r => r.Rotate(It.IsAny<RefreshToken>(), It.IsAny<RefreshToken>()), Times.Never);
         _repository.Verify(r => r.RevokeFamily(It.IsAny<Guid>(), It.IsAny<DateTime>()), Times.Never);
     }
 
@@ -160,7 +164,7 @@ public class RefreshTokenServiceTests
 
         Assert.Equal(RefreshTokenStatus.Revoked, result.Status);
         _repository.Verify(r => r.RevokeFamily(familyId, It.IsAny<DateTime>()), Times.Once);
-        _repository.Verify(r => r.Add(It.IsAny<RefreshToken>()), Times.Never);
+        _repository.Verify(r => r.Rotate(It.IsAny<RefreshToken>(), It.IsAny<RefreshToken>()), Times.Never);
     }
 
     [Fact]

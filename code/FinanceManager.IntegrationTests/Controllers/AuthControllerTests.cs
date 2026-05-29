@@ -49,7 +49,15 @@ public class AuthControllerTests(OptionsProvider optionsProvider) : ControllerTe
         var loginRequest = new LoginRequestModel(_userName, PasswordEncryptionProvider.EncryptPassword(_password));
         var loginResponse = await Client.PostAsJsonAsync("api/Login", loginRequest, ct);
         loginResponse.EnsureSuccessStatusCode();
-        Assert.Contains(loginResponse.Headers, h => h.Key == "Set-Cookie" && h.Value.Any(v => v.Contains("fm_refresh_token")));
+        var setCookie = loginResponse.Headers.TryGetValues("Set-Cookie", out var values)
+            ? string.Join(";", values)
+            : string.Empty;
+        Assert.Contains("fm_refresh_token", setCookie);
+        Assert.Contains("httponly", setCookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("samesite=strict", setCookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("path=/api/Auth", setCookie, StringComparison.OrdinalIgnoreCase);
+        // Secure is intentionally NOT asserted here: the test client talks plain HTTP, and the cookie's Secure flag
+        // tracks Request.IsHttps (verified over HTTPS in the AuthController unit tests instead).
 
         // Refresh exchanges the cookie for a new access token without any credentials.
         var refreshResponse = await Client.PostAsync("api/Auth/refresh", content: null, ct);

@@ -33,6 +33,8 @@ public class AuthControllerTests
     private AuthController CreateController(string? cookieValue, out HttpContext httpContext)
     {
         httpContext = new DefaultHttpContext();
+        // Drive the request as HTTPS so the Secure cookie attribute (Secure = Request.IsHttps) is exercised.
+        httpContext.Request.IsHttps = true;
         if (cookieValue is not null)
             httpContext.Request.Headers["Cookie"] = $"{_cookieName}={cookieValue}";
 
@@ -86,7 +88,9 @@ public class AuthControllerTests
         Assert.True(HasSetCookie(ctx, out var setCookie));
         Assert.Contains($"{_cookieName}=newtoken", setCookie);
         Assert.Contains("httponly", setCookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("secure", setCookie, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("samesite=strict", setCookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("path=/api/Auth", setCookie, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]

@@ -22,6 +22,14 @@ public class RefreshTokenRepository(AppDbContext context) : IRefreshTokenReposit
         await context.SaveChangesAsync();
     }
 
+    public async Task Rotate(RefreshToken revoked, RefreshToken replacement)
+    {
+        context.RefreshTokens.Update(revoked);
+        await context.RefreshTokens.AddAsync(replacement);
+        // A single SaveChangesAsync commits both writes together (one transaction on a relational provider).
+        await context.SaveChangesAsync();
+    }
+
     public async Task RevokeFamily(Guid familyId, DateTime revokedAt)
     {
         var familyTokens = await context.RefreshTokens
