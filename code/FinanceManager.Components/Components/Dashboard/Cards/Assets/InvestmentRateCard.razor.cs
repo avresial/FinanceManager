@@ -15,8 +15,6 @@ public partial class InvestmentRateCard
     private const string _highlightColor = "#FF9800";
     private const string _mutedBarColor = "#5F6368";
     private const string _mutedLabelColor = "var(--mud-palette-text-secondary)";
-    private const int _chromeHeightPx = 240;
-    private const int _minChartHeightPx = 110;
 
     private static readonly string[] _singleLetterMonths =
         ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
@@ -39,8 +37,6 @@ public partial class InvestmentRateCard
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
-
-    private string ChartHeightPx => $"{Math.Max(_minChartHeightPx, ParseHeightPx(Height) - _chromeHeightPx)}px";
 
     [Inject] public required ILogger<InvestmentRateCard> Logger { get; set; }
     [Inject] public required AssetsPageCardsCacheService AssetsPageCardsCacheService { get; set; }
@@ -195,14 +191,6 @@ public partial class InvestmentRateCard
                 ],
             };
         }
-    }
-
-    private static int ParseHeightPx(string height)
-    {
-        if (height.EndsWith("px", StringComparison.Ordinal)
-            && int.TryParse(height.AsSpan(0, height.Length - 2), out var px))
-            return px;
-        return 380;
     }
 
     private static string FormatRateNumber(decimal value) => $"{value * 100m:0.00}";

@@ -34,7 +34,7 @@ rules agents must follow when updating this file.
 
 ### Fixed
 - Investment paycheck card's top-right "i" info badge now opens its definitions popover when clicked — the activator icon button was swallowing the click so the tooltip never appeared. #227
-- Investment rate card separator no longer renders as a tall grey rectangle — the divider between the chart and the Salary/Investments footer is now pinned to a thin line instead of stretching to fill the card's leftover vertical space. #255
+- Investment rate card layout fixed: the separator between the chart and the Salary/Investments footer no longer renders as a tall grey rectangle (it is now a thin line), the bar chart fills the available middle space, and the footer is pinned to the bottom of the card. #255
 - Expandable transaction rows on the currency, stock, and bond account details pages are now keyboard-accessible — each row exposes a button role and toggles open/closed on Enter or Space. #247
 - Guest stock account no longer shows "Stock price unavailable" on every entry — the demo seeder now stores a real ISIN and a matching `StockDetails` row so the ticker resolves from the local sandbox instead of falling through to OpenFIGI. #222
 - Guest dashboard's net cash flow card no longer times out — stock price lookups now preload in bulk per ticker instead of one external resolve per entry. #208
