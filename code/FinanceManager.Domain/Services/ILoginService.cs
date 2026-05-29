@@ -9,5 +9,10 @@ public interface ILoginService
     Task<bool> Login(UserSession userSession);
     Task Logout();
     Task<UserSession?> GetLoggedUser();
-    Task<UserSession?> GetKeepMeLoggedInSession();
+
+    /// <summary>
+    /// Attempts to obtain a fresh access token from the refresh-token cookie. Returns <c>true</c> when the session
+    /// was restored. Safe to call when not logged in (the server simply returns 401).
+    /// </summary>
+    Task<bool> TryRefresh();
 }

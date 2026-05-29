@@ -32,6 +32,7 @@ builder.Services
 
 
 builder.Services.Configure<JwtAuthOptions>(builder.Configuration.GetSection("JwtConfig"));
+builder.Services.Configure<RefreshTokenOptions>(builder.Configuration.GetSection(RefreshTokenOptions.SectionName));
 builder.Services.Configure<StockApiOptions>(builder.Configuration.GetSection("StockApi"));
 builder.Services.Configure<OpenFigiOptions>(builder.Configuration.GetSection("OpenFigi"));
 builder.Services.Configure<LmStudioOptions>(builder.Configuration.GetSection("LmStudio"));
