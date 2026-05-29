@@ -48,7 +48,8 @@
                 }
             </div>
 
-            <MudDivider Class="my-1" />
+            @* flex-grow:0 keeps the divider a thin line; MudDivider's default flex-grow:1 would stretch it vertically in this flex-column card. *@
+            <MudDivider Class="my-1" Style="flex-grow:0;" />
             <MudGrid Spacing="1">
                 <MudItem xs="6">
                     <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">Salary</MudText>
