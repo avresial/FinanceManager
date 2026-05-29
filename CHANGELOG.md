@@ -11,6 +11,7 @@ rules agents must follow when updating this file.
 
 ### Added
 - Admin log viewer: warnings and errors emitted by the API are now persisted to the database and surfaced in the admin panel as a "Recent warnings & errors" dashboard widget and a full `/Admin/Logs` page with warning/error filtering and pagination. A retention background service purges entries older than the configured cutoff (default 30 days) on API start and once a day, and a SignalR hub pushes new entries to the UI live. #212
+- Guest demo account now seeds three sample financial insights so the dashboard Insights card is populated instead of empty when trying out the app. #259
 
 ### Changed
 - Recurring transactions card tightened: reduced dead space between the header and the transaction list, denser list rows, and the details view now shows the transaction title inline with the back-arrow button instead of stacked below it. #253
