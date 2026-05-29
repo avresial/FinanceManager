@@ -1,7 +1,8 @@
 .investment-rate-card__chart {
     width: 100%;
     overflow: hidden;
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .investment-rate-card__chart ::deep .apexcharts-canvas {
