@@ -1,9 +1,11 @@
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using Moq;
 
@@ -14,10 +16,17 @@ namespace FinanceManager.UnitTests.Application.Services;
 public class DiversificationServiceTests
 {
     private readonly Mock<IFinancialAccountRepository> _repositoryMock = new();
+    private readonly Mock<IStockDetailsRepository> _stockDetailsMock = new();
+    private readonly Mock<IBondDetailsRepository> _bondDetailsMock = new();
     private readonly DiversificationService _service;
     private readonly DateTime _asOfDate = new(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-    public DiversificationServiceTests() => _service = new(_repositoryMock.Object);
+    public DiversificationServiceTests()
+    {
+        _stockDetailsMock.Setup(x => x.GetAll(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _service = new(_repositoryMock.Object, _stockDetailsMock.Object, _bondDetailsMock.Object);
+    }
 
     private void SetupStockAccounts(params StockAccount[] accounts) =>
         _repositoryMock.Setup(x => x.GetAccounts<StockAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
@@ -30,6 +39,23 @@ public class DiversificationServiceTests
     private void SetupCurrencyAccounts(params CurrencyAccount[] accounts) =>
         _repositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(accounts.ToAsyncEnumerable());
+
+    private void SetupStockDetails(params StockDetails[] details) =>
+        _stockDetailsMock.Setup(x => x.GetAll(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(details);
+
+    private void SetupBondDetails(params BondDetails[] details)
+    {
+        foreach (var detail in details)
+            _bondDetailsMock.Setup(x => x.GetByIdAsync(detail.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(detail);
+    }
+
+    private static StockDetails Stock(string isin, string ticker) =>
+        new() { Isin = isin, Ticker = ticker, Currency = new Currency(1, "USD", "$") };
+
+    private static BondDetails Bond(int id, string name) =>
+        new() { Id = id, Name = name, Type = BondType.InflationBond, Currency = new Currency(1, "PLN", "zł") };
 
     [Fact]
     public async Task GetDiversificationScore_EmptyPortfolio_ReturnsZero()
@@ -317,5 +343,105 @@ public class DiversificationServiceTests
     public void GetBand_MatchesScoreRanges(int score, string expectedBand)
     {
         Assert.Equal(expectedBand, DiversificationService.GetBand(score));
+    }
+
+    [Fact]
+    public async Task GetDiversificationBreakdown_EmptyPortfolio_ReturnsNoGroups()
+    {
+        SetupStockAccounts();
+        SetupBondAccounts();
+        SetupCurrencyAccounts();
+
+        var result = await _service.GetDiversificationBreakdown(1, _asOfDate, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result.AssetClasses);
+    }
+
+    [Fact]
+    public async Task GetDiversificationBreakdown_GroupsHoldingsByClassWithResolvedNames()
+    {
+        var stockAccount = new StockAccount(1, 1, "stocks");
+        stockAccount.Add(new StockAccountEntry(1, 1, _asOfDate, 10, 10, "US0378331005", InvestmentType.Stock), false);
+        stockAccount.Add(new StockAccountEntry(1, 2, _asOfDate, 10, 10, "US5949181045", InvestmentType.Stock), false);
+
+        var bondAccount = new BondAccount(1, 2, "bonds",
+            [new BondAccountEntry(2, 1, _asOfDate, 10m, 10m, 7)], AccountLabel.Other);
+
+        var cashAccount = new CurrencyAccount(1, 3, "cash", AccountLabel.Cash);
+        cashAccount.Add(new CurrencyAccountEntry(3, 1, _asOfDate, 100, 100), false);
+
+        SetupStockAccounts(stockAccount);
+        SetupBondAccounts(bondAccount);
+        SetupCurrencyAccounts(cashAccount);
+        SetupStockDetails(Stock("US0378331005", "AAPL"), Stock("US5949181045", "MSFT"));
+        SetupBondDetails(Bond(7, "Treasury 2030"));
+
+        var result = await _service.GetDiversificationBreakdown(1, _asOfDate, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["Stocks", "Bonds", "Cash"], result.AssetClasses.Select(g => g.AssetClass));
+        Assert.Equal(["AAPL", "MSFT"], result.AssetClasses[0].Holdings);
+        Assert.Equal(["Treasury 2030"], result.AssetClasses[1].Holdings);
+        Assert.Equal(["Cash"], result.AssetClasses[2].Holdings);
+    }
+
+    [Fact]
+    public async Task GetDiversificationBreakdown_UnknownStockIsin_FallsBackToIsin()
+    {
+        var stockAccount = new StockAccount(1, 1, "stocks");
+        stockAccount.Add(new StockAccountEntry(1, 1, _asOfDate, 10, 10, "US0378331005", InvestmentType.Stock), false);
+
+        SetupStockAccounts(stockAccount);
+        SetupBondAccounts();
+        SetupCurrencyAccounts();
+        // No matching StockDetails registered.
+
+        var result = await _service.GetDiversificationBreakdown(1, _asOfDate, TestContext.Current.CancellationToken);
+
+        var stocks = Assert.Single(result.AssetClasses);
+        Assert.Equal("Stocks", stocks.AssetClass);
+        Assert.Equal(["US0378331005"], stocks.Holdings);
+    }
+
+    [Fact]
+    public async Task GetDiversificationBreakdown_UnknownBondId_FallsBackToPlaceholderName()
+    {
+        var bondAccount = new BondAccount(1, 1, "bonds",
+            [new BondAccountEntry(1, 1, _asOfDate, 10m, 10m, 42)], AccountLabel.Other);
+
+        SetupStockAccounts();
+        SetupBondAccounts(bondAccount);
+        SetupCurrencyAccounts();
+        // No matching BondDetails registered → GetByIdAsync returns null.
+
+        var result = await _service.GetDiversificationBreakdown(1, _asOfDate, TestContext.Current.CancellationToken);
+
+        var bonds = Assert.Single(result.AssetClasses);
+        Assert.Equal(["Bond #42"], bonds.Holdings);
+    }
+
+    [Fact]
+    public async Task GetDiversificationBreakdown_SoldOutAndDuplicateHoldings_AreExcludedAndDeduped()
+    {
+        var sellDate = _asOfDate.AddDays(-5);
+
+        var account1 = new StockAccount(1, 1, "stocks-a");
+        account1.Add(new StockAccountEntry(1, 1, _asOfDate, 5, 5, "US0378331005", InvestmentType.Stock), false);
+        // Fully sold position must not appear.
+        account1.Add(new StockAccountEntry(1, 2, _asOfDate.AddDays(-10), 10, 10, "US38259P5089", InvestmentType.Stock), false);
+        account1.Add(new StockAccountEntry(1, 3, sellDate, 0, -10, "US38259P5089", InvestmentType.Stock), false);
+
+        // Same ISIN held in another account must be listed once.
+        var account2 = new StockAccount(1, 2, "stocks-b");
+        account2.Add(new StockAccountEntry(2, 1, _asOfDate, 3, 3, "US0378331005", InvestmentType.Stock), false);
+
+        SetupStockAccounts(account1, account2);
+        SetupBondAccounts();
+        SetupCurrencyAccounts();
+        SetupStockDetails(Stock("US0378331005", "AAPL"), Stock("US38259P5089", "GOOG"));
+
+        var result = await _service.GetDiversificationBreakdown(1, _asOfDate, TestContext.Current.CancellationToken);
+
+        var stocks = Assert.Single(result.AssetClasses);
+        Assert.Equal(["AAPL"], stocks.Holdings);
     }
 }

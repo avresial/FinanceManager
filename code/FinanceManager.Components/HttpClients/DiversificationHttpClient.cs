@@ -11,4 +11,11 @@ public class DiversificationHttpClient(HttpClient httpClient)
             $"{httpClient.BaseAddress}api/Diversification/{userId}/{asOfDate:O}");
         return result;
     }
+
+    public async Task<DiversificationBreakdown?> GetDiversificationBreakdown(int userId, DateTime asOfDate)
+    {
+        var result = await httpClient.GetFromJsonAsync<DiversificationBreakdown>(
+            $"{httpClient.BaseAddress}api/Diversification/{userId}/{asOfDate:O}/breakdown");
+        return result;
+    }
 }
