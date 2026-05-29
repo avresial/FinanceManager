@@ -13,6 +13,7 @@ rules agents must follow when updating this file.
 - Admin log viewer: warnings and errors emitted by the API are now persisted to the database and surfaced in the admin panel as a "Recent warnings & errors" dashboard widget and a full `/Admin/Logs` page with warning/error filtering and pagination. A retention background service purges entries older than the configured cutoff (default 30 days) on API start and once a day, and a SignalR hub pushes new entries to the UI live. #212
 
 ### Changed
+- Recurring transactions card tightened: reduced dead space between the header and the transaction list, denser list rows, and the details view now shows the transaction title inline with the back-arrow button instead of stacked below it. #253
 - Investment paycheck card on the Assets page redesigned for visual parity with the neighbouring pie cards: hero monthly figure with amber affixes, a clickable replacement-% pill, a continuous 2–8% withdrawal-rate slider paired with Conservative/Standard/Aggressive preset chips (default now 4% to match the safe withdrawal rate convention), a clearer footer surfacing the investments value and salary-history coverage, and an "i" badge that opens a definitions popover. #227
 - Investment rate card on the Assets page now surfaces a 12-month rate history bar chart (with the current month highlighted) and an end-of-year projection in PLN derived from the YTD pace, alongside the existing rate, salary, and investments-change figures. #229
 - Currency account details page redesigned around a hero (avatar, name, balance, range toggle, chart), a search/filter toolbar with income/expense chips and category picker, day-grouped transaction cards with running balance, and an insight rail (balance change, top 5 income, bottom 5 expenses). #175
@@ -32,6 +33,7 @@ rules agents must follow when updating this file.
 
 ### Fixed
 - Investment paycheck card's top-right "i" info badge now opens its definitions popover when clicked — the activator icon button was swallowing the click so the tooltip never appeared. #227
+- Investment rate card separator no longer renders as a tall grey rectangle — the divider between the chart and the Salary/Investments footer is now pinned to a thin line instead of stretching to fill the card's leftover vertical space. #255
 - Expandable transaction rows on the currency, stock, and bond account details pages are now keyboard-accessible — each row exposes a button role and toggles open/closed on Enter or Space. #247
 - Guest stock account no longer shows "Stock price unavailable" on every entry — the demo seeder now stores a real ISIN and a matching `StockDetails` row so the ticker resolves from the local sandbox instead of falling through to OpenFIGI. #222
 - Guest dashboard's net cash flow card no longer times out — stock price lookups now preload in bulk per ticker instead of one external resolve per entry. #208
