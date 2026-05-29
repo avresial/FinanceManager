@@ -1,0 +1,275 @@
+/* Asset diversification card — "Gauge + breakdown" (design Variation D).
+   Structural colours come from MudBlazor palette variables (auto theme-switch);
+   the calm band palette below is overridden under prefers-color-scheme: dark,
+   which is how this app flips theme (system preference, see App.razor). */
+.diversification-card {
+    --band-limited: #C56F4D;
+    --band-limited-soft: rgba(197, 111, 77, 0.13);
+    --band-moderate: #C2982F;
+    --band-moderate-soft: rgba(194, 152, 47, 0.14);
+    --band-broad: #4E8C6A;
+    --band-broad-soft: rgba(78, 140, 106, 0.13);
+    --track: rgba(0, 0, 0, 0.08);
+    --track-strong: rgba(0, 0, 0, 0.22);
+
+    box-sizing: border-box;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 18px 18px 16px;
+    container-type: inline-size;
+}
+
+@media (prefers-color-scheme: dark) {
+    .diversification-card {
+        --band-limited: #DB9070;
+        --band-limited-soft: rgba(219, 144, 112, 0.16);
+        --band-moderate: #E0B452;
+        --band-moderate-soft: rgba(224, 180, 82, 0.15);
+        --band-broad: #6FB994;
+        --band-broad-soft: rgba(111, 185, 148, 0.16);
+        --track: rgba(255, 255, 255, 0.11);
+        --track-strong: rgba(255, 255, 255, 0.30);
+    }
+}
+
+/* ---- Header ---- */
+.diversification-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.diversification-card__title {
+    font-family: var(--mud-typography-default-family, "Roboto", "Helvetica", "Arial", sans-serif);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--mud-palette-text-primary);
+}
+
+/* ---- Body (gauge | breakdown) ---- */
+.diversification-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.diversification-card__gauge {
+    width: 100%;
+}
+
+.diversification-card__gaugewrap {
+    position: relative;
+    width: 100%;
+    max-width: 188px;
+    margin: 0 auto;
+}
+
+.diversification-card__gaugewrap svg {
+    display: block;
+}
+
+.diversification-card__gaugecenter {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    text-align: center;
+}
+
+.diversification-card__score {
+    font-family: var(--mud-typography-default-family, "Roboto", sans-serif);
+    font-size: 2.1rem;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--mud-palette-text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.diversification-card__of {
+    font-size: 11px;
+    color: var(--mud-palette-text-secondary);
+    margin-top: 1px;
+}
+
+.diversification-card__band {
+    margin-top: 4px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--c);
+}
+
+.diversification-card__break {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.diversification-card__overline {
+    margin-bottom: 10px;
+    font-size: 10.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--mud-palette-text-secondary);
+}
+
+.diversification-card__compbar {
+    display: flex;
+    height: 14px;
+    border-radius: 999px;
+    background: var(--track);
+    overflow: hidden;
+}
+
+.diversification-card__seg {
+    height: 100%;
+    transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.diversification-card__seg + .diversification-card__seg {
+    border-left: 2px solid var(--mud-palette-surface);
+}
+
+.diversification-card__seg--primary {
+    background: var(--c);
+}
+
+.diversification-card__seg--secondary {
+    background: var(--c);
+    opacity: 0.55;
+}
+
+.diversification-card__keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px 18px;
+    margin-top: 11px;
+    font-size: 12px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.diversification-card__keys span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.diversification-card__keys b {
+    color: var(--mud-palette-text-primary);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.diversification-card__dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+}
+
+.diversification-card__dot--primary {
+    background: var(--c);
+}
+
+.diversification-card__dot--secondary {
+    background: var(--c);
+    opacity: 0.55;
+}
+
+/* ---- Band legend ---- */
+.diversification-card__legend {
+    display: flex;
+    gap: 6px;
+}
+
+.diversification-card__pill {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 5px 4px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    color: var(--mud-palette-text-secondary);
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.diversification-card__pilldot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--c);
+    opacity: 0.4;
+}
+
+.diversification-card__pill--current {
+    background: var(--cs);
+    color: var(--mud-palette-text-primary);
+    font-weight: 500;
+}
+
+.diversification-card__pill--current .diversification-card__pilldot {
+    opacity: 1;
+}
+
+/* ---- Insight callout (gentle, never a red error) ---- */
+.diversification-card__insight {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--cs);
+}
+
+.diversification-card__insighticon {
+    flex: none;
+    margin-top: 1px;
+}
+
+.diversification-card__insightlines {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.diversification-card__insightlines p {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--mud-palette-text-primary);
+}
+
+/* ---- Loading / empty ---- */
+.diversification-card__center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ---- Responsive: row layout once the card itself is wide enough ---- */
+@container (min-width: 360px) {
+    .diversification-card__body {
+        flex-direction: row;
+        align-items: center;
+        gap: 22px;
+    }
+
+    .diversification-card__gauge {
+        flex: 0 0 150px;
+        width: 150px;
+    }
+
+    .diversification-card__break {
+        flex: 1;
+        border-left: 1px solid var(--mud-palette-divider);
+        padding-left: 22px;
+    }
+}
