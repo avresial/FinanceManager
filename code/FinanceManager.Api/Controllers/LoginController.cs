@@ -1,6 +1,7 @@
 using FinanceManager.Api.Services;
 using FinanceManager.Api.Services.Guest;
 using FinanceManager.Application.Commands.Login;
+using FinanceManager.Application.Options;
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Enums;
@@ -9,6 +10,7 @@ using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace FinanceManager.Api.Controllers;
 
@@ -18,6 +20,7 @@ namespace FinanceManager.Api.Controllers;
 public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepository userRepository, IActiveUsersRepository activeUsersRepository,
     IGuestSessionStore guestSessionStore, IServiceScopeFactory scopeFactory,
     IInsightsGenerationChannel insightsGenerationChannel,
+    IRefreshTokenService refreshTokenService, IOptions<RefreshTokenOptions> refreshOptions,
     ILogger<LoginController> logger) : ControllerBase
 {
     private const string _guestLogin = "guest";
@@ -54,6 +57,19 @@ public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepositor
         catch (Exception ex)
         {
             logger.LogError(ex, "Error occurred while queueing user {UserId} for insights generation", token.UserId);
+        }
+
+        // Persist the session beyond the short-lived access token by issuing a rotating refresh token. Guests are
+        // deliberately excluded below — their sandboxes are throwaway and stay on a single short-lived token.
+        try
+        {
+            var refreshToken = await refreshTokenService.Issue(user.UserId, cancellationToken);
+            RefreshTokenCookie.Append(Response, Request.IsHttps, refreshOptions.Value.CookieName, refreshToken,
+                DateTimeOffset.UtcNow.AddDays(refreshOptions.Value.SlidingValidityDays));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while issuing a refresh token for user {UserId}", user.UserId);
         }
 
         return Ok(token);

@@ -27,6 +27,7 @@ public static class ServiceCollectionExtension
     public static IServiceCollection AddApplicationApi(this IServiceCollection services)
     {
         services.AddScoped<ISettingsService, SettingsService>()
+                .AddScoped<IRefreshTokenService, RefreshTokenService>()
                 .AddScoped<IMoneyFlowService, MoneyFlowService>()
                 .AddScoped<IInvestmentPaycheckEstimatorService, InvestmentPaycheckEstimatorService>()
             .AddScoped<IEssentialSpendingServiceTyped, CurrencyEssentialSpendingService>()
