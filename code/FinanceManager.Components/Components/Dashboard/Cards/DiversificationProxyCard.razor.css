@@ -16,7 +16,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     padding: 18px 18px 16px;
     container-type: inline-size;
 }
@@ -63,7 +63,7 @@
 .diversification-card__gaugewrap {
     position: relative;
     width: 100%;
-    max-width: 188px;
+    max-width: 158px;
     margin: 0 auto;
 }
 
@@ -252,6 +252,114 @@
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* ---- Default face: scrollable middle + pinned footer ---- */
+.diversification-card__main {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ---- Footer "Show holdings" affordance ---- */
+.diversification-card__footer {
+    display: flex;
+    justify-content: center;
+}
+
+/* ---- Holdings details view ---- */
+.diversification-card__details {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.diversification-card__back {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    padding: 2px 6px 2px 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--mud-palette-text-secondary);
+    transition: color 0.15s;
+}
+
+.diversification-card__back:hover {
+    color: var(--mud-palette-text-primary);
+}
+
+.diversification-card__detaillist {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-right: 4px;
+}
+
+.diversification-card__group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.diversification-card__grouphead {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--mud-palette-text-secondary);
+}
+
+.diversification-card__groupcount {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--track);
+    font-size: 10.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.diversification-card__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.diversification-card__chip {
+    padding: 3px 9px;
+    border-radius: 6px;
+    background: var(--track);
+    color: var(--mud-palette-text-primary);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.diversification-card__emptydetails {
+    font-size: 13px;
+    color: var(--mud-palette-text-secondary);
 }
 
 /* ---- Responsive: row layout once the card itself is wide enough ---- */

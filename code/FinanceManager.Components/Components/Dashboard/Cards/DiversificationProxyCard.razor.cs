@@ -36,6 +36,12 @@ public partial class DiversificationProxyCard
     private string _valuePath = "";
     private List<(string X, string Y)> _ticks = [];
 
+    private int? _userId;
+    private DateTime _asOfDate = DateTime.UtcNow;
+    private bool _showDetails;
+    private bool _breakdownLoading;
+    private DiversificationBreakdown? _breakdown;
+
     [Parameter] public string Height { get; set; } = "300px";
 
     [Inject] public required ILogger<DiversificationProxyCard> Logger { get; set; }
@@ -61,7 +67,9 @@ public partial class DiversificationProxyCard
                 return;
             }
 
-            _score = await DiversificationHttpClient.GetDiversificationScore(user.UserId, DateTime.UtcNow);
+            _userId = user.UserId;
+            _asOfDate = DateTime.UtcNow;
+            _score = await DiversificationHttpClient.GetDiversificationScore(_userId.Value, _asOfDate);
             if (_score is null) return;
 
             _bandKey = _score.Band.ToLowerInvariant();
@@ -83,6 +91,29 @@ public partial class DiversificationProxyCard
 
     // Inline-style custom properties so a single band drives every band-coloured element.
     private static string BandVars(string key) => $"--c:var(--band-{key});--cs:var(--band-{key}-soft);";
+
+    private async Task ShowDetails()
+    {
+        _showDetails = true;
+
+        if (_breakdown is not null || _userId is null) return;
+
+        _breakdownLoading = true;
+        try
+        {
+            _breakdown = await DiversificationHttpClient.GetDiversificationBreakdown(_userId.Value, _asOfDate);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading diversification breakdown");
+        }
+        finally
+        {
+            _breakdownLoading = false;
+        }
+    }
+
+    private void HideDetails() => _showDetails = false;
 
     private void BuildGauge(int score)
     {
