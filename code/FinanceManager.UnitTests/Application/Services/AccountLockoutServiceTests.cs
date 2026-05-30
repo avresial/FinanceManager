@@ -28,63 +28,65 @@ public class AccountLockoutServiceTests
         _userRepository.Setup(r => r.GetLoginThrottlingState(_login))
             .ReturnsAsync(new LoginThrottlingState(failedAttempts, lockoutEndUtc));
 
+    private void SetupIncrementReturns(int newCount) =>
+        _userRepository.Setup(r => r.IncrementFailedLoginAttempts(_login)).ReturnsAsync(newCount);
+
     [Fact]
     public async Task RegisterFailedAttempt_BelowThreshold_IncrementsWithoutLocking()
     {
-        SetupState(1, null);
+        SetupIncrementReturns(2);
 
         await _service.RegisterFailedAttempt(_login, TestContext.Current.CancellationToken);
 
-        _userRepository.Verify(r => r.SetLoginThrottlingState(_login, 2, null), Times.Once);
+        _userRepository.Verify(r => r.IncrementFailedLoginAttempts(_login), Times.Once);
+        _userRepository.Verify(r => r.LockAccount(It.IsAny<string>(), It.IsAny<DateTime>()), Times.Never);
     }
 
     [Fact]
     public async Task RegisterFailedAttempt_ReachingThreshold_LocksForConfiguredWindow()
     {
-        SetupState(2, null);
+        SetupIncrementReturns(3);
         var before = DateTime.UtcNow;
 
-        DateTime? capturedLockoutEnd = null;
-        _userRepository.Setup(r => r.SetLoginThrottlingState(_login, It.IsAny<int>(), It.IsAny<DateTime?>()))
-            .Callback<string, int, DateTime?>((_, _, end) => capturedLockoutEnd = end)
+        DateTime capturedLockoutEnd = default;
+        _userRepository.Setup(r => r.LockAccount(_login, It.IsAny<DateTime>()))
+            .Callback<string, DateTime>((_, end) => capturedLockoutEnd = end)
             .ReturnsAsync(true);
 
         await _service.RegisterFailedAttempt(_login, TestContext.Current.CancellationToken);
 
-        _userRepository.Verify(r => r.SetLoginThrottlingState(_login, 3, It.IsAny<DateTime?>()), Times.Once);
-        Assert.NotNull(capturedLockoutEnd);
+        _userRepository.Verify(r => r.LockAccount(_login, It.IsAny<DateTime>()), Times.Once);
         // Lockout end is roughly now + the configured duration.
-        Assert.InRange(capturedLockoutEnd!.Value,
+        Assert.InRange(capturedLockoutEnd,
             before.Add(_options.LockoutDuration),
             DateTime.UtcNow.Add(_options.LockoutDuration).AddSeconds(1));
     }
 
     [Fact]
-    public async Task RegisterFailedAttempt_UnknownAccount_IsIgnored()
+    public async Task RegisterFailedAttempt_ExceedingThreshold_StillLocks()
     {
-        _userRepository.Setup(r => r.GetLoginThrottlingState(_login)).ReturnsAsync((LoginThrottlingState?)null);
+        // A concurrent increment can push the count past the threshold; that must still lock (the safe direction).
+        SetupIncrementReturns(7);
 
         await _service.RegisterFailedAttempt(_login, TestContext.Current.CancellationToken);
 
-        _userRepository.Verify(r => r.SetLoginThrottlingState(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<DateTime?>()), Times.Never);
+        _userRepository.Verify(r => r.LockAccount(_login, It.IsAny<DateTime>()), Times.Once);
     }
 
     [Fact]
-    public async Task RegisterFailedAttempt_AfterLockoutLapsed_StartsFreshCount()
+    public async Task RegisterFailedAttempt_UnknownAccount_IsIgnored()
     {
-        // Threshold previously hit but the lockout window has already passed.
-        SetupState(3, DateTime.UtcNow.AddMinutes(-1));
+        _userRepository.Setup(r => r.IncrementFailedLoginAttempts(_login)).ReturnsAsync((int?)null);
 
         await _service.RegisterFailedAttempt(_login, TestContext.Current.CancellationToken);
 
-        // Counts from zero again rather than re-tripping the lock on the very next failure.
-        _userRepository.Verify(r => r.SetLoginThrottlingState(_login, 1, null), Times.Once);
+        _userRepository.Verify(r => r.LockAccount(It.IsAny<string>(), It.IsAny<DateTime>()), Times.Never);
     }
 
     [Fact]
     public async Task IsLockedOut_WhenLockoutInFuture_ReturnsTrue()
     {
-        SetupState(3, DateTime.UtcNow.AddMinutes(5));
+        SetupState(0, DateTime.UtcNow.AddMinutes(5));
 
         Assert.True(await _service.IsLockedOut(_login, TestContext.Current.CancellationToken));
     }
@@ -92,7 +94,7 @@ public class AccountLockoutServiceTests
     [Fact]
     public async Task IsLockedOut_WhenLockoutExpired_ReturnsFalse()
     {
-        SetupState(3, DateTime.UtcNow.AddMinutes(-5));
+        SetupState(0, DateTime.UtcNow.AddMinutes(-5));
 
         Assert.False(await _service.IsLockedOut(_login, TestContext.Current.CancellationToken));
     }
@@ -120,7 +122,7 @@ public class AccountLockoutServiceTests
 
         await _service.Reset(_login, TestContext.Current.CancellationToken);
 
-        _userRepository.Verify(r => r.SetLoginThrottlingState(_login, 0, null), Times.Once);
+        _userRepository.Verify(r => r.ResetLoginThrottling(_login), Times.Once);
     }
 
     [Fact]
@@ -130,7 +132,7 @@ public class AccountLockoutServiceTests
 
         await _service.Reset(_login, TestContext.Current.CancellationToken);
 
-        _userRepository.Verify(r => r.SetLoginThrottlingState(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<DateTime?>()), Times.Never);
+        _userRepository.Verify(r => r.ResetLoginThrottling(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -138,11 +140,14 @@ public class AccountLockoutServiceTests
     {
         _options.Enabled = false;
         SetupState(10, DateTime.UtcNow.AddMinutes(30));
+        SetupIncrementReturns(11);
 
         Assert.False(await _service.IsLockedOut(_login, TestContext.Current.CancellationToken));
         await _service.RegisterFailedAttempt(_login, TestContext.Current.CancellationToken);
         await _service.Reset(_login, TestContext.Current.CancellationToken);
 
-        _userRepository.Verify(r => r.SetLoginThrottlingState(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<DateTime?>()), Times.Never);
+        _userRepository.Verify(r => r.IncrementFailedLoginAttempts(It.IsAny<string>()), Times.Never);
+        _userRepository.Verify(r => r.LockAccount(It.IsAny<string>(), It.IsAny<DateTime>()), Times.Never);
+        _userRepository.Verify(r => r.ResetLoginThrottling(It.IsAny<string>()), Times.Never);
     }
 }

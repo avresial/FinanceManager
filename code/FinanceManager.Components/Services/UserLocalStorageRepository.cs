@@ -103,10 +103,63 @@ public class UserLocalStorageRepository(ILocalStorageService localStorageService
         return true;
     }
 
+    public async Task<LoginThrottlingState?> GetLoginThrottlingState(string login)
+    {
+        var foundUser = await FindUser(login);
+        if (foundUser is null) return null;
+
+        return new LoginThrottlingState(foundUser.FailedLoginAttempts, foundUser.LockoutEndUtc);
+    }
+
+    public async Task<int?> IncrementFailedLoginAttempts(string login)
+    {
+        var (userDtos, foundUser) = await LoadUser(login);
+        if (foundUser is null) return null;
+
+        foundUser.FailedLoginAttempts++;
+        await Persist(userDtos);
+        return foundUser.FailedLoginAttempts;
+    }
+
+    public async Task<bool> LockAccount(string login, DateTime lockoutEndUtc)
+    {
+        var (userDtos, foundUser) = await LoadUser(login);
+        if (foundUser is null) return false;
+
+        foundUser.LockoutEndUtc = lockoutEndUtc;
+        foundUser.FailedLoginAttempts = 0;
+        await Persist(userDtos);
+        return true;
+    }
+
+    public async Task<bool> ResetLoginThrottling(string login)
+    {
+        var (userDtos, foundUser) = await LoadUser(login);
+        if (foundUser is null) return false;
+
+        foundUser.LockoutEndUtc = null;
+        foundUser.FailedLoginAttempts = 0;
+        await Persist(userDtos);
+        return true;
+    }
+
+    private async Task<UserDto?> FindUser(string login)
+    {
+        var (_, foundUser) = await LoadUser(login);
+        return foundUser;
+    }
+
+    private async Task<(List<UserDto> Users, UserDto? Found)> LoadUser(string login)
+    {
+        login = login.ToLower();
+        var userDtos = await localStorageService.GetItemAsync<List<UserDto>>("Users") ?? [];
+        return (userDtos, userDtos.FirstOrDefault(x => x.Login == login));
+    }
+
+    private Task Persist(List<UserDto> userDtos) => localStorageService.SetItemAsync("Users", userDtos).AsTask();
+
     public Task<bool> UpdatePassword(int userId, string password) => throw new NotImplementedException();
     public Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel) => throw new NotImplementedException();
-    public Task<LoginThrottlingState?> GetLoginThrottlingState(string login) => throw new NotImplementedException();
-    public Task<bool> SetLoginThrottlingState(string login, int failedAttempts, DateTime? lockoutEndUtc) => throw new NotImplementedException();
     public Task<User?> GetUser(string login) => throw new NotImplementedException();
     public Task<int> GetUsersCount() => throw new NotImplementedException();
     public IAsyncEnumerable<User> GetUsers(DateTime startDate, DateTime endDate) => throw new NotImplementedException();

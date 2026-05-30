@@ -17,17 +17,31 @@ public interface IUserRepository
     Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole);
 
     /// <summary>
-    /// Reads the persisted login-throttling counters for an account, or <c>null</c> when no such account exists.
+    /// Reads the persisted login-throttling state for an account, or <c>null</c> when no such account exists.
     /// Returning <c>null</c> for unknown logins lets callers avoid tracking (and thereby enumerating) accounts
     /// that were never registered.
     /// </summary>
     Task<LoginThrottlingState?> GetLoginThrottlingState(string login);
 
     /// <summary>
-    /// Persists the failed-attempt counter and lockout expiry for an account. Returns <c>false</c> when the
+    /// Atomically increments the consecutive failed-login counter for an account and returns the new value, or
+    /// <c>null</c> when the account does not exist. The increment must be a single, race-free operation so that
+    /// concurrent failed logins cannot lose updates and delay the lockout.
+    /// </summary>
+    Task<int?> IncrementFailedLoginAttempts(string login);
+
+    /// <summary>
+    /// Locks an account until <paramref name="lockoutEndUtc"/> and clears its failed-attempt counter, so that once
+    /// the lockout lapses a fresh threshold of failures is required to lock it again. Returns <c>false</c> when the
     /// account does not exist.
     /// </summary>
-    Task<bool> SetLoginThrottlingState(string login, int failedAttempts, DateTime? lockoutEndUtc);
+    Task<bool> LockAccount(string login, DateTime lockoutEndUtc);
+
+    /// <summary>
+    /// Clears the failed-attempt counter and any active lockout for an account. Returns <c>false</c> when the
+    /// account does not exist.
+    /// </summary>
+    Task<bool> ResetLoginThrottling(string login);
 
     /// <summary>
     /// Inserts a user with an explicit id. Intended for ephemeral guest sandboxes where the id is chosen by the
