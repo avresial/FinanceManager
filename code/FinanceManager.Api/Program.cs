@@ -184,10 +184,6 @@ builder.Services.AddHostedService<LogRetentionBackgroundService>();
 
 var app = builder.Build();
 
-// Map the /health (all checks) and /alive (liveness) endpoints from ServiceDefaults so the
-// Aspire dashboard and orchestrator can report resource health. Only mapped in Development.
-app.MapDefaultEndpoints();
-
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

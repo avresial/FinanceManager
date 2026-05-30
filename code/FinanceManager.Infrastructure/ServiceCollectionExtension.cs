@@ -123,11 +123,6 @@ public static class ServiceCollectionExtension
             });
         }
 
-        // Surface database connectivity as a readiness health check so it shows up at /health
-        // (mapped by MapDefaultEndpoints) and in the Aspire dashboard's resource health column.
-        services.AddHealthChecks()
-            .AddDbContextCheck<AppDbContext>("database", tags: ["ready"]);
-
         return services;
     }
 
