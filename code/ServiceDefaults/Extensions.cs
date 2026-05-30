@@ -75,6 +75,9 @@ public static class Extensions
             .WithTracing(tracing =>
             {
                 tracing.AddSource(builder.Environment.ApplicationName)
+                    // Npgsql emits a span per database command on the "Npgsql" ActivitySource;
+                    // capturing it surfaces every SQL query as a child span in the Aspire dashboard.
+                    .AddSource("Npgsql")
                     .AddAspNetCoreInstrumentation(tracing =>
                         // Exclude health check requests from tracing
                         tracing.Filter = context =>
