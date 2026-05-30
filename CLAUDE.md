@@ -44,6 +44,8 @@ Branch naming is **critical for the changelog to work**. Every changelog entry e
 
 When opening a pull request that resolves a GitHub issue, the PR body must include a GitHub auto-close keyword referencing the issue (e.g. `closes #123`) so that merging the PR automatically closes the linked issue.
 
+**Subscribe to the PR the instant it is created.** In the *same turn* as the `create_pull_request` call, immediately call `subscribe_pr_activity` for the new PR number — do not wait to be asked and do not defer it. The subscription only delivers events that occur *after* it is active, so subscribing late (e.g. after CI has already finished) silently misses the run. Subscribing as part of PR creation guarantees the subscription is live before CI starts. Note that wake events are delivered for CI **failures** and review/comment activity; a fully green run may not push an event, so do not treat silence as failure.
+
 ## T-Shirt Size Estimation
 
 Every issue (and the PR that resolves it) carries exactly one `size/*` label so the team — and agents picking up work — know the rough scope before opening the diff. Labels are defined in [`.github/labels.yml`](./.github/labels.yml) and synced to GitHub by the `sync-labels` workflow.
