@@ -25,6 +25,20 @@ A merge to `develop` triggers build → unit tests → code-quality → security
 
 After step 3 is done, the next merge into `develop` will deploy automatically. Validate at `https://FinanceManagerApi-dev.azurewebsites.net`.
 
+## Health probes
+
+The API exposes three health endpoints (mapped in every environment, including production):
+
+| Endpoint         | Purpose   | Auth          | Body                          | Use it for |
+|------------------|-----------|---------------|-------------------------------|------------|
+| `/alive`         | Liveness  | Anonymous     | `Healthy` / `Unhealthy` (text)| "Is the process responsive?" Checks nothing external, so a dependency outage never trips it. A failure means *restart the instance*. |
+| `/health`        | Readiness | Anonymous     | `Healthy` / `Unhealthy` (text)| "Can this instance serve traffic?" Runs all checks, including database connectivity. A failure means *stop routing traffic here* (don't restart). |
+| `/health/detail` | Diagnostics | **JWT required** | Per-check JSON breakdown    | Operator/dashboard view: name, status, description, duration, tags, and error per check. Returns `401` to anonymous callers so internal topology is never exposed publicly. |
+
+Liveness and readiness return only the aggregate status word (no per-check detail), so they leak nothing to anonymous probes. `Healthy`/`Degraded` map to HTTP `200`, `Unhealthy` to `503`.
+
+**Configuring the deploy target (Azure Web App):** set the health-check path under *Monitoring → Health check* to `/health` (readiness). Azure restarts instances that fail it. If you later run behind an orchestrator that distinguishes the two, point the liveness probe at `/alive` and the readiness probe at `/health`.
+
 ## Free-tier notes
 
 - F1 free tier sleeps after ~20 min of inactivity; the first request after sleep is slow. Acceptable for a validation environment.

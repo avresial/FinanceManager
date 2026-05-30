@@ -1,3 +1,4 @@
+using FinanceManager.Api.HealthChecks;
 using FinanceManager.Api.Logging;
 using FinanceManager.Api.Services;
 using FinanceManager.Api.Services.Guest;
@@ -7,6 +8,7 @@ using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -148,6 +150,10 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSignalR();
 builder.Services.AddAuthorization();
+
+// Readiness probe dependency: surface database connectivity on the "ready" tag so /health reflects it.
+builder.Services.AddHealthChecks()
+    .AddTypeActivatedCheck<DatabaseHealthCheck>("database", failureStatus: HealthStatus.Unhealthy, tags: ["ready"]);
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddSingleton<IGuestSessionStore, GuestSessionStore>();
 builder.Services.AddScoped<IGuestSessionAccessor, GuestSessionAccessor>();
@@ -193,6 +199,10 @@ app.UseStaticFiles();
 app.UseCors("ApiCorsPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Liveness (/alive), readiness (/health) and the secured detailed view (/health/detail).
+// Mapped after auth so /health/detail can require authorization.
+app.MapDefaultEndpoints();
 
 app.MapControllers();
 app.MapHub<FinanceManager.Api.Hubs.CurrencyImportHub>("/hubs/currency-import");
