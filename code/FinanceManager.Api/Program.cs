@@ -3,6 +3,7 @@ using FinanceManager.Api.Logging;
 using FinanceManager.Api.Services;
 using FinanceManager.Api.Services.Guest;
 using FinanceManager.Application;
+using FinanceManager.Application.Diagnostics;
 using FinanceManager.Application.Options;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure;
@@ -10,6 +11,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 using ServiceDefaults;
 using System.Security.Claims;
@@ -17,6 +20,12 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
+
+// Surface FinanceManager's own business metrics and traces (see FinanceManagerTelemetry)
+// in the Aspire dashboard alongside the defaults wired up by AddServiceDefaults().
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics.AddMeter(FinanceManagerTelemetry.MeterName))
+    .WithTracing(tracing => tracing.AddSource(FinanceManagerTelemetry.ActivitySourceName));
 
 // The JWT signing key must never be committed. It is supplied via environment variable / User Secrets.
 // Fail fast outside Development so we never silently fall back to an insecure default; in Development
@@ -174,6 +183,7 @@ builder.Services.AddHostedService<LogEntryPersistenceBackgroundService>();
 builder.Services.AddHostedService<LogRetentionBackgroundService>();
 
 var app = builder.Build();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

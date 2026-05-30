@@ -40,7 +40,11 @@ Branch naming is **critical for the changelog to work**. Every changelog entry e
 
 ## Pull Requests
 
+**Before opening a pull request, always merge the latest `develop` into the feature branch first.** Fetch `develop` and merge it into the branch (`git fetch origin develop && git merge origin/develop`), resolve any conflicts, and re-run the build and tests on the merged result *before* creating the PR. This surfaces and fixes conflicts (and silent semantic overlaps that auto-merge cleanly but still collide) on the branch rather than in the PR, and keeps the diff reviewable against an up-to-date base. Never open a PR from a branch that is behind `develop`.
+
 When opening a pull request that resolves a GitHub issue, the PR body must include a GitHub auto-close keyword referencing the issue (e.g. `closes #123`) so that merging the PR automatically closes the linked issue.
+
+**Subscribe to the PR the instant it is created.** In the *same turn* as the `create_pull_request` call, immediately call `subscribe_pr_activity` for the new PR number — do not wait to be asked and do not defer it. The subscription only delivers events that occur *after* it is active, so subscribing late (e.g. after CI has already finished) silently misses the run. Subscribing as part of PR creation guarantees the subscription is live before CI starts. Note that wake events are delivered for CI **failures** and review/comment activity; a fully green run may not push an event, so do not treat silence as failure.
 
 ## T-Shirt Size Estimation
 
