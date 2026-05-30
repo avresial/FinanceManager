@@ -30,6 +30,13 @@ if (string.IsNullOrWhiteSpace(jwtSigningKey))
     jwtSigningKey = "development-only-insecure-jwt-signing-key-do-not-use-in-production";
     builder.Configuration["JwtConfig:Key"] = jwtSigningKey;
 }
+else if (Encoding.UTF8.GetByteCount(jwtSigningKey) < 32)
+{
+    // HMAC-SHA256 needs a 256-bit (32-byte) key; reject anything weaker so a short
+    // env var can't silently produce forgeable tokens for both issuing and validation.
+    throw new InvalidOperationException(
+        "JwtConfig:Key must be at least 32 bytes (256 bits) for HMAC-SHA256 signing.");
+}
 
 
 builder.Services
