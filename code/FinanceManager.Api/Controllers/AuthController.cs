@@ -5,6 +5,7 @@ using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 
 namespace FinanceManager.Api.Controllers;
@@ -12,6 +13,7 @@ namespace FinanceManager.Api.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Authentication")]
+[EnableRateLimiting(RateLimitingServiceCollectionExtension.AuthPolicy)]
 public class AuthController(
     IRefreshTokenService refreshTokenService,
     JwtTokenGenerator jwtTokenGenerator,

@@ -154,6 +154,7 @@ builder.Services.AddCors(options =>
     };
 });
 
+builder.Services.AddApiRateLimiting(builder.Configuration);
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSignalR();
@@ -204,6 +205,13 @@ app.UseStaticFiles();
 
 app.UseCors("ApiCorsPolicy");
 app.UseAuthentication();
+
+// Placed after authentication so the limiter can partition by authenticated user id when available
+// (falling back to the remote IP for anonymous traffic), but before authorization so requests rejected
+// with 401/403 are still counted — otherwise protected endpoints could be hammered with invalid tokens
+// and bypass even the global limit.
+app.UseRateLimiter();
+
 app.UseAuthorization();
 
 // Liveness (/alive), readiness (/health) and the secured detailed view (/health/detail).

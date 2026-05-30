@@ -6,6 +6,7 @@ using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace FinanceManager.Api.Controllers;
 
@@ -19,6 +20,7 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
 
     [Authorize]
     [HttpPost("add-stock-price")]
+    [EnableRateLimiting(RateLimitingServiceCollectionExtension.ExternalProviderPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockPrice))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -39,6 +41,7 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
 
     [Authorize]
     [HttpPost("update-stock-price")]
+    [EnableRateLimiting(RateLimitingServiceCollectionExtension.ExternalProviderPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockPrice))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -58,6 +61,7 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
     }
 
     [HttpGet("get-stock-price")]
+    [EnableRateLimiting(RateLimitingServiceCollectionExtension.ExternalProviderPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockPrice))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -101,6 +105,7 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
     }
 
     [HttpGet("get-stock-prices")]
+    [EnableRateLimiting(RateLimitingServiceCollectionExtension.ExternalProviderPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<StockPrice>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -169,6 +174,7 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
     }
 
     [HttpGet("search-ticker")]
+    [EnableRateLimiting(RateLimitingServiceCollectionExtension.ExternalProviderPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TickerSearchMatch>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -202,6 +208,7 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
 
     [HttpGet("get-stock-details/{ticker}")]
     [Authorize]
+    [EnableRateLimiting(RateLimitingServiceCollectionExtension.ExternalProviderPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockDetails))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetStockDetails(string ticker, CancellationToken cancellationToken = default)
@@ -229,6 +236,7 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
 
     [HttpPost("add-stock-details")]
     [Authorize(Roles = "Admin")]
+    [EnableRateLimiting(RateLimitingServiceCollectionExtension.ExternalProviderPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockDetails))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -262,6 +270,7 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
 
     [HttpPut("update-stock-details")]
     [Authorize(Roles = "Admin")]
+    [EnableRateLimiting(RateLimitingServiceCollectionExtension.ExternalProviderPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockDetails))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateStockDetails([FromBody] UpdateStockRequest request, CancellationToken cancellationToken = default)
@@ -309,6 +318,7 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
 
     [HttpDelete("delete-stock/{ticker}")]
     [Authorize(Roles = "Admin")]
+    [EnableRateLimiting(RateLimitingServiceCollectionExtension.ExternalProviderPolicy)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteStock(string ticker, CancellationToken cancellationToken = default)

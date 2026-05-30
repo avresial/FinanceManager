@@ -55,7 +55,9 @@ internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<ApiEntryP
             {
                 var settings = new Dictionary<string, string?>
                 {
-                    //["Key"] = "value",
+                    // Rate limiting is off by default so the broader integration suite isn't throttled by
+                    // shared-loopback partitioning; RateLimitingTests re-enables it with tiny limits.
+                    ["RateLimiting:Enabled"] = "false",
                 };
                 config.AddInMemoryCollection(settings);
             });
