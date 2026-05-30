@@ -154,6 +154,7 @@ builder.Services.AddCors(options =>
     };
 });
 
+builder.Services.AddApiRateLimiting(builder.Configuration);
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSignalR();
@@ -205,6 +206,10 @@ app.UseStaticFiles();
 app.UseCors("ApiCorsPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Placed after authentication so the limiter can partition by authenticated user id when available,
+// falling back to the remote IP for anonymous traffic.
+app.UseRateLimiter();
 
 // Liveness (/alive), readiness (/health) and the secured detailed view (/health/detail).
 // Mapped after auth so /health/detail can require authorization; restricted to the Admin role

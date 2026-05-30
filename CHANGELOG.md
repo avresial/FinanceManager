@@ -49,6 +49,7 @@ rules agents must follow when updating this file.
 - Settings page no longer overflows on mobile — profile row, danger zone, and the unsaved-changes bar reflow vertically on narrow viewports while the desktop layout stays unchanged. #218
 
 ### Security
+- API requests are now rate limited: a lenient global limit guards every endpoint, with tighter limits on authentication endpoints (login, refresh, logout) to blunt brute-force/credential-stuffing and on stock endpoints that fan out to paid external providers (Alpha Vantage, OpenFIGI) to prevent quota exhaustion. Exceeding a limit returns `429 Too Many Requests` with a `Retry-After` header. Limits are configurable under the `RateLimiting` section and partitioned per authenticated user (falling back to client IP for anonymous traffic). #276
 - The JWT signing key is no longer committed in `appsettings.json`; it must now be supplied via environment variable / User Secrets and the API refuses to start without it outside Development. The previously committed key has been treated as compromised and removed, so all existing access tokens are invalidated and users must sign in again. #273
 
 ## [26.5.25] - 2026-05-25

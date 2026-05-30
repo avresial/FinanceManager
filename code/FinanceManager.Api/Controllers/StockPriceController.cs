@@ -6,6 +6,7 @@ using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace FinanceManager.Api.Controllers;
 
@@ -58,6 +59,7 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
     }
 
     [HttpGet("get-stock-price")]
+    [EnableRateLimiting(RateLimitingServiceCollectionExtension.ExternalProviderPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockPrice))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -101,6 +103,7 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
     }
 
     [HttpGet("get-stock-prices")]
+    [EnableRateLimiting(RateLimitingServiceCollectionExtension.ExternalProviderPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<StockPrice>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -169,6 +172,7 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
     }
 
     [HttpGet("search-ticker")]
+    [EnableRateLimiting(RateLimitingServiceCollectionExtension.ExternalProviderPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TickerSearchMatch>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
