@@ -17,6 +17,27 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
+// The JWT signing key must never be committed. It is supplied via environment variable / User Secrets.
+// Fail fast outside Development so we never silently fall back to an insecure default; in Development
+// fall back to a clearly-insecure local key so the app still runs without configured secrets.
+var jwtSigningKey = builder.Configuration["JwtConfig:Key"];
+if (string.IsNullOrWhiteSpace(jwtSigningKey))
+{
+    if (!builder.Environment.IsDevelopment())
+        throw new InvalidOperationException(
+            "JwtConfig:Key is not configured. Provide a signing key via the JwtConfig__Key environment variable or User Secrets.");
+
+    jwtSigningKey = "development-only-insecure-jwt-signing-key-do-not-use-in-production";
+    builder.Configuration["JwtConfig:Key"] = jwtSigningKey;
+}
+else if (Encoding.UTF8.GetByteCount(jwtSigningKey) < 32)
+{
+    // HMAC-SHA256 needs a 256-bit (32-byte) key; reject anything weaker so a short
+    // env var can't silently produce forgeable tokens for both issuing and validation.
+    throw new InvalidOperationException(
+        "JwtConfig:Key must be at least 32 bytes (256 bits) for HMAC-SHA256 signing.");
+}
+
 
 builder.Services
     .AddSingleton(typeof(IOptionsSnapshot<>), typeof(OptionsManager<>))
@@ -79,7 +100,7 @@ builder.Services.AddCors(options =>
     {
         ValidIssuer = builder.Configuration["JwtConfig:Issuer"],
         ValidAudience = builder.Configuration["JwtConfig:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtConfig:Key"]!)),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
         ValidateIssuer = true,
         ValidateAudience = true,
         ValidateLifetime = true,
