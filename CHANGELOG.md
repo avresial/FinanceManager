@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Production-safe health endpoints: `/alive` (liveness) and `/health` (readiness, including a database connectivity check) now respond in every environment without exposing internal diagnostics, plus an authenticated `/health/detail` endpoint with a full per-check JSON breakdown for operators. #279
 - Sessions now persist across page reloads and browser restarts: signing in keeps you logged in for up to 14 days without re-entering your password, access tokens are refreshed transparently in the background, and when the session finally expires you're returned to the login page with a "Your session has expired, please sign in again." message. #226
 - Asset diversification card now has a "Show holdings" view that lists your current holdings grouped by asset class — stock tickers, bond names, and cash — loaded on demand when you expand the card. #264
 - Admin log viewer: warnings and errors emitted by the API are now persisted to the database and surfaced in the admin panel as a "Recent warnings & errors" dashboard widget and a full `/Admin/Logs` page with warning/error filtering and pagination. A retention background service purges entries older than the configured cutoff (default 30 days) on API start and once a day, and a SignalR hub pushes new entries to the UI live. #212
