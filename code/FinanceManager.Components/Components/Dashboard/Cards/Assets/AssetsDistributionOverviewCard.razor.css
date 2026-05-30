@@ -17,7 +17,9 @@
 }
 
 .ad-chart-wrap {
-    flex: 0 0 auto;
+    flex: 0 0 150px;
+    width: 150px;
+    overflow: hidden;
 }
 
 .ad-chart-wrap ::deep .apexcharts-canvas {
