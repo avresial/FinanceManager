@@ -40,6 +40,8 @@ Branch naming is **critical for the changelog to work**. Every changelog entry e
 
 ## Pull Requests
 
+**Before opening a pull request, always merge the latest `develop` into the feature branch first.** Fetch `develop` and merge it into the branch (`git fetch origin develop && git merge origin/develop`), resolve any conflicts, and re-run the build and tests on the merged result *before* creating the PR. This surfaces and fixes conflicts (and silent semantic overlaps that auto-merge cleanly but still collide) on the branch rather than in the PR, and keeps the diff reviewable against an up-to-date base. Never open a PR from a branch that is behind `develop`.
+
 When opening a pull request that resolves a GitHub issue, the PR body must include a GitHub auto-close keyword referencing the issue (e.g. `closes #123`) so that merging the PR automatically closes the linked issue.
 
 ## T-Shirt Size Estimation
