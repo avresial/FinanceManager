@@ -1,3 +1,4 @@
+using FinanceManager.Api;
 using FinanceManager.Api.Logging;
 using FinanceManager.Api.Services;
 using FinanceManager.Api.Services.Guest;
@@ -157,6 +158,7 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSignalR();
 builder.Services.AddAuthorization();
+builder.Services.AddApiHealthChecks();
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddSingleton<IGuestSessionStore, GuestSessionStore>();
 builder.Services.AddScoped<IGuestSessionAccessor, GuestSessionAccessor>();
@@ -207,6 +209,11 @@ app.UseStaticFiles();
 app.UseCors("ApiCorsPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Liveness (/alive), readiness (/health) and the secured detailed view (/health/detail).
+// Mapped after auth so /health/detail can require authorization; restricted to the Admin role
+// to match the app's other operational surfaces (admin logs, AI providers).
+app.MapDefaultEndpoints("Admin");
 
 app.MapControllers();
 app.MapHub<FinanceManager.Api.Hubs.CurrencyImportHub>("/hubs/currency-import");

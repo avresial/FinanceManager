@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -17,6 +19,7 @@ public static class Extensions
 {
     private const string _healthEndpointPath = "/health";
     private const string _alivenessEndpointPath = "/alive";
+    private const string _healthDetailEndpointPath = "/health/detail";
 
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
@@ -122,22 +125,71 @@ public static class Extensions
         return builder;
     }
 
-    public static WebApplication MapDefaultEndpoints(this WebApplication app)
+    // healthDetailRoles: roles allowed to read /health/detail. The caller (app layer) supplies its own role
+    // taxonomy so this shared library stays auth-agnostic. When empty, any authenticated user is allowed.
+    public static WebApplication MapDefaultEndpoints(this WebApplication app, params string[] healthDetailRoles)
     {
-        // Adding health checks endpoints to applications in non-development environments has security implications.
-        // See https://aka.ms/dotnet/aspire/healthchecks for details before enabling these endpoints in non-development environments.
-        if (app.Environment.IsDevelopment())
-        {
-            // All health checks must pass for app to be considered ready to accept traffic after starting
-            app.MapHealthChecks(_healthEndpointPath);
+        // Public probes are intentionally body-light: orchestrators (Azure Web App, Supabase, k8s) only need the
+        // HTTP status code, and we must not leak the internal dependency topology to anonymous callers. The
+        // detailed per-check breakdown lives behind authorization on _healthDetailEndpointPath.
 
-            // Only health checks tagged with the "live" tag must pass for app to be considered alive
-            app.MapHealthChecks(_alivenessEndpointPath, new HealthCheckOptions
-            {
-                Predicate = r => r.Tags.Contains("live")
-            });
-        }
+        // Liveness: only checks tagged "live" must pass. Must never touch external dependencies — a failing
+        // liveness probe tells the host to *restart* the process, so a DB blip here would restart every instance.
+        app.MapHealthChecks(_alivenessEndpointPath, new HealthCheckOptions
+        {
+            Predicate = r => r.Tags.Contains("live"),
+            ResponseWriter = WriteMinimalResponse
+        });
+
+        // Readiness: all checks (including dependency checks such as the database tagged "ready") must pass for
+        // the app to receive traffic. A failure pulls the instance out of the load balancer without restarting it.
+        app.MapHealthChecks(_healthEndpointPath, new HealthCheckOptions
+        {
+            ResponseWriter = WriteMinimalResponse
+        });
+
+        // Operator-facing detailed view: full per-check status/description/duration as JSON, including exception
+        // messages — so it is restricted to the supplied operator roles (falling back to any authenticated user).
+        var detail = app.MapHealthChecks(_healthDetailEndpointPath, new HealthCheckOptions
+        {
+            ResponseWriter = WriteDetailedJsonResponse
+        });
+
+        if (healthDetailRoles is { Length: > 0 })
+            detail.RequireAuthorization(new AuthorizeAttribute { Roles = string.Join(',', healthDetailRoles) });
+        else
+            detail.RequireAuthorization();
 
         return app;
+    }
+
+    // Public probes return the aggregate status word only (e.g. "Healthy") alongside the HTTP status code.
+    private static Task WriteMinimalResponse(HttpContext context, HealthReport report)
+    {
+        context.Response.ContentType = "text/plain";
+        return context.Response.WriteAsync(report.Status.ToString());
+    }
+
+    // Authenticated detail endpoint: per-check breakdown for operators/dashboards.
+    private static Task WriteDetailedJsonResponse(HttpContext context, HealthReport report)
+    {
+        context.Response.ContentType = "application/json";
+
+        var payload = new
+        {
+            status = report.Status.ToString(),
+            totalDuration = report.TotalDuration.ToString(),
+            checks = report.Entries.Select(entry => new
+            {
+                name = entry.Key,
+                status = entry.Value.Status.ToString(),
+                description = entry.Value.Description,
+                duration = entry.Value.Duration.ToString(),
+                tags = entry.Value.Tags,
+                error = entry.Value.Exception?.Message
+            })
+        };
+
+        return context.Response.WriteAsJsonAsync(payload);
     }
 }
