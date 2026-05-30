@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
@@ -121,7 +122,9 @@ public static class Extensions
         return builder;
     }
 
-    public static WebApplication MapDefaultEndpoints(this WebApplication app)
+    // healthDetailRoles: roles allowed to read /health/detail. The caller (app layer) supplies its own role
+    // taxonomy so this shared library stays auth-agnostic. When empty, any authenticated user is allowed.
+    public static WebApplication MapDefaultEndpoints(this WebApplication app, params string[] healthDetailRoles)
     {
         // Public probes are intentionally body-light: orchestrators (Azure Web App, Supabase, k8s) only need the
         // HTTP status code, and we must not leak the internal dependency topology to anonymous callers. The
@@ -142,12 +145,17 @@ public static class Extensions
             ResponseWriter = WriteMinimalResponse
         });
 
-        // Operator-facing detailed view: full per-check status/description/duration as JSON, secured so internal
-        // diagnostics are never exposed anonymously.
-        app.MapHealthChecks(_healthDetailEndpointPath, new HealthCheckOptions
+        // Operator-facing detailed view: full per-check status/description/duration as JSON, including exception
+        // messages — so it is restricted to the supplied operator roles (falling back to any authenticated user).
+        var detail = app.MapHealthChecks(_healthDetailEndpointPath, new HealthCheckOptions
         {
             ResponseWriter = WriteDetailedJsonResponse
-        }).RequireAuthorization();
+        });
+
+        if (healthDetailRoles is { Length: > 0 })
+            detail.RequireAuthorization(new AuthorizeAttribute { Roles = string.Join(',', healthDetailRoles) });
+        else
+            detail.RequireAuthorization();
 
         return app;
     }
