@@ -105,6 +105,8 @@ public class UserLocalStorageRepository(ILocalStorageService localStorageService
 
     public Task<bool> UpdatePassword(int userId, string password) => throw new NotImplementedException();
     public Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel) => throw new NotImplementedException();
+    public Task<LoginThrottlingState?> GetLoginThrottlingState(string login) => throw new NotImplementedException();
+    public Task<bool> SetLoginThrottlingState(string login, int failedAttempts, DateTime? lockoutEndUtc) => throw new NotImplementedException();
     public Task<User?> GetUser(string login) => throw new NotImplementedException();
     public Task<int> GetUsersCount() => throw new NotImplementedException();
     public IAsyncEnumerable<User> GetUsers(DateTime startDate, DateTime endDate) => throw new NotImplementedException();

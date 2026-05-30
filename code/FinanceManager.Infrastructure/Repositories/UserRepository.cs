@@ -92,6 +92,27 @@ public class UserRepository(AppDbContext context) : IUserRepository
         await context.SaveChangesAsync();
         return await Task.FromResult(true);
     }
+    public async Task<LoginThrottlingState?> GetLoginThrottlingState(string login)
+    {
+        var userDto = await context.Users.FirstOrDefaultAsync(x => x.Login == login);
+        if (userDto is null) return null;
+
+        return new LoginThrottlingState(userDto.FailedLoginAttempts, userDto.LockoutEndUtc);
+    }
+
+    public async Task<bool> SetLoginThrottlingState(string login, int failedAttempts, DateTime? lockoutEndUtc)
+    {
+        var userDto = await context.Users.FirstOrDefaultAsync(x => x.Login == login);
+        if (userDto is null) return false;
+
+        userDto.FailedLoginAttempts = failedAttempts;
+        userDto.LockoutEndUtc = lockoutEndUtc;
+        context.Update(userDto);
+        await context.SaveChangesAsync();
+
+        return true;
+    }
+
     public async Task<bool> UpdatePassword(int userId, string password)
     {
         var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);

@@ -17,6 +17,19 @@ public interface IUserRepository
     Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole);
 
     /// <summary>
+    /// Reads the persisted login-throttling counters for an account, or <c>null</c> when no such account exists.
+    /// Returning <c>null</c> for unknown logins lets callers avoid tracking (and thereby enumerating) accounts
+    /// that were never registered.
+    /// </summary>
+    Task<LoginThrottlingState?> GetLoginThrottlingState(string login);
+
+    /// <summary>
+    /// Persists the failed-attempt counter and lockout expiry for an account. Returns <c>false</c> when the
+    /// account does not exist.
+    /// </summary>
+    Task<bool> SetLoginThrottlingState(string login, int failedAttempts, DateTime? lockoutEndUtc);
+
+    /// <summary>
     /// Inserts a user with an explicit id. Intended for ephemeral guest sandboxes where the id is chosen by the
     /// session store ahead of any persistence and cannot be reassigned by an identity column.
     /// </summary>
