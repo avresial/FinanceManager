@@ -46,7 +46,7 @@ public class UserLocalStorageRepository(ILocalStorageService localStorageService
             CreationDate = foundUser.CreationDate,
         };
     }
-    async Task<bool> IUserRepository.AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole)
+    async Task<bool> IUserRepository.AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole, string? firstName, string? lastName)
     {
         login = login.ToLower();
         var databaseUserDtos = await localStorageService.GetItemAsync<List<UserDto>>("Users");
@@ -58,6 +58,8 @@ public class UserLocalStorageRepository(ILocalStorageService localStorageService
         userDtos.Add(new()
         {
             Login = login,
+            FirstName = firstName,
+            LastName = lastName,
             Password = password,
             Id = userDtos.Any() ? userDtos.Max(x => x.Id) + 1 : 0,
             PricingLevel = pricingLevel,
@@ -78,7 +80,7 @@ public class UserLocalStorageRepository(ILocalStorageService localStorageService
         return true;
     }
 
-    Task<bool> IUserRepository.AddUserWithId(int userId, string login, string password, PricingLevel pricingLevel, UserRole userRole)
+    Task<bool> IUserRepository.AddUserWithId(int userId, string login, string password, PricingLevel pricingLevel, UserRole userRole, string? firstName, string? lastName)
         => throw new NotImplementedException();
 
     async Task<bool> IUserRepository.RemoveUser(int userId)

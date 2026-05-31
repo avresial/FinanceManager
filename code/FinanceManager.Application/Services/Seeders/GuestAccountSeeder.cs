@@ -38,6 +38,6 @@ public class GuestAccountSeeder(
     private async Task EnsureGuestUserRecord(int guestUserId)
     {
         if (await userRepository.GetUser(guestUserId) is not null) return;
-        await userRepository.AddUserWithId(guestUserId, login: $"guest-{guestUserId}", password: string.Empty, PricingLevel.Basic, UserRole.User);
+        await userRepository.AddUserWithId(guestUserId, login: $"guest-{guestUserId}", password: string.Empty, PricingLevel.Basic, UserRole.User, firstName: "Demo");
     }
 }

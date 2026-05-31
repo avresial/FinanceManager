@@ -67,6 +67,26 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
     }
 
     [Fact]
+    public async Task Add_WithNames_PersistsFirstAndLastName()
+    {
+        // arrange (empty DB ensures login does not exist yet)
+        Assert.NotNull(_testDatabase);
+        const string email = "happyuser@example.com";
+        AddUser cmd = new(email, "pw", PricingLevel.Basic, "Happy", "User");
+        var userClient = new UserHttpClient(Client);
+
+        // act
+        var result = await userClient.AddUser(cmd);
+
+        // assert
+        Assert.True(result);
+        var persisted = await _testDatabase!.Context.Users
+            .FirstAsync(u => u.Login == email, TestContext.Current.CancellationToken);
+        Assert.Equal("Happy", persisted.FirstName);
+        Assert.Equal("User", persisted.LastName);
+    }
+
+    [Fact]
     public async Task Get_ReturnsUser()
     {
         // arrange

@@ -7,6 +7,8 @@ public class UserDto
 {
     public int Id { get; set; }
     public required string Login { get; set; }
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
     public required string Password { get; set; }
     public PricingLevel PricingLevel { get; set; } = PricingLevel.Free;
     public UserRole UserRole { get; set; } = UserRole.User;
@@ -23,6 +25,8 @@ public class UserDto
     {
         UserId = Id,
         Login = Login,
+        FirstName = FirstName,
+        LastName = LastName,
         PricingLevel = PricingLevel,
         UserRole = UserRole,
         CreationDate = CreationDate

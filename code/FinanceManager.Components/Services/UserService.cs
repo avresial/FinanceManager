@@ -11,11 +11,11 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
 {
     public event Action<User>? OnUserChangeEvent;
 
-    public Task<bool> AddUser(string login, string password, PricingLevel pricingLevel)
+    public Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, string? firstName = null, string? lastName = null)
     {
         try
         {
-            return httpClient.AddUser(new AddUser(login, password, pricingLevel));
+            return httpClient.AddUser(new AddUser(login, password, pricingLevel, firstName, lastName));
         }
         catch (Exception ex)
         {

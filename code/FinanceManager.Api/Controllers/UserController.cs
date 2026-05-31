@@ -27,7 +27,7 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
         if (existingUser is not null) return BadRequest();
 
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(addUserCommand.Password);
-        var result = await userRepository.AddUser(addUserCommand.UserName, encryptedPassword, addUserCommand.PricingLevel, UserRole.User);
+        var result = await userRepository.AddUser(addUserCommand.UserName, encryptedPassword, addUserCommand.PricingLevel, UserRole.User, addUserCommand.FirstName, addUserCommand.LastName);
 
         return result ? Ok(result) : BadRequest();
     }
