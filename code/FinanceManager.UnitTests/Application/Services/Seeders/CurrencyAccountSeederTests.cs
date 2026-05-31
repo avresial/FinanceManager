@@ -14,10 +14,10 @@ namespace FinanceManager.UnitTests.Application.Services.Seeders;
 [Trait("Category", "Unit")]
 public class CurrencyAccountSeederTests
 {
-    private const decimal MonthlySalary = 5_000m;
-    private const decimal MonthlyInvestment = 500m;
-    private const decimal MonthlyRent = 1_000m;
-    private const decimal MonthlyUtilities = 100m;
+    private const decimal _monthlySalary = 5_000m;
+    private const decimal _monthlyInvestment = 500m;
+    private const decimal _monthlyRent = 1_000m;
+    private const decimal _monthlyUtilities = 100m;
 
     private static readonly FinancialLabel[] _seededLabels =
     [
@@ -84,7 +84,7 @@ public class CurrencyAccountSeederTests
         Assert.All(salaryEntries, e =>
         {
             Assert.Equal(1, e.PostingDate.Day);
-            Assert.Equal(MonthlySalary, e.ValueChange);
+            Assert.Equal(_monthlySalary, e.ValueChange);
             Assert.Equal("Salary", Assert.Single(e.Labels).Name);
         });
 
@@ -127,13 +127,13 @@ public class CurrencyAccountSeederTests
         {
             var day3 = cashEntries.SingleOrDefault(e => e.PostingDate == month.AddDays(2));
             Assert.NotNull(day3);
-            Assert.Equal(-MonthlyInvestment, day3!.ValueChange);
+            Assert.Equal(-_monthlyInvestment, day3!.ValueChange);
             Assert.Contains(day3.Labels, l => l.Name == "Investment");
 
             var day4Entries = cashEntries.Where(e => e.PostingDate == month.AddDays(3)).ToList();
             Assert.Equal(2, day4Entries.Count);
-            Assert.Single(day4Entries, e => e.ValueChange == -MonthlyRent && e.Labels.Any(l => l.Name == "Rent"));
-            Assert.Single(day4Entries, e => e.ValueChange == -MonthlyUtilities && e.Labels.Any(l => l.Name == "Utilities"));
+            Assert.Single(day4Entries, e => e.ValueChange == -_monthlyRent && e.Labels.Any(l => l.Name == "Rent"));
+            Assert.Single(day4Entries, e => e.ValueChange == -_monthlyUtilities && e.Labels.Any(l => l.Name == "Utilities"));
         }
     }
 
@@ -151,8 +151,8 @@ public class CurrencyAccountSeederTests
             .GroupBy(e => new DateTime(e.PostingDate.Year, e.PostingDate.Month, 1))
             .Select(g => new { Month = g.Key, Total = -g.Sum(e => e.ValueChange) });
 
-        Assert.All(monthlyNegatives, m => Assert.True(m.Total < MonthlySalary,
-            $"Month {m.Month:yyyy-MM} negatives {m.Total} must be strictly below salary {MonthlySalary}."));
+        Assert.All(monthlyNegatives, m => Assert.True(m.Total < _monthlySalary,
+            $"Month {m.Month:yyyy-MM} negatives {m.Total} must be strictly below salary {_monthlySalary}."));
     }
 
     [Fact]

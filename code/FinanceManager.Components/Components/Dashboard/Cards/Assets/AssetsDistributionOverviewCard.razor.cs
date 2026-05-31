@@ -13,10 +13,10 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Assets;
 
 public partial class AssetsDistributionOverviewCard
 {
-    private const string ViewByType = "type";
-    private const string ViewByWallet = "wallet";
+    private const string _viewByType = "type";
+    private const string _viewByWallet = "wallet";
 
-    private string _view = ViewByType;
+    private string _view = _viewByType;
     private bool _isLoading;
     private Currency _currency = DefaultCurrency.PLN;
     private decimal _totalAssets;
@@ -33,7 +33,7 @@ public partial class AssetsDistributionOverviewCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    private List<NameValueResult> ActiveData => _view == ViewByWallet ? _walletData : _typeData;
+    private List<NameValueResult> ActiveData => _view == _viewByWallet ? _walletData : _typeData;
 
     private readonly ApexChartOptions<NameValueResult> _chartOptions = new()
     {

@@ -18,8 +18,8 @@ public class StockAccountSeeder(
     // CSPX.LON is iShares Core S&P 500 UCITS ETF; its real ISIN is IE00B5BMR087.
     // Seeding a matching StockDetails row lets CachingIsinResolver resolve the ticker
     // from the local DB instead of falling through to OpenFIGI on every price lookup.
-    private const string DemoTicker = "CSPX.LON";
-    private const string DemoIsin = "IE00B5BMR087";
+    private const string _demoTicker = "CSPX.LON";
+    private const string _demoIsin = "IE00B5BMR087";
 
     public async Task Seed(int userId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
     {
@@ -32,20 +32,20 @@ public class StockAccountSeeder(
         await SeedStockDetails(currency, cancellationToken);
 
         // Generate the price series before the account so each monthly buy can be sized from that day's price.
-        logger.LogTrace("Prefilling stock prices for {Isin}.", DemoIsin);
-        var prices = await SeedStockPrices(DemoIsin, currency, start, end, cancellationToken);
+        logger.LogTrace("Prefilling stock prices for {Isin}.", _demoIsin);
+        var prices = await SeedStockPrices(_demoIsin, currency, start, end, cancellationToken);
 
         await SeedStockAccount(userId, start, end, prices, cancellationToken);
     }
 
     private async Task SeedStockDetails(Currency currency, CancellationToken cancellationToken)
     {
-        if (await stockDetailsRepository.Get(DemoIsin, cancellationToken) is not null) return;
+        if (await stockDetailsRepository.Get(_demoIsin, cancellationToken) is not null) return;
 
         await stockDetailsRepository.Add(new StockDetails
         {
-            Isin = DemoIsin,
-            Ticker = DemoTicker,
+            Isin = _demoIsin,
+            Ticker = _demoTicker,
             Name = "iShares Core S&P 500 UCITS ETF",
             Type = "ETF",
             Region = "LSE",
@@ -70,9 +70,9 @@ public class StockAccountSeeder(
             var units = Math.Round(GuestInvestmentPlan.StockMonthlyAmount / price, 4, MidpointRounding.AwayFromZero);
             if (units <= 0) continue;
 
-            var entry = new StockAccountEntry(account.AccountId, 0, date, 0, units, DemoIsin, InvestmentType.Stock)
+            var entry = new StockAccountEntry(account.AccountId, 0, date, 0, units, _demoIsin, InvestmentType.Stock)
             {
-                Ticker = DemoTicker
+                Ticker = _demoTicker
             };
             account.Add(entry, false);
         }

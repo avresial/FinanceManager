@@ -14,8 +14,8 @@ namespace FinanceManager.UnitTests.Application.Services.Seeders;
 public class StockAccountSeederTests
 {
     // Mirrors the cash seeder's recurring "Investment" outflow that the stock buys are synced to.
-    private const decimal MonthlyInvestment = 500m;
-    private const int InvestmentDay = 3;
+    private const decimal _monthlyInvestment = 500m;
+    private const int _investmentDay = 3;
 
     private static readonly Currency _usd = new(1, "USD", "$");
 
@@ -76,7 +76,7 @@ public class StockAccountSeederTests
 
         // Feb–Jul: one buy on day 3 of each month whose investment day falls after the opening day.
         Assert.Equal(6, entries.Count);
-        Assert.All(entries, e => Assert.Equal(InvestmentDay, e.PostingDate.Day));
+        Assert.All(entries, e => Assert.Equal(_investmentDay, e.PostingDate.Day));
         var months = entries.Select(e => new DateTime(e.PostingDate.Year, e.PostingDate.Month, 1)).ToList();
         Assert.Equal(months.Count, months.Distinct().Count());
     }
@@ -107,8 +107,8 @@ public class StockAccountSeederTests
             var priceThatDay = _seededPrices[e.PostingDate.Date];
             var spent = e.ValueChange * priceThatDay;
             // Units are rounded to 4 dp, so the realised cash spend lands within a cent or two of the target.
-            Assert.True(Math.Abs(spent - MonthlyInvestment) < 0.05m,
-                $"Buy on {e.PostingDate:yyyy-MM-dd} spent {spent} at {priceThatDay}, expected ~{MonthlyInvestment}.");
+            Assert.True(Math.Abs(spent - _monthlyInvestment) < 0.05m,
+                $"Buy on {e.PostingDate:yyyy-MM-dd} spent {spent} at {priceThatDay}, expected ~{_monthlyInvestment}.");
         });
     }
 

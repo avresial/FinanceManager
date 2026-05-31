@@ -13,11 +13,11 @@ public class CurrencyAccountSeeder(
     IFinancialLabelsRepository financialLabelsRepository,
     ILogger<CurrencyAccountSeeder> logger)
 {
-    private const decimal MonthlySalary = 5_000m;
-    private const decimal MonthlyRent = 1_000m;
-    private const decimal MonthlyUtilities = 100m;
-    private const int MaxRandomTransactionsPerDay = 10;
-    private const int MaxRandomTransactionAmount = 150;
+    private const decimal _monthlySalary = 5_000m;
+    private const decimal _monthlyRent = 1_000m;
+    private const decimal _monthlyUtilities = 100m;
+    private const int _maxRandomTransactionsPerDay = 10;
+    private const int _maxRandomTransactionAmount = 150;
 
     private record FakeMerchant(string Description, string LabelName);
 
@@ -83,7 +83,7 @@ public class CurrencyAccountSeeder(
 
         // Opening balance equals one month's salary so the partial first month can absorb random expenses
         // before the first day-1 paycheck lands.
-        account.AddEntry(new AddCurrencyEntryDto(start, MonthlySalary, "Opening balance", null, []), false);
+        account.AddEntry(new AddCurrencyEntryDto(start, _monthlySalary, "Opening balance", null, []), false);
 
         // The loan is taken out on the guest's very first day: its proceeds land in cash here while the loan
         // account books the matching debt (see SeedLoanAccount).
@@ -106,7 +106,7 @@ public class CurrencyAccountSeeder(
             switch (date.Day)
             {
                 case 1:
-                    account.AddEntry(new AddCurrencyEntryDto(date, MonthlySalary, "Monthly salary", null, salaryLabels), false);
+                    account.AddEntry(new AddCurrencyEntryDto(date, _monthlySalary, "Monthly salary", null, salaryLabels), false);
                     break;
                 case GuestInvestmentPlan.StockDayOfMonth:
                     // Pays for the matching stock purchase StockAccountSeeder books on the same day.
@@ -114,9 +114,9 @@ public class CurrencyAccountSeeder(
                     negativesThisMonth += GuestInvestmentPlan.StockMonthlyAmount;
                     break;
                 case 4:
-                    account.AddEntry(new AddCurrencyEntryDto(date, -MonthlyRent, "Rent payment", null, rentLabels), false);
-                    account.AddEntry(new AddCurrencyEntryDto(date, -MonthlyUtilities, "Utilities bill", null, utilitiesLabels), false);
-                    negativesThisMonth += MonthlyRent + MonthlyUtilities;
+                    account.AddEntry(new AddCurrencyEntryDto(date, -_monthlyRent, "Rent payment", null, rentLabels), false);
+                    account.AddEntry(new AddCurrencyEntryDto(date, -_monthlyUtilities, "Utilities bill", null, utilitiesLabels), false);
+                    negativesThisMonth += _monthlyRent + _monthlyUtilities;
                     break;
                 case GuestInvestmentPlan.BondDayOfMonth:
                     // Pays for the matching bond purchase BondAccountSeeder books on the same day.
@@ -140,14 +140,14 @@ public class CurrencyAccountSeeder(
 
     private static decimal AddRandomNegatives(CurrencyAccount account, DateTime date, Dictionary<string, FinancialLabel> labelByName, decimal negativesThisMonth)
     {
-        var transactions = Random.Shared.Next(0, MaxRandomTransactionsPerDay + 1);
+        var transactions = Random.Shared.Next(0, _maxRandomTransactionsPerDay + 1);
         for (var i = 0; i < transactions; i++)
         {
             // Rule from #240: total negatives within a month must stay strictly below the salary.
-            var remaining = MonthlySalary - 1m - negativesThisMonth;
+            var remaining = _monthlySalary - 1m - negativesThisMonth;
             if (remaining < 1m) break;
 
-            var max = (int)Math.Floor(Math.Min(MaxRandomTransactionAmount, remaining));
+            var max = (int)Math.Floor(Math.Min(_maxRandomTransactionAmount, remaining));
             if (max < 1) break;
             var amount = Random.Shared.Next(1, max + 1);
 
