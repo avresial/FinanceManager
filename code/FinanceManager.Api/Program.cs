@@ -50,6 +50,8 @@ else if (Encoding.UTF8.GetByteCount(jwtSigningKey) < 32)
 
 
 builder.Services
+    .AddProblemDetails()
+    .AddExceptionHandler<FinanceManager.Api.Middleware.GlobalExceptionHandler>()
     .AddSingleton(typeof(IOptionsSnapshot<>), typeof(OptionsManager<>))
     .AddSingleton(typeof(IOptionsFactory<>), typeof(OptionsFactory<>))
     .AddOpenApi("v1", options =>
@@ -189,6 +191,10 @@ builder.Services.AddHostedService<LogEntryPersistenceBackgroundService>();
 builder.Services.AddHostedService<LogRetentionBackgroundService>();
 
 var app = builder.Build();
+
+// Registered first so it wraps the whole pipeline: any unhandled exception is turned into a
+// consistent ProblemDetails response by GlobalExceptionHandler instead of leaking framework defaults.
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {

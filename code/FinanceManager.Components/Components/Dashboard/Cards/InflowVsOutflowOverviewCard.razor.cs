@@ -15,6 +15,7 @@ public partial class InflowVsOutflowOverviewCard
     private List<List<ChartJsLineDataPoint>> _series = [];
     private bool _isInitializing = true;
     private bool _isLoading = false;
+    private bool _hasError = false;
 
 
     [Parameter] public string Height { get; set; } = "300px";
@@ -27,6 +28,7 @@ public partial class InflowVsOutflowOverviewCard
 
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required ILogger<InflowVsOutflowOverviewCard> Logger { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -42,6 +44,7 @@ public partial class InflowVsOutflowOverviewCard
         if (user is null) return;
 
         _series.Clear();
+        _hasError = false;
         try
         {
             if (DisplayInflow)
@@ -57,6 +60,7 @@ public partial class InflowVsOutflowOverviewCard
         }
         catch (Exception ex)
         {
+            _hasError = true;
             Logger.LogError(ex, ex.Message);
         }
 
@@ -74,6 +78,7 @@ public partial class InflowVsOutflowOverviewCard
         }
         catch (Exception ex)
         {
+            _hasError = true;
             Logger.LogError(ex, ex.Message);
         }
 
@@ -91,8 +96,12 @@ public partial class InflowVsOutflowOverviewCard
         }
         catch (Exception ex)
         {
+            _hasError = true;
             Logger.LogError(ex, ex.Message);
         }
+
+        if (_hasError)
+            Snackbar.Add("Unable to load inflow/outflow data.", Severity.Error);
 
         _isLoading = false;
         _isInitializing = false;

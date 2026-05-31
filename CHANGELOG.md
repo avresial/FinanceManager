@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Dashboard cards now surface data-load failures instead of failing silently: a failed fetch shows an error toast (and a "Failed to load" indicator on the net worth, net cash flow, and closing balance cards) rather than leaving an empty card, and a top-level error boundary catches unexpected page errors with a friendly message. The API also now returns consistent RFC-7807 `ProblemDetails` responses for unhandled errors, without leaking stack traces in production. #275
 - Production-safe health endpoints: `/alive` (liveness) and `/health` (readiness, including a database connectivity check) now respond in every environment without exposing internal diagnostics, plus an authenticated `/health/detail` endpoint with a full per-check JSON breakdown for operators. #279
 - Sessions now persist across page reloads and browser restarts: signing in keeps you logged in for up to 14 days without re-entering your password, access tokens are refreshed transparently in the background, and when the session finally expires you're returned to the login page with a "Your session has expired, please sign in again." message. #226
 - Asset diversification card now has a "Show holdings" view that lists your current holdings grouped by asset class — stock tickers, bond names, and cash — loaded on demand when you expand the card. #264

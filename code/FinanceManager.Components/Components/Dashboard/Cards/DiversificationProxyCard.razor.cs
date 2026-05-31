@@ -3,6 +3,7 @@ using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using MudBlazor;
 using System.Globalization;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards;
@@ -45,6 +46,7 @@ public partial class DiversificationProxyCard
     [Parameter] public string Height { get; set; } = "300px";
 
     [Inject] public required ILogger<DiversificationProxyCard> Logger { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required DiversificationHttpClient DiversificationHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
@@ -81,6 +83,7 @@ public partial class DiversificationProxyCard
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading diversification score");
+            Snackbar.Add("Unable to load diversification score.", Severity.Error);
         }
         finally
         {
@@ -106,6 +109,7 @@ public partial class DiversificationProxyCard
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading diversification breakdown");
+            Snackbar.Add("Unable to load diversification breakdown.", Severity.Error);
         }
         finally
         {

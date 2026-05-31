@@ -4,6 +4,7 @@ using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using MudBlazor;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards;
 
@@ -20,6 +21,7 @@ public partial class RecurringTransactionDetectorCard
     [Parameter] public string Height { get; set; } = "300px";
 
     [Inject] public required ILogger<RecurringTransactionDetectorCard> Logger { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required RecurringTransactionDetectorHttpClient RecurringTransactionDetectorHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required CurrencyEntryHttpClient CurrencyEntryHttpClient { get; set; }
@@ -50,6 +52,7 @@ public partial class RecurringTransactionDetectorCard
         catch (Exception ex)
         {
             Logger.LogError(ex, ex.Message);
+            Snackbar.Add("Unable to load recurring transactions.", Severity.Error);
         }
         finally
         {
@@ -78,6 +81,7 @@ public partial class RecurringTransactionDetectorCard
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to load entries for {Name}", item.Name);
+            Snackbar.Add("Unable to load transaction details.", Severity.Error);
         }
         finally
         {
