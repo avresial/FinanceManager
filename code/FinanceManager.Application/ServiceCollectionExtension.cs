@@ -28,6 +28,7 @@ public static class ServiceCollectionExtension
     {
         services.AddScoped<ISettingsService, SettingsService>()
                 .AddScoped<IRefreshTokenService, RefreshTokenService>()
+                .AddScoped<IAccountLockoutService, AccountLockoutService>()
                 .AddScoped<IMoneyFlowService, MoneyFlowService>()
                 .AddScoped<IInvestmentPaycheckEstimatorService, InvestmentPaycheckEstimatorService>()
             .AddScoped<IEssentialSpendingServiceTyped, CurrencyEssentialSpendingService>()

@@ -208,6 +208,7 @@ Integration tests use the EF Core **InMemory** provider. They also remove `Datab
 - **Primary constructors** are preferred for classes, records, and structs. For records, use positional syntax: `public record Person(string Name, int Age);`. For classes/structs, map primary constructor parameters to readonly auto-properties — do not add separate private backing fields.
 - If a primary constructor cannot be used (complex init, serialization constraints), add a one-line comment explaining why.
 - Use **collection expressions** (`[]`, `["a"]`) when the language version allows.
+- For null-checking-and-unwrapping a nullable value, prefer the **explicit type pattern** `x is DateTime value` over the empty property pattern `x is { } value`. The explicit form names the type and reads more clearly.
 - Latest C# features allowed by the configured `LangVersion` are fair game.
 - Private/internal fields: `_camelCase`. Interfaces: `IPascalCase`. Files and types: `PascalCase`.
 - Namespaces must match folder paths (`dotnet_style_namespace_match_folder = true` in `.editorconfig`).

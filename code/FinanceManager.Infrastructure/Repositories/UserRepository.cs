@@ -92,6 +92,86 @@ public class UserRepository(AppDbContext context) : IUserRepository
         await context.SaveChangesAsync();
         return await Task.FromResult(true);
     }
+    public async Task<LoginThrottlingState?> GetLoginThrottlingState(string login)
+    {
+        var userDto = await context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Login == login);
+        if (userDto is null) return null;
+
+        return new LoginThrottlingState(userDto.FailedLoginAttempts, userDto.LockoutEndUtc);
+    }
+
+    public async Task<int?> IncrementFailedLoginAttempts(string login)
+    {
+        // Relational providers can increment in a single atomic UPDATE, so concurrent failed logins can't read the
+        // same value and overwrite each other's increment (a read-modify-write would lose updates and delay lockout).
+        if (context.Database.IsRelational())
+        {
+            var affected = await context.Users
+                .Where(x => x.Login == login)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.FailedLoginAttempts, u => u.FailedLoginAttempts + 1));
+            if (affected == 0) return null;
+
+            // ExecuteUpdate bypasses the change tracker and returns only the row count, so re-read the new value
+            // untracked. A concurrent increment can only make this larger, which trips the lockout earlier — the
+            // safe direction.
+            return await context.Users.AsNoTracking()
+                .Where(x => x.Login == login)
+                .Select(x => (int?)x.FailedLoginAttempts)
+                .FirstOrDefaultAsync();
+        }
+
+        // The in-memory provider used by tests doesn't support ExecuteUpdate; fall back to a tracked read-modify-write.
+        // It only ever runs single-threaded there, so the lost-update race the atomic path guards against can't occur.
+        var userDto = await context.Users.FirstOrDefaultAsync(x => x.Login == login);
+        if (userDto is null) return null;
+
+        userDto.FailedLoginAttempts++;
+        await context.SaveChangesAsync();
+        return userDto.FailedLoginAttempts;
+    }
+
+    public async Task<bool> LockAccount(string login, DateTime lockoutEndUtc)
+    {
+        if (context.Database.IsRelational())
+        {
+            var affected = await context.Users
+                .Where(x => x.Login == login)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(u => u.LockoutEndUtc, lockoutEndUtc)
+                    .SetProperty(u => u.FailedLoginAttempts, 0));
+            return affected > 0;
+        }
+
+        var userDto = await context.Users.FirstOrDefaultAsync(x => x.Login == login);
+        if (userDto is null) return false;
+
+        userDto.LockoutEndUtc = lockoutEndUtc;
+        userDto.FailedLoginAttempts = 0;
+        await context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> ResetLoginThrottling(string login)
+    {
+        if (context.Database.IsRelational())
+        {
+            var affected = await context.Users
+                .Where(x => x.Login == login)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(u => u.LockoutEndUtc, (DateTime?)null)
+                    .SetProperty(u => u.FailedLoginAttempts, 0));
+            return affected > 0;
+        }
+
+        var userDto = await context.Users.FirstOrDefaultAsync(x => x.Login == login);
+        if (userDto is null) return false;
+
+        userDto.LockoutEndUtc = null;
+        userDto.FailedLoginAttempts = 0;
+        await context.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<bool> UpdatePassword(int userId, string password)
     {
         var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);

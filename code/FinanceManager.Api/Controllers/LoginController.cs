@@ -22,10 +22,13 @@ namespace FinanceManager.Api.Controllers;
 public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepository userRepository, IActiveUsersRepository activeUsersRepository,
     IGuestSessionStore guestSessionStore, IServiceScopeFactory scopeFactory,
     IInsightsGenerationChannel insightsGenerationChannel,
-    IRefreshTokenService refreshTokenService, IOptions<RefreshTokenOptions> refreshOptions,
+    IRefreshTokenService refreshTokenService, IAccountLockoutService accountLockoutService,
+    IOptions<RefreshTokenOptions> refreshOptions,
     ILogger<LoginController> logger) : ControllerBase
 {
     private const string _guestLogin = "guest";
+    private const string _lockedOutMessage =
+        "This account is temporarily locked due to repeated failed login attempts. Please try again later.";
 
     [AllowAnonymous]
     [HttpPost(Name = "Login")]
@@ -36,10 +39,24 @@ public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepositor
         if (string.Equals(requestModel.UserName, _guestLogin, StringComparison.OrdinalIgnoreCase))
             return await LoginAsGuest(cancellationToken);
 
+        // Per-account brute-force guard: refuse a locked account before touching its password so a flood of guesses
+        // against one login can't keep checking credentials even when it rotates source IPs past the per-IP limiter.
+        if (await accountLockoutService.IsLockedOut(requestModel.UserName, cancellationToken))
+        {
+            logger.LogWarning("Login refused for a locked-out account.");
+            return StatusCode(StatusCodes.Status403Forbidden, _lockedOutMessage);
+        }
+
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(requestModel.Password);
         var user = await userRepository.GetUser(requestModel.UserName, encryptedPassword);
 
-        if (user is null) return Forbid();
+        if (user is null)
+        {
+            await accountLockoutService.RegisterFailedAttempt(requestModel.UserName, cancellationToken);
+            return Forbid();
+        }
+
+        await accountLockoutService.Reset(requestModel.UserName, cancellationToken);
 
         var token = jwtTokenGenerator.GenerateToken(requestModel.UserName, user.UserId, user.UserRole);
 
