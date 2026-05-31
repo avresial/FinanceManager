@@ -3,11 +3,11 @@ using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Exceptions;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Api.Controllers;
 
@@ -34,10 +34,10 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
             var result = await userRepository.AddUser(addUserCommand.UserName, encryptedPassword, addUserCommand.PricingLevel, UserRole.User, addUserCommand.FirstName, addUserCommand.LastName);
             return result ? Ok(result) : BadRequest();
         }
-        catch (DbUpdateException)
+        catch (DuplicateLoginException)
         {
-            // The unique index on Users.Login lost the check-then-insert race: another concurrent request created
-            // the same login between the lookup above and this insert. Surface it as a conflict, not a 500.
+            // A concurrent request created the same login between the lookup above and this insert. Surface it as a
+            // conflict, not a 500.
             return Conflict();
         }
     }

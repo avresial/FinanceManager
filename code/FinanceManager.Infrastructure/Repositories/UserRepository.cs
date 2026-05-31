@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Exceptions;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
@@ -22,7 +23,21 @@ public class UserRepository(AppDbContext context) : IUserRepository
             CreationDate = DateTime.UtcNow,
         });
 
-        await context.SaveChangesAsync();
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // The unique login index rejected the insert. If a row with this login now exists, a concurrent request
+            // created it between the caller's existence check and this insert; translate the persistence-specific
+            // failure into a domain concept so callers don't have to depend on EF Core. Otherwise the failure is
+            // something else and must surface unchanged.
+            context.ChangeTracker.Clear();
+            if (await context.Users.AsNoTracking().AnyAsync(x => x.Login == login))
+                throw new DuplicateLoginException(login);
+            throw;
+        }
 
         return true;
     }
