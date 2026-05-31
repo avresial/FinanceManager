@@ -7,6 +7,7 @@ using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Api.Controllers;
 
@@ -21,15 +22,24 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
     [Route("Add")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Add(AddUser addUserCommand, CancellationToken cancellationToken = default)
     {
         var existingUser = await userRepository.GetUser(addUserCommand.UserName);
-        if (existingUser is not null) return BadRequest();
+        if (existingUser is not null) return Conflict();
 
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(addUserCommand.Password);
-        var result = await userRepository.AddUser(addUserCommand.UserName, encryptedPassword, addUserCommand.PricingLevel, UserRole.User, addUserCommand.FirstName, addUserCommand.LastName);
-
-        return result ? Ok(result) : BadRequest();
+        try
+        {
+            var result = await userRepository.AddUser(addUserCommand.UserName, encryptedPassword, addUserCommand.PricingLevel, UserRole.User, addUserCommand.FirstName, addUserCommand.LastName);
+            return result ? Ok(result) : BadRequest();
+        }
+        catch (DbUpdateException)
+        {
+            // The unique index on Users.Login lost the check-then-insert race: another concurrent request created
+            // the same login between the lookup above and this insert. Surface it as a conflict, not a 500.
+            return Conflict();
+        }
     }
 
     [Authorize]
