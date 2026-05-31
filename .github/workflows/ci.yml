@@ -71,6 +71,12 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore ./code
 
+      # Naming-rule violations (IDE1006) are a hard failure: the .editorconfig naming rules
+      # are set to error severity, but the C# compiler does not run the naming analyzer during
+      # `dotnet build`, so this `dotnet format` check is what actually enforces them in CI.
+      - name: Enforce naming conventions
+        run: dotnet format style ./code --verify-no-changes --diagnostics IDE1006 --severity error
+
       - name: Check code formatting
         run: dotnet format ./code --verify-no-changes --verbosity diagnostic
         continue-on-error: true
