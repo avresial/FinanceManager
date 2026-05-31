@@ -2,6 +2,7 @@ using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
+using MudBlazor;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards;
 
@@ -13,6 +14,7 @@ public partial class FinancialInsightsCarousel
 
     [Inject] public required FinancialInsightsHttpClient FinancialInsightsHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public int Count { get; set; } = 3;
@@ -39,6 +41,10 @@ public partial class FinancialInsightsCarousel
 
             _insights = await FinancialInsightsHttpClient.GetLatestAsync(Count, AccountId);
         }
+        catch
+        {
+            Snackbar.Add("Unable to load financial insights.", Severity.Error);
+        }
         finally
         {
             _isLoading = false;
@@ -64,6 +70,10 @@ public partial class FinancialInsightsCarousel
             _isLoggedIn = true;
             var generated = await FinancialInsightsHttpClient.GenerateAsync(Count, AccountId);
             _insights = generated.Count > 0 ? generated : await FinancialInsightsHttpClient.GetLatestAsync(Count, AccountId);
+        }
+        catch
+        {
+            Snackbar.Add("Unable to generate financial insights.", Severity.Error);
         }
         finally
         {

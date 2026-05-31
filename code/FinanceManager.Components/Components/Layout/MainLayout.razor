@@ -24,7 +24,16 @@
             </MudDrawer>
 
             <MudMainContent>
-                @Body
+                <ErrorBoundary @ref="_errorBoundary">
+                    <ChildContent>
+                        @Body
+                    </ChildContent>
+                    <ErrorContent Context="exception">
+                        <MudAlert Severity="Severity.Error" Class="ma-4">
+                            Something went wrong while loading this page. Please try again.
+                        </MudAlert>
+                    </ErrorContent>
+                </ErrorBoundary>
             </MudMainContent>
         </MudLayout>
     </Authorized>
@@ -39,6 +48,13 @@
     private bool _drawerOpen = true;
     private bool _isMobile;
     private DrawerVariant _drawerVariant = DrawerVariant.Mini;
+    private ErrorBoundary? _errorBoundary;
+
+    protected override void OnInitialized() => Navigation.LocationChanged += OnLocationChanged;
+
+    // The ErrorBoundary latches its error state; recover on navigation so a failure on one page
+    // doesn't leave every subsequent page stuck on the fallback message.
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => _errorBoundary?.Recover();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -71,6 +87,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        Navigation.LocationChanged -= OnLocationChanged;
         await BrowserViewportService.UnsubscribeAsync(_viewportSubscriptionId);
     }
 }
