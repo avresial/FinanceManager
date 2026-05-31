@@ -17,6 +17,10 @@
             <MudDrawer @bind-Open="_drawerOpen" Variant="@_drawerVariant" Elevation="0">
                 <NavMenu DrawerIsOpen=_drawerOpen />
                 <MudSpacer />
+                @if (_drawerOpen && !string.IsNullOrWhiteSpace(_greeting))
+                {
+                    <MudText Typo="Typo.body2" Class="px-4 py-1" Style="color: var(--mud-palette-text-secondary);">@_greeting</MudText>
+                }
                 <MudNavMenu>
                     <MudNavLink Icon="@Icons.Material.Filled.Settings" Href="UserSettings">Settings</MudNavLink>
                     <MudNavLink Icon="@Icons.Material.Filled.Logout" @onclick=LogOut>Log out</MudNavLink>
@@ -42,15 +46,28 @@
 @code {
     [Inject] public NavigationManager Navigation { get; set; } = default!;
     [Inject] public ILoginService LoginService { get; set; } = default!;
+    [Inject] public IUserService UserService { get; set; } = default!;
     [Inject] public IBrowserViewportService BrowserViewportService { get; set; } = default!;
 
     private readonly Guid _viewportSubscriptionId = Guid.NewGuid();
+    private string? _greeting;
     private bool _drawerOpen = true;
     private bool _isMobile;
     private DrawerVariant _drawerVariant = DrawerVariant.Mini;
     private ErrorBoundary? _errorBoundary;
 
     protected override void OnInitialized() => Navigation.LocationChanged += OnLocationChanged;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var loggedUser = await LoginService.GetLoggedUser();
+        if (loggedUser is null) return;
+
+        var user = await UserService.GetUser(loggedUser.UserId);
+        var firstName = user?.FirstName;
+        var displayName = string.IsNullOrWhiteSpace(firstName) ? loggedUser.UserName : firstName;
+        _greeting = string.IsNullOrWhiteSpace(displayName) ? null : $"Hello, {displayName}";
+    }
 
     // The ErrorBoundary latches its error state; recover on navigation so a failure on one page
     // doesn't leave every subsequent page stuck on the fallback message.

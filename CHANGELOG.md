@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Registration now asks for your first name (required) and last name (optional), and the app greets you by your first name in the account menu. #301
 - Dashboard cards now surface data-load failures instead of failing silently: a failed fetch shows an error toast (and a "Failed to load" indicator on the net worth, net cash flow, and closing balance cards) rather than leaving an empty card, and a top-level error boundary catches unexpected page errors with a friendly message. The API also now returns consistent RFC-7807 `ProblemDetails` responses for unhandled errors, without leaking stack traces in production. #275
 - Production-safe health endpoints: `/alive` (liveness) and `/health` (readiness, including a database connectivity check) now respond in every environment without exposing internal diagnostics, plus an authenticated `/health/detail` endpoint with a full per-check JSON breakdown for operators. #279
 - Sessions now persist across page reloads and browser restarts: signing in keeps you logged in for up to 14 days without re-entering your password, access tokens are refreshed transparently in the background, and when the session finally expires you're returned to the login page with a "Your session has expired, please sign in again." message. #226
@@ -18,6 +19,7 @@ rules agents must follow when updating this file.
 - Guest demo account now seeds three sample financial insights so the dashboard Insights card is populated instead of empty when trying out the app. #259
 
 ### Changed
+- Sign-in and registration now use your email address as your login instead of a separate username. #301
 - Asset diversification card on the Assets page redesigned from a single radial gauge into a "gauge + breakdown" layout: the score gauge now sits beside a "Built from" bar showing how the asset-class and holdings sub-scores combine, with a Limited/Moderate/Broad band legend and a gentle, band-tinted insight callout (no longer an alarming red warning). #262
 - "Assets per type" and "Assets per wallet" cards merged into a single "Assets distribution" card with a segmented "By type / By wallet" toggle that swaps the pie chart in place using the chart library's built-in animation. #268
 - Recurring transactions card tightened: reduced dead space between the header and the transaction list, denser list rows, and the details view now shows the transaction title inline with the back-arrow button instead of stacked below it. #253

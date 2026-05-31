@@ -10,5 +10,10 @@ public class UserDtoConfiguration : IEntityTypeConfiguration<UserDto>
     {
         builder.Property(e => e.Id)
             .ValueGeneratedOnAdd();
+
+        // Logins are the account identifier (the email); a unique index closes the check-then-insert race in
+        // registration where two concurrent requests could otherwise both create the same login.
+        builder.HasIndex(e => e.Login)
+            .IsUnique();
     }
 }

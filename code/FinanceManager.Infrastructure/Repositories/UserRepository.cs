@@ -9,11 +9,13 @@ namespace FinanceManager.Infrastructure.Repositories;
 
 public class UserRepository(AppDbContext context) : IUserRepository
 {
-    public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole)
+    public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole, string? firstName = null, string? lastName = null)
     {
         context.Add(new UserDto
         {
             Login = login,
+            FirstName = firstName,
+            LastName = lastName,
             Password = password,
             PricingLevel = pricingLevel,
             UserRole = userRole,
@@ -25,12 +27,14 @@ public class UserRepository(AppDbContext context) : IUserRepository
         return true;
     }
 
-    public async Task<bool> AddUserWithId(int userId, string login, string password, PricingLevel pricingLevel, UserRole userRole)
+    public async Task<bool> AddUserWithId(int userId, string login, string password, PricingLevel pricingLevel, UserRole userRole, string? firstName = null, string? lastName = null)
     {
         context.Add(new UserDto
         {
             Id = userId,
             Login = login,
+            FirstName = firstName,
+            LastName = lastName,
             Password = password,
             PricingLevel = pricingLevel,
             UserRole = userRole,

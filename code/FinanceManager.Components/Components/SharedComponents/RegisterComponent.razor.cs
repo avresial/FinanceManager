@@ -5,6 +5,7 @@ using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using System.ComponentModel.DataAnnotations;
 
 namespace FinanceManager.Components.Components.SharedComponents;
 
@@ -17,6 +18,8 @@ public partial class RegisterComponent
     private LoginModel _loginModel = new();
 
     public string? ConfirmPassword { get; set; }
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
 
     [Inject] public required NavigationManager Navigation { get; set; }
     [Inject] public required IUserService UserService { get; set; }
@@ -39,7 +42,7 @@ public partial class RegisterComponent
         List<string> newErrors = [];
         if (_loginModel.Login is not null && _loginModel.Password is not null)
         {
-            if (!await UserService.AddUser(_loginModel.Login, PasswordEncryptionProvider.EncryptPassword(_loginModel.Password), PricingLevel))
+            if (!await UserService.AddUser(_loginModel.Login, PasswordEncryptionProvider.EncryptPassword(_loginModel.Password), PricingLevel, FirstName, LastName))
                 newErrors.Add("Incorrect username or password.");
             else if (await LoginService.Login(_loginModel.Login, _loginModel.Password))
                 Navigation.NavigateTo("");
@@ -47,6 +50,13 @@ public partial class RegisterComponent
 
         _errors = newErrors.ToArray();
         _loginModel.Password = string.Empty;
+    }
+    private static string? ValidateEmail(string arg)
+    {
+        if (string.IsNullOrWhiteSpace(arg))
+            return "Email is required";
+
+        return new EmailAddressAttribute().IsValid(arg) ? null : "Invalid email address";
     }
     private string? PasswordMatch(string arg)
     {

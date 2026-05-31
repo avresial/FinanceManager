@@ -14,7 +14,7 @@ public interface IUserRepository
     IAsyncEnumerable<int> GetUsersIds(int recordIndex, int recordsCount);
     Task<bool> UpdatePassword(int userId, string password);
     Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel);
-    Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole);
+    Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole, string? firstName = null, string? lastName = null);
 
     /// <summary>
     /// Reads the persisted login-throttling state for an account, or <c>null</c> when no such account exists.
@@ -47,7 +47,7 @@ public interface IUserRepository
     /// Inserts a user with an explicit id. Intended for ephemeral guest sandboxes where the id is chosen by the
     /// session store ahead of any persistence and cannot be reassigned by an identity column.
     /// </summary>
-    Task<bool> AddUserWithId(int userId, string login, string password, PricingLevel pricingLevel, UserRole userRole);
+    Task<bool> AddUserWithId(int userId, string login, string password, PricingLevel pricingLevel, UserRole userRole, string? firstName = null, string? lastName = null);
 
     Task<bool> RemoveUser(int userId);
 }
