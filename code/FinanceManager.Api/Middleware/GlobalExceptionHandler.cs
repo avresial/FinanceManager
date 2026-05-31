@@ -15,11 +15,13 @@ public sealed class GlobalExceptionHandler(
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
+        // Strip line breaks from the request method/path before logging so a crafted URL can't forge
+        // additional log entries (CodeQL: log entries created from user input).
         logger.LogError(
             exception,
             "Unhandled exception while processing {Method} {Path}",
-            httpContext.Request.Method,
-            httpContext.Request.Path);
+            Sanitize(httpContext.Request.Method),
+            Sanitize(httpContext.Request.Path.Value));
 
         httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
@@ -40,4 +42,7 @@ public sealed class GlobalExceptionHandler(
             ProblemDetails = problemDetails,
         });
     }
+
+    private static string Sanitize(string? value) =>
+        string.IsNullOrEmpty(value) ? string.Empty : value.Replace("\r", string.Empty).Replace("\n", string.Empty);
 }

@@ -81,7 +81,8 @@ public partial class RecurringTransactionDetectorCard
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to load entries for {Name}", item.Name);
-            Snackbar.Add("Unable to load transaction details.", Severity.Error);
+            if (requestVersion == _detailRequestVersion)
+                Snackbar.Add("Unable to load transaction details.", Severity.Error);
         }
         finally
         {
