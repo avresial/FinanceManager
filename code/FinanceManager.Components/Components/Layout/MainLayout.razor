@@ -65,7 +65,8 @@
 
         var user = await UserService.GetUser(loggedUser.UserId);
         var firstName = user?.FirstName;
-        _greeting = string.IsNullOrWhiteSpace(firstName) ? null : $"Hello, {firstName}";
+        var displayName = string.IsNullOrWhiteSpace(firstName) ? loggedUser.UserName : firstName;
+        _greeting = string.IsNullOrWhiteSpace(displayName) ? null : $"Hello, {displayName}";
     }
 
     // The ErrorBoundary latches its error state; recover on navigation so a failure on one page
