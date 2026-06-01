@@ -147,12 +147,25 @@ jobs:
           mkdir -p ${{ github.workspace }}/TestResults
           ./code/FinanceManager.UnitTests/bin/Release/net10.0/FinanceManager.UnitTests -trx ${{ github.workspace }}/TestResults/unit-test-results.trx
 
+      - name: Run architecture tests
+        run: |
+          mkdir -p ${{ github.workspace }}/TestResults
+          ./code/FinanceManager.ArchitectureTests/bin/Release/net10.0/FinanceManager.ArchitectureTests -trx ${{ github.workspace }}/TestResults/architecture-test-results.trx
+
       - name: Publish unit test results
         uses: dorny/test-reporter@v1
         if: always()
         with:
           name: 'Unit Test Results'
           path: '${{ github.workspace }}/TestResults/**/unit-test-results.trx'
+          reporter: dotnet-trx
+
+      - name: Publish architecture test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: 'Architecture Test Results'
+          path: '${{ github.workspace }}/TestResults/**/architecture-test-results.trx'
           reporter: dotnet-trx
 
   integration-tests:
