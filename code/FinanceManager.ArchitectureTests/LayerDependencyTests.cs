@@ -7,9 +7,10 @@ namespace FinanceManager.ArchitectureTests;
 
 /// <summary>
 /// Enforces the layered modular monolith described in CLAUDE.md:
-/// Domain ← Application ← Infrastructure ← Api, with Components ← Application.
+/// Domain ← Application ← Infrastructure ← Api, with the browser-side surface
+/// (Components + the FinanceManager.WebUi WASM host) ← Application.
 /// Dependencies only ever point downward; the Domain stays free of infrastructure concerns
-/// and the browser-side Components never reach the database.
+/// and the browser-side code never reaches the database.
 /// </summary>
 [Trait("Category", "Architecture")]
 public class LayerDependencyTests
@@ -24,6 +25,7 @@ public class LayerDependencyTests
             .AndShould().NotDependOnAny(InfrastructureLayer)
             .AndShould().NotDependOnAny(ApiLayer)
             .AndShould().NotDependOnAny(ComponentsLayer)
+            .AndShould().NotDependOnAny(WebUiLayer)
             .Because("the Domain layer is the leaf of the dependency graph and must not reference outer layers.");
 
         rule.Check(Architecture);
@@ -58,7 +60,8 @@ public class LayerDependencyTests
             .Should().NotDependOnAny(InfrastructureLayer)
             .AndShould().NotDependOnAny(ApiLayer)
             .AndShould().NotDependOnAny(ComponentsLayer)
-            .Because("the Application layer orchestrates use cases and must not depend on Infrastructure, Api or Components.");
+            .AndShould().NotDependOnAny(WebUiLayer)
+            .Because("the Application layer orchestrates use cases and must not depend on Infrastructure or the presentation layers.");
 
         rule.Check(Architecture);
     }
@@ -71,39 +74,40 @@ public class LayerDependencyTests
         IArchRule rule = Types().That().Are(InfrastructureLayer)
             .Should().NotDependOnAny(ApiLayer)
             .AndShould().NotDependOnAny(ComponentsLayer)
-            .Because("Infrastructure is an inner layer and must not depend on the Api or Components presentation layers.");
+            .AndShould().NotDependOnAny(WebUiLayer)
+            .Because("Infrastructure is an inner layer and must not depend on the Api or browser-side presentation layers.");
 
         rule.Check(Architecture);
     }
 
-    // --- Components is browser-side and must never touch the database -------------------------
+    // --- Browser-side (Components + WASM host) must never touch the database ------------------
 
     [Fact]
-    public void Components_should_not_depend_on_infrastructure()
+    public void Browser_side_should_not_depend_on_infrastructure()
     {
-        IArchRule rule = Types().That().Are(ComponentsLayer)
+        IArchRule rule = Types().That().Are(BrowserSideLayer)
             .Should().NotDependOnAny(InfrastructureLayer)
-            .Because("Blazor Components must reach the server through typed HttpClients, never the Infrastructure layer directly.");
+            .Because("browser-side code must reach the server through typed HttpClients, never the Infrastructure layer directly.");
 
         rule.Check(Architecture);
     }
 
     [Fact]
-    public void Components_should_not_depend_on_entity_framework_core()
+    public void Browser_side_should_not_depend_on_entity_framework_core()
     {
-        IArchRule rule = Types().That().Are(ComponentsLayer)
+        IArchRule rule = Types().That().Are(BrowserSideLayer)
             .Should().NotDependOnAnyTypesThat().ResideInNamespaceMatching(EntityFrameworkCoreNamespacePattern)
-            .Because("Blazor Components run in the browser and must never access the database (no EF Core).");
+            .Because("browser-side code runs in the browser and must never access the database (no EF Core).");
 
         rule.Check(Architecture);
     }
 
     [Fact]
-    public void Components_should_not_depend_on_api()
+    public void Browser_side_should_not_depend_on_api()
     {
-        IArchRule rule = Types().That().Are(ComponentsLayer)
+        IArchRule rule = Types().That().Are(BrowserSideLayer)
             .Should().NotDependOnAny(ApiLayer)
-            .Because("Components talk to the Api over HTTP, not by referencing the Api host assembly.");
+            .Because("browser-side code talks to the Api over HTTP, not by referencing the Api host assembly.");
 
         rule.Check(Architecture);
     }

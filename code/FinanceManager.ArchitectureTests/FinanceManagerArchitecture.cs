@@ -25,6 +25,7 @@ public static class FinanceManagerArchitecture
     private static readonly System.Reflection.Assembly _infrastructureAssembly = typeof(FinanceManager.Infrastructure.Repositories.AccountRepository).Assembly;
     private static readonly System.Reflection.Assembly _apiAssembly = typeof(FinanceManager.Api.Controllers.AssetsController).Assembly;
     private static readonly System.Reflection.Assembly _componentsAssembly = typeof(FinanceManager.Components.HttpClients.AdminAiProvidersHttpClient).Assembly;
+    private static readonly System.Reflection.Assembly _webUiAssembly = typeof(FinanceManager.WebUi.App).Assembly;
 
     public static readonly Architecture Architecture = new ArchLoader()
         .LoadAssemblies(
@@ -32,7 +33,8 @@ public static class FinanceManagerArchitecture
             _applicationAssembly,
             _infrastructureAssembly,
             _apiAssembly,
-            _componentsAssembly)
+            _componentsAssembly,
+            _webUiAssembly)
         .Build();
 
     public static readonly IObjectProvider<IType> DomainLayer =
@@ -49,6 +51,15 @@ public static class FinanceManagerArchitecture
 
     public static readonly IObjectProvider<IType> ComponentsLayer =
         Types().That().ResideInAssembly(_componentsAssembly).As("Components layer");
+
+    // FinanceManager.WebUi is the Blazor WASM bootstrap (Program.cs, App). It runs in the
+    // browser, so it is subject to the same constraints as Components.
+    public static readonly IObjectProvider<IType> WebUiLayer =
+        Types().That().ResideInAssembly(_webUiAssembly).As("WASM host (FinanceManager.WebUi)");
+
+    // The full browser-side surface: Blazor Components plus the WASM bootstrap host.
+    public static readonly IObjectProvider<IType> BrowserSideLayer =
+        Types().That().ResideInAssembly(_componentsAssembly, _webUiAssembly).As("Browser-side (Components + WASM host)");
 
     // External framework namespaces the inner layers must stay clear of. These live in
     // assemblies we deliberately do NOT load, so they are matched as dependency *targets*
