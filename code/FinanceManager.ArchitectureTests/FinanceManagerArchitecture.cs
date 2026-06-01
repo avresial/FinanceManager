@@ -50,11 +50,12 @@ public static class FinanceManagerArchitecture
     public static readonly IObjectProvider<IType> ComponentsLayer =
         Types().That().ResideInAssembly(_componentsAssembly).As("Components layer");
 
-    // External infrastructure concerns the inner layers must stay clear of. These live in
-    // their own assemblies, so namespace matching is the right tool here.
-    public static readonly IObjectProvider<IType> EntityFrameworkCore =
-        Types().That().ResideInNamespaceMatching(@"^Microsoft\.EntityFrameworkCore").As("Entity Framework Core");
+    // External framework namespaces the inner layers must stay clear of. These live in
+    // assemblies we deliberately do NOT load, so they are matched as dependency *targets*
+    // (NotDependOnAnyTypesThat().ResideInNamespaceMatching(...)) rather than as loaded types.
+    // An IObjectProvider over Types() would be empty here — only the five FinanceManager
+    // assemblies are loaded — and the rule would pass vacuously.
+    public const string EntityFrameworkCoreNamespacePattern = @"^Microsoft\.EntityFrameworkCore";
 
-    public static readonly IObjectProvider<IType> AspNetCore =
-        Types().That().ResideInNamespaceMatching(@"^Microsoft\.AspNetCore").As("ASP.NET Core");
+    public const string AspNetCoreNamespacePattern = @"^Microsoft\.AspNetCore";
 }

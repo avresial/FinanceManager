@@ -33,7 +33,7 @@ public class LayerDependencyTests
     public void Domain_should_not_depend_on_entity_framework_core()
     {
         IArchRule rule = Types().That().Are(DomainLayer)
-            .Should().NotDependOnAny(EntityFrameworkCore)
+            .Should().NotDependOnAnyTypesThat().ResideInNamespaceMatching(EntityFrameworkCoreNamespacePattern)
             .Because("the Domain layer must remain persistence-ignorant (no EF Core).");
 
         rule.Check(Architecture);
@@ -43,7 +43,7 @@ public class LayerDependencyTests
     public void Domain_should_not_depend_on_aspnet_core()
     {
         IArchRule rule = Types().That().Are(DomainLayer)
-            .Should().NotDependOnAny(AspNetCore)
+            .Should().NotDependOnAnyTypesThat().ResideInNamespaceMatching(AspNetCoreNamespacePattern)
             .Because("the Domain layer must not reference ASP.NET Core.");
 
         rule.Check(Architecture);
@@ -92,7 +92,7 @@ public class LayerDependencyTests
     public void Components_should_not_depend_on_entity_framework_core()
     {
         IArchRule rule = Types().That().Are(ComponentsLayer)
-            .Should().NotDependOnAny(EntityFrameworkCore)
+            .Should().NotDependOnAnyTypesThat().ResideInNamespaceMatching(EntityFrameworkCoreNamespacePattern)
             .Because("Blazor Components run in the browser and must never access the database (no EF Core).");
 
         rule.Check(Architecture);
