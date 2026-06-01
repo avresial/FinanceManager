@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>FinanceManager.ArchitectureTests</RootNamespace>
+		<OutputType>Exe</OutputType>
+		<IsPackable>false</IsPackable>
+		<IsTestProject>true</IsTestProject>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.NET.Test.Sdk" />
+		<PackageReference Include="TngTech.ArchUnitNET.xUnitV3" />
+		<PackageReference Include="xunit.runner.visualstudio">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="xunit.v3.mtp-v2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\FinanceManager.Domain\FinanceManager.Domain.csproj" />
+		<ProjectReference Include="..\FinanceManager.Application\FinanceManager.Application.csproj" />
+		<ProjectReference Include="..\FinanceManager.Infrastructure\FinanceManager.Infrastructure.csproj" />
+		<ProjectReference Include="..\FinanceManager.Api\FinanceManager.Api.csproj" />
+		<ProjectReference Include="..\FinanceManager.Components\FinanceManager.Components.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Using Include="Xunit" />
+	</ItemGroup>
+
+</Project>
