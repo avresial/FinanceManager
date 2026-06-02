@@ -257,7 +257,15 @@ public partial class TimeSeriesValueCard
             ],
             Tooltip = new Tooltip
             {
+                Enabled = true,
                 Theme = Mode.Dark,
+                // Pin the tooltip to the plot's top-left corner. The card is
+                // overflow:hidden (it clips the pushed-out x-axis label row), which
+                // would also clip a cursor-following tooltip near the chart edges. A
+                // fixed tooltip always renders inside the visible plot area while the
+                // crosshair + marker dot still track the hovered point. Content stays
+                // per-point: month title + formatted value.
+                Fixed = new TooltipFixed { Enabled = true, Position = TooltipPosition.TopLeft, OffsetX = 8, OffsetY = 8 },
                 X = new TooltipX { Format = "MMMM yyyy" },
                 Y = new TooltipY
                 {
