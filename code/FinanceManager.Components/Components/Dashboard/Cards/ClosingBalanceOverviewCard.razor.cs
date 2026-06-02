@@ -5,6 +5,7 @@ using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using MudBlazor;
 
 namespace FinanceManager.Components.Components.Dashboard.Cards;
 
@@ -14,12 +15,14 @@ public partial class ClosingBalanceOverviewCard
     private decimal? _closingBalance;
     private List<List<ChartJsLineDataPoint>> _series = [];
     private bool _isLoading = true;
+    private bool _hasError = false;
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
     [Inject] public required ILogger<ClosingBalanceOverviewCard> Logger { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required DashboardOverviewCardsCacheService DashboardOverviewCardsCacheService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -27,6 +30,7 @@ public partial class ClosingBalanceOverviewCard
     protected override async Task OnParametersSetAsync()
     {
         _isLoading = true;
+        _hasError = false;
         _currency = SettingsService.GetCurrency();
         _closingBalance = null;
         _series.Clear();
@@ -58,7 +62,9 @@ public partial class ClosingBalanceOverviewCard
         }
         catch (Exception ex)
         {
+            _hasError = true;
             Logger.LogError(ex, "Error while getting closing balance");
+            Snackbar.Add("Unable to load closing balance.", Severity.Error);
         }
 
         _isLoading = false;

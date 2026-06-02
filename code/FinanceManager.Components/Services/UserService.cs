@@ -11,17 +11,17 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
 {
     public event Action<User>? OnUserChangeEvent;
 
-    public Task<bool> AddUser(string login, string password, PricingLevel pricingLevel)
+    public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, string? firstName = null, string? lastName = null)
     {
         try
         {
-            return httpClient.AddUser(new AddUser(login, password, pricingLevel));
+            return await httpClient.AddUser(new AddUser(login, password, pricingLevel, firstName, lastName));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, $"Error adding user {login}", login);
         }
-        return Task.FromResult(false);
+        return false;
     }
     public Task<User?> GetUser(int id)
     {

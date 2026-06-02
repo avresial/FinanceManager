@@ -7,6 +7,10 @@
                 <StringSpinner CharactersCount="4" />
                 @_currency
             }
+            else if (_hasError)
+            {
+                <MudText Typo="Typo.subtitle1" Color="Color.Error">Failed to load</MudText>
+            }
             else
             {
                 @if (_totalNetWorth is not null)

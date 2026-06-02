@@ -1,7 +1,9 @@
+using FinanceManager.Api;
 using FinanceManager.Api.Logging;
 using FinanceManager.Api.Services;
 using FinanceManager.Api.Services.Guest;
 using FinanceManager.Application;
+using FinanceManager.Application.Diagnostics;
 using FinanceManager.Application.Options;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure;
@@ -9,6 +11,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 using ServiceDefaults;
 using System.Security.Claims;
@@ -17,8 +21,37 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
+// Surface FinanceManager's own business metrics and traces (see FinanceManagerTelemetry)
+// in the Aspire dashboard alongside the defaults wired up by AddServiceDefaults().
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics.AddMeter(FinanceManagerTelemetry.MeterName))
+    .WithTracing(tracing => tracing.AddSource(FinanceManagerTelemetry.ActivitySourceName));
+
+// The JWT signing key must never be committed. It is supplied via environment variable / User Secrets.
+// Fail fast outside Development so we never silently fall back to an insecure default; in Development
+// fall back to a clearly-insecure local key so the app still runs without configured secrets.
+var jwtSigningKey = builder.Configuration["JwtConfig:Key"];
+if (string.IsNullOrWhiteSpace(jwtSigningKey))
+{
+    if (!builder.Environment.IsDevelopment())
+        throw new InvalidOperationException(
+            "JwtConfig:Key is not configured. Provide a signing key via the JwtConfig__Key environment variable or User Secrets.");
+
+    jwtSigningKey = "development-only-insecure-jwt-signing-key-do-not-use-in-production";
+    builder.Configuration["JwtConfig:Key"] = jwtSigningKey;
+}
+else if (Encoding.UTF8.GetByteCount(jwtSigningKey) < 32)
+{
+    // HMAC-SHA256 needs a 256-bit (32-byte) key; reject anything weaker so a short
+    // env var can't silently produce forgeable tokens for both issuing and validation.
+    throw new InvalidOperationException(
+        "JwtConfig:Key must be at least 32 bytes (256 bits) for HMAC-SHA256 signing.");
+}
+
 
 builder.Services
+    .AddProblemDetails()
+    .AddExceptionHandler<FinanceManager.Api.Middleware.GlobalExceptionHandler>()
     .AddSingleton(typeof(IOptionsSnapshot<>), typeof(OptionsManager<>))
     .AddSingleton(typeof(IOptionsFactory<>), typeof(OptionsFactory<>))
     .AddOpenApi("v1", options =>
@@ -32,6 +65,12 @@ builder.Services
 
 
 builder.Services.Configure<JwtAuthOptions>(builder.Configuration.GetSection("JwtConfig"));
+builder.Services.Configure<RefreshTokenOptions>(builder.Configuration.GetSection(RefreshTokenOptions.SectionName));
+builder.Services.AddOptions<AccountLockoutOptions>()
+    .Bind(builder.Configuration.GetSection(AccountLockoutOptions.SectionName))
+    .Validate(o => o.MaxFailedAttempts > 0, "AccountLockout:MaxFailedAttempts must be greater than 0.")
+    .Validate(o => o.LockoutDuration > TimeSpan.Zero, "AccountLockout:LockoutDuration must be greater than 0.")
+    .ValidateOnStart();
 builder.Services.Configure<StockApiOptions>(builder.Configuration.GetSection("StockApi"));
 builder.Services.Configure<OpenFigiOptions>(builder.Configuration.GetSection("OpenFigi"));
 builder.Services.Configure<LmStudioOptions>(builder.Configuration.GetSection("LmStudio"));
@@ -78,7 +117,7 @@ builder.Services.AddCors(options =>
     {
         ValidIssuer = builder.Configuration["JwtConfig:Issuer"],
         ValidAudience = builder.Configuration["JwtConfig:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtConfig:Key"]!)),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
         ValidateIssuer = true,
         ValidateAudience = true,
         ValidateLifetime = true,
@@ -122,10 +161,12 @@ builder.Services.AddCors(options =>
     };
 });
 
+builder.Services.AddApiRateLimiting(builder.Configuration);
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSignalR();
 builder.Services.AddAuthorization();
+builder.Services.AddApiHealthChecks();
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddSingleton<IGuestSessionStore, GuestSessionStore>();
 builder.Services.AddScoped<IGuestSessionAccessor, GuestSessionAccessor>();
@@ -150,6 +191,11 @@ builder.Services.AddHostedService<LogEntryPersistenceBackgroundService>();
 builder.Services.AddHostedService<LogRetentionBackgroundService>();
 
 var app = builder.Build();
+
+// Registered first so it wraps the whole pipeline: any unhandled exception is turned into a
+// consistent ProblemDetails response by GlobalExceptionHandler instead of leaking framework defaults.
+app.UseExceptionHandler();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -170,7 +216,19 @@ app.UseStaticFiles();
 
 app.UseCors("ApiCorsPolicy");
 app.UseAuthentication();
+
+// Placed after authentication so the limiter can partition by authenticated user id when available
+// (falling back to the remote IP for anonymous traffic), but before authorization so requests rejected
+// with 401/403 are still counted — otherwise protected endpoints could be hammered with invalid tokens
+// and bypass even the global limit.
+app.UseRateLimiter();
+
 app.UseAuthorization();
+
+// Liveness (/alive), readiness (/health) and the secured detailed view (/health/detail).
+// Mapped after auth so /health/detail can require authorization; restricted to the Admin role
+// to match the app's other operational surfaces (admin logs, AI providers).
+app.MapDefaultEndpoints("Admin");
 
 app.MapControllers();
 app.MapHub<FinanceManager.Api.Hubs.CurrencyImportHub>("/hubs/currency-import");

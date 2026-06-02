@@ -8,5 +8,5 @@ public class InvestmentRate
     public decimal Salary { get; set; }
     public decimal InvestmentsChange { get; set; }
 
-    public decimal GetPercentage() => InvestmentsChange / Salary;
+    public decimal GetPercentage() => Salary == 0 ? 0 : InvestmentsChange / Salary;
 }

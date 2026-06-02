@@ -1,5 +1,7 @@
+using FinanceManager.Application.Diagnostics;
 using FinanceManager.Application.Services.FinancialInsights;
 using FinanceManager.Domain.Repositories;
+using System.Diagnostics;
 
 namespace FinanceManager.Api.Services;
 
@@ -16,6 +18,10 @@ public sealed class InsightsGenerationBackgroundService(
 
         await foreach (var userId in channel.ReadAll(stoppingToken))
         {
+            using var activity = FinanceManagerTelemetry.ActivitySource.StartActivity("insights.generate");
+            activity?.SetTag("user.id", userId);
+            var stopwatch = Stopwatch.StartNew();
+            var outcome = "success";
             try
             {
                 logger.LogDebug("Processing insights generation for user {UserId}.", userId);
@@ -28,6 +34,7 @@ public sealed class InsightsGenerationBackgroundService(
                 var hasRecent = latest.Any(x => x.CreatedAt >= DateTime.UtcNow.AddHours(-24));
                 if (hasRecent)
                 {
+                    outcome = "skipped";
                     logger.LogDebug("Skipping insights generation for user {UserId}; recent insights found.", userId);
                     continue;
                 }
@@ -35,20 +42,32 @@ public sealed class InsightsGenerationBackgroundService(
                 var insights = await financialInsightsAiGenerator.GenerateInsights(userId, null, _insightsCountToGenerate, stoppingToken);
                 if (insights.Count == 0)
                 {
+                    outcome = "empty";
                     logger.LogDebug("No insights generated for user {UserId}.", userId);
                     continue;
                 }
 
                 await financialInsightsRepository.AddRange(insights, stoppingToken);
+                activity?.SetTag("insights.count", insights.Count);
                 logger.LogInformation("Stored {Count} insights for user {UserId}.", insights.Count, userId);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
+                outcome = "canceled";
                 break;
             }
             catch (Exception ex)
             {
+                outcome = "failure";
+                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
                 logger.LogError(ex, "Error occurred in insights generation background worker for user {UserId}", userId);
+            }
+            finally
+            {
+                stopwatch.Stop();
+                var outcomeTag = new KeyValuePair<string, object?>("outcome", outcome);
+                FinanceManagerTelemetry.InsightsGenerationRuns.Add(1, outcomeTag);
+                FinanceManagerTelemetry.InsightsGenerationDuration.Record(stopwatch.Elapsed.TotalMilliseconds, outcomeTag);
             }
         }
 

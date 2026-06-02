@@ -40,7 +40,11 @@ Branch naming is **critical for the changelog to work**. Every changelog entry e
 
 ## Pull Requests
 
+**Before opening a pull request, always merge the latest `develop` into the feature branch first.** Fetch `develop` and merge it into the branch (`git fetch origin develop && git merge origin/develop`), resolve any conflicts, and re-run the build and tests on the merged result *before* creating the PR. This surfaces and fixes conflicts (and silent semantic overlaps that auto-merge cleanly but still collide) on the branch rather than in the PR, and keeps the diff reviewable against an up-to-date base. Never open a PR from a branch that is behind `develop`.
+
 When opening a pull request that resolves a GitHub issue, the PR body must include a GitHub auto-close keyword referencing the issue (e.g. `closes #123`) so that merging the PR automatically closes the linked issue.
+
+**Subscribe to the PR the instant it is created.** In the *same turn* as the `create_pull_request` call, immediately call `subscribe_pr_activity` for the new PR number — do not wait to be asked and do not defer it. The subscription only delivers events that occur *after* it is active, so subscribing late (e.g. after CI has already finished) silently misses the run. Subscribing as part of PR creation guarantees the subscription is live before CI starts. Note that wake events are delivered for CI **failures** and review/comment activity; a fully green run may not push an event, so do not treat silence as failure.
 
 ## T-Shirt Size Estimation
 
@@ -100,6 +104,8 @@ Every code change that has a user-visible effect must add an entry to `CHANGELOG
 
 - **Install the .NET SDK before coding.** Any task that involves code changes requires the .NET 10 SDK to be installed first so that `dotnet build`, `dotnet format`, and `dotnet test` can run. If `dotnet --list-sdks` does not show a `10.*` SDK, install it before making changes — see "Installing the .NET SDK" below for the path that works in the cloud sandbox.
 - **Run unit tests after every change.** Every code change must end with `dotnet test --project ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj` passing (see "Running tests" below for the correct invocation). Do not commit, push, or report a task as complete until unit tests are green.
+- **Render and screenshot any UI change on the guest account.** A green build is not proof the UI looks right. Whenever a change touches the Blazor UI (any `.razor`/`.razor.cs`/`.razor.css`, layouts, or styling), boot the app, log in via the built-in **"Check out demo"** guest account, and screenshot the affected page on both a mobile and a desktop viewport before reporting the task complete. Follow [`.claude/skills/ui-testing/SKILL.md`](./.claude/skills/ui-testing/SKILL.md) for the exact steps and sandbox gotchas (blocked chart CDN, light-vs-dark theme, SPA navigation).
+- **Send the screenshot of the changed feature.** Before reporting a task complete, if the work changed the UI in the current thread, run the app and send me the screenshot(s) of the feature that changed (use `SendUserFile`) so I can see the change — capture the affected page/component on both a mobile and a desktop viewport per the rule above. If the thread made **no** UI change, do not run the app for a screenshot and do not send one.
 
 ### Installing the .NET SDK (cloud sandbox)
 
@@ -202,6 +208,7 @@ Integration tests use the EF Core **InMemory** provider. They also remove `Datab
 - **Primary constructors** are preferred for classes, records, and structs. For records, use positional syntax: `public record Person(string Name, int Age);`. For classes/structs, map primary constructor parameters to readonly auto-properties — do not add separate private backing fields.
 - If a primary constructor cannot be used (complex init, serialization constraints), add a one-line comment explaining why.
 - Use **collection expressions** (`[]`, `["a"]`) when the language version allows.
+- For null-checking-and-unwrapping a nullable value, prefer the **explicit type pattern** `x is DateTime value` over the empty property pattern `x is { } value`. The explicit form names the type and reads more clearly.
 - Latest C# features allowed by the configured `LangVersion` are fair game.
 - Private/internal fields: `_camelCase`. Interfaces: `IPascalCase`. Files and types: `PascalCase`.
 - Namespaces must match folder paths (`dotnet_style_namespace_match_folder = true` in `.editorconfig`).

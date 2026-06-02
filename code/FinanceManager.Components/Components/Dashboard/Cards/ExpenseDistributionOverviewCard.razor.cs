@@ -29,6 +29,7 @@ public partial class ExpenseDistributionOverviewCard
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
     [Inject] public required ILogger<ExpenseDistributionOverviewCard> Logger { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -75,6 +76,7 @@ public partial class ExpenseDistributionOverviewCard
         catch (Exception ex)
         {
             Logger.LogError(ex, ex.Message);
+            Snackbar.Add("Unable to load expense distribution.", Severity.Error);
         }
         finally
         {

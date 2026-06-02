@@ -1,9 +1,19 @@
 @using FinanceManager.Components.Components.SharedComponents.Charts
 @using FinanceManager.Domain.Entities.MoneyFlowModels
 
+@if (IsMobile)
+{
+    @* On mobile the account name moves into the top app bar (next to the menu button) so the
+       hero is just the chart and a compact range strip — no title competing for the row. *@
+    <SectionContent SectionName="page-title">
+        <MudText Typo="Typo.h6" Class="ml-2" Style="color: var(--mud-palette-text-primary);">@AccountName</MudText>
+    </SectionContent>
+}
+
 <MudPaper Elevation="0" Class="pa-6 pb-0 mb-0" Style="background-color: transparent;">
-    <MudStack Spacing="4">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="3">
+    @if (!IsMobile)
+    {
+        <MudStack Spacing="4">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
                 <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Large">
                     @GetInitial()
@@ -14,58 +24,35 @@
                 </MudStack>
             </MudStack>
 
-            <MudStack AlignItems="AlignItems.End" Spacing="2">
-                <MudToggleGroup T="string" Value="SelectedRange" ValueChanged="OnRangeChanged"
-                                SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary"
-                                Outlined="true" Dense="true">
-                    <MudToggleItem Value="@("1M")" />
-                    <MudToggleItem Value="@("3M")" />
-                    <MudToggleItem Value="@("6M")" />
-                    <MudToggleItem Value="@("1Y")" />
-                    <MudToggleItem Value="@("Range")" />
-                </MudToggleGroup>
-                @if (SelectedRange == "Range")
-                {
-                    <div style="width: 260px;">
-                        <MudDateRangePicker DateRange="CustomDateRange" DateRangeChanged="OnCustomDateRangeChanged"
-                                            Variant="Variant.Outlined" Margin="Margin.Dense"
-                                            PickerVariant="PickerVariant.Dialog"
-                                            DisplayMonths="2" Orientation="Orientation.Landscape"
-                                            Clearable="true"
-                                            PlaceholderStart="From" PlaceholderEnd="To" />
-                    </div>
-                }
-            </MudStack>
-        </MudStack>
-
-        <MudStack Row="true" AlignItems="AlignItems.End" Justify="Justify.SpaceBetween" Spacing="4">
-            <MudStack Spacing="1">
-                <MudText Typo="Typo.overline" Color="Color.Default">Balance</MudText>
-                <MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="1">
-                    <MudText Typo="Typo.h3" Class="fm-tabular">@Balance.ToString("N2")</MudText>
-                    <MudText Typo="Typo.h5" Color="Color.Default">@Currency</MudText>
+            <MudStack Row="true" AlignItems="AlignItems.End" Justify="Justify.SpaceBetween" Spacing="4">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.overline" Color="Color.Default">Balance</MudText>
+                    <MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="1">
+                        <MudText Typo="Typo.h3" Class="fm-tabular">@Balance.ToString("N2")</MudText>
+                        <MudText Typo="Typo.h5" Color="Color.Default">@Currency</MudText>
+                    </MudStack>
                 </MudStack>
-            </MudStack>
 
-            <MudStack Spacing="1" AlignItems="AlignItems.End">
-                <MudText Typo="Typo.overline" Color="Color.Default">Change · @SelectedRange</MudText>
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                    <MudIcon Icon="@(BalanceChange >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
-                             Color="@(BalanceChange >= 0 ? Color.Success : Color.Error)" Size="Size.Small" />
-                    <MudText Typo="Typo.h6" Color="@(BalanceChange >= 0 ? Color.Success : Color.Error)" Class="fm-tabular">
-                        @(BalanceChange >= 0 ? "+" : "")@BalanceChange.ToString("N2") @Currency
-                    </MudText>
-                    @if (BalanceChangePercent.HasValue)
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Default" Class="fm-tabular">
-                            · @(BalanceChange >= 0 ? "+" : "")@BalanceChangePercent.Value.ToString("0.0")%
+                <MudStack Spacing="1" AlignItems="AlignItems.End">
+                    <MudText Typo="Typo.overline" Color="Color.Default">Change · @SelectedRange</MudText>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@(BalanceChange >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
+                                 Color="@(BalanceChange >= 0 ? Color.Success : Color.Error)" Size="Size.Small" />
+                        <MudText Typo="Typo.h6" Color="@(BalanceChange >= 0 ? Color.Success : Color.Error)" Class="fm-tabular">
+                            @(BalanceChange >= 0 ? "+" : "")@BalanceChange.ToString("N2") @Currency
                         </MudText>
-                    }
+                        @if (BalanceChangePercent.HasValue)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Default" Class="fm-tabular">
+                                · @(BalanceChange >= 0 ? "+" : "")@BalanceChangePercent.Value.ToString("0.0")%
+                            </MudText>
+                        }
+                    </MudStack>
                 </MudStack>
             </MudStack>
         </MudStack>
+    }
 
-    </MudStack>
     <div class="mx-n6 mt-2" style="min-height: 200px; position: relative;">
         @if (IsChartLoading)
         {
@@ -76,6 +63,33 @@
             <LineChartJs Series="@_chartSeries" />
         }
     </div>
+
+    @* Borderless range selector under the chart — light text labels with the active one in the
+       accent colour, plus a calendar icon for a custom range (Apple Stocks / Robinhood pattern). *@
+    <div class="d-flex justify-center align-center flex-wrap mt-1 pb-1" style="gap: 2px;">
+        @foreach (var range in _ranges)
+        {
+            <MudButton Variant="Variant.Text" Size="Size.Small"
+                       Color="@(SelectedRange == range ? Color.Primary : Color.Default)"
+                       Style="@($"min-width: 44px; font-weight: {(SelectedRange == range ? 700 : 500)};")"
+                       OnClick="@(() => OnRangeChanged(range))">@range</MudButton>
+        }
+        <MudIconButton Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small"
+                       Color="@(SelectedRange == "Range" ? Color.Primary : Color.Default)"
+                       OnClick="@(() => OnRangeChanged("Range"))" aria-label="Custom date range" />
+    </div>
+
+    @if (SelectedRange == "Range")
+    {
+        <div class="mx-auto pb-2" style="max-width: 360px;">
+            <MudDateRangePicker DateRange="CustomDateRange" DateRangeChanged="OnCustomDateRangeChanged"
+                                Variant="Variant.Outlined" Margin="Margin.Dense"
+                                PickerVariant="PickerVariant.Dialog"
+                                DisplayMonths="2" Orientation="Orientation.Landscape"
+                                Clearable="true"
+                                PlaceholderStart="From" PlaceholderEnd="To" />
+        </div>
+    }
 </MudPaper>
 
 @code {
@@ -91,6 +105,9 @@
     [Parameter] public EventCallback<DateRange?> CustomDateRangeChanged { get; set; }
     [Parameter] public bool IsChartLoading { get; set; }
     [Parameter] public List<TimeSeriesModel> ChartData { get; set; } = [];
+    [Parameter] public bool IsMobile { get; set; }
+
+    private readonly string[] _ranges = ["1M", "3M", "6M", "1Y"];
 
     private List<List<ChartJsLineDataPoint>> _chartSeries = [];
     private List<TimeSeriesModel>? _lastChartData;

@@ -11,11 +11,16 @@
         <MudLayout>
             <MudAppBar Dense Elevation="0">
                 <MudIconButton Icon="@Icons.Material.Filled.Menu" Edge="Edge.Start" OnClick="@DrawerToggle" />
+                <SectionOutlet SectionName="page-title" />
             </MudAppBar>
 
             <MudDrawer @bind-Open="_drawerOpen" Variant="@_drawerVariant" Elevation="0">
                 <NavMenu DrawerIsOpen=_drawerOpen />
                 <MudSpacer />
+                @if (_drawerOpen && !string.IsNullOrWhiteSpace(_greeting))
+                {
+                    <MudText Typo="Typo.body2" Class="px-4 py-1" Style="color: var(--mud-palette-text-secondary);">@_greeting</MudText>
+                }
                 <MudNavMenu>
                     <MudNavLink Icon="@Icons.Material.Filled.Settings" Href="UserSettings">Settings</MudNavLink>
                     <MudNavLink Icon="@Icons.Material.Filled.Logout" @onclick=LogOut>Log out</MudNavLink>
@@ -23,7 +28,16 @@
             </MudDrawer>
 
             <MudMainContent>
-                @Body
+                <ErrorBoundary @ref="_errorBoundary">
+                    <ChildContent>
+                        @Body
+                    </ChildContent>
+                    <ErrorContent Context="exception">
+                        <MudAlert Severity="Severity.Error" Class="ma-4">
+                            Something went wrong while loading this page. Please try again.
+                        </MudAlert>
+                    </ErrorContent>
+                </ErrorBoundary>
             </MudMainContent>
         </MudLayout>
     </Authorized>
@@ -32,12 +46,32 @@
 @code {
     [Inject] public NavigationManager Navigation { get; set; } = default!;
     [Inject] public ILoginService LoginService { get; set; } = default!;
+    [Inject] public IUserService UserService { get; set; } = default!;
     [Inject] public IBrowserViewportService BrowserViewportService { get; set; } = default!;
 
     private readonly Guid _viewportSubscriptionId = Guid.NewGuid();
+    private string? _greeting;
     private bool _drawerOpen = true;
     private bool _isMobile;
     private DrawerVariant _drawerVariant = DrawerVariant.Mini;
+    private ErrorBoundary? _errorBoundary;
+
+    protected override void OnInitialized() => Navigation.LocationChanged += OnLocationChanged;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var loggedUser = await LoginService.GetLoggedUser();
+        if (loggedUser is null) return;
+
+        var user = await UserService.GetUser(loggedUser.UserId);
+        var firstName = user?.FirstName;
+        var displayName = string.IsNullOrWhiteSpace(firstName) ? loggedUser.UserName : firstName;
+        _greeting = string.IsNullOrWhiteSpace(displayName) ? null : $"Hello, {displayName}";
+    }
+
+    // The ErrorBoundary latches its error state; recover on navigation so a failure on one page
+    // doesn't leave every subsequent page stuck on the fallback message.
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => _errorBoundary?.Recover();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -70,6 +104,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        Navigation.LocationChanged -= OnLocationChanged;
         await BrowserViewportService.UnsubscribeAsync(_viewportSubscriptionId);
     }
 }

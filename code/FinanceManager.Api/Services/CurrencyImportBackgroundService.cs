@@ -1,7 +1,9 @@
 using FinanceManager.Api.Hubs;
+using FinanceManager.Application.Diagnostics;
 using FinanceManager.Application.Services.Currencies;
 using FinanceManager.Domain.Entities.Imports;
 using Microsoft.AspNetCore.SignalR;
+using System.Diagnostics;
 
 namespace FinanceManager.Api.Services;
 
@@ -18,11 +20,16 @@ public sealed class CurrencyImportBackgroundService(
         DateTime lastStatusUpdate = DateTime.MinValue;
         await foreach (var request in channel.ReadAll(stoppingToken))
         {
+            if (!jobStore.TrySetRunning(request.JobId))
+                continue;
+
+            using var activity = FinanceManagerTelemetry.ActivitySource.StartActivity("currency_import.job");
+            activity?.SetTag("job.id", request.JobId);
+            activity?.SetTag("user.id", request.UserId);
+            var stopwatch = Stopwatch.StartNew();
+            var outcome = "success";
             try
             {
-                if (!jobStore.TrySetRunning(request.JobId))
-                    continue;
-
                 await PublishStatus(request.JobId, request.UserId, stoppingToken);
 
                 using var scope = scopeFactory.CreateScope();
@@ -69,13 +76,23 @@ public sealed class CurrencyImportBackgroundService(
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
+                outcome = "canceled";
                 break;
             }
             catch (Exception ex)
             {
+                outcome = "failure";
+                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
                 logger.LogError(ex, "Currency import job {JobId} failed.", request.JobId);
                 jobStore.TryMarkFailed(request.JobId, ex.Message);
                 await PublishStatus(request.JobId, request.UserId, stoppingToken);
+            }
+            finally
+            {
+                stopwatch.Stop();
+                var outcomeTag = new KeyValuePair<string, object?>("outcome", outcome);
+                FinanceManagerTelemetry.CurrencyImportJobs.Add(1, outcomeTag);
+                FinanceManagerTelemetry.CurrencyImportDuration.Record(stopwatch.Elapsed.TotalMilliseconds, outcomeTag);
             }
         }
 

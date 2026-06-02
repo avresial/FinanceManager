@@ -11,6 +11,7 @@ public class GuestAccountSeeder(
     CurrencyAccountSeeder currencyAccountSeeder,
     StockAccountSeeder stockAccountSeeder,
     BondAccountSeeder bondAccountSeeder,
+    FinancialInsightsSeeder financialInsightsSeeder,
     ILogger<GuestAccountSeeder> logger)
 {
     public async Task SeedForGuest(int guestUserId, CancellationToken cancellationToken = default)
@@ -28,6 +29,7 @@ public class GuestAccountSeeder(
         await currencyAccountSeeder.Seed(guestUserId, start, end, cancellationToken);
         await stockAccountSeeder.Seed(guestUserId, start, end, cancellationToken);
         await bondAccountSeeder.Seed(guestUserId, start, end, cancellationToken);
+        await financialInsightsSeeder.SeedForGuest(guestUserId, cancellationToken);
         logger.LogTrace("Seeding finished.");
     }
 
@@ -36,6 +38,6 @@ public class GuestAccountSeeder(
     private async Task EnsureGuestUserRecord(int guestUserId)
     {
         if (await userRepository.GetUser(guestUserId) is not null) return;
-        await userRepository.AddUserWithId(guestUserId, login: $"guest-{guestUserId}", password: string.Empty, PricingLevel.Basic, UserRole.User);
+        await userRepository.AddUserWithId(guestUserId, login: $"guest-{guestUserId}", password: string.Empty, PricingLevel.Basic, UserRole.User, firstName: "Demo");
     }
 }

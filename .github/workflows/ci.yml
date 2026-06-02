@@ -71,6 +71,12 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore ./code
 
+      # Naming-rule violations (IDE1006) are a hard failure: the .editorconfig naming rules
+      # are set to error severity, but the C# compiler does not run the naming analyzer during
+      # `dotnet build`, so this `dotnet format` check is what actually enforces them in CI.
+      - name: Enforce naming conventions
+        run: dotnet format style ./code --verify-no-changes --diagnostics IDE1006 --severity error
+
       - name: Check code formatting
         run: dotnet format ./code --verify-no-changes --verbosity diagnostic
         continue-on-error: true
@@ -192,9 +198,46 @@ jobs:
           path: '${{ github.workspace }}/TestResults/**/integration-test-results.trx'
           reporter: dotnet-trx
 
+  architecture-tests:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ./code
+
+      # ArchUnitNET analyzes compiled IL; Release optimizations (elided casts/locals,
+      # inlined typeof) can distort the dependency graph, so the maintainers recommend
+      # running architecture tests against a Debug build.
+      - name: Build architecture tests (Debug)
+        run: dotnet build ./code/FinanceManager.ArchitectureTests/FinanceManager.ArchitectureTests.csproj --configuration Debug
+
+      - name: Run architecture tests
+        run: |
+          mkdir -p ${{ github.workspace }}/TestResults
+          chmod +x ./code/FinanceManager.ArchitectureTests/bin/Debug/net10.0/FinanceManager.ArchitectureTests
+          ./code/FinanceManager.ArchitectureTests/bin/Debug/net10.0/FinanceManager.ArchitectureTests -trx ${{ github.workspace }}/TestResults/architecture-test-results.trx
+
+      - name: Publish architecture test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: 'Architecture Test Results'
+          path: '${{ github.workspace }}/TestResults/**/architecture-test-results.trx'
+          reporter: dotnet-trx
+
   publish:
     runs-on: ubuntu-latest
-    needs: [build, unit-tests, integration-tests, code-quality, security-scan]
+    needs: [build, unit-tests, integration-tests, architecture-tests, code-quality, security-scan]
     if: |
       always()
       && github.event_name == 'push'
@@ -202,6 +245,7 @@ jobs:
       && needs.build.result == 'success'
       && (needs.unit-tests.result == 'success' || needs.unit-tests.result == 'skipped')
       && (needs.integration-tests.result == 'success' || needs.integration-tests.result == 'skipped')
+      && (needs.architecture-tests.result == 'success' || needs.architecture-tests.result == 'skipped')
       && (needs.code-quality.result == 'success' || needs.code-quality.result == 'skipped')
       && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped')
 

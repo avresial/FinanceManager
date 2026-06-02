@@ -32,6 +32,7 @@ public partial class IncomeSourceOverviewCard
 
 
     [Inject] public required ILogger<IncomeSourceOverviewCard> Logger { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -97,6 +98,7 @@ public partial class IncomeSourceOverviewCard
         if (user is null) return;
 
         ChartData.Clear();
+        var hasError = false;
         if (_chart is not null) await _chart.UpdateSeriesAsync(true);
         await Task.Run(async () =>
         {
@@ -108,6 +110,7 @@ public partial class IncomeSourceOverviewCard
             }
             catch (Exception ex)
             {
+                hasError = true;
                 Logger.LogError(ex.ToString());
             }
 
@@ -147,6 +150,10 @@ public partial class IncomeSourceOverviewCard
             Total = ChartData.Sum(x => x.Value);
 
         });
+
+        if (hasError)
+            Snackbar.Add("Unable to load income sources.", Severity.Error);
+
         if (_chart is not null) await _chart.UpdateSeriesAsync(true);
     }
     public class IncomeSourceOverviewEntry

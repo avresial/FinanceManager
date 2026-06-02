@@ -232,10 +232,17 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
 
     private void AccountDataSynchronizationService_AccountsChanged()
     {
-        Task.Run(async () =>
+        _ = InvokeAsync(async () =>
         {
-            await UpdateEntries();
-            await InvokeAsync(StateHasChanged);
+            try
+            {
+                await UpdateEntries();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error while refreshing currency account details after data sync for account ID {AccountId}", AccountId);
+            }
         });
     }
 

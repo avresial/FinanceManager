@@ -22,6 +22,7 @@ public partial class LoginComponent
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILocalStorageService LocalStorageService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -36,6 +37,8 @@ public partial class LoginComponent
         //return;
 #endif
 
+        await NotifyIfSessionExpired();
+
         bool firstVisit = !(await LocalStorageService.ContainKeyAsync("isThisFirstVisit"));
         if (firstVisit)
         {
@@ -44,20 +47,20 @@ public partial class LoginComponent
             return;
         }
 
+        // GetLoggedUser silently restores the session from the refresh-token cookie when one is still valid, so a
+        // user returning within the refresh window lands straight back in the app without re-entering credentials.
         var loggedUser = await LoginService.GetLoggedUser();
         if (loggedUser is not null)
-        {
             Navigation.NavigateTo("");
-            return;
-        }
+    }
 
-        var getKeepMeLoggedinSession = await LoginService.GetKeepMeLoggedInSession();
-        if (getKeepMeLoggedinSession is not null)
-        {
-            var result = await LoginService.Login(getKeepMeLoggedinSession);
-            if (result)
-                Navigation.NavigateTo("");
-        }
+    private async Task NotifyIfSessionExpired()
+    {
+        if (!await LocalStorageService.ContainKeyAsync(TokenRefreshRedirectHandler.SessionExpiredKey))
+            return;
+
+        await LocalStorageService.RemoveItemAsync(TokenRefreshRedirectHandler.SessionExpiredKey);
+        Snackbar.Add("Your session has expired, please sign in again.", Severity.Info);
     }
 
     private async Task Login()

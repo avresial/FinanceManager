@@ -21,7 +21,7 @@ public class DashboardOverviewCardsCacheService(
     private const string _cacheKeyPrefix = "dashboard-overview-cards-cache-v1";
     private static readonly TimeSpan _maxStale = TimeSpan.FromMinutes(5);
 
-    public Task<DashboardOverviewCardsCacheSnapshot> GetSnapshotAsync(DashboardOverviewCardsRefreshContext context)
+    public virtual Task<DashboardOverviewCardsCacheSnapshot> GetSnapshotAsync(DashboardOverviewCardsRefreshContext context)
         => GetOrRefreshAsync(context);
 
     protected override string GetCacheKey(DashboardOverviewCardsRefreshContext refreshContext)

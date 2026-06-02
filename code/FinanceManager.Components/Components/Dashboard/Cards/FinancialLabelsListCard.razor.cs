@@ -17,6 +17,7 @@ public partial class FinancialLabelsListCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
@@ -34,6 +35,10 @@ public partial class FinancialLabelsListCard
             if (userId is not null)
                 _data = (await MoneyFlowHttpClient.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime)).Where(x => x.Value != 0).ToList();
         }
+        catch
+        {
+            Snackbar.Add("Unable to load financial labels.", Severity.Error);
+        }
         finally
         {
             _isLoading = false;
@@ -50,6 +55,10 @@ public partial class FinancialLabelsListCard
         {
             if (userId is not null)
                 _data = (await MoneyFlowHttpClient.GetLabelsValue(userId.UserId, StartDateTime, EndDateTime)).Where(x => x.Value != 0).ToList();
+        }
+        catch
+        {
+            Snackbar.Add("Unable to load financial labels.", Severity.Error);
         }
         finally
         {
