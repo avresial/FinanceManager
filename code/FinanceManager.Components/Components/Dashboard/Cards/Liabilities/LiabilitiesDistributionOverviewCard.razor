@@ -4,7 +4,7 @@
 @using FinanceManager.Domain.Providers
 
 <MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
-    <MudPaper Class="d-flex align-start justify-space-between gap-4 pa-3 pb-0 flex-shrink-0" Elevation="0">
+    <MudPaper Class="d-flex flex-wrap align-start justify-space-between gap-2 pa-3 pb-0 flex-shrink-0" Elevation="0">
         <div>
             <MudText Typo="Typo.h5">Liabilities distribution</MudText>
             @if (_isLoading)
