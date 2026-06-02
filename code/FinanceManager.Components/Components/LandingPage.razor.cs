@@ -1,6 +1,7 @@
 using Blazored.LocalStorage;
 using FinanceManager.Components.HttpClients;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using MudBlazor;
 
 namespace FinanceManager.Components.Components;
@@ -11,14 +12,23 @@ public partial class LandingPage : ComponentBase
 
     [Inject] public required ILocalStorageService LocalStorageService { get; set; }
     [Inject] public required NewVisitorsHttpClient NewVisitorsHttpClient { get; set; }
+    [Inject] public required ILogger<LandingPage> Logger { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        if (!await LocalStorageService.ContainKeyAsync("isThisFirstVisit") ||
-             await LocalStorageService.GetItemAsync<bool>("isThisFirstVisit"))
+        // Visit tracking must never block or break the landing page render.
+        try
         {
-            await LocalStorageService.SetItemAsync("isThisFirstVisit", false);
-            await NewVisitorsHttpClient.AddVisit();
+            if (!await LocalStorageService.ContainKeyAsync("isThisFirstVisit") ||
+                 await LocalStorageService.GetItemAsync<bool>("isThisFirstVisit"))
+            {
+                await LocalStorageService.SetItemAsync("isThisFirstVisit", false);
+                await NewVisitorsHttpClient.AddVisit();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to record first visit.");
         }
     }
 
