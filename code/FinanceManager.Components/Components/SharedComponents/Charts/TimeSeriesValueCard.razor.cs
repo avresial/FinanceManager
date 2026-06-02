@@ -63,6 +63,11 @@ public partial class TimeSeriesValueCard
             ? new TimeSeriesModel(DateTime.Today, 0m)
             : Data[Math.Clamp(_hoverIndex ?? Data.Count - 1, 0, Data.Count - 1)];
 
+    // Percent change is only meaningful when the range opens with a non-zero
+    // baseline; from a zero baseline the change is undefined (division by zero),
+    // so the chip is hidden rather than showing a misleading "+0.0 %".
+    private bool HasDelta => Data.Count > 0 && Data[0].Value != 0;
+
     // Percent change of the shown point versus the first point in range.
     private double DeltaPct =>
         Data.Count == 0 || Data[0].Value == 0

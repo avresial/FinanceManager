@@ -22,7 +22,10 @@
             {
                 <div class="fm-tsvc-right">
                     <span class="fm-tsvc-value">@FormatMoney(Shown.Value)</span>
-                    <span class="fm-tsvc-delta" style="@($"color:{DeltaColor};background:{DeltaBackground};")">@DeltaText</span>
+                    @if (HasDelta)
+                    {
+                        <span class="fm-tsvc-delta" style="@($"color:{DeltaColor};background:{DeltaBackground};")">@DeltaText</span>
+                    }
                 </div>
             }
             else
