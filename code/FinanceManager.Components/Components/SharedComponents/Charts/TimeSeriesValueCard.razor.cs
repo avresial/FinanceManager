@@ -226,9 +226,15 @@ public partial class TimeSeriesValueCard
                 Crosshairs = new AxisCrosshairs { Show = true, Width = 1 },
                 Labels = new XAxisLabels
                 {
-                    // OffsetY shifts the labels upward into the plot area so they sit
-                    // just above the card's bottom border (which clips the x-axis row).
-                    OffsetY = -6,
+                    // The chart's inner div is pushed 30px below the card (see the
+                    // .razor) so ApexCharts' reserved x-axis row is clipped and the
+                    // gradient sits flush with the bottom border. The month labels live
+                    // in that clipped row; OffsetY lifts them back up so they sit just
+                    // inside the card's bottom edge (bottom-aligned). The chart SVG is
+                    // rendered at 2x, so each unit of OffsetY shifts the label ~2px:
+                    // -16 lands the labels ~6px above the card bottom. (0 dropped them
+                    // below the clip; -34 floated them ~40px up into the plot.)
+                    OffsetY = -16,
                     Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
                     // Format per tick granularity so sub-month ranges don't repeat the
                     // month (e.g. a "This month" daily range showed "Jun '26" on every tick,
@@ -250,9 +256,11 @@ public partial class TimeSeriesValueCard
                     AxisTicks = new AxisTicks { Show = false },
                     Labels = new YAxisLabels
                     {
-                        // OffsetX shifts labels rightward from the left chart edge so
-                        // they appear inside the plot area (matching the design mock).
-                        OffsetX = 36,
+                        // Floating labels overlay the plot; OffsetX nudges them right
+                        // off the left chart edge so they sit just inside the card's
+                        // left border (~7px gap), bottom-aligned-style like the x-axis
+                        // labels. Each unit of OffsetX is ~1px here, so 24 ≈ 7px in.
+                        OffsetX = 24,
                         Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
                         // compact currency ticks: 2.5k / 7.5k / 10k / 13k
                         Formatter = "function(v){ if(!v) return ''; var k=v/1000; " +
