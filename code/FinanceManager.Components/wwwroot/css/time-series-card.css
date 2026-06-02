@@ -90,13 +90,14 @@
     }
 }
 
-/* Subtle dark halo on the overlaid axis labels so they stay legible over the
-   gradient fill (mirrors the design mock's paint-order stroke). */
+/* Subtle halo on the overlaid axis labels so they stay legible over the
+   gradient fill. The stroke is kept thin and theme-neutral so it only lifts
+   the text off the fill without thickening the glyphs into a heavy/bold look. */
 .fm-tsvc-card .apexcharts-yaxis-texts-g text,
 .fm-tsvc-card .apexcharts-xaxis-texts-g text {
     paint-order: stroke;
-    stroke: rgba(20, 20, 22, 0.45);
-    stroke-width: 2.4px;
+    stroke: rgba(128, 128, 128, 0.25);
+    stroke-width: 1px;
     stroke-linejoin: round;
 }
 

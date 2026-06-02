@@ -226,9 +226,14 @@ public partial class TimeSeriesValueCard
                 Crosshairs = new AxisCrosshairs { Show = true, Width = 1 },
                 Labels = new XAxisLabels
                 {
-                    // OffsetY shifts the labels upward into the plot area so they sit
-                    // just above the card's bottom border (which clips the x-axis row).
-                    OffsetY = -6,
+                    // The chart's inner div is pushed 30px below the card (see the
+                    // .razor) so ApexCharts' reserved x-axis row is clipped and the
+                    // gradient sits flush with the bottom border. The month labels live
+                    // in that clipped row, so OffsetY must lift them back up by roughly
+                    // that push (plus the label height) to land them just inside the
+                    // card's bottom edge. -6px left them clipped (month annotation
+                    // missing); -34px brings them into view.
+                    OffsetY = -34,
                     Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
                     // Format per tick granularity so sub-month ranges don't repeat the
                     // month (e.g. a "This month" daily range showed "Jun '26" on every tick,
