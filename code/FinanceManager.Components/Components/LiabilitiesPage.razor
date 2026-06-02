@@ -10,15 +10,7 @@
         </MudItem>
         
         <MudItem xs="12" lg="4">
-            <LiabilityPerTypeOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
-        </MudItem>
-
-        <MudItem xs="12" lg="4">
-            <LiabilitiesPerAccountOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{1.5 * _unitHeight}px")" />
-        </MudItem>
-
-        <MudItem xs="12" lg="4">
-            <LiabilitiesPerAccountOverviewCard DisplayAsChart="false" StartDateTime=StartDate EndDateTime="@EndDate"  Height="@($"{1.5 * _unitHeight}px")" />
+            <LiabilitiesDistributionOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{2 * _unitHeight}px")" />
         </MudItem>
     </MudGrid>
 </MudContainer>

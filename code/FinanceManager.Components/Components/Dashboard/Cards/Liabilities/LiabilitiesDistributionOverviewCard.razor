@@ -1,0 +1,78 @@
+@using ApexCharts
+@using FinanceManager.Components.Components.SharedComponents
+@using FinanceManager.Domain.Entities.MoneyFlowModels
+@using FinanceManager.Domain.Providers
+
+<MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
+    <MudPaper Class="d-flex align-start justify-space-between gap-4 pa-3 pb-0 flex-shrink-0" Elevation="0">
+        <div>
+            <MudText Typo="Typo.h5">Liabilities distribution</MudText>
+            @if (_isLoading)
+            {
+                <MudText Typo="Typo.h6" Class="text-muted">
+                    <StringSpinner CharactersCount="4" />
+                </MudText>
+            }
+            else if (_totalLiabilities != 0)
+            {
+                <MudText Class="ld-total">@_totalLiabilities.ToString("0.00") @_currency.ShortName</MudText>
+            }
+        </div>
+        <MudToggleGroup T="string" Value="@_view" ValueChanged="OnViewChangedAsync"
+                        Outlined="true" Dense="true" Class="flex-shrink-0 mt-1">
+            <MudToggleItem Value="@_viewByType" Text="By type" />
+            <MudToggleItem Value="@_viewByAccount" Text="By account" />
+        </MudToggleGroup>
+    </MudPaper>
+
+    <MudPaper Class="flex-grow-1 overflow-hidden d-flex align-center" Elevation="0">
+        @if (_isLoading)
+        {
+            <div style="width:100%;height:100%">
+                <ChartSpinner MaxHeight=@Height />
+            </div>
+        }
+        else if (ActiveData.Any())
+        {
+            <div class="ld-body">
+                <div class="ld-chart-wrap">
+                    <ApexChart @ref="_chart" TItem="NameValueResult" Options="_chartOptions" Width="150" Height="150">
+                        <ApexPointSeries TItem="NameValueResult"
+                                         Items="ActiveData"
+                                         Name="Liabilities"
+                                         SeriesType="SeriesType.Pie"
+                                         XValue="e => e.Name"
+                                         YAggregate="@(e => e.Sum(x => Math.Round(x.Value, 2)))"
+                                         OrderByDescending="@(e => e.Y)" />
+                    </ApexChart>
+                </div>
+                <div class="ld-legend">
+                    @{
+                        var sorted = ActiveData.OrderByDescending(x => x.Value).ToList();
+                        var colors = ColorsProvider.GetColors();
+                        for (int i = 0; i < sorted.Count; i++)
+                        {
+                            var item = sorted[i];
+                            var color = colors[i % colors.Count];
+                            var pct = _totalLiabilities == 0 ? 0m : Math.Round(item.Value / _totalLiabilities * 100m, 1);
+                            <div class="ld-legend-row">
+                                <span class="ld-legend-dot" style="background: @color"></span>
+                                <span class="ld-legend-name">@item.Name</span>
+                                <span class="ld-legend-vals">
+                                    <span class="ld-legend-amt">@item.Value.ToString("0.00")</span>
+                                    <span class="ld-legend-pct">@pct.ToString("0.0")%</span>
+                                </span>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
+            </div>
+        }
+    </MudPaper>
+</MudCard>
