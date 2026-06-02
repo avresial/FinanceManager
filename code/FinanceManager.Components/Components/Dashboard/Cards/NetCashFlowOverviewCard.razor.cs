@@ -33,7 +33,11 @@ public partial class NetCashFlowOverviewCard
         {
             var start = StartDateTime.ToLocalTime().ToString("MMM yyyy", CultureInfo.InvariantCulture);
             var end = EndDateTime.ToLocalTime().ToString("MMM yyyy", CultureInfo.InvariantCulture);
-            return start == end ? $"Total · {start}" : $"Total · {start} – {end}";
+            // Glyphs as code points so the source stays pure-ASCII (U+00B7 middle dot,
+            // U+2013 en dash), matching the convention in TimeSeriesValueCard.
+            var dot = (char)0x00B7;
+            var dash = (char)0x2013;
+            return start == end ? $"Total {dot} {start}" : $"Total {dot} {start} {dash} {end}";
         }
     }
 
@@ -41,13 +45,15 @@ public partial class NetCashFlowOverviewCard
 
     private async Task Reload()
     {
-        _currency = SettingsService.GetCurrency().ShortName;
+        var currency = SettingsService.GetCurrency();
+        _currency = currency.ShortName;
         _totalNetCashFlow = null;
 
         var user = await LoginService.GetLoggedUser();
         if (user is null)
         {
             _series = [];
+            _hasError = false;
             _isLoading = false;
             return;
         }
@@ -58,7 +64,6 @@ public partial class NetCashFlowOverviewCard
 
         try
         {
-            var currency = SettingsService.GetCurrency();
             var context = new DashboardOverviewCardsRefreshContext
             {
                 UserId = user.UserId,

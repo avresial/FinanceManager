@@ -27,12 +27,14 @@ public partial class ClosingBalanceOverviewCard
 
     private async Task Reload()
     {
-        _currency = SettingsService.GetCurrency().ShortName;
+        var currency = SettingsService.GetCurrency();
+        _currency = currency.ShortName;
 
         var user = await LoginService.GetLoggedUser();
         if (user is null)
         {
             _series = [];
+            _hasError = false;
             _isLoading = false;
             return;
         }
@@ -43,7 +45,6 @@ public partial class ClosingBalanceOverviewCard
 
         try
         {
-            var currency = SettingsService.GetCurrency();
             var context = new DashboardOverviewCardsRefreshContext
             {
                 UserId = user.UserId,

@@ -77,7 +77,7 @@ public partial class TimeSeriesValueCard
     private string CaptionText =>
         ShowSummary && !string.IsNullOrEmpty(SummaryCaption)
             ? SummaryCaption!
-            : $"{(IsHovering ? "Value on" : "Current value")} · " +
+            : $"{(IsHovering ? "Value on" : "Current value")} {(char)0x00B7} " +
               Shown.DateTime.ToLocalTime().ToString("MMMM yyyy", CultureInfo.InvariantCulture);
 
     // The delta chip compares the shown point to the range start; that pairing is
