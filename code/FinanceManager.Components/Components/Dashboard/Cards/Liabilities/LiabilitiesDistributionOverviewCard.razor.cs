@@ -18,7 +18,6 @@ public partial class LiabilitiesDistributionOverviewCard
     private string _view = _viewByType;
     private bool _isLoading;
     private Currency _currency = DefaultCurrency.PLN;
-    private decimal _totalLiabilities;
     private List<NameValueResult> _typeData = [];
     private List<NameValueResult> _accountData = [];
     private ApexChart<NameValueResult>? _chart;
@@ -33,6 +32,9 @@ public partial class LiabilitiesDistributionOverviewCard
     [Inject] public required ILoginService LoginService { get; set; }
 
     private List<NameValueResult> ActiveData => _view == _viewByAccount ? _accountData : _typeData;
+
+    // Derive the total from the active dataset so per-view percentages and the header stay self-consistent.
+    private decimal TotalLiabilities => ActiveData.Count == 0 ? 0 : Math.Round(ActiveData.Sum(x => x.Value), 2);
 
     private readonly ApexChartOptions<NameValueResult> _chartOptions = new()
     {
@@ -68,7 +70,6 @@ public partial class LiabilitiesDistributionOverviewCard
             {
                 _typeData = [];
                 _accountData = [];
-                _totalLiabilities = 0;
                 return;
             }
 
@@ -77,7 +78,6 @@ public partial class LiabilitiesDistributionOverviewCard
             {
                 _typeData = [];
                 _accountData = [];
-                _totalLiabilities = 0;
                 return;
             }
 
@@ -87,7 +87,6 @@ public partial class LiabilitiesDistributionOverviewCard
 
             _typeData = ToPositive(await typeTask);
             _accountData = ToPositive(await accountTask);
-            _totalLiabilities = _typeData.Count == 0 ? 0 : Math.Round(_typeData.Sum(x => x.Value), 2);
 
             if (_chart is not null)
                 await _chart.UpdateSeriesAsync(true);

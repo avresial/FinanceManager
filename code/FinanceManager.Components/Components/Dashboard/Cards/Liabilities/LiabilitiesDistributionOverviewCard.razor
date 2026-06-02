@@ -13,9 +13,9 @@
                     <StringSpinner CharactersCount="4" />
                 </MudText>
             }
-            else if (_totalLiabilities != 0)
+            else if (TotalLiabilities != 0)
             {
-                <MudText Class="ld-total">@_totalLiabilities.ToString("0.00") @_currency.ShortName</MudText>
+                <MudText Class="ld-total">@TotalLiabilities.ToString("0.00") @_currency.ShortName</MudText>
             }
         </div>
         <MudToggleGroup T="string" Value="@_view" ValueChanged="OnViewChangedAsync"
@@ -54,7 +54,8 @@
                         {
                             var item = sorted[i];
                             var color = colors[i % colors.Count];
-                            var pct = _totalLiabilities == 0 ? 0m : Math.Round(item.Value / _totalLiabilities * 100m, 1);
+                            var total = TotalLiabilities;
+                            var pct = total == 0 ? 0m : Math.Round(item.Value / total * 100m, 1);
                             <div class="ld-legend-row">
                                 <span class="ld-legend-dot" style="background: @color"></span>
                                 <span class="ld-legend-name">@item.Name</span>
