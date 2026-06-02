@@ -43,6 +43,9 @@ rules agents must follow when updating this file.
 - Guest stock seeder now buys shares in sync with the cash account's monthly investment: each 3rd-of-the-month investment purchases the matching value of the demo ETF at that day's price, so the holding's value reflects real invested cash plus market movement instead of random unit counts. #240
 - Guest loan and bond accounts now move in step with cash: the loan is taken out on the guest's first day with its proceeds credited to cash and repaid in equal monthly instalments shown on both accounts, and the bond account buys a fixed amount each month funded by a matching cash outflow. Investment- and loan-related cash transactions carry a descriptive label (Investment/Loan) and description so it's clear what each one paid for. #240
 
+### Removed
+- Removed the redundant "Total net worth" card from the top of the dashboard; the "Net worth over time" card below it already shows the same current value alongside its chart. #319
+
 ### Fixed
 - Landing page no longer crashes when the visit-tracking call fails: a failed `PUT /api/NewVisitors` (e.g. a 500) is now caught and logged instead of throwing out of the page's initialization, so the landing/demo page always renders. #316
 - Time-series dashboard cards (assets value over time, net worth, liabilities, investment type) no longer render the gridline labels with a heavy bold halo, and the date/month annotation along the bottom axis — previously clipped out of view — is now visible. #313
