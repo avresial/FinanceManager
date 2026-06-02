@@ -256,9 +256,11 @@ public partial class TimeSeriesValueCard
                     AxisTicks = new AxisTicks { Show = false },
                     Labels = new YAxisLabels
                     {
-                        // OffsetX shifts labels rightward from the left chart edge so
-                        // they appear inside the plot area (matching the design mock).
-                        OffsetX = 36,
+                        // Floating labels overlay the plot; OffsetX nudges them right
+                        // off the left chart edge so they sit just inside the card's
+                        // left border (~7px gap), bottom-aligned-style like the x-axis
+                        // labels. Each unit of OffsetX is ~1px here, so 24 ≈ 7px in.
+                        OffsetX = 24,
                         Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
                         // compact currency ticks: 2.5k / 7.5k / 10k / 13k
                         Formatter = "function(v){ if(!v) return ''; var k=v/1000; " +
