@@ -1,6 +1,5 @@
 using FinanceManager.Components.Models;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -11,6 +10,8 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.TimeSeries;
 public partial class AssetsTimeSeriesCard
 {
     private bool _isLoading;
+    private bool _hasError;
+    private string _currency = "PLN";
     public List<TimeSeriesModel> ChartData { get; set; } = [];
 
     [Parameter] public DateTime StartDateTime { get; set; }
@@ -22,20 +23,30 @@ public partial class AssetsTimeSeriesCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    protected override async Task OnParametersSetAsync()
+    protected override Task OnParametersSetAsync() => Reload();
+
+    private async Task Reload()
     {
         var user = await LoginService.GetLoggedUser();
-        if (user is null) return;
+        if (user is null)
+        {
+            ChartData.Clear();
+            return;
+        }
 
         _isLoading = true;
+        _hasError = false;
         StateHasChanged();
         try
         {
+            var currency = SettingsService.GetCurrency();
+            _currency = currency.ShortName;
+
             ChartData.Clear();
             var context = new AssetsPageCardsRefreshContext
             {
                 UserId = user.UserId,
-                CurrencyId = SettingsService.GetCurrency().Id,
+                CurrencyId = currency.Id,
                 StartDateTime = StartDateTime,
                 EndDateTime = EndDateTime,
             };
@@ -45,9 +56,12 @@ public partial class AssetsTimeSeriesCard
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex.Message, ex);
+            _hasError = true;
+            Logger.LogError(ex, "Error getting assets time series data");
         }
-
-        _isLoading = false;
+        finally
+        {
+            _isLoading = false;
+        }
     }
 }

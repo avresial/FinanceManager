@@ -19,6 +19,7 @@ rules agents must follow when updating this file.
 - Guest demo account now seeds three sample financial insights so the dashboard Insights card is populated instead of empty when trying out the app. #259
 
 ### Changed
+- Time-series dashboard cards (assets value over time, net worth, liabilities, investment type) redesigned into a shared card with a live value/delta readout header and a gradient area chart that now shows axes, gridlines, compact currency Y labels, date X labels, and an interactive hover tooltip that syncs the header to the hovered point; the investment-type card also drops its raw Bootstrap markup for `MudCard`. #284
 - Sign-in and registration now use your email address as your login instead of a separate username. #301
 - Asset diversification card on the Assets page redesigned from a single radial gauge into a "gauge + breakdown" layout: the score gauge now sits beside a "Built from" bar showing how the asset-class and holdings sub-scores combine, with a Limited/Moderate/Broad band legend and a gentle, band-tinted insight callout (no longer an alarming red warning). #262
 - "Assets per type" and "Assets per wallet" cards merged into a single "Assets distribution" card with a segmented "By type / By wallet" toggle that swaps the pie chart in place using the chart library's built-in animation. #268

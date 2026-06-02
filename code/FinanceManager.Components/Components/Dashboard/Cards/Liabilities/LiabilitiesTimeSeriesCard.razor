@@ -1,23 +1,10 @@
-﻿@using ApexCharts
 @using FinanceManager.Components.Components.SharedComponents.Charts
-@using FinanceManager.Domain.Entities.MoneyFlowModels;
 
-
-<MudCard Outlined Class="d-flex flex-nowrap " Style="@($"height:{Height}")">
-    <MudPaper Class="flex-grow-0 p-3" Elevation="0">
-        <MudText Typo=Typo.h5>Liabilities value over time</MudText>
-    </MudPaper>
-    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
-        @if (ChartData.Any())
-        {
-            <LineChartJs
-                Series="@([ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()])" />
-        }
-        else
-        {
-            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
-                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
-            </div>
-        }
-    </MudPaper>
-</MudCard>
+<TimeSeriesValueCard Title="Liabilities value over time"
+                     Data="ChartData"
+                     IsLoading="_isLoading"
+                     HasError="_hasError"
+                     OnRetry="Reload"
+                     Accent="#EF5350"
+                     CurrencyShortName="@_currency"
+                     Height="@Height" />

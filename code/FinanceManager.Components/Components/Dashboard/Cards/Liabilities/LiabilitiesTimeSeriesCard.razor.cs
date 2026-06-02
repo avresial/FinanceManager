@@ -8,6 +8,9 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.Liabilities;
 
 public partial class LiabilitiesTimeSeriesCard
 {
+    private bool _isLoading;
+    private bool _hasError;
+    private string _currency = "PLN";
     public List<TimeSeriesModel> ChartData { get; set; } = [];
 
     [Parameter] public DateTime StartDateTime { get; set; }
@@ -19,28 +22,32 @@ public partial class LiabilitiesTimeSeriesCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    protected override async Task OnParametersSetAsync()
+    protected override Task OnParametersSetAsync() => Reload();
+
+    private async Task Reload()
     {
         var user = await LoginService.GetLoggedUser();
         if (user is null) return;
-        ChartData.Clear();
-        ChartData.AddRange((await GetData()).OrderBy(x => x.DateTime));
-    }
 
-    private async Task<List<TimeSeriesModel>> GetData()
-    {
-        var user = await LoginService.GetLoggedUser();
-        if (user is null) return [];
-
+        _isLoading = true;
+        _hasError = false;
+        StateHasChanged();
         try
         {
-            return await LiabilitiesHttpClient.GetLiabilitiesTimeSeries(user.UserId, StartDateTime, EndDateTime).ToListAsync();
+            _currency = SettingsService.GetCurrency().ShortName;
+
+            ChartData.Clear();
+            var data = await LiabilitiesHttpClient.GetLiabilitiesTimeSeries(user.UserId, StartDateTime, EndDateTime).ToListAsync();
+            ChartData.AddRange(data.OrderBy(x => x.DateTime));
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error getting assets time series data");
+            _hasError = true;
+            Logger.LogError(ex, "Error getting liabilities time series data");
         }
-
-        return [];
+        finally
+        {
+            _isLoading = false;
+        }
     }
 }

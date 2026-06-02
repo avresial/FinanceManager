@@ -1,4 +1,5 @@
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -8,7 +9,9 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.TimeSeries;
 public partial class NetWorthTimeSeriesCard
 {
     private bool _isLoading;
-    public Dictionary<DateTime, decimal> ChartData { get; set; } = [];
+    private bool _hasError;
+    private string _currency = "PLN";
+    private List<TimeSeriesModel> _series = [];
 
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
@@ -19,24 +22,34 @@ public partial class NetWorthTimeSeriesCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    protected override async Task OnParametersSetAsync()
+    protected override Task OnParametersSetAsync() => Reload();
+
+    private async Task Reload()
     {
         var user = await LoginService.GetLoggedUser();
         if (user is null)
         {
-            ChartData = [];
+            _series = [];
             return;
         }
 
         _isLoading = true;
+        _hasError = false;
         StateHasChanged();
         try
         {
-            ChartData = await MoneyFlowHttpClient.GetNetWorth(user.UserId, SettingsService.GetCurrency(), StartDateTime, EndDateTime);
+            var currency = SettingsService.GetCurrency();
+            _currency = currency.ShortName;
+
+            var netWorth = await MoneyFlowHttpClient.GetNetWorth(user.UserId, currency, StartDateTime, EndDateTime);
+            _series = netWorth.OrderBy(x => x.Key)
+                              .Select(x => new TimeSeriesModel(x.Key, x.Value))
+                              .ToList();
         }
         catch (Exception ex)
         {
-            ChartData = [];
+            _series = [];
+            _hasError = true;
             Logger.LogError(ex, "Error getting net worth time series data");
         }
         finally

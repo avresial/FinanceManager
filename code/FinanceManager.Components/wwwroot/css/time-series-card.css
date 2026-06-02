@@ -1,0 +1,140 @@
+/* Styles for TimeSeriesValueCard. Shipped as a plain (non-isolated) stylesheet
+   and linked from index.html, because this app's scoped-CSS bundle
+   (FinanceManager.WebUi.styles.css) is not wired up, so .razor.css isolation
+   does not apply at runtime. Class names are fm-tsvc-* to avoid collisions. */
+
+/* Header: split row on desktop (title/caption left, value/delta right). */
+.fm-tsvc-header {
+    padding: 16px 18px 12px;
+    flex: none;
+}
+
+.fm-tsvc-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.fm-tsvc-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.fm-tsvc-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fm-tsvc-caption {
+    font-size: 12px;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fm-tsvc-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex: none;
+}
+
+.fm-tsvc-value {
+    font-size: 1.9rem;
+    font-weight: 400;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.fm-tsvc-value--muted {
+    color: var(--mud-palette-text-disabled);
+}
+
+.fm-tsvc-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12.5px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* Header value placeholder shown while the series loads. */
+.fm-tsvc-shimmer {
+    width: 160px;
+    height: 30px;
+    border-radius: 4px;
+    flex: none;
+    background: linear-gradient(90deg, rgba(128, 128, 128, 0.12) 25%, rgba(128, 128, 128, 0.22) 37%, rgba(128, 128, 128, 0.12) 63%);
+    background-size: 400% 100%;
+    animation: fm-tsvc-shimmer 1.4s ease infinite;
+}
+
+@keyframes fm-tsvc-shimmer {
+    0% {
+        background-position: 100% 0;
+    }
+
+    100% {
+        background-position: -100% 0;
+    }
+}
+
+/* Subtle dark halo on the overlaid axis labels so they stay legible over the
+   gradient fill (mirrors the design mock's paint-order stroke). */
+.fm-tsvc-card .apexcharts-yaxis-texts-g text,
+.fm-tsvc-card .apexcharts-xaxis-texts-g text {
+    paint-order: stroke;
+    stroke: rgba(20, 20, 22, 0.45);
+    stroke-width: 2.4px;
+    stroke-linejoin: round;
+}
+
+/* Let hover events reach the chart so the tooltip / crosshair / marker fire.
+   ApexCharts overlays a full-plot <foreignObject> (it only carries an injected
+   <style> block) with pointer-events:auto, which sat on top of the series and
+   swallowed every mousemove — so hovering produced no tooltip at all. The
+   element is purely decorative, so disabling its pointer events is safe and
+   restores hover labelling. */
+.fm-tsvc-card .apexcharts-svg > foreignObject {
+    pointer-events: none;
+}
+
+/* Tooltip panel: a little extra padding + softer shadow over the gradient. */
+.fm-tsvc-card .apexcharts-tooltip {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+    border: none !important;
+}
+
+/* Mobile: stack the header so the title isn't squeezed out by the value readout. */
+@media (max-width: 599.98px) {
+    .fm-tsvc-header {
+        padding: 12px 14px 0;
+    }
+
+    .fm-tsvc-header-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+    }
+
+    .fm-tsvc-right {
+        flex-direction: row;
+        align-items: baseline;
+        gap: 10px;
+    }
+
+    .fm-tsvc-value {
+        font-size: 1.55rem;
+    }
+}
