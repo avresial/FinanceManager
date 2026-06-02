@@ -77,10 +77,10 @@
     flex: none;
     background: linear-gradient(90deg, rgba(128, 128, 128, 0.12) 25%, rgba(128, 128, 128, 0.22) 37%, rgba(128, 128, 128, 0.12) 63%);
     background-size: 400% 100%;
-    animation: fmTsvcShimmer 1.4s ease infinite;
+    animation: fm-tsvc-shimmer 1.4s ease infinite;
 }
 
-@keyframes fmTsvcShimmer {
+@keyframes fm-tsvc-shimmer {
     0% {
         background-position: 100% 0;
     }

@@ -28,7 +28,11 @@ public partial class AssetsTimeSeriesCard
     private async Task Reload()
     {
         var user = await LoginService.GetLoggedUser();
-        if (user is null) return;
+        if (user is null)
+        {
+            ChartData.Clear();
+            return;
+        }
 
         _isLoading = true;
         _hasError = false;
