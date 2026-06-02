@@ -229,11 +229,12 @@ public partial class TimeSeriesValueCard
                     // The chart's inner div is pushed 30px below the card (see the
                     // .razor) so ApexCharts' reserved x-axis row is clipped and the
                     // gradient sits flush with the bottom border. The month labels live
-                    // in that clipped row, so OffsetY must lift them back up by roughly
-                    // that push (plus the label height) to land them just inside the
-                    // card's bottom edge. -6px left them clipped (month annotation
-                    // missing); -34px brings them into view.
-                    OffsetY = -34,
+                    // in that clipped row; OffsetY lifts them back up so they sit just
+                    // inside the card's bottom edge (bottom-aligned). The chart SVG is
+                    // rendered at 2x, so each unit of OffsetY shifts the label ~2px:
+                    // -16 lands the labels ~6px above the card bottom. (0 dropped them
+                    // below the clip; -34 floated them ~40px up into the plot.)
+                    OffsetY = -16,
                     Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
                     // Format per tick granularity so sub-month ranges don't repeat the
                     // month (e.g. a "This month" daily range showed "Jun '26" on every tick,
