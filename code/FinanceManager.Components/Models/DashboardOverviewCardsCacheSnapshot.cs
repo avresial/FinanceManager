@@ -14,7 +14,6 @@ public sealed class DashboardOverviewCardsCacheSnapshot
     public DateTime FetchedAtUtc { get; set; }
     public List<TimeSeriesModel> NetCashFlowSeries { get; set; } = [];
     public List<TimeSeriesModel> ClosingBalanceSeries { get; set; } = [];
-    public decimal? NetWorth { get; set; }
 }
 
 public sealed class DashboardOverviewCardsRefreshContext

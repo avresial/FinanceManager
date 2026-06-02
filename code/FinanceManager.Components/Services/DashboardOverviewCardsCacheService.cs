@@ -34,9 +34,8 @@ public class DashboardOverviewCardsCacheService(
 
         var netCashFlowTask = moneyFlowHttpClient.GetNetCashFlow(refreshContext.UserId, DefaultCurrency.PLN, startDate, endDate);
         var closingBalanceTask = moneyFlowHttpClient.GetClosingBalance(refreshContext.UserId, DefaultCurrency.PLN, startDate, endDate);
-        var netWorthTask = moneyFlowHttpClient.GetNetWorth(refreshContext.UserId, DefaultCurrency.PLN, endDate);
 
-        await Task.WhenAll(netCashFlowTask, closingBalanceTask, netWorthTask);
+        await Task.WhenAll(netCashFlowTask, closingBalanceTask);
 
         var snapshot = new DashboardOverviewCardsCacheSnapshot
         {
@@ -48,7 +47,6 @@ public class DashboardOverviewCardsCacheService(
             FetchedAtUtc = DateTime.UtcNow,
             NetCashFlowSeries = [.. (await netCashFlowTask)],
             ClosingBalanceSeries = [.. (await closingBalanceTask)],
-            NetWorth = await netWorthTask,
         };
 
         return snapshot;
