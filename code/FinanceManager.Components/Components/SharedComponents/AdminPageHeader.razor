@@ -1,4 +1,4 @@
-@using MudBlazor
+@* @using MudBlazor
 
 <MudPaper Class="pa-4 mb-4" Elevation="0">
     @if (BreadcrumbItems is not null && BreadcrumbItems.Count > 0)
@@ -38,4 +38,4 @@
     [Parameter] public RenderFragment? Actions { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public IReadOnlyList<BreadcrumbItem>? BreadcrumbItems { get; set; }
-}
+} *@
