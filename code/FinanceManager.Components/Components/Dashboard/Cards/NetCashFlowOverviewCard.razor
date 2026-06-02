@@ -1,46 +1,11 @@
 @using FinanceManager.Components.Components.SharedComponents.Charts
 
-<MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
-    <MudPaper Class="flex-grow-0 p-3 pb-1" Elevation="0">
-        <MudText Typo="Typo.h5">Net cash flow</MudText>
-        <MudText Typo="Typo.h3" Class="card-subtitle text-muted">
-            @if (_isLoading)
-            {
-                <StringSpinner CharactersCount="4" />
-                @_currency
-            }
-            else if (_hasError)
-            {
-                <MudText Typo="Typo.subtitle1" Color="Color.Error">Failed to load</MudText>
-            }
-            else if (_totalNetCashFlow is not null)
-            {
-                @_totalNetCashFlow.Value.ToString("0.00")
-                @_currency
-            }
-            else
-            {
-                @("No data")
-            }
-        </MudText>
-    </MudPaper>
-
-    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
-        @if (_isLoading)
-        {
-            <div style="height:100%">
-                <ChartSpinner MaxHeight="@Height" />
-            </div>
-        }
-        else if (_series.Any())
-        {
-            <LineChartJs Series="@_series" />
-        }
-        else
-        {
-            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
-                <MudText Typo="Typo.button" HtmlTag="h3">@(_hasError ? "Failed to load" : "No data")</MudText>
-            </div>
-        }
-    </MudPaper>
-</MudCard>
+<TimeSeriesValueCard Title="Net cash flow"
+                     Data="_series"
+                     SummaryValue="_totalNetCashFlow"
+                     SummaryCaption="@PeriodCaption"
+                     IsLoading="_isLoading"
+                     HasError="_hasError"
+                     OnRetry="Reload"
+                     CurrencyShortName="@_currency"
+                     Height="@Height" />

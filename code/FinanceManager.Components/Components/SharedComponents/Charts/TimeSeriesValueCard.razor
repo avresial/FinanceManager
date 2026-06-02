@@ -9,9 +9,7 @@
         <div class="fm-tsvc-header-row">
             <div class="fm-tsvc-left">
                 <MudText Typo="Typo.h5" Class="fm-tsvc-title">@Title</MudText>
-                <span class="fm-tsvc-caption">
-                    @(IsHovering ? "Value on" : "Current value") &middot; @Shown.DateTime.ToLocalTime().ToString("MMMM yyyy", CultureInfo.InvariantCulture)
-                </span>
+                <span class="fm-tsvc-caption">@CaptionText</span>
             </div>
 
             @if (State == LoadState.Loading)
@@ -21,8 +19,8 @@
             else if (State == LoadState.Ready)
             {
                 <div class="fm-tsvc-right">
-                    <span class="fm-tsvc-value">@FormatMoney(Shown.Value)</span>
-                    @if (HasDelta)
+                    <span class="fm-tsvc-value">@FormatMoney(HeaderValue)</span>
+                    @if (ShowDelta)
                     {
                         <span class="fm-tsvc-delta" style="@($"color:{DeltaColor};background:{DeltaBackground};")">@DeltaText</span>
                     }
