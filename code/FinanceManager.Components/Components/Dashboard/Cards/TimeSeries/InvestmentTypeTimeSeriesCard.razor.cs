@@ -1,9 +1,6 @@
-using ApexCharts;
-using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -12,95 +9,46 @@ namespace FinanceManager.Components.Components.Dashboard.Cards.TimeSeries;
 
 public partial class InvestmentTypeTimeSeriesCard
 {
-    private ApexChart<TimeSeriesModel>? _chart;
+    private bool _isLoading;
+    private bool _hasError;
+    private string _currency = "PLN";
     private List<TimeSeriesModel> _priceTimeseries = [];
-    private ApexChartOptions<TimeSeriesModel> _options = new()
-    {
-        Chart = new Chart
-        {
-            Sparkline = new ChartSparkline()
-            {
-                Enabled = true,
-            },
-            Toolbar = new Toolbar
-            {
-                Show = false
-            },
-        },
-        Xaxis = new XAxis()
-        {
-            AxisTicks = new AxisTicks()
-            {
-                Show = false,
-            },
-            AxisBorder = new AxisBorder()
-            {
-                Show = false
-            },
-        },
-        Yaxis =
-        [
-            new YAxis
-            {
-                Show = false,
-                SeriesName = "Vaue",
-                DecimalsInFloat = 0,
-            }
-        ],
-        Colors =
-        [
-           ColorsProvider.GetColors().First()
-        ]
-    };
 
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
+    [Parameter] public string Height { get; set; } = "250px";
 
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<InvestmentTypeTimeSeriesCard> Logger { get; set; }
-    [Inject] public required StockPriceHttpClient StockPriceHttpClient { get; set; }
     [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
 
+    protected override Task OnParametersSetAsync() => Reload();
 
-    protected override async Task OnInitializedAsync()
-    {
-        _options.Tooltip = new Tooltip
-        {
-            Y = new TooltipY
-            {
-                Formatter = ChartHelper.GetCurrencyFormatter(SettingsService.GetCurrency().ShortName)
-            }
-        };
-
-        var user = await LoginService.GetLoggedUser();
-        if (user is null) return;
-        _priceTimeseries.Clear();
-
-        _priceTimeseries.AddRange(await GetData());
-    }
-
-    protected override async Task OnParametersSetAsync()
+    private async Task Reload()
     {
         var user = await LoginService.GetLoggedUser();
         if (user is null) return;
-        _priceTimeseries.Clear();
-        _priceTimeseries.AddRange(await GetData());
-    }
 
-    private async Task<List<TimeSeriesModel>> GetData()
-    {
-        var user = await LoginService.GetLoggedUser();
-        if (user is null) return [];
-        List<TimeSeriesModel> result = [];
+        _isLoading = true;
+        _hasError = false;
+        StateHasChanged();
         try
         {
-            result = await AssetsHttpClient.GetAssetsTimeSeries(user.UserId, DefaultCurrency.PLN, StartDateTime, EndDateTime);
+            _currency = SettingsService.GetCurrency().ShortName;
+
+            _priceTimeseries.Clear();
+            var data = await AssetsHttpClient.GetAssetsTimeSeries(user.UserId, DefaultCurrency.PLN, StartDateTime, EndDateTime);
+            _priceTimeseries.AddRange(data.OrderBy(x => x.DateTime));
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error getting income data");
+            _hasError = true;
+            Logger.LogError(ex, "Error getting investment type time series data");
         }
-        return result;
+        finally
+        {
+            _isLoading = false;
+        }
     }
 }
