@@ -57,13 +57,19 @@ public partial class InvestmentPaycheckEstimatorCard
 
     protected override async Task OnParametersSetAsync()
     {
-        await RefreshEstimate();
+        await RefreshEstimate(showLoading: true);
     }
 
-    private async Task RefreshEstimate()
+    // showLoading is suppressed for slider/preset changes: the paycheck is recomputed
+    // client-side from the (rate-independent) estimate, so the value is already correct
+    // the instant the rate moves. Flashing the spinner there only hides an unchanged value.
+    private async Task RefreshEstimate(bool showLoading)
     {
-        _isLoading = true;
-        StateHasChanged();
+        if (showLoading)
+        {
+            _isLoading = true;
+            StateHasChanged();
+        }
 
         try
         {
@@ -125,7 +131,7 @@ public partial class InvestmentPaycheckEstimatorCard
                 await Task.Delay(TimeSpan.FromMilliseconds(350), token);
                 if (token.IsCancellationRequested)
                     return;
-                await InvokeAsync(RefreshEstimate);
+                await InvokeAsync(() => RefreshEstimate(showLoading: false));
             }
             catch (TaskCanceledException)
             {
