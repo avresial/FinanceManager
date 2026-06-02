@@ -46,6 +46,17 @@ public partial class TimeSeriesValueCard
     /// <summary>Currency suffix for the readout / tooltip (e.g. "PLN").</summary>
     [Parameter] public string CurrencyShortName { get; set; } = "PLN";
 
+    /// <summary>
+    /// Optional hero value shown in the header while not hovering. When set it overrides the
+    /// latest-point value (e.g. a period total for the net cash flow card); hovering a point
+    /// still reveals that point's value. When null the latest point is shown (net worth,
+    /// closing balance, …).
+    /// </summary>
+    [Parameter] public decimal? SummaryValue { get; set; }
+
+    /// <summary>Caption shown beside <see cref="SummaryValue"/> while not hovering.</summary>
+    [Parameter] public string? SummaryCaption { get; set; }
+
     /// <summary>Card height; fills its grid cell. Default 250px (issue #284).</summary>
     [Parameter] public string Height { get; set; } = "250px";
 
@@ -56,6 +67,23 @@ public partial class TimeSeriesValueCard
         : LoadState.Ready;
 
     private bool IsHovering => _hoverIndex is not null;
+
+    // At rest an optional summary (e.g. a period total) overrides the latest-point hero;
+    // hovering always falls back to the hovered point so the chart stays explorable.
+    private bool ShowSummary => SummaryValue is not null && !IsHovering;
+
+    private decimal HeaderValue => ShowSummary ? SummaryValue!.Value : Shown.Value;
+
+    private string CaptionText =>
+        ShowSummary && !string.IsNullOrEmpty(SummaryCaption)
+            ? SummaryCaption!
+            : $"{(IsHovering ? "Value on" : "Current value")} {(char)0x00B7} " +
+              Shown.DateTime.ToLocalTime().ToString("MMMM yyyy", CultureInfo.InvariantCulture);
+
+    // The delta chip compares the shown point to the range start; that pairing is
+    // meaningless next to a summary hero (a period sum), so it's hidden whenever a
+    // summary value is supplied.
+    private bool ShowDelta => HasDelta && SummaryValue is null;
 
     // The point reflected in the header: hovered, else the latest.
     private TimeSeriesModel Shown =>
