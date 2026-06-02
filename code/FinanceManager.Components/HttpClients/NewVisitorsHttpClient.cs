@@ -1,27 +1,35 @@
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;
 
-public class NewVisitorsHttpClient(HttpClient httpClient)
+public class NewVisitorsHttpClient(HttpClient httpClient, ILogger<NewVisitorsHttpClient> logger)
 {
     public async Task AddVisit()
     {
-        var response = await httpClient.PutAsync($"{httpClient.BaseAddress}api/NewVisitors", null);
-        response.EnsureSuccessStatusCode();
+        try
+        {
+            var response = await httpClient.PutAsync($"{httpClient.BaseAddress}api/NewVisitors", null);
+            response.EnsureSuccessStatusCode();
+        }
+        catch (HttpRequestException ex)
+        {
+            // Visit tracking is non-essential telemetry; never let a failure surface to the UI.
+            logger.LogWarning(ex, "Failed to record visit.");
+        }
     }
 
-    public Task<int> GetVisit(DateTime dateTime)
+    public async Task<int> GetVisit(DateTime dateTime)
     {
         try
         {
             var encodedDate = Uri.EscapeDataString(dateTime.Date.ToString("O"));
-            return httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/NewVisitors/GetNewVisitor/{encodedDate}");
+            return await httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/NewVisitors/GetNewVisitor/{encodedDate}");
         }
         catch (HttpRequestException ex)
         {
-            Debug.WriteLine(ex.ToString());
-            return Task.FromResult(0);
+            logger.LogWarning(ex, "Failed to retrieve visit count.");
+            return 0;
         }
     }
 }
