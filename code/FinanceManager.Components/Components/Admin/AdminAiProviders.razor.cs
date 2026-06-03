@@ -16,6 +16,23 @@ public partial class AdminAiProviders : ComponentBase
         public bool IsEnabled { get; set; } = true;
         public List<ModelEntry> Models { get; set; } = [];
         public string NewModelName { get; set; } = string.Empty;
+
+        private string _savedBaseUrl = string.Empty;
+        private int _savedTimeout = 180;
+        private bool _savedIsEnabled = true;
+
+        public bool IsDirty =>
+            BaseUrl != _savedBaseUrl
+            || RequestTimeoutSeconds != _savedTimeout
+            || IsEnabled != _savedIsEnabled
+            || !string.IsNullOrEmpty(NewApiKey);
+
+        public void CaptureSnapshot()
+        {
+            _savedBaseUrl = BaseUrl;
+            _savedTimeout = RequestTimeoutSeconds;
+            _savedIsEnabled = IsEnabled;
+        }
     }
 
     private sealed class ModelEntry
@@ -46,8 +63,10 @@ public partial class AdminAiProviders : ComponentBase
     private readonly List<FallbackEntryModel> _fallbackEntries = [];
     private readonly Dictionary<string, bool> _showApiKey = [];
     private List<string> _availableToAdd = [];
-    private string? _selectedProviderToAdd;
     private bool _addingProvider;
+    private string _savedFallbackSignature = string.Empty;
+
+    private bool FallbackDirty => FallbackSignature() != _savedFallbackSignature;
 
     protected override async Task OnInitializedAsync()
     {
@@ -66,7 +85,7 @@ public partial class AdminAiProviders : ComponentBase
             _providers.Clear();
             foreach (var p in config.Providers)
             {
-                _providers.Add(new ProviderModel
+                var provider = new ProviderModel
                 {
                     ProviderName = p.ProviderName,
                     BaseUrl = p.BaseUrl,
@@ -79,7 +98,9 @@ public partial class AdminAiProviders : ComponentBase
                         ModelName = m.ModelName,
                         IsEnabled = m.IsEnabled,
                     }).ToList(),
-                });
+                };
+                provider.CaptureSnapshot();
+                _providers.Add(provider);
                 _showApiKey[p.ProviderName] = false;
             }
 
@@ -92,10 +113,10 @@ public partial class AdminAiProviders : ComponentBase
                     Model = e.Model,
                 });
             }
+            _savedFallbackSignature = FallbackSignature();
 
             var configuredNames = _providers.Select(p => p.ProviderName).ToHashSet(StringComparer.OrdinalIgnoreCase);
             _availableToAdd = config.KnownProviders.Where(n => !configuredNames.Contains(n)).ToList();
-            _selectedProviderToAdd = _availableToAdd.FirstOrDefault();
         }
         catch (Exception ex)
         {
@@ -107,15 +128,15 @@ public partial class AdminAiProviders : ComponentBase
         }
     }
 
-    private async Task AddProviderAsync()
+    private async Task AddProviderAsync(string providerName)
     {
-        if (string.IsNullOrEmpty(_selectedProviderToAdd)) return;
+        if (string.IsNullOrEmpty(providerName)) return;
         _addingProvider = true;
         try
         {
-            await ApiClient.AddProviderAsync(new AddProviderRequest(_selectedProviderToAdd));
+            await ApiClient.AddProviderAsync(new AddProviderRequest(providerName));
             await LoadAsync();
-            Snackbar.Add($"{_selectedProviderToAdd} added.", Severity.Success);
+            Snackbar.Add($"{providerName} added.", Severity.Success);
         }
         catch (Exception ex)
         {
@@ -161,6 +182,7 @@ public partial class AdminAiProviders : ComponentBase
 
             provider.HasApiKey = provider.HasApiKey || !string.IsNullOrEmpty(provider.NewApiKey);
             provider.NewApiKey = string.Empty;
+            provider.CaptureSnapshot();
             Snackbar.Add($"{provider.ProviderName} saved.", Severity.Success);
         }
         catch (Exception ex)
@@ -243,6 +265,7 @@ public partial class AdminAiProviders : ComponentBase
                 .ToList();
 
             await ApiClient.UpdateFallbackAsync(new UpdateFallbackRequest(entries));
+            _savedFallbackSignature = FallbackSignature();
             Snackbar.Add("Fallback strategy saved.", Severity.Success);
         }
         catch (Exception ex)
@@ -257,9 +280,11 @@ public partial class AdminAiProviders : ComponentBase
 
     private void AddFallbackEntry()
     {
+        var provider = _providers.FirstOrDefault();
         _fallbackEntries.Add(new FallbackEntryModel
         {
-            ProviderName = _providers.FirstOrDefault()?.ProviderName ?? string.Empty,
+            ProviderName = provider?.ProviderName ?? string.Empty,
+            Model = provider?.Models.FirstOrDefault()?.ModelName ?? string.Empty,
         });
     }
 
@@ -271,6 +296,21 @@ public partial class AdminAiProviders : ComponentBase
         _fallbackEntries.RemoveAt(index);
         _fallbackEntries.Insert(newIndex, entry);
     }
+
+    private void OnFallbackProviderChanged(FallbackEntryModel entry, string providerName)
+    {
+        entry.ProviderName = providerName;
+        var models = ModelsForProvider(providerName).ToList();
+        if (!models.Any(m => m.ModelName.Equals(entry.Model, StringComparison.OrdinalIgnoreCase)))
+            entry.Model = models.FirstOrDefault()?.ModelName ?? string.Empty;
+    }
+
+    private IEnumerable<ModelEntry> ModelsForProvider(string providerName) =>
+        _providers.FirstOrDefault(p => p.ProviderName.Equals(providerName, StringComparison.OrdinalIgnoreCase))?.Models
+        ?? Enumerable.Empty<ModelEntry>();
+
+    private string FallbackSignature() =>
+        string.Join("|", _fallbackEntries.Select(e => $"{e.ProviderName}>{e.Model}"));
 
     private void ToggleApiKeyVisibility(string providerName)
     {
