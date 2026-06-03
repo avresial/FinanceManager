@@ -16,6 +16,23 @@ public partial class AdminAiProviders : ComponentBase
         public bool IsEnabled { get; set; } = true;
         public List<ModelEntry> Models { get; set; } = [];
         public string NewModelName { get; set; } = string.Empty;
+
+        private string _savedBaseUrl = string.Empty;
+        private int _savedTimeout = 180;
+        private bool _savedIsEnabled = true;
+
+        public bool IsDirty =>
+            BaseUrl != _savedBaseUrl
+            || RequestTimeoutSeconds != _savedTimeout
+            || IsEnabled != _savedIsEnabled
+            || !string.IsNullOrEmpty(NewApiKey);
+
+        public void CaptureSnapshot()
+        {
+            _savedBaseUrl = BaseUrl;
+            _savedTimeout = RequestTimeoutSeconds;
+            _savedIsEnabled = IsEnabled;
+        }
     }
 
     private sealed class ModelEntry
@@ -46,8 +63,11 @@ public partial class AdminAiProviders : ComponentBase
     private readonly List<FallbackEntryModel> _fallbackEntries = [];
     private readonly Dictionary<string, bool> _showApiKey = [];
     private List<string> _availableToAdd = [];
-    private string? _selectedProviderToAdd;
+    private List<string> _knownProviders = [];
     private bool _addingProvider;
+    private string _savedFallbackSignature = string.Empty;
+
+    private bool FallbackDirty => FallbackSignature() != _savedFallbackSignature;
 
     protected override async Task OnInitializedAsync()
     {
@@ -66,20 +86,7 @@ public partial class AdminAiProviders : ComponentBase
             _providers.Clear();
             foreach (var p in config.Providers)
             {
-                _providers.Add(new ProviderModel
-                {
-                    ProviderName = p.ProviderName,
-                    BaseUrl = p.BaseUrl,
-                    HasApiKey = p.HasApiKey,
-                    RequestTimeoutSeconds = p.RequestTimeoutSeconds,
-                    IsEnabled = p.IsEnabled,
-                    Models = p.Models.Select(m => new ModelEntry
-                    {
-                        Id = m.Id,
-                        ModelName = m.ModelName,
-                        IsEnabled = m.IsEnabled,
-                    }).ToList(),
-                });
+                _providers.Add(ToProviderModel(p));
                 _showApiKey[p.ProviderName] = false;
             }
 
@@ -92,10 +99,10 @@ public partial class AdminAiProviders : ComponentBase
                     Model = e.Model,
                 });
             }
+            _savedFallbackSignature = FallbackSignature();
 
-            var configuredNames = _providers.Select(p => p.ProviderName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            _availableToAdd = config.KnownProviders.Where(n => !configuredNames.Contains(n)).ToList();
-            _selectedProviderToAdd = _availableToAdd.FirstOrDefault();
+            _knownProviders = config.KnownProviders.ToList();
+            RecomputeAvailableToAdd();
         }
         catch (Exception ex)
         {
@@ -107,15 +114,71 @@ public partial class AdminAiProviders : ComponentBase
         }
     }
 
-    private async Task AddProviderAsync()
+    // Fetches the latest config and appends any provider card not already shown, leaving existing cards
+    // (and their unsaved edits / dirty state) untouched.
+    private async Task AddProviderCardAsync(string providerName)
     {
-        if (string.IsNullOrEmpty(_selectedProviderToAdd)) return;
+        var config = await ApiClient.GetConfigurationAsync();
+        if (config is null) return;
+
+        _knownProviders = config.KnownProviders.ToList();
+        var existing = _providers.Select(p => p.ProviderName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in config.Providers.Where(p => !existing.Contains(p.ProviderName)))
+        {
+            _providers.Add(ToProviderModel(p));
+            _showApiKey[p.ProviderName] = false;
+        }
+        RecomputeAvailableToAdd();
+    }
+
+    // Replaces just one provider's model list from the server (e.g. after adding a model) without
+    // rebuilding any card, so dirty edits everywhere survive.
+    private async Task RefreshProviderModelsAsync(ProviderModel provider)
+    {
+        var config = await ApiClient.GetConfigurationAsync();
+        var dto = config?.Providers.FirstOrDefault(p => p.ProviderName.Equals(provider.ProviderName, StringComparison.OrdinalIgnoreCase));
+        if (dto is null) return;
+        provider.Models = dto.Models.Select(ToModelEntry).ToList();
+    }
+
+    private void RecomputeAvailableToAdd()
+    {
+        var configuredNames = _providers.Select(p => p.ProviderName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _availableToAdd = _knownProviders.Where(n => !configuredNames.Contains(n)).ToList();
+    }
+
+    private static ProviderModel ToProviderModel(AiProviderDto p)
+    {
+        var provider = new ProviderModel
+        {
+            ProviderName = p.ProviderName,
+            BaseUrl = p.BaseUrl,
+            HasApiKey = p.HasApiKey,
+            RequestTimeoutSeconds = p.RequestTimeoutSeconds,
+            IsEnabled = p.IsEnabled,
+            Models = p.Models.Select(ToModelEntry).ToList(),
+        };
+        provider.CaptureSnapshot();
+        return provider;
+    }
+
+    private static ModelEntry ToModelEntry(AiProviderModelDto m) => new()
+    {
+        Id = m.Id,
+        ModelName = m.ModelName,
+        IsEnabled = m.IsEnabled,
+    };
+
+    private async Task AddProviderAsync(string providerName)
+    {
+        if (string.IsNullOrEmpty(providerName)) return;
         _addingProvider = true;
         try
         {
-            await ApiClient.AddProviderAsync(new AddProviderRequest(_selectedProviderToAdd));
-            await LoadAsync();
-            Snackbar.Add($"{_selectedProviderToAdd} added.", Severity.Success);
+            await ApiClient.AddProviderAsync(new AddProviderRequest(providerName));
+            // Add only the new card so unsaved edits on existing cards (and their dirty state) survive.
+            await AddProviderCardAsync(providerName);
+            Snackbar.Add($"{providerName} added.", Severity.Success);
         }
         catch (Exception ex)
         {
@@ -133,7 +196,10 @@ public partial class AdminAiProviders : ComponentBase
         try
         {
             await ApiClient.DeleteProviderAsync(provider.ProviderName);
-            await LoadAsync();
+            // Drop only this card locally so unsaved edits on the remaining cards survive.
+            _providers.Remove(provider);
+            _showApiKey.Remove(provider.ProviderName);
+            RecomputeAvailableToAdd();
             Snackbar.Add($"{provider.ProviderName} removed.", Severity.Success);
         }
         catch (Exception ex)
@@ -161,6 +227,7 @@ public partial class AdminAiProviders : ComponentBase
 
             provider.HasApiKey = provider.HasApiKey || !string.IsNullOrEmpty(provider.NewApiKey);
             provider.NewApiKey = string.Empty;
+            provider.CaptureSnapshot();
             Snackbar.Add($"{provider.ProviderName} saved.", Severity.Success);
         }
         catch (Exception ex)
@@ -181,7 +248,9 @@ public partial class AdminAiProviders : ComponentBase
         {
             await ApiClient.AddModelAsync(provider.ProviderName, new AddModelRequest(provider.NewModelName.Trim()));
             provider.NewModelName = string.Empty;
-            await LoadAsync();
+            // Re-pull just this provider's models (to get the new model's id) without rebuilding every
+            // card, so unsaved edits and dirty state on other cards — and this one — are preserved.
+            await RefreshProviderModelsAsync(provider);
             Snackbar.Add("Model added.", Severity.Success);
         }
         catch (Exception ex)
@@ -243,6 +312,7 @@ public partial class AdminAiProviders : ComponentBase
                 .ToList();
 
             await ApiClient.UpdateFallbackAsync(new UpdateFallbackRequest(entries));
+            _savedFallbackSignature = FallbackSignature();
             Snackbar.Add("Fallback strategy saved.", Severity.Success);
         }
         catch (Exception ex)
@@ -257,9 +327,11 @@ public partial class AdminAiProviders : ComponentBase
 
     private void AddFallbackEntry()
     {
+        var provider = _providers.FirstOrDefault();
         _fallbackEntries.Add(new FallbackEntryModel
         {
-            ProviderName = _providers.FirstOrDefault()?.ProviderName ?? string.Empty,
+            ProviderName = provider?.ProviderName ?? string.Empty,
+            Model = provider?.Models.FirstOrDefault()?.ModelName ?? string.Empty,
         });
     }
 
@@ -271,6 +343,21 @@ public partial class AdminAiProviders : ComponentBase
         _fallbackEntries.RemoveAt(index);
         _fallbackEntries.Insert(newIndex, entry);
     }
+
+    private void OnFallbackProviderChanged(FallbackEntryModel entry, string providerName)
+    {
+        entry.ProviderName = providerName;
+        var models = ModelsForProvider(providerName).ToList();
+        if (!models.Any(m => m.ModelName.Equals(entry.Model, StringComparison.OrdinalIgnoreCase)))
+            entry.Model = models.FirstOrDefault()?.ModelName ?? string.Empty;
+    }
+
+    private IEnumerable<ModelEntry> ModelsForProvider(string providerName) =>
+        _providers.FirstOrDefault(p => p.ProviderName.Equals(providerName, StringComparison.OrdinalIgnoreCase))?.Models
+        ?? Enumerable.Empty<ModelEntry>();
+
+    private string FallbackSignature() =>
+        string.Join("|", _fallbackEntries.Select(e => $"{e.ProviderName}>{e.Model}"));
 
     private void ToggleApiKeyVisibility(string providerName)
     {
