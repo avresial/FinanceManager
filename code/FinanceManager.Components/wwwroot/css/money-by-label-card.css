@@ -39,13 +39,6 @@
     font-weight: 400;
 }
 
-/* Restore the uppercase eyebrow styling on overline labels (Net / Income / Spending);
-   this app's MudTheme strips text-transform from the overline typography. */
-.fm-labels-card .fm-caps {
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}
-
 /* Bottom-align the header so the Net label/value block sits on the same baseline
    as the title+period column rather than floating in the vertical middle.
    MudBlazor sets align-self on .mud-card-header-actions which overrides the
