@@ -34,6 +34,24 @@
     white-space: nowrap;
 }
 
+/* Regular-weight card title (the app's h6 ships at 500, too heavy vs the design). */
+.fm-labels-card .fm-title {
+    font-weight: 400;
+}
+
+/* Restore the uppercase eyebrow styling on overline labels (Net / Income / Spending);
+   this app's MudTheme strips text-transform from the overline typography. */
+.fm-labels-card .fm-caps {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+/* Vertically centre the header so the Net block sits balanced against the
+   two-line title+period column instead of riding up against the top edge. */
+.fm-labels-card .mud-card-header {
+    align-items: center;
+}
+
 .fm-labels-card .fm-pos {
     color: var(--fm-pos);
 }
