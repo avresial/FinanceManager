@@ -10,8 +10,8 @@
             @if (!_isLoading && !_hasError && _data.Any())
             {
                 <div class="d-flex flex-column align-end mr-2">
-                    <MudText Typo="Typo.overline" Class="fm-muted">Net</MudText>
-                    <MudText Typo="Typo.subtitle1" Class="@($"fm-amount {(_net >= 0 ? "fm-pos" : "fm-neg")}")">@Fmt(_net, true)</MudText>
+                    <MudText Typo="Typo.overline" Class="fm-muted fm-tight">Net</MudText>
+                    <MudText Typo="Typo.subtitle1" Class="@($"fm-amount fm-tight {(_net >= 0 ? "fm-pos" : "fm-neg")}")">@Fmt(_net, true)</MudText>
                 </div>
             }
         </CardHeaderActions>
@@ -59,9 +59,9 @@
             <MudList T="NameValueResult" Dense ReadOnly DisablePadding>
                 @if (_income.Any())
                 {
-                    <MudListSubheader Class="d-flex justify-space-between align-center py-1 px-3">
-                        <MudText Typo="Typo.overline" Class="fm-muted">Income</MudText>
-                        <MudText Typo="Typo.subtitle2" Class="fm-amount fm-pos">@Fmt(_totalIn, true)</MudText>
+                    <MudListSubheader Class="d-flex justify-space-between align-center fm-subheader px-3">
+                        <MudText Typo="Typo.overline" Class="fm-muted fm-tight">Income</MudText>
+                        <MudText Typo="Typo.caption" Class="fm-amount fm-muted">@Fmt(_totalIn, true)</MudText>
                     </MudListSubheader>
                     @foreach (var label in _income)
                     {
@@ -71,9 +71,9 @@
 
                 @if (_spending.Any())
                 {
-                    <MudListSubheader Class="d-flex justify-space-between align-center py-1 px-3">
-                        <MudText Typo="Typo.overline" Class="fm-muted">Spending</MudText>
-                        <MudText Typo="Typo.subtitle2" Class="fm-amount fm-neg">@Fmt(-_totalOut)</MudText>
+                    <MudListSubheader Class="d-flex justify-space-between align-center fm-subheader px-3">
+                        <MudText Typo="Typo.overline" Class="fm-muted fm-tight">Spending</MudText>
+                        <MudText Typo="Typo.caption" Class="fm-amount fm-muted">@Fmt(-_totalOut)</MudText>
                     </MudListSubheader>
                     @foreach (var label in _spending)
                     {
@@ -100,9 +100,9 @@
 @code {
     private RenderFragment LabelRow(NameValueResult label, decimal groupMax, decimal groupTotal, bool isIncome)
     {
-        return @<MudListItem T="NameValueResult" Class="py-1">
+        return @<MudListItem T="NameValueResult" Class="fm-list-item">
             <div class="d-flex align-center fm-row">
-                <MudAvatar Rounded Size="Size.Small" Class="@(isIncome ? "fm-tint-pos" : "fm-tint-neg")">
+                <MudAvatar Rounded Size="Size.Medium" Class="@($"fm-chip {(isIncome ? "fm-tint-pos" : "fm-tint-neg")}")">
                     <MudIcon Icon="@GetCategoryIcon(label.Name)" Size="Size.Small" />
                 </MudAvatar>
                 <div class="flex-grow-1" style="min-width:0;">

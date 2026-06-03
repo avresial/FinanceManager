@@ -58,10 +58,36 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* Collapse the generous default line-height on overline/subtitle meta so a label
+   sits right above its value (header Net block) and group headers hug their rows. */
+.fm-labels-card .fm-tight {
+    line-height: 1.15;
+}
+
 /* Row layout — leading chip gap mirrors the admin "Recent warnings" density. */
 .fm-labels-card .fm-row {
     gap: 12px;
     width: 100%;
+}
+
+/* Denser rows — trim the stock MudListItem vertical padding. */
+.fm-labels-card .fm-list-item {
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+
+/* Group sub-header pulled tight to its first row. */
+.fm-labels-card .fm-subheader {
+    min-height: 0;
+    padding-top: 6px;
+    padding-bottom: 0;
+}
+
+/* Leading icon chip sized to span the full two-line row. */
+.fm-labels-card .fm-chip {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
 }
 
 /* Leading icon chip — tinted square behind a money-coloured icon. */
