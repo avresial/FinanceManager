@@ -4,13 +4,13 @@
     <MudCardHeader Class="py-2 flex-shrink-0">
         <CardHeaderContent>
             <MudText Typo="Typo.h6">Money by label</MudText>
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@PeriodLabel</MudText>
+            <MudText Typo="Typo.caption" Class="fm-muted">@PeriodLabel</MudText>
         </CardHeaderContent>
         <CardHeaderActions>
             @if (!_isLoading && !_hasError && _data.Any())
             {
                 <div class="d-flex flex-column align-end mr-2">
-                    <MudText Typo="Typo.overline" Color="Color.Secondary">Net</MudText>
+                    <MudText Typo="Typo.overline" Class="fm-muted">Net</MudText>
                     <MudText Typo="Typo.subtitle1" Class="@($"fm-amount {(_net >= 0 ? "fm-pos" : "fm-neg")}")">@Fmt(_net, true)</MudText>
                 </div>
             }
@@ -47,7 +47,7 @@
             <div class="fm-state">
                 <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Error" Size="Size.Large" />
                 <MudText Typo="Typo.subtitle1" Class="mt-2">Couldn't load labels</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                <MudText Typo="Typo.body2" Class="fm-muted" Align="Align.Center">
                     Something went wrong fetching this period's breakdown.
                 </MudText>
                 <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
@@ -60,7 +60,7 @@
                 @if (_income.Any())
                 {
                     <MudListSubheader Class="d-flex justify-space-between align-center py-1 px-3">
-                        <MudText Typo="Typo.overline" Color="Color.Secondary">Income</MudText>
+                        <MudText Typo="Typo.overline" Class="fm-muted">Income</MudText>
                         <MudText Typo="Typo.subtitle2" Class="fm-amount fm-pos">@Fmt(_totalIn, true)</MudText>
                     </MudListSubheader>
                     @foreach (var label in _income)
@@ -72,7 +72,7 @@
                 @if (_spending.Any())
                 {
                     <MudListSubheader Class="d-flex justify-space-between align-center py-1 px-3">
-                        <MudText Typo="Typo.overline" Color="Color.Secondary">Spending</MudText>
+                        <MudText Typo="Typo.overline" Class="fm-muted">Spending</MudText>
                         <MudText Typo="Typo.subtitle2" Class="fm-amount fm-neg">@Fmt(-_totalOut)</MudText>
                     </MudListSubheader>
                     @foreach (var label in _spending)
@@ -89,7 +89,7 @@
                     <MudIcon Icon="@Icons.Material.Filled.Inbox" Color="Color.Default" Size="Size.Large" />
                 </div>
                 <MudText Typo="Typo.subtitle1" Class="mt-2">No data</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                <MudText Typo="Typo.body2" Class="fm-muted" Align="Align.Center">
                     No labelled activity in this period. Try a wider date range.
                 </MudText>
             </div>
@@ -114,7 +114,7 @@
                         <MudProgressLinear Rounded Value="@BarPercentage(label.Value, groupMax)"
                                            Class="@($"flex-grow-1 {(isIncome ? "fm-bar-pos" : "fm-bar-neg")}")"
                                            Style="height:6px;" />
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fm-share">
+                        <MudText Typo="Typo.caption" Class="fm-share fm-muted">
                             @SharePercentage(label.Value, groupTotal)% of @(isIncome ? "income" : "spending")
                         </MudText>
                     </div>

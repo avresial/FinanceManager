@@ -46,6 +46,13 @@
     font-weight: 500;
 }
 
+/* Neutral muted text for meta labels (period, Net, group sub-headers, share %, state copy).
+   The app's MudTheme paints Color.Secondary as a gold brand accent, so the design's muted
+   grey has to come from the palette's text-secondary token instead. */
+.fm-labels-card .fm-muted {
+    color: var(--mud-palette-text-secondary);
+}
+
 .fm-labels-card .fm-share {
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
