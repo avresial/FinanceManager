@@ -1,0 +1,96 @@
+/* Styles for FinancialLabelsListCard ("Money by label"). Shipped as a plain
+   (non-isolated) stylesheet and linked from index.html — like time-series-card.css —
+   because these classes sit on MudBlazor components (MudText, MudAvatar,
+   MudProgressLinear), whose rendered elements don't carry this component's
+   scoped-CSS attribute, so .razor.css isolation can't reach them. Everything is
+   nested under .fm-labels-card to avoid collisions.
+
+   Structural colours (text, dividers) come from MudBlazor palette variables so
+   they auto theme-switch. The money green/red are tuned to FinanceManager's
+   tokens (brighter than MudBlazor's Success/Error) and flipped under
+   prefers-color-scheme: dark, which is how this app flips theme. */
+.fm-labels-card {
+    --fm-pos: #2E7D32;
+    --fm-neg: #C62828;
+    --fm-tint-pos: rgba(46, 125, 50, 0.15);
+    --fm-tint-neg: rgba(198, 40, 40, 0.13);
+    --fm-track: rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+    .fm-labels-card {
+        --fm-pos: #66BB6A;
+        --fm-neg: #EF5350;
+        --fm-tint-pos: rgba(102, 187, 106, 0.18);
+        --fm-tint-neg: rgba(239, 83, 80, 0.16);
+        --fm-track: rgba(255, 255, 255, 0.11);
+    }
+}
+
+/* Tabular figures keep amounts aligned across rows. */
+.fm-labels-card .fm-amount {
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.fm-labels-card .fm-pos {
+    color: var(--fm-pos);
+}
+
+.fm-labels-card .fm-neg {
+    color: var(--fm-neg);
+}
+
+.fm-labels-card .fm-name {
+    font-weight: 500;
+}
+
+.fm-labels-card .fm-share {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Row layout — leading chip gap mirrors the admin "Recent warnings" density. */
+.fm-labels-card .fm-row {
+    gap: 12px;
+    width: 100%;
+}
+
+/* Leading icon chip — tinted square behind a money-coloured icon. */
+.fm-labels-card .fm-tint-pos {
+    background-color: var(--fm-tint-pos);
+    color: var(--fm-pos);
+}
+
+.fm-labels-card .fm-tint-neg {
+    background-color: var(--fm-tint-neg);
+    color: var(--fm-neg);
+}
+
+/* Recolour the proportion bar to the money tokens (track + fill). */
+.fm-labels-card .fm-bar-pos,
+.fm-labels-card .fm-bar-neg {
+    background-color: var(--fm-track) !important;
+}
+
+.fm-labels-card .fm-bar-pos .mud-progress-linear-bar {
+    background-color: var(--fm-pos) !important;
+}
+
+.fm-labels-card .fm-bar-neg .mud-progress-linear-bar {
+    background-color: var(--fm-neg) !important;
+}
+
+/* Empty / error states — centred stack filling the card body. */
+.fm-labels-card .fm-state {
+    height: 100%;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 16px;
+    color: var(--mud-palette-text-secondary);
+}
