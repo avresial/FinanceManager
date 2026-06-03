@@ -150,14 +150,19 @@ public class LoginService : ILoginService
             Console.WriteLine(ex);
         }
 
+        await EndSession();
+    }
+
+    public async Task EndSession()
+    {
         await _sessionStorageService.RemoveItemAsync(_sessionString);
         await _localStorageService.RemoveItemAsync(_sessionString);
         _httpClient.DefaultRequestHeaders.Authorization = null;
         await ((CustomAuthenticationStateProvider)_authStateProvider).Logout();
-        LogginStateChanged?.Invoke(false);
         _loggedUser = null;
-        // Block GetLoggedUser from silently re-authenticating with a stale cookie after a deliberate logout.
+        // Block GetLoggedUser from silently re-authenticating with a stale cookie after the session has ended.
         _initialRefreshAttempted = true;
+        LogginStateChanged?.Invoke(false);
     }
 
     // Applies a successful login/refresh response: updates the in-memory session, the bearer header used by the
