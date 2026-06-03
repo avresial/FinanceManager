@@ -47,9 +47,16 @@
 }
 
 /* Bottom-align the header so the Net label/value block sits on the same baseline
-   as the title+period column rather than floating in the vertical middle. */
+   as the title+period column rather than floating in the vertical middle.
+   MudBlazor sets align-self on .mud-card-header-actions which overrides the
+   parent align-items, so we must force it on the child too. */
 .fm-labels-card .mud-card-header {
     align-items: flex-end;
+}
+
+.fm-labels-card .mud-card-header-actions {
+    align-self: flex-end;
+    padding-bottom: 0;
 }
 
 .fm-labels-card .fm-pos {
