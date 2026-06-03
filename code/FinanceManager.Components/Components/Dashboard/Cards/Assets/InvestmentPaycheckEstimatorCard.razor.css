@@ -122,8 +122,6 @@
 .pc-slider-label {
     font-size: 11px;
     color: var(--mud-palette-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
 }
 
 .pc-slider-val {
@@ -235,8 +233,6 @@
     font-size: 11px;
     line-height: 1;
     color: var(--mud-palette-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
     margin-bottom: 10px;
 }
 
