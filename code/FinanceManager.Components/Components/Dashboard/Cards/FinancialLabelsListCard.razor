@@ -3,7 +3,8 @@
 <MudCard Outlined Class="rounded-lg d-flex flex-column fm-labels-card" Style="@($"height:{Height};")">
     <MudCardHeader Class="py-2 flex-shrink-0">
         <CardHeaderContent>
-            <MudText Typo="Typo.h5">Money by label</MudText>
+            <MudText Typo="Typo.h6">Money by label</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@PeriodLabel</MudText>
         </CardHeaderContent>
         <CardHeaderActions>
             @if (!_isLoading && !_hasError && _data.Any())
@@ -27,8 +28,14 @@
                         <div class="d-flex align-center fm-row">
                             <MudSkeleton SkeletonType="SkeletonType.Rectangle" Width="34px" Height="34px" Class="rounded" />
                             <div class="flex-grow-1" style="min-width:0;">
-                                <MudSkeleton SkeletonType="SkeletonType.Text" Width="60%" />
-                                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="6px" Class="mt-1 rounded" />
+                                <div class="d-flex justify-space-between align-center gap-2">
+                                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="40%" />
+                                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="22%" />
+                                </div>
+                                <div class="d-flex justify-space-between align-center gap-3 mt-1">
+                                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="6px" Width="65%" Class="rounded" />
+                                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="15%" />
+                                </div>
                             </div>
                         </div>
                     </MudListItem>
@@ -54,7 +61,7 @@
                 {
                     <MudListSubheader Class="d-flex justify-space-between align-center py-1 px-3">
                         <MudText Typo="Typo.overline" Color="Color.Secondary">Income</MudText>
-                        <MudText Typo="Typo.subtitle2" Class="fm-amount fm-pos">@Fmt(_totalIn)</MudText>
+                        <MudText Typo="Typo.subtitle2" Class="fm-amount fm-pos">@Fmt(_totalIn, true)</MudText>
                     </MudListSubheader>
                     @foreach (var label in _income)
                     {
@@ -78,7 +85,9 @@
         else
         {
             <div class="fm-state">
-                <MudIcon Icon="@Icons.Material.Filled.Inbox" Color="Color.Default" Size="Size.Large" />
+                <div class="fm-state-icon">
+                    <MudIcon Icon="@Icons.Material.Filled.Inbox" Color="Color.Default" Size="Size.Large" />
+                </div>
                 <MudText Typo="Typo.subtitle1" Class="mt-2">No data</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
                     No labelled activity in this period. Try a wider date range.
@@ -99,7 +108,7 @@
                 <div class="flex-grow-1" style="min-width:0;">
                     <div class="d-flex justify-space-between align-baseline gap-2">
                         <MudText Typo="Typo.body2" Class="fm-name text-truncate">@label.Name</MudText>
-                        <MudText Typo="Typo.body2" Class="@($"fm-amount {(isIncome ? "fm-pos" : "fm-neg")}")">@Fmt(label.Value)</MudText>
+                        <MudText Typo="Typo.body2" Class="@($"fm-amount {(isIncome ? "fm-pos" : "fm-neg")}")">@Fmt(label.Value, true)</MudText>
                     </div>
                     <div class="d-flex align-center gap-3 mt-1">
                         <MudProgressLinear Rounded Value="@BarPercentage(label.Value, groupMax)"

@@ -94,3 +94,14 @@
     padding: 16px;
     color: var(--mud-palette-text-secondary);
 }
+
+/* Soft circular backdrop behind the empty-state glyph (matches the design mock). */
+.fm-labels-card .fm-state-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--mud-palette-action-default-hover);
+}

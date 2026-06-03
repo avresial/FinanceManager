@@ -34,6 +34,25 @@ public partial class FinancialLabelsListCard
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
     [Parameter] public CardMode CardMode { get; set; } = CardMode.List;
 
+    // Human-readable period for the header subtitle. A single calendar month renders as
+    // "May 2026"; ranges collapse to "MMM – MMM yyyy" (same year) or "MMM yyyy – MMM yyyy".
+    private string PeriodLabel
+    {
+        get
+        {
+            var end = EndDateTime;
+            if (StartDateTime == default)
+                return end.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
+
+            var start = StartDateTime;
+            if (start.Year == end.Year && start.Month == end.Month)
+                return end.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
+            if (start.Year == end.Year)
+                return $"{start.ToString("MMM", CultureInfo.InvariantCulture)} – {end.ToString("MMM yyyy", CultureInfo.InvariantCulture)}";
+            return $"{start.ToString("MMM yyyy", CultureInfo.InvariantCulture)} – {end.ToString("MMM yyyy", CultureInfo.InvariantCulture)}";
+        }
+    }
+
     protected override Task OnParametersSetAsync() => LoadData();
 
     private async Task LoadData()
