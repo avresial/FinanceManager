@@ -27,7 +27,6 @@ public partial class FinancialLabelsListCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
-    [Inject] public required ISnackbar Snackbar { get; set; }
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
@@ -72,7 +71,6 @@ public partial class FinancialLabelsListCard
         catch
         {
             _hasError = true;
-            Snackbar.Add("Unable to load financial labels.", Severity.Error);
         }
         finally
         {
@@ -105,7 +103,7 @@ public partial class FinancialLabelsListCard
     private static int SharePercentage(decimal value, decimal groupTotal) =>
         groupTotal == 0 ? 0 : (int)Math.Round(Math.Abs(value) / groupTotal * 100);
 
-    private string GetCategoryIcon(string categoryName) => categoryName.ToLower() switch
+    private string GetCategoryIcon(string categoryName) => (categoryName ?? string.Empty).ToLowerInvariant() switch
     {
         var n when n.Contains("salary") => Icons.Material.Filled.Paid,
         var n when n.Contains("freelance") => Icons.Material.Filled.Work,
