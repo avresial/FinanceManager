@@ -39,26 +39,31 @@ public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepositor
         if (string.Equals(requestModel.UserName, _guestLogin, StringComparison.OrdinalIgnoreCase))
             return await LoginAsGuest(cancellationToken);
 
+        // Logins are case-insensitive emails stored lowercased at registration. Normalize here so a sign-in with
+        // different casing — or a direct API caller that doesn't pre-lowercase like the Blazor client does — still
+        // matches the stored row and shares a single lockout key.
+        var userName = requestModel.UserName.ToLowerInvariant();
+
         // Per-account brute-force guard: refuse a locked account before touching its password so a flood of guesses
         // against one login can't keep checking credentials even when it rotates source IPs past the per-IP limiter.
-        if (await accountLockoutService.IsLockedOut(requestModel.UserName, cancellationToken))
+        if (await accountLockoutService.IsLockedOut(userName, cancellationToken))
         {
             logger.LogWarning("Login refused for a locked-out account.");
             return StatusCode(StatusCodes.Status403Forbidden, _lockedOutMessage);
         }
 
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(requestModel.Password);
-        var user = await userRepository.GetUser(requestModel.UserName, encryptedPassword);
+        var user = await userRepository.GetUser(userName, encryptedPassword);
 
         if (user is null)
         {
-            await accountLockoutService.RegisterFailedAttempt(requestModel.UserName, cancellationToken);
+            await accountLockoutService.RegisterFailedAttempt(userName, cancellationToken);
             return Forbid();
         }
 
-        await accountLockoutService.Reset(requestModel.UserName, cancellationToken);
+        await accountLockoutService.Reset(userName, cancellationToken);
 
-        var token = jwtTokenGenerator.GenerateToken(requestModel.UserName, user.UserId, user.UserRole);
+        var token = jwtTokenGenerator.GenerateToken(userName, user.UserId, user.UserRole);
 
         try
         {

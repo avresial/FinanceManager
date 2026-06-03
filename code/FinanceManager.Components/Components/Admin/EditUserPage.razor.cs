@@ -170,12 +170,15 @@ public partial class EditUserPage : ComponentBase
                 {
                     _errors.Clear();
                     _info.Insert(0, "Password changed successfully.");
+
+                    // Only clear the inputs on success — a failed validation or update should leave what the
+                    // admin typed in place so they can fix it rather than re-enter from scratch.
+                    _password = "";
+                    _confirmPassword = "";
+                    if (_passwordField is not null)
+                        await _passwordField.ResetAsync();
                 }
             }
         }
-        _password = "";
-        _confirmPassword = "";
-        if (_passwordField is not null)
-            await _passwordField.ResetAsync();
     }
 }
