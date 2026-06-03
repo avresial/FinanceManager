@@ -15,7 +15,7 @@
             }
             else if (TotalLiabilities != 0)
             {
-                <MudText Class="ld-total">@TotalLiabilities.ToString("0.00") @_currency.ShortName</MudText>
+                <MudText Class="fm-card-total">@TotalLiabilities.ToString("0.00") @_currency.ShortName</MudText>
             }
         </div>
         <MudToggleGroup T="string" Value="@_view" ValueChanged="OnViewChangedAsync"
@@ -34,8 +34,8 @@
         }
         else if (ActiveData.Any())
         {
-            <div class="ld-body">
-                <div class="ld-chart-wrap">
+            <div class="fm-pie-body">
+                <div class="fm-chart-wrap">
                     <ApexChart @ref="_chart" TItem="NameValueResult" Options="_chartOptions" Width="150" Height="150">
                         <ApexPointSeries TItem="NameValueResult"
                                          Items="ActiveData"
@@ -46,7 +46,7 @@
                                          OrderByDescending="@(e => e.Y)" />
                     </ApexChart>
                 </div>
-                <div class="ld-legend">
+                <div class="fm-legend">
                     @{
                         var sorted = ActiveData.OrderByDescending(x => x.Value).ToList();
                         var colors = ColorsProvider.GetColors();
@@ -56,12 +56,12 @@
                             var color = colors[i % colors.Count];
                             var total = TotalLiabilities;
                             var pct = total == 0 ? 0m : Math.Round(item.Value / total * 100m, 1);
-                            <div class="ld-legend-row">
-                                <span class="ld-legend-dot" style="background: @color"></span>
-                                <span class="ld-legend-name">@item.Name</span>
-                                <span class="ld-legend-vals">
-                                    <span class="ld-legend-amt">@item.Value.ToString("0.00")</span>
-                                    <span class="ld-legend-pct">@pct.ToString("0.0")%</span>
+                            <div class="fm-legend-row">
+                                <span class="fm-legend-dot" style="background: @color"></span>
+                                <span class="fm-legend-name">@item.Name</span>
+                                <span class="fm-legend-vals">
+                                    <span class="fm-legend-amt">@item.Value.ToString("0.00")</span>
+                                    <span class="fm-legend-pct">@pct.ToString("0.0")%</span>
                                 </span>
                             </div>
                         }
