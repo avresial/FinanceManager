@@ -23,17 +23,19 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
         }
         return false;
     }
-    public Task<User?> GetUser(int id)
+    public async Task<User?> GetUser(int id)
     {
         try
         {
-            return httpClient.GetUser(id);
+            // Must await here: returning the un-awaited task let the async 401 (e.g. an expired token) escape this
+            // try/catch and surface as an unhandled exception in callers such as MainLayout.OnInitializedAsync.
+            return await httpClient.GetUser(id);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, $"Error getting user {id}", id);
         }
-        return Task.FromResult((User?)null);
+        return null;
     }
     public Task<RecordCapacity?> GetRecordCapacity(int userId)
     {

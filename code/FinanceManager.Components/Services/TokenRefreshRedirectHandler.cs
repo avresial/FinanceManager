@@ -1,5 +1,4 @@
 using Blazored.LocalStorage;
-using Blazored.SessionStorage;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,10 +15,8 @@ namespace FinanceManager.Components.Services;
 public sealed class TokenRefreshRedirectHandler(
     IServiceProvider services,
     NavigationManager navigation,
-    ISessionStorageService sessionStorage,
     ILocalStorageService localStorage) : DelegatingHandler
 {
-    private const string _sessionKey = "userSession";
     public const string SessionExpiredKey = "sessionExpired";
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -48,10 +45,11 @@ public sealed class TokenRefreshRedirectHandler(
             return await base.SendAsync(retry, cancellationToken);
         }
 
-        // Refresh failed → the session is genuinely over. Clean up, leave a breadcrumb for the login page to show a
-        // "session expired" message, and redirect.
-        await sessionStorage.RemoveItemAsync(_sessionKey, cancellationToken);
-        await localStorage.RemoveItemAsync(_sessionKey, cancellationToken);
+        // Refresh failed → the session is genuinely over. Tear down the local session, including the in-memory state
+        // and cascading auth: clearing only browser storage leaves the app "authenticated", so it keeps rendering
+        // protected pages, re-hits 401s, and bounces between the app and the login page. Leave a breadcrumb for the
+        // login page to show a "session expired" message, then redirect.
+        await loginService.EndSession();
         await localStorage.SetItemAsync(SessionExpiredKey, true, cancellationToken);
         navigation.NavigateTo("Login", forceLoad: false);
 
