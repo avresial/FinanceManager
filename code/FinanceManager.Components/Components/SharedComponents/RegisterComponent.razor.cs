@@ -1,5 +1,4 @@
 using Blazored.LocalStorage;
-using FinanceManager.Application.Providers;
 using FinanceManager.Components.Models;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
@@ -42,7 +41,7 @@ public partial class RegisterComponent
         List<string> newErrors = [];
         if (_loginModel.Login is not null && _loginModel.Password is not null)
         {
-            if (!await UserService.AddUser(_loginModel.Login, PasswordEncryptionProvider.EncryptPassword(_loginModel.Password), PricingLevel, FirstName, LastName))
+            if (!await UserService.AddUser(_loginModel.Login, _loginModel.Password, PricingLevel, FirstName, LastName))
                 newErrors.Add("Incorrect username or password.");
             else if (await LoginService.Login(_loginModel.Login, _loginModel.Password))
                 Navigation.NavigateTo("");

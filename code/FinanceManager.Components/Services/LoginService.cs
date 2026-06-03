@@ -102,7 +102,8 @@ public class LoginService : ILoginService
         {
             UserId = 0,
             UserName = username.ToLower(),
-            Password = PasswordEncryptionProvider.EncryptPassword(password),
+            // Send the plaintext password; the API is the single place that hashes it (see UserController/LoginController).
+            Password = password,
             UserRole = UserRole.User,
         });
 

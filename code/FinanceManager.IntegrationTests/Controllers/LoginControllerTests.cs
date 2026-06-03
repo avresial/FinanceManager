@@ -22,7 +22,7 @@ public class LoginControllerTests(OptionsProvider optionsProvider) : ControllerT
     protected override void ConfigureServices(IServiceCollection services)
     {
         var userRepoMock = new Mock<IUserRepository>();
-        userRepoMock.Setup(x => x.GetUser(_testUserName, PasswordEncryptionProvider.EncryptPassword(PasswordEncryptionProvider.EncryptPassword(_testPassword))))
+        userRepoMock.Setup(x => x.GetUser(_testUserName, PasswordEncryptionProvider.EncryptPassword(_testPassword)))
             .ReturnsAsync(new User
             {
                 UserId = 99,
@@ -42,7 +42,8 @@ public class LoginControllerTests(OptionsProvider optionsProvider) : ControllerT
     public async Task Login_ReturnsToken_ForValidCredentials()
     {
         // arrange
-        LoginRequestModel request = new(_testUserName, PasswordEncryptionProvider.EncryptPassword(_testPassword));
+        // The client sends the plaintext password; the API hashes it exactly once before looking the user up.
+        LoginRequestModel request = new(_testUserName, _testPassword);
 
         // act
         var response = await Client.PostAsJsonAsync("api/Login", request, cancellationToken: TestContext.Current.CancellationToken);

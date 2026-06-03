@@ -30,7 +30,7 @@ public class AuthControllerTests(OptionsProvider optionsProvider) : ControllerTe
         };
 
         var userRepoMock = new Mock<IUserRepository>();
-        userRepoMock.Setup(x => x.GetUser(_userName, PasswordEncryptionProvider.EncryptPassword(PasswordEncryptionProvider.EncryptPassword(_password))))
+        userRepoMock.Setup(x => x.GetUser(_userName, PasswordEncryptionProvider.EncryptPassword(_password)))
             .ReturnsAsync(user);
         userRepoMock.Setup(x => x.GetUser(_userId)).ReturnsAsync(user);
         services.AddSingleton(userRepoMock.Object);
@@ -46,7 +46,7 @@ public class AuthControllerTests(OptionsProvider optionsProvider) : ControllerTe
         var ct = TestContext.Current.CancellationToken;
 
         // Login sets the refresh-token cookie (handled automatically by the client's cookie container).
-        var loginRequest = new LoginRequestModel(_userName, PasswordEncryptionProvider.EncryptPassword(_password));
+        var loginRequest = new LoginRequestModel(_userName, _password);
         var loginResponse = await Client.PostAsJsonAsync("api/Login", loginRequest, ct);
         loginResponse.EnsureSuccessStatusCode();
         var setCookie = loginResponse.Headers.TryGetValues("Set-Cookie", out var values)
