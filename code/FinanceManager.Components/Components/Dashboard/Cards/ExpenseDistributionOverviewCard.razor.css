@@ -1,0 +1,88 @@
+.ed-total {
+    font-size: 1.25rem;
+    font-weight: 300;
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.ed-body {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    height: 100%;
+    padding: 4px 12px 12px;
+    min-height: 0;
+}
+
+.ed-chart-wrap {
+    flex: 0 0 150px;
+    width: 150px;
+    overflow: hidden;
+}
+
+.ed-chart-wrap ::deep .apexcharts-canvas {
+    background: transparent !important;
+}
+
+.ed-chart-wrap ::deep .apexcharts-toolbar {
+    display: none !important;
+}
+
+.ed-legend {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    gap: 0;
+}
+
+.ed-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--mud-palette-divider);
+}
+
+.ed-legend-row:last-child {
+    border-bottom: none;
+}
+
+.ed-legend-dot {
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+.ed-legend-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ed-legend-vals {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    white-space: nowrap;
+}
+
+.ed-legend-amt {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.ed-legend-pct {
+    font-size: 11px;
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
