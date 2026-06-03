@@ -70,14 +70,17 @@ else
                                                   Immediate
                                                   Variant="Variant.Outlined" />
 
+                                    @{
+                                        var apiKeyVisible = _showApiKey.TryGetValue(provider.ProviderName, out var show) && show;
+                                    }
                                     <MudTextField T="string" Label="@(provider.HasApiKey ? "API Key (set — enter new to replace)" : "API Key")"
                                                   Value="@provider.NewApiKey"
                                                   ValueChanged="@(v => provider.NewApiKey = v)"
                                                   Immediate
-                                                  InputType="@(_showApiKey.TryGetValue(provider.ProviderName, out var show) && show ? InputType.Text : InputType.Password)"
+                                                  InputType="@(apiKeyVisible ? InputType.Text : InputType.Password)"
                                                   Variant="Variant.Outlined"
                                                   Adornment="Adornment.End"
-                                                  AdornmentIcon="@(_showApiKey.TryGetValue(provider.ProviderName, out var showIcon) && showIcon ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                                  AdornmentIcon="@(apiKeyVisible ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
                                                   OnAdornmentClick="@(() => ToggleApiKeyVisibility(provider.ProviderName))" />
 
                                     <MudNumericField T="int" Label="Timeout (seconds)"
