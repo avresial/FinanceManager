@@ -46,10 +46,10 @@
     letter-spacing: 0.08em;
 }
 
-/* Vertically centre the header so the Net block sits balanced against the
-   two-line title+period column instead of riding up against the top edge. */
+/* Bottom-align the header so the Net label/value block sits on the same baseline
+   as the title+period column rather than floating in the vertical middle. */
 .fm-labels-card .mud-card-header {
-    align-items: center;
+    align-items: flex-end;
 }
 
 .fm-labels-card .fm-pos {
