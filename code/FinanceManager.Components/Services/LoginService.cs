@@ -91,6 +91,9 @@ public class LoginService : ILoginService
 
         if (result is null) return false;
 
+        // Don't let the plaintext password ride along on the session we keep in memory as _loggedUser; it's only
+        // needed for the request above.
+        userSession.Password = string.Empty;
         await ApplySession(result, userSession);
 
         LogginStateChanged?.Invoke(true);
@@ -102,7 +105,8 @@ public class LoginService : ILoginService
         {
             UserId = 0,
             UserName = username.ToLower(),
-            Password = PasswordEncryptionProvider.EncryptPassword(password),
+            // Send the plaintext password; the API is the single place that hashes it (see UserController/LoginController).
+            Password = password,
             UserRole = UserRole.User,
         });
 

@@ -16,13 +16,14 @@ namespace FinanceManager.IntegrationTests.Controllers;
 [Trait("Category", "Integration")]
 public class LoginControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
-    private static readonly string _testUserName = "testUser";
+    // Stored login is lowercased (logins are normalized at the API boundary); see the mixed-case test below.
+    private static readonly string _testUserName = "testuser";
     private static readonly string _testPassword = "password";
 
     protected override void ConfigureServices(IServiceCollection services)
     {
         var userRepoMock = new Mock<IUserRepository>();
-        userRepoMock.Setup(x => x.GetUser(_testUserName, PasswordEncryptionProvider.EncryptPassword(PasswordEncryptionProvider.EncryptPassword(_testPassword))))
+        userRepoMock.Setup(x => x.GetUser(_testUserName, PasswordEncryptionProvider.EncryptPassword(_testPassword)))
             .ReturnsAsync(new User
             {
                 UserId = 99,
@@ -42,7 +43,28 @@ public class LoginControllerTests(OptionsProvider optionsProvider) : ControllerT
     public async Task Login_ReturnsToken_ForValidCredentials()
     {
         // arrange
-        LoginRequestModel request = new(_testUserName, PasswordEncryptionProvider.EncryptPassword(_testPassword));
+        // The client sends the plaintext password; the API hashes it exactly once before looking the user up.
+        LoginRequestModel request = new(_testUserName, _testPassword);
+
+        // act
+        var response = await Client.PostAsJsonAsync("api/Login", request, cancellationToken: TestContext.Current.CancellationToken);
+
+        // assert
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<LoginResponseModel>(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(body);
+        Assert.Equal(_testUserName, body.UserName);
+        Assert.Equal(99, body.UserId);
+        Assert.False(string.IsNullOrWhiteSpace(body.AccessToken));
+    }
+
+    [Fact]
+    public async Task Login_ReturnsToken_ForMixedCaseCredentials()
+    {
+        // arrange: post the username with different casing than the stored (lowercased) login. The API normalizes
+        // the username before lookup, so this must still authenticate.
+        LoginRequestModel request = new("TestUser", _testPassword);
 
         // act
         var response = await Client.PostAsJsonAsync("api/Login", request, cancellationToken: TestContext.Current.CancellationToken);

@@ -25,13 +25,18 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Add(AddUser addUserCommand, CancellationToken cancellationToken = default)
     {
-        var existingUser = await userRepository.GetUser(addUserCommand.UserName);
+        // Logins are case-insensitive emails; store them lowercased so they match the lowercased lookup performed at
+        // login (LoginService lowercases the username). Without this, a login with any uppercase letter is stored
+        // verbatim but never found at sign-in on case-sensitive providers like PostgreSQL.
+        var login = addUserCommand.UserName.ToLowerInvariant();
+
+        var existingUser = await userRepository.GetUser(login);
         if (existingUser is not null) return Conflict();
 
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(addUserCommand.Password);
         try
         {
-            var result = await userRepository.AddUser(addUserCommand.UserName, encryptedPassword, addUserCommand.PricingLevel, UserRole.User, addUserCommand.FirstName, addUserCommand.LastName);
+            var result = await userRepository.AddUser(login, encryptedPassword, addUserCommand.PricingLevel, UserRole.User, addUserCommand.FirstName, addUserCommand.LastName);
             return result ? Ok(result) : BadRequest();
         }
         catch (DuplicateLoginException)

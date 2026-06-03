@@ -19,6 +19,7 @@ public partial class EditUserPage : ComponentBase
     private bool _success;
     private string _selectedPlan = $"{PricingLevel.Free}";
     private string? _selectedUserRole;
+    private string? _password;
     private string? _confirmPassword;
     private MudForm? _passwordForm;
     private MudTextField<string>? _passwordField;
@@ -53,7 +54,7 @@ public partial class EditUserPage : ComponentBase
 
     private string PasswordMatch(string arg)
     {
-        if (_passwordField is not null && _passwordField.Value != arg)
+        if (!string.Equals(_password, arg, StringComparison.Ordinal))
             return "Passwords don't match";
 
         return "";
@@ -146,13 +147,13 @@ public partial class EditUserPage : ComponentBase
     {
         if (_userData is null) return;
         if (_passwordForm is null) return;
-        if (_passwordField is null) return;
+        if (string.IsNullOrEmpty(_password)) return;
         if (string.IsNullOrEmpty(_confirmPassword)) return;
 
         await _passwordForm.Validate();
         if (_passwordForm.IsValid)
         {
-            if (_passwordField.Value != _confirmPassword)
+            if (!string.Equals(_password, _confirmPassword, StringComparison.Ordinal))
             {
                 _warnings.Insert(0, "New passwords do not match.");
                 return;
@@ -169,9 +170,15 @@ public partial class EditUserPage : ComponentBase
                 {
                     _errors.Clear();
                     _info.Insert(0, "Password changed successfully.");
+
+                    // Only clear the inputs on success — a failed validation or update should leave what the
+                    // admin typed in place so they can fix it rather than re-enter from scratch.
+                    _password = "";
+                    _confirmPassword = "";
+                    if (_passwordField is not null)
+                        await _passwordField.ResetAsync();
                 }
             }
         }
-        _confirmPassword = "";
     }
 }
