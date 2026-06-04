@@ -7,27 +7,27 @@
 <MudLayout>
     <MudAppBar Elevation="0">
         <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="flex-grow-1">
-            <MudIconButton Icon="@Icons.Material.Filled.Menu" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" aria-label="Toggle navigation menu" />
             @if (_breadcrumbs.Count > 0)
             {
                 <MudBreadcrumbs Items="_breadcrumbs" />
             }
         </MudStack>
-        <MudIconButton OnClick=LoginService.Logout Icon="@Icons.Material.Filled.Logout" Edge="Edge.End" />
+        <MudIconButton OnClick=LoginService.Logout Icon="@Icons.Material.Filled.Logout" Edge="Edge.End" aria-label="Log out" />
     </MudAppBar>
 
     <MudDrawer @bind-Open="_drawerOpen" Elevation="0">
-        <MudNavMenu>
+        <MudNavMenu aria-label="Admin">
             <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary">FinanceManager</MudText>
             <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Admin panel</MudText>
             <MudDivider Class="my-2" />
-            <MudNavLink Icon="@Icons.Material.Filled.Dashboard" Href="Admin/Dashboard">Dashboard</MudNavLink>
-            <MudNavLink Icon="@Icons.Material.Filled.People" Href="Admin/Users">Users</MudNavLink>
-            <MudNavLink Icon="@Icons.Material.Filled.Label" Href="Admin/Labels">Labels</MudNavLink>
-            <MudNavLink Icon="@Icons.Material.Filled.AccountBalance" Href="Admin/Bonds">Bonds</MudNavLink>
-            <MudNavLink Icon="@Icons.Material.Filled.ShowChart" Href="Admin/Stocks">Stocks</MudNavLink>
-            <MudNavLink Icon="@Icons.Material.Filled.SmartToy" Href="Admin/AiProviders">AI Providers</MudNavLink>
-            <MudNavLink Icon="@Icons.Material.Filled.ReportProblem" Href="Admin/Logs">Logs</MudNavLink>
+            <MudNavLink Icon="@Icons.Material.Filled.Dashboard" Href="Admin/Dashboard" data-testid="nav-admin-dashboard">Dashboard</MudNavLink>
+            <MudNavLink Icon="@Icons.Material.Filled.People" Href="Admin/Users" data-testid="nav-admin-users">Users</MudNavLink>
+            <MudNavLink Icon="@Icons.Material.Filled.Label" Href="Admin/Labels" data-testid="nav-admin-labels">Labels</MudNavLink>
+            <MudNavLink Icon="@Icons.Material.Filled.AccountBalance" Href="Admin/Bonds" data-testid="nav-admin-bonds">Bonds</MudNavLink>
+            <MudNavLink Icon="@Icons.Material.Filled.ShowChart" Href="Admin/Stocks" data-testid="nav-admin-stocks">Stocks</MudNavLink>
+            <MudNavLink Icon="@Icons.Material.Filled.SmartToy" Href="Admin/AiProviders" data-testid="nav-admin-aiproviders">AI Providers</MudNavLink>
+            <MudNavLink Icon="@Icons.Material.Filled.ReportProblem" Href="Admin/Logs" data-testid="nav-admin-logs">Logs</MudNavLink>
         </MudNavMenu>
 
     </MudDrawer>

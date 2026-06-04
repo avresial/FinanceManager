@@ -3,6 +3,8 @@
 @attribute [Authorize(Roles = "Admin")]
 @layout AdminLayout
 
+<PageTitle>Labels - Admin</PageTitle>
+
 @if (!_isLoading)
 {
     <MudStack Spacing="2">
@@ -19,7 +21,7 @@
                     <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearchChanged"
                                   Placeholder="Search by name" Immediate="true" Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" Class="flex-grow-1" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="add" Href="Admin/AddLabel"
+                    <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="Add label" Href="Admin/AddLabel"
                                    Color="Color.Primary" />
                     @if (!_showSuggestions)
                     {
@@ -76,7 +78,7 @@
                         <MudText Typo="Typo.h6">AI suggestions</MudText>
                         <MudSpacer />
                         <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="CloseSuggestions"
-                                       aria-label="close" />
+                                       aria-label="Close AI suggestions" />
                     </MudStack>
 
                     @foreach (var message in _suggestionErrors)

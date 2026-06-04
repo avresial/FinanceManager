@@ -25,7 +25,7 @@ else
                 <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentQuarterRange()))>This quarter</MudButton>
                 <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentYearRange()))>This year</MudButton>
 
-                <MudIconButton Icon="@Icons.Material.Filled.ArrowDropDown" OnClick="@(() => _expanded = !_expanded)" />
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowDropDown" OnClick="@(() => _expanded = !_expanded)" aria-label="More date range options" />
             </MudButtonGroup>
 
             <MudCollapse Expanded="_expanded">

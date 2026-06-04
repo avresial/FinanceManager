@@ -3,6 +3,8 @@
 @layout AdminLayout
 @using Microsoft.AspNetCore.Authorization
 
+<PageTitle>AI providers - Admin</PageTitle>
+
 @if (_isLoading)
 {
     <MudProgressCircular Indeterminate Color="Color.Primary" />
@@ -58,7 +60,8 @@ else
                                                        Color="Color.Error"
                                                        Size="Size.Small"
                                                        Disabled="@_deletingProvider.Contains(provider.ProviderName)"
-                                                       OnClick="@(() => DeleteProviderAsync(provider))" />
+                                                       OnClick="@(() => DeleteProviderAsync(provider))"
+                                                       aria-label="@($"Delete provider {provider.ProviderName}")" />
                                     </MudStack>
                                 </CardHeaderContent>
                             </MudCardHeader>
@@ -120,7 +123,8 @@ else
                                                                                Color="Color.Error"
                                                                                Size="Size.Small"
                                                                                Disabled="@_deletingModel.Contains(model.Id)"
-                                                                               OnClick="@(() => DeleteModelAsync(provider, model))" />
+                                                                               OnClick="@(() => DeleteModelAsync(provider, model))"
+                                                                               aria-label="@($"Delete model {model.ModelName}")" />
                                                             </MudStack>
                                                         </MudStack>
                                                     }
@@ -137,7 +141,8 @@ else
                                                     <MudIconButton Icon="@Icons.Material.Filled.Add"
                                                                    Color="Color.Primary"
                                                                    Disabled="@(_addingModel.Contains(provider.ProviderName) || string.IsNullOrWhiteSpace(provider.NewModelName))"
-                                                                   OnClick="@(() => AddModelAsync(provider))" />
+                                                                   OnClick="@(() => AddModelAsync(provider))"
+                                                                   aria-label="@($"Add model to {provider.ProviderName}")" />
                                                 </MudStack>
                                             </MudStack>
                                             </ChildContent>
@@ -189,10 +194,12 @@ else
                         <MudStack Row Spacing="1">
                             <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
                                            Disabled="@(_fallbackEntries.IndexOf(context) == 0)"
-                                           OnClick="@(() => MoveFallbackEntry(context, -1))" />
+                                           OnClick="@(() => MoveFallbackEntry(context, -1))"
+                                           aria-label="Move fallback entry up" />
                             <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
                                            Disabled="@(_fallbackEntries.IndexOf(context) == _fallbackEntries.Count - 1)"
-                                           OnClick="@(() => MoveFallbackEntry(context, 1))" />
+                                           OnClick="@(() => MoveFallbackEntry(context, 1))"
+                                           aria-label="Move fallback entry down" />
                         </MudStack>
                     </MudTd>
                     <MudTd Style="@(isDisabled ? "opacity:0.4;" : "")">
@@ -217,7 +224,8 @@ else
                     </MudTd>
                     <MudTd>
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                                       OnClick="@(() => _fallbackEntries.Remove(context))" />
+                                       OnClick="@(() => _fallbackEntries.Remove(context))"
+                                       aria-label="Remove fallback entry" />
                     </MudTd>
                 </RowTemplate>
                 <FooterContent>
