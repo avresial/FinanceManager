@@ -30,8 +30,10 @@ public class PasswordResetController(
         var rawToken = await passwordResetService.RequestReset(request.Login, cancellationToken);
 
         // TEMPORARY (issue #280): no email provider is wired up yet, so the raw token is returned in the response
-        // and the client renders a direct "reset password" link from it. Once transactional email is in place the
-        // token must stop being returned here and be delivered only via the emailed link.
+        // and the client renders a direct "reset password" link from it. A token is returned for *every* request —
+        // a real persisted one for registered accounts, a throwaway one otherwise — so neither the response nor the
+        // link reveals whether the email is registered (#342). Once transactional email is in place the token must
+        // stop being returned here and be delivered only via the emailed link.
         return Ok(new ForgotPasswordResponse(_genericMessage, rawToken));
     }
 
