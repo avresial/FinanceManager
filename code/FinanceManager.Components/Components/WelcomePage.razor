@@ -17,8 +17,9 @@
             </MudText>
         </MudItem>
         <MudItem xs="12" md="6" Class="order-1 order-md-2 d-flex align-center">
-            <MudImage Fluid="true" Src="IMGS/Dashboard.JPG" Alt="FinanceManager dashboard"
-                      Class="flex-grow-1 rounded-lg" />
+            @* Both theme variants are rendered; scoped CSS shows the one matching the active (system) theme. *@
+            <img src="IMGS/onboarding/dashboard-light.jpg" alt="FinanceManager dashboard" class="onb-img onb-hero onb-light rounded-lg" />
+            <img src="IMGS/onboarding/dashboard-dark.jpg" alt="FinanceManager dashboard" class="onb-img onb-hero onb-dark rounded-lg" />
         </MudItem>
     </MudGrid>
 
@@ -106,8 +107,8 @@
             <MudCarouselItem Transition="Transition.Slide">
                 <div class="d-flex flex-column align-center justify-center" style="height: 100%;">
                     <MudText Typo="Typo.h6" Class="mb-2">@preview.Caption</MudText>
-                    <MudImage Src="@preview.Src" Alt="@preview.Caption" ObjectFit="ObjectFit.Contain"
-                              Class="rounded-lg" Style="max-height: 400px; max-width: 100%;" />
+                    <img src="@preview.Light" alt="@preview.Caption" class="onb-img onb-carousel onb-light rounded-lg" />
+                    <img src="@preview.Dark" alt="@preview.Caption" class="onb-img onb-carousel onb-dark rounded-lg" />
                 </div>
             </MudCarouselItem>
         }
@@ -128,13 +129,13 @@
 </MudContainer>
 
 @code {
-    private record Preview(string Src, string Caption);
+    private record Preview(string Light, string Dark, string Caption);
 
     private readonly Preview[] _previews =
     [
-        new("IMGS/Dashboard.JPG", "Dashboard — your finances at a glance"),
-        new("IMGS/CashAccount.JPG", "Currency account — cash flow and transactions"),
-        new("IMGS/SharesAccount.JPG", "Stock account — holdings and portfolio value"),
-        new("IMGS/Assets.JPG", "Assets — net worth over time"),
+        new("IMGS/onboarding/dashboard-light.jpg", "IMGS/onboarding/dashboard-dark.jpg", "Dashboard — your finances at a glance"),
+        new("IMGS/onboarding/currency-light.jpg", "IMGS/onboarding/currency-dark.jpg", "Currency account — cash flow and transactions"),
+        new("IMGS/onboarding/stock-light.jpg", "IMGS/onboarding/stock-dark.jpg", "Stock account — holdings and portfolio value"),
+        new("IMGS/onboarding/assets-light.jpg", "IMGS/onboarding/assets-dark.jpg", "Assets — net worth over time"),
     ];
 }
