@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Forgot-password flow: the sign-in page now has a "Forgot password?" link that opens a page where you enter your email to request a reset link, then a page to choose a new password. Reset links are single-use and expire after an hour. While email delivery isn't set up yet, the reset link is shown on-screen straight after you request it. #280
 - New users with no accounts now land on a welcoming first-run screen instead of being dropped straight onto a blank "Add account" form: a short intro to what FinanceManager does, one-click "Create" buttons for a Currency, Stock, or Bond account (each opening the form with that type preselected), and a carousel previewing the dashboard, currency, stock, and assets pages (the screenshots follow your light/dark theme). #281
 - Registration now asks for your first name (required) and last name (optional), and the app greets you by your first name in the account menu. #301
 - Dashboard cards now surface data-load failures instead of failing silently: a failed fetch shows an error toast (and a "Failed to load" indicator on the net worth, net cash flow, and closing balance cards) rather than leaving an empty card, and a top-level error boundary catches unexpected page errors with a friendly message. The API also now returns consistent RFC-7807 `ProblemDetails` responses for unhandled errors, without leaking stack traces in production. #275
