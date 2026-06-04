@@ -16,23 +16,27 @@ public class PasswordResetService(
     private const int _tokenByteLength = 32;
     private readonly PasswordResetOptions _options = options.Value;
 
-    public async Task<string?> RequestReset(string login, CancellationToken cancellationToken = default)
+    public async Task<string> RequestReset(string login, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(login)) return null;
+        // Always mint a token so the return value (and therefore the API response and the link the client renders)
+        // looks the same for every request. For an unknown login the token is returned but never persisted, so it
+        // can't reset anything — the caller cannot tell a registered email from an unregistered one.
+        var rawToken = GenerateRawToken();
+
+        if (string.IsNullOrWhiteSpace(login)) return rawToken;
 
         // Logins are stored lowercased at registration; normalise here so a request with different casing still
         // resolves the same account.
         var normalizedLogin = login.ToLowerInvariant();
 
         var user = await userRepository.GetUser(normalizedLogin);
-        if (user is null) return null;
+        if (user is null) return rawToken;
 
         var now = DateTime.UtcNow;
 
         // Requesting a new link supersedes any earlier one, so only the freshest token can be redeemed.
         await tokenRepository.InvalidateActiveTokensForUser(user.UserId, now);
 
-        var rawToken = GenerateRawToken();
         await tokenRepository.Add(new PasswordResetToken
         {
             UserId = user.UserId,

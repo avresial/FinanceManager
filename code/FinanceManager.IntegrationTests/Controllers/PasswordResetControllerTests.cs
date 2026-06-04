@@ -51,7 +51,7 @@ public class PasswordResetControllerTests(OptionsProvider optionsProvider) : Con
     }
 
     [Fact]
-    public async Task ForgotPassword_UnknownUser_ReturnsSameMessage_WithoutToken()
+    public async Task ForgotPassword_KnownAndUnknownUser_ReturnIndistinguishableResponses()
     {
         var ct = TestContext.Current.CancellationToken;
 
@@ -63,10 +63,27 @@ public class PasswordResetControllerTests(OptionsProvider optionsProvider) : Con
 
         Assert.NotNull(knownBody);
         Assert.NotNull(unknownBody);
-        // No account-enumeration signal: identical message and status for both.
+        // No account-enumeration signal: identical status, message, and response shape (both carry a token) for both.
         Assert.Equal(HttpStatusCode.OK, unknown.StatusCode);
         Assert.Equal(knownBody.Message, unknownBody.Message);
-        Assert.Null(unknownBody.ResetToken);
+        Assert.False(string.IsNullOrWhiteSpace(knownBody.ResetToken));
+        Assert.False(string.IsNullOrWhiteSpace(unknownBody.ResetToken));
+    }
+
+    [Fact]
+    public async Task ResetPassword_WithTokenFromUnknownUser_IsRejected()
+    {
+        var ct = TestContext.Current.CancellationToken;
+
+        // The throwaway token handed back for an unregistered email is never persisted, so it can't reset anything.
+        var forgot = await Client.PostAsJsonAsync("api/PasswordReset/forgot-password", new ForgotPasswordRequest("ghost@example.com"), ct);
+        var forgotBody = await forgot.Content.ReadFromJsonAsync<ForgotPasswordResponse>(cancellationToken: ct);
+        Assert.False(string.IsNullOrWhiteSpace(forgotBody!.ResetToken));
+
+        var reset = await Client.PostAsJsonAsync("api/PasswordReset/reset-password",
+            new ResetPasswordRequest(forgotBody.ResetToken!, "brand-new-password"), ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, reset.StatusCode);
     }
 
     [Fact]

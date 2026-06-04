@@ -69,14 +69,33 @@ public class PasswordResetServiceTests
     }
 
     [Fact]
-    public async Task RequestReset_UnknownUser_ReturnsNull_WithoutIssuingToken()
+    public async Task RequestReset_UnknownUser_ReturnsThrowawayToken_WithoutPersisting()
     {
         _userRepository.Setup(r => r.GetUser(It.IsAny<string>())).ReturnsAsync((User?)null);
 
         var raw = await _service.RequestReset("ghost@example.com", TestContext.Current.CancellationToken);
 
-        Assert.Null(raw);
+        // A token is still returned so the response shape matches the known-account case (no enumeration signal)...
+        Assert.False(string.IsNullOrWhiteSpace(raw));
+        // ...but nothing is persisted, so the throwaway token can never reset an account.
         _tokenRepository.Verify(r => r.Add(It.IsAny<PasswordResetToken>()), Times.Never);
+        _tokenRepository.Verify(r => r.InvalidateActiveTokensForUser(It.IsAny<int>(), It.IsAny<DateTime>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RequestReset_KnownAndUnknown_ReturnIndistinguishableTokens()
+    {
+        _userRepository.Setup(r => r.GetUser("user@example.com")).ReturnsAsync(BuildUser());
+        _userRepository.Setup(r => r.GetUser("ghost@example.com")).ReturnsAsync((User?)null);
+        _tokenRepository.Setup(r => r.Add(It.IsAny<PasswordResetToken>())).Returns(Task.CompletedTask);
+
+        var known = await _service.RequestReset("user@example.com", TestContext.Current.CancellationToken);
+        var unknown = await _service.RequestReset("ghost@example.com", TestContext.Current.CancellationToken);
+
+        // Both branches return a non-empty token of the same shape, so the caller can't tell them apart.
+        Assert.False(string.IsNullOrWhiteSpace(known));
+        Assert.False(string.IsNullOrWhiteSpace(unknown));
+        Assert.Equal(known!.Length, unknown!.Length);
     }
 
     [Fact]
