@@ -18,7 +18,7 @@
         </MudItem>
         <MudItem xs="12" md="6" Class="order-1 order-md-2 d-flex align-center">
             <MudImage Fluid="true" Src="IMGS/Dashboard.JPG" Alt="FinanceManager dashboard"
-                      Class="flex-grow-1 rounded-lg" Elevation="10" />
+                      Class="flex-grow-1 rounded-lg" />
         </MudItem>
     </MudGrid>
 
@@ -34,7 +34,7 @@
 
     <MudGrid Class="mb-2">
         <MudItem xs="12" sm="4" Class="d-flex">
-            <MudCard Elevation="6" Class="rounded-lg d-flex flex-column flex-grow-1">
+            <MudCard Elevation="0" Outlined="true" Class="rounded-lg d-flex flex-column flex-grow-1">
                 <MudCardContent Class="d-flex flex-column align-center text-center flex-grow-1">
                     <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
                     <MudText Typo="Typo.h6">Currency account</MudText>
@@ -52,7 +52,7 @@
         </MudItem>
 
         <MudItem xs="12" sm="4" Class="d-flex">
-            <MudCard Elevation="6" Class="rounded-lg d-flex flex-column flex-grow-1">
+            <MudCard Elevation="0" Outlined="true" Class="rounded-lg d-flex flex-column flex-grow-1">
                 <MudCardContent Class="d-flex flex-column align-center text-center flex-grow-1">
                     <MudIcon Icon="@Icons.Material.Filled.ShowChart" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
                     <MudText Typo="Typo.h6">Stock account</MudText>
@@ -70,7 +70,7 @@
         </MudItem>
 
         <MudItem xs="12" sm="4" Class="d-flex">
-            <MudCard Elevation="6" Class="rounded-lg d-flex flex-column flex-grow-1">
+            <MudCard Elevation="0" Outlined="true" Class="rounded-lg d-flex flex-column flex-grow-1">
                 <MudCardContent Class="d-flex flex-column align-center text-center flex-grow-1">
                     <MudIcon Icon="@Icons.Material.Filled.Savings" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
                     <MudText Typo="Typo.h6">Bond account</MudText>
@@ -98,9 +98,9 @@
         </MudText>
     </div>
 
-    <MudCarousel TData="object" Class="rounded-lg mud-width-full mb-6" Style="height: 460px;"
+    <MudCarousel TData="object" Class="rounded-lg mud-width-full mb-6 mud-border-lines-default border-solid border-2" Style="height: 460px;"
                  ShowArrows="true" ShowBullets="true" EnableSwipeGesture="true" AutoCycle="true"
-                 AutoCycleTime="TimeSpan.FromSeconds(6)" Elevation="6">
+                 AutoCycleTime="TimeSpan.FromSeconds(6)" Elevation="0">
         @foreach (var preview in _previews)
         {
             <MudCarouselItem Transition="Transition.Slide">
