@@ -6,7 +6,7 @@
     <MudGrid Class="align-center mb-4">
         <MudItem xs="12" md="6" Class="order-2 order-md-1">
             <MudText Typo="Typo.h3" Class="mb-3">Welcome to FinanceManager 👋</MudText>
-            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-4">
+            <MudText Typo="Typo.h6" Style="color: var(--mud-palette-text-secondary);" Class="mb-4">
                 Keep all of your finances in one place. Track your net worth, cash flow and
                 investments across cash, stock and bond accounts — and watch your dashboard
                 come alive as you add data.
@@ -27,7 +27,7 @@
     @* Primary call to action: pick an account type to start with *@
     <div class="text-center mb-5">
         <MudText Typo="Typo.h4" Class="mb-2">Start by creating your first account</MudText>
-        <MudText Typo="Typo.body1" Color="Color.Secondary">
+        <MudText Typo="Typo.body1" Style="color: var(--mud-palette-text-secondary);">
             Pick whichever fits what you want to track first — you can always add more later.
         </MudText>
     </div>
@@ -36,9 +36,9 @@
         <MudItem xs="12" sm="4" Class="d-flex">
             <MudCard Elevation="0" Outlined="true" Class="rounded-lg d-flex flex-column flex-grow-1">
                 <MudCardContent Class="d-flex flex-column align-center text-center flex-grow-1">
-                    <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
+                    <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Color="Color.Default" Size="Size.Large" Class="mb-2" />
                     <MudText Typo="Typo.h6">Currency account</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);" Class="mt-2">
                         Everyday cash, salary, bills and spending. Import CSV statements from your bank.
                     </MudText>
                 </MudCardContent>
@@ -54,9 +54,9 @@
         <MudItem xs="12" sm="4" Class="d-flex">
             <MudCard Elevation="0" Outlined="true" Class="rounded-lg d-flex flex-column flex-grow-1">
                 <MudCardContent Class="d-flex flex-column align-center text-center flex-grow-1">
-                    <MudIcon Icon="@Icons.Material.Filled.ShowChart" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
+                    <MudIcon Icon="@Icons.Material.Filled.ShowChart" Color="Color.Default" Size="Size.Large" Class="mb-2" />
                     <MudText Typo="Typo.h6">Stock account</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);" Class="mt-2">
                         Shares and ETFs. Track holdings and see how your portfolio value changes over time.
                     </MudText>
                 </MudCardContent>
@@ -72,9 +72,9 @@
         <MudItem xs="12" sm="4" Class="d-flex">
             <MudCard Elevation="0" Outlined="true" Class="rounded-lg d-flex flex-column flex-grow-1">
                 <MudCardContent Class="d-flex flex-column align-center text-center flex-grow-1">
-                    <MudIcon Icon="@Icons.Material.Filled.Savings" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
+                    <MudIcon Icon="@Icons.Material.Filled.Savings" Color="Color.Default" Size="Size.Large" Class="mb-2" />
                     <MudText Typo="Typo.h6">Bond account</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);" Class="mt-2">
                         Treasury and savings bonds. Keep your fixed-income investments alongside the rest.
                     </MudText>
                 </MudCardContent>
@@ -93,7 +93,7 @@
     @* Preview carousel: what the app looks like with data *@
     <div class="text-center mb-4">
         <MudText Typo="Typo.h4" Class="mb-2">See what you'll get</MudText>
-        <MudText Typo="Typo.body1" Color="Color.Secondary">
+        <MudText Typo="Typo.body1" Style="color: var(--mud-palette-text-secondary);">
             A quick look at the dashboard and accounts once they fill up with data.
         </MudText>
     </div>
@@ -115,10 +115,10 @@
 
     @* Low-commitment escape hatch: explore seeded demo data *@
     <div class="text-center mb-4">
-        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-2">
+        <MudText Typo="Typo.body1" Style="color: var(--mud-palette-text-secondary);" Class="mb-2">
             Just want to look around first?
         </MudText>
-        <MudButton Variant="Variant.Text" Color="Color.Primary"
+        <MudButton Variant="Variant.Text" Color="Color.Default"
                    StartIcon="@Icons.Material.Filled.Visibility"
                    Disabled="_isLaunchingDemo" OnClick="ExploreDemo">
             Explore the demo with sample data
