@@ -114,18 +114,6 @@
         }
     </MudCarousel>
 
-    @* Low-commitment escape hatch: explore seeded demo data *@
-    <div class="text-center mb-4">
-        <MudText Typo="Typo.body1" Style="color: var(--mud-palette-text-secondary);" Class="mb-2">
-            Just want to look around first?
-        </MudText>
-        <MudButton Variant="Variant.Text" Color="Color.Default"
-                   StartIcon="@Icons.Material.Filled.Visibility"
-                   Disabled="_isLaunchingDemo" OnClick="ExploreDemo">
-            Explore the demo with sample data
-        </MudButton>
-    </div>
-
 </MudContainer>
 
 @code {
