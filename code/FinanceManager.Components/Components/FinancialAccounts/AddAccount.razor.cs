@@ -20,6 +20,18 @@ public partial class AddAccount : ComponentBase
         "Currency account", "Stock account", "Bond account"
     };
 
+    // Lets the welcome screen deep-link straight to a preselected account type (e.g. AddAccount?type=Stock).
+    [Parameter, SupplyParameterFromQuery] public string? Type { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (string.IsNullOrWhiteSpace(Type)) return;
+
+        var match = Array.Find(_accountTypes, t => t.StartsWith(Type, StringComparison.OrdinalIgnoreCase));
+        if (match is not null)
+            _selectedAccountType = match;
+    }
+
     [Inject] public required ILogger<AddAccount> Logger { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required CurrencyAccountHttpClient CurrencyAccountHttpClient { get; set; }
