@@ -32,19 +32,28 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
 
     public Task InvokeAsync(HttpContext context)
     {
-        var headers = context.Response.Headers;
+        // Set the headers in OnStarting rather than inline so they are applied right before the
+        // response is sent. This survives UseExceptionHandler clearing the response (Response.Clear)
+        // when GlobalExceptionHandler turns an unhandled exception into a ProblemDetails result, so
+        // error responses carry the same hardening headers as successful ones.
+        context.Response.OnStarting(static state =>
+        {
+            var headers = ((HttpContext)state).Response.Headers;
 
-        if (!headers.ContainsKey("X-Content-Type-Options"))
-            headers["X-Content-Type-Options"] = "nosniff";
+            if (!headers.ContainsKey("X-Content-Type-Options"))
+                headers["X-Content-Type-Options"] = "nosniff";
 
-        if (!headers.ContainsKey("X-Frame-Options"))
-            headers["X-Frame-Options"] = "DENY";
+            if (!headers.ContainsKey("X-Frame-Options"))
+                headers["X-Frame-Options"] = "DENY";
 
-        if (!headers.ContainsKey("Referrer-Policy"))
-            headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+            if (!headers.ContainsKey("Referrer-Policy"))
+                headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
 
-        if (!headers.ContainsKey("Content-Security-Policy"))
-            headers["Content-Security-Policy"] = _contentSecurityPolicy;
+            if (!headers.ContainsKey("Content-Security-Policy"))
+                headers["Content-Security-Policy"] = _contentSecurityPolicy;
+
+            return Task.CompletedTask;
+        }, context);
 
         return next(context);
     }

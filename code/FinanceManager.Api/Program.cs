@@ -1,5 +1,6 @@
 using FinanceManager.Api;
 using FinanceManager.Api.Logging;
+using FinanceManager.Api.Middleware;
 using FinanceManager.Api.Services;
 using FinanceManager.Api.Services.Guest;
 using FinanceManager.Application;
@@ -202,7 +203,7 @@ if (!app.Environment.IsDevelopment())
 
 // Emit X-Content-Type-Options, X-Frame-Options, Referrer-Policy and a Blazor-WASM-compatible CSP
 // on every response. Placed before UseHttpsRedirection so the headers ride the 307 as well.
-app.UseMiddleware<FinanceManager.Api.Middleware.SecurityHeadersMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
