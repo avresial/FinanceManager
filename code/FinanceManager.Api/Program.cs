@@ -176,13 +176,30 @@ builder.Services.AddCors(options =>
 // The app runs behind a TLS-terminating reverse proxy (Cloudflare) in production, so the request
 // arriving at Kestrel is plain HTTP from the proxy. Honour X-Forwarded-Proto/For so Request.IsHttps,
 // Request.Scheme and the remote IP reflect the original client request — this is what makes the
-// Secure refresh-token cookie, HTTPS redirect and per-client rate limiting behave correctly. The
-// origin is only reachable through the trusted proxy, so we trust the single forwarded hop.
+// Secure refresh-token cookie, HTTPS redirect and per-client rate limiting behave correctly.
+// Only trust headers forwarded by the declared proxy addresses/networks; trusting any source would
+// allow a client that reaches Kestrel directly to spoof scheme or IP.
+var reverseProxyIps = builder.Configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? [];
+var reverseProxyNetworks = builder.Configuration.GetSection("ReverseProxy:KnownNetworks").Get<string[]>() ?? [];
+
+if (!builder.Environment.IsDevelopment() && reverseProxyIps.Length == 0 && reverseProxyNetworks.Length == 0)
+    throw new InvalidOperationException(
+        "ReverseProxy:KnownProxies or ReverseProxy:KnownNetworks must be configured outside Development. " +
+        "Set these to the IP addresses or CIDR ranges of your reverse proxy (e.g. Cloudflare's published ranges).");
+
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
+
+    foreach (var proxy in reverseProxyIps)
+        if (System.Net.IPAddress.TryParse(proxy, out var ip))
+            options.KnownProxies.Add(ip);
+
+    foreach (var network in reverseProxyNetworks)
+        if (System.Net.IPNetwork.TryParse(network, out var net))
+            options.KnownIPNetworks.Add(net);
 });
 
 builder.Services.AddApiRateLimiting(builder.Configuration);
