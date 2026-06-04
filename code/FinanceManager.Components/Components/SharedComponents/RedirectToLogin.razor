@@ -4,7 +4,15 @@
 @code {
     protected override async Task OnInitializedAsync()
     {
-        await LoginService.Logout();
+        // Before bouncing to the login page, try to silently restore the session from the refresh-token cookie.
+        // GetLoggedUser performs that one-shot refresh on a cold load, so a user returning within the refresh
+        // window (e.g. a reload or deep link into a protected route) is logged straight back in: the auth state
+        // flips to authenticated and the surrounding AuthorizeView re-renders the protected content in place.
+        // Note we deliberately do NOT call Logout here — that would revoke the still-valid refresh token on the
+        // server and defeat auto-login. If no session can be restored there is nothing to revoke anyway.
+        var loggedUser = await LoginService.GetLoggedUser();
+        if (loggedUser is not null) return;
+
         Navigation.NavigateTo("login");
     }
 }
