@@ -129,8 +129,14 @@ public class PasswordResetControllerTests(OptionsProvider optionsProvider) : Con
         public Task<PasswordResetToken?> GetByHash(string tokenHash) =>
             Task.FromResult(_tokens.FirstOrDefault(t => t.TokenHash == tokenHash));
 
-        // Tokens are stored by reference and mutated in place by the service, so there is nothing extra to persist.
-        public Task Update(PasswordResetToken token) => Task.CompletedTask;
+        public Task<bool> TryConsume(string tokenHash, DateTime usedAt)
+        {
+            var token = _tokens.FirstOrDefault(t => t.TokenHash == tokenHash && t.UsedAt is null);
+            if (token is null) return Task.FromResult(false);
+
+            token.UsedAt = usedAt;
+            return Task.FromResult(true);
+        }
 
         public Task InvalidateActiveTokensForUser(int userId, DateTime usedAt)
         {

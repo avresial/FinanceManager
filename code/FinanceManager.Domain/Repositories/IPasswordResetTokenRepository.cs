@@ -6,7 +6,13 @@ public interface IPasswordResetTokenRepository
 {
     Task Add(PasswordResetToken token);
     Task<PasswordResetToken?> GetByHash(string tokenHash);
-    Task Update(PasswordResetToken token);
+
+    /// <summary>
+    /// Atomically marks the token with the given hash as used, but only if it is still unused. Returns
+    /// <c>true</c> only for the single caller that wins the claim, so a token can be redeemed exactly once even
+    /// when concurrent requests present the same link.
+    /// </summary>
+    Task<bool> TryConsume(string tokenHash, DateTime usedAt);
 
     /// <summary>
     /// Marks every still-active (unused) token for a user as used, so requesting a new reset link silently

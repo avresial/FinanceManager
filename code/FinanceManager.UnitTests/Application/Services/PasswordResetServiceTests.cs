@@ -91,17 +91,38 @@ public class PasswordResetServiceTests
             ExpiresAt = now.AddMinutes(30),
         };
         _tokenRepository.Setup(r => r.GetByHash(Hash("valid"))).ReturnsAsync(token);
+        _tokenRepository.Setup(r => r.TryConsume(token.TokenHash, It.IsAny<DateTime>())).ReturnsAsync(true);
         _userRepository.Setup(r => r.UpdatePassword(7, It.IsAny<string>())).ReturnsAsync(true);
 
         var result = await _service.ResetPassword("valid", "newSecret", TestContext.Current.CancellationToken);
 
         Assert.Equal(PasswordResetStatus.Success, result.Status);
         Assert.True(result.Succeeded);
+        // The token is claimed atomically before the password write.
+        _tokenRepository.Verify(r => r.TryConsume(token.TokenHash, It.IsAny<DateTime>()), Times.Once);
         // Password is hashed before persistence — the raw value never reaches the repository.
         _userRepository.Verify(r => r.UpdatePassword(7, PasswordEncryptionProvider.EncryptPassword("newSecret")), Times.Once);
-        // Token consumed only after the password change succeeded.
-        Assert.NotNull(token.UsedAt);
-        _tokenRepository.Verify(r => r.Update(token), Times.Once);
+    }
+
+    [Fact]
+    public async Task ResetPassword_WhenTokenClaimedConcurrently_ReturnsAlreadyUsed_WithoutChangingPassword()
+    {
+        var now = DateTime.UtcNow;
+        var token = new PasswordResetToken
+        {
+            UserId = 7,
+            TokenHash = Hash("valid"),
+            CreatedAt = now.AddMinutes(-5),
+            ExpiresAt = now.AddMinutes(30),
+        };
+        _tokenRepository.Setup(r => r.GetByHash(Hash("valid"))).ReturnsAsync(token);
+        // A concurrent request won the atomic claim first, so this caller's consume affects no rows.
+        _tokenRepository.Setup(r => r.TryConsume(token.TokenHash, It.IsAny<DateTime>())).ReturnsAsync(false);
+
+        var result = await _service.ResetPassword("valid", "newSecret", TestContext.Current.CancellationToken);
+
+        Assert.Equal(PasswordResetStatus.AlreadyUsed, result.Status);
+        _userRepository.Verify(r => r.UpdatePassword(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]

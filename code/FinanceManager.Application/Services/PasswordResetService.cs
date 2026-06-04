@@ -59,15 +59,17 @@ public class PasswordResetService(
         if (DateTime.UtcNow >= existing.ExpiresAt)
             return PasswordResetResult.Failure(PasswordResetStatus.Expired);
 
+        // Claim the token atomically *before* changing the password. The conditional consume succeeds for only the
+        // single caller that flips UsedAt from null, so two concurrent redemptions of the same link can't both clear
+        // the check above and reset the password twice — the loser is rejected here rather than overwriting the
+        // winner's new password. (The checks above stay as a cheap fast-path for the common, uncontended case.)
+        if (!await tokenRepository.TryConsume(existing.TokenHash, DateTime.UtcNow))
+            return PasswordResetResult.Failure(PasswordResetStatus.AlreadyUsed);
+
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(newPassword);
         var updated = await userRepository.UpdatePassword(existing.UserId, encryptedPassword);
         if (!updated)
             return PasswordResetResult.Failure(PasswordResetStatus.InvalidToken);
-
-        // Consume the token only after the password change has been persisted, so a failed update can be retried
-        // with the same link rather than silently burning it.
-        existing.UsedAt = DateTime.UtcNow;
-        await tokenRepository.Update(existing);
 
         return PasswordResetResult.Ok();
     }
