@@ -9,6 +9,7 @@ using FinanceManager.Application.Options;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -87,6 +88,13 @@ var allowedCorsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins")
     .Distinct(StringComparer.OrdinalIgnoreCase)
     .ToArray();
 
+// Outside Development an empty/missing allowlist must fail fast: never silently fall back to
+// AllowAnyOrigin() in production, which would let any site call the API cross-origin.
+if (allowedCorsOrigins is not { Length: > 0 } && !builder.Environment.IsDevelopment())
+    throw new InvalidOperationException(
+        "Cors:AllowedOrigins is not configured. Provide explicit allowed origins via the " +
+        "Cors__AllowedOrigins configuration; AllowAnyOrigin is only permitted in Development.");
+
 
 builder.Services.AddCors(options =>
 {
@@ -102,6 +110,8 @@ builder.Services.AddCors(options =>
                 return;
             }
 
+            // Reachable only in Development (the guard above throws otherwise): allow any origin
+            // so local tooling and ad-hoc clients work without configuring an allowlist.
             corsPolicyBuilder.AllowAnyOrigin()
                 .AllowAnyHeader()
                 .AllowAnyMethod();
@@ -163,6 +173,35 @@ builder.Services.AddCors(options =>
     };
 });
 
+// The app runs behind a TLS-terminating reverse proxy (Cloudflare) in production, so the request
+// arriving at Kestrel is plain HTTP from the proxy. Honour X-Forwarded-Proto/For so Request.IsHttps,
+// Request.Scheme and the remote IP reflect the original client request — this is what makes the
+// Secure refresh-token cookie, HTTPS redirect and per-client rate limiting behave correctly.
+// Only trust headers forwarded by the declared proxy addresses/networks; trusting any source would
+// allow a client that reaches Kestrel directly to spoof scheme or IP.
+var reverseProxyIps = builder.Configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? [];
+var reverseProxyNetworks = builder.Configuration.GetSection("ReverseProxy:KnownNetworks").Get<string[]>() ?? [];
+
+if (!builder.Environment.IsDevelopment() && reverseProxyIps.Length == 0 && reverseProxyNetworks.Length == 0)
+    throw new InvalidOperationException(
+        "ReverseProxy:KnownProxies or ReverseProxy:KnownNetworks must be configured outside Development. " +
+        "Set these to the IP addresses or CIDR ranges of your reverse proxy (e.g. Cloudflare's published ranges).");
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+
+    foreach (var proxy in reverseProxyIps)
+        if (System.Net.IPAddress.TryParse(proxy, out var ip))
+            options.KnownProxies.Add(ip);
+
+    foreach (var network in reverseProxyNetworks)
+        if (System.Net.IPNetwork.TryParse(network, out var net))
+            options.KnownIPNetworks.Add(net);
+});
+
 builder.Services.AddApiRateLimiting(builder.Configuration);
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
@@ -193,6 +232,11 @@ builder.Services.AddHostedService<LogEntryPersistenceBackgroundService>();
 builder.Services.AddHostedService<LogRetentionBackgroundService>();
 
 var app = builder.Build();
+
+// Must run before any middleware that inspects the scheme or client IP (HTTPS redirect, CORS,
+// rate limiter): it rewrites Request.Scheme/IsHttps and the remote IP from the proxy's
+// X-Forwarded-* headers so the rest of the pipeline sees the original client request.
+app.UseForwardedHeaders();
 
 // Registered first so it wraps the whole pipeline: any unhandled exception is turned into a
 // consistent ProblemDetails response by GlobalExceptionHandler instead of leaking framework defaults.
