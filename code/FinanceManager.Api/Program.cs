@@ -196,6 +196,14 @@ var app = builder.Build();
 // consistent ProblemDetails response by GlobalExceptionHandler instead of leaking framework defaults.
 app.UseExceptionHandler();
 
+// HSTS only outside Development so local HTTP-only loops aren't pinned to HTTPS in the browser.
+if (!app.Environment.IsDevelopment())
+    app.UseHsts();
+
+// Emit X-Content-Type-Options, X-Frame-Options, Referrer-Policy and a Blazor-WASM-compatible CSP
+// on every response. Placed before UseHttpsRedirection so the headers ride the 307 as well.
+app.UseMiddleware<FinanceManager.Api.Middleware.SecurityHeadersMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
