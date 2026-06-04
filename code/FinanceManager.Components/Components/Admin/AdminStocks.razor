@@ -4,6 +4,8 @@
 @attribute [Authorize(Roles = "Admin")]
 @layout AdminLayout
 
+<PageTitle>Stocks - Admin</PageTitle>
+
 @if (!_isLoading)
 {
     <MudStack Spacing="2">
@@ -21,7 +23,7 @@
                    StartIcon="@Icons.Material.Filled.UploadFile">
             Bulk import prices
         </MudButton>
-        <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="add" Href="Admin/AddStock" Color="Color.Primary" />
+        <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="Add stock" Href="Admin/AddStock" Color="Color.Primary" />
     </MudStack>
 
     @if (_pagedElements.Any())
@@ -47,9 +49,9 @@
                 <MudTd DataLabel="Action">
                     <MudStack Row Spacing="1">
                         <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary"
-                                       Href="@($"Admin/EditStock/{context.Isin}")" />
+                                       Href="@($"Admin/EditStock/{context.Isin}")" aria-label="@($"Edit stock {context.Name}")" />
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
-                                       OnClick="@(() => DeleteStock(context))" />
+                                       OnClick="@(() => DeleteStock(context))" aria-label="@($"Delete stock {context.Name}")" />
                     </MudStack>
                 </MudTd>
             </RowTemplate>

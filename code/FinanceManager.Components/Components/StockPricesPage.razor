@@ -1,6 +1,7 @@
 ﻿@page "/StockPrices"
 @page "/StockPrices/{Ticker}/{Date}"
 
+<PageTitle>Stock prices</PageTitle>
 
 @if (!string.IsNullOrEmpty(Ticker) && ParsedDate is not null)
 {

@@ -7,6 +7,8 @@
 @using Microsoft.AspNetCore.Authorization
 @implements IAsyncDisposable
 
+<PageTitle>Logs - Admin</PageTitle>
+
 <MudStack Spacing="3">
     <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
         <MudIcon Icon="@Icons.Material.Filled.ReportProblem" Color="Color.Warning" />
@@ -71,10 +73,10 @@
             </MudText>
             <MudSpacer />
             <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Disabled="@(_skip <= 0 || _loading)"
-                           OnClick="PrevPage" Size="Size.Small" />
+                           OnClick="PrevPage" Size="Size.Small" aria-label="Previous page" />
             <MudText Typo="Typo.body2">Page @CurrentPage / @TotalPages</MudText>
             <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Disabled="@(_skip + _take >= _totalCount || _loading)"
-                           OnClick="NextPage" Size="Size.Small" />
+                           OnClick="NextPage" Size="Size.Small" aria-label="Next page" />
         </MudStack>
     </MudPaper>
 </MudStack>
