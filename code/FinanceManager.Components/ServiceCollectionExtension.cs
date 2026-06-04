@@ -34,6 +34,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<AssetsHttpClient>()
                 .AddScoped<LiabilitiesHttpClient>()
                 .AddScoped<UserHttpClient>()
+                .AddScoped<PasswordResetHttpClient>()
                 .AddScoped<FinancialLabelHttpClient>()
                 .AddScoped<LabelSetterProgressHttpClient>()
                 .AddScoped<FinancialInsightsHttpClient>()
