@@ -1,0 +1,140 @@
+@namespace FinanceManager.Components.Components
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+
+    @* Hero: what FinanceManager is for *@
+    <MudGrid Class="align-center mb-4">
+        <MudItem xs="12" md="6" Class="order-2 order-md-1">
+            <MudText Typo="Typo.h3" Class="mb-3">Welcome to FinanceManager 👋</MudText>
+            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-4">
+                Keep all of your finances in one place. Track your net worth, cash flow and
+                investments across cash, stock and bond accounts — and watch your dashboard
+                come alive as you add data.
+            </MudText>
+            <MudText Typo="Typo.body1" Class="mb-2">
+                It only takes a minute: <b>create your first account</b>, then add transactions
+                manually or import a CSV from your bank.
+            </MudText>
+        </MudItem>
+        <MudItem xs="12" md="6" Class="order-1 order-md-2 d-flex align-center">
+            <MudImage Fluid="true" Src="IMGS/Dashboard.JPG" Alt="FinanceManager dashboard"
+                      Class="flex-grow-1 rounded-lg" Elevation="10" />
+        </MudItem>
+    </MudGrid>
+
+    <MudDivider Class="my-6" />
+
+    @* Primary call to action: pick an account type to start with *@
+    <div class="text-center mb-5">
+        <MudText Typo="Typo.h4" Class="mb-2">Start by creating your first account</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary">
+            Pick whichever fits what you want to track first — you can always add more later.
+        </MudText>
+    </div>
+
+    <MudGrid Class="mb-2">
+        <MudItem xs="12" sm="4" Class="d-flex">
+            <MudCard Elevation="6" Class="rounded-lg d-flex flex-column flex-grow-1">
+                <MudCardContent Class="d-flex flex-column align-center text-center flex-grow-1">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
+                    <MudText Typo="Typo.h6">Currency account</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                        Everyday cash, salary, bills and spending. Import CSV statements from your bank.
+                    </MudText>
+                </MudCardContent>
+                <MudCardActions Class="justify-center pb-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddAccount("Currency"))">
+                        Create
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="4" Class="d-flex">
+            <MudCard Elevation="6" Class="rounded-lg d-flex flex-column flex-grow-1">
+                <MudCardContent Class="d-flex flex-column align-center text-center flex-grow-1">
+                    <MudIcon Icon="@Icons.Material.Filled.ShowChart" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
+                    <MudText Typo="Typo.h6">Stock account</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                        Shares and ETFs. Track holdings and see how your portfolio value changes over time.
+                    </MudText>
+                </MudCardContent>
+                <MudCardActions Class="justify-center pb-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddAccount("Stock"))">
+                        Create
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="4" Class="d-flex">
+            <MudCard Elevation="6" Class="rounded-lg d-flex flex-column flex-grow-1">
+                <MudCardContent Class="d-flex flex-column align-center text-center flex-grow-1">
+                    <MudIcon Icon="@Icons.Material.Filled.Savings" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
+                    <MudText Typo="Typo.h6">Bond account</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                        Treasury and savings bonds. Keep your fixed-income investments alongside the rest.
+                    </MudText>
+                </MudCardContent>
+                <MudCardActions Class="justify-center pb-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddAccount("Bond"))">
+                        Create
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudDivider Class="my-6" />
+
+    @* Preview carousel: what the app looks like with data *@
+    <div class="text-center mb-4">
+        <MudText Typo="Typo.h4" Class="mb-2">See what you'll get</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary">
+            A quick look at the dashboard and accounts once they fill up with data.
+        </MudText>
+    </div>
+
+    <MudCarousel TData="object" Class="rounded-lg mud-width-full mb-6" Style="height: 460px;"
+                 ShowArrows="true" ShowBullets="true" EnableSwipeGesture="true" AutoCycle="true"
+                 AutoCycleTime="TimeSpan.FromSeconds(6)" Elevation="6">
+        @foreach (var preview in _previews)
+        {
+            <MudCarouselItem Transition="Transition.Slide">
+                <div class="d-flex flex-column align-center justify-center" style="height: 100%;">
+                    <MudText Typo="Typo.h6" Class="mb-2">@preview.Caption</MudText>
+                    <MudImage Src="@preview.Src" Alt="@preview.Caption" ObjectFit="ObjectFit.Contain"
+                              Class="rounded-lg" Style="max-height: 400px; max-width: 100%;" />
+                </div>
+            </MudCarouselItem>
+        }
+    </MudCarousel>
+
+    @* Low-commitment escape hatch: explore seeded demo data *@
+    <div class="text-center mb-4">
+        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-2">
+            Just want to look around first?
+        </MudText>
+        <MudButton Variant="Variant.Text" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Visibility"
+                   Disabled="_isLaunchingDemo" OnClick="ExploreDemo">
+            Explore the demo with sample data
+        </MudButton>
+    </div>
+
+</MudContainer>
+
+@code {
+    private record Preview(string Src, string Caption);
+
+    private readonly Preview[] _previews =
+    [
+        new("IMGS/Dashboard.JPG", "Dashboard — your finances at a glance"),
+        new("IMGS/CashAccount.JPG", "Currency account — cash flow and transactions"),
+        new("IMGS/SharesAccount.JPG", "Stock account — holdings and portfolio value"),
+        new("IMGS/Assets.JPG", "Assets — net worth over time"),
+    ];
+}

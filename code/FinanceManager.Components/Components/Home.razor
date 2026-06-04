@@ -4,5 +4,12 @@
 
 @if (!_isLoading)
 {
-    <Dashboard />
+    @if (_showWelcome)
+    {
+        <WelcomePage />
+    }
+    else
+    {
+        <Dashboard />
+    }
 }

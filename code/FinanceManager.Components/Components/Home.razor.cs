@@ -8,6 +8,7 @@ namespace FinanceManager.Components.Components;
 public partial class Home : ComponentBase
 {
     private bool _isLoading;
+    private bool _showWelcome;
 
     [Inject] public required ILogger<Home> Logger { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -53,7 +54,7 @@ public partial class Home : ComponentBase
         }
 
         if (availableAccounts is null || availableAccounts.Count == 0)
-            Navigation.NavigateTo("AddAccount");
+            _showWelcome = true;
 
         _isLoading = false;
     }
