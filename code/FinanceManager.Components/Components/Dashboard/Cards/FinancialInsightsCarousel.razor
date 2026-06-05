@@ -9,9 +9,9 @@
         <div class="ins-head">
             <span class="ins-eyebrow">Insights</span>
             <span class="ins-spacer"></span>
-            @if (!_isLoading && _currentInsight is not null)
+            @if (!_isLoading && CurrentInsight is not null)
             {
-                <span class="ins-time">@GetRelativeTime(_currentInsight.CreatedAt)</span>
+                <span class="ins-time">@GetRelativeTime(CurrentInsight.CreatedAt)</span>
             }
             <span class="ins-ai-pill">
                 <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="font-size:12px;line-height:1" />
@@ -62,14 +62,14 @@
             else
             {
                 <div class="ins-fade" @key="_currentIndex">
-                    <div class="ins-insight-title">@_currentInsight!.Title</div>
-                    <div class="ins-insight-msg">@_currentInsight!.Message</div>
+                    <div class="ins-insight-title">@CurrentInsight!.Title</div>
+                    <div class="ins-insight-msg">@CurrentInsight!.Message</div>
                 </div>
                 <div class="ins-body-spacer"></div>
                 @if (_insights.Count <= 1)
                 {
                     <div class="ins-tags ins-tags-body">
-                        @foreach (var tag in GetTags(_currentInsight!.Tags))
+                        @foreach (var tag in GetTags(CurrentInsight!.Tags))
                         {
                             <span class="ins-tag">@tag</span>
                         }
@@ -83,7 +83,7 @@
         {
             <div class="ins-foot">
                 <div class="ins-tags">
-                    @foreach (var tag in GetTags(_currentInsight!.Tags))
+                    @foreach (var tag in GetTags(CurrentInsight!.Tags))
                     {
                         <span class="ins-tag">@tag</span>
                     }

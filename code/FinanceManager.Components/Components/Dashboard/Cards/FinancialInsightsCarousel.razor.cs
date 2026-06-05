@@ -13,7 +13,7 @@ public partial class FinancialInsightsCarousel : IDisposable
     private bool _isPaused;
     private Timer? _advanceTimer;
 
-    private const int DwellMs = 6000;
+    private const int _dwellMs = 6000;
 
     [Inject] public required FinancialInsightsHttpClient FinancialInsightsHttpClient { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
@@ -22,7 +22,7 @@ public partial class FinancialInsightsCarousel : IDisposable
     [Parameter] public int Count { get; set; } = 3;
     [Parameter] public int? AccountId { get; set; }
 
-    private FinancialInsight? _currentInsight =>
+    private FinancialInsight? CurrentInsight =>
         _insights.Count > 0 ? _insights[Math.Min(_currentIndex, _insights.Count - 1)] : null;
 
     protected override async Task OnInitializedAsync() => await LoadInsightsAsync();
@@ -72,7 +72,7 @@ public partial class FinancialInsightsCarousel : IDisposable
     {
         StopAutoAdvance();
         if (_insights.Count <= 1 || _isPaused) return;
-        _advanceTimer = new Timer(OnAutoAdvance, null, DwellMs, Timeout.Infinite);
+        _advanceTimer = new Timer(OnAutoAdvance, null, _dwellMs, Timeout.Infinite);
     }
 
     private void StopAutoAdvance()
