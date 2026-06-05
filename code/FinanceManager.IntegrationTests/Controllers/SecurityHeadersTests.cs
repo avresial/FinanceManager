@@ -21,6 +21,9 @@ public class SecurityHeadersTests(OptionsProvider optionsProvider) : ControllerT
         var csp = Assert.Single(GetHeader(response, "Content-Security-Policy"));
         Assert.Contains("default-src 'self'", csp);
         Assert.Contains("'wasm-unsafe-eval'", csp);
+        // Blazor-ApexCharts evaluates its option/formatter functions as strings, so the dashboard
+        // charts require 'unsafe-eval' in script-src (see apexcharts/Blazor-ApexCharts#400).
+        Assert.Contains("'unsafe-eval'", csp);
         Assert.Contains("frame-ancestors 'none'", csp);
     }
 
