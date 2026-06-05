@@ -3,8 +3,7 @@
 
 @if (IsMobile)
 {
-    @* On mobile the account name moves into the top app bar (next to the menu button) so the
-       hero is just the chart and a compact range strip — no title competing for the row. *@
+    @* On mobile the account name moves into the top app bar *@
     <SectionContent SectionName="page-title">
         <MudText Typo="Typo.h6" Class="ml-2" Style="color: var(--mud-palette-text-primary);">@AccountName</MudText>
     </SectionContent>
@@ -14,16 +13,31 @@
     @if (!IsMobile)
     {
         <MudStack Spacing="4">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                <MudAvatar Color="MudBlazor.Color.Primary" Variant="Variant.Filled" Size="MudBlazor.Size.Large">
-                    @GetInitial()
-                </MudAvatar>
-                <MudStack Spacing="0">
-                    <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">@AccountTypeLabel · @Currency</MudText>
-                    <MudText Typo="Typo.h5">@AccountName</MudText>
+            @* Row 1: avatar + name (left)  |  range selector (right) *@
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                    <MudAvatar Color="MudBlazor.Color.Primary" Variant="Variant.Filled" Size="MudBlazor.Size.Large">
+                        @GetInitial()
+                    </MudAvatar>
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">@AccountTypeLabel · @Currency</MudText>
+                        <MudText Typo="Typo.h5">@AccountName</MudText>
+                    </MudStack>
                 </MudStack>
+
+                @* Range selector — top right *@
+                <div class="d-flex align-center" style="gap: 2px;">
+                    @foreach (var range in _ranges)
+                    {
+                        <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small"
+                                   Color="@(SelectedRange == range ? MudBlazor.Color.Primary : MudBlazor.Color.Default)"
+                                   Style="@($"min-width: 40px; font-weight: {(SelectedRange == range ? 700 : 500)};")"
+                                   OnClick="@(() => OnRangeChanged(range))">@range</MudButton>
+                    }
+                </div>
             </MudStack>
 
+            @* Row 2: balance (left) | change (right) *@
             <MudStack Row="true" AlignItems="AlignItems.End" Justify="Justify.SpaceBetween" Spacing="4">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">Balance</MudText>
@@ -71,63 +85,22 @@
         }
     </div>
 
-    @* Borderless range selector under the chart — light text labels with the active one in the
-       accent colour, plus a calendar icon for a custom range (Apple Stocks / Robinhood pattern). *@
-    <div class="d-flex justify-center align-center flex-wrap mt-1 pb-1" style="gap: 2px;">
-        @foreach (var range in _ranges)
-        {
-            <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small"
-                       Color="@(SelectedRange == range ? MudBlazor.Color.Primary : MudBlazor.Color.Default)"
-                       Style="@($"min-width: 44px; font-weight: {(SelectedRange == range ? 700 : 500)};")"
-                       OnClick="@(() => OnRangeChanged(range))">@range</MudButton>
-        }
-        <MudIconButton Icon="@Icons.Material.Filled.CalendarMonth" Size="MudBlazor.Size.Small"
-                       Color="@(SelectedRange == "Range" ? MudBlazor.Color.Primary : MudBlazor.Color.Default)"
-                       OnClick="@(() => OnRangeChanged("Range"))" aria-label="Custom date range" />
-    </div>
-
-    @if (SelectedRange == "Range")
+    @* On mobile show the range strip below the chart *@
+    @if (IsMobile)
     {
-        <div class="pb-2">
-            <MudStack Spacing="2">
-                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Justify="Justify.Center">
-                    @foreach (var preset in _presets)
-                    {
-                        <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small"
-                                   Color="@(IsPresetActive(preset.Key) ? MudBlazor.Color.Primary : MudBlazor.Color.Default)"
-                                   Style="@($"min-width: 100px; font-weight: {(IsPresetActive(preset.Key) ? 600 : 400)};")"
-                                   OnClick="@(() => ApplyPreset(preset.Key))">@preset.Key</MudButton>
-                    }
-                </MudStack>
-                <MudDateRangePicker @ref="_picker" @bind-DateRange="_pendingRange"
-                                    PickerVariant="PickerVariant.Static"
-                                    DisplayMonths="@(IsMobile ? 1 : 2)"
-                                    Color="MudBlazor.Color.Primary"
-                                    AutoClose="false"
-                                    Editable="false"
-                                    Class="w-100" />
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="px-2">
-                    <MudText Typo="Typo.body2" Class="fm-tabular" Color="MudBlazor.Color.Default">
-                        @RangeReadout
-                    </MudText>
-                    <MudStack Row="true" Spacing="2">
-                        <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small" OnClick="CancelCustomRange">Cancel</MudButton>
-                        <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" Size="MudBlazor.Size.Small"
-                                   Disabled="@(_pendingRange?.Start is null || _pendingRange?.End is null)"
-                                   OnClick="ApplyCustomRange">Apply</MudButton>
-                    </MudStack>
-                </MudStack>
-            </MudStack>
+        <div class="d-flex justify-center align-center flex-wrap mt-1 pb-1" style="gap: 2px;">
+            @foreach (var range in _ranges)
+            {
+                <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small"
+                           Color="@(SelectedRange == range ? MudBlazor.Color.Primary : MudBlazor.Color.Default)"
+                           Style="@($"min-width: 44px; font-weight: {(SelectedRange == range ? 700 : 500)};")"
+                           OnClick="@(() => OnRangeChanged(range))">@range</MudButton>
+            }
         </div>
     }
 </MudPaper>
 
 @code {
-    private MudDateRangePicker? _picker;
-    private DateRange? _pendingRange;
-    private string? _activePreset;
-    private string _previousFixedRange = "3M";
-
     [Parameter] public required string AccountName { get; set; }
     [Parameter] public string AccountTypeLabel { get; set; } = "Cash account";
     [Parameter] public required string Currency { get; set; }
@@ -136,56 +109,11 @@
     [Parameter] public decimal? BalanceChangePercent { get; set; }
     [Parameter] public string SelectedRange { get; set; } = "3M";
     [Parameter] public EventCallback<string> SelectedRangeChanged { get; set; }
-    [Parameter] public DateRange? CustomDateRange { get; set; }
-    [Parameter] public EventCallback<DateRange?> CustomDateRangeChanged { get; set; }
     [Parameter] public bool IsChartLoading { get; set; }
     [Parameter] public List<TimeSeriesModel> ChartData { get; set; } = [];
     [Parameter] public bool IsMobile { get; set; }
 
-    private readonly string[] _ranges = ["1M", "3M", "6M", "1Y"];
-
-    private IReadOnlyDictionary<string, Func<DateRange>> _presets => new Dictionary<string, Func<DateRange>>
-    {
-        ["Last 7 days"]    = () => new DateRange(DateTime.Today.AddDays(-6), DateTime.Today),
-        ["Last 30 days"]   = () => new DateRange(DateTime.Today.AddDays(-29), DateTime.Today),
-        ["Last 3 months"]  = () => new DateRange(DateTime.Today.AddMonths(-3), DateTime.Today),
-        ["Last 6 months"]  = () => new DateRange(DateTime.Today.AddMonths(-6), DateTime.Today),
-        ["Year to date"]   = () => new DateRange(new DateTime(DateTime.Today.Year, 1, 1), DateTime.Today),
-    };
-
-    private bool IsPresetActive(string presetName) => _activePreset == presetName;
-
-    private string RangeReadout
-    {
-        get
-        {
-            if (_pendingRange?.Start is null && _pendingRange?.End is null) return "Select a date range";
-            var start = _pendingRange?.Start?.ToString("dd MMM yyyy") ?? "…";
-            var end = _pendingRange?.End?.ToString("dd MMM yyyy") ?? "…";
-            return $"{start}  ›  {end}";
-        }
-    }
-
-    private void ApplyPreset(string presetName)
-    {
-        _activePreset = presetName;
-        _pendingRange = _presets[presetName]();
-    }
-
-    private async Task ApplyCustomRange()
-    {
-        if (_pendingRange is null) return;
-        CustomDateRange = _pendingRange;
-        await CustomDateRangeChanged.InvokeAsync(_pendingRange);
-    }
-
-    private async Task CancelCustomRange()
-    {
-        _pendingRange = CustomDateRange;
-        _activePreset = null;
-        SelectedRange = _previousFixedRange;
-        await SelectedRangeChanged.InvokeAsync(SelectedRange);
-    }
+    private readonly string[] _ranges = ["1W", "1M", "3M", "6M", "YTD", "All"];
 
     private static readonly ApexChartOptions<TimeSeriesModel> _heroChartOptions = new()
     {
@@ -219,11 +147,7 @@
 
     private async Task OnRangeChanged(string value)
     {
-        if (value == "Range" && _ranges.Contains(SelectedRange))
-            _previousFixedRange = SelectedRange;
         SelectedRange = value;
-        if (value == "Range")
-            _pendingRange = CustomDateRange;
         await SelectedRangeChanged.InvokeAsync(value);
     }
 }

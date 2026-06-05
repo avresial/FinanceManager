@@ -26,18 +26,11 @@ public partial class AccountHistoryToolbar : ComponentBase
     [Parameter] public EventCallback OnInsightsClick { get; set; }
     [Parameter] public bool IsMobile { get; set; }
 
-    private string LabelButtonText => SelectedLabels.Count switch
+    private string CategoryButtonText => SelectedLabels.Count switch
     {
-        0 => "Label",
+        0 => "Category",
         1 => SelectedLabels.First(),
-        _ => $"{SelectedLabels.Count} labels"
-    };
-
-    private string TypeValue => ActiveFilter switch
-    {
-        TxFilter.Income => "Income",
-        TxFilter.Expense => "Expense",
-        _ => "All"
+        _ => $"{SelectedLabels.Count} categories"
     };
 
     private async Task OnSearchChanged(string? value)
@@ -46,16 +39,11 @@ public partial class AccountHistoryToolbar : ComponentBase
         await SearchTextChanged.InvokeAsync(value);
     }
 
-    private async Task OnTypeChanged(string? value)
+    private async Task ToggleFilter(TxFilter filter)
     {
-        TxFilter? filter = value switch
-        {
-            "Income" => TxFilter.Income,
-            "Expense" => TxFilter.Expense,
-            _ => null
-        };
-        ActiveFilter = filter;
-        await ActiveFilterChanged.InvokeAsync(filter);
+        TxFilter? next = ActiveFilter == filter ? null : filter;
+        ActiveFilter = next;
+        await ActiveFilterChanged.InvokeAsync(next);
     }
 
     private async Task ToggleLabel(string label)

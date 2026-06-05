@@ -1,7 +1,7 @@
 @using FinanceManager.Domain.Entities.Shared.Accounts
 
-<MudPaper Outlined="true" Class="d-flex flex-wrap align-center gap-2 pa-1 rounded-lg mb-4" Style="padding: 6px 8px;">
-    @* Group 1: search + type filter — wrap together as a unit *@
+<div class="d-flex flex-wrap align-center gap-2 mb-4">
+    @* Group 1: search + Income / Expense toggle buttons + Category filter *@
     <div class="d-flex align-center gap-2" style="flex: 1 1 auto; min-width: 0;">
         <MudTextField T="string" Value="SearchText" ValueChanged="OnSearchChanged"
                       Placeholder="Search transactions, notes, labels…" Adornment="Adornment.Start"
@@ -9,22 +9,18 @@
                       Immediate="true" DebounceInterval="150" Clearable="true"
                       Class="flex-grow-1" Style="min-width: 80px;" />
 
-        <MudToggleGroup T="string" Value="@TypeValue" ValueChanged="OnTypeChanged"
-                        SelectionMode="SelectionMode.SingleSelection"
-                        Color="@(ActiveFilter switch { TxFilter.Income => Color.Success, TxFilter.Expense => Color.Error, _ => Color.Default })"
-                        Outlined="true" Dense="true" CheckMark="false" Size="Size.Small" Style="flex: 0 0 auto;">
-            <MudToggleItem Value="@("All")" Text="All" />
-            <MudToggleItem Value="@("Income")">
-                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Style="margin-right: 3px;" />Income
-            </MudToggleItem>
-            <MudToggleItem Value="@("Expense")">
-                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Style="margin-right: 3px;" />Expense
-            </MudToggleItem>
-        </MudToggleGroup>
-    </div>
+        <MudButton Variant="@(ActiveFilter == TxFilter.Income ? Variant.Filled : Variant.Outlined)"
+                   Color="@(ActiveFilter == TxFilter.Income ? Color.Success : Color.Default)"
+                   EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
+                   Size="Size.Small" Style="text-transform: none; flex-shrink: 0;"
+                   OnClick="@(() => ToggleFilter(TxFilter.Income))">Income</MudButton>
 
-    @* Group 2: label filter + add-entry — wrap together as a unit *@
-    <div class="d-flex align-center gap-2" style="flex: 0 0 auto;">
+        <MudButton Variant="@(ActiveFilter == TxFilter.Expense ? Variant.Filled : Variant.Outlined)"
+                   Color="@(ActiveFilter == TxFilter.Expense ? Color.Error : Color.Default)"
+                   EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
+                   Size="Size.Small" Style="text-transform: none; flex-shrink: 0;"
+                   OnClick="@(() => ToggleFilter(TxFilter.Expense))">Expense</MudButton>
+
         @if (AvailableLabels is not null && AvailableLabels.Any())
         {
             <MudMenu @ref="_labelMenu" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
@@ -32,14 +28,14 @@
                     <MudButton Variant="Variant.Outlined"
                                Color="@(SelectedLabels.Count > 0 ? Color.Primary : Color.Default)"
                                Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Label"
+                               StartIcon="@Icons.Material.Filled.FilterList"
                                EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
-                               Style="text-transform: none; padding: 0 8px;">
-                        @LabelButtonText
+                               Style="text-transform: none; flex-shrink: 0; padding: 0 8px;">
+                        @CategoryButtonText
                     </MudButton>
                 </ActivatorContent>
                 <ChildContent>
-                    <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1" Style="display:block">Filter by label</MudText>
+                    <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1" Style="display:block">Filter by category</MudText>
                     @foreach (var label in AvailableLabels)
                     {
                         <MudMenuItem OnClick="@(() => ToggleLabel(label))" AutoClose="false">
@@ -59,29 +55,25 @@
                 </ChildContent>
             </MudMenu>
         }
-
-        <MudButtonGroup Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small">
-            <MudButton StartIcon="@Icons.Material.Filled.Add" OnClick="OnAddEntry"
-                       Style="padding: 0 10px;">Add entry</MudButton>
-            <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
-                <ActivatorContent>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
-                               Style="min-width: 24px; padding: 0 4px;">
-                        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
-                    </MudButton>
-                </ActivatorContent>
-                <ChildContent>
-                    @if (ShowInsightsButton)
-                    {
-                        <MudMenuItem Icon="@Icons.Material.Filled.Insights" OnClick="OnInsightsClick">Insights</MudMenuItem>
-                        <MudDivider />
-                    }
-                    <MudMenuItem Icon="@Icons.Material.Filled.FileUpload" Href="@($"/Import/{AccountId}")">Import…</MudMenuItem>
-                    <MudMenuItem Icon="@Icons.Material.Filled.FileDownload" Href="@($"/Export/{AccountId}")">Export CSV</MudMenuItem>
-                    <MudDivider />
-                    <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="@($"/ManageAccount/{AccountId}")">Manage account</MudMenuItem>
-                </ChildContent>
-            </MudMenu>
-        </MudButtonGroup>
     </div>
-</MudPaper>
+
+    @* Group 2: Import / Export / Settings + Add entry *@
+    <div class="d-flex align-center gap-2" style="flex: 0 0 auto;">
+        <MudButton Variant="Variant.Text" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.FileUpload"
+                   Href="@($"/Import/{AccountId}")"
+                   Style="text-transform: none;">Import</MudButton>
+
+        <MudButton Variant="Variant.Text" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.FileDownload"
+                   Href="@($"/Export/{AccountId}")"
+                   Style="text-transform: none;">Export</MudButton>
+
+        <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small"
+                       Href="@($"/ManageAccount/{AccountId}")" aria-label="Manage account" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Add" OnClick="OnAddEntry"
+                   Style="text-transform: none;">Add entry</MudButton>
+    </div>
+</div>

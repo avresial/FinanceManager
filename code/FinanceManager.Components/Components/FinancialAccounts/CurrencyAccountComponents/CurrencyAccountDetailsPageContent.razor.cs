@@ -21,7 +21,6 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private string _selectedRange = "3M";
     private DateTime _dateStart;
     private DateTime _dateEnd = DateTime.UtcNow;
-    private DateRange? _customDateRange;
 
     private bool _addEntryVisibility;
 
@@ -264,24 +263,6 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         }
     }
 
-    private async Task OnCustomDateRangeChanged(DateRange? range)
-    {
-        _customDateRange = range;
-        if (_selectedRange != "Range") return;
-        SetDateRangeForSelection();
-        IsLoading = true;
-        StateHasChanged();
-        try
-        {
-            await UpdateEntries();
-        }
-        finally
-        {
-            IsLoading = false;
-            StateHasChanged();
-        }
-    }
-
     private async Task OnSearchChanged(string? value)
     {
         _searchText = value;
@@ -336,20 +317,15 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private void SetDateRangeForSelection()
     {
         var today = DateTime.UtcNow;
-        if (_selectedRange == "Range")
-        {
-            _dateStart = _customDateRange?.Start ?? Account?.Start ?? today.AddMonths(-3);
-            _dateEnd = _customDateRange?.End ?? today;
-            return;
-        }
-
         _dateStart = _selectedRange switch
         {
-            "1M" => today.AddMonths(-1),
-            "3M" => today.AddMonths(-3),
-            "6M" => today.AddMonths(-6),
-            "1Y" => today.AddYears(-1),
-            _ => today.AddMonths(-3)
+            "1W"  => today.AddDays(-7),
+            "1M"  => today.AddMonths(-1),
+            "3M"  => today.AddMonths(-3),
+            "6M"  => today.AddMonths(-6),
+            "YTD" => new DateTime(today.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            "All" => Account?.Start ?? today.AddYears(-10),
+            _     => today.AddMonths(-3),
         };
         _dateEnd = today;
     }
