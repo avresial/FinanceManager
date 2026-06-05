@@ -1,52 +1,103 @@
 @using FinanceManager.Domain.Entities.Users
 
-<MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
-    <MudCardHeader>
-        <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100">
-            <MudText Typo="Typo.h5">Insights</MudText>
+<MudCard Outlined Class="d-flex flex-column overflow-hidden" Style="@($"height:{Height}")">
+    <div class="ins-inner"
+         @onmouseenter="OnMouseEnter" @onmouseleave="OnMouseLeave"
+         @onfocusin="OnFocusIn" @onfocusout="OnFocusOut">
 
-            @if (_isLoggedIn)
+        @* ---- Header ---- *@
+        <div class="ins-head">
+            <span class="ins-eyebrow">Insights</span>
+            <span class="ins-spacer"></span>
+            @if (!_isLoading && _currentInsight is not null)
             {
-                <MudButton Variant="Variant.Outlined" Disabled="@_isLoading" OnClick="GenerateAsync">
-                    Generate
-                </MudButton>
+                <span class="ins-time">@GetRelativeTime(_currentInsight.CreatedAt)</span>
             }
-        </MudStack>
-    </MudCardHeader>
+            <span class="ins-ai-pill">
+                <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="font-size:12px;line-height:1" />
+                AI
+            </span>
+        </div>
 
-    <MudCardContent Class="flex-grow-1 d-flex">
-        @if (_isLoading)
+        @* ---- Story progress bar (carousel mode only) ---- *@
+        @if (!_isLoading && _insights.Count > 1)
         {
-            <div style="height:100%">
-                <ChartSpinner MaxHeight=@Height />
-            </div>
-        }
-        else if (_insights.Any())
-        {
-            <MudCarousel TData="FinancialInsight" Class="w-100" AutoCycle=false ShowArrows=true EnableSwipeGesture
-                         ShowBullets=false>
-                @foreach (var insight in _insights)
+            <div class="ins-progress @(_isPaused ? "paused" : "")" style="--dwell:6000ms">
+                @for (var k = 0; k < _insights.Count; k++)
                 {
-                    <MudCarouselItem Transition="Transition.Fade">
-                        <MudStack Spacing="2">
-                            <MudText Typo="Typo.h6">@insight.Title</MudText>
-                            <MudText>@insight.Message</MudText>
-                            <MudStack Row Spacing="1">
-                                @foreach (var tag in GetTags(insight.Tags))
-                                {
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@tag</MudChip>
-                                }
-                            </MudStack>
-                        </MudStack>
-                    </MudCarouselItem>
+                    var kk = k;
+                    <span class="seg @(kk < _currentIndex ? "done" : kk == _currentIndex ? "active" : "")">
+                        <i @key="@(kk == _currentIndex ? $"a{_currentIndex}" : $"s{kk}")"></i>
+                    </span>
                 }
-            </MudCarousel>
-        }
-        else
-        {
-            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
-                <MudText Typo="Typo.button" HtmlTag="h3">No insights</MudText>
             </div>
         }
-    </MudCardContent>
+
+        @* ---- Body ---- *@
+        <div class="ins-body">
+            @if (_isLoading)
+            {
+                <div class="ins-skel" style="height:18px;width:82%"></div>
+                <div class="ins-skel" style="height:11px;width:100%;margin-top:16px"></div>
+                <div class="ins-skel" style="height:11px;width:94%;margin-top:8px"></div>
+                <div class="ins-skel" style="height:11px;width:60%;margin-top:8px"></div>
+                <div class="ins-skel-spacer"></div>
+                <div class="ins-skel-chips">
+                    <div class="ins-skel" style="height:24px;width:62px;border-radius:9999px"></div>
+                    <div class="ins-skel" style="height:24px;width:52px;border-radius:9999px"></div>
+                </div>
+            }
+            else if (!_insights.Any())
+            {
+                <div class="ins-empty">
+                    <span class="ins-empty-orb">
+                        <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="font-size:26px" />
+                    </span>
+                    <span class="ins-empty-title">No insights yet</span>
+                    <span class="ins-empty-sub">
+                        As your accounts update, we'll surface short insights about your finances here.
+                    </span>
+                </div>
+            }
+            else
+            {
+                <div class="ins-fade" @key="_currentIndex">
+                    <div class="ins-insight-title">@_currentInsight!.Title</div>
+                    <div class="ins-insight-msg">@_currentInsight!.Message</div>
+                </div>
+                <div class="ins-body-spacer"></div>
+                @if (_insights.Count <= 1)
+                {
+                    <div class="ins-tags ins-tags-body">
+                        @foreach (var tag in GetTags(_currentInsight!.Tags))
+                        {
+                            <span class="ins-tag">@tag</span>
+                        }
+                    </div>
+                }
+            }
+        </div>
+
+        @* ---- Footer: tags left + arrows right (carousel only) ---- *@
+        @if (!_isLoading && _insights.Count > 1)
+        {
+            <div class="ins-foot">
+                <div class="ins-tags">
+                    @foreach (var tag in GetTags(_currentInsight!.Tags))
+                    {
+                        <span class="ins-tag">@tag</span>
+                    }
+                </div>
+                <div class="ins-nav">
+                    <button class="ins-arrow" aria-label="Previous insight" @onclick="GoPrevious">
+                        <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:20px" />
+                    </button>
+                    <button class="ins-arrow" aria-label="Next insight" @onclick="GoNext">
+                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Style="font-size:20px" />
+                    </button>
+                </div>
+            </div>
+        }
+
+    </div>
 </MudCard>
