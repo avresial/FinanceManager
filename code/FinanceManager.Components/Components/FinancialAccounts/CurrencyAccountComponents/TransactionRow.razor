@@ -2,37 +2,44 @@
 @using FinanceManager.Domain.Entities.FinancialAccounts.Currencies
 @using FinanceManager.Domain.Entities.Shared.Accounts
 
-<div class="d-flex align-start pa-2 mud-list-item-clickable" style="cursor: pointer;"
+<div class="pa-2 mud-list-item-clickable"
+     style="@(_expanded ? "background: rgba(255,171,0,0.06);" : "")"
      role="button" tabindex="0" @onclick="ToggleExpanded" @onkeydown="OnKeyDown">
-    <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Start" Class="w-100">
+    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="w-100">
+        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"
+                 Style="@($"transition: transform 220ms; transform: rotate({(_expanded ? 180 : 0)}deg); flex-shrink: 0; color: {(_expanded ? "var(--mud-palette-primary)" : "var(--mud-palette-text-secondary)")}")"
+                 Size="Size.Small" />
+
         @if (!IsMobile)
         {
-            <MudAvatar Size="Size.Medium" Variant="Variant.Filled" Color="Color.Default">
+            <MudAvatar Size="Size.Small" Variant="Variant.Filled" Color="Color.Default" Style="flex-shrink: 0;">
                 @GetAvatarLabel()
             </MudAvatar>
         }
 
         <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
-            <MudText Typo="Typo.body1">@GetTitle()</MudText>
+            <MudText Typo="Typo.body1" Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@GetTitle()</MudText>
             <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
                 @if (Entry.Labels is not null && Entry.Labels.Any())
                 {
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
-                             Style="height: 20px; font-size: 11px;">@Entry.Labels.First().Name</MudChip>
+                             Style="height: 18px; font-size: 11px; margin: 0;">@Entry.Labels.First().Name</MudChip>
+                    <MudText Typo="Typo.caption" Color="Color.Default">·</MudText>
                 }
                 @if (!IsMobile)
                 {
-                    <MudText Typo="Typo.caption" Color="Color.Default">· @Entry.PostingDate.ToLocalTime().ToString("HH:mm")</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">@Entry.PostingDate.ToLocalTime().ToString("HH:mm")</MudText>
                 }
             </MudStack>
         </MudStack>
 
         <MudText Typo="Typo.body1" Class="fm-tabular"
-                 Color="@(Entry.ValueChange >= 0 ? Color.Success : Color.Error)">
+                 Color="@(Entry.ValueChange >= 0 ? Color.Success : Color.Error)"
+                 Style="flex-shrink: 0;">
             @(Entry.ValueChange >= 0 ? "+" : "")@Entry.ValueChange.ToString("N2") @Currency
         </MudText>
 
-        <MudStack Spacing="0" AlignItems="AlignItems.End" Style="min-width: 110px;">
+        <MudStack Spacing="0" AlignItems="AlignItems.End" Style="min-width: 110px; flex-shrink: 0;">
             <MudText Typo="Typo.overline" Color="Color.Default">Balance</MudText>
             <MudText Typo="Typo.caption" Class="fm-tabular">@Entry.Value.ToString("N2") @Currency</MudText>
         </MudStack>
@@ -40,41 +47,54 @@
 </div>
 
 <MudCollapse Expanded="_expanded">
-    <div class="px-4 pb-3" style="padding-left: 60px;">
-        <MudGrid Spacing="2">
+    <div class="px-4 pb-3" style="padding-left: 60px;" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+        <MudDivider Class="mb-3" Style="border-style: dashed;" />
+        <MudGrid Spacing="3">
             <MudItem xs="6">
-                <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
-                <MudText Typo="Typo.body2">@Entry.PostingDate.ToString("dd-MM-yyyy HH:mm")</MudText>
+                <MudText Typo="Typo.overline" Color="Color.Default">Posting date</MudText>
+                <MudText Typo="Typo.body2" Class="fm-tabular">@Entry.PostingDate.ToLocalTime().ToString("dd-MM-yyyy · HH:mm")</MudText>
             </MudItem>
-            @if (Entry.Labels is not null && Entry.Labels.Any())
-            {
-                <MudItem xs="6">
-                    <MudText Typo="Typo.caption" Color="Color.Default">Labels</MudText>
-                    <MudStack Row Spacing="1">
-                        @foreach (var label in Entry.Labels)
-                        {
-                            <MudChip T="string" Size="Size.Small">@label.Name</MudChip>
-                        }
-                    </MudStack>
-                </MudItem>
-            }
+            <MudItem xs="6">
+                <MudText Typo="Typo.overline" Color="Color.Default">Running balance</MudText>
+                <MudText Typo="Typo.body2" Class="fm-tabular">@Entry.Value.ToString("N2") @Currency</MudText>
+            </MudItem>
             @if (!string.IsNullOrWhiteSpace(Entry.Description))
             {
                 <MudItem xs="12">
-                    <MudText Typo="Typo.caption" Color="Color.Default">Description</MudText>
+                    <MudText Typo="Typo.overline" Color="Color.Default">Description</MudText>
                     <MudText Typo="Typo.body2">@Entry.Description</MudText>
                 </MudItem>
             }
             @if (!string.IsNullOrWhiteSpace(Entry.ContractorDetails))
             {
                 <MudItem xs="12">
-                    <MudText Typo="Typo.caption" Color="Color.Default">Contractor details</MudText>
+                    <MudText Typo="Typo.overline" Color="Color.Default">Contractor details</MudText>
                     <MudText Typo="Typo.body2">@Entry.ContractorDetails</MudText>
                 </MudItem>
             }
             <MudItem xs="12">
-                <MudButton Variant="Variant.Text" OnClick="ShowEditOverlay">Edit</MudButton>
-                <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="ShowRemoveOverlay">Remove</MudButton>
+                <MudText Typo="Typo.overline" Color="Color.Default">Labels</MudText>
+                <MudStack Row="true" Spacing="1" Class="mt-1" Wrap="Wrap.Wrap">
+                    @if (Entry.Labels is not null)
+                    {
+                        @foreach (var label in Entry.Labels)
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@label.Name</MudChip>
+                        }
+                    }
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" OnClick="ShowEditOverlay"
+                             Style="border-style: dashed;">+ Add label</MudChip>
+                </MudStack>
+            </MudItem>
+            <MudItem xs="12">
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Edit" OnClick="ShowEditOverlay">Edit</MudButton>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.ContentCopy" OnClick="DuplicateEntry">Duplicate</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Delete" OnClick="ShowRemoveOverlay">Delete</MudButton>
+                </MudStack>
             </MudItem>
         </MudGrid>
     </div>
@@ -107,6 +127,7 @@
     [Inject] public required FinanceManager.Components.Services.IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required FinanceManager.Components.Services.AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required Microsoft.Extensions.Logging.ILogger<TransactionRow> Logger { get; set; }
+    [Inject] public required MudBlazor.ISnackbar Snackbar { get; set; }
 
     private void ToggleExpanded() => _expanded = !_expanded;
 
@@ -174,5 +195,27 @@
 
         await AccountDataSynchronizationService.AccountChanged();
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task DuplicateEntry()
+    {
+        try
+        {
+            var duplicate = new CurrencyAccountEntry(Account.AccountId, 0, DateTime.UtcNow, Entry.Value, Entry.ValueChange)
+            {
+                Description = Entry.Description,
+                ContractorDetails = Entry.ContractorDetails,
+                Labels = Entry.Labels?.ToList() ?? [],
+            };
+            await FinancialAccountService.AddEntry(duplicate);
+            await AccountDataSynchronizationService.AccountChanged();
+            _expanded = false;
+            Snackbar.Add("Entry duplicated", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while duplicating entry");
+            Snackbar.Add("Failed to duplicate entry", Severity.Error);
+        }
     }
 }

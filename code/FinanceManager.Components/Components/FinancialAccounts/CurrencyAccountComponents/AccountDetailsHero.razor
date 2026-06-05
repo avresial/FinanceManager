@@ -88,18 +88,45 @@
 
     @if (SelectedRange == "Range")
     {
-        <div class="mx-auto pb-2" style="max-width: 360px;">
-            <MudDateRangePicker DateRange="CustomDateRange" DateRangeChanged="OnCustomDateRangeChanged"
-                                Variant="Variant.Outlined" Margin="Margin.Dense"
-                                PickerVariant="PickerVariant.Dialog"
-                                DisplayMonths="2" Orientation="MudBlazor.Orientation.Landscape"
-                                Clearable="true"
-                                PlaceholderStart="From" PlaceholderEnd="To" />
+        <div class="pb-2">
+            <MudStack Spacing="2">
+                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Justify="Justify.Center">
+                    @foreach (var preset in _presets)
+                    {
+                        <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small"
+                                   Color="@(IsPresetActive(preset.Key) ? MudBlazor.Color.Primary : MudBlazor.Color.Default)"
+                                   Style="@($"min-width: 100px; font-weight: {(IsPresetActive(preset.Key) ? 600 : 400)};")"
+                                   OnClick="@(() => ApplyPreset(preset.Key))">@preset.Key</MudButton>
+                    }
+                </MudStack>
+                <MudDateRangePicker @ref="_picker" @bind-DateRange="_pendingRange"
+                                    PickerVariant="PickerVariant.Static"
+                                    DisplayMonths="@(IsMobile ? 1 : 2)"
+                                    Color="MudBlazor.Color.Primary"
+                                    AutoClose="false"
+                                    Editable="false"
+                                    Class="w-100" />
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="px-2">
+                    <MudText Typo="Typo.body2" Class="fm-tabular" Color="MudBlazor.Color.Default">
+                        @RangeReadout
+                    </MudText>
+                    <MudStack Row="true" Spacing="2">
+                        <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small" OnClick="CancelCustomRange">Cancel</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" Size="MudBlazor.Size.Small"
+                                   Disabled="@(_pendingRange?.Start is null || _pendingRange?.End is null)"
+                                   OnClick="ApplyCustomRange">Apply</MudButton>
+                    </MudStack>
+                </MudStack>
+            </MudStack>
         </div>
     }
 </MudPaper>
 
 @code {
+    private MudDateRangePicker? _picker;
+    private DateRange? _pendingRange;
+    private string? _activePreset;
+
     [Parameter] public required string AccountName { get; set; }
     [Parameter] public string AccountTypeLabel { get; set; } = "Cash account";
     [Parameter] public required string Currency { get; set; }
@@ -115,6 +142,49 @@
     [Parameter] public bool IsMobile { get; set; }
 
     private readonly string[] _ranges = ["1M", "3M", "6M", "1Y"];
+
+    private IReadOnlyDictionary<string, Func<DateRange>> _presets => new Dictionary<string, Func<DateRange>>
+    {
+        ["Last 7 days"]    = () => new DateRange(DateTime.Today.AddDays(-6), DateTime.Today),
+        ["Last 30 days"]   = () => new DateRange(DateTime.Today.AddDays(-29), DateTime.Today),
+        ["Last 3 months"]  = () => new DateRange(DateTime.Today.AddMonths(-3), DateTime.Today),
+        ["Last 6 months"]  = () => new DateRange(DateTime.Today.AddMonths(-6), DateTime.Today),
+        ["Year to date"]   = () => new DateRange(new DateTime(DateTime.Today.Year, 1, 1), DateTime.Today),
+    };
+
+    private bool IsPresetActive(string presetName) => _activePreset == presetName;
+
+    private string RangeReadout
+    {
+        get
+        {
+            if (_pendingRange?.Start is null && _pendingRange?.End is null) return "Select a date range";
+            var start = _pendingRange?.Start?.ToString("dd MMM yyyy") ?? "…";
+            var end = _pendingRange?.End?.ToString("dd MMM yyyy") ?? "…";
+            return $"{start}  ›  {end}";
+        }
+    }
+
+    private void ApplyPreset(string presetName)
+    {
+        _activePreset = presetName;
+        _pendingRange = _presets[presetName]();
+    }
+
+    private async Task ApplyCustomRange()
+    {
+        if (_pendingRange is null) return;
+        CustomDateRange = _pendingRange;
+        await CustomDateRangeChanged.InvokeAsync(_pendingRange);
+    }
+
+    private async Task CancelCustomRange()
+    {
+        _pendingRange = CustomDateRange;
+        _activePreset = null;
+        SelectedRange = _ranges.Contains(SelectedRange) ? SelectedRange : "3M";
+        await SelectedRangeChanged.InvokeAsync(SelectedRange);
+    }
 
     private static readonly ApexChartOptions<TimeSeriesModel> _heroChartOptions = new()
     {
@@ -149,12 +219,8 @@
     private async Task OnRangeChanged(string value)
     {
         SelectedRange = value;
+        if (value == "Range")
+            _pendingRange = CustomDateRange;
         await SelectedRangeChanged.InvokeAsync(value);
-    }
-
-    private async Task OnCustomDateRangeChanged(DateRange? range)
-    {
-        CustomDateRange = range;
-        await CustomDateRangeChanged.InvokeAsync(range);
     }
 }
