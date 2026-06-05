@@ -10,7 +10,7 @@
 
     @* Income / Expense toggle group *@
     <MudToggleGroup T="TxFilter?" Value="ActiveFilter" ValueChanged="ActiveFilterChanged"
-                    SelectionMode="SelectionMode.ToggleSelection"
+                    SelectionMode="SelectionMode.ToggleSelection" Color="Color.Default"
                     Dense="true" Size="Size.Small" Outlined="true" Delimiters="true"
                     Style="flex-shrink: 0; height: 40px;">
         <MudToggleItem Value="@((TxFilter?)TxFilter.Income)">Income</MudToggleItem>
