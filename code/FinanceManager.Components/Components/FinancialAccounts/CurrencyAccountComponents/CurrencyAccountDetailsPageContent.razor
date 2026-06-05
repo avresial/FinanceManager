@@ -21,8 +21,8 @@ else if (IsLoading || Account.Entries?.Any() == true)
             <MudItem xs="12" lg="8">
                 <AccountHistoryToolbar AccountId="@Account.AccountId" SearchText="@_searchText"
                                        SearchTextChanged="OnSearchChanged" ActiveFilter="@_activeFilter"
-                                       ActiveFilterChanged="OnTxFilterChanged" AvailableCategories="@_availableCategories"
-                                       SelectedCategory="@_selectedCategory" SelectedCategoryChanged="OnCategoryChanged"
+                                       ActiveFilterChanged="OnTxFilterChanged" AvailableLabels="@_availableLabels"
+                                       SelectedLabels="@_selectedLabels" SelectedLabelsChanged="OnLabelsChanged"
                                        OnAddEntry="ShowAddOverlay" ShowInsightsButton="@_isMobile" OnInsightsClick="ToggleInsightsDrawer"
                                        IsMobile="@_isMobile" />
 

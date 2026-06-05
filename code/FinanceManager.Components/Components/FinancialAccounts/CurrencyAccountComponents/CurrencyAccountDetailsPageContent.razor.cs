@@ -27,8 +27,8 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
 
     private string? _searchText;
     private AccountHistoryToolbar.TxFilter? _activeFilter;
-    private string? _selectedCategory;
-    private IEnumerable<string> _availableCategories = [];
+    private HashSet<string> _selectedLabels = new(StringComparer.OrdinalIgnoreCase);
+    private IEnumerable<string> _availableLabels = [];
 
     private decimal _currentBalance;
     private decimal _balanceChange;
@@ -129,12 +129,13 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         var startBalance = _currentBalance - _balanceChange;
         _balanceChangePercent = startBalance == 0 ? null : _balanceChange / startBalance * 100m;
 
-        _availableCategories = Account.Entries
+        _availableLabels = Account.Entries
             .SelectMany(e => e.Labels ?? [])
             .Where(l => l is not null)
             .Select(l => l.Name)
-            .Distinct()
-            .OrderBy(n => n)
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         _accountTypeLabel = Account.AccountType switch
@@ -295,15 +296,15 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         StateHasChanged();
     }
 
-    private async Task OnCategoryChanged(string? value)
+    private async Task OnLabelsChanged(HashSet<string> value)
     {
-        _selectedCategory = value;
+        _selectedLabels = new HashSet<string>(value, StringComparer.OrdinalIgnoreCase);
         await UpdateInfo();
         StateHasChanged();
     }
 
     private bool HasActiveFilter =>
-        !string.IsNullOrWhiteSpace(_searchText) || _activeFilter.HasValue || _selectedCategory is not null;
+        !string.IsNullOrWhiteSpace(_searchText) || _activeFilter.HasValue || _selectedLabels.Count > 0;
 
     private List<CurrencyAccountEntry> GetFilteredEntries()
     {
@@ -316,9 +317,9 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         else if (_activeFilter == AccountHistoryToolbar.TxFilter.Expense)
             entries = entries.Where(x => x.ValueChange < 0);
 
-        if (!string.IsNullOrWhiteSpace(_selectedCategory))
+        if (_selectedLabels.Count > 0)
             entries = entries.Where(x => x.Labels is not null
-                && x.Labels.Any(l => string.Equals(l.Name, _selectedCategory, StringComparison.OrdinalIgnoreCase)));
+                && x.Labels.Any(l => _selectedLabels.Contains(l.Name)));
 
         if (!string.IsNullOrWhiteSpace(_searchText))
         {

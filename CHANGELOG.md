@@ -10,6 +10,9 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Changed
+- Account transaction toolbar redesigned into a single wrapping row: search field, All/Income/Expense segmented toggle, multi-select label filter, and a split "Add entry" button that keeps Import, Export CSV, and Manage account in an attached dropdown — the whole bar now fits on one line at full width. #289
+- Expanded transaction row details now show a running balance field and a Duplicate action alongside Edit and Delete; the actions are styled as filled/outlined buttons; labels are displayed as chips with a "+ Add label" shortcut; a dashed divider and amber row tint signal the open state. #290
+- Date-range selector on account pages now includes preset shortcuts (Last 7 days, Last 30 days, Last 3 months, Last 6 months, Year to date) and an explicit Apply/Cancel flow instead of auto-committing on date selection, with a two-month calendar grid for custom ranges. #289
 - All dashboard and account charts now use ApexCharts exclusively: the hand-rolled Chart.js interop (`LineChartJs`) used on the account balance hero and stock prices page has been replaced with ApexCharts area charts, and the two MudChart bar charts on the admin dashboard have been replaced with ApexCharts bar charts. The Chart.js, moment.js, and chartjs-adapter-moment scripts have been removed from the bundle. #291
 
 ### Fixed
