@@ -39,13 +39,6 @@ public partial class AccountHistoryToolbar : ComponentBase
         await SearchTextChanged.InvokeAsync(value);
     }
 
-    private async Task ToggleFilter(TxFilter filter)
-    {
-        TxFilter? next = ActiveFilter == filter ? null : filter;
-        ActiveFilter = next;
-        await ActiveFilterChanged.InvokeAsync(next);
-    }
-
     private async Task ToggleLabel(string label)
     {
         if (!SelectedLabels.Add(label))

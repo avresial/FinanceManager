@@ -8,19 +8,14 @@
                   Immediate="true" DebounceInterval="150" Clearable="true"
                   Class="flex-grow-1" Style="min-width: 160px;" />
 
-    @* Income toggle *@
-    <MudButton Variant="@(ActiveFilter == TxFilter.Income ? Variant.Filled : Variant.Text)"
-               Color="@(ActiveFilter == TxFilter.Income ? Color.Success : Color.Default)"
-               EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
-               Size="Size.Small" Style="text-transform: none; white-space: nowrap; flex-shrink: 0;"
-               OnClick="@(() => ToggleFilter(TxFilter.Income))">Income</MudButton>
-
-    @* Expense toggle *@
-    <MudButton Variant="@(ActiveFilter == TxFilter.Expense ? Variant.Filled : Variant.Text)"
-               Color="@(ActiveFilter == TxFilter.Expense ? Color.Error : Color.Default)"
-               EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
-               Size="Size.Small" Style="text-transform: none; white-space: nowrap; flex-shrink: 0;"
-               OnClick="@(() => ToggleFilter(TxFilter.Expense))">Expense</MudButton>
+    @* Income / Expense toggle group *@
+    <MudToggleGroup T="TxFilter?" Value="ActiveFilter" ValueChanged="ActiveFilterChanged"
+                    SelectionMode="SelectionMode.ToggleSelection"
+                    Dense="true" Size="Size.Small" Outlined="true" Delimiters="true"
+                    Style="flex-shrink: 0;">
+        <MudToggleItem Value="@((TxFilter?)TxFilter.Income)" Color="Color.Success">Income</MudToggleItem>
+        <MudToggleItem Value="@((TxFilter?)TxFilter.Expense)" Color="Color.Error">Expense</MudToggleItem>
+    </MudToggleGroup>
 
     @* Category filter *@
     @if (AvailableLabels is not null && AvailableLabels.Any())
