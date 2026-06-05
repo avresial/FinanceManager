@@ -12,9 +12,9 @@
     <MudToggleGroup T="TxFilter?" Value="ActiveFilter" ValueChanged="ActiveFilterChanged"
                     SelectionMode="SelectionMode.ToggleSelection"
                     Dense="true" Size="Size.Small" Outlined="true" Delimiters="true"
-                    Style="flex-shrink: 0;">
-        <MudToggleItem Value="@((TxFilter?)TxFilter.Income)" Color="Color.Success">Income</MudToggleItem>
-        <MudToggleItem Value="@((TxFilter?)TxFilter.Expense)" Color="Color.Error">Expense</MudToggleItem>
+                    Style="flex-shrink: 0; height: 40px;">
+        <MudToggleItem Value="@((TxFilter?)TxFilter.Income)">Income</MudToggleItem>
+        <MudToggleItem Value="@((TxFilter?)TxFilter.Expense)">Expense</MudToggleItem>
     </MudToggleGroup>
 
     @* Category filter *@
@@ -22,12 +22,12 @@
     {
         <MudMenu @ref="_labelMenu" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
             <ActivatorContent>
-                <MudButton Variant="Variant.Text"
+                <MudButton Variant="Variant.Outlined"
                            Color="@(SelectedLabels.Count > 0 ? Color.Primary : Color.Default)"
-                           Size="Size.Small"
+                           Size="Size.Medium"
                            StartIcon="@Icons.Material.Filled.FilterList"
                            EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
-                           Style="text-transform: none; white-space: nowrap; flex-shrink: 0;">
+                           Style="text-transform: none; white-space: nowrap; flex-shrink: 0; height: 40px;">
                     @CategoryButtonText
                 </MudButton>
             </ActivatorContent>
@@ -54,9 +54,9 @@
     }
 
     @* Add entry split button — primary action + Import / Export / Manage in dropdown *@
-    <MudButtonGroup Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Style="flex-shrink: 0;">
+    <MudButtonGroup Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" Style="flex-shrink: 0; height: 40px;">
         <MudButton OnClick="OnAddEntry"
-                   Style="text-transform: none; white-space: nowrap;">Add entry</MudButton>
+                   Style="text-transform: none; white-space: nowrap; height: 40px;">Add entry</MudButton>
         <MudMenu Icon="@Icons.Material.Filled.ArrowDropDown" AnchorOrigin="Origin.BottomRight"
                  TransformOrigin="Origin.TopRight" Dense="true" Style="align-self: auto;">
             @if (ShowInsightsButton)
