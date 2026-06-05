@@ -9,6 +9,12 @@ rules agents must follow when updating this file.
 
 ## [Unreleased]
 
+### Changed
+- All dashboard and account charts now use ApexCharts exclusively: the hand-rolled Chart.js interop (`LineChartJs`) used on the account balance hero and stock prices page has been replaced with ApexCharts area charts, and the two MudChart bar charts on the admin dashboard have been replaced with ApexCharts bar charts. The Chart.js, moment.js, and chartjs-adapter-moment scripts have been removed from the bundle. #291
+
+### Fixed
+- Dashboard charts (the asset/expense/liability distribution pies in particular) no longer crash the page under the production Content-Security-Policy. ApexCharts evaluates its chart options as JavaScript, which the policy added in #278 blocked, taking down the whole dashboard with a "Something went wrong" error; `'unsafe-eval'` is now permitted in `script-src` so the charts render. #291
+
 ### Added
 - Forgot-password flow: the sign-in page now has a "Forgot password?" link that opens a page where you enter your email to request a reset link, then a page to choose a new password. Reset links are single-use and expire after an hour. While email delivery isn't set up yet, the reset link is shown on-screen straight after you request it. #280
 - New users with no accounts now land on a welcoming first-run screen instead of being dropped straight onto a blank "Add account" form: a short intro to what FinanceManager does, one-click "Create" buttons for a Currency, Stock, or Bond account (each opening the form with that type preselected), and a carousel previewing the dashboard, currency, stock, and assets pages (the screenshots follow your light/dark theme). #281

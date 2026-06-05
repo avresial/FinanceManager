@@ -9,8 +9,11 @@ namespace FinanceManager.Api.Middleware;
 ///   <item><c>X-Frame-Options: DENY</c> — kept alongside <c>frame-ancestors</c> for older browsers</item>
 ///   <item><c>Referrer-Policy: strict-origin-when-cross-origin</c></item>
 ///   <item><c>Content-Security-Policy</c> — tuned for Blazor WebAssembly: <c>'wasm-unsafe-eval'</c> for
-///       the runtime, <c>'unsafe-inline'</c> for the bootstrap scripts and MudBlazor's injected styles,
-///       <c>ws:/wss:</c> for SignalR, <c>blob:</c> for downloads and Blazor's workers.</item>
+///       the runtime, <c>'unsafe-eval'</c> for the dashboard's ApexCharts (Blazor-ApexCharts evaluates
+///       its option/formatter functions as strings and has no CSP-hash/nonce alternative — see
+///       apexcharts/Blazor-ApexCharts#400), <c>'unsafe-inline'</c> for the bootstrap scripts and
+///       MudBlazor's injected styles, <c>ws:/wss:</c> for SignalR, <c>blob:</c> for downloads and
+///       Blazor's workers.</item>
 /// </list>
 /// HSTS is not handled here — it is wired via <c>UseHsts()</c> in <c>Program.cs</c> so it only
 /// applies outside Development (Kestrel won't issue it on plain HTTP either way).
@@ -19,7 +22,7 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
 {
     private const string _contentSecurityPolicy =
         "default-src 'self'; " +
-        "script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'; " +
+        "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval' 'unsafe-inline'; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data: blob:; " +
         "font-src 'self' data:; " +

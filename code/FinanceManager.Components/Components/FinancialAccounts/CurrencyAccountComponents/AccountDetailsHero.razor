@@ -1,4 +1,4 @@
-@using FinanceManager.Components.Components.SharedComponents.Charts
+@using ApexCharts
 @using FinanceManager.Domain.Entities.MoneyFlowModels
 
 @if (IsMobile)
@@ -15,35 +15,35 @@
     {
         <MudStack Spacing="4">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Large">
+                <MudAvatar Color="MudBlazor.Color.Primary" Variant="Variant.Filled" Size="MudBlazor.Size.Large">
                     @GetInitial()
                 </MudAvatar>
                 <MudStack Spacing="0">
-                    <MudText Typo="Typo.overline" Color="Color.Default">@AccountTypeLabel · @Currency</MudText>
+                    <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">@AccountTypeLabel · @Currency</MudText>
                     <MudText Typo="Typo.h5">@AccountName</MudText>
                 </MudStack>
             </MudStack>
 
             <MudStack Row="true" AlignItems="AlignItems.End" Justify="Justify.SpaceBetween" Spacing="4">
                 <MudStack Spacing="1">
-                    <MudText Typo="Typo.overline" Color="Color.Default">Balance</MudText>
+                    <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">Balance</MudText>
                     <MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="1">
                         <MudText Typo="Typo.h3" Class="fm-tabular">@Balance.ToString("N2")</MudText>
-                        <MudText Typo="Typo.h5" Color="Color.Default">@Currency</MudText>
+                        <MudText Typo="Typo.h5" Color="MudBlazor.Color.Default">@Currency</MudText>
                     </MudStack>
                 </MudStack>
 
                 <MudStack Spacing="1" AlignItems="AlignItems.End">
-                    <MudText Typo="Typo.overline" Color="Color.Default">Change · @SelectedRange</MudText>
+                    <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">Change · @SelectedRange</MudText>
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                         <MudIcon Icon="@(BalanceChange >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
-                                 Color="@(BalanceChange >= 0 ? Color.Success : Color.Error)" Size="Size.Small" />
-                        <MudText Typo="Typo.h6" Color="@(BalanceChange >= 0 ? Color.Success : Color.Error)" Class="fm-tabular">
+                                 Color="@(BalanceChange >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)" Size="MudBlazor.Size.Small" />
+                        <MudText Typo="Typo.h6" Color="@(BalanceChange >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)" Class="fm-tabular">
                             @(BalanceChange >= 0 ? "+" : "")@BalanceChange.ToString("N2") @Currency
                         </MudText>
                         @if (BalanceChangePercent.HasValue)
                         {
-                            <MudText Typo="Typo.body2" Color="Color.Default" Class="fm-tabular">
+                            <MudText Typo="Typo.body2" Color="MudBlazor.Color.Default" Class="fm-tabular">
                                 · @(BalanceChange >= 0 ? "+" : "")@BalanceChangePercent.Value.ToString("0.0")%
                             </MudText>
                         }
@@ -60,7 +60,14 @@
         }
         else
         {
-            <LineChartJs Series="@_chartSeries" />
+            <ApexChart TItem="TimeSeriesModel" Options="_heroChartOptions" Height="200">
+                <ApexPointSeries TItem="TimeSeriesModel"
+                                 Items="ChartData"
+                                 Name="Balance"
+                                 SeriesType="SeriesType.Area"
+                                 XValue="@(p => p.DateTime.ToLocalTime())"
+                                 YValue="@(p => p.Value)" />
+            </ApexChart>
         }
     </div>
 
@@ -69,13 +76,13 @@
     <div class="d-flex justify-center align-center flex-wrap mt-1 pb-1" style="gap: 2px;">
         @foreach (var range in _ranges)
         {
-            <MudButton Variant="Variant.Text" Size="Size.Small"
-                       Color="@(SelectedRange == range ? Color.Primary : Color.Default)"
+            <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small"
+                       Color="@(SelectedRange == range ? MudBlazor.Color.Primary : MudBlazor.Color.Default)"
                        Style="@($"min-width: 44px; font-weight: {(SelectedRange == range ? 700 : 500)};")"
                        OnClick="@(() => OnRangeChanged(range))">@range</MudButton>
         }
-        <MudIconButton Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small"
-                       Color="@(SelectedRange == "Range" ? Color.Primary : Color.Default)"
+        <MudIconButton Icon="@Icons.Material.Filled.CalendarMonth" Size="MudBlazor.Size.Small"
+                       Color="@(SelectedRange == "Range" ? MudBlazor.Color.Primary : MudBlazor.Color.Default)"
                        OnClick="@(() => OnRangeChanged("Range"))" aria-label="Custom date range" />
     </div>
 
@@ -85,7 +92,7 @@
             <MudDateRangePicker DateRange="CustomDateRange" DateRangeChanged="OnCustomDateRangeChanged"
                                 Variant="Variant.Outlined" Margin="Margin.Dense"
                                 PickerVariant="PickerVariant.Dialog"
-                                DisplayMonths="2" Orientation="Orientation.Landscape"
+                                DisplayMonths="2" Orientation="MudBlazor.Orientation.Landscape"
                                 Clearable="true"
                                 PlaceholderStart="From" PlaceholderEnd="To" />
         </div>
@@ -109,24 +116,33 @@
 
     private readonly string[] _ranges = ["1M", "3M", "6M", "1Y"];
 
-    private List<List<ChartJsLineDataPoint>> _chartSeries = [];
-    private List<TimeSeriesModel>? _lastChartData;
-    private int _lastChartDataCount = -1;
-
-    protected override void OnParametersSet()
+    private static readonly ApexChartOptions<TimeSeriesModel> _heroChartOptions = new()
     {
-        // Rebuild the chart series only when the underlying ChartData actually changes — the
-        // parent re-renders for unrelated state (e.g. the mobile insights drawer toggle), and
-        // recreating the series list every time would force LineChartJs to re-run its draw
-        // animation for no reason. Reference equality + count covers the in-place mutation
-        // the page does (Clear + AddRange).
-        if (!ReferenceEquals(ChartData, _lastChartData) || ChartData.Count != _lastChartDataCount)
+        Chart = new Chart
         {
-            _lastChartData = ChartData;
-            _lastChartDataCount = ChartData.Count;
-            _chartSeries = [ChartData.Select(x => new ChartJsLineDataPoint(x.DateTime.ToLocalTime(), x.Value)).ToList()];
-        }
-    }
+            Background = "transparent",
+            Toolbar = new Toolbar { Show = false },
+            Animations = new Animations { Enabled = false },
+        },
+        Colors = ["#ffab00"],
+        Stroke = new Stroke { Curve = Curve.Smooth, Width = 2, LineCap = LineCap.Round },
+        DataLabels = new DataLabels { Enabled = false },
+        Legend = new Legend { Show = false },
+        Fill = new Fill
+        {
+            Type = [FillType.Gradient],
+            Gradient = new FillGradient { OpacityFrom = 0.45, OpacityTo = 0d, Stops = [0, 100] },
+        },
+        Grid = new Grid { Show = false, Padding = new Padding { Left = 0, Right = 0, Top = 0, Bottom = 0 } },
+        Xaxis = new XAxis
+        {
+            Labels = new XAxisLabels { Show = false },
+            AxisBorder = new AxisBorder { Show = false },
+            AxisTicks = new AxisTicks { Show = false },
+        },
+        Yaxis = [new YAxis { Show = false, Labels = new YAxisLabels { Show = false } }],
+        Tooltip = new Tooltip { Enabled = false },
+    };
 
     private string GetInitial() => string.IsNullOrWhiteSpace(AccountName) ? "?" : AccountName.Trim()[..1].ToUpperInvariant();
 
