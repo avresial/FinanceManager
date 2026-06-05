@@ -1,6 +1,6 @@
 @using FinanceManager.Domain.Entities.Shared.Accounts
 
-<MudPaper Outlined="true" Class="d-flex flex-wrap align-center gap-2 pa-2 rounded-lg mb-4">
+<MudPaper Outlined="true" Class="d-flex flex-wrap align-center gap-2 pa-1 rounded-lg mb-4" Style="padding: 6px 8px;">
     @* Group 1: search + type filter — wrap together as a unit *@
     <div class="d-flex align-center gap-2" style="flex: 1 1 auto; min-width: 0;">
         <MudTextField T="string" Value="SearchText" ValueChanged="OnSearchChanged"
@@ -11,14 +11,14 @@
 
         <MudToggleGroup T="string" Value="@TypeValue" ValueChanged="OnTypeChanged"
                         SelectionMode="SelectionMode.SingleSelection"
-                        Color="@(ActiveFilter switch { TxFilter.Income => Color.Success, TxFilter.Expense => Color.Error, _ => Color.Primary })"
-                        Outlined="true" Dense="true" CheckMark="false" Style="flex: 0 0 auto;">
+                        Color="@(ActiveFilter switch { TxFilter.Income => Color.Success, TxFilter.Expense => Color.Error, _ => Color.Default })"
+                        Outlined="true" Dense="true" CheckMark="false" Size="Size.Small" Style="flex: 0 0 auto;">
             <MudToggleItem Value="@("All")" Text="All" />
             <MudToggleItem Value="@("Income")">
-                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Class="mr-1" />Income
+                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Style="margin-right: 3px;" />Income
             </MudToggleItem>
             <MudToggleItem Value="@("Expense")">
-                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Class="mr-1" />Expense
+                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Style="margin-right: 3px;" />Expense
             </MudToggleItem>
         </MudToggleGroup>
     </div>
@@ -34,7 +34,7 @@
                                Size="Size.Small"
                                StartIcon="@Icons.Material.Filled.Label"
                                EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
-                               Style="text-transform: none;">
+                               Style="text-transform: none; padding: 0 8px;">
                         @LabelButtonText
                     </MudButton>
                 </ActivatorContent>
@@ -60,12 +60,13 @@
             </MudMenu>
         }
 
-        <MudButtonGroup Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small">
-            <MudButton StartIcon="@Icons.Material.Filled.Add" OnClick="OnAddEntry">Add entry</MudButton>
+        <MudButtonGroup Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small">
+            <MudButton StartIcon="@Icons.Material.Filled.Add" OnClick="OnAddEntry"
+                       Style="padding: 0 10px;">Add entry</MudButton>
             <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
                 <ActivatorContent>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                               Style="min-width: 28px; padding: 0 4px;">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
+                               Style="min-width: 24px; padding: 0 4px;">
                         <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
                     </MudButton>
                 </ActivatorContent>
