@@ -126,6 +126,7 @@
     private MudDateRangePicker? _picker;
     private DateRange? _pendingRange;
     private string? _activePreset;
+    private string _previousFixedRange = "3M";
 
     [Parameter] public required string AccountName { get; set; }
     [Parameter] public string AccountTypeLabel { get; set; } = "Cash account";
@@ -182,7 +183,7 @@
     {
         _pendingRange = CustomDateRange;
         _activePreset = null;
-        SelectedRange = _ranges.Contains(SelectedRange) ? SelectedRange : "3M";
+        SelectedRange = _previousFixedRange;
         await SelectedRangeChanged.InvokeAsync(SelectedRange);
     }
 
@@ -218,6 +219,8 @@
 
     private async Task OnRangeChanged(string value)
     {
+        if (value == "Range" && _ranges.Contains(SelectedRange))
+            _previousFixedRange = SelectedRange;
         SelectedRange = value;
         if (value == "Range")
             _pendingRange = CustomDateRange;

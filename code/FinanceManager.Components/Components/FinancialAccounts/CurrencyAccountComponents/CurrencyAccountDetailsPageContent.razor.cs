@@ -27,7 +27,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
 
     private string? _searchText;
     private AccountHistoryToolbar.TxFilter? _activeFilter;
-    private HashSet<string> _selectedLabels = [];
+    private HashSet<string> _selectedLabels = new(StringComparer.OrdinalIgnoreCase);
     private IEnumerable<string> _availableLabels = [];
 
     private decimal _currentBalance;
@@ -133,8 +133,9 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
             .SelectMany(e => e.Labels ?? [])
             .Where(l => l is not null)
             .Select(l => l.Name)
-            .Distinct()
-            .OrderBy(n => n)
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         _accountTypeLabel = Account.AccountType switch
@@ -297,7 +298,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
 
     private async Task OnLabelsChanged(HashSet<string> value)
     {
-        _selectedLabels = value;
+        _selectedLabels = new HashSet<string>(value, StringComparer.OrdinalIgnoreCase);
         await UpdateInfo();
         StateHasChanged();
     }
@@ -318,7 +319,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
 
         if (_selectedLabels.Count > 0)
             entries = entries.Where(x => x.Labels is not null
-                && x.Labels.Any(l => _selectedLabels.Contains(l.Name, StringComparer.OrdinalIgnoreCase)));
+                && x.Labels.Any(l => _selectedLabels.Contains(l.Name)));
 
         if (!string.IsNullOrWhiteSpace(_searchText))
         {

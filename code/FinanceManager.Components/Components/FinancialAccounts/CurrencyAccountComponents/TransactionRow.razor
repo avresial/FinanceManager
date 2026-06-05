@@ -50,11 +50,11 @@
     <div class="px-4 pb-3" style="padding-left: 60px;" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
         <MudDivider Class="mb-3" Style="border-style: dashed;" />
         <MudGrid Spacing="3">
-            <MudItem xs="6">
+            <MudItem xs="12" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Posting date</MudText>
                 <MudText Typo="Typo.body2" Class="fm-tabular">@Entry.PostingDate.ToLocalTime().ToString("dd-MM-yyyy · HH:mm")</MudText>
             </MudItem>
-            <MudItem xs="6">
+            <MudItem xs="12" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Running balance</MudText>
                 <MudText Typo="Typo.body2" Class="fm-tabular">@Entry.Value.ToString("N2") @Currency</MudText>
             </MudItem>
