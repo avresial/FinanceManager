@@ -12,9 +12,8 @@ else if (IsLoading || Account.Entries?.Any() == true)
 {
     <AccountDetailsHero AccountName="@Account.Name" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
                         Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
-                        SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged" CustomDateRange="@_customDateRange"
-                        CustomDateRangeChanged="OnCustomDateRangeChanged" IsChartLoading="@IsLoading" ChartData="@ChartData"
-                        IsMobile="@_isMobile" />
+                        SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged"
+                        IsChartLoading="@IsLoading" ChartData="@ChartData" IsMobile="@_isMobile" />
 
     <MudContainer MaxWidth="MaxWidth.Large" Class="px-0">
         <MudGrid Spacing="3">
