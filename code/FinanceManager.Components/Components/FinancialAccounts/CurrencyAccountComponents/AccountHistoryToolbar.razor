@@ -1,12 +1,13 @@
 @using FinanceManager.Domain.Entities.Shared.Accounts
 
-<div class="d-flex align-center gap-2 mb-4" style="overflow-x: auto; min-height: 40px;">
-    @* Search *@
+<div class="d-flex align-center gap-2 mb-4 @(IsMobile ? "flex-wrap" : "")"
+     style="@(IsMobile ? "" : "overflow-x: auto; ") min-height: 40px;">
+    @* Search — full-width on mobile so filters wrap to their own row *@
     <MudTextField T="string" Value="SearchText" ValueChanged="OnSearchChanged"
                   Placeholder="Search transactions, notes, labels…" Adornment="Adornment.Start"
                   AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense"
                   Immediate="true" DebounceInterval="150" Clearable="true"
-                  Class="flex-grow-1" Style="min-width: 160px;" />
+                  Class="flex-grow-1" Style="@(IsMobile ? "flex: 0 0 100%;" : "min-width: 160px;")" />
 
     @* Income / Expense toggle group *@
     <MudToggleGroup T="TxFilter?" Value="ActiveFilter" ValueChanged="ActiveFilterChanged"
@@ -54,7 +55,8 @@
     }
 
     @* Add entry split button — primary action + Import / Export / Manage in dropdown *@
-    <MudButtonGroup Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" Style="flex-shrink: 0; height: 40px;">
+    <MudButtonGroup Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium"
+                    Style="@($"flex-shrink: 0; height: 40px;{(IsMobile ? " margin-left: auto;" : "")}")">
         <MudButton OnClick="OnAddEntry"
                    Style="text-transform: none; white-space: nowrap; height: 40px;">Add entry</MudButton>
         <MudMenu Icon="@Icons.Material.Filled.ArrowDropDown" AnchorOrigin="Origin.BottomRight"
