@@ -1,28 +1,30 @@
 @using FinanceManager.Domain.Entities.Shared.Accounts
 
 <MudPaper Outlined="true" Class="d-flex flex-wrap align-center gap-2 pa-2 rounded-lg mb-4">
-    <MudTextField T="string" Value="SearchText" ValueChanged="OnSearchChanged"
-                  Placeholder="Search transactions, notes, labels…" Adornment="Adornment.Start"
-                  AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense"
-                  Immediate="true" DebounceInterval="150" Clearable="true"
-                  Class="flex-grow-1" Style="min-width: 200px;" />
+    @* Group 1: search + type filter — wrap together as a unit *@
+    <div class="d-flex align-center gap-2" style="flex: 1 1 auto; min-width: 0;">
+        <MudTextField T="string" Value="SearchText" ValueChanged="OnSearchChanged"
+                      Placeholder="Search transactions, notes, labels…" Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Immediate="true" DebounceInterval="150" Clearable="true"
+                      Class="flex-grow-1" Style="min-width: 80px;" />
 
-    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="flex: 0 0 auto;">
         <MudToggleGroup T="string" Value="@TypeValue" ValueChanged="OnTypeChanged"
                         SelectionMode="SelectionMode.SingleSelection"
                         Color="@(ActiveFilter switch { TxFilter.Income => Color.Success, TxFilter.Expense => Color.Error, _ => Color.Primary })"
-                        Outlined="true" Dense="true" CheckMark="false">
+                        Outlined="true" Dense="true" CheckMark="false" Style="flex: 0 0 auto;">
             <MudToggleItem Value="@("All")" Text="All" />
             <MudToggleItem Value="@("Income")">
-                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Class="@(IsMobile ? "" : "mr-1")" />
-                @if (!IsMobile) { <text>Income</text> }
+                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Class="mr-1" />Income
             </MudToggleItem>
             <MudToggleItem Value="@("Expense")">
-                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Class="@(IsMobile ? "" : "mr-1")" />
-                @if (!IsMobile) { <text>Expense</text> }
+                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Class="mr-1" />Expense
             </MudToggleItem>
         </MudToggleGroup>
+    </div>
 
+    @* Group 2: label filter + add-entry — wrap together as a unit *@
+    <div class="d-flex align-center gap-2" style="flex: 0 0 auto;">
         @if (AvailableLabels is not null && AvailableLabels.Any())
         {
             <MudMenu @ref="_labelMenu" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
@@ -33,7 +35,7 @@
                                StartIcon="@Icons.Material.Filled.Label"
                                EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
                                Style="text-transform: none;">
-                        @(IsMobile ? null : LabelButtonText)
+                        @LabelButtonText
                     </MudButton>
                 </ActivatorContent>
                 <ChildContent>
@@ -59,9 +61,7 @@
         }
 
         <MudButtonGroup Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small">
-            <MudButton StartIcon="@Icons.Material.Filled.Add" OnClick="OnAddEntry">
-                @(IsMobile ? null : "Add entry")
-            </MudButton>
+            <MudButton StartIcon="@Icons.Material.Filled.Add" OnClick="OnAddEntry">Add entry</MudButton>
             <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
                 <ActivatorContent>
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
@@ -82,7 +82,7 @@
                 </ChildContent>
             </MudMenu>
         </MudButtonGroup>
-    </MudStack>
+    </div>
 </MudPaper>
 
 @code {

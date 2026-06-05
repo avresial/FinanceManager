@@ -9,6 +9,9 @@ rules agents must follow when updating this file.
 
 ## [Unreleased]
 
+### Changed
+- Account history toolbar wrapping layout now groups search + type filter together on the first row and label filter + add-entry button together on the second row when the toolbar is too narrow to fit on one line; Income/Expense toggle always shows full text at all viewport widths. #353
+
 ### Fixed
 - Account history toolbar no longer overflows on narrow mobile screens: the Income/Expense toggle items show only their arrow icons on mobile (text hidden), and the label filter button shows only its icon, keeping all controls within a 360 px viewport. #350
 - Transaction row Edit/Duplicate/Delete action buttons now share a consistent outlined style; Edit was previously filled amber while the others were outlined. #351
