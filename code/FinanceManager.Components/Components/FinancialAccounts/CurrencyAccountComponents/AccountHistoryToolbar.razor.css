@@ -5,7 +5,8 @@
     color: var(--mud-palette-text-secondary) !important;
 }
 
-::deep .mud-button-group-outlined .mud-button-root {
+::deep .mud-button-group-outlined .mud-button-root,
+::deep .mud-toggle-group-outlined {
     border-color: var(--mud-palette-lines-inputs) !important;
     color: var(--mud-palette-text-secondary) !important;
 }
