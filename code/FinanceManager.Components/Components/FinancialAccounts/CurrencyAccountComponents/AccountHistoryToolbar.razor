@@ -62,24 +62,17 @@
     <MudButtonGroup Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Style="flex-shrink: 0;">
         <MudButton StartIcon="@Icons.Material.Filled.Add" OnClick="OnAddEntry"
                    Style="text-transform: none; white-space: nowrap;">Add entry</MudButton>
-        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
-            <ActivatorContent>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                           Style="min-width: 24px; padding: 0 4px;">
-                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
-                </MudButton>
-            </ActivatorContent>
-            <ChildContent>
-                @if (ShowInsightsButton)
-                {
-                    <MudMenuItem Icon="@Icons.Material.Filled.Insights" OnClick="OnInsightsClick">Insights</MudMenuItem>
-                    <MudDivider />
-                }
-                <MudMenuItem Icon="@Icons.Material.Filled.FileUpload" Href="@($"/Import/{AccountId}")">Import…</MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.FileDownload" Href="@($"/Export/{AccountId}")">Export CSV</MudMenuItem>
+        <MudMenu Icon="@Icons.Material.Filled.ArrowDropDown" AnchorOrigin="Origin.BottomRight"
+                 TransformOrigin="Origin.TopRight" Dense="true" Style="align-self: auto;">
+            @if (ShowInsightsButton)
+            {
+                <MudMenuItem Icon="@Icons.Material.Filled.Insights" OnClick="OnInsightsClick">Insights</MudMenuItem>
                 <MudDivider />
-                <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="@($"/ManageAccount/{AccountId}")">Manage account</MudMenuItem>
-            </ChildContent>
+            }
+            <MudMenuItem Icon="@Icons.Material.Filled.FileUpload" Href="@($"/Import/{AccountId}")">Import…</MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.FileDownload" Href="@($"/Export/{AccountId}")">Export CSV</MudMenuItem>
+            <MudDivider />
+            <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="@($"/ManageAccount/{AccountId}")">Manage account</MudMenuItem>
         </MudMenu>
     </MudButtonGroup>
 </div>
