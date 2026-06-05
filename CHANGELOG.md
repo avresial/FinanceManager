@@ -13,6 +13,7 @@ rules agents must follow when updating this file.
 - Account history toolbar redesigned to match design spec: Income and Expense are now separate toggle buttons (green/red when active), the label filter is renamed to Category, Import/Export/Settings are surfaced as inline toolbar buttons, and the Add entry button is a standalone filled primary button; the toolbar container no longer has an outlined border. #355
 - Account hero range selector repositioned to the top-right corner on desktop (same row as account name) and updated to offer 1W, 1M, 3M, 6M, YTD, and All presets; the custom date-range picker has been removed. #355
 - Account history toolbar wrapping layout now groups search + type filter together on the first row and label filter + add-entry button together on the second row when the toolbar is too narrow to fit on one line; Income/Expense toggle always shows full text at all viewport widths. #353
+- Account history toolbar buttons (Income/Expense toggle, Category filter, Add entry) now render in a muted gray that matches the search input's outlined border, reducing visual noise in the control bar. #355
 
 ### Fixed
 - Account history toolbar no longer overflows on narrow mobile screens: the Income/Expense toggle items show only their arrow icons on mobile (text hidden), and the label filter button shows only its icon, keeping all controls within a 360 px viewport. #350

@@ -1,0 +1,11 @@
+/* Mute outlined buttons/toggles so they match the text-field border */
+::deep .mud-button-root.mud-button-outlined-default,
+::deep .mud-toggle-item.mud-toggle-item-outlined {
+    border-color: var(--mud-palette-lines-inputs) !important;
+    color: var(--mud-palette-text-secondary) !important;
+}
+
+::deep .mud-button-group-outlined .mud-button-root {
+    border-color: var(--mud-palette-lines-inputs) !important;
+    color: var(--mud-palette-text-secondary) !important;
+}
