@@ -14,10 +14,12 @@
                         Outlined="true" Dense="true" CheckMark="false">
             <MudToggleItem Value="@("All")" Text="All" />
             <MudToggleItem Value="@("Income")">
-                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Class="mr-1" />Income
+                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Class="@(IsMobile ? "" : "mr-1")" />
+                @if (!IsMobile) { <text>Income</text> }
             </MudToggleItem>
             <MudToggleItem Value="@("Expense")">
-                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Class="mr-1" />Expense
+                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Class="@(IsMobile ? "" : "mr-1")" />
+                @if (!IsMobile) { <text>Expense</text> }
             </MudToggleItem>
         </MudToggleGroup>
 
@@ -31,7 +33,7 @@
                                StartIcon="@Icons.Material.Filled.Label"
                                EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
                                Style="text-transform: none;">
-                        @LabelButtonText
+                        @(IsMobile ? null : LabelButtonText)
                     </MudButton>
                 </ActivatorContent>
                 <ChildContent>

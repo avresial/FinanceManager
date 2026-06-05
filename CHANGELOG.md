@@ -9,6 +9,10 @@ rules agents must follow when updating this file.
 
 ## [Unreleased]
 
+### Fixed
+- Account history toolbar no longer overflows on narrow mobile screens: the Income/Expense toggle items show only their arrow icons on mobile (text hidden), and the label filter button shows only its icon, keeping all controls within a 360 px viewport. #350
+- Transaction row Edit/Duplicate/Delete action buttons now share a consistent outlined style; Edit was previously filled amber while the others were outlined. #351
+
 ### Changed
 - Account transaction toolbar redesigned into a single wrapping row: search field, All/Income/Expense segmented toggle, multi-select label filter, and a split "Add entry" button that keeps Import, Export CSV, and Manage account in an attached dropdown — the whole bar now fits on one line at full width. #289
 - Expanded transaction row details now show a running balance field and a Duplicate action alongside Edit and Delete; the actions are styled as filled/outlined buttons; labels are displayed as chips with a "+ Add label" shortcut; a dashed divider and amber row tint signal the open state. #290
