@@ -3,13 +3,14 @@
   <a href="https://github.com/avresial/FinanceManager/issues"><img src="https://img.shields.io/github/issues/avresial/FinanceManager" alt="GitHub issues"/></a>
   <img src="https://img.shields.io/badge/.NET-10-512BD4" alt=".NET 10"/>
   <img src="https://img.shields.io/badge/Blazor-WASM-blue" alt="Blazor WASM"/>
+  <a href="https://financemanager.mikikarkowski.dev/login"><img src="https://img.shields.io/badge/Live%20App-online-brightgreen" alt="Live App"/></a>
 </p>
 
 # FinanceManager
 
 **FinanceManager** is an open-source personal finance tracker built with Blazor WebAssembly and ASP.NET Core. It lets you manage all your accounts — cash, stocks, and bonds — in one place, with a rich analytics dashboard, AI-powered insights, and real-time market data.
 
-> **[Live Demo](https://avresial.github.io/FinanceManager/landingpage)**
+> **[Live App](https://financemanager.mikikarkowski.dev/login)**
 
 ---
 
