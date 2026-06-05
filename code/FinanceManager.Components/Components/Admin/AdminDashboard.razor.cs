@@ -1,7 +1,8 @@
+using ApexCharts;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Entities.Shared;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
-using MudBlazor.Charts;
 
 namespace FinanceManager.Components.Components.Admin;
 
@@ -12,18 +13,57 @@ public partial class AdminDashboard : ComponentBase
     private int? _totalTrackedMoney = default;
     private int? _newVisitorsToday = default;
 
-    private ChartOptions _chartOptions = new ChartOptions()
+    private static readonly ApexChartOptions<ChartEntryModel> _chartOptions = new()
     {
-        ChartPalette = ["#ffab00"],
-        ShowLegend = false,
-        ShowToolTips = false,
+        Chart = new Chart
+        {
+            Background = "transparent",
+            Toolbar = new Toolbar { Show = false },
+            Zoom = new Zoom { Enabled = false },
+            FontFamily = "Roboto, sans-serif",
+        },
+        Colors = ["#ffab00"],
+        DataLabels = new DataLabels { Enabled = false },
+        Legend = new Legend { Show = false },
+        PlotOptions = new PlotOptions
+        {
+            Bar = new PlotOptionsBar { BorderRadius = 4, ColumnWidth = "60%" },
+        },
+        Grid = new Grid
+        {
+            BorderColor = "rgba(128,128,128,0.18)",
+            Xaxis = new GridXAxis { Lines = new Lines { Show = false } },
+        },
+        Xaxis = new XAxis
+        {
+            Type = XAxisType.Category,
+            AxisBorder = new AxisBorder { Show = false },
+            AxisTicks = new AxisTicks { Show = false },
+            Labels = new XAxisLabels
+            {
+                Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
+            },
+        },
+        Yaxis =
+        [
+            new YAxis
+            {
+                AxisBorder = new AxisBorder { Show = false },
+                AxisTicks = new AxisTicks { Show = false },
+                Labels = new YAxisLabels
+                {
+                    Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
+                },
+            },
+        ],
+        Tooltip = new Tooltip { Theme = Mode.Dark },
     };
-    private List<ChartSeries<double>>? _dailyActiveUsersSeries = null;
-    private List<ChartSeries<double>>? _newUsersSeries = null;
+
+    private List<ChartEntryModel>? _dailyActiveUsers;
+    private List<ChartEntryModel>? _newUsers;
 
     [Inject] required public AdministrationUsersHttpClient AdministrationUsersHttpClient { get; set; }
     [Inject] required public NewVisitorsHttpClient NewVisitorsHttpClient { get; set; }
-
 
     protected override async Task OnInitializedAsync()
     {
@@ -35,26 +75,10 @@ public partial class AdminDashboard : ComponentBase
             _newVisitorsToday = await NewVisitorsHttpClient.GetVisit(DateTime.UtcNow);
             StateHasChanged();
 
-            var dailyActiveUsers = await AdministrationUsersHttpClient.GetDailyActiveUsers();
-            _dailyActiveUsersSeries =
-            [
-                new ChartSeries<double>()
-                {
-                    Name = "Users count",
-                    Data = dailyActiveUsers.Select(x =>  (double)x.Value).ToArray()
-                },
-            ];
+            _dailyActiveUsers = await AdministrationUsersHttpClient.GetDailyActiveUsers();
             StateHasChanged();
 
-            var newUsers = await AdministrationUsersHttpClient.GetNewUsersDaily();
-            _newUsersSeries =
-            [
-                new ChartSeries<double>()
-                {
-                    Name = "Users count",
-                    Data = newUsers.Select(x =>  (double)x.Value).ToArray()
-                },
-            ];
+            _newUsers = await AdministrationUsersHttpClient.GetNewUsersDaily();
         }
         catch (Exception ex)
         {

@@ -1,10 +1,18 @@
-﻿@using FinanceManager.Components.Components.SharedComponents.Charts
+﻿@using ApexCharts
+@using FinanceManager.Domain.Entities.Stocks
 @using FinanceManager.Components.Components.Dashboard
 
-<MudText Typo="Typo.h3" Class="mx-2" style="position: absolute; z-index: 50; display: inline-block;">@Isin.ToUpper()
-</MudText>
-<LineChartJs
-Series="@([_stockPrices.Select(x => new ChartJsLineDataPoint(x.Date.ToLocalTime(), x.PricePerUnit)).ToList()])" />
+@if (_stockPrices.Any())
+{
+    <ApexChart TItem="StockPrice" Options="_chartOptions" Height="300">
+        <ApexPointSeries TItem="StockPrice"
+                         Items="_stockPrices"
+                         Name="@Isin.ToUpper()"
+                         SeriesType="SeriesType.Area"
+                         XValue="@(p => p.Date.ToLocalTime())"
+                         YValue="@(p => p.PricePerUnit)" />
+    </ApexChart>
+}
 
 <DashboardDatePicker StockStyle DateChanged=DateChanged InitialDateRange=DateRange />
 
@@ -28,42 +36,42 @@ Series="@([_stockPrices.Select(x => new ChartJsLineDataPoint(x.Date.ToLocalTime(
                     <MudCardContent>
                         <MudGrid>
                             <MudItem xs="12" sm="6" md="3">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">ISIN</MudText>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">ISIN</MudText>
                                 <MudText Typo="Typo.body1"><strong>@_selectedStock.Isin</strong></MudText>
                             </MudItem>
                             <MudItem xs="12" sm="6" md="3">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Ticker</MudText>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">Ticker</MudText>
                                 <MudText Typo="Typo.body1">@_selectedStock.Ticker</MudText>
                             </MudItem>
                             <MudItem xs="12" sm="6" md="3">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Name</MudText>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">Name</MudText>
                                 <MudText Typo="Typo.body1">@_selectedStock.Name</MudText>
                             </MudItem>
                             <MudItem xs="12" sm="6" md="2">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Type</MudText>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">Type</MudText>
                                 <MudText Typo="Typo.body1">@_selectedStock.Type</MudText>
                             </MudItem>
                             <MudItem xs="12" sm="6" md="2">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Region</MudText>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">Region</MudText>
                                 <MudText Typo="Typo.body1">@_selectedStock.Region</MudText>
                             </MudItem>
                             <MudItem xs="12" sm="6" md="2">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Currency</MudText>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">Currency</MudText>
                                 <MudText Typo="Typo.body1">@_selectedStock.Currency.ShortName</MudText>
                             </MudItem>
                             @if (_stockPrices.Any())
                             {
                                 <MudItem xs="12" sm="6" md="3">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Latest Price</MudText>
+                                    <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">Latest Price</MudText>
                                     <MudText Typo="Typo.body1">@_stockPrices.First().PricePerUnit.ToString("N2")
                                         @_selectedStock.Currency.ShortName</MudText>
                                     </MudItem>
                                     <MudItem xs="12" sm="6" md="3">
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Data Points</MudText>
+                                        <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">Data Points</MudText>
                                         <MudText Typo="Typo.body1">@_stockPrices.Count</MudText>
                                     </MudItem>
                                     <MudItem xs="12" sm="6" md="3">
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Date Range</MudText>
+                                        <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">Date Range</MudText>
                                         <MudText Typo="Typo.body1">@_stockPrices.Last().Date.ToString("dd-MM-yyyy") -
                                             @_stockPrices.First().Date.ToString("dd-MM-yyyy")</MudText>
                                         </MudItem>
