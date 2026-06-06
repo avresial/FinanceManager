@@ -72,27 +72,23 @@
                     <MudText Typo="Typo.body2">@Entry.ContractorDetails</MudText>
                 </MudItem>
             }
-            <MudItem xs="12">
-                <MudText Typo="Typo.overline" Color="Color.Default">Labels</MudText>
-                <MudStack Row="true" Spacing="1" Class="mt-1" Wrap="Wrap.Wrap">
-                    @if (Entry.Labels is not null)
-                    {
+            @if (Entry.Labels is not null && Entry.Labels.Count > 1)
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.overline" Color="Color.Default">Labels</MudText>
+                    <MudStack Row="true" Spacing="1" Class="mt-1" Wrap="Wrap.Wrap">
                         @foreach (var label in Entry.Labels)
                         {
                             <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@label.Name</MudChip>
                         }
-                    }
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" OnClick="ShowEditOverlay"
-                             Style="border-style: dashed;">+ Add label</MudChip>
-                </MudStack>
-            </MudItem>
+                    </MudStack>
+                </MudItem>
+            }
             <MudItem xs="12">
                 <MudStack Row="true" Spacing="2">
-                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
                                StartIcon="@Icons.Material.Filled.Edit" OnClick="ShowEditOverlay">Edit</MudButton>
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.ContentCopy" OnClick="DuplicateEntry">Duplicate</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
                                StartIcon="@Icons.Material.Filled.Delete" OnClick="ShowRemoveOverlay">Delete</MudButton>
                 </MudStack>
             </MudItem>
@@ -195,27 +191,5 @@
 
         await AccountDataSynchronizationService.AccountChanged();
         await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task DuplicateEntry()
-    {
-        try
-        {
-            var duplicate = new CurrencyAccountEntry(Account.AccountId, 0, DateTime.UtcNow, Entry.Value, Entry.ValueChange)
-            {
-                Description = Entry.Description,
-                ContractorDetails = Entry.ContractorDetails,
-                Labels = Entry.Labels?.ToList() ?? [],
-            };
-            await FinancialAccountService.AddEntry(duplicate);
-            await AccountDataSynchronizationService.AccountChanged();
-            _expanded = false;
-            Snackbar.Add("Entry duplicated", Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error while duplicating entry");
-            Snackbar.Add("Failed to duplicate entry", Severity.Error);
-        }
     }
 }

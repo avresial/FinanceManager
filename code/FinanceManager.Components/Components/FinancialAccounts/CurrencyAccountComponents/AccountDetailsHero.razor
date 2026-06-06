@@ -9,18 +9,19 @@
     </SectionContent>
 }
 
-<MudPaper Elevation="0" Class="pa-6 pb-0 mb-0" Style="background-color: transparent;">
+<MudPaper Elevation="0" Class="px-6 pb-0 mb-0" Style="background-color: transparent;">
     @if (!IsMobile)
     {
         <MudStack Spacing="4">
-            @* Row 1: avatar + name (left)  |  range selector (right) *@
+            @* Row 1: avatar + name (left) | range selector (right) *@
             <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
                     <MudAvatar Color="MudBlazor.Color.Primary" Variant="Variant.Filled" Size="MudBlazor.Size.Large">
                         @GetInitial()
                     </MudAvatar>
                     <MudStack Spacing="0">
-                        <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">@AccountTypeLabel · @Currency</MudText>
+                        <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">@AccountTypeLabel · @Currency
+                        </MudText>
                         <MudText Typo="Typo.h5">@AccountName</MudText>
                     </MudStack>
                 </MudStack>
@@ -50,9 +51,13 @@
                 <MudStack Spacing="1" AlignItems="AlignItems.End">
                     <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">Change · @SelectedRange</MudText>
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                        <MudIcon Icon="@(BalanceChange >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
-                                 Color="@(BalanceChange >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)" Size="MudBlazor.Size.Small" />
-                        <MudText Typo="Typo.h6" Color="@(BalanceChange >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)" Class="fm-tabular">
+                        <MudIcon
+                        Icon="@(BalanceChange >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
+                        Color="@(BalanceChange >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)"
+                        Size="MudBlazor.Size.Small" />
+                        <MudText Typo="Typo.h6"
+                                 Color="@(BalanceChange >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)"
+                                 Class="fm-tabular">
                             @(BalanceChange >= 0 ? "+" : "")@BalanceChange.ToString("N2") @Currency
                         </MudText>
                         @if (BalanceChangePercent.HasValue)
@@ -75,12 +80,8 @@
         else
         {
             <ApexChart TItem="TimeSeriesModel" Options="_heroChartOptions" Height="200">
-                <ApexPointSeries TItem="TimeSeriesModel"
-                                 Items="ChartData"
-                                 Name="Balance"
-                                 SeriesType="SeriesType.Area"
-                                 XValue="@(p => p.DateTime.ToLocalTime())"
-                                 YValue="@(p => p.Value)" />
+                <ApexPointSeries TItem="TimeSeriesModel" Items="ChartData" Name="Balance" SeriesType="SeriesType.Area"
+                                 XValue="@(p => p.DateTime.ToLocalTime())" YValue="@(p => p.Value)" />
             </ApexChart>
         }
     </div>
@@ -143,7 +144,8 @@
         Tooltip = new Tooltip { Enabled = false },
     };
 
-    private string GetInitial() => string.IsNullOrWhiteSpace(AccountName) ? "?" : AccountName.Trim()[..1].ToUpperInvariant();
+    private string GetInitial() => string.IsNullOrWhiteSpace(AccountName) ? "?" :
+AccountName.Trim()[..1].ToUpperInvariant();
 
     private async Task OnRangeChanged(string value)
     {
