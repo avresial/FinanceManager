@@ -1,5 +1,4 @@
 @using FinanceManager.Components.Components.FinancialAccounts.Shared
-@using FinanceManager.Domain.Entities.FinancialAccounts.Currencies
 
 @if (Account is null)
 {
@@ -12,8 +11,8 @@ else if (IsLoading || Account.Entries?.Any() == true)
 {
     <AccountDetailsHero AccountName="@Account.Name" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
                         Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
-                        SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged"
-                        IsChartLoading="@IsLoading" ChartData="@ChartData" IsMobile="@_isMobile" />
+                        SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged" IsChartLoading="@IsLoading"
+                        ChartData="@ChartData" IsMobile="@_isMobile" />
 
     <MudContainer MaxWidth="MaxWidth.Large" Class="px-0">
         <MudGrid Spacing="3">
@@ -21,9 +20,8 @@ else if (IsLoading || Account.Entries?.Any() == true)
                 <AccountHistoryToolbar AccountId="@Account.AccountId" SearchText="@_searchText"
                                        SearchTextChanged="OnSearchChanged" ActiveFilter="@_activeFilter"
                                        ActiveFilterChanged="OnTxFilterChanged" AvailableLabels="@_availableLabels"
-                                       SelectedLabels="@_selectedLabels" SelectedLabelsChanged="OnLabelsChanged"
-                                       OnAddEntry="ShowAddOverlay" ShowInsightsButton="@_isMobile" OnInsightsClick="ToggleInsightsDrawer"
-                                       IsMobile="@_isMobile" />
+                                       SelectedLabels="@_selectedLabels" SelectedLabelsChanged="OnLabelsChanged" OnAddEntry="ShowAddOverlay"
+                                       ShowInsightsButton="@_isMobile" OnInsightsClick="ToggleInsightsDrawer" IsMobile="@_isMobile" />
 
                 @{
                     var filteredEntries = GetFilteredEntries();

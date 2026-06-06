@@ -7,6 +7,7 @@ public partial class AccountHistoryToolbar : ComponentBase
 {
     public enum TxFilter
     {
+        All,
         Income,
         Expense
     }
