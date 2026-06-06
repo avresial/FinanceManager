@@ -21,9 +21,6 @@ public class AdminServiceKeysController(IExternalServiceConfigService configServ
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ExternalServicesResponse))]
     public async Task<IActionResult> GetConfiguration(CancellationToken ct)
     {
-        var dbConfigs = await configService.GetAllServicesAsync(ct);
-        var dbByName = dbConfigs.ToDictionary(s => s.ServiceName, StringComparer.OrdinalIgnoreCase);
-
         var dtos = new List<ExternalServiceDto>(_knownServices.Count);
         foreach (var (serviceName, displayName, description, docsUrl) in _knownServices)
         {
@@ -49,8 +46,11 @@ public class AdminServiceKeysController(IExternalServiceConfigService configServ
         if (string.IsNullOrWhiteSpace(serviceName))
             return BadRequest("Service name is required.");
 
-        if (!_knownServices.Any(s => s.ServiceName.Equals(serviceName, StringComparison.OrdinalIgnoreCase)))
+        var knownService = _knownServices.FirstOrDefault(s => s.ServiceName.Equals(serviceName, StringComparison.OrdinalIgnoreCase));
+        if (knownService == default)
             return BadRequest($"Unknown service '{serviceName}'. Supported: {string.Join(", ", _knownServices.Select(s => s.ServiceName))}.");
+
+        var canonicalName = knownService.ServiceName;
 
         if (string.IsNullOrWhiteSpace(request.BaseUrl))
             return BadRequest("BaseUrl is required.");
@@ -58,7 +58,7 @@ public class AdminServiceKeysController(IExternalServiceConfigService configServ
         string apiKey;
         if (request.ApiKey is null)
         {
-            var existing = await configService.GetServiceAsync(serviceName, ct);
+            var existing = await configService.GetServiceAsync(canonicalName, ct);
             apiKey = existing.ApiKey;
         }
         else
@@ -68,7 +68,7 @@ public class AdminServiceKeysController(IExternalServiceConfigService configServ
 
         var config = new ExternalServiceConfiguration
         {
-            ServiceName = serviceName,
+            ServiceName = canonicalName,
             BaseUrl = request.BaseUrl,
             ApiKey = apiKey,
             IsEnabled = request.IsEnabled,

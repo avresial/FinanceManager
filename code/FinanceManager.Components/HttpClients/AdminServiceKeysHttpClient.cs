@@ -6,12 +6,12 @@ public class AdminServiceKeysHttpClient(HttpClient httpClient)
 {
     public async Task<ExternalServicesResponse?> GetConfigurationAsync(CancellationToken ct = default) =>
         await httpClient.GetFromJsonAsync<ExternalServicesResponse>(
-            $"{httpClient.BaseAddress}api/admin/service-keys", ct);
+            "api/admin/service-keys", ct);
 
     public async Task UpdateServiceAsync(string serviceName, UpdateServiceKeyRequest request, CancellationToken ct = default)
     {
         var response = await httpClient.PutAsJsonAsync(
-            $"{httpClient.BaseAddress}api/admin/service-keys/{Uri.EscapeDataString(serviceName)}", request, ct);
+            $"api/admin/service-keys/{Uri.EscapeDataString(serviceName)}", request, ct);
         response.EnsureSuccessStatusCode();
     }
 }

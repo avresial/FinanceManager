@@ -23,7 +23,7 @@ public partial class AdminServiceKeys : ComponentBase
         public bool IsDirty =>
             BaseUrl != _savedBaseUrl
             || IsEnabled != _savedIsEnabled
-            || !string.IsNullOrEmpty(NewApiKey);
+            || !string.IsNullOrWhiteSpace(NewApiKey);
 
         public void CaptureSnapshot()
         {
@@ -94,14 +94,14 @@ public partial class AdminServiceKeys : ComponentBase
         _savingServices.Add(service.ServiceName);
         try
         {
-            string? apiKey = string.IsNullOrEmpty(service.NewApiKey) ? null : service.NewApiKey;
+            string? apiKey = string.IsNullOrWhiteSpace(service.NewApiKey) ? null : service.NewApiKey.Trim();
 
             await ApiClient.UpdateServiceAsync(service.ServiceName, new UpdateServiceKeyRequest(
                 service.BaseUrl,
                 apiKey,
                 service.IsEnabled));
 
-            service.HasApiKey = service.HasApiKey || !string.IsNullOrEmpty(service.NewApiKey);
+            service.HasApiKey = service.HasApiKey || !string.IsNullOrWhiteSpace(service.NewApiKey);
             service.NewApiKey = string.Empty;
             service.CaptureSnapshot();
             Snackbar.Add($"{service.DisplayName} saved.", Severity.Success);
