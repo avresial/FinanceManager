@@ -1,0 +1,109 @@
+@page "/Admin/ServiceKeys"
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+@using Microsoft.AspNetCore.Authorization
+
+<PageTitle>Service Keys - Admin</PageTitle>
+
+@if (_isLoading)
+{
+    <MudProgressCircular Indeterminate Color="Color.Primary" />
+}
+else
+{
+    <MudStack Spacing="4">
+        @foreach (var message in _errors)
+        {
+            <MudAlert Severity="Severity.Error">@message</MudAlert>
+        }
+
+        <MudText Typo="Typo.h5">External Service Keys</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            Configure API credentials for third-party integrations.
+            Changes take effect immediately without redeployment.
+            Keys set here override values from environment variables and <code>appsettings.json</code>.
+        </MudText>
+
+        <MudGrid Spacing="3">
+            @foreach (var service in _services)
+            {
+                <MudItem xs="12" md="6">
+                    <MudCard Outlined>
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudStack Spacing="0">
+                                        <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                            <MudText Typo="Typo.h6">@service.DisplayName</MudText>
+                                            <MudSwitch T="bool" Value="@service.IsEnabled"
+                                                       ValueChanged="@(v => service.IsEnabled = v)"
+                                                       Color="Color.Primary" />
+                                        </MudStack>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@service.Description</MudText>
+                                    </MudStack>
+                                    <MudTooltip Text="Documentation">
+                                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
+                                                       Size="Size.Small"
+                                                       Href="@service.DocsUrl"
+                                                       Target="_blank"
+                                                       aria-label="@($"Open {service.DisplayName} documentation")" />
+                                    </MudTooltip>
+                                </MudStack>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudStack Spacing="3">
+                                <MudTextField T="string" Label="Base URL"
+                                              Value="@service.BaseUrl"
+                                              ValueChanged="@(v => service.BaseUrl = v)"
+                                              Immediate
+                                              Variant="Variant.Outlined" />
+
+                                @{
+                                    var apiKeyVisible = _showApiKey.TryGetValue(service.ServiceName, out var show) && show;
+                                }
+                                <MudTextField T="string"
+                                              Label="@(service.HasApiKey ? "API Key (set — enter new to replace)" : "API Key")"
+                                              Value="@service.NewApiKey"
+                                              ValueChanged="@(v => service.NewApiKey = v)"
+                                              Immediate
+                                              InputType="@(apiKeyVisible ? InputType.Text : InputType.Password)"
+                                              Variant="Variant.Outlined"
+                                              Adornment="Adornment.End"
+                                              AdornmentIcon="@(apiKeyVisible ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                              OnAdornmentClick="@(() => ToggleApiKeyVisibility(service.ServiceName))" />
+
+                                <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                                    @if (service.HasApiKey)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                        <MudText Typo="Typo.body2" Color="Color.Success">API key configured</MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                                        <MudText Typo="Typo.body2" Color="Color.Warning">No API key — using appsettings default</MudText>
+                                    }
+                                </MudStack>
+                            </MudStack>
+                        </MudCardContent>
+                        @if (service.IsDirty)
+                        {
+                            <MudCardActions>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                           OnClick="@(() => SaveServiceAsync(service))"
+                                           Disabled="@_savingServices.Contains(service.ServiceName)">
+                                    @if (_savingServices.Contains(service.ServiceName))
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate Class="mr-2" />
+                                    }
+                                    Save
+                                </MudButton>
+                            </MudCardActions>
+                        }
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudStack>
+}
