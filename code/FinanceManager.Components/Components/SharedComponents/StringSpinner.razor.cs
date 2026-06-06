@@ -48,5 +48,6 @@ public partial class StringSpinner : IDisposable
     public void Dispose()
     {
         _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.Dispose();
     }
 }

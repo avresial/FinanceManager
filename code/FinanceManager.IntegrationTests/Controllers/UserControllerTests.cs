@@ -1,4 +1,5 @@
 using FinanceManager.Application.Commands.User;
+using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Enums;
@@ -19,6 +20,7 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
 {
     private const int _testUserId = 42;
     private const string _testUserName = "happyuser";
+    private const string _testUserPassword = "oldpw";
     private TestDatabase? _testDatabase;
 
     protected override void ConfigureServices(IServiceCollection services)
@@ -46,7 +48,7 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
         {
             Id = _testUserId,
             Login = _testUserName,
-            Password = "hash", // original password before update
+            Password = PasswordEncryptionProvider.EncryptPassword(_testUserPassword), // original password before update
             PricingLevel = PricingLevel.Basic,
             UserRole = UserRole.User,
             CreationDate = DateTime.UtcNow
@@ -143,7 +145,7 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
         // arrange
         await SeedUser();
         Authorize(_testUserName, _testUserId, UserRole.User);
-        UpdatePassword cmd = new(_testUserId, "newpw");
+        UpdatePassword cmd = new(_testUserId, "newpw", _testUserPassword);
         Assert.NotNull(_testDatabase);
         var originalPassword = (await _testDatabase!.Context.Users.FirstAsync(u => u.Id == _testUserId, TestContext.Current.CancellationToken)).Password;
 

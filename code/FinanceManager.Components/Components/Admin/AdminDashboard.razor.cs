@@ -1,5 +1,6 @@
 using FinanceManager.Components.HttpClients;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using MudBlazor;
 using MudBlazor.Charts;
 
@@ -23,6 +24,7 @@ public partial class AdminDashboard : ComponentBase
 
     [Inject] required public AdministrationUsersHttpClient AdministrationUsersHttpClient { get; set; }
     [Inject] required public NewVisitorsHttpClient NewVisitorsHttpClient { get; set; }
+    [Inject] required public ILogger<AdminDashboard> Logger { get; set; }
 
 
     protected override async Task OnInitializedAsync()
@@ -58,7 +60,7 @@ public partial class AdminDashboard : ComponentBase
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.ToString());
+            Logger.LogError(ex, "Error loading admin dashboard data.");
             throw;
         }
 

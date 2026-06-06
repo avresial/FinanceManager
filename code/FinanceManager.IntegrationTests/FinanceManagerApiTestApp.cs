@@ -58,6 +58,9 @@ internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<ApiEntryP
                     // Rate limiting is off by default so the broader integration suite isn't throttled by
                     // shared-loopback partitioning; RateLimitingTests re-enables it with tiny limits.
                     ["RateLimiting:Enabled"] = "false",
+                    // appsettings.json restricts AllowedHosts to the production hostname; the test host serves
+                    // requests over http://localhost, so relax host filtering here or every request 400s.
+                    ["AllowedHosts"] = "*",
                 };
                 config.AddInMemoryCollection(settings);
             });

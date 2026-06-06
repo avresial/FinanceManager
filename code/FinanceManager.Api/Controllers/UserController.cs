@@ -1,4 +1,5 @@
-﻿using FinanceManager.Application.Commands.User;
+﻿using FinanceManager.Api.Helpers;
+using FinanceManager.Application.Commands.User;
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Users;
@@ -80,15 +81,43 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
     [HttpDelete]
     [Route("Delete/{userId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
-    public async Task<IActionResult> Delete(int userId, CancellationToken cancellationToken = default) => Ok(await usersService.DeleteUser(userId));
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Delete(int userId, CancellationToken cancellationToken = default)
+    {
+        // A "User"-role caller may only delete their own account; Admins may delete anyone.
+        if (!User.IsInRole("Admin") && ApiAuthenticationHelper.GetUserId(User) != userId)
+            return Forbid();
+
+        return Ok(await usersService.DeleteUser(userId));
+    }
 
     [Authorize(Roles = "Admin, User")]
     [HttpPut]
     [Route("UpdatePassword")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdatePassword(UpdatePassword updatePassword, CancellationToken cancellationToken = default)
     {
+        // A "User"-role caller may only change their own password and must prove they know the current one.
+        // Admins may reset any user's password without supplying the current password.
+        if (!User.IsInRole("Admin"))
+        {
+            if (ApiAuthenticationHelper.GetUserId(User) != updatePassword.UserId)
+                return Forbid();
+
+            var user = await userRepository.GetUser(updatePassword.UserId);
+            if (user is null) return NotFound();
+
+            if (string.IsNullOrEmpty(updatePassword.CurrentPassword))
+                return BadRequest("Current password is required.");
+
+            var encryptedCurrentPassword = PasswordEncryptionProvider.EncryptPassword(updatePassword.CurrentPassword);
+            if (await userRepository.GetUser(user.Login, encryptedCurrentPassword) is null)
+                return BadRequest("Current password is incorrect.");
+        }
+
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(updatePassword.Password);
         var result = await userRepository.UpdatePassword(updatePassword.UserId, encryptedPassword);
         return result ? Ok(result) : BadRequest();

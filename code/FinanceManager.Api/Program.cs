@@ -71,12 +71,26 @@ builder.Services.AddOptions<AccountLockoutOptions>()
     .Validate(o => o.MaxFailedAttempts > 0, "AccountLockout:MaxFailedAttempts must be greater than 0.")
     .Validate(o => o.LockoutDuration > TimeSpan.Zero, "AccountLockout:LockoutDuration must be greater than 0.")
     .ValidateOnStart();
-builder.Services.Configure<StockApiOptions>(builder.Configuration.GetSection("StockApi"));
+builder.Services.AddOptions<StockApiOptions>()
+    .Bind(builder.Configuration.GetSection("StockApi"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "StockApi:BaseUrl must be configured.")
+    .ValidateOnStart();
 builder.Services.Configure<OpenFigiOptions>(builder.Configuration.GetSection("OpenFigi"));
 builder.Services.Configure<LmStudioOptions>(builder.Configuration.GetSection("LmStudio"));
-builder.Services.Configure<OpenRouterOptions>(builder.Configuration.GetSection("OpenRouter"));
-builder.Services.Configure<GitHubModelsOptions>(builder.Configuration.GetSection("GitHubModels"));
-builder.Services.Configure<OllamaOptions>(builder.Configuration.GetSection("Ollama"));
+builder.Services.AddOptions<OpenRouterOptions>()
+    .Bind(builder.Configuration.GetSection("OpenRouter"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "OpenRouter:BaseUrl must be configured.")
+    .Validate(o => o.RequestTimeoutSeconds > 0, "OpenRouter:RequestTimeoutSeconds must be greater than 0.")
+    .ValidateOnStart();
+builder.Services.AddOptions<GitHubModelsOptions>()
+    .Bind(builder.Configuration.GetSection("GitHubModels"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "GitHubModels:BaseUrl must be configured.")
+    .Validate(o => o.RequestTimeoutSeconds > 0, "GitHubModels:RequestTimeoutSeconds must be greater than 0.")
+    .ValidateOnStart();
+builder.Services.AddOptions<OllamaOptions>()
+    .Bind(builder.Configuration.GetSection("Ollama"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "Ollama:BaseUrl must be configured.")
+    .ValidateOnStart();
 builder.Services.Configure<AiProviderOptions>(builder.Configuration.GetSection("AiProvider"));
 builder.Services.Configure<List<AiProviderFallbackStrategyOption>>(builder.Configuration.GetSection("AIProviderFallbackStrategies"));
 
@@ -111,7 +125,7 @@ builder.Services.AddCors(options =>
     options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(options =>
 {
-    options.RequireHttpsMetadata = false;
+    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -195,6 +209,9 @@ var app = builder.Build();
 // Registered first so it wraps the whole pipeline: any unhandled exception is turned into a
 // consistent ProblemDetails response by GlobalExceptionHandler instead of leaking framework defaults.
 app.UseExceptionHandler();
+
+// Emit baseline security headers (incl. Permissions-Policy) on every response, static assets included.
+app.UseMiddleware<FinanceManager.Api.Middleware.SecurityHeadersMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

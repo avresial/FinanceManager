@@ -3,6 +3,7 @@ using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using MudBlazor;
 
 namespace FinanceManager.Components.Components.SharedComponents;
@@ -19,6 +20,7 @@ public partial class StockPricesComponent
 
     [Inject] private StockPriceHttpClient StockPriceHttpClient { get; set; } = default!;
     [Inject] private ISettingsService SettingsService { get; set; } = default!;
+    [Inject] private ILogger<StockPricesComponent> Logger { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -28,7 +30,7 @@ public partial class StockPricesComponent
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading stocks: {ex.Message}");
+            Logger.LogError(ex, "Error loading stocks: {Message}", ex.Message);
         }
     }
 
@@ -83,7 +85,7 @@ public partial class StockPricesComponent
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error fetching stock price: {ex.Message}");
+            Logger.LogError(ex, "Error fetching stock price: {Message}", ex.Message);
         }
 
         StateHasChanged();
