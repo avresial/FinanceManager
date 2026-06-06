@@ -319,13 +319,13 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         var today = DateTime.UtcNow;
         _dateStart = _selectedRange switch
         {
-            "1W"  => today.AddDays(-7),
-            "1M"  => today.AddMonths(-1),
-            "3M"  => today.AddMonths(-3),
-            "6M"  => today.AddMonths(-6),
+            "1W" => today.AddDays(-7),
+            "1M" => today.AddMonths(-1),
+            "3M" => today.AddMonths(-3),
+            "6M" => today.AddMonths(-6),
             "YTD" => new DateTime(today.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             "All" => Account?.Start ?? today.AddYears(-10),
-            _     => today.AddMonths(-3),
+            _ => today.AddMonths(-3),
         };
         _dateEnd = today;
     }
