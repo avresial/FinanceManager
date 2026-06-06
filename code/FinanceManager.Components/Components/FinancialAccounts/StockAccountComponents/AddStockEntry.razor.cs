@@ -5,6 +5,7 @@ using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using MudBlazor;
 using MudBlazor.Utilities;
 
@@ -41,6 +42,7 @@ public partial class AddStockEntry
     [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required StockPriceHttpClient StockPriceHttpClient { get; set; }
+    [Inject] public required ILogger<AddStockEntry> Logger { get; set; }
 
     protected async Task OnFieldChanged(FormFieldChangedEventArgs args)
     {
@@ -88,7 +90,7 @@ public partial class AddStockEntry
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex);
+            Logger.LogError(ex, "Error parsing investment type '{ExpenseType}'.", ExpenseType);
         }
 
         var id = 0;

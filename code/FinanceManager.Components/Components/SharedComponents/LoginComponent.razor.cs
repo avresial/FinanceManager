@@ -3,6 +3,7 @@ using FinanceManager.Components.Models;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 
@@ -18,6 +19,7 @@ public partial class LoginComponent
     private bool _isProcessing = false;
 
     [Inject] public required ILogger<LoginComponent> Logger { get; set; }
+    [Inject] public required IConfiguration Configuration { get; set; }
     [Inject] public required NavigationManager Navigation { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILocalStorageService LocalStorageService { get; set; }
@@ -119,7 +121,8 @@ public partial class LoginComponent
             Logger.LogError(ex.ToString());
         }
 
-        await LoginService.Login(_guestLogin, "GuestPassword");
+        var guestPassword = Configuration["GuestAccount:Password"] ?? "GuestPassword";
+        await LoginService.Login(_guestLogin, guestPassword);
         Navigation.NavigateTo("");
     }
 

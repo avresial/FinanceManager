@@ -11,7 +11,7 @@ public interface IUserService
     Task<User?> GetUser(int userId);
     Task<RecordCapacity?> GetRecordCapacity(int userId);
     Task<bool> Delete(int userId);
-    Task<bool> UpdatePassword(int userId, string newPassword);
+    Task<bool> UpdatePassword(int userId, string newPassword, string? currentPassword = null);
     Task<bool> UpdatePricingPlan(int userId, PricingLevel newPricingLevel);
     Task<bool> UpdateRole(int userId, UserRole userRole);
 

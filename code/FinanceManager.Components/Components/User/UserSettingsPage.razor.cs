@@ -234,10 +234,16 @@ public partial class UserSettingsPage : ComponentBase
             return;
         }
 
-        var result = await UserService.UpdatePassword(_loggedUser.UserId, _confirmPassword);
+        if (string.IsNullOrEmpty(_currentPassword))
+        {
+            _warnings.Insert(0, "Current password is required.");
+            return;
+        }
+
+        var result = await UserService.UpdatePassword(_loggedUser.UserId, _confirmPassword, _currentPassword);
         if (!result)
         {
-            _errors.Insert(0, "Failed to change password.");
+            _errors.Insert(0, "Failed to change password. Check that your current password is correct.");
             return;
         }
 

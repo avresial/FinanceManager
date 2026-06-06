@@ -37,18 +37,18 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
         }
         return null;
     }
-    public Task<RecordCapacity?> GetRecordCapacity(int userId)
+    public async Task<RecordCapacity?> GetRecordCapacity(int userId)
     {
         try
         {
-            httpClient.GetRecordCapacity(userId);
+            return await httpClient.GetRecordCapacity(userId);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, $"Error getting user record capacity {userId}", userId);
         }
 
-        return Task.FromResult((RecordCapacity?)null); ;
+        return null;
     }
     public async Task<bool> Delete(int userId)
     {
@@ -70,13 +70,13 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
 
         return false;
     }
-    public async Task<bool> UpdatePassword(int userId, string newPassword)
+    public async Task<bool> UpdatePassword(int userId, string newPassword, string? currentPassword = null)
     {
         try
         {
             var existingUser = await GetUser(userId);
             if (existingUser is null) return false;
-            if (await httpClient.UpdatePassword(new(userId, newPassword)))
+            if (await httpClient.UpdatePassword(new(userId, newPassword, currentPassword)))
             {
                 OnUserChangeEvent?.Invoke(existingUser);
                 return true;

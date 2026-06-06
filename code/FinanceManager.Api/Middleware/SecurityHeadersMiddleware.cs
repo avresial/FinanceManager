@@ -8,6 +8,7 @@ namespace FinanceManager.Api.Middleware;
 ///   <item><c>X-Content-Type-Options: nosniff</c></item>
 ///   <item><c>X-Frame-Options: DENY</c> — kept alongside <c>frame-ancestors</c> for older browsers</item>
 ///   <item><c>Referrer-Policy: strict-origin-when-cross-origin</c></item>
+///   <item><c>Permissions-Policy: camera=(), microphone=(), geolocation=()</c> — disables sensor APIs the app never uses</item>
 ///   <item><c>Content-Security-Policy</c> — tuned for Blazor WebAssembly: <c>'wasm-unsafe-eval'</c> for
 ///       the runtime, <c>'unsafe-eval'</c> for the dashboard's ApexCharts (Blazor-ApexCharts evaluates
 ///       its option/formatter functions as strings and has no CSP-hash/nonce alternative — see
@@ -51,6 +52,9 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
 
             if (!headers.ContainsKey("Referrer-Policy"))
                 headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+
+            if (!headers.ContainsKey("Permissions-Policy"))
+                headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
 
             if (!headers.ContainsKey("Content-Security-Policy"))
                 headers["Content-Security-Policy"] = _contentSecurityPolicy;

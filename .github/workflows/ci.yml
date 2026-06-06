@@ -10,7 +10,7 @@ env:
   AZURE_WEBAPP_NAME_DEV: 'FinanceManagerApi-dev'
   AZURE_WEBAPP_PACKAGE_PATH: './code/FinanceManager.Api/publish'
   DOTNET_VERSION: '10.x'
-  SOLUTION_PATH: './code/FinanceManager.slx'
+  SOLUTION_PATH: './code/FinanceManager.slnx'
   API_PROJECT_PATH: './code/FinanceManager.Api/FinanceManager.Api.csproj'
   PUBLISH_DIR: './code/FinanceManager.Api/publish'
 
@@ -51,7 +51,7 @@ jobs:
   code-quality:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
 
     steps:
       - name: Checkout code
@@ -79,16 +79,14 @@ jobs:
 
       - name: Check code formatting
         run: dotnet format ./code --verify-no-changes --verbosity diagnostic
-        continue-on-error: true
 
       - name: Build with code analysis
         run: dotnet build ./code --no-restore --configuration Release /p:EnforceCodeStyleInBuild=true
-        continue-on-error: true
 
   security-scan:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
 
     steps:
       - name: Checkout code
@@ -108,9 +106,17 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore ./code
 
+      # `dotnet list package --vulnerable` exits 0 even when it finds vulnerabilities, so grep the
+      # output and fail the step ourselves — a known CVE must block the build, not just be reported.
       - name: Check for vulnerable packages
-        run: dotnet list ./code package --vulnerable --include-transitive
-        continue-on-error: true
+        run: |
+          output=$(dotnet list ./code package --vulnerable --include-transitive 2>&1)
+          echo "$output"
+          if echo "$output" | grep -q "has the following vulnerable packages"; then
+            echo "::error::Vulnerable packages detected."
+            exit 1
+          fi
+        continue-on-error: false
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -126,7 +132,7 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
     env:
       FINANCE_MANAGER_DB_KEY: ${{ secrets.FINANCE_MANAGER_DB_KEY }}
 
@@ -164,7 +170,7 @@ jobs:
   integration-tests:
     runs-on: ubuntu-latest
     needs: [build, unit-tests]
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
     env:
       FINANCE_MANAGER_DB_KEY: ${{ secrets.FINANCE_MANAGER_DB_KEY }}
       UseInMemoryDatabase: true
@@ -201,7 +207,7 @@ jobs:
   architecture-tests:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
 
     steps:
       - name: Checkout code
@@ -243,11 +249,11 @@ jobs:
       && github.event_name == 'push'
       && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
       && needs.build.result == 'success'
-      && (needs.unit-tests.result == 'success' || needs.unit-tests.result == 'skipped')
-      && (needs.integration-tests.result == 'success' || needs.integration-tests.result == 'skipped')
-      && (needs.architecture-tests.result == 'success' || needs.architecture-tests.result == 'skipped')
-      && (needs.code-quality.result == 'success' || needs.code-quality.result == 'skipped')
-      && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped')
+      && needs.unit-tests.result == 'success'
+      && needs.integration-tests.result == 'success'
+      && needs.architecture-tests.result == 'success'
+      && needs.code-quality.result == 'success'
+      && needs.security-scan.result == 'success'
 
     steps:
       - name: Checkout code

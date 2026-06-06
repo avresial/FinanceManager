@@ -1,10 +1,11 @@
 using FinanceManager.Application.Commands.Bonds;
 using FinanceManager.Domain.Entities.Bonds;
+using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;
 
-public class BondDetailsHttpClient(HttpClient httpClient)
+public class BondDetailsHttpClient(HttpClient httpClient, ILogger<BondDetailsHttpClient>? logger = null)
 {
     public Task<BondDetails?> GetById(int id, CancellationToken cancellationToken = default) =>
         httpClient.GetFromJsonAsync<BondDetails>($"{httpClient.BaseAddress}api/BondDetails/{id}", cancellationToken);
@@ -45,7 +46,7 @@ public class BondDetailsHttpClient(HttpClient httpClient)
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error updating bond details: {ex.Message}");
+            logger?.LogError(ex, "Error updating bond details: {Message}", ex.Message);
             return false;
         }
     }

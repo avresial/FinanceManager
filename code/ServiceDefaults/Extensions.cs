@@ -99,6 +99,10 @@ public static class Extensions
 
     private static TBuilder AddOpenTelemetryExporters<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
+        // PRODUCTION NOTE: no exporter is wired up unless the OTEL_EXPORTER_OTLP_ENDPOINT environment variable
+        // (or configuration key) points at an OTLP collector. Without it, all traces and metrics are collected
+        // in-process and then silently dropped — production deployments must set OTEL_EXPORTER_OTLP_ENDPOINT
+        // to an OTLP-compatible endpoint (or uncomment the Azure Monitor block below) to retain observability.
         var useOtlpExporter = !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
 
         if (useOtlpExporter)

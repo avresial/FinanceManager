@@ -3,10 +3,11 @@ using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Dtos;
+using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Infrastructure.Repositories;
 
-public class UserLocalStorageRepository(ILocalStorageService localStorageService) : IUserRepository
+public class UserLocalStorageRepository(ILocalStorageService localStorageService, ILogger<UserLocalStorageRepository> logger) : IUserRepository
 {
     async Task<User?> IUserRepository.GetUser(string login, string password)
     {
@@ -73,7 +74,7 @@ public class UserLocalStorageRepository(ILocalStorageService localStorageService
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex);
+            logger.LogError(ex, "Error adding user to local storage.");
             return false;
         }
 
@@ -98,7 +99,7 @@ public class UserLocalStorageRepository(ILocalStorageService localStorageService
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex);
+            logger.LogError(ex, "Error removing user from local storage.");
             return false;
         }
 

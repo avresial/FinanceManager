@@ -74,12 +74,26 @@ builder.Services.AddOptions<AccountLockoutOptions>()
     .Validate(o => o.MaxFailedAttempts > 0, "AccountLockout:MaxFailedAttempts must be greater than 0.")
     .Validate(o => o.LockoutDuration > TimeSpan.Zero, "AccountLockout:LockoutDuration must be greater than 0.")
     .ValidateOnStart();
-builder.Services.Configure<StockApiOptions>(builder.Configuration.GetSection("StockApi"));
+builder.Services.AddOptions<StockApiOptions>()
+    .Bind(builder.Configuration.GetSection("StockApi"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "StockApi:BaseUrl must be configured.")
+    .ValidateOnStart();
 builder.Services.Configure<OpenFigiOptions>(builder.Configuration.GetSection("OpenFigi"));
 builder.Services.Configure<LmStudioOptions>(builder.Configuration.GetSection("LmStudio"));
-builder.Services.Configure<OpenRouterOptions>(builder.Configuration.GetSection("OpenRouter"));
-builder.Services.Configure<GitHubModelsOptions>(builder.Configuration.GetSection("GitHubModels"));
-builder.Services.Configure<OllamaOptions>(builder.Configuration.GetSection("Ollama"));
+builder.Services.AddOptions<OpenRouterOptions>()
+    .Bind(builder.Configuration.GetSection("OpenRouter"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "OpenRouter:BaseUrl must be configured.")
+    .Validate(o => o.RequestTimeoutSeconds > 0, "OpenRouter:RequestTimeoutSeconds must be greater than 0.")
+    .ValidateOnStart();
+builder.Services.AddOptions<GitHubModelsOptions>()
+    .Bind(builder.Configuration.GetSection("GitHubModels"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "GitHubModels:BaseUrl must be configured.")
+    .Validate(o => o.RequestTimeoutSeconds > 0, "GitHubModels:RequestTimeoutSeconds must be greater than 0.")
+    .ValidateOnStart();
+builder.Services.AddOptions<OllamaOptions>()
+    .Bind(builder.Configuration.GetSection("Ollama"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "Ollama:BaseUrl must be configured.")
+    .ValidateOnStart();
 builder.Services.Configure<AiProviderOptions>(builder.Configuration.GetSection("AiProvider"));
 builder.Services.Configure<List<AiProviderFallbackStrategyOption>>(builder.Configuration.GetSection("AIProviderFallbackStrategies"));
 
@@ -123,7 +137,7 @@ builder.Services.AddCors(options =>
     options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(options =>
 {
-    options.RequireHttpsMetadata = false;
+    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -246,8 +260,8 @@ app.UseExceptionHandler();
 if (!app.Environment.IsDevelopment())
     app.UseHsts();
 
-// Emit X-Content-Type-Options, X-Frame-Options, Referrer-Policy and a Blazor-WASM-compatible CSP
-// on every response. Placed before UseHttpsRedirection so the headers ride the 307 as well.
+// Emit X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy and a
+// Blazor-WASM-compatible CSP on every response. Placed before UseHttpsRedirection so the headers ride the 307 as well.
 app.UseMiddleware<SecurityHeadersMiddleware>();
 
 if (app.Environment.IsDevelopment())

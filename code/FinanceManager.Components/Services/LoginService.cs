@@ -8,6 +8,7 @@ using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.Services;
@@ -20,6 +21,7 @@ public class LoginService : ILoginService
     private readonly ILocalStorageService _localStorageService;
     private readonly IUserRepository _loginRepository;
     private readonly HttpClient _httpClient;
+    private readonly ILogger<LoginService> _logger;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     // Once we've tried (and failed) to silently restore a session we don't keep hammering the refresh endpoint on
@@ -34,7 +36,7 @@ public class LoginService : ILoginService
 
     private readonly AuthenticationStateProvider _authStateProvider;
     public LoginService(ISessionStorageService sessionStorageService, ILocalStorageService localStorageService,
-        AuthenticationStateProvider authState, IUserRepository loginRepository, HttpClient httpClient)
+        AuthenticationStateProvider authState, IUserRepository loginRepository, HttpClient httpClient, ILogger<LoginService> logger)
     {
         _sessionStorageService = sessionStorageService;
         _localStorageService = localStorageService;
@@ -42,6 +44,7 @@ public class LoginService : ILoginService
 
         _loginRepository = loginRepository;
         _httpClient = httpClient;
+        _logger = logger;
         _ = _loginRepository.AddUser("Guest", PasswordEncryptionProvider.EncryptPassword("GuestPassword"), PricingLevel.Basic, UserRole.User);
     }
 
@@ -86,7 +89,7 @@ public class LoginService : ILoginService
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex);
+            _logger.LogError(ex, "Error during login request.");
         }
 
         if (result is null) return false;
@@ -134,7 +137,7 @@ public class LoginService : ILoginService
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex);
+            _logger.LogError(ex, "Error refreshing session.");
             return false;
         }
         finally
@@ -151,7 +154,7 @@ public class LoginService : ILoginService
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex);
+            _logger.LogError(ex, "Error during logout request.");
         }
 
         await EndSession();
