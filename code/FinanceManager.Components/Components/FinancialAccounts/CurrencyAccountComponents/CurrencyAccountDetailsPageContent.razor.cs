@@ -21,14 +21,13 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private string _selectedRange = "3M";
     private DateTime _dateStart;
     private DateTime _dateEnd = DateTime.UtcNow;
-    private DateRange? _customDateRange;
 
     private bool _addEntryVisibility;
 
     private string? _searchText;
     private AccountHistoryToolbar.TxFilter? _activeFilter;
-    private string? _selectedCategory;
-    private IEnumerable<string> _availableCategories = [];
+    private HashSet<string> _selectedLabels = new(StringComparer.OrdinalIgnoreCase);
+    private IEnumerable<string> _availableLabels = [];
 
     private decimal _currentBalance;
     private decimal _balanceChange;
@@ -129,12 +128,13 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         var startBalance = _currentBalance - _balanceChange;
         _balanceChangePercent = startBalance == 0 ? null : _balanceChange / startBalance * 100m;
 
-        _availableCategories = Account.Entries
+        _availableLabels = Account.Entries
             .SelectMany(e => e.Labels ?? [])
             .Where(l => l is not null)
             .Select(l => l.Name)
-            .Distinct()
-            .OrderBy(n => n)
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         _accountTypeLabel = Account.AccountType switch
@@ -263,24 +263,6 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         }
     }
 
-    private async Task OnCustomDateRangeChanged(DateRange? range)
-    {
-        _customDateRange = range;
-        if (_selectedRange != "Range") return;
-        SetDateRangeForSelection();
-        IsLoading = true;
-        StateHasChanged();
-        try
-        {
-            await UpdateEntries();
-        }
-        finally
-        {
-            IsLoading = false;
-            StateHasChanged();
-        }
-    }
-
     private async Task OnSearchChanged(string? value)
     {
         _searchText = value;
@@ -295,15 +277,15 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         StateHasChanged();
     }
 
-    private async Task OnCategoryChanged(string? value)
+    private async Task OnLabelsChanged(HashSet<string> value)
     {
-        _selectedCategory = value;
+        _selectedLabels = new HashSet<string>(value, StringComparer.OrdinalIgnoreCase);
         await UpdateInfo();
         StateHasChanged();
     }
 
     private bool HasActiveFilter =>
-        !string.IsNullOrWhiteSpace(_searchText) || _activeFilter.HasValue || _selectedCategory is not null;
+        !string.IsNullOrWhiteSpace(_searchText) || _activeFilter.HasValue || _selectedLabels.Count > 0;
 
     private List<CurrencyAccountEntry> GetFilteredEntries()
     {
@@ -316,9 +298,9 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         else if (_activeFilter == AccountHistoryToolbar.TxFilter.Expense)
             entries = entries.Where(x => x.ValueChange < 0);
 
-        if (!string.IsNullOrWhiteSpace(_selectedCategory))
+        if (_selectedLabels.Count > 0)
             entries = entries.Where(x => x.Labels is not null
-                && x.Labels.Any(l => string.Equals(l.Name, _selectedCategory, StringComparison.OrdinalIgnoreCase)));
+                && x.Labels.Any(l => _selectedLabels.Contains(l.Name)));
 
         if (!string.IsNullOrWhiteSpace(_searchText))
         {
@@ -335,20 +317,15 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private void SetDateRangeForSelection()
     {
         var today = DateTime.UtcNow;
-        if (_selectedRange == "Range")
-        {
-            _dateStart = _customDateRange?.Start ?? Account?.Start ?? today.AddMonths(-3);
-            _dateEnd = _customDateRange?.End ?? today;
-            return;
-        }
-
         _dateStart = _selectedRange switch
         {
+            "1W" => today.AddDays(-7),
             "1M" => today.AddMonths(-1),
             "3M" => today.AddMonths(-3),
             "6M" => today.AddMonths(-6),
-            "1Y" => today.AddYears(-1),
-            _ => today.AddMonths(-3)
+            "YTD" => new DateTime(today.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            "All" => Account?.Start ?? today.AddYears(-10),
+            _ => today.AddMonths(-3),
         };
         _dateEnd = today;
     }

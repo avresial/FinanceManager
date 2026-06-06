@@ -1,7 +1,7 @@
-using FinanceManager.Application.Options;
+using FinanceManager.Application.Services.ExternalServices;
+using FinanceManager.Domain.Entities.ExternalServices;
 using FinanceManager.Infrastructure.Services.Stocks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System.Net;
 
 namespace FinanceManager.UnitTests.Infrastructure.Services.Stocks;
@@ -10,20 +10,23 @@ namespace FinanceManager.UnitTests.Infrastructure.Services.Stocks;
 [Trait("Category", "Unit")]
 public class OpenFigiClientTests
 {
-    private IOptions<OpenFigiOptions> CreateOptions(string apiKey = "")
+    private static IExternalServiceConfigService CreateConfigService(string apiKey = "")
     {
-        return Options.Create(new OpenFigiOptions
+        var config = new ExternalServiceConfiguration
         {
+            ServiceName = "OpenFigi",
             BaseUrl = "https://api.openfigi.com/v3",
-            ApiKey = apiKey
-        });
+            ApiKey = apiKey,
+            IsEnabled = true,
+        };
+        return new StubExternalServiceConfigService(config);
     }
 
     private OpenFigiClient CreateClient(MockHttpMessageHandler handler, string apiKey = "")
     {
         var httpClient = new HttpClient(handler);
         var logger = LoggerFactory.Create(b => { }).CreateLogger<OpenFigiClient>();
-        return new OpenFigiClient(httpClient, logger, CreateOptions(apiKey));
+        return new OpenFigiClient(httpClient, logger, CreateConfigService(apiKey));
     }
 
     [Fact]
@@ -179,6 +182,18 @@ public class OpenFigiClientTests
 
         // Assert
         Assert.Equal("US0378331005", result);
+    }
+
+    private sealed class StubExternalServiceConfigService(ExternalServiceConfiguration config) : IExternalServiceConfigService
+    {
+        public ValueTask<ExternalServiceConfiguration> GetServiceAsync(string serviceName, CancellationToken ct = default) =>
+            ValueTask.FromResult(config);
+
+        public ValueTask<IReadOnlyList<ExternalServiceConfiguration>> GetAllServicesAsync(CancellationToken ct = default) =>
+            ValueTask.FromResult<IReadOnlyList<ExternalServiceConfiguration>>([config]);
+
+        public Task SaveServiceAsync(ExternalServiceConfiguration cfg, CancellationToken ct = default) =>
+            Task.CompletedTask;
     }
 
     private sealed class MockHttpMessageHandler : HttpMessageHandler

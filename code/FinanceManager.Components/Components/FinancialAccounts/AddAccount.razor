@@ -1,15 +1,17 @@
 ﻿@page "/AddAccount"
 
+<PageTitle>Add account</PageTitle>
+
 <MudContainer MaxWidth="MaxWidth.Small">
     <MudForm Spacing="3" @bind-IsValid="@_success" @bind-Errors="@_errors">
         <MudText Typo="Typo.h4">Add new account</MudText>
         <MudTextField T="string" @bind-Value=_accountName Label="Account name" Required="true" RequiredError="User name is required!"
-                      Validation="@(new Func<string, IEnumerable<string>>(AccountNameValidation))" />
+                      Validation="@(new Func<string, IEnumerable<string>>(AccountNameValidation))" data-testid="account-name" />
 
             <MudStack>
                 <MudSelect @bind-Value="_selectedAccountType"
                            Variant="Variant.Text"
-                           Label="Account type" Required>
+                           Label="Account type" Required data-testid="account-type">
                     @foreach (var state in _accountTypes)
                     {
                         <MudSelectItem Value="state">@state</MudSelectItem>
@@ -17,7 +19,7 @@
                 </MudSelect>
             </MudStack>
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_success)" Class="ml-auto" @onclick=Add>Add</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_success)" Class="ml-auto" @onclick=Add data-testid="account-submit">Add</MudButton>
         @if (_addedAccountId is not null)
         {
             <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="my-3">

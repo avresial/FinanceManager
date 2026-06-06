@@ -4,8 +4,8 @@
 
     @* Hero: what FinanceManager is for *@
     <MudGrid Class="align-center mb-4">
-        <MudItem xs="12" md="6" Class="order-2 order-md-1">
-            <MudText Typo="Typo.h3" Class="mb-3">Welcome to FinanceManager 👋</MudText>
+        <MudItem xs="12" md="6" Class="order-1">
+            <MudText Typo="Typo.h3" Class="mb-3">Welcome to FinanceManager</MudText>
             <MudText Typo="Typo.h6" Style="color: var(--mud-palette-text-secondary);" Class="mb-4">
                 Keep all of your finances in one place. Track your net worth, cash flow and
                 investments across cash, stock and bond accounts — and watch your dashboard
@@ -16,7 +16,7 @@
                 manually or import a CSV from your bank.
             </MudText>
         </MudItem>
-        <MudItem xs="12" md="6" Class="order-1 order-md-2 d-flex align-center">
+        <MudItem xs="12" md="6" Class="order-2 d-flex align-center">
             @* Both theme variants are rendered; scoped CSS shows the one matching the active (system) theme. *@
             <img src="IMGS/onboarding/dashboard-light.jpg" alt="FinanceManager dashboard" class="onb-img onb-hero onb-light rounded-lg" />
             <img src="IMGS/onboarding/dashboard-dark.jpg" alt="FinanceManager dashboard" class="onb-img onb-hero onb-dark rounded-lg" />
@@ -99,14 +99,13 @@
         </MudText>
     </div>
 
-    <MudCarousel TData="object" Class="rounded-lg mud-width-full mb-6 mud-border-lines-default border-solid border-2" Style="height: 460px;"
+    <MudCarousel TData="object" Class="rounded-lg mud-width-full mb-6" Style="height: 460px;"
                  ShowArrows="true" ShowBullets="true" EnableSwipeGesture="true" AutoCycle="true"
                  AutoCycleTime="TimeSpan.FromSeconds(6)" Elevation="0">
         @foreach (var preview in _previews)
         {
             <MudCarouselItem Transition="Transition.Slide">
                 <div class="d-flex flex-column align-center justify-center" style="height: 100%;">
-                    <MudText Typo="Typo.h6" Class="mb-2">@preview.Caption</MudText>
                     <img src="@preview.Light" alt="@preview.Caption" class="onb-img onb-carousel onb-light rounded-lg" />
                     <img src="@preview.Dark" alt="@preview.Caption" class="onb-img onb-carousel onb-dark rounded-lg" />
                 </div>

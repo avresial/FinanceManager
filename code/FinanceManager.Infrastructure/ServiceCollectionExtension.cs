@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Application.Options;
 using FinanceManager.Application.Services;
 using FinanceManager.Application.Services.Ai;
+using FinanceManager.Application.Services.ExternalServices;
 using FinanceManager.Application.Services.FinancialInsights;
 using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Entities.Bonds;
@@ -19,6 +20,7 @@ using FinanceManager.Infrastructure.Repositories.Account.Entry;
 using FinanceManager.Infrastructure.Services;
 using FinanceManager.Infrastructure.Services.Ai;
 using FinanceManager.Infrastructure.Services.Currencies;
+using FinanceManager.Infrastructure.Services.ExternalServices;
 using FinanceManager.Infrastructure.Services.Stocks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -32,6 +34,7 @@ public static class ServiceCollectionExtension
 {
     public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
     {
+        services.AddSingleton<IExternalServiceConfigService, ExternalServiceConfigService>();
         services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
         services.AddHttpClient<OpenFigiClient>();
         services.AddScoped<IIsinResolver, CachingIsinResolver>();
@@ -46,6 +49,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IFinancialAccountRepository, AccountRepository>()
                 .AddScoped<IUserRepository, UserRepository>()
                 .AddScoped<IRefreshTokenRepository, RefreshTokenRepository>()
+                .AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>()
                 .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()
                 .AddScoped<IAccountEntryRepository<CurrencyAccountEntry>, CurrencyEntryRepository>()
                 .AddScoped<IAccountEntryRepository<BondAccountEntry>, BondEntryRepository>()
@@ -62,6 +66,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<ICsvHeaderMappingRepository, CsvHeaderMappingRepository>()
                 .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()
                 .AddScoped<IAiProviderConfigRepository, AiProviderConfigRepository>()
+                .AddScoped<IExternalServiceConfigRepository, ExternalServiceConfigRepository>()
                 .AddScoped<ILogEntryRepository, LogEntryRepository>()
 
                 .AddSingleton<IInsightsPromptProvider, InsightsPromptProvider>()

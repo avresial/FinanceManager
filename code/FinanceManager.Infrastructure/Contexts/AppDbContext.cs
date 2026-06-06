@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Domain.Entities.Ai;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.ExternalServices;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Entities.Logging;
@@ -18,6 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ActiveUser> ActiveUsers { get; set; } = default!;
     public DbSet<UserDto> Users { get; set; } = default!;
     public DbSet<RefreshToken> RefreshTokens { get; set; } = default!;
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = default!;
     public DbSet<Currency> Currencies { get; set; } = default!;
     public DbSet<StockDetails> StockDetails { get; set; } = default!;
     public DbSet<FinancialAccountBaseDto> Accounts { get; set; } = default!;
@@ -35,6 +37,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AiFallbackEntry> AiFallbackEntries { get; set; } = default!;
     public DbSet<AiProviderModel> AiProviderModels { get; set; } = default!;
     public DbSet<LogEntry> LogEntries { get; set; } = default!;
+    public DbSet<ExternalServiceConfiguration> ExternalServiceConfigurations { get; set; } = default!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,6 +53,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new StockPriceDtoConfiguration());
         modelBuilder.ApplyConfiguration(new UserDtoConfiguration());
         modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
+        modelBuilder.ApplyConfiguration(new PasswordResetTokenConfiguration());
         modelBuilder.ApplyConfiguration(new BondDetailsConfiguration());
         modelBuilder.ApplyConfiguration(new BondCalculationMethodConfiguration());
         modelBuilder.ApplyConfiguration(new CsvHeaderMappingConfiguration());
@@ -59,6 +63,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new AiFallbackEntryConfiguration());
         modelBuilder.ApplyConfiguration(new AiProviderModelConfiguration());
         modelBuilder.ApplyConfiguration(new LogEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new ExternalServiceConfigurationConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }

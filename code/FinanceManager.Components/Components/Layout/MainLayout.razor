@@ -10,7 +10,7 @@
     <Authorized>
         <MudLayout>
             <MudAppBar Dense Elevation="0">
-                <MudIconButton Icon="@Icons.Material.Filled.Menu" Edge="Edge.Start" OnClick="@DrawerToggle" />
+                <MudIconButton Icon="@Icons.Material.Filled.Menu" Edge="Edge.Start" OnClick="@DrawerToggle" aria-label="Toggle navigation menu" />
                 <SectionOutlet SectionName="page-title" />
             </MudAppBar>
 
@@ -21,9 +21,9 @@
                 {
                     <MudText Typo="Typo.body2" Class="px-4 py-1" Style="color: var(--mud-palette-text-secondary);">@_greeting</MudText>
                 }
-                <MudNavMenu>
-                    <MudNavLink Icon="@Icons.Material.Filled.Settings" Href="UserSettings">Settings</MudNavLink>
-                    <MudNavLink Icon="@Icons.Material.Filled.Logout" @onclick=LogOut>Log out</MudNavLink>
+                <MudNavMenu aria-label="Account">
+                    <MudNavLink Icon="@Icons.Material.Filled.Settings" Href="UserSettings" data-testid="nav-settings">Settings</MudNavLink>
+                    <MudNavLink Icon="@Icons.Material.Filled.Logout" @onclick=LogOut data-testid="nav-logout">Log out</MudNavLink>
                 </MudNavMenu>
             </MudDrawer>
 

@@ -2,8 +2,12 @@
 @attribute [Authorize(Roles = "Admin")]
 @layout AdminLayout
 
+@using ApexCharts
+@using FinanceManager.Domain.Entities.Shared
 @using FinanceManager.Domain.Enums
 @using Microsoft.AspNetCore.Authorization
+
+<PageTitle>Admin dashboard</PageTitle>
 
 <MudGrid Spacing="3">
     <MudItem xs="6" md="3">
@@ -11,7 +15,7 @@
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
                     <MudText>Total users count</MudText>
-                    <MudText Typo="Typo.h3" Color="Color.Primary">
+                    <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
                         <b>
                             @if (_userCount.HasValue)
                             {
@@ -39,7 +43,7 @@
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
                     <MudText>Accounts count</MudText>
-                    <MudText Typo="Typo.h3" Color="Color.Primary">
+                    <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
                         <b>
                             @if (_accountsCount.HasValue)
                             {
@@ -67,7 +71,7 @@
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
                     <MudText>Total tracked money</MudText>
-                    <MudText Typo="Typo.h3" Color="Color.Primary">
+                    <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
                         <b>
                             @if (_totalTrackedMoney.HasValue)
                             {
@@ -95,7 +99,7 @@
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
                     <MudText>Todays new visitors</MudText>
-                    <MudText Typo="Typo.h3" Color="Color.Primary">
+                    <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
                         @if (_newVisitorsToday.HasValue)
                         {
                             @_newVisitorsToday
@@ -120,10 +124,16 @@
         <MudCard Outlined>
             <MudCardContent>
                 <MudText>Daily active users</MudText>
-                @if (_dailyActiveUsersSeries is not null)
+                @if (_dailyActiveUsers is not null)
                 {
-                    <MudChart T="double" ChartType="ChartType.Bar" ChartSeries="@_dailyActiveUsersSeries" Width="100%"
-                              Height="300px" ChartOptions=_chartOptions />
+                    <ApexChart TItem="ChartEntryModel" Options="_chartOptions" Height="300">
+                        <ApexPointSeries TItem="ChartEntryModel"
+                                         Items="_dailyActiveUsers"
+                                         Name="Users count"
+                                         SeriesType="SeriesType.Bar"
+                                         XValue="@(e => e.Date.ToString("dd MMM"))"
+                                         YValue="@(e => (decimal)e.Value)" />
+                    </ApexChart>
                 }
                 else
                 {
@@ -139,10 +149,16 @@
         <MudCard Outlined>
             <MudCardContent>
                 <MudText>New users</MudText>
-                @if (_newUsersSeries is not null)
+                @if (_newUsers is not null)
                 {
-                    <MudChart T="double" ChartType="ChartType.Bar" ChartSeries="@_newUsersSeries" Width="100%"
-                              Height="300px" ChartOptions="@_chartOptions" />
+                    <ApexChart TItem="ChartEntryModel" Options="_chartOptions" Height="300">
+                        <ApexPointSeries TItem="ChartEntryModel"
+                                         Items="_newUsers"
+                                         Name="Users count"
+                                         SeriesType="SeriesType.Bar"
+                                         XValue="@(e => e.Date.ToString("dd MMM"))"
+                                         YValue="@(e => (decimal)e.Value)" />
+                    </ApexChart>
                 }
                 else
                 {

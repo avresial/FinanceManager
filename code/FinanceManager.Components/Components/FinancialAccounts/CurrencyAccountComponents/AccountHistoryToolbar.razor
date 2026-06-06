@@ -1,138 +1,75 @@
 @using FinanceManager.Domain.Entities.Shared.Accounts
 
-<div class="px-0 mb-2">
-    <MudStack Spacing="2">
-        @* Row 1 — search takes the remaining width with the primary "Add" action pinned
-           to its right so the one loud control has a home instead of floating. *@
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.NoWrap">
-            <div style="flex: 1 1 auto; min-width: 0;">
-                <MudTextField T="string" Value="SearchText" ValueChanged="OnSearchChanged"
-                              Placeholder="Search transactions, notes, categories…" Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense"
-                              Immediate="true" DebounceInterval="150" Clearable="true" />
-            </div>
+<div class="d-flex align-center gap-2 mb-4 @(IsMobile ? "flex-wrap" : "")"
+     style="@(IsMobile ? "" : "overflow-x: auto; ") min-height: 40px;">
+    @* Search — full-width on mobile so filters wrap to their own row *@
+    <MudTextField T="string" Value="SearchText" ValueChanged="OnSearchChanged"
+                  Placeholder="Search transactions, notes, labels…" Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Immediate="true" DebounceInterval="150" Clearable="true"
+                  Class="flex-grow-1" Style="@(IsMobile ? "flex: 0 0 100%;" : "min-width: 160px;")" />
 
-            @if (IsMobile)
-            {
-                <MudTooltip Text="Add entry">
-                    <MudIconButton Icon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary"
-                                   Size="Size.Medium" OnClick="OnAddEntry" aria-label="Add entry" />
-                </MudTooltip>
-            }
-            else
-            {
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-                           Size="Size.Medium" OnClick="OnAddEntry" Style="flex: 0 0 auto;">
-                    Add entry
+    @* Income / Expense toggle group *@
+    <MudToggleGroup T="TxFilter?" Value="ActiveFilter" ValueChanged="ActiveFilterChanged"
+                    SelectionMode="SelectionMode.ToggleSelection" Color="Color.Default"
+                    Dense="true" Size="Size.Small" Outlined="true" Delimiters="true"
+                    Style="flex-shrink: 0; height: 40px;">
+        <MudToggleItem Value="@((TxFilter?)TxFilter.Income)">Income</MudToggleItem>
+        <MudToggleItem Value="@((TxFilter?)TxFilter.Expense)">Expense</MudToggleItem>
+    </MudToggleGroup>
+
+    @* Category filter *@
+    @if (AvailableLabels is not null && AvailableLabels.Any())
+    {
+        <MudMenu @ref="_labelMenu" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+            <ActivatorContent>
+                <MudButton Variant="Variant.Outlined"
+                           Color="@(SelectedLabels.Count > 0 ? Color.Primary : Color.Default)"
+                           Size="Size.Medium"
+                           StartIcon="@Icons.Material.Filled.FilterList"
+                           EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
+                           Style="text-transform: none; white-space: nowrap; flex-shrink: 0; height: 40px;">
+                    @CategoryButtonText
                 </MudButton>
-            }
-        </MudStack>
+            </ActivatorContent>
+            <ChildContent>
+                <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1" Style="display:block">Filter by category</MudText>
+                @foreach (var label in AvailableLabels)
+                {
+                    <MudMenuItem OnClick="@(() => ToggleLabel(label))" AutoClose="false">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudCheckBox Value="@SelectedLabels.Contains(label)" T="bool" Dense="true" ReadOnly="true" />
+                            <MudText Typo="Typo.body2">@label</MudText>
+                        </MudStack>
+                    </MudMenuItem>
+                }
+                <MudDivider />
+                <div class="d-flex justify-space-between px-2 py-1">
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                               Disabled="@(SelectedLabels.Count == 0)" OnClick="ClearLabels">Clear all</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               OnClick="CloseLabelMenu">Done</MudButton>
+                </div>
+            </ChildContent>
+        </MudMenu>
+    }
 
-        @* Row 2 — filters grouped on the left, a single quiet overflow on the right.
-           Every control here is outlined/quiet so the orange "Add" above is the only accent. *@
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
-            <MudToggleGroup T="string" Value="@TypeValue" ValueChanged="OnTypeChanged"
-                            SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary"
-                            Outlined="true" Dense="true">
-                <MudToggleItem Value="@("All")" Text="All" />
-                <MudToggleItem Value="@("Income")">
-                    <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Class="mr-1" />Income
-                </MudToggleItem>
-                <MudToggleItem Value="@("Expense")">
-                    <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Class="mr-1" />Expense
-                </MudToggleItem>
-            </MudToggleGroup>
-
-            @if (AvailableCategories is not null && AvailableCategories.Any())
+    @* Add entry split button — primary action + Import / Export / Manage in dropdown *@
+    <MudButtonGroup Variant="Variant.Outlined" Color="Color.Default" Size="Size.Medium"
+                    Style="@($"flex-shrink: 0; height: 40px;{(IsMobile ? " margin-left: auto;" : "")}")">
+        <MudButton OnClick="OnAddEntry"
+                   Style="text-transform: none; white-space: nowrap; height: 40px;">Add entry</MudButton>
+        <MudMenu Icon="@Icons.Material.Filled.ArrowDropDown" AnchorOrigin="Origin.BottomRight"
+                 TransformOrigin="Origin.TopRight" Dense="true" Style="align-self: auto;">
+            @if (ShowInsightsButton)
             {
-                <MudMenu Label="@(SelectedCategory ?? "Category")" StartIcon="@Icons.Material.Filled.FilterList"
-                         Variant="Variant.Outlined" Color="@(SelectedCategory is null ? Color.Default : Color.Primary)"
-                         Size="Size.Small" Dense="true" Style="text-transform: none;">
-                    @if (SelectedCategory is not null)
-                    {
-                        <MudMenuItem Icon="@Icons.Material.Filled.Close" OnClick="OnClearCategory">Clear filter</MudMenuItem>
-                        <MudDivider />
-                    }
-                    @foreach (var category in AvailableCategories)
-                    {
-                        <MudMenuItem OnClick="@(() => OnCategoryChanged(category))">@category</MudMenuItem>
-                    }
-                </MudMenu>
+                <MudMenuItem Icon="@Icons.Material.Filled.Insights" OnClick="OnInsightsClick">Insights</MudMenuItem>
+                <MudDivider />
             }
-
-            <div class="ml-auto">
-                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Variant="Variant.Outlined"
-                         Color="Color.Default" Size="Size.Small" Dense="true" aria-label="More actions">
-                    @if (ShowInsightsButton)
-                    {
-                        <MudMenuItem Icon="@Icons.Material.Filled.Insights" OnClick="OnInsightsClick">Insights</MudMenuItem>
-                        <MudDivider />
-                    }
-                    <MudMenuItem Icon="@Icons.Material.Filled.FileUpload" Href="@($"/Import/{AccountId}")">Import</MudMenuItem>
-                    <MudMenuItem Icon="@Icons.Material.Filled.FileDownload" Href="@($"/Export/{AccountId}")">Export</MudMenuItem>
-                    <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="@($"/ManageAccount/{AccountId}")">Manage</MudMenuItem>
-                </MudMenu>
-            </div>
-        </MudStack>
-    </MudStack>
+            <MudMenuItem Icon="@Icons.Material.Filled.FileUpload" Href="@($"/Import/{AccountId}")">Import…</MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.FileDownload" Href="@($"/Export/{AccountId}")">Export CSV</MudMenuItem>
+            <MudDivider />
+            <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="@($"/ManageAccount/{AccountId}")">Manage account</MudMenuItem>
+        </MudMenu>
+    </MudButtonGroup>
 </div>
-
-@code {
-    public enum TxFilter
-    {
-        Income,
-        Expense
-    }
-
-    [Parameter] public required int AccountId { get; set; }
-    [Parameter] public string? SearchText { get; set; }
-    [Parameter] public EventCallback<string?> SearchTextChanged { get; set; }
-    [Parameter] public TxFilter? ActiveFilter { get; set; }
-    [Parameter] public EventCallback<TxFilter?> ActiveFilterChanged { get; set; }
-    [Parameter] public IEnumerable<string>? AvailableCategories { get; set; }
-    [Parameter] public string? SelectedCategory { get; set; }
-    [Parameter] public EventCallback<string?> SelectedCategoryChanged { get; set; }
-    [Parameter] public EventCallback OnAddEntry { get; set; }
-    [Parameter] public bool ShowInsightsButton { get; set; }
-    [Parameter] public EventCallback OnInsightsClick { get; set; }
-    [Parameter] public bool IsMobile { get; set; }
-
-    private async Task OnSearchChanged(string? value)
-    {
-        SearchText = value;
-        await SearchTextChanged.InvokeAsync(value);
-    }
-
-    // The segmented control speaks strings ("All"/"Income"/"Expense"); map to the nullable
-    // TxFilter the rest of the page already understands (null == no type filter).
-    private string TypeValue => ActiveFilter switch
-    {
-        TxFilter.Income => "Income",
-        TxFilter.Expense => "Expense",
-        _ => "All"
-    };
-
-    private async Task OnTypeChanged(string? value)
-    {
-        TxFilter? filter = value switch
-        {
-            "Income" => TxFilter.Income,
-            "Expense" => TxFilter.Expense,
-            _ => null
-        };
-        ActiveFilter = filter;
-        await ActiveFilterChanged.InvokeAsync(filter);
-    }
-
-    private async Task OnCategoryChanged(string category)
-    {
-        SelectedCategory = category;
-        await SelectedCategoryChanged.InvokeAsync(category);
-    }
-
-    private async Task OnClearCategory()
-    {
-        SelectedCategory = null;
-        await SelectedCategoryChanged.InvokeAsync(null);
-    }
-}

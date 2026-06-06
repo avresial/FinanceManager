@@ -3,6 +3,8 @@
 @attribute [Authorize(Roles = "Admin")]
 @layout AdminLayout
 
+<PageTitle>Bonds - Admin</PageTitle>
+
 @if (!_isLoading)
 {
     <MudStack Spacing="2">
@@ -16,7 +18,7 @@
         <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearchChanged" Placeholder="Search by name"
                       Immediate="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true"
                       Class="flex-grow-1" />
-        <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="add" Href="Admin/AddBondDetails"
+        <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="Add bond" Href="Admin/AddBondDetails"
                        Color="Color.Primary" />
     </MudStack>
 
@@ -39,9 +41,9 @@
                 <MudTd DataLabel="Action">
                     <MudStack Row Spacing="1">
                         <MudIconButton Icon="@Icons.Material.Filled.Info" Color="Color.Primary"
-                                       OnClick="@(() => ShowInfo(context))" />
+                                       OnClick="@(() => ShowInfo(context))" aria-label="@($"View details for {context.Name}")" />
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
-                                       OnClick="@(() => DeleteBondDetails(context))" />
+                                       OnClick="@(() => DeleteBondDetails(context))" aria-label="@($"Delete {context.Name}")" />
                     </MudStack>
                 </MudTd>
             </RowTemplate>

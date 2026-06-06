@@ -5,6 +5,8 @@
 @attribute [Authorize(Roles = "Admin")]
 @layout AdminLayout
 
+<PageTitle>Add bond - Admin</PageTitle>
+
 <MudForm @ref="_form" @bind-IsValid="_isValid">
     <MudGrid Spacing="4">
         <MudItem xs="12">
@@ -83,7 +85,7 @@
                             <MudTd DataLabel="Rate">@context.Rate</MudTd>
                             <MudTd DataLabel="Action">
                                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
-                                               OnClick="@(() => RemoveCalculationMethod(context))" />
+                                               OnClick="@(() => RemoveCalculationMethod(context))" aria-label="Remove calculation method" />
                             </MudTd>
                         </RowTemplate>
                     </MudTable>
