@@ -5,7 +5,7 @@ namespace FinanceManager.Components.Components.Features.FinancialAccounts.BondAc
 
 public static class BondImportMapper
 {
-    private static readonly string[] AllowedDateFormats =
+    private static readonly string[] _allowedDateFormats =
     [
         "dd/MM/yyyy HH:mm:ss",
         "dd/MM/yyyy H:mm:ss",
@@ -34,7 +34,7 @@ public static class BondImportMapper
             var value = GetCell(row, valueIndex);
             var bond = GetCell(row, bondIndex);
 
-            if (!DateTime.TryParseExact(posting, AllowedDateFormats, CultureInfo.InvariantCulture,
+            if (!DateTime.TryParseExact(posting, _allowedDateFormats, CultureInfo.InvariantCulture,
                     DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var date)
                 && !DateTime.TryParse(posting, CultureInfo.InvariantCulture,
                     DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out date))

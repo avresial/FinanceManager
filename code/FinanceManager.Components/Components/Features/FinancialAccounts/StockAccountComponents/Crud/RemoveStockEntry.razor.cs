@@ -7,11 +7,11 @@ namespace FinanceManager.Components.Components.Features.FinancialAccounts.StockA
 
 public partial class RemoveStockEntry
 {
-    private DateTime? date = new DateTime();
-    private decimal balanceChange;
-    private Currency currency = DefaultCurrency.PLN;
-    private string isin = "ISIN";
-    private string investmentType = "InvestmentType";
+    private DateTime? _date = new DateTime();
+    private decimal _balanceChange;
+    private Currency _currency = DefaultCurrency.PLN;
+    private string _isin = "ISIN";
+    private string _investmentType = "InvestmentType";
 
     [Parameter] public EventCallback Confirm { get; set; }
     [Parameter] public EventCallback Cancel { get; set; }
@@ -22,10 +22,10 @@ public partial class RemoveStockEntry
 
     protected override void OnParametersSet()
     {
-        date = StockEntry.PostingDate;
-        balanceChange = StockEntry.ValueChange;
-        currency = SettingsService.GetCurrency();
-        isin = StockEntry.Isin;
-        investmentType = StockEntry.InvestmentType.ToString();
+        _date = StockEntry.PostingDate;
+        _balanceChange = StockEntry.ValueChange;
+        _currency = SettingsService.GetCurrency();
+        _isin = StockEntry.Isin;
+        _investmentType = StockEntry.InvestmentType.ToString();
     }
 }

@@ -7,8 +7,8 @@ namespace FinanceManager.Components.Components.Features.FinancialAccounts.Curren
 
 public partial class RemoveCurrencyEntry
 {
-    private DateTime? date = new DateTime();
-    private decimal BalanceChange;
+    private DateTime? _date = new DateTime();
+    private decimal _balanceChange;
     private string _entryType = string.Empty;
     private Currency _currency = DefaultCurrency.PLN;
 
@@ -21,8 +21,8 @@ public partial class RemoveCurrencyEntry
 
     protected override void OnParametersSet()
     {
-        date = CurrencyAccountEntry.PostingDate;
-        BalanceChange = CurrencyAccountEntry.ValueChange;
+        _date = CurrencyAccountEntry.PostingDate;
+        _balanceChange = CurrencyAccountEntry.ValueChange;
         _entryType = CurrencyAccountEntry.GetType().Name;
         _currency = SettingsService.GetCurrency();
     }

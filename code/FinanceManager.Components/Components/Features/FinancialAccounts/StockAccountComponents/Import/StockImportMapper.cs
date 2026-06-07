@@ -4,7 +4,7 @@ namespace FinanceManager.Components.Components.Features.FinancialAccounts.StockA
 
 public static class StockImportMapper
 {
-    private static readonly string[] AllowedDateFormats =
+    private static readonly string[] _allowedDateFormats =
     [
         "dd/MM/yyyy HH:mm:ss",
         "dd/MM/yyyy H:mm:ss",
@@ -32,7 +32,7 @@ public static class StockImportMapper
             var value = GetCell(row, valueIndex);
             var ticker = GetCell(row, tickerIndex).Trim();
 
-            if (!DateTime.TryParseExact(posting, AllowedDateFormats, CultureInfo.InvariantCulture,
+            if (!DateTime.TryParseExact(posting, _allowedDateFormats, CultureInfo.InvariantCulture,
                     DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var date)
                 && !DateTime.TryParse(posting, CultureInfo.InvariantCulture,
                     DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out date))

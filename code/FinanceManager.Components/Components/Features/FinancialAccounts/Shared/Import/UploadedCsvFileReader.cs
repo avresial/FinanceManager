@@ -4,7 +4,7 @@ namespace FinanceManager.Components.Components.Features.FinancialAccounts.Shared
 
 public static class UploadedCsvFileReader
 {
-    private const long MaxFileSize = 20 * 1024 * 1024;
+    private const long _maxFileSize = 20 * 1024 * 1024;
 
     public static async Task<UploadedCsvFileReadResult> ReadAsync(IBrowserFile? file)
     {
@@ -14,7 +14,7 @@ public static class UploadedCsvFileReader
         if (!Path.GetExtension(file.Name).Equals(".csv", StringComparison.InvariantCultureIgnoreCase))
             return UploadedCsvFileReadResult.Failed($"{file.Name} is not a csv file. Select csv file to continue.");
 
-        using var stream = file.OpenReadStream(maxAllowedSize: MaxFileSize);
+        using var stream = file.OpenReadStream(maxAllowedSize: _maxFileSize);
         using StreamReader reader = new(stream);
 
         var content = await reader.ReadToEndAsync();
