@@ -1,23 +1,22 @@
 using FinanceManager.Components.Components.SharedComponents;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents.Crud;
 
-public partial class ManageCurrencyAccount
+public partial class ManageStockAccount : ComponentBase
 {
     private MudForm? _form;
     private bool _success;
     private string[] _errors = [];
-    private CurrencyAccount? _currencyAccount = null;
+
+    private StockAccount? StocktAccount { get; set; } = null;
 
     public string AccountName { get; set; } = string.Empty;
-    public AccountLabel AccountType { get; set; }
 
     [Parameter] public required int AccountId { get; set; }
 
@@ -25,8 +24,8 @@ public partial class ManageCurrencyAccount
     [Inject] public required NavigationManager Navigation { get; set; }
     [Inject] public required IDialogService DialogService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
-    [Inject] public required ILogger<ManageCurrencyAccount> Logger { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
+    [Inject] public required ILogger<ManageStockAccount> Logger { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -35,16 +34,16 @@ public partial class ManageCurrencyAccount
             var user = await LoginService.GetLoggedUser();
             if (user is null) return;
 
-            _currencyAccount = await FinancalAccountService.GetAccount<CurrencyAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            StocktAccount = await FinancalAccountService.GetAccount<StockAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
-            if (_currencyAccount is null) return;
+            if (StocktAccount is null) return;
 
-            AccountName = _currencyAccount.Name;
-            AccountType = _currencyAccount.AccountType;
+            AccountName = StocktAccount.Name;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error loading currency account with ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error loading Stock Account with AccountId {AccountId}", AccountId);
+            _errors = [$"An error occurred while loading the account: {ex.Message}"];
         }
     }
 
@@ -52,28 +51,28 @@ public partial class ManageCurrencyAccount
     {
         try
         {
-
             if (_form is null) return;
             await _form.Validate();
 
             if (!_form.IsValid) return;
-            if (_currencyAccount is null) return;
+            if (StocktAccount is null) return;
             if (string.IsNullOrEmpty(AccountName))
             {
                 _errors = [$"AccountName can not be empty"];
                 return;
             }
 
-            if (_currencyAccount is null) return;
+            if (StocktAccount is null) return;
 
-            CurrencyAccount updatedAccount = new CurrencyAccount(_currencyAccount.UserId, _currencyAccount.AccountId, AccountName, AccountType);
+            StockAccount updatedAccount = new(StocktAccount.UserId, StocktAccount.AccountId, AccountName);
             await FinancalAccountService.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error updating currency account with ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error updating Stock Account with AccountId {AccountId}", AccountId);
+            _errors = [ex.Message];
         }
     }
 
@@ -81,7 +80,6 @@ public partial class ManageCurrencyAccount
     {
         try
         {
-
             var options = new DialogOptions { CloseOnEscapeKey = true };
             var dialog = await DialogService.ShowAsync<ConfirmRemoveDialog>("Simple Dialog", options);
             var result = await dialog.Result;
@@ -95,7 +93,8 @@ public partial class ManageCurrencyAccount
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error removing currency account with ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error removing Stock Account with AccountId {AccountId}", AccountId);
+            _errors = [ex.Message];
         }
     }
 }

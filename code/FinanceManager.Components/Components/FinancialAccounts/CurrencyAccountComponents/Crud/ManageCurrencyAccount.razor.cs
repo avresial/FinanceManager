@@ -1,21 +1,23 @@
 using FinanceManager.Components.Components.SharedComponents;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents.Crud;
 
-public partial class ManageBondAccount
+public partial class ManageCurrencyAccount
 {
     private MudForm? _form;
     private bool _success;
     private string[] _errors = [];
-    private BondAccount? _bondAccount = null;
+    private CurrencyAccount? _currencyAccount = null;
 
     public string AccountName { get; set; } = string.Empty;
+    public AccountLabel AccountType { get; set; }
 
     [Parameter] public required int AccountId { get; set; }
 
@@ -23,7 +25,7 @@ public partial class ManageBondAccount
     [Inject] public required NavigationManager Navigation { get; set; }
     [Inject] public required IDialogService DialogService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
-    [Inject] public required ILogger<ManageBondAccount> Logger { get; set; }
+    [Inject] public required ILogger<ManageCurrencyAccount> Logger { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
     protected override async Task OnParametersSetAsync()
@@ -33,15 +35,16 @@ public partial class ManageBondAccount
             var user = await LoginService.GetLoggedUser();
             if (user is null) return;
 
-            _bondAccount = await FinancalAccountService.GetAccount<BondAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            _currencyAccount = await FinancalAccountService.GetAccount<CurrencyAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
-            if (_bondAccount is null) return;
+            if (_currencyAccount is null) return;
 
-            AccountName = _bondAccount.Name;
+            AccountName = _currencyAccount.Name;
+            AccountType = _currencyAccount.AccountType;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error loading bond account with ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error loading currency account with ID {AccountId}", AccountId);
         }
     }
 
@@ -54,23 +57,23 @@ public partial class ManageBondAccount
             await _form.Validate();
 
             if (!_form.IsValid) return;
-            if (_bondAccount is null) return;
+            if (_currencyAccount is null) return;
             if (string.IsNullOrEmpty(AccountName))
             {
                 _errors = [$"AccountName can not be empty"];
                 return;
             }
 
-            if (_bondAccount is null) return;
+            if (_currencyAccount is null) return;
 
-            BondAccount updatedAccount = new(_bondAccount.UserId, _bondAccount.AccountId, AccountName);
+            CurrencyAccount updatedAccount = new CurrencyAccount(_currencyAccount.UserId, _currencyAccount.AccountId, AccountName, AccountType);
             await FinancalAccountService.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error updating bond account with ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error updating currency account with ID {AccountId}", AccountId);
         }
     }
 
@@ -92,7 +95,7 @@ public partial class ManageBondAccount
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error removing bond account with ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error removing currency account with ID {AccountId}", AccountId);
         }
     }
 }

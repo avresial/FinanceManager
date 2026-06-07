@@ -1,8 +1,8 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Imports;
-using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Readers;
 using Microsoft.AspNetCore.Components;
@@ -11,9 +11,9 @@ using Microsoft.Extensions.Logging;
 using MudBlazor;
 using System.Globalization;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents.Import;
 
-public partial class ImportStockEntriesComponent : ComponentBase
+public partial class ImportBondEntriesComponent : ComponentBase
 {
     private const string _defaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mud-width-full mud-height-full";
     private string _dragClass = _defaultDragClass;
@@ -27,16 +27,18 @@ public partial class ImportStockEntriesComponent : ComponentBase
     private List<string> _headers = [];
     private string? _selectedPostingDateHeader;
     private string? _selectedValueChangeHeader;
-    private string? _selectedTickerHeader;
-    private List<(DateTime PostingDate, decimal ValueChange, string Ticker)> _mappedPreview = [];
+    private string? _selectedBondHeader;
+    private List<(DateTime PostingDate, decimal ValueChange, int BondDetailsId, string BondName)> _mappedPreview = [];
 
-    private StockImportResult? _importResult = null;
+    private BondImportResult? _importResult;
     private string? _uploadedContent;
     private string? _fileName;
     private long _fileSize;
     private int _totalRowCount;
     private bool _conflictsResolved;
     private CancellationTokenSource? _regenCts;
+
+    private List<BondDetails> _possibleBonds = [];
 
     private string _delimiterBacking = ",";
     private string Delimiter
@@ -73,11 +75,12 @@ public partial class ImportStockEntriesComponent : ComponentBase
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
-    [Inject] public required ILogger<ImportStockEntriesComponent> Logger { get; set; }
-    [Inject] public required StockAccountImportHttpClient AccountImportHttpClient { get; set; }
+    [Inject] public required ILogger<ImportBondEntriesComponent> Logger { get; set; }
+    [Inject] public required BondAccountImportHttpClient AccountImportHttpClient { get; set; }
+    [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
     [Inject] public required CsvHeaderMappingHttpClient MappingHttpClient { get; set; }
 
-    private StockEntryConflictResolver? _resolverRef;
+    private BondEntryConflictResolver? _resolverRef;
     private bool HasUnresolvedConflicts =>
         !_conflictsResolved && _importResult is not null &&
         _importResult.Conflicts.Any(c => !c.IsExactMatch);
@@ -111,10 +114,13 @@ public partial class ImportStockEntriesComponent : ComponentBase
     {
         try
         {
-            var user = await LoginService.GetLoggedUser();
-            if (user is null) throw new Exception("User is null");
+            _possibleBonds = await BondDetailsHttpClient.GetAll();
 
-            var existingAccount = await FinancialAccountService.GetAccount<StockAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            var user = await LoginService.GetLoggedUser();
+            if (user is null)
+                throw new Exception("User is null");
+
+            var existingAccount = await FinancialAccountService.GetAccount<BondAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
             if (existingAccount is not null)
                 AccountName = existingAccount.Name;
         }
@@ -207,8 +213,8 @@ public partial class ImportStockEntriesComponent : ComponentBase
                     case "ValueChange":
                         _selectedValueChangeHeader = suggestion.OriginalHeaderName;
                         break;
-                    case "Ticker":
-                        _selectedTickerHeader = suggestion.OriginalHeaderName;
+                    case "Bond":
+                        _selectedBondHeader = suggestion.OriginalHeaderName;
                         break;
                 }
             }
@@ -227,22 +233,22 @@ public partial class ImportStockEntriesComponent : ComponentBase
         {
             if (string.IsNullOrEmpty(_selectedPostingDateHeader) ||
                 string.IsNullOrEmpty(_selectedValueChangeHeader) ||
-                string.IsNullOrEmpty(_selectedTickerHeader))
+                string.IsNullOrEmpty(_selectedBondHeader))
                 return;
 
             var mappingItems = new List<HeaderMappingRequestItemDto>
             {
                 new(_selectedPostingDateHeader, "PostingDate"),
                 new(_selectedValueChangeHeader, "ValueChange"),
-                new(_selectedTickerHeader, "Ticker"),
+                new(_selectedBondHeader, "Bond"),
             };
 
             await MappingHttpClient.SaveMappingsAsync(new SaveMappingRequestDto(mappingItems));
-            Logger?.LogInformation("Stock mapping choices saved successfully");
+            Logger?.LogInformation("Bond mapping choices saved successfully");
         }
         catch (Exception ex)
         {
-            Logger?.LogDebug(ex, "Failed to save stock mapping choices");
+            Logger?.LogDebug(ex, "Failed to save bond mapping choices");
         }
     }
 
@@ -329,7 +335,7 @@ public partial class ImportStockEntriesComponent : ComponentBase
 
         if (string.IsNullOrWhiteSpace(_selectedPostingDateHeader) ||
             string.IsNullOrWhiteSpace(_selectedValueChangeHeader) ||
-            string.IsNullOrWhiteSpace(_selectedTickerHeader))
+            string.IsNullOrWhiteSpace(_selectedBondHeader))
         {
             _step2Complete = false;
             return;
@@ -337,7 +343,7 @@ public partial class ImportStockEntriesComponent : ComponentBase
 
         try
         {
-            _mappedPreview = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, _selectedTickerHeader, _headers, _rawPreview).ToList();
+            _mappedPreview = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, _selectedBondHeader, _headers, _rawPreview).ToList();
         }
         catch (Exception ex)
         {
@@ -371,18 +377,18 @@ public partial class ImportStockEntriesComponent : ComponentBase
             if (string.IsNullOrEmpty(_selectedValueChangeHeader))
                 throw new Exception("Value change header is not selected.");
 
-            if (string.IsNullOrEmpty(_selectedTickerHeader))
-                throw new Exception("Ticker header is not selected.");
+            if (string.IsNullOrEmpty(_selectedBondHeader))
+                throw new Exception("Bond column is not selected.");
 
-            var (Headers, Data) = await ImportStockModelReader.Read(_uploadedContent!, Delimiter, CancellationToken.None) ??
-                throw new Exception("Failed to read data for import.");
+            var (headers, data) = await ImportStockModelReader.Read(_uploadedContent, Delimiter, CancellationToken.None)
+                ?? throw new Exception("Failed to read data for import.");
 
-            var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, _selectedTickerHeader, Headers, Data);
-            var entries = exportResult.Select(x => new StockEntryImportRecordDto(x.PostingDate, x.ValueChange, x.Ticker)).ToList();
+            var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, _selectedBondHeader, headers, data);
+            var entries = exportResult.Select(x => new BondEntryImportRecordDto(x.PostingDate, x.ValueChange, x.BondDetailsId)).ToList();
 
             try
             {
-                _importResult = await AccountImportHttpClient.ImportStockEntriesAsync(new(AccountId, entries));
+                _importResult = await AccountImportHttpClient.ImportBondEntriesAsync(new(AccountId, entries));
 
                 if (_importResult is not null && _importResult.Imported != 0)
                     _summaryInfos.Add($"Imported {_importResult.Imported} entries.");
@@ -440,7 +446,7 @@ public partial class ImportStockEntriesComponent : ComponentBase
         _headers.Clear();
         _selectedPostingDateHeader = null;
         _selectedValueChangeHeader = null;
-        _selectedTickerHeader = null;
+        _selectedBondHeader = null;
         _mappedPreview.Clear();
         _summaryInfos.Clear();
         _warnings.Clear();
@@ -509,7 +515,7 @@ public partial class ImportStockEntriesComponent : ComponentBase
             case 0:
                 if (_step1Complete != true)
                 {
-                    _erorrs.Add($"Can not continue. Select csv file");
+                    _erorrs.Add("Can not continue. Select csv file");
                     arg.Cancel = true;
                 }
                 break;
@@ -522,6 +528,7 @@ public partial class ImportStockEntriesComponent : ComponentBase
                     arg.Cancel = true;
                 break;
         }
+
         await Task.CompletedTask;
     }
 
@@ -531,42 +538,37 @@ public partial class ImportStockEntriesComponent : ComponentBase
         {
             case 1:
                 if (_step1Complete != true)
-                {
                     arg.Cancel = true;
-                }
                 break;
             case 2:
                 if (_step2Complete != true)
-                {
                     arg.Cancel = true;
-                }
                 break;
             case 3:
                 if (_step3Complete != true)
-                {
                     arg.Cancel = true;
-                }
                 break;
         }
+
         await Task.CompletedTask;
     }
 
-    private IEnumerable<(DateTime PostingDate, decimal ValueChange, string Ticker)> GetExportData(
-        string postingDateHeader, string valueChangeHeader, string tickerHeader,
+    private IEnumerable<(DateTime PostingDate, decimal ValueChange, int BondDetailsId, string BondName)> GetExportData(
+        string postingDateHeader, string valueChangeHeader, string bondHeader,
         List<string> headers, List<List<string>> dataToConvert)
     {
         var postingIndex = headers.FindIndex(h => h.Equals(postingDateHeader, StringComparison.OrdinalIgnoreCase));
         var valueIndex = headers.FindIndex(h => h.Equals(valueChangeHeader, StringComparison.OrdinalIgnoreCase));
-        var tickerIndex = headers.FindIndex(h => h.Equals(tickerHeader, StringComparison.OrdinalIgnoreCase));
+        var bondIndex = headers.FindIndex(h => h.Equals(bondHeader, StringComparison.OrdinalIgnoreCase));
 
-        if (postingIndex < 0 || valueIndex < 0 || tickerIndex < 0)
+        if (postingIndex < 0 || valueIndex < 0 || bondIndex < 0)
             throw new Exception("Selected headers are invalid.");
 
         foreach (var row in dataToConvert)
         {
             var posting = postingIndex < row.Count ? row[postingIndex] : string.Empty;
             var value = valueIndex < row.Count ? row[valueIndex] : string.Empty;
-            var ticker = tickerIndex < row.Count ? row[tickerIndex] : string.Empty;
+            var bond = bondIndex < row.Count ? row[bondIndex] : string.Empty;
 
             var allowedFormats = new[]
             {
@@ -592,11 +594,23 @@ public partial class ImportStockEntriesComponent : ComponentBase
             if (!decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var valueChange))
                 throw new Exception($"Could not parse value change: '{value}'");
 
-            ticker = ticker.Trim();
-            if (string.IsNullOrWhiteSpace(ticker))
-                throw new Exception("Ticker value is empty.");
+            if (string.IsNullOrWhiteSpace(bond))
+                throw new Exception("Bond value is empty.");
 
-            yield return (new(date.Ticks, DateTimeKind.Utc), valueChange, ticker);
+            var resolvedBond = ResolveBond(bond);
+            if (resolvedBond is null)
+                throw new Exception($"Could not map bond '{bond}' to existing bond details (id or name).");
+
+            yield return (new(date.Ticks, DateTimeKind.Utc), valueChange, resolvedBond.Id, resolvedBond.Name);
         }
+    }
+
+    private BondDetails? ResolveBond(string bondValue)
+    {
+        var normalized = bondValue.Trim();
+        if (int.TryParse(normalized, out var id))
+            return _possibleBonds.FirstOrDefault(x => x.Id == id);
+
+        return _possibleBonds.FirstOrDefault(x => string.Equals(x.Name, normalized, StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -3,45 +3,30 @@ using FinanceManager.Domain.Entities.Imports;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents.Import;
 
-public partial class BondEntryConflictResolver
+public partial class StockEntryConflictResolver
 {
-    [Inject] public required BondAccountImportHttpClient AccountImportHttpClient { get; set; }
-    [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
-    [Inject] public required ILogger<BondEntryConflictResolver> Logger { get; set; }
+    [Inject] public required StockAccountImportHttpClient AccountImportHttpClient { get; set; }
+    [Inject] public required ILogger<StockEntryConflictResolver> Logger { get; set; }
 
-    [Parameter] public required IReadOnlyCollection<BondImportConflict> Conflicts { get; set; }
+    [Parameter] public required IReadOnlyCollection<StockImportConflict> Conflicts { get; set; }
     [Parameter] public bool SkipExactMatches { get; set; } = true;
     [Parameter] public required string AccountName { get; set; }
     [Parameter] public EventCallback OnResolutionChanged { get; set; }
     [Parameter] public EventCallback OnSubmitted { get; set; }
 
-    private bool _isLoading;
+    private bool _isLoading = false;
     private string? _errorMessage;
     private int _accountId;
     private List<DayGroup> _dayGroups = [];
     private readonly Dictionary<DateTime, ResolveChoice> _dayChoices = new();
-    private Dictionary<int, string> _bondNamesById = [];
 
     public int ResolvedCount => _dayChoices.Count;
     public int UnresolvedCount => Math.Max(0, _dayGroups.Count - _dayChoices.Count);
     public int ImportedCount => _dayChoices.Values.Count(c => c == ResolveChoice.Imported);
     public int ExistingCount => _dayChoices.Values.Count(c => c == ResolveChoice.Existing);
     public bool AllResolved => _dayGroups.Count > 0 && _dayChoices.Count == _dayGroups.Count;
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            var bonds = await BondDetailsHttpClient.GetAll();
-            _bondNamesById = bonds.ToDictionary(x => x.Id, x => x.Name);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogDebug(ex, "Failed to load bond details for name resolution");
-        }
-    }
 
     protected override void OnParametersSet()
     {
@@ -65,7 +50,7 @@ public partial class BondEntryConflictResolver
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error initializing {Component} for account {AccountId}", nameof(BondEntryConflictResolver), _accountId);
+            Logger.LogError(ex, "Error initializing {Component} for account {AccountId}", nameof(StockEntryConflictResolver), _accountId);
         }
         _isLoading = false;
     }
@@ -97,14 +82,14 @@ public partial class BondEntryConflictResolver
         _errorMessage = null;
         try
         {
-            var resolvedImports = new List<ResolvedBondImportConflict>();
+            var resolvedImports = new List<ResolvedStockImportConflict>();
             foreach (var g in _dayGroups)
             {
                 if (!_dayChoices.TryGetValue(g.Date, out var choice)) continue;
                 if (choice != ResolveChoice.Imported) continue;
                 foreach (var c in g.Conflicts)
                 {
-                    resolvedImports.Add(new ResolvedBondImportConflict(
+                    resolvedImports.Add(new ResolvedStockImportConflict(
                         c.AccountId, true, c.ImportEntry, false, c.ExistingEntry?.EntryId));
                 }
             }
@@ -124,10 +109,7 @@ public partial class BondEntryConflictResolver
         StateHasChanged();
     }
 
-    public string GetBondName(int bondDetailsId) =>
-        _bondNamesById.TryGetValue(bondDetailsId, out var name) ? name : $"Bond #{bondDetailsId}";
-
     public enum ResolveChoice { Imported, Existing }
 
-    private sealed record DayGroup(DateTime Date, List<BondImportConflict> Conflicts);
+    private sealed record DayGroup(DateTime Date, List<StockImportConflict> Conflicts);
 }

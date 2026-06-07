@@ -4,7 +4,7 @@ using FinanceManager.Domain.Entities.Imports;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents.Import;
 
 public partial class CurrencyEntryConflictResolver
 {

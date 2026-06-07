@@ -1,18 +1,18 @@
+using FinanceManager.Components.Components.FinancialAccounts.Shared;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Entities.Users;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents.TransactionHistory;
 
-public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDisposable
+public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDisposable
 {
     private readonly Guid _viewportSubscriptionId = Guid.NewGuid();
     private bool _isMobile;
@@ -21,25 +21,27 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private string _selectedRange = "3M";
     private DateTime _dateStart;
     private DateTime _dateEnd = DateTime.UtcNow;
+    private DateRange? _customDateRange;
 
     private bool _addEntryVisibility;
 
     private string? _searchText;
     private AccountHistoryToolbar.TxFilter? _activeFilter;
-    private HashSet<string> _selectedLabels = new(StringComparer.OrdinalIgnoreCase);
-    private IEnumerable<string> _availableLabels = [];
+    private string? _selectedCategory;
+    private IEnumerable<string> _availableCategories = [];
 
     private decimal _currentBalance;
     private decimal _balanceChange;
     private decimal? _balanceChangePercent;
-    private List<CurrencyAccountEntry>? _top5;
-    private List<CurrencyAccountEntry>? _bottom5;
+    private List<BondAccountEntry>? _top5;
+    private List<BondAccountEntry>? _bottom5;
     private Currency _currency = DefaultCurrency.PLN;
-    private string _accountTypeLabel = "Cash account";
+    private readonly string _accountTypeLabel = "Bond account";
+    private readonly List<BondDetails> _bondDetails = [];
     private UserSession? _user;
 
     public bool IsLoading = false;
-    public CurrencyAccount? Account { get; set; }
+    public BondAccount? Account { get; set; }
     public string ErrorMessage { get; set; } = string.Empty;
     public List<TimeSeriesModel> ChartData { get; set; } = [];
 
@@ -50,7 +52,8 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
-    [Inject] public required ILogger<CurrencyAccountDetailsPageContent> Logger { get; set; }
+    [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
+    [Inject] public required ILogger<BondAccountDetailsPageContent> Logger { get; set; }
     [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
 
     public Task ShowAddOverlay()
@@ -99,7 +102,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         return Task.CompletedTask;
     }
 
-    public async Task UpdateInfo()
+    public async Task UpdateInfo(bool refreshChart = true)
     {
         if (Account is null || Account.Entries is null) return;
 
@@ -113,6 +116,15 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
             return;
         }
 
+        foreach (var id in Account.GetStoredBondsIds())
+        {
+            if (_bondDetails.Any(x => x.Id == id)) continue;
+
+            var bond = await BondDetailsHttpClient.GetById(id);
+            if (bond is not null)
+                _bondDetails.Add(bond);
+        }
+
         var filteredEntries = GetFilteredEntries();
 
         var entriesOrdered = filteredEntries.OrderByDescending(x => x.ValueChange).ToList();
@@ -122,33 +134,28 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
                                  .Take(5)
                                  .ToList();
 
-        _currentBalance = Account.Entries.First().Value;
-        _balanceChange = filteredEntries.Sum(e => e.ValueChange);
+        // Text filters (search/income-expense/category) narrow the list and movers only;
+        // the chart and hero balance track the selected date range, so skip the network
+        // refetch when only a filter changed.
+        if (refreshChart)
+            await UpdateChartData();
+
+        // Bond entry Value/ValueChange are unit-denominated, so the hero balance and change
+        // come from the currency-denominated closing-balance series (the same data the chart
+        // plots) rather than from the entries.
+        _currentBalance = ChartData.LastOrDefault()?.Value ?? 0;
+        _balanceChange = ChartData.Count >= 2 ? ChartData.Last().Value - ChartData.First().Value : 0;
 
         var startBalance = _currentBalance - _balanceChange;
         _balanceChangePercent = startBalance == 0 ? null : _balanceChange / startBalance * 100m;
 
-        _availableLabels = Account.Entries
+        _availableCategories = Account.Entries
             .SelectMany(e => e.Labels ?? [])
             .Where(l => l is not null)
             .Select(l => l.Name)
-            .Where(n => !string.IsNullOrWhiteSpace(n))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+            .Distinct()
+            .OrderBy(n => n)
             .ToList();
-
-        _accountTypeLabel = Account.AccountType switch
-        {
-            AccountLabel.Cash => "Cash account",
-            AccountLabel.Stock => "Stock account",
-            AccountLabel.Bond => "Bond account",
-            AccountLabel.Crypto => "Crypto account",
-            AccountLabel.Loan => "Loan account",
-            AccountLabel.RealEstate => "Real estate account",
-            _ => "Account"
-        };
-
-        await UpdateChartData();
     }
 
     protected override async Task OnInitializedAsync()
@@ -178,7 +185,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error during initialization of CurrencyAccountDetailsPageContent for account ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error during initialization of BondAccountDetailsPageContent for account ID {AccountId}", AccountId);
         }
     }
 
@@ -193,7 +200,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error during initialization of CurrencyAccountDetailsPageContent for account ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error during initialization of BondAccountDetailsPageContent for account ID {AccountId}", AccountId);
         }
         finally
         {
@@ -207,8 +214,11 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         {
             if (_user is null) return;
 
-            _dateEnd = DateTime.UtcNow;
-            Account = await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
+            // Preset ranges always end "now"; a custom RANGE keeps the end picked in the hero
+            // (already set by SetDateRangeForSelection), so don't overwrite it here.
+            if (_selectedRange != "Range")
+                _dateEnd = DateTime.UtcNow;
+            Account = await FinancialAccountService.GetAccount<BondAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
 
             if (Account?.Entries is not null)
                 await UpdateInfo();
@@ -216,7 +226,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
-            Logger.LogError(ex, "Error while loading currency account details for account ID {AccountId}", AccountId);
+            Logger.LogError(ex, "Error while loading bond account details for account ID {AccountId}", AccountId);
         }
     }
 
@@ -241,7 +251,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error while refreshing currency account details after data sync for account ID {AccountId}", AccountId);
+                Logger.LogError(ex, "Error while refreshing bond account details after data sync for account ID {AccountId}", AccountId);
             }
         });
     }
@@ -263,69 +273,94 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         }
     }
 
+    private async Task OnCustomDateRangeChanged(DateRange? range)
+    {
+        _customDateRange = range;
+        if (_selectedRange != "Range") return;
+        SetDateRangeForSelection();
+        IsLoading = true;
+        StateHasChanged();
+        try
+        {
+            await UpdateEntries();
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task OnSearchChanged(string? value)
     {
         _searchText = value;
-        await UpdateInfo();
+        await UpdateInfo(refreshChart: false);
         StateHasChanged();
     }
 
     private async Task OnTxFilterChanged(AccountHistoryToolbar.TxFilter? value)
     {
         _activeFilter = value;
-        await UpdateInfo();
+        await UpdateInfo(refreshChart: false);
         StateHasChanged();
     }
 
-    private async Task OnLabelsChanged(HashSet<string> value)
+    private async Task OnCategoryChanged(string? value)
     {
-        _selectedLabels = new HashSet<string>(value, StringComparer.OrdinalIgnoreCase);
-        await UpdateInfo();
+        _selectedCategory = value;
+        await UpdateInfo(refreshChart: false);
         StateHasChanged();
     }
 
     private bool HasActiveFilter =>
-        !string.IsNullOrWhiteSpace(_searchText) || _activeFilter.HasValue || _selectedLabels.Count > 0;
+        !string.IsNullOrWhiteSpace(_searchText) || _activeFilter.HasValue || _selectedCategory is not null;
 
-    private List<CurrencyAccountEntry> GetFilteredEntries()
+    private List<BondAccountEntry> GetFilteredEntries()
     {
         if (Account?.Entries is null) return [];
 
-        IEnumerable<CurrencyAccountEntry> entries = Account.Entries;
+        IEnumerable<BondAccountEntry> entries = Account.Entries;
 
         if (_activeFilter == AccountHistoryToolbar.TxFilter.Income)
             entries = entries.Where(x => x.ValueChange > 0);
         else if (_activeFilter == AccountHistoryToolbar.TxFilter.Expense)
             entries = entries.Where(x => x.ValueChange < 0);
 
-        if (_selectedLabels.Count > 0)
+        if (!string.IsNullOrWhiteSpace(_selectedCategory))
             entries = entries.Where(x => x.Labels is not null
-                && x.Labels.Any(l => _selectedLabels.Contains(l.Name)));
+                && x.Labels.Any(l => string.Equals(l.Name, _selectedCategory, StringComparison.OrdinalIgnoreCase)));
 
         if (!string.IsNullOrWhiteSpace(_searchText))
         {
             var needle = _searchText.Trim();
             entries = entries.Where(x =>
-                (!string.IsNullOrEmpty(x.Description) && x.Description.Contains(needle, StringComparison.OrdinalIgnoreCase))
-                || (!string.IsNullOrEmpty(x.ContractorDetails) && x.ContractorDetails.Contains(needle, StringComparison.OrdinalIgnoreCase))
+                GetBondName(x).Contains(needle, StringComparison.OrdinalIgnoreCase)
                 || (x.Labels is not null && x.Labels.Any(l => l.Name.Contains(needle, StringComparison.OrdinalIgnoreCase))));
         }
 
         return entries.OrderByDescending(x => x.PostingDate).ToList();
     }
 
+    private string GetBondName(BondAccountEntry entry) =>
+        _bondDetails.FirstOrDefault(b => b.Id == entry.BondDetailsId)?.Name ?? string.Empty;
+
     private void SetDateRangeForSelection()
     {
         var today = DateTime.UtcNow;
+        if (_selectedRange == "Range")
+        {
+            _dateStart = _customDateRange?.Start ?? Account?.Start ?? today.AddMonths(-3);
+            _dateEnd = _customDateRange?.End ?? today;
+            return;
+        }
+
         _dateStart = _selectedRange switch
         {
-            "1W" => today.AddDays(-7),
             "1M" => today.AddMonths(-1),
             "3M" => today.AddMonths(-3),
             "6M" => today.AddMonths(-6),
-            "YTD" => new DateTime(today.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            "All" => Account?.Start ?? today.AddYears(-10),
-            _ => today.AddMonths(-3),
+            "1Y" => today.AddYears(-1),
+            _ => today.AddMonths(-3)
         };
         _dateEnd = today;
     }

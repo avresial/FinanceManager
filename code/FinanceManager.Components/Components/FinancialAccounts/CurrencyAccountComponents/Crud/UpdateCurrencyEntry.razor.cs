@@ -1,14 +1,14 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents.Crud;
 
-public partial class UpdateBondEntry
+public partial class UpdateCurrencyEntry
 {
 
     private int? _loadedEntryId = null;
@@ -20,54 +20,42 @@ public partial class UpdateBondEntry
     private DateTime? _postingDate = DateTime.Today;
     private TimeSpan? _time = new TimeSpan(01, 00, 00);
 
-    private decimal? _valueChange = 0;
-
-    private BondDetails? _selectedBond;
-    private List<BondDetails> _possibleBonds = [];
+    private string? _description = string.Empty;
+    private string? _contractorDetails;
+    private decimal? _balanceChange = 0;
 
     private string _labelValue = "Nothing selected";
     private IReadOnlyCollection<string> _selectedLabels = [];
     private List<FinancialLabel> _possibleLabels = [];
 
     [Parameter] public Func<Task>? ActionCompleted { get; set; }
-    [Parameter] public required BondAccount BondAccount { get; set; }
-    [Parameter] public required BondAccountEntry BondAccountEntry { get; set; }
+    [Parameter] public required CurrencyAccount CurrencyAccount { get; set; }
+    [Parameter] public required CurrencyAccountEntry CurrencyAccountEntry { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required FinancialLabelHttpClient FinancialLabelHttpClient { get; set; }
-    [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         var allLabelsCount = await FinancialLabelHttpClient.GetCount();
-        _possibleLabels = (await FinancialLabelHttpClient.Get(0, allLabelsCount)).ToList();
 
-        _possibleBonds = await BondDetailsHttpClient.GetAll();
-        SetSelectedBond();
+        _possibleLabels = (await FinancialLabelHttpClient.Get(0, allLabelsCount)).ToList();
     }
 
     protected override void OnParametersSet()
     {
-        if (_loadedEntryId.HasValue && _loadedEntryId.Value == BondAccountEntry.EntryId) return;
-        _loadedEntryId = BondAccountEntry.EntryId;
+        if (_loadedEntryId.HasValue && _loadedEntryId.Value == CurrencyAccountEntry.EntryId) return;
+        _loadedEntryId = CurrencyAccountEntry.EntryId;
 
         _currency = settingsService.GetCurrency();
-        _postingDate = BondAccountEntry.PostingDate;
-        _time = new TimeSpan(BondAccountEntry.PostingDate.Hour, BondAccountEntry.PostingDate.Minute, BondAccountEntry.PostingDate.Second);
-        _valueChange = BondAccountEntry.ValueChange;
+        _postingDate = CurrencyAccountEntry.PostingDate;
+        _time = new TimeSpan(CurrencyAccountEntry.PostingDate.Hour, CurrencyAccountEntry.PostingDate.Minute, CurrencyAccountEntry.PostingDate.Second);
+        _description = CurrencyAccountEntry.Description;
+        _contractorDetails = CurrencyAccountEntry.ContractorDetails;
+        _balanceChange = CurrencyAccountEntry.ValueChange;
 
-        SetSelectedBond();
-
-        _selectedLabels = BondAccountEntry.Labels?.Select(x => x.Name.ToString()).ToList() ?? [];
-    }
-
-    private void SetSelectedBond()
-    {
-        if (_possibleBonds.Count > 0)
-        {
-            _selectedBond = _possibleBonds.FirstOrDefault(b => b.Id == BondAccountEntry.BondDetailsId);
-        }
+        _selectedLabels = CurrencyAccountEntry.Labels?.Select(x => x.Name.ToString()).ToList() ?? [];
     }
 
     public async Task Update()
@@ -76,20 +64,21 @@ public partial class UpdateBondEntry
         await _form.Validate();
 
         if (!_form.IsValid) return;
-        if (!_valueChange.HasValue) return;
+        if (!_balanceChange.HasValue) return;
         if (!_postingDate.HasValue) return;
         if (!_time.HasValue) return;
-        if (_selectedBond is null) return;
 
         DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes, _time.Value.Seconds);
-        BondAccountEntry bondAccountEntry = new(BondAccountEntry.AccountId, BondAccountEntry.EntryId, date, -1, _valueChange.Value, _selectedBond.Id)
+        CurrencyAccountEntry accountEntry = new(CurrencyAccountEntry.AccountId, CurrencyAccountEntry.EntryId, date, -1, _balanceChange.Value)
         {
+            Description = this._description is null ? string.Empty : this._description,
+            ContractorDetails = this._contractorDetails,
             Labels = GetLabels().ToList()
         };
 
         try
         {
-            await FinancialAccountService.UpdateEntry(bondAccountEntry);
+            await FinancialAccountService.UpdateEntry(accountEntry);
         }
         catch (Exception ex)
         {
@@ -121,4 +110,5 @@ public partial class UpdateBondEntry
         if (ActionCompleted is not null)
             await ActionCompleted();
     }
+
 }

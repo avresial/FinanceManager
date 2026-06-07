@@ -3,16 +3,15 @@ using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
-using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Logging;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents.Crud;
 
-public partial class AddBondEntry : ComponentBase
+public partial class UpdateBondEntry
 {
 
+    private int? _loadedEntryId = null;
     private Currency _currency = DefaultCurrency.PLN;
     private bool _success;
     private string[] _errors = [];
@@ -21,7 +20,7 @@ public partial class AddBondEntry : ComponentBase
     private DateTime? _postingDate = DateTime.Today;
     private TimeSpan? _time = new TimeSpan(01, 00, 00);
 
-    public decimal? ValueChange { get; set; } = null;
+    private decimal? _valueChange = 0;
 
     private BondDetails? _selectedBond;
     private List<BondDetails> _possibleBonds = [];
@@ -29,17 +28,15 @@ public partial class AddBondEntry : ComponentBase
     private string _labelValue = "Nothing selected";
     private IReadOnlyCollection<string> _selectedLabels = [];
     private List<FinancialLabel> _possibleLabels = [];
-    [Parameter] public RenderFragment? CustomButton { get; set; }
+
     [Parameter] public Func<Task>? ActionCompleted { get; set; }
     [Parameter] public required BondAccount BondAccount { get; set; }
+    [Parameter] public required BondAccountEntry BondAccountEntry { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
-    [Inject] public required ISettingsService SettingsService { get; set; }
-    [Inject] public required ILogger<AddBondEntry> Logger { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required FinancialLabelHttpClient FinancialLabelHttpClient { get; set; }
     [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
-
 
     protected override async Task OnInitializedAsync()
     {
@@ -47,66 +44,67 @@ public partial class AddBondEntry : ComponentBase
         _possibleLabels = (await FinancialLabelHttpClient.Get(0, allLabelsCount)).ToList();
 
         _possibleBonds = await BondDetailsHttpClient.GetAll();
+        SetSelectedBond();
     }
+
     protected override void OnParametersSet()
     {
-        _currency = SettingsService.GetCurrency();
+        if (_loadedEntryId.HasValue && _loadedEntryId.Value == BondAccountEntry.EntryId) return;
+        _loadedEntryId = BondAccountEntry.EntryId;
+
+        _currency = settingsService.GetCurrency();
+        _postingDate = BondAccountEntry.PostingDate;
+        _time = new TimeSpan(BondAccountEntry.PostingDate.Hour, BondAccountEntry.PostingDate.Minute, BondAccountEntry.PostingDate.Second);
+        _valueChange = BondAccountEntry.ValueChange;
+
+        SetSelectedBond();
+
+        _selectedLabels = BondAccountEntry.Labels?.Select(x => x.Name.ToString()).ToList() ?? [];
     }
 
-    public async Task Add()
+    private void SetSelectedBond()
     {
-        if (_form is null)
+        if (_possibleBonds.Count > 0)
         {
-            _errors = ["Form initialization error. Please try again."];
-            return;
+            _selectedBond = _possibleBonds.FirstOrDefault(b => b.Id == BondAccountEntry.BondDetailsId);
         }
+    }
 
+    public async Task Update()
+    {
+        if (_form is null) return;
         await _form.Validate();
 
-        if (!_form.IsValid)
-        {
-            _errors = ["Please correct the validation errors before submitting."];
-            return;
-        }
-        if (!ValueChange.HasValue)
-        {
-            _errors = ["Value change is required."];
-            return;
-        }
-        if (!_postingDate.HasValue || !_time.HasValue)
-        {
-            _errors = ["Date and time are required."];
-            return;
-        }
-        if (_selectedBond is null)
-        {
-            _errors = ["Bond selection is required."];
-            return;
-        }
+        if (!_form.IsValid) return;
+        if (!_valueChange.HasValue) return;
+        if (!_postingDate.HasValue) return;
+        if (!_time.HasValue) return;
+        if (_selectedBond is null) return;
 
-        DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes,
-            _time.Value.Seconds);
-
-        BondAccountEntry bondAccountEntry = new(BondAccount.AccountId, -1, date, -1, ValueChange.Value, _selectedBond.Id)
+        DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes, _time.Value.Seconds);
+        BondAccountEntry bondAccountEntry = new(BondAccountEntry.AccountId, BondAccountEntry.EntryId, date, -1, _valueChange.Value, _selectedBond.Id)
         {
             Labels = GetLabels().ToList()
         };
+
         try
         {
-            await FinancialAccountService.AddEntry(bondAccountEntry);
+            await FinancialAccountService.UpdateEntry(bondAccountEntry);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error adding entry");
-            _errors = [ex.Message];
+            _errors = [ex.ToString()];
         }
+
         if (_errors.Length == 0)
         {
-            _ = AccountDataSynchronizationService.AccountChanged();
+            await AccountDataSynchronizationService.AccountChanged();
+
             if (ActionCompleted is not null)
                 await ActionCompleted();
         }
     }
+
     public IEnumerable<FinancialLabel> GetLabels()
     {
         if (_selectedLabels is null || _selectedLabels.Count() == 0) yield break;

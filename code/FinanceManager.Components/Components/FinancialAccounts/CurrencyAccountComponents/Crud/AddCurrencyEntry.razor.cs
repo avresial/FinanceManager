@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents.Crud;
 
 public partial class AddCurrencyEntry : ComponentBase
 {

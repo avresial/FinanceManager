@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 using MudBlazor;
 using System.Globalization;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents.Import;
 
 public partial class ImportCurrencyEntriesComponent : ComponentBase, IAsyncDisposable
 {

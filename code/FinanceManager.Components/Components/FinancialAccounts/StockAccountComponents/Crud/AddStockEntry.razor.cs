@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using MudBlazor;
 using MudBlazor.Utilities;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents.Crud;
 
 public partial class AddStockEntry
 {

@@ -1,20 +1,19 @@
 using FinanceManager.Components.Components.SharedComponents;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 
-namespace FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents;
+namespace FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents.Crud;
 
-public partial class ManageStockAccount : ComponentBase
+public partial class ManageBondAccount
 {
     private MudForm? _form;
     private bool _success;
     private string[] _errors = [];
-
-    private StockAccount? StocktAccount { get; set; } = null;
+    private BondAccount? _bondAccount = null;
 
     public string AccountName { get; set; } = string.Empty;
 
@@ -24,8 +23,8 @@ public partial class ManageStockAccount : ComponentBase
     [Inject] public required NavigationManager Navigation { get; set; }
     [Inject] public required IDialogService DialogService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required ILogger<ManageBondAccount> Logger { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
-    [Inject] public required ILogger<ManageStockAccount> Logger { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -34,16 +33,15 @@ public partial class ManageStockAccount : ComponentBase
             var user = await LoginService.GetLoggedUser();
             if (user is null) return;
 
-            StocktAccount = await FinancalAccountService.GetAccount<StockAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            _bondAccount = await FinancalAccountService.GetAccount<BondAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
-            if (StocktAccount is null) return;
+            if (_bondAccount is null) return;
 
-            AccountName = StocktAccount.Name;
+            AccountName = _bondAccount.Name;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error loading Stock Account with AccountId {AccountId}", AccountId);
-            _errors = [$"An error occurred while loading the account: {ex.Message}"];
+            Logger.LogError(ex, "Error loading bond account with ID {AccountId}", AccountId);
         }
     }
 
@@ -51,28 +49,28 @@ public partial class ManageStockAccount : ComponentBase
     {
         try
         {
+
             if (_form is null) return;
             await _form.Validate();
 
             if (!_form.IsValid) return;
-            if (StocktAccount is null) return;
+            if (_bondAccount is null) return;
             if (string.IsNullOrEmpty(AccountName))
             {
                 _errors = [$"AccountName can not be empty"];
                 return;
             }
 
-            if (StocktAccount is null) return;
+            if (_bondAccount is null) return;
 
-            StockAccount updatedAccount = new(StocktAccount.UserId, StocktAccount.AccountId, AccountName);
+            BondAccount updatedAccount = new(_bondAccount.UserId, _bondAccount.AccountId, AccountName);
             await FinancalAccountService.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error updating Stock Account with AccountId {AccountId}", AccountId);
-            _errors = [ex.Message];
+            Logger.LogError(ex, "Error updating bond account with ID {AccountId}", AccountId);
         }
     }
 
@@ -80,6 +78,7 @@ public partial class ManageStockAccount : ComponentBase
     {
         try
         {
+
             var options = new DialogOptions { CloseOnEscapeKey = true };
             var dialog = await DialogService.ShowAsync<ConfirmRemoveDialog>("Simple Dialog", options);
             var result = await dialog.Result;
@@ -93,8 +92,7 @@ public partial class ManageStockAccount : ComponentBase
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error removing Stock Account with AccountId {AccountId}", AccountId);
-            _errors = [ex.Message];
+            Logger.LogError(ex, "Error removing bond account with ID {AccountId}", AccountId);
         }
     }
 }
