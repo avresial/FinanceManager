@@ -9,6 +9,7 @@ using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net;
 using Xunit;
 
 namespace FinanceManager.IntegrationTests.Controllers;
@@ -111,6 +112,16 @@ public class DiversificationControllerTests(OptionsProvider optionsProvider) : C
 
         Assert.NotNull(result);
         Assert.Empty(result.AssetClasses);
+    }
+
+    [Fact]
+    public async Task GetDiversificationBreakdown_ForOtherUser_ReturnsForbidden()
+    {
+        Authorize("TestUser", 1, UserRole.User);
+
+        var response = await Client.GetAsync($"api/Diversification/2/{_nowUtc:O}/breakdown", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     public override void Dispose()

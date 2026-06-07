@@ -123,6 +123,17 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
     }
 
     [Fact]
+    public async Task Get_ForOtherUser_ReturnsForbidden()
+    {
+        await SeedUser();
+        Authorize("otheruser", _testUserId + 1, UserRole.User);
+
+        var response = await Client.GetAsync($"{Client.BaseAddress}api/User/Get/{_testUserId}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetRecordCapacity_ReturnsCapacity()
     {
         // arrange

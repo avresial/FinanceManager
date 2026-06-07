@@ -9,6 +9,7 @@ using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using System.Net;
 using Xunit;
 
 namespace FinanceManager.IntegrationTests.Controllers;
@@ -100,6 +101,17 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
         Assert.Equal(_testAccountId, account!.AccountId);
         Assert.Equal(_testUserId, account.UserId);
         Assert.Equal(_testAccountName, account.Name);
+    }
+
+    [Fact]
+    public async Task GetById_ForOtherUsersAccount_ReturnsForbidden()
+    {
+        await SeedAccount();
+        Authorize("otheruser", _testUserId + 1, UserRole.User);
+
+        var response = await Client.GetAsync($"api/StockAccount/{_testAccountId}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

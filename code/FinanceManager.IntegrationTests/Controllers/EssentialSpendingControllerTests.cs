@@ -9,6 +9,7 @@ using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using System.Net;
 using Xunit;
 
 namespace FinanceManager.IntegrationTests.Controllers;
@@ -108,6 +109,16 @@ public class EssentialSpendingControllerTests(OptionsProvider optionsProvider) :
         Assert.Equal(2, result.Count);
         Assert.Equal(-50m, result.Single(x => x.DateTime == _nowUtc.AddDays(-1)).Value);
         Assert.Equal(-20m, result.Single(x => x.DateTime == _nowUtc).Value);
+    }
+
+    [Fact]
+    public async Task GetEssentialSpending_ForOtherUser_ReturnsForbidden()
+    {
+        Authorize("TestUser", 1, UserRole.User);
+
+        var response = await Client.GetAsync($"api/EssentialSpending/GetEssentialSpending/2/{DefaultCurrency.USD.Id}/{_nowUtc.AddDays(-1):O}/{_nowUtc:O}/", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     public override void Dispose()

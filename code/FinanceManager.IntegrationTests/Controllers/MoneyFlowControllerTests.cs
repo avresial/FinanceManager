@@ -12,6 +12,7 @@ using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using System.Net;
 using Xunit;
 
 namespace FinanceManager.IntegrationTests.Controllers;
@@ -646,6 +647,16 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         // user1Result should include account 20 (1000) but not account 21
         // user2Result should include account 21 (5000) but not account 20
         Assert.NotEqual(user1Result, user2Result);
+    }
+
+    [Fact]
+    public async Task GetNetWorth_ForOtherUser_ReturnsForbidden()
+    {
+        Authorize("User1", 1, UserRole.User);
+
+        var response = await Client.GetAsync($"api/MoneyFlow/GetNetWorth/2/{DefaultCurrency.USD.Id}/{_nowUtc:O}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     public override void Dispose()

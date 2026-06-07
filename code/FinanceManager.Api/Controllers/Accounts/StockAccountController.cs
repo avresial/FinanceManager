@@ -1,4 +1,4 @@
-﻿using FinanceManager.Api.Helpers;
+using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services.Exports;
 using FinanceManager.Application.Services.Stocks;
@@ -45,8 +45,8 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     {
         var account = await stockAccountRepository.Get(accountId);
         if (account is null) return NoContent();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User))
-            return Forbid("User does not own this account.");
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId))
+            return Forbid();
 
         return Ok(account);
     }
@@ -58,11 +58,9 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate, [FromQuery] int minimumEntryCount = 0)
     {
-        var userId = ApiAuthenticationHelper.GetUserId(User);
-
         var account = await stockAccountRepository.Get(accountId);
         if (account is null) return NotFound();
-        if (account.UserId != userId) return Forbid("User ID does not match the account owner.");
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
         if (minimumEntryCount < 0) return BadRequest("Minimum entry count cannot be negative.");
 
         var loadResult = await stockEntryProvider.GetEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
@@ -77,11 +75,9 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get(int accountId, [FromQuery] DateTime date, [FromQuery] int count, [FromQuery] bool olderThenDate = true)
     {
-        var userId = ApiAuthenticationHelper.GetUserId(User);
-
         var account = await stockAccountRepository.Get(accountId);
         if (account is null) return NotFound();
-        if (account.UserId != userId) return Forbid("User ID does not match the account owner.");
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
         if (count <= 0) return BadRequest("Count must be greater than 0.");
 
         var entries = await stockAccountEntryRepository.Get(accountId, date, count, olderThenDate);
@@ -122,8 +118,8 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     public async Task<IActionResult> Update(UpdateAccount updateAccount)
     {
         var account = await stockAccountRepository.Get(updateAccount.AccountId);
-        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User))
-            return Forbid("User ID does not match the account owner.");
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId))
+            return Forbid();
 
         var result = await stockAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName);
         return Ok(result);
@@ -137,8 +133,8 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     {
         var account = await stockAccountRepository.Get(accountId);
         if (account is null) return NotFound("Account not found.");
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User))
-            return Forbid("User does not own this account.");
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId))
+            return Forbid();
 
         await stockAccountEntryRepository.Delete(accountId);
         return Ok(await stockAccountRepository.Delete(accountId));
@@ -152,8 +148,8 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     {
         var account = await stockAccountRepository.Get(accountId);
         if (account is null) return NotFound();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User))
-            return Forbid("User does not own this account.");
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId))
+            return Forbid();
 
         var csv = await stockAccountCsvExportService.GetExportResults(account.UserId, accountId, startDate, endDate, cancellationToken);
         var fileName = $"stock-account-{accountId}-{startDate:yyyyMMdd}-{endDate:yyyyMMdd}.csv";

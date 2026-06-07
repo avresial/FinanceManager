@@ -11,4 +11,17 @@ public static class ApiAuthenticationHelper
 
         return int.Parse(user.Claims.Single(c => c.Type == ClaimTypes.NameIdentifier).Value);
     }
+
+    public static bool IsAuthenticatedUser(ClaimsPrincipal user, int userId) =>
+        int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var authenticatedUserId) &&
+        authenticatedUserId == userId;
+
+    public static bool IsAccountOwner(ClaimsPrincipal user, int accountUserId) =>
+        IsAuthenticatedUser(user, accountUserId);
+
+    public static bool IsAdmin(ClaimsPrincipal user) =>
+        user.IsInRole("Admin");
+
+    public static bool IsAdminOrAuthenticatedUser(ClaimsPrincipal user, int userId) =>
+        IsAdmin(user) || IsAuthenticatedUser(user, userId);
 }

@@ -1,8 +1,8 @@
+using FinanceManager.Api.Helpers;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace FinanceManager.Api.Controllers;
 
@@ -18,11 +18,7 @@ public class DiversificationController(IDiversificationService diversificationSe
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetDiversificationScore(int userId, DateTime asOfDate, CancellationToken cancellationToken = default)
     {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var authenticatedUserId))
-            return Forbid();
-
-        if (authenticatedUserId != userId)
+        if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId))
             return Forbid();
 
         return Ok(await diversificationService.GetDiversificationScore(userId, asOfDate));
@@ -34,11 +30,7 @@ public class DiversificationController(IDiversificationService diversificationSe
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetDiversificationBreakdown(int userId, DateTime asOfDate, CancellationToken cancellationToken = default)
     {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var authenticatedUserId))
-            return Forbid();
-
-        if (authenticatedUserId != userId)
+        if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId))
             return Forbid();
 
         return Ok(await diversificationService.GetDiversificationBreakdown(userId, asOfDate, cancellationToken));

@@ -5,6 +5,7 @@ using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net;
 using Xunit;
 
 namespace FinanceManager.IntegrationTests.Controllers;
@@ -111,6 +112,16 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
         Assert.NotNull(result);
         Assert.NotEmpty(result);
         Assert.All(result, item => Assert.True(item.Value < 0));
+    }
+
+    [Fact]
+    public async Task GetEndLiabilitiesPerAccount_ForOtherUser_ReturnsForbidden()
+    {
+        Authorize("TestUser", 1, UserRole.User);
+
+        var response = await Client.GetAsync($"api/Liabilities/GetEndLiabilitiesPerAccount/2/{_nowUtc.AddDays(-2):O}/{_nowUtc:O}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     public override void Dispose()

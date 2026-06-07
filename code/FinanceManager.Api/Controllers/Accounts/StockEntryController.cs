@@ -26,7 +26,7 @@ public class StockEntryController(
         var account = await stockAccountRepository.Get(accountId);
 
         if (account is null) return NotFound();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         var entry = await stockAccountEntryRepository.GetYoungest(accountId);
         if (entry is not null)
@@ -44,7 +44,7 @@ public class StockEntryController(
         var account = await stockAccountRepository.Get(accountId);
 
         if (account is null) return NotFound();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         var entry = await stockAccountEntryRepository.GetOldest(accountId);
         if (entry is not null)
@@ -56,8 +56,15 @@ public class StockEntryController(
     [HttpPost("Add")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockAccountEntryDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Add(AddStockAccountEntry addEntry) =>
-        Ok(await stockAccountEntryRepository.Add(addEntry.Entry));
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Add(AddStockAccountEntry addEntry)
+    {
+        var account = await stockAccountRepository.Get(addEntry.Entry.AccountId);
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId))
+            return Forbid();
+
+        return Ok(await stockAccountEntryRepository.Add(addEntry.Entry));
+    }
 
     [HttpDelete("Delete/{accountId:int}/{entryId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
@@ -65,8 +72,8 @@ public class StockEntryController(
     public async Task<IActionResult> Delete(int accountId, int entryId)
     {
         var account = await stockAccountRepository.Get(accountId);
-        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User))
-            return Forbid("User ID does not match the account owner.");
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId))
+            return Forbid();
 
         return Ok(await stockAccountEntryRepository.Delete(accountId, entryId));
     }
@@ -78,8 +85,8 @@ public class StockEntryController(
     public async Task<IActionResult> Update(UpdateStockAccountEntry updateCommand)
     {
         var account = await stockAccountRepository.Get(updateCommand.AccountId);
-        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User))
-            return Forbid("User ID does not match the account owner.");
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId))
+            return Forbid();
 
         var entryToUpdate = await stockAccountEntryRepository.Get(updateCommand.AccountId, updateCommand.EntryId);
 
