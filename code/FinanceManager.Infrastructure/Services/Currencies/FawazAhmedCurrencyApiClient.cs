@@ -1,7 +1,7 @@
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
 
 namespace FinanceManager.Infrastructure.Services.Currencies;
 
@@ -14,10 +14,15 @@ internal sealed class FawazAhmedCurrencyApiClient(
         try
         {
             var response = await httpClient.GetAsync($"https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date:yyyy-MM-dd}/v1/currencies/{fromCurrency.ShortName.ToLower()}.json");
-            var jObject = JObject.Parse(await response.Content.ReadAsStringAsync());
-            var tokenPath = $"$.{fromCurrency.ShortName.ToLower()}.{toCurrency.ShortName.ToLower()}";
+            await using var contentStream = await response.Content.ReadAsStreamAsync();
+            using var document = await JsonDocument.ParseAsync(contentStream);
 
-            return (decimal?)jObject.SelectToken(tokenPath);
+            if (document.RootElement.TryGetProperty(fromCurrency.ShortName.ToLower(), out var fromCurrencyRates) &&
+                fromCurrencyRates.TryGetProperty(toCurrency.ShortName.ToLower(), out var exchangeRate) &&
+                exchangeRate.TryGetDecimal(out var value))
+                return value;
+
+            return null;
         }
         catch (Exception ex)
         {

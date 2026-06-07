@@ -17,7 +17,6 @@
 		<PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-		<PackageReference Include="Newtonsoft.Json" />
 		<PackageReference Include="Scrutor" />
 		<PackageReference Include="System.Linq.Async" />
 	</ItemGroup>
