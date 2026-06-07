@@ -1,0 +1,19 @@
+@page "/Liabilities"
+@using FinanceManager.Components.Components.Features.Dashboard.Cards.Liabilities
+
+<PageTitle>Liabilities</PageTitle>
+
+<MudContainer Class="mt-2">
+    <MudGrid Spacing="2">
+        <MudItem xs="12">
+            <LiabilitiesTimeSeriesCard StartDateTime=StartDate EndDateTime="@EndDate" />
+        </MudItem>
+        
+        <MudItem xs="12" lg="4">
+            <LiabilitiesDistributionOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{2 * _unitHeight}px")" />
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+
+<DashboardDatePicker DateChanged=DateChanged StartingOption="ThisMonth" />
