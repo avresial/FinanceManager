@@ -649,12 +649,25 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         Assert.NotEqual(user1Result, user2Result);
     }
 
-    [Fact]
-    public async Task GetNetWorth_ForOtherUser_ReturnsForbidden()
+    public static TheoryData<Func<DateTime, string>> OtherUserMoneyFlowEndpointUrls => new()
+    {
+        now => $"api/MoneyFlow/GetNetWorth/2/{DefaultCurrency.USD.Id}/{now:O}",
+        now => $"api/MoneyFlow/GetNetWorth/2/{DefaultCurrency.USD.Id}/{now.AddDays(-7):O}/{now:O}",
+        now => $"api/MoneyFlow/GetInflow/2/{DefaultCurrency.USD.Id}/{now.AddDays(-7):O}/{now:O}",
+        now => $"api/MoneyFlow/GetOutflow/2/{DefaultCurrency.USD.Id}/{now.AddDays(-7):O}/{now:O}",
+        now => $"api/MoneyFlow/GetNetCashFlow/2/{DefaultCurrency.USD.Id}/{now.AddDays(-7):O}/{now:O}",
+        now => $"api/MoneyFlow/GetClosingBalance/2/{DefaultCurrency.USD.Id}/{now.AddDays(-7):O}/{now:O}",
+        now => $"api/MoneyFlow/GetLabelsValue?userId=2&start={now.AddDays(-7):O}&end={now:O}",
+        now => $"api/MoneyFlow/GetInvestmentRate?userId=2&start={now.AddDays(-7):O}&end={now:O}",
+    };
+
+    [Theory]
+    [MemberData(nameof(OtherUserMoneyFlowEndpointUrls))]
+    public async Task UserScopedEndpoints_ForOtherUser_ReturnForbidden(Func<DateTime, string> endpointUrl)
     {
         Authorize("User1", 1, UserRole.User);
 
-        var response = await Client.GetAsync($"api/MoneyFlow/GetNetWorth/2/{DefaultCurrency.USD.Id}/{_nowUtc:O}", TestContext.Current.CancellationToken);
+        var response = await Client.GetAsync(endpointUrl(_nowUtc), TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
