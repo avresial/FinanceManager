@@ -1,3 +1,7 @@
-﻿namespace FinanceManager.Application.Commands.Account;
+using System.ComponentModel.DataAnnotations;
 
-public record UpdateFiancialLabel(int Id, string Name);
+namespace FinanceManager.Application.Commands.Account;
+
+public record UpdateFiancialLabel(
+    [Range(1, int.MaxValue)] int Id,
+    [Required, StringLength(256)] string Name);

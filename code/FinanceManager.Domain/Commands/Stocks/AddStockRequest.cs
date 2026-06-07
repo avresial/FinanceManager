@@ -1,3 +1,10 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace FinanceManager.Domain.Commands.Stocks;
 
-public sealed record AddStockRequest(string Ticker, string Name, string Type, string Region, string Currency);
+public sealed record AddStockRequest(
+    [Required, StringLength(32)] string Ticker,
+    [Required, StringLength(256)] string Name,
+    [Required, StringLength(64)] string Type,
+    [Required, StringLength(64)] string Region,
+    [Required, StringLength(3, MinimumLength = 3)] string Currency);

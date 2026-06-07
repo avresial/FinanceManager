@@ -20,7 +20,7 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
 {
     private const int _testUserId = 42;
     private const string _testUserName = "happyuser";
-    private const string _testUserPassword = "oldpw";
+    private const string _testUserPassword = "oldpassword";
     private TestDatabase? _testDatabase;
 
     protected override void ConfigureServices(IServiceCollection services)
@@ -60,7 +60,7 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
     public async Task Add_ReturnsOkTrue()
     {
         // arrange (empty DB ensures login does not exist yet)
-        AddUser cmd = new(_testUserName, "pw", PricingLevel.Basic);
+        AddUser cmd = new("happyuser@example.com", "password", PricingLevel.Basic);
         var userClient = new UserHttpClient(Client);
 
         // act
@@ -75,7 +75,7 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
     {
         // arrange: register once into the empty DB
         const string email = "dupe@example.com";
-        AddUser cmd = new(email, "pw", PricingLevel.Basic, "First", null);
+        AddUser cmd = new(email, "password", PricingLevel.Basic, "First", null);
         Assert.True(await new UserHttpClient(Client).AddUser(cmd));
 
         // act: register the same login again
@@ -91,7 +91,7 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
         // arrange (empty DB ensures login does not exist yet)
         Assert.NotNull(_testDatabase);
         const string email = "happyuser@example.com";
-        AddUser cmd = new(email, "pw", PricingLevel.Basic, "Happy", "User");
+        AddUser cmd = new(email, "password", PricingLevel.Basic, "Happy", "User");
         var userClient = new UserHttpClient(Client);
 
         // act
@@ -156,7 +156,7 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
         // arrange
         await SeedUser();
         Authorize(_testUserName, _testUserId, UserRole.User);
-        UpdatePassword cmd = new(_testUserId, "newpw", _testUserPassword);
+        UpdatePassword cmd = new(_testUserId, "newpassword", _testUserPassword);
         Assert.NotNull(_testDatabase);
         var originalPassword = (await _testDatabase!.Context.Users.FirstAsync(u => u.Id == _testUserId, TestContext.Current.CancellationToken)).Password;
 

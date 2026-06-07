@@ -1,3 +1,6 @@
-﻿namespace FinanceManager.Application.Commands.Account;
+using System.ComponentModel.DataAnnotations;
 
-public record AddFinancialLabel(string Name);
+namespace FinanceManager.Application.Commands.Account;
+
+public record AddFinancialLabel(
+    [Required, StringLength(256)] string Name);

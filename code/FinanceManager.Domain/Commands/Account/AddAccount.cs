@@ -1,3 +1,6 @@
-﻿namespace FinanceManager.Domain.Commands.Account;
+using System.ComponentModel.DataAnnotations;
 
-public record AddAccount(string AccountName);
+namespace FinanceManager.Domain.Commands.Account;
+
+public record AddAccount(
+    [Required, StringLength(256)] string AccountName);

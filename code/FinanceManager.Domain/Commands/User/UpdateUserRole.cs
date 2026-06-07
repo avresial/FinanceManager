@@ -1,5 +1,8 @@
-﻿using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace FinanceManager.Application.Commands.User;
 
-public record UpdateUserRole(int UserId, UserRole UserRole);
+public record UpdateUserRole(
+    [Range(1, int.MaxValue)] int UserId,
+    UserRole UserRole);

@@ -104,8 +104,8 @@ public class LoginControllerTests(OptionsProvider optionsProvider) : ControllerT
     [Fact]
     public async Task Login_AsGuest_AllocatesDistinctSandboxPerLogin()
     {
-        var first = await Client.PostAsJsonAsync("api/Login", new LoginRequestModel("guest", "x"), cancellationToken: TestContext.Current.CancellationToken);
-        var second = await Client.PostAsJsonAsync("api/Login", new LoginRequestModel("guest", "x"), cancellationToken: TestContext.Current.CancellationToken);
+        var first = await Client.PostAsJsonAsync("api/Login", new LoginRequestModel("guest", "anything"), cancellationToken: TestContext.Current.CancellationToken);
+        var second = await Client.PostAsJsonAsync("api/Login", new LoginRequestModel("guest", "anything"), cancellationToken: TestContext.Current.CancellationToken);
 
         var firstBody = await first.Content.ReadFromJsonAsync<LoginResponseModel>(cancellationToken: TestContext.Current.CancellationToken);
         var secondBody = await second.Content.ReadFromJsonAsync<LoginResponseModel>(cancellationToken: TestContext.Current.CancellationToken);

@@ -1,4 +1,6 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace FinanceManager.Api.Controllers.Admin;
 
 public sealed record UpdateFallbackRequest(
-    IReadOnlyList<AiFallbackEntryDto> Entries);
+    [Required, MinLength(1)] IReadOnlyList<AiFallbackEntryDto> Entries);

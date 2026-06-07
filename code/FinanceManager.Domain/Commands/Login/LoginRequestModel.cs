@@ -1,3 +1,7 @@
-﻿namespace FinanceManager.Application.Commands.Login;
+using System.ComponentModel.DataAnnotations;
 
-public record LoginRequestModel(string UserName, string Password);
+namespace FinanceManager.Application.Commands.Login;
+
+public record LoginRequestModel(
+    [Required, StringLength(256)] string UserName,
+    [Required, StringLength(128, MinimumLength = 8)] string Password);

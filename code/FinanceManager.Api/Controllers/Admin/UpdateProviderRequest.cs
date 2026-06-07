@@ -1,7 +1,9 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace FinanceManager.Api.Controllers.Admin;
 
 public sealed record UpdateProviderRequest(
-    string BaseUrl,
-    string? ApiKey,
-    int RequestTimeoutSeconds,
+    [Required, Url, StringLength(2048)] string BaseUrl,
+    [StringLength(4096)] string? ApiKey,
+    [Range(1, 600)] int RequestTimeoutSeconds,
     bool IsEnabled);

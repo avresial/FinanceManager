@@ -1,3 +1,7 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace FinanceManager.Api.Controllers.Admin;
 
-public sealed record UpdateModelRequest(string ModelName, bool IsEnabled);
+public sealed record UpdateModelRequest(
+    [Required, StringLength(256)] string ModelName,
+    bool IsEnabled);

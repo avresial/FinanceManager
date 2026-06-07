@@ -1,3 +1,9 @@
+using FinanceManager.Domain.Validation;
+using System.ComponentModel.DataAnnotations;
+
 namespace FinanceManager.Domain.Dtos;
 
-public record StockEntryImportRecordDto(DateTime PostingDate, decimal ValueChange, string Ticker);
+public record StockEntryImportRecordDto(
+    [ReasonableDate] DateTime PostingDate,
+    decimal ValueChange,
+    [Required, StringLength(32)] string Ticker);
