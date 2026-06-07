@@ -75,7 +75,7 @@ jobs:
 
             Follow the repository's CLAUDE.md: install the .NET 10 SDK, and before committing make sure
             `dotnet build` is clean and the unit tests pass
-            (cd code && dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj).
+            (cd code && dotnet test --project ./FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj).
             Run `dotnet format` on the files you touch. Add a CHANGELOG entry only if your change has a
             user-visible effect.
 

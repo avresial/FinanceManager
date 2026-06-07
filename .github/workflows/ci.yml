@@ -157,7 +157,7 @@ jobs:
       - name: Run unit tests
         run: |
           mkdir -p ${{ github.workspace }}/TestResults
-          ./code/FinanceManager.UnitTests/bin/Release/net10.0/FinanceManager.UnitTests -trx ${{ github.workspace }}/TestResults/unit-test-results.trx
+          ./code/FinanceManager.Tests.Unit/bin/Release/net10.0/FinanceManager.Tests.Unit -trx ${{ github.workspace }}/TestResults/unit-test-results.trx
 
       - name: Publish unit test results
         uses: dorny/test-reporter@v1
@@ -193,8 +193,8 @@ jobs:
       - name: Run integration tests
         run: |
           mkdir -p ${{ github.workspace }}/TestResults
-          chmod +x ./code/FinanceManager.IntegrationTests/bin/Release/net10.0/FinanceManager.IntegrationTests
-          ./code/FinanceManager.IntegrationTests/bin/Release/net10.0/FinanceManager.IntegrationTests -trx ${{ github.workspace }}/TestResults/integration-test-results.trx
+          chmod +x ./code/FinanceManager.Tests.Integration/bin/Release/net10.0/FinanceManager.Tests.Integration
+          ./code/FinanceManager.Tests.Integration/bin/Release/net10.0/FinanceManager.Tests.Integration -trx ${{ github.workspace }}/TestResults/integration-test-results.trx
 
       - name: Publish integration test results
         uses: dorny/test-reporter@v1
@@ -225,13 +225,13 @@ jobs:
       # inlined typeof) can distort the dependency graph, so the maintainers recommend
       # running architecture tests against a Debug build.
       - name: Build architecture tests (Debug)
-        run: dotnet build ./code/FinanceManager.ArchitectureTests/FinanceManager.ArchitectureTests.csproj --configuration Debug
+        run: dotnet build ./code/FinanceManager.Tests.Architecture/FinanceManager.Tests.Architecture.csproj --configuration Debug
 
       - name: Run architecture tests
         run: |
           mkdir -p ${{ github.workspace }}/TestResults
-          chmod +x ./code/FinanceManager.ArchitectureTests/bin/Debug/net10.0/FinanceManager.ArchitectureTests
-          ./code/FinanceManager.ArchitectureTests/bin/Debug/net10.0/FinanceManager.ArchitectureTests -trx ${{ github.workspace }}/TestResults/architecture-test-results.trx
+          chmod +x ./code/FinanceManager.Tests.Architecture/bin/Debug/net10.0/FinanceManager.Tests.Architecture
+          ./code/FinanceManager.Tests.Architecture/bin/Debug/net10.0/FinanceManager.Tests.Architecture -trx ${{ github.workspace }}/TestResults/architecture-test-results.trx
 
       - name: Publish architecture test results
         uses: dorny/test-reporter@v1
