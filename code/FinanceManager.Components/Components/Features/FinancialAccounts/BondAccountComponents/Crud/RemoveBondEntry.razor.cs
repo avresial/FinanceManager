@@ -7,8 +7,8 @@ namespace FinanceManager.Components.Components.Features.FinancialAccounts.BondAc
 
 public partial class RemoveBondEntry
 {
-    private DateTime? date = new DateTime();
-    private decimal ValueChange;
+    private DateTime? _date = new DateTime();
+    private decimal _valueChange;
     private Currency _currency = DefaultCurrency.PLN;
 
     [Parameter] public EventCallback Confirm { get; set; }
@@ -20,8 +20,8 @@ public partial class RemoveBondEntry
 
     protected override void OnParametersSet()
     {
-        date = BondAccountEntry.PostingDate;
-        ValueChange = BondAccountEntry.ValueChange;
+        _date = BondAccountEntry.PostingDate;
+        _valueChange = BondAccountEntry.ValueChange;
         _currency = SettingsService.GetCurrency();
     }
 }

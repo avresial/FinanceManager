@@ -35,8 +35,8 @@ The project's `code/global.json` opts into the new Microsoft.Testing.Platform ru
 
 ```bash
 cd code
-dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
-dotnet test --project ./FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
+dotnet test --project ./FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj
+dotnet test --project ./FinanceManager.Tests.Integration/FinanceManager.Tests.Integration.csproj
 ```
 
 If you see *"Testing with VSTest target is no longer supported"* or *"MSBUILD : error MSB1001: Unknown switch ... --project"*, you're outside `code/`. `cd code` and retry.

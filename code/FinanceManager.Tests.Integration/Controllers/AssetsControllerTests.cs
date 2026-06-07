@@ -184,12 +184,25 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         Assert.True(result.HasPartialSalaryHistory);
     }
 
-    [Fact]
-    public async Task GetEndAssetsPerAccount_ForOtherUser_ReturnsForbidden()
+    public static TheoryData<Func<DateTime, string>> OtherUserAssetEndpointUrls => new()
+    {
+        now => "api/Assets/IsAnyAccountWithAssets/2",
+        now => $"api/Assets/GetEndAssetsPerAccount/2/{DefaultCurrency.USD.Id}/{now:O}",
+        now => $"api/Assets/GetEndAssetsPerType/2/{DefaultCurrency.USD.Id}/{now:O}",
+        now => $"api/Assets/GetAssetsTimeSeries/2/{DefaultCurrency.USD.Id}/{now.AddDays(-2):O}/{now:O}",
+        now => $"api/Assets/GetAssetsTimeSeries/2/{DefaultCurrency.USD.Id}/{now.AddDays(-2):O}/{now:O}/{InvestmentType.Stock}",
+        now => $"api/Assets/GetInvestmentPaycheckEstimate/2/{DefaultCurrency.USD.Id}/{now:O}",
+        now => $"api/Assets/GetUnrealizedGainLossPerAccount/2/{DefaultCurrency.USD.Id}/{now:O}",
+        now => $"api/Assets/GetUnrealizedGainLossPerInstrument/2/{DefaultCurrency.USD.Id}/{now:O}",
+    };
+
+    [Theory]
+    [MemberData(nameof(OtherUserAssetEndpointUrls))]
+    public async Task UserScopedEndpoints_ForOtherUser_ReturnForbidden(Func<DateTime, string> endpointUrl)
     {
         Authorize("TestUser", 1, UserRole.User);
 
-        var response = await Client.GetAsync($"api/Assets/GetEndAssetsPerAccount/2/{DefaultCurrency.USD.Id}/{_nowUtc:O}", TestContext.Current.CancellationToken);
+        var response = await Client.GetAsync(endpointUrl(_nowUtc), TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
