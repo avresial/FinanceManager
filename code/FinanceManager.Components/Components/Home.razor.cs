@@ -1,4 +1,4 @@
-﻿using FinanceManager.Components.Services;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -13,7 +13,7 @@ public partial class Home : ComponentBase
     [Inject] public required ILogger<Home> Logger { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required NavigationManager Navigation { get; set; }
-    [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
 
@@ -31,7 +31,7 @@ public partial class Home : ComponentBase
         Dictionary<int, Type>? availableAccounts = null;
         try
         {
-            availableAccounts = await FinancalAccountService.GetAvailableAccounts();
+            availableAccounts = await FinancialAccountService.GetAvailableAccounts();
         }
         catch (Exception ex)
         {
@@ -42,8 +42,8 @@ public partial class Home : ComponentBase
         {
             try
             {
-                FinancalAccountService.InitializeMock();
-                availableAccounts = await FinancalAccountService.GetAvailableAccounts();
+                FinancialAccountService.InitializeMock();
+                availableAccounts = await FinancialAccountService.GetAvailableAccounts();
             }
             catch (Exception ex)
             {

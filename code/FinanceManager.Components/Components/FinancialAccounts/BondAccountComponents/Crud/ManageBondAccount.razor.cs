@@ -19,7 +19,7 @@ public partial class ManageBondAccount
 
     [Parameter] public required int AccountId { get; set; }
 
-    [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required NavigationManager Navigation { get; set; }
     [Inject] public required IDialogService DialogService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -33,7 +33,7 @@ public partial class ManageBondAccount
             var user = await LoginService.GetLoggedUser();
             if (user is null) return;
 
-            _bondAccount = await FinancalAccountService.GetAccount<BondAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            _bondAccount = await FinancialAccountService.GetAccount<BondAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
             if (_bondAccount is null) return;
 
@@ -64,7 +64,7 @@ public partial class ManageBondAccount
             if (_bondAccount is null) return;
 
             BondAccount updatedAccount = new(_bondAccount.UserId, _bondAccount.AccountId, AccountName);
-            await FinancalAccountService.UpdateAccount(updatedAccount);
+            await FinancialAccountService.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");
         }
@@ -85,7 +85,7 @@ public partial class ManageBondAccount
 
             if (result is not null && !result.Canceled)
             {
-                await FinancalAccountService.RemoveAccount(AccountId);
+                await FinancialAccountService.RemoveAccount(AccountId);
                 Navigation.NavigateTo($"");
                 await AccountDataSynchronizationService.AccountChanged();
             }

@@ -1,14 +1,14 @@
-﻿@using FinanceManager.Domain.Entities
+@using FinanceManager.Domain.Entities
 @using FinanceManager.Domain.Entities.Currencies
 @using FinanceManager.Domain.Entities.Stocks
 
-@if (InvestmentEntry is not null)
+@if (StockEntry is not null)
 {
     <MudContainer MaxWidth="MaxWidth.Medium">
         <MudGrid Justify="Justify.Center">
             <MudItem xs="12" sm="12" md="12">
                 <MudText Typo="Typo.h4">Remove</MudText>
-                <MudText Typo="Typo.subtitle1">@InvestmentAccountName</MudText>
+                <MudText Typo="Typo.subtitle1">@StockAccountName</MudText>
             </MudItem>
 
             <MudItem xs="12" sm="6">
@@ -38,20 +38,20 @@
     private string isin = "ISIN";
     private string investmentType = "InvestmentType";
 
-    [Parameter] public required Func<Task> Confirm { get; set; }
-    [Parameter] public required Func<Task> Cancel { get; set; }
-    [Parameter] public required string InvestmentAccountName { get; set; }
-    [Parameter] public required StockAccountEntry InvestmentEntry { get; set; }
+    [Parameter] public EventCallback Confirm { get; set; }
+    [Parameter] public EventCallback Cancel { get; set; }
+    [Parameter] public required string StockAccountName { get; set; }
+    [Parameter] public required StockAccountEntry StockEntry { get; set; }
 
     [Inject] public required ISettingsService SettingsService { get; set; }
 
     protected override void OnParametersSet()
     {
-        date = InvestmentEntry.PostingDate;
-        balanceChange = InvestmentEntry.ValueChange;
+        date = StockEntry.PostingDate;
+        balanceChange = StockEntry.ValueChange;
         currency = SettingsService.GetCurrency();
-        isin = InvestmentEntry.Isin;
-        investmentType = InvestmentEntry.InvestmentType.ToString();
+        isin = StockEntry.Isin;
+        investmentType = StockEntry.InvestmentType.ToString();
 
         base.OnParametersSet();
     }

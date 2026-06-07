@@ -30,7 +30,7 @@ public partial class AddBondEntry : ComponentBase
     private IReadOnlyCollection<string> _selectedLabels = [];
     private List<FinancialLabel> _possibleLabels = [];
     [Parameter] public RenderFragment? CustomButton { get; set; }
-    [Parameter] public Func<Task>? ActionCompleted { get; set; }
+    [Parameter] public EventCallback ActionCompleted { get; set; }
     [Parameter] public required BondAccount BondAccount { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
@@ -103,8 +103,7 @@ public partial class AddBondEntry : ComponentBase
         if (_errors.Length == 0)
         {
             _ = AccountDataSynchronizationService.AccountChanged();
-            if (ActionCompleted is not null)
-                await ActionCompleted();
+            await ActionCompleted.InvokeAsync();
         }
     }
     public IEnumerable<FinancialLabel> GetLabels()
@@ -120,7 +119,6 @@ public partial class AddBondEntry : ComponentBase
     }
     public async Task Cancel()
     {
-        if (ActionCompleted is not null)
-            await ActionCompleted();
+        await ActionCompleted.InvokeAsync();
     }
 }

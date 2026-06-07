@@ -1,4 +1,4 @@
-﻿@using FinanceManager.Domain.Entities
+@using FinanceManager.Domain.Entities
 @using FinanceManager.Domain.Entities.Currencies
 @using FinanceManager.Domain.Entities.FinancialAccounts.Currencies
 @using FinanceManager.Domain.Enums
@@ -13,7 +13,7 @@
                 <MudText Typo="Typo.subtitle1">@CurrencyAccountName</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text" ReadOnly />
+                <MudAutocomplete @bind-Value="_entryType" Label="Entry type" Variant="Variant.Text" ReadOnly />
             </MudItem>
         
             <MudItem xs="12" sm="6">
@@ -39,11 +39,11 @@
 @code {
     private DateTime? date = new DateTime();
     private decimal BalanceChange = 0;
-    private string ExpenseType = string.Empty;
+    private string _entryType = string.Empty;
     private Currency _currency = DefaultCurrency.PLN;
 
-    [Parameter] public required Func<Task> Confirm { get; set; }
-    [Parameter] public required Func<Task> Cancel { get; set; }
+    [Parameter] public EventCallback Confirm { get; set; }
+    [Parameter] public EventCallback Cancel { get; set; }
     [Parameter] public required string CurrencyAccountName { get; set; }
     [Parameter] public required CurrencyAccountEntry CurrencyAccountEntry { get; set; }
     
@@ -53,6 +53,7 @@
     {
         date = CurrencyAccountEntry.PostingDate;
         BalanceChange = CurrencyAccountEntry.ValueChange;
+        _entryType = CurrencyAccountEntry.GetType().Name;
         _currency = SettingsService.GetCurrency();
 
         base.OnParametersSet();

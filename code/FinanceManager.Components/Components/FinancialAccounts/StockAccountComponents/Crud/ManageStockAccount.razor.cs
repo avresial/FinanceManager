@@ -14,13 +14,13 @@ public partial class ManageStockAccount : ComponentBase
     private bool _success;
     private string[] _errors = [];
 
-    private StockAccount? StocktAccount { get; set; } = null;
+    private StockAccount? _stockAccount;
 
     public string AccountName { get; set; } = string.Empty;
 
     [Parameter] public required int AccountId { get; set; }
 
-    [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required NavigationManager Navigation { get; set; }
     [Inject] public required IDialogService DialogService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -34,11 +34,11 @@ public partial class ManageStockAccount : ComponentBase
             var user = await LoginService.GetLoggedUser();
             if (user is null) return;
 
-            StocktAccount = await FinancalAccountService.GetAccount<StockAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            _stockAccount = await FinancialAccountService.GetAccount<StockAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
-            if (StocktAccount is null) return;
+            if (_stockAccount is null) return;
 
-            AccountName = StocktAccount.Name;
+            AccountName = _stockAccount.Name;
         }
         catch (Exception ex)
         {
@@ -55,17 +55,17 @@ public partial class ManageStockAccount : ComponentBase
             await _form.Validate();
 
             if (!_form.IsValid) return;
-            if (StocktAccount is null) return;
+            if (_stockAccount is null) return;
             if (string.IsNullOrEmpty(AccountName))
             {
                 _errors = [$"AccountName can not be empty"];
                 return;
             }
 
-            if (StocktAccount is null) return;
+            if (_stockAccount is null) return;
 
-            StockAccount updatedAccount = new(StocktAccount.UserId, StocktAccount.AccountId, AccountName);
-            await FinancalAccountService.UpdateAccount(updatedAccount);
+            StockAccount updatedAccount = new(_stockAccount.UserId, _stockAccount.AccountId, AccountName);
+            await FinancialAccountService.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");
         }
@@ -86,7 +86,7 @@ public partial class ManageStockAccount : ComponentBase
 
             if (result is not null && !result.Canceled)
             {
-                await FinancalAccountService.RemoveAccount(AccountId);
+                await FinancialAccountService.RemoveAccount(AccountId);
                 Navigation.NavigateTo($"");
                 await AccountDataSynchronizationService.AccountChanged();
             }

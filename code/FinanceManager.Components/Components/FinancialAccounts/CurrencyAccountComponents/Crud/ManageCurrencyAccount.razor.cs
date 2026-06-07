@@ -21,7 +21,7 @@ public partial class ManageCurrencyAccount
 
     [Parameter] public required int AccountId { get; set; }
 
-    [Inject] public required IFinancialAccountService FinancalAccountService { get; set; }
+    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required NavigationManager Navigation { get; set; }
     [Inject] public required IDialogService DialogService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -35,7 +35,7 @@ public partial class ManageCurrencyAccount
             var user = await LoginService.GetLoggedUser();
             if (user is null) return;
 
-            _currencyAccount = await FinancalAccountService.GetAccount<CurrencyAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
+            _currencyAccount = await FinancialAccountService.GetAccount<CurrencyAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
             if (_currencyAccount is null) return;
 
@@ -67,7 +67,7 @@ public partial class ManageCurrencyAccount
             if (_currencyAccount is null) return;
 
             CurrencyAccount updatedAccount = new CurrencyAccount(_currencyAccount.UserId, _currencyAccount.AccountId, AccountName, AccountType);
-            await FinancalAccountService.UpdateAccount(updatedAccount);
+            await FinancialAccountService.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");
         }
@@ -88,7 +88,7 @@ public partial class ManageCurrencyAccount
 
             if (result is not null && !result.Canceled)
             {
-                await FinancalAccountService.RemoveAccount(AccountId);
+                await FinancialAccountService.RemoveAccount(AccountId);
                 Navigation.NavigateTo($"");
                 await AccountDataSynchronizationService.AccountChanged();
             }

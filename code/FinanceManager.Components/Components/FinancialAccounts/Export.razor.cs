@@ -1,8 +1,5 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.Stocks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
@@ -14,20 +11,13 @@ public partial class Export : ComponentBase
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
 
-    // Backwards-compatible alias with the previous misspelled name.
-    public IFinancialAccountService FinancalAccountService
-    {
-        get => FinancialAccountService;
-        set => FinancialAccountService = value;
-    }
-
     [Inject] public required HttpClient HttpClient { get; set; }
     [Inject] public required IJSRuntime JSRuntime { get; set; }
     [Inject] public required CurrencyAccountHttpClient CurrencyAccountHttpClient { get; set; }
     [Inject] public required StockAccountHttpClient StockAccountHttpClient { get; set; }
     [Inject] public required BondAccountHttpClient BondAccountHttpClient { get; set; }
 
-    public Type? accountType = null;
+    public FinancialAccountTypeDescriptor? AccountDescriptor { get; private set; }
     public string AccountName { get; set; } = string.Empty;
     public string ErrorMessage { get; set; } = string.Empty;
 
@@ -42,7 +32,7 @@ public partial class Export : ComponentBase
 
     protected override async Task OnParametersSetAsync()
     {
-        accountType = null;
+        AccountDescriptor = null;
         AccountName = string.Empty;
         ErrorMessage = string.Empty;
         _startDate = null;
@@ -56,10 +46,16 @@ public partial class Export : ComponentBase
     {
         try
         {
-            var accounts = await FinancalAccountService.GetAvailableAccounts();
-            if (accounts.ContainsKey(AccountId))
+            var accounts = await FinancialAccountService.GetAvailableAccounts();
+            if (accounts.TryGetValue(AccountId, out var accountType))
             {
-                accountType = accounts[AccountId];
+                AccountDescriptor = FinancialAccountTypeDescriptor.FromType(accountType);
+                if (AccountDescriptor is null)
+                {
+                    ErrorMessage = $"{accountType} type is not supported.";
+                    return;
+                }
+
                 await UpdateAccountName();
                 await UpdateAvailableDateRange();
             }
@@ -74,21 +70,21 @@ public partial class Export : ComponentBase
 
     private async Task UpdateAccountName()
     {
-        if (accountType == typeof(CurrencyAccount))
+        if (AccountDescriptor?.Kind == FinancialAccountKind.Currency)
         {
             var account = await CurrencyAccountHttpClient.GetAccountAsync(AccountId);
             AccountName = account?.Name ?? string.Empty;
             return;
         }
 
-        if (accountType == typeof(StockAccount))
+        if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
         {
             var account = await StockAccountHttpClient.GetAccountAsync(AccountId);
             AccountName = account?.Name ?? string.Empty;
             return;
         }
 
-        if (accountType == typeof(BondAccount))
+        if (AccountDescriptor?.Kind == FinancialAccountKind.Bond)
         {
             var account = await BondAccountHttpClient.GetAccountAsync(AccountId);
             AccountName = account?.Name ?? string.Empty;
@@ -112,20 +108,12 @@ public partial class Export : ComponentBase
 
     private string GetAccountTypeLabel()
     {
-        if (accountType == typeof(CurrencyAccount)) return "Currency";
-        if (accountType == typeof(StockAccount)) return "Stock";
-        if (accountType == typeof(BondAccount)) return "Bond";
-
-        return "Unknown";
+        return AccountDescriptor?.Label ?? "Unknown";
     }
 
     private string? GetExportEndpoint()
     {
-        if (accountType == typeof(CurrencyAccount)) return $"api/CurrencyAccount/export/{AccountId}";
-        if (accountType == typeof(StockAccount)) return $"api/StockAccount/export/{AccountId}";
-        if (accountType == typeof(BondAccount)) return $"api/BondAccount/export/{AccountId}";
-
-        return null;
+        return AccountDescriptor?.GetExportEndpoint(AccountId);
     }
 
     private async Task DownloadSelected()

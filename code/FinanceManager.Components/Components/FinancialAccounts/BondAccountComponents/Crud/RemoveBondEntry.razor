@@ -37,8 +37,8 @@
     private decimal ValueChange = 0;
     private Currency _currency = DefaultCurrency.PLN;
 
-    [Parameter] public required Func<Task> Confirm { get; set; }
-    [Parameter] public required Func<Task> Cancel { get; set; }
+    [Parameter] public EventCallback Confirm { get; set; }
+    [Parameter] public EventCallback Cancel { get; set; }
     [Parameter] public required string BondAccountName { get; set; }
     [Parameter] public required BondAccountEntry BondAccountEntry { get; set; }
 

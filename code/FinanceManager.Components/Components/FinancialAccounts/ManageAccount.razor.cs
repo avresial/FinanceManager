@@ -1,3 +1,3 @@
 namespace FinanceManager.Components.Components.FinancialAccounts;
 
-public partial class Import;
+public partial class ManageAccount;

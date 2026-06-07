@@ -28,7 +28,7 @@ public partial class UpdateCurrencyEntry
     private IReadOnlyCollection<string> _selectedLabels = [];
     private List<FinancialLabel> _possibleLabels = [];
 
-    [Parameter] public Func<Task>? ActionCompleted { get; set; }
+    [Parameter] public EventCallback ActionCompleted { get; set; }
     [Parameter] public required CurrencyAccount CurrencyAccount { get; set; }
     [Parameter] public required CurrencyAccountEntry CurrencyAccountEntry { get; set; }
 
@@ -89,8 +89,7 @@ public partial class UpdateCurrencyEntry
         {
             await AccountDataSynchronizationService.AccountChanged();
 
-            if (ActionCompleted is not null)
-                await ActionCompleted();
+            await ActionCompleted.InvokeAsync();
         }
     }
 
@@ -107,8 +106,7 @@ public partial class UpdateCurrencyEntry
     }
     public async Task Cancel()
     {
-        if (ActionCompleted is not null)
-            await ActionCompleted();
+        await ActionCompleted.InvokeAsync();
     }
 
 }

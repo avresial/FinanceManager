@@ -83,13 +83,13 @@ else if (IsLoading || Account.Entries?.Any() == true)
 
     <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
         <MudPaper Class="p-5">
-            <AddStockEntry InvestmentAccount=Account ActionCompleted="HideAddOverlay" Tickers=@_availableStocks />
+            <AddStockEntry StockAccount=Account ActionCompleted="HideAddOverlay" Tickers=@_availableStocks />
         </MudPaper>
     </MudOverlay>
 }
 else if (Account.Entries?.Any() != true)
 {
-    <AddStockEntry InvestmentAccount=Account ActionCompleted="HideAddOverlay" Tickers=@_availableStocks>
+    <AddStockEntry StockAccount=Account ActionCompleted="HideAddOverlay" Tickers=@_availableStocks>
         <CustomButton>
             <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary" href="@($"/Import/{Account.AccountId}")">
                 Import

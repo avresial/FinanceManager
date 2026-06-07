@@ -75,13 +75,13 @@
 
 <MudOverlay @bind-Visible="_updateEntryVisibility" DarkBackground="true">
     <MudPaper Class="p-5">
-        <UpdateStockEntry InvestmentAccount="Account" InvestmentEntry="Entry" ActionCompleted="HideOverlay" />
+        <UpdateStockEntry StockAccount="Account" StockEntry="Entry" ActionCompleted="HideOverlay" />
     </MudPaper>
 </MudOverlay>
 
 <MudOverlay @bind-Visible="_removeEntryVisibility" DarkBackground="true">
     <MudPaper Class="p-5">
-        <RemoveStockEntry InvestmentAccountName="@Account.Name" InvestmentEntry="Entry"
+        <RemoveStockEntry StockAccountName="@Account.Name" StockEntry="Entry"
                           Cancel="HideOverlay" Confirm="ConfirmRemove" />
     </MudPaper>
 </MudOverlay>

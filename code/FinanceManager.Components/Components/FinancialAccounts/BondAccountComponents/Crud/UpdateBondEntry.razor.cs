@@ -29,7 +29,7 @@ public partial class UpdateBondEntry
     private IReadOnlyCollection<string> _selectedLabels = [];
     private List<FinancialLabel> _possibleLabels = [];
 
-    [Parameter] public Func<Task>? ActionCompleted { get; set; }
+    [Parameter] public EventCallback ActionCompleted { get; set; }
     [Parameter] public required BondAccount BondAccount { get; set; }
     [Parameter] public required BondAccountEntry BondAccountEntry { get; set; }
 
@@ -100,8 +100,7 @@ public partial class UpdateBondEntry
         {
             await AccountDataSynchronizationService.AccountChanged();
 
-            if (ActionCompleted is not null)
-                await ActionCompleted();
+            await ActionCompleted.InvokeAsync();
         }
     }
 
@@ -118,7 +117,6 @@ public partial class UpdateBondEntry
     }
     public async Task Cancel()
     {
-        if (ActionCompleted is not null)
-            await ActionCompleted();
+        await ActionCompleted.InvokeAsync();
     }
 }

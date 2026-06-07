@@ -15,7 +15,7 @@
             <MudItem xs="12" sm="12" md="12">
                 <MudText Typo="Typo.h4">Add new entry</MudText>
 
-                <MudText Typo="Typo.subtitle1">@InvestmentAccount.Name</MudText>
+                <MudText Typo="Typo.subtitle1">@StockAccount.Name</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudDatePicker Label="Posting date" @bind-Date="_postingDate"
@@ -38,7 +38,7 @@
                                  Label="Balance change" Variant="Variant.Text" Immediate />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudAutocomplete @bind-Value="ExpenseType" Label="Expense type" Variant="Variant.Text"
+                <MudAutocomplete @bind-Value="InvestmentTypeName" Label="Investment type" Variant="Variant.Text"
                                  SearchFunc="Search" />
             </MudItem>
 

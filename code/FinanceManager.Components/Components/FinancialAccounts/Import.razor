@@ -1,39 +1,37 @@
-﻿@page "/Import/{AccountId:int}"
-@using FinanceManager.Domain.Entities.Bonds
-@using FinanceManager.Domain.Entities.FinancialAccounts.Currencies
-@using FinanceManager.Domain.Entities.Stocks
+@page "/Import/{AccountId:int}"
+@inherits AccountTypePageBase
 
 <PageTitle>Import transactions</PageTitle>
 
-@if (accountType is null)
+@if (IsLoading)
 {
     <DisplaySpinner />
 }
 else
 {
-    <div class="container-fluid px-0" @ref=MyElementReference>
+    <div class="container-fluid px-0" @ref="MyElementReference">
         @if (ErrorMessage != string.Empty)
         {
             <div class="alert alert-warning" role="alert">
                 @ErrorMessage
             </div>
         }
-        else if (accountType == typeof(CurrencyAccount))
+        else if (AccountDescriptor?.Kind == FinancialAccountKind.Currency)
         {
             <ImportCurrencyEntriesComponent AccountId="@AccountId" />
         }
-        else if (accountType == typeof(StockAccount))
+        else if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
         {
             <ImportStockEntriesComponent AccountId="@AccountId" />
         }
-        else if (accountType == typeof(BondAccount))
+        else if (AccountDescriptor?.Kind == FinancialAccountKind.Bond)
         {
             <ImportBondEntriesComponent AccountId="@AccountId" />
         }
         else
         {
             <div class="alert alert-danger" role="alert">
-                @accountType type is not supported.
+                @AccountType type is not supported.
             </div>
         }
     </div>
