@@ -42,7 +42,7 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
     {
         var account = await bondAccountRepository.Get(accountId);
         if (account is null) return NotFound();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         return Ok(account);
     }
@@ -57,7 +57,7 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
         var account = await bondAccountRepository.Get(accountId);
 
         if (account is null) return NotFound();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
         if (minimumEntryCount < 0) return BadRequest("Minimum entry count cannot be negative.");
 
         var loadResult = await bondEntryProvider.GetEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
@@ -75,7 +75,7 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
         var account = await bondAccountRepository.Get(accountId);
 
         if (account is null) return NotFound();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
         if (count <= 0) return BadRequest("Count must be greater than 0.");
 
         var entries = await bondAccountEntryRepository.Get(accountId, date, count, olderThenDate);
@@ -105,7 +105,7 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
     {
         var account = await bondAccountRepository.Get(updateAccount.AccountId);
 
-        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return BadRequest();
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
 
         return Ok(await bondAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName));
     }
@@ -116,7 +116,7 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
     public async Task<IActionResult> Delete(int accountId)
     {
         var account = await bondAccountRepository.Get(accountId);
-        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return BadRequest();
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
 
         await bondAccountEntryRepository.Delete(accountId);
         return Ok(await bondAccountRepository.Delete(accountId));
@@ -130,7 +130,7 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
     {
         var account = await bondAccountRepository.Get(accountId);
         if (account is null) return NotFound();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         var csv = await bondAccountCsvExportService.GetExportResults(account.UserId, accountId, startDate, endDate, cancellationToken);
         var fileName = $"bond-account-{accountId}-{startDate:yyyyMMdd}-{endDate:yyyyMMdd}.csv";

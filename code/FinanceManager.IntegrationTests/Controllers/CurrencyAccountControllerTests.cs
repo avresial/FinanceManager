@@ -9,6 +9,7 @@ using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using System.Net;
 using Xunit;
 
 namespace FinanceManager.IntegrationTests.Controllers;
@@ -111,6 +112,17 @@ public class CurrencyAccountControllerTests(OptionsProvider optionsProvider) : C
         var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains($"\"accountId\":{_testAccountId}", content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains($"\"userId\":{_testUserId}", content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task GetById_ForOtherUsersAccount_ReturnsForbidden()
+    {
+        await SeedAccount();
+        Authorize("otheruser", _testUserId + 1, UserRole.User);
+
+        var response = await Client.GetAsync($"{Client.BaseAddress}api/CurrencyAccount/{_testAccountId}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

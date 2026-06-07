@@ -1,4 +1,4 @@
-﻿using FinanceManager.Api.Helpers;
+using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.User;
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
@@ -55,6 +55,9 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(int userId, CancellationToken cancellationToken = default)
     {
+        if (!ApiAuthenticationHelper.IsAdminOrAuthenticatedUser(User, userId))
+            return Forbid();
+
         var result = await userRepository.GetUser(userId);
         return result is not null ? Ok(result) : NotFound();
     }
@@ -85,7 +88,7 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
     public async Task<IActionResult> Delete(int userId, CancellationToken cancellationToken = default)
     {
         // A "User"-role caller may only delete their own account; Admins may delete anyone.
-        if (!User.IsInRole("Admin") && ApiAuthenticationHelper.GetUserId(User) != userId)
+        if (!ApiAuthenticationHelper.IsAdminOrAuthenticatedUser(User, userId))
             return Forbid();
 
         return Ok(await usersService.DeleteUser(userId));
@@ -102,10 +105,11 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
     {
         // A "User"-role caller may only change their own password and must prove they know the current one.
         // Admins may reset any user's password without supplying the current password.
-        if (!User.IsInRole("Admin"))
+        if (!ApiAuthenticationHelper.IsAdminOrAuthenticatedUser(User, updatePassword.UserId))
+            return Forbid();
+
+        if (!ApiAuthenticationHelper.IsAdmin(User))
         {
-            if (ApiAuthenticationHelper.GetUserId(User) != updatePassword.UserId)
-                return Forbid();
 
             var user = await userRepository.GetUser(updatePassword.UserId);
             if (user is null) return NotFound();

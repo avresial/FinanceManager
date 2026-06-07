@@ -1,10 +1,10 @@
+using FinanceManager.Api.Helpers;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace FinanceManager.Api.Controllers;
 
@@ -18,16 +18,8 @@ public class ExpenseDistributionController(IExpenseDistributionService expenseDi
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<NameValueResult>))]
     public async Task<IActionResult> GetExpenseDistribution(int userId, int currencyId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
     {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var authenticatedUserId))
-        {
+        if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId))
             return Forbid();
-        }
-
-        if (authenticatedUserId != userId)
-        {
-            return Forbid();
-        }
 
         var currency = await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken);
         return Ok(await expenseDistributionService.GetExpenseDistribution(userId, currency, start, end));

@@ -8,6 +8,8 @@ using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using System.Net;
+using System.Net.Http.Json;
 using Xunit;
 
 namespace FinanceManager.IntegrationTests.Controllers;
@@ -122,6 +124,18 @@ public class StockEntryControllerTests(OptionsProvider optionsProvider) : Contro
         Assert.NotNull(entryInDb);
         Assert.Equal(5000m, entryInDb!.Value);
         Assert.Equal(5000m, entryInDb.ValueChange);
+    }
+
+    [Fact]
+    public async Task Add_ForOtherUsersAccount_ReturnsForbidden()
+    {
+        await SeedAccount();
+        Authorize("otheruser", _testUserId + 1, UserRole.User);
+        var newEntry = new StockAccountEntry(_testAccountId, 0, DateTime.UtcNow.Date, 5000m, 5000m, "US02079K3059", InvestmentType.Stock) { Ticker = "GOOGL" };
+
+        var response = await Client.PostAsJsonAsync("api/StockEntry/Add", new AddStockAccountEntry(newEntry), TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

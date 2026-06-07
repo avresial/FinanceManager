@@ -3,6 +3,7 @@ using FinanceManager.Application.Providers;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using System.Net;
@@ -38,6 +39,15 @@ public class AuthControllerTests(OptionsProvider optionsProvider) : ControllerTe
         var activeUsersMock = new Mock<IActiveUsersRepository>();
         activeUsersMock.Setup(x => x.Add(It.IsAny<int>(), It.IsAny<DateOnly>())).Returns(Task.CompletedTask);
         services.AddSingleton(activeUsersMock.Object);
+
+        var refreshTokenServiceMock = new Mock<IRefreshTokenService>();
+        refreshTokenServiceMock.Setup(x => x.Issue(_userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("refresh-token-1");
+        refreshTokenServiceMock.Setup(x => x.ValidateAndRotate("refresh-token-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(RefreshTokenRotationResult.Ok(_userId, "refresh-token-2"));
+        refreshTokenServiceMock.Setup(x => x.Revoke("refresh-token-2", It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        services.AddSingleton(refreshTokenServiceMock.Object);
     }
 
     [Fact]

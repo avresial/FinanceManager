@@ -8,6 +8,7 @@ using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using System.Net;
 using Xunit;
 
 namespace FinanceManager.IntegrationTests.Controllers;
@@ -84,6 +85,18 @@ public class BondEntryControllerTests(OptionsProvider optionsProvider) : Control
         Assert.Equal(value, result.Value);
         Assert.Equal(valueChange, result.ValueChange);
         Assert.Equal(bondDetailsId, result.BondDetailsId);
+    }
+
+    [Fact]
+    public async Task GetEntry_ForOtherUsersAccount_ReturnsForbidden()
+    {
+        await SeedAccount();
+        await SeedEntry(1, DateTime.UtcNow.Date.AddDays(-5), 1000m, 50m, 101);
+        Authorize("otheruser", _testUserId + 1, UserRole.User);
+
+        var response = await Client.GetAsync($"api/BondEntry?accountId={_testAccountId}&entryId=1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

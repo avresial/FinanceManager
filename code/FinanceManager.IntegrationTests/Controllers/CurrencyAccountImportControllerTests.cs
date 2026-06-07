@@ -9,6 +9,8 @@ using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using System.Net;
+using System.Net.Http.Json;
 using Xunit;
 
 namespace FinanceManager.IntegrationTests.Controllers;
@@ -88,6 +90,18 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         Assert.Equal(0, result.Failed);
         Assert.Empty(result.Errors);
         Assert.Empty(result.Conflicts);
+    }
+
+    [Fact]
+    public async Task ImportCurrencyEntries_ForOtherUsersAccount_ReturnsForbidden()
+    {
+        await SeedAccount();
+        Authorize("otheruser", _testUserId + 1, UserRole.User);
+        var dto = new CurrencyDataImportDto(_testAccountId, [new CurrencyEntryImportRecordDto(_utcNow.Date, 100m)]);
+
+        var response = await Client.PostAsJsonAsync("api/CurrencyAccountImport/ImportCurrencyEntries", dto, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

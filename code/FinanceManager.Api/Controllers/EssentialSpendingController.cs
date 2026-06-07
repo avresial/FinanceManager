@@ -1,3 +1,4 @@
+using FinanceManager.Api.Helpers;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
@@ -17,9 +18,12 @@ public class EssentialSpendingController(IEssentialSpendingService essentialSpen
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TimeSeriesModel>))]
     public async Task<IActionResult> GetEssentialSpending(int userId, int currencyId, DateTime start, DateTime end, long? step = null, [FromQuery] List<int>? accountIds = null, CancellationToken cancellationToken = default)
     {
+        if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)) return Forbid();
+
         var currency = await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken);
         return Ok(accountIds is { Count: > 0 }
             ? await essentialSpendingService.GetEssentialSpending(userId, currency, start, end, accountIds)
             : await essentialSpendingService.GetEssentialSpending(userId, currency, start, end));
     }
+
 }

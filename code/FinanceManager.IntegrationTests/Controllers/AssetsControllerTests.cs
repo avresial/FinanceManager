@@ -8,6 +8,7 @@ using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net;
 using Xunit;
 
 namespace FinanceManager.IntegrationTests.Controllers;
@@ -181,6 +182,16 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         Assert.Equal(1, result.SalaryMonthsUsed);
         Assert.Equal(3000m, result.AverageMonthlySalary);
         Assert.True(result.HasPartialSalaryHistory);
+    }
+
+    [Fact]
+    public async Task GetEndAssetsPerAccount_ForOtherUser_ReturnsForbidden()
+    {
+        Authorize("TestUser", 1, UserRole.User);
+
+        var response = await Client.GetAsync($"api/Assets/GetEndAssetsPerAccount/2/{DefaultCurrency.USD.Id}/{_nowUtc:O}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     public override void Dispose()

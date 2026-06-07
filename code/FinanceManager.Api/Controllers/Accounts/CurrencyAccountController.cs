@@ -1,4 +1,4 @@
-﻿using FinanceManager.Api.Helpers;
+using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
 using FinanceManager.Application.Services.Currencies;
@@ -42,7 +42,7 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
     {
         var account = await accountRepository.Get(accountId);
         if (account is null) return NotFound();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         return Ok(account);
     }
@@ -57,7 +57,7 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         var account = await accountRepository.Get(accountId);
 
         if (account is null) return NotFound();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
         if (minimumEntryCount < 0) return BadRequest("Minimum entry count cannot be negative.");
 
         var loadResult = await currencyEntryProvider.GetEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
@@ -75,7 +75,7 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         var account = await accountRepository.Get(accountId);
 
         if (account is null) return NotFound();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
         if (count <= 0) return BadRequest("Count must be greater than 0.");
 
         var entries = await accountEntryRepository.Get(accountId, date, count, olderThenDate);
@@ -105,7 +105,7 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
     {
         var account = await accountRepository.Get(updateAccount.AccountId);
 
-        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return BadRequest();
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
         return Ok(await accountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType));
     }
 
@@ -115,7 +115,7 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
     public async Task<IActionResult> Delete(int accountId)
     {
         var account = await accountRepository.Get(accountId);
-        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return BadRequest();
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
 
         await accountEntryRepository.Delete(accountId);
         return Ok(await accountRepository.Delete(accountId));
@@ -129,7 +129,7 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
     {
         var account = await accountRepository.Get(accountId);
         if (account is null) return NotFound();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         var csv = await currencyAccountCsvExportService.GetExportResults(account.UserId, accountId, startDate, endDate, cancellationToken);
         var fileName = $"currency-account-{accountId}-{startDate:yyyyMMdd}-{endDate:yyyyMMdd}.csv";

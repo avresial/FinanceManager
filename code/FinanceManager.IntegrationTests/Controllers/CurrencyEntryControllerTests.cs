@@ -8,6 +8,8 @@ using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using System.Net;
+using System.Net.Http.Json;
 using Xunit;
 
 namespace FinanceManager.IntegrationTests.Controllers;
@@ -90,6 +92,18 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
     }
 
     [Fact]
+    public async Task GetEntry_ForOtherUsersAccount_ReturnsForbidden()
+    {
+        await SeedAccount();
+        await SeedEntry(1, DateTime.UtcNow.Date.AddDays(-5), 100m, 50m);
+        Authorize("otheruser", _testUserId + 1, UserRole.User);
+
+        var response = await Client.GetAsync($"api/CurrencyEntry?accountId={_testAccountId}&entryId=1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetYoungestEntryDate_ReturnsYoungestDate_WhenEntriesExist()
     {
         // arrange
@@ -162,6 +176,18 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
                                      TestContext.Current.CancellationToken);
         Assert.NotNull(dbEntry);
         Assert.Equal(addEntry.ValueChange, dbEntry.ValueChange);
+    }
+
+    [Fact]
+    public async Task AddEntry_ForOtherUsersAccount_ReturnsForbidden()
+    {
+        await SeedAccount();
+        Authorize("otheruser", _testUserId + 1, UserRole.User);
+        var addEntry = new AddCurrencyAccountEntry(_testAccountId, 100, DateTime.UtcNow.Date.AddDays(-3), 500m, 250m, "New test entry", null);
+
+        var response = await Client.PostAsJsonAsync("api/CurrencyEntry", addEntry, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

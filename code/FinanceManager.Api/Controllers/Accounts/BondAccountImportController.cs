@@ -25,6 +25,10 @@ public class BondAccountImportController(IBondAccountImportService importService
             return BadRequest("No import data provided.");
 
         var userId = ApiAuthenticationHelper.GetUserId(User);
+        var account = await accountRepository.Get(importDto.AccountId);
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId))
+            return Forbid();
+
         var domainEntries = importDto.Entries.Select(e => new BondEntryImport(e.PostingDate, e.ValueChange, e.BondDetailsId));
         var domainResult = await importService.ImportEntries(userId, importDto.AccountId, domainEntries);
         return Ok(domainResult);
@@ -44,8 +48,8 @@ public class BondAccountImportController(IBondAccountImportService importService
         foreach (var accountId in resolvedConflicts.Select(rc => rc.AccountId).Distinct())
         {
             var account = await accountRepository.Get(accountId);
-            if (account is null || account.UserId != userId)
-                return Forbid("Account not found or access denied.");
+            if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId))
+                return Forbid();
         }
 
         await importService.ApplyResolvedConflicts(resolvedConflicts);
