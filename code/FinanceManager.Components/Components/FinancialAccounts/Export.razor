@@ -1,12 +1,7 @@
 @page "/Export/{AccountId:int}"
 <PageTitle>Export</PageTitle>
 
-@if (AccountDescriptor is null && string.IsNullOrEmpty(ErrorMessage))
-{
-    <DisplaySpinner />
-}
-else
-{
+<ComponentStateView IsLoading="@_isLoading" ErrorMessage="@ErrorMessage">
     <MudContainer MaxWidth="MaxWidth.Small" Class="mt-6">
         <MudPaper Class="pa-4">
             <MudStack Spacing="2">
@@ -15,11 +10,6 @@ else
                 @if (!string.IsNullOrWhiteSpace(AccountName))
                 {
                     <MudText Typo="Typo.subtitle2">@AccountName</MudText>
-                }
-
-                @if (ErrorMessage != string.Empty)
-                {
-                    <MudAlert Severity="Severity.Error">@ErrorMessage</MudAlert>
                 }
 
                 @if (HasAvailableDateRange)
@@ -61,4 +51,4 @@ else
             </MudStack>
         </MudPaper>
     </MudContainer>
-}
+</ComponentStateView>

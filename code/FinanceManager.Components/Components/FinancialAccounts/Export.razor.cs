@@ -25,6 +25,7 @@ public partial class Export : ComponentBase
     private DateTime? _endDate;
     private DateTime? _availableStartDate;
     private DateTime? _availableEndDate;
+    private bool _isLoading = true;
     private bool _isDownloading;
 
     private bool HasAvailableDateRange => _availableStartDate.HasValue && _availableEndDate.HasValue;
@@ -39,7 +40,16 @@ public partial class Export : ComponentBase
         _endDate = null;
         _availableStartDate = null;
         _availableEndDate = null;
-        await UpdateAccountType();
+        _isLoading = true;
+
+        try
+        {
+            await UpdateAccountType();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
     }
 
     private async Task UpdateAccountType()

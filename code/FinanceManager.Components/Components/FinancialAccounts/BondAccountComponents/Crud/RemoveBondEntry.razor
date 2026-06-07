@@ -1,9 +1,3 @@
-@using FinanceManager.Domain.Entities
-@using FinanceManager.Domain.Entities.Bonds
-@using FinanceManager.Domain.Entities.Currencies
-@using FinanceManager.Domain.Enums
-@using FinanceManager.Domain.Repositories
-
 @if (BondAccountEntry is not null)
 {
     <MudContainer MaxWidth="MaxWidth.Medium">
@@ -32,24 +26,3 @@
         </MudContainer>
     }
 
-@code {
-    private DateTime? date = new DateTime();
-    private decimal ValueChange = 0;
-    private Currency _currency = DefaultCurrency.PLN;
-
-    [Parameter] public EventCallback Confirm { get; set; }
-    [Parameter] public EventCallback Cancel { get; set; }
-    [Parameter] public required string BondAccountName { get; set; }
-    [Parameter] public required BondAccountEntry BondAccountEntry { get; set; }
-
-    [Inject] public required ISettingsService SettingsService { get; set; }
-
-    protected override void OnParametersSet()
-    {
-        date = BondAccountEntry.PostingDate;
-        ValueChange = BondAccountEntry.ValueChange;
-        _currency = SettingsService.GetCurrency();
-
-        base.OnParametersSet();
-    }
-}

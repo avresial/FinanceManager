@@ -3,20 +3,9 @@
 
 <PageTitle>Import transactions</PageTitle>
 
-@if (IsLoading)
-{
-    <DisplaySpinner />
-}
-else
-{
+<ComponentStateView IsLoading="@IsLoading" ErrorMessage="@ErrorMessage" ErrorSeverity="Severity.Warning">
     <div class="container-fluid px-0" @ref="MyElementReference">
-        @if (ErrorMessage != string.Empty)
-        {
-            <div class="alert alert-warning" role="alert">
-                @ErrorMessage
-            </div>
-        }
-        else if (AccountDescriptor?.Kind == FinancialAccountKind.Currency)
+        @if (AccountDescriptor?.Kind == FinancialAccountKind.Currency)
         {
             <ImportCurrencyEntriesComponent AccountId="@AccountId" />
         }
@@ -35,4 +24,4 @@ else
             </div>
         }
     </div>
-}
+</ComponentStateView>
