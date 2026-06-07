@@ -1,0 +1,19 @@
+<MudStack AlignItems="AlignItems.Center" Spacing="3" Class="py-8">
+    <MudAvatar Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large">
+        <MudIcon Icon="@Icons.Material.Filled.Check" />
+    </MudAvatar>
+    <MudText Typo="Typo.h5">Import complete</MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary" Style="max-width:460px;text-align:center;">
+        All entries have been added to <b>@AccountName</b> and any conflicts you flagged were resolved.
+    </MudText>
+    <MudStack Row="true" Spacing="2" Class="mt-2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="Clear">
+            Import another file
+        </MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   Href="@($"AccountDetails/{AccountId}")"
+                   EndIcon="@Icons.Material.Filled.ArrowForward">
+            Return to @AccountName
+        </MudButton>
+    </MudStack>
+</MudStack>

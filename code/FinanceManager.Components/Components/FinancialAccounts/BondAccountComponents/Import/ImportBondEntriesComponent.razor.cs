@@ -1,4 +1,5 @@
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Components.FinancialAccounts.Shared.Import;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Bonds;
@@ -9,7 +10,6 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
-using System.Globalization;
 
 namespace FinanceManager.Components.Components.FinancialAccounts.BondAccountComponents.Import;
 
@@ -145,31 +145,12 @@ public partial class ImportBondEntriesComponent : ComponentBase
 
         try
         {
-            var result = await ImportStockModelReader.Read(_uploadedContent, Delimiter, cancellationToken);
-            if (result is null) return;
+            var preview = await ImportCsvPreviewReader.ReadAsync(_uploadedContent, Delimiter, ImportStockModelReader.Read, cancellationToken);
+            if (preview is null) return;
 
-            _headers = result.Value.Headers ?? [];
-            var allParsedRows = result.Value.Data ?? [];
-            _totalRowCount = allParsedRows.Count;
-
-            if (_headers.Count != 0 && allParsedRows.Count != 0)
-                _rawPreview = allParsedRows.Take(3).ToList();
-
-            var emptyIndexes = _rawPreview.First().Where(x => string.IsNullOrEmpty(x)).Select(x => _rawPreview.First().IndexOf(x)).ToList();
-            foreach (var previewItem in _rawPreview.Skip(1))
-            {
-                var newEmptyIndexes = previewItem.Where(x => string.IsNullOrEmpty(x)).Select(x => previewItem.IndexOf(x)).ToList();
-                var indexToRemove = emptyIndexes.Where(x => !newEmptyIndexes.Any(y => y == x)).ToList();
-                emptyIndexes.RemoveAll(x => indexToRemove.Any(y => y == x));
-            }
-
-            foreach (var index in emptyIndexes.OrderByDescending(x => x))
-            {
-                _headers.RemoveAt(index);
-                foreach (var previewItem in _rawPreview)
-                    previewItem.RemoveAt(index);
-            }
-
+            _headers = preview.Headers;
+            _rawPreview = preview.RawPreview;
+            _totalRowCount = preview.TotalRowCount;
         }
         catch (OperationCanceledException)
         {
@@ -265,41 +246,22 @@ public partial class ImportBondEntriesComponent : ComponentBase
             return;
         }
 
-        if (!Path.GetExtension(file.Name).Equals(".csv", StringComparison.InvariantCultureIgnoreCase))
-        {
-            _erorrs.Add($"{file.Name} is not a csv file. Select csv file to continue.");
-            _isImportingData = false;
-            return;
-        }
-
-        _loadedFiles = [file];
-        if (file is null)
-        {
-            _erorrs.Add("Failed to load file.");
-            _isImportingData = false;
-            return;
-        }
-
         await Clear();
-
-        _fileName = file.Name;
-        _fileSize = file.Size;
 
         try
         {
-            using var stream = file.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
-            using StreamReader reader = new(stream);
-
-            var content = await reader.ReadToEndAsync();
-
-            if (string.IsNullOrWhiteSpace(content))
+            var readResult = await UploadedCsvFileReader.ReadAsync(file);
+            if (!readResult.Success)
             {
-                _erorrs.Add("File is empty.");
+                _erorrs.Add(readResult.Error!);
                 _isImportingData = false;
                 return;
             }
 
-            _uploadedContent = content;
+            _loadedFiles = [file];
+            _fileName = readResult.FileName;
+            _fileSize = readResult.FileSize;
+            _uploadedContent = readResult.Content;
 
             try
             {
@@ -343,7 +305,7 @@ public partial class ImportBondEntriesComponent : ComponentBase
 
         try
         {
-            _mappedPreview = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, _selectedBondHeader, _headers, _rawPreview).ToList();
+            _mappedPreview = BondImportMapper.MapEntries(_selectedPostingDateHeader, _selectedValueChangeHeader, _selectedBondHeader, _headers, _rawPreview, _possibleBonds).ToList();
         }
         catch (Exception ex)
         {
@@ -383,7 +345,7 @@ public partial class ImportBondEntriesComponent : ComponentBase
             var (headers, data) = await ImportStockModelReader.Read(_uploadedContent, Delimiter, CancellationToken.None)
                 ?? throw new Exception("Failed to read data for import.");
 
-            var exportResult = GetExportData(_selectedPostingDateHeader, _selectedValueChangeHeader, _selectedBondHeader, headers, data);
+            var exportResult = BondImportMapper.MapEntries(_selectedPostingDateHeader, _selectedValueChangeHeader, _selectedBondHeader, headers, data, _possibleBonds);
             var entries = exportResult.Select(x => new BondEntryImportRecordDto(x.PostingDate, x.ValueChange, x.BondDetailsId)).ToList();
 
             try
@@ -553,64 +515,4 @@ public partial class ImportBondEntriesComponent : ComponentBase
         await Task.CompletedTask;
     }
 
-    private IEnumerable<(DateTime PostingDate, decimal ValueChange, int BondDetailsId, string BondName)> GetExportData(
-        string postingDateHeader, string valueChangeHeader, string bondHeader,
-        List<string> headers, List<List<string>> dataToConvert)
-    {
-        var postingIndex = headers.FindIndex(h => h.Equals(postingDateHeader, StringComparison.OrdinalIgnoreCase));
-        var valueIndex = headers.FindIndex(h => h.Equals(valueChangeHeader, StringComparison.OrdinalIgnoreCase));
-        var bondIndex = headers.FindIndex(h => h.Equals(bondHeader, StringComparison.OrdinalIgnoreCase));
-
-        if (postingIndex < 0 || valueIndex < 0 || bondIndex < 0)
-            throw new Exception("Selected headers are invalid.");
-
-        foreach (var row in dataToConvert)
-        {
-            var posting = postingIndex < row.Count ? row[postingIndex] : string.Empty;
-            var value = valueIndex < row.Count ? row[valueIndex] : string.Empty;
-            var bond = bondIndex < row.Count ? row[bondIndex] : string.Empty;
-
-            var allowedFormats = new[]
-            {
-                "dd/MM/yyyy HH:mm:ss",
-                "dd/MM/yyyy H:mm:ss",
-                "MM/dd/yyyy HH:mm:ss",
-                "MM/dd/yyyy H:mm:ss",
-                "yyyy-MM-dd HH:mm:ss",
-                "yyyy-MM-ddTHH:mm:ss",
-                "yyyy/MM/dd HH:mm:ss"
-            };
-
-            // Try strict formats first, then fall back to flexible parsing for ISO 8601 variants
-            // (fractional seconds, timezone offsets, "Z" suffix, etc.).
-            // Note: RoundtripKind conflicts with AssumeUniversal — DateTime.TryParse handles
-            // ISO 8601 with explicit timezone (e.g. trailing Z) natively without it.
-            if (!DateTime.TryParseExact(posting, allowedFormats, CultureInfo.InvariantCulture,
-                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var date)
-                && !DateTime.TryParse(posting, CultureInfo.InvariantCulture,
-                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out date))
-                throw new Exception($"Could not parse posting date: '{posting}'");
-
-            if (!decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var valueChange))
-                throw new Exception($"Could not parse value change: '{value}'");
-
-            if (string.IsNullOrWhiteSpace(bond))
-                throw new Exception("Bond value is empty.");
-
-            var resolvedBond = ResolveBond(bond);
-            if (resolvedBond is null)
-                throw new Exception($"Could not map bond '{bond}' to existing bond details (id or name).");
-
-            yield return (new(date.Ticks, DateTimeKind.Utc), valueChange, resolvedBond.Id, resolvedBond.Name);
-        }
-    }
-
-    private BondDetails? ResolveBond(string bondValue)
-    {
-        var normalized = bondValue.Trim();
-        if (int.TryParse(normalized, out var id))
-            return _possibleBonds.FirstOrDefault(x => x.Id == id);
-
-        return _possibleBonds.FirstOrDefault(x => string.Equals(x.Name, normalized, StringComparison.OrdinalIgnoreCase));
-    }
 }

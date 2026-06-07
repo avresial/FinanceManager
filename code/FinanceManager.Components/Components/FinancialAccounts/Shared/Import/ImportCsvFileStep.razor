@@ -1,0 +1,109 @@
+@using Microsoft.AspNetCore.Components.Forms
+
+<MudStack Spacing="3" Class="pa-4">
+    @foreach (var error in Errors)
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Text" Dense="true">@error</MudAlert>
+    }
+
+    @if (!RawPreview.Any() && (IsLoading || !string.IsNullOrEmpty(FileName)))
+    {
+        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="2" Class="py-12">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                Reading <b>@FileName</b>...
+            </MudText>
+        </MudStack>
+    }
+    else if (!RawPreview.Any())
+    {
+        <MudFileUpload T="IBrowserFile" Hidden="@false"
+                       InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
+                       InputStyle="opacity:0" ErrorText="@string.Empty" tabindex="-1"
+                       @ondrop="ClearDragClass" @ondragenter="SetDragClass"
+                       @ondragleave="ClearDragClass" @ondragend="ClearDragClass"
+                       OnFilesChanged="OnFilesChanged">
+            <CustomContent>
+                <MudPaper Elevation="0" Class="@DragClass">
+                    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="3" Class="py-6">
+                        <MudAvatar Color="Color.Primary" Variant="Variant.Outlined" Square="false" Size="Size.Large">
+                            <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" />
+                        </MudAvatar>
+                        <MudStack Spacing="1" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.body1"><b>Drop CSV file here, or click to browse</b></MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@Description</MudText>
+                        </MudStack>
+                        <MudStack Row="true" Spacing="6" Class="mt-2">
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary"><b>Format</b> · CSV</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary"><b>Max size</b> · 20 MB</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary"><b>Encoding</b> · UTF-8 / Win-1250</MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            </CustomContent>
+            <SelectedTemplate>@* suppress default file chip *@</SelectedTemplate>
+        </MudFileUpload>
+    }
+    else
+    {
+        <MudPaper Outlined="true" Elevation="0" Class="pa-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="4">
+                <MudAvatar Color="Color.Primary" Variant="Variant.Outlined" Square="true" Size="Size.Medium">
+                    <MudIcon Icon="@Icons.Material.Outlined.Description" />
+                </MudAvatar>
+                <MudStack Spacing="0" Style="flex:1;min-width:0;">
+                    <MudText Typo="Typo.body1"><b>@FileName</b></MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        <b>@($"{FileSize / 1024.0:F1} KB")</b> ·
+                        <b>@TotalRowCount rows</b> ·
+                        <b>@Headers.Count columns</b> detected
+                    </MudText>
+                </MudStack>
+                <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small" OnClick="Clear">Replace</MudButton>
+            </MudStack>
+        </MudPaper>
+
+        <MudStack Row="true" AlignItems="AlignItems.End" Class="mt-2 mud-width-full">
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.subtitle2">
+                    Preview
+                    <MudText Inline="true" Typo="Typo.caption" Class="mud-text-secondary">
+                        · first @RawPreview.Count of @TotalRowCount rows
+                    </MudText>
+                </MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    Check that columns split correctly. If they don't, change the delimiter.
+                </MudText>
+            </MudStack>
+            <MudSelect T="string" Label="Delimiter" Value="Delimiter" ValueChanged="DelimiterChanged"
+                       Variant="Variant.Outlined" Margin="Margin.Dense"
+                       Class="ml-auto" Style="max-width: 220px;">
+                <MudSelectItem T="string" Value="@(",")">Comma  ( , )</MudSelectItem>
+                <MudSelectItem T="string" Value="@(";")">Semicolon  ( ; )</MudSelectItem>
+                <MudSelectItem T="string" Value="@("\t")">Tab  ( \t )</MudSelectItem>
+            </MudSelect>
+        </MudStack>
+
+        <MudSimpleTable Dense="true" Hover="true" Style="overflow-x: auto;" Elevation="0">
+            <thead>
+                <tr>
+                    @foreach (var header in Headers)
+                    {
+                        <th>@header</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in RawPreview)
+                {
+                    <tr>
+                        @for (var i = 0; i < Headers.Count; i++)
+                        {
+                            <td>@Truncate(i < row.Count ? row[i] : string.Empty)</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    }
+</MudStack>
