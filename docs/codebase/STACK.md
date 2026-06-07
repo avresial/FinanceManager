@@ -32,9 +32,9 @@
 |------|---------|----------|
 | `dotnet build` | Compile all projects in the solution | `.github\copilot-instructions.md`, `.github\workflows\ci.yml` |
 | `dotnet format` | Formatting and code-style verification in CI | `.github\workflows\ci.yml` |
-| xUnit v3 + Microsoft.Testing.Platform | Unit and integration test runner | `code\Directory.Packages.props`, `code\global.json`, `code\FinanceManager.UnitTests\FinanceManager.UnitTests.csproj`, `code\FinanceManager.IntegrationTests\FinanceManager.IntegrationTests.csproj` |
-| Moq | Mocking in unit tests | `code\Directory.Packages.props`, `code\FinanceManager.UnitTests\FinanceManager.UnitTests.csproj` |
-| coverlet | Coverage collection | `code\Directory.Packages.props`, `code\FinanceManager.UnitTests\FinanceManager.UnitTests.csproj`, `code\FinanceManager.IntegrationTests\FinanceManager.IntegrationTests.csproj` |
+| xUnit v3 + Microsoft.Testing.Platform | Unit and integration test runner | `code\Directory.Packages.props`, `code\global.json`, `code\FinanceManager.Tests.Unit\FinanceManager.Tests.Unit.csproj`, `code\FinanceManager.Tests.Integration\FinanceManager.Tests.Integration.csproj` |
+| Moq | Mocking in unit tests | `code\Directory.Packages.props`, `code\FinanceManager.Tests.Unit\FinanceManager.Tests.Unit.csproj` |
+| coverlet | Coverage collection | `code\Directory.Packages.props`, `code\FinanceManager.Tests.Unit\FinanceManager.Tests.Unit.csproj`, `code\FinanceManager.Tests.Integration\FinanceManager.Tests.Integration.csproj` |
 | GitHub Actions + CodeQL | CI/CD, package vulnerability checks, static analysis, deployment | `.github\workflows\ci.yml` |
 | `.editorconfig` + warnings-as-errors | Style enforcement during build | `code\.editorconfig`, `code\Directory.Build.props` |
 
@@ -43,8 +43,8 @@
 ```bash
 dotnet restore .\code
 dotnet build .\code\FinanceManager.slnx
-dotnet test .\code\FinanceManager.UnitTests\FinanceManager.UnitTests.csproj
-dotnet test .\code\FinanceManager.IntegrationTests\FinanceManager.IntegrationTests.csproj
+dotnet test .\code\FinanceManager.Tests.Unit\FinanceManager.Tests.Unit.csproj
+dotnet test .\code\FinanceManager.Tests.Integration\FinanceManager.Tests.Integration.csproj
 dotnet format .\code --verify-no-changes --verbosity diagnostic
 ```
 

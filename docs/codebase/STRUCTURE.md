@@ -15,8 +15,8 @@
 | `code\FinanceManager.Infrastructure\` | EF Core `DbContext`, repositories, external API adapters, AI providers | `code\FinanceManager.Infrastructure\Contexts\AppDbContext.cs`, `code\FinanceManager.Infrastructure\Repositories`, `code\FinanceManager.Infrastructure\Services` |
 | `code\AppHost\` | Aspire local orchestration for API + PostgreSQL | `code\AppHost\AppHost.cs` |
 | `code\ServiceDefaults\` | Shared telemetry, service-discovery, resilience, health defaults | `code\ServiceDefaults\Extensions.cs` |
-| `code\FinanceManager.UnitTests\` | Unit tests against controllers, application services, domain types | `code\FinanceManager.UnitTests` directory listing, `code\FinanceManager.UnitTests\FinanceManager.UnitTests.csproj` |
-| `code\FinanceManager.IntegrationTests\` | Integration tests using `WebApplicationFactory` + in-memory EF Core | `code\FinanceManager.IntegrationTests` directory listing, `code\FinanceManager.IntegrationTests\FinanceManagerApiTestApp.cs` |
+| `code\FinanceManager.Tests.Unit\` | Unit tests against controllers, application services, domain types | `code\FinanceManager.Tests.Unit` directory listing, `code\FinanceManager.Tests.Unit\FinanceManager.Tests.Unit.csproj` |
+| `code\FinanceManager.Tests.Integration\` | Integration tests using `WebApplicationFactory` + in-memory EF Core | `code\FinanceManager.Tests.Integration` directory listing, `code\FinanceManager.Tests.Integration\FinanceManagerApiTestApp.cs` |
 | `.github\` | CI/CD and repo-specific Copilot instructions | `.github\workflows\ci.yml`, `.github\copilot-instructions.md` |
 | `resources\` / `sample-data\` | Non-code data inputs used by the app and imports | repo root directory listing, `code\FinanceManager.Api\appsettings.Development.json` |
 | repo root published files (`index.html`, `_framework\`, `_content\`, compressed assets) | Built static site output checked into the repository root | repo root directory listing |
@@ -37,7 +37,7 @@
 | `FinanceManager.Application` | Use-case orchestration, pricing/insight services, seeding, provider composition | ASP.NET endpoint definitions, EF Core `DbContext` details |
 | `FinanceManager.Domain` | Entities, contracts, commands, value objects, domain abstractions | HTTP transport code, concrete infrastructure adapters |
 | `FinanceManager.Infrastructure` | Repository implementations, `AppDbContext`, external APIs, AI clients | Route handling, page rendering |
-| `FinanceManager.UnitTests` / `FinanceManager.IntegrationTests` | Verification only | Production runtime wiring |
+| `FinanceManager.Tests.Unit` / `FinanceManager.Tests.Integration` | Verification only | Production runtime wiring |
 
 ### 4) Naming and Organization Rules
 

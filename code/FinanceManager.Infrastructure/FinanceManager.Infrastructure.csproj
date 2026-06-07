@@ -1,8 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 	
 	<ItemGroup>
-		<InternalsVisibleTo Include="FinanceManager.IntegrationTests" />
-		<InternalsVisibleTo Include="FinanceManager.UnitTests" />
+		<InternalsVisibleTo Include="FinanceManager.Tests.Integration" />
+		<InternalsVisibleTo Include="FinanceManager.Tests.Unit" />
 	</ItemGroup>
 
 	<ItemGroup>

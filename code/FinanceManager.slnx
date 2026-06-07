@@ -17,9 +17,9 @@
     <File Path="GlobalUsings.cs" />
   </Folder>
   <Project Path="FinanceManager.Application/FinanceManager.Application.csproj" />
-  <Project Path="FinanceManager.ArchitectureTests/FinanceManager.ArchitectureTests.csproj" />
+  <Project Path="FinanceManager.Tests.Architecture/FinanceManager.Tests.Architecture.csproj" />
   <Project Path="FinanceManager.Domain/FinanceManager.Domain.csproj" />
   <Project Path="FinanceManager.Infrastructure/FinanceManager.Infrastructure.csproj" />
-  <Project Path="FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj" />
-  <Project Path="FinanceManager.UnitTests/FinanceManager.UnitTests.csproj" />
+  <Project Path="FinanceManager.Tests.Integration/FinanceManager.Tests.Integration.csproj" />
+  <Project Path="FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj" />
 </Solution>

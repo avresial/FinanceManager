@@ -103,7 +103,7 @@ Every code change that has a user-visible effect must add an entry to `CHANGELOG
 ## Agent Requirements
 
 - **Install the .NET SDK before coding.** Any task that involves code changes requires the .NET 10 SDK to be installed first so that `dotnet build`, `dotnet format`, and `dotnet test` can run. If `dotnet --list-sdks` does not show a `10.*` SDK, install it before making changes — see "Installing the .NET SDK" below for the path that works in the cloud sandbox.
-- **Run unit tests after every change.** Every code change must end with `dotnet test --project ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj` passing (see "Running tests" below for the correct invocation). Do not commit, push, or report a task as complete until unit tests are green.
+- **Run unit tests after every change.** Every code change must end with `dotnet test --project ./code/FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj` passing (see "Running tests" below for the correct invocation). Do not commit, push, or report a task as complete until unit tests are green.
 - **Render and screenshot any UI change on the guest account.** A green build is not proof the UI looks right. Whenever a change touches the Blazor UI (any `.razor`/`.razor.cs`/`.razor.css`, layouts, or styling), boot the app, log in via the built-in **"Check out demo"** guest account, and screenshot the affected page on both a mobile and a desktop viewport before reporting the task complete. Follow [`.claude/skills/ui-testing/SKILL.md`](./.claude/skills/ui-testing/SKILL.md) for the exact steps and sandbox gotchas (blocked chart CDN, light-vs-dark theme, SPA navigation).
 - **Send the screenshot of the changed feature.** Before reporting a task complete, if the work changed the UI in the current thread, run the app and send me the screenshot(s) of the feature that changed (use `SendUserFile`) so I can see the change — capture the affected page/component on both a mobile and a desktop viewport per the rule above. If the thread made **no** UI change, do not run the app for a screenshot and do not send one.
 
@@ -128,8 +128,8 @@ The project's `code/global.json` opts into the new Microsoft.Testing.Platform ru
 
 ```bash
 cd code
-dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
-dotnet test --project ./FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
+dotnet test --project ./FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj
+dotnet test --project ./FinanceManager.Tests.Integration/FinanceManager.Tests.Integration.csproj
 ```
 
 If you see *"Testing with VSTest target is no longer supported by Microsoft.Testing.Platform on .NET 10 SDK"*, you're outside `code/` — `cd code` and retry.
@@ -149,13 +149,13 @@ cd code
 dotnet test --project ./FinanceManager.slnx
 
 # Run only unit tests
-dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
+dotnet test --project ./FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj
 
 # Run only integration tests (requires UseInMemoryDatabase=true env var in CI)
-dotnet test --project ./FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
+dotnet test --project ./FinanceManager.Tests.Integration/FinanceManager.Tests.Integration.csproj
 
 # Run a single test project with coverage
-dotnet test --project ./FinanceManager.UnitTests/FinanceManager.UnitTests.csproj --collect:"XPlat Code Coverage"
+dotnet test --project ./FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj --collect:"XPlat Code Coverage"
 ```
 
 **Build is strict**: warnings are treated as errors (`Directory.Build.props`). Always run `dotnet build` before committing.

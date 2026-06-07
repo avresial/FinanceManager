@@ -140,10 +140,10 @@ Then open `https://localhost:5001` in your browser.
 dotnet test ./code/FinanceManager.slnx
 
 # Unit tests only
-dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
+dotnet test ./code/FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj
 
 # Integration tests (uses in-memory DB)
-UseInMemoryDatabase=true dotnet test ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
+UseInMemoryDatabase=true dotnet test ./code/FinanceManager.Tests.Integration/FinanceManager.Tests.Integration.csproj
 ```
 
 ### External API keys (optional)

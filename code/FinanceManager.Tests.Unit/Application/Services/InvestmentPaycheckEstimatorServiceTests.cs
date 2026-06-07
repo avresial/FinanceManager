@@ -1,0 +1,173 @@
+using FinanceManager.Application.Providers;
+using FinanceManager.Application.Services;
+using FinanceManager.Application.Services.Stocks;
+using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.Entities.Shared.Accounts;
+using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.Services;
+using Microsoft.Extensions.Caching.Memory;
+using Moq;
+
+namespace FinanceManager.Tests.Unit.Application.Services;
+
+[Collection("Application")]
+[Trait("Category", "Unit")]
+public class InvestmentPaycheckEstimatorServiceTests
+{
+    private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
+    private readonly Mock<IFinancialLabelsRepository> _financialLabelsRepositoryMock = new();
+    private readonly Mock<IStockPriceRepository> _stockRepositoryMock = new();
+    private readonly Mock<ICurrencyExchangeService> _currencyExchangeServiceMock = new();
+    private readonly Mock<IBondDetailsRepository> _bondDetailsRepositoryMock = new();
+    private readonly InvestmentPaycheckEstimatorService _service;
+
+    public InvestmentPaycheckEstimatorServiceTests()
+    {
+        _currencyExchangeServiceMock
+            .Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
+            .ReturnsAsync(1m);
+
+        IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
+        var stockDetailsRepoMock = new Mock<IStockDetailsRepository>();
+        stockDetailsRepoMock.Setup(x => x.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string ticker, CancellationToken _) => new StockDetails
+            {
+                Isin = "US0000000001",
+                Ticker = ticker,
+                Currency = DefaultCurrency.PLN,
+                Name = ticker,
+                Type = "Stock",
+                Region = "US"
+            });
+        var isinResolverMock = new Mock<IIsinResolver>();
+        isinResolverMock.Setup(x => x.ResolveAsync("MSFT", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("US5949181045");
+        var stockPriceProvider = new StockPriceProvider(
+            _stockRepositoryMock.Object,
+            new Mock<IAlphaVantageClient>().Object,
+            stockDetailsRepoMock.Object,
+            new Mock<ICurrencyRepository>().Object,
+            _currencyExchangeServiceMock.Object,
+            cache,
+            isinResolverMock.Object);
+        _service = new InvestmentPaycheckEstimatorService(_financialAccountRepositoryMock.Object, _financialLabelsRepositoryMock.Object, stockPriceProvider, _bondDetailsRepositoryMock.Object);
+    }
+
+    [Fact]
+    public async Task GetEstimate_ExcludesCurrentPartialMonthFromSalaryAverage()
+    {
+        var userId = 1;
+        var asOfDate = new DateTime(2026, 3, 14, 0, 0, 0, DateTimeKind.Utc);
+        var salaryLabel = new FinancialLabel { Id = 1, Name = "salary" };
+
+        var salaryAccount = new CurrencyAccount(userId, 10, "Salary", AccountLabel.Cash);
+        salaryAccount.Add(new CurrencyAccountEntry(10, 1, new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc), 3000m, 3000m) { Labels = [salaryLabel] }, false);
+        salaryAccount.Add(new CurrencyAccountEntry(10, 2, new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), 4500m, 4500m) { Labels = [salaryLabel] }, false);
+
+        var stockAccount = new StockAccount(userId, 20, "Stocks");
+        stockAccount.Add(new StockAccountEntry(20, 1, asOfDate.AddDays(-1), 100m, 100m, "MSFT", InvestmentType.Stock), false);
+
+        var bondAccount = new BondAccount(userId, 30, "Bonds", AccountLabel.Other);
+        bondAccount.Add(new BondAccountEntry(30, 1, asOfDate.AddDays(-2), 12000m, 12000m, 1), false);
+
+        _financialLabelsRepositoryMock
+            .Setup(x => x.GetLabels(It.IsAny<CancellationToken>()))
+            .Returns(new[] { salaryLabel }.ToAsyncEnumerable());
+
+        _financialAccountRepositoryMock
+            .Setup(x => x.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { salaryAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock
+            .Setup(x => x.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { stockAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock
+            .Setup(x => x.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { bondAccount }.ToAsyncEnumerable());
+        _bondDetailsRepositoryMock
+            .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+            .Returns(new[]
+            {
+                new BondDetails(
+                    "Bond",
+                    "Issuer",
+                    DateOnly.FromDateTime(asOfDate.AddYears(-1)),
+                    DateOnly.FromDateTime(asOfDate.AddYears(1)),
+                    [new BondCalculationMethod { DateOperator = DateOperator.UntilDate, DateValue = asOfDate.AddYears(1).ToString("yyyy-MM-dd"), Rate = 0m }],
+                    DefaultCurrency.PLN,
+                    BondType.InflationBond,
+                    1m)
+                {
+                    Id = 1
+                }
+            }.ToAsyncEnumerable());
+
+        _stockRepositoryMock
+            .Setup(x => x.GetThisOrNextOlder("US5949181045", It.IsAny<DateTime>()))
+            .ReturnsAsync(new StockPrice { Isin = "US5949181045", Currency = DefaultCurrency.PLN, PricePerUnit = 10m, Date = asOfDate });
+
+        var result = await _service.GetEstimate(userId, DefaultCurrency.PLN, asOfDate, 0.05m, 3);
+
+        Assert.Equal(13000m, result.InvestableAssetsValue);
+        Assert.Equal(54.17m, result.SustainableMonthlyPaycheck);
+        Assert.Equal(3, result.SalaryMonthsRequested);
+        Assert.Equal(1, result.SalaryMonthsUsed);
+        Assert.Equal(3000m, result.AverageMonthlySalary);
+        Assert.Equal(0.0181m, result.IncomeReplacementRatio);
+        Assert.True(result.HasPartialSalaryHistory);
+    }
+
+    [Fact]
+    public async Task GetEstimate_WithoutSalaryLabel_ReturnsAssetValuesWithoutIncomeBaseline()
+    {
+        var userId = 1;
+        var asOfDate = new DateTime(2026, 3, 14, 0, 0, 0, DateTimeKind.Utc);
+
+        var bondAccount = new BondAccount(userId, 30, "Bonds", AccountLabel.Other);
+        bondAccount.Add(new BondAccountEntry(30, 1, asOfDate.AddDays(-2), 24000m, 24000m, 1), false);
+
+        _financialLabelsRepositoryMock
+            .Setup(x => x.GetLabels(It.IsAny<CancellationToken>()))
+            .Returns(AsyncEnumerable.Empty<FinancialLabel>());
+
+        _financialAccountRepositoryMock
+            .Setup(x => x.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
+        _financialAccountRepositoryMock
+            .Setup(x => x.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<StockAccount>());
+        _financialAccountRepositoryMock
+            .Setup(x => x.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { bondAccount }.ToAsyncEnumerable());
+        _bondDetailsRepositoryMock
+            .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+            .Returns(new[]
+            {
+                new BondDetails(
+                    "Bond",
+                    "Issuer",
+                    DateOnly.FromDateTime(asOfDate.AddYears(-1)),
+                    DateOnly.FromDateTime(asOfDate.AddYears(1)),
+                    [new BondCalculationMethod { DateOperator = DateOperator.UntilDate, DateValue = asOfDate.AddYears(1).ToString("yyyy-MM-dd"), Rate = 0m }],
+                    DefaultCurrency.PLN,
+                    BondType.InflationBond,
+                    1m)
+                {
+                    Id = 1
+                }
+            }.ToAsyncEnumerable());
+
+        var result = await _service.GetEstimate(userId, DefaultCurrency.PLN, asOfDate, 0.04m, 3);
+
+        Assert.Equal(24000m, result.InvestableAssetsValue);
+        Assert.Equal(80m, result.SustainableMonthlyPaycheck);
+        Assert.Equal(0, result.SalaryMonthsUsed);
+        Assert.Null(result.AverageMonthlySalary);
+        Assert.Null(result.IncomeReplacementRatio);
+        Assert.False(result.HasSalaryData);
+    }
+}

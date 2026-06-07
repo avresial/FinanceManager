@@ -6,10 +6,10 @@
 
 | Item | Rule | Example | Evidence |
 |------|------|---------|----------|
-| Files | PascalCase for C# and Razor files; tests end with `Tests.cs`; code-behind pairs use `.razor` + `.razor.cs` | `StockPriceController.cs`, `AssetsPage.razor`, `StockPriceControllerTests.cs` | `code\FinanceManager.Api\Controllers\StockPriceController.cs`, `code\FinanceManager.Components\Components\AssetsPage.razor`, `code\FinanceManager.UnitTests\Api\Controllers\StockPriceControllerTests.cs` |
+| Files | PascalCase for C# and Razor files; tests end with `Tests.cs`; code-behind pairs use `.razor` + `.razor.cs` | `StockPriceController.cs`, `AssetsPage.razor`, `StockPriceControllerTests.cs` | `code\FinanceManager.Api\Controllers\StockPriceController.cs`, `code\FinanceManager.Components\Components\AssetsPage.razor`, `code\FinanceManager.Tests.Unit\Api\Controllers\StockPriceControllerTests.cs` |
 | Functions/methods | PascalCase methods | `AddApplicationApi`, `GetStockPrice`, `GetPricePerUnitAsync` | `code\FinanceManager.Application\ServiceCollectionExtension.cs`, `code\FinanceManager.Api\Controllers\StockPriceController.cs`, `code\FinanceManager.Application\Providers\StockPriceProvider.cs` |
 | Types/interfaces | PascalCase types; interfaces prefixed with `I` | `StockPriceRepository`, `IStockPriceProvider` | `code\.editorconfig`, `code\FinanceManager.Infrastructure\Repositories\StockPriceRepository.cs`, `code\FinanceManager.Domain\Services\IStockPriceProvider.cs` |
-| Constants/env vars | Environment variables use uppercase snake case; private/internal fields use `_camelCase` | `FINANCE_MANAGER_DB_KEY`, `_currencyExchangeMock` | `code\FinanceManager.Api\appsettings.Development.json`, `code\.editorconfig`, `code\FinanceManager.IntegrationTests\Controllers\StockPriceControllerTests.cs` |
+| Constants/env vars | Environment variables use uppercase snake case; private/internal fields use `_camelCase` | `FINANCE_MANAGER_DB_KEY`, `_currencyExchangeMock` | `code\FinanceManager.Api\appsettings.Development.json`, `code\.editorconfig`, `code\FinanceManager.Tests.Integration\Controllers\StockPriceControllerTests.cs` |
 
 ### 2) Formatting and Linting
 
@@ -32,7 +32,7 @@
 
 ### 5) Testing Conventions
 
-- Test file naming/location rule: tests live in dedicated `FinanceManager.UnitTests` and `FinanceManager.IntegrationTests` projects and use `*Tests.cs`
+- Test file naming/location rule: tests live in dedicated `FinanceManager.Tests.Unit` and `FinanceManager.Tests.Integration` projects and use `*Tests.cs`
 - Mocking strategy norm: unit tests use `Moq`; integration tests override DI registrations and use in-memory EF Core plus generated JWTs
 - Coverage expectation: coverlet is enabled, but no explicit minimum coverage threshold was found
 
@@ -42,6 +42,6 @@
 - `code\Directory.Build.props`
 - `.github\workflows\ci.yml`
 - `code\FinanceManager.Api\Controllers\StockPriceController.cs`
-- `code\FinanceManager.IntegrationTests\Controllers\StockPriceControllerTests.cs`
+- `code\FinanceManager.Tests.Integration\Controllers\StockPriceControllerTests.cs`
 - `code\FinanceManager.Components\Services\LoginService.cs`
 
