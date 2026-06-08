@@ -308,10 +308,15 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore ./code
 
+      - name: Install EF Core CLI
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.*
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
       - name: Apply EF migrations
         run: dotnet ef database update -s code/FinanceManager.Api/FinanceManager.Api.csproj
         env:
-          ConnectionStrings__FinanceManagerDb: ${{ secrets.PROD_CONNECTION_STRING }}
+          ConnectionStrings__DefaultConnection: ${{ secrets.PROD_CONNECTION_STRING }}
 
       - name: Download publish artifact
         uses: actions/download-artifact@v5
@@ -351,10 +356,15 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore ./code
 
+      - name: Install EF Core CLI
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.*
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
       - name: Apply EF migrations
         run: dotnet ef database update -s code/FinanceManager.Api/FinanceManager.Api.csproj
         env:
-          ConnectionStrings__FinanceManagerDb: ${{ secrets.DEV_CONNECTION_STRING }}
+          ConnectionStrings__DefaultConnection: ${{ secrets.DEV_CONNECTION_STRING }}
 
       - name: Download publish artifact
         uses: actions/download-artifact@v5
