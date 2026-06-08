@@ -11,25 +11,12 @@ internal sealed class RequestBodySizeLimitMiddleware(
     {
         var limit = RequestBodySizeLimits.GetLimitForPath(context.Request.Path);
         var canHaveBody = context.Features.Get<IHttpRequestBodyDetectionFeature>()?.CanHaveBody ?? false;
-        if (!canHaveBody)
-        {
-            await next(context);
-            return;
-        }
-
-        if (context.Request.ContentLength is null)
-        {
-            logger.LogWarning("Rejected request to {Path} because Content-Length was missing.", context.Request.Path);
-            await WriteRejectionAsync(context, StatusCodes.Status411LengthRequired, "Request body requires a Content-Length header.");
-            return;
-        }
-
-        if (context.Request.ContentLength.Value > limit)
+        if (canHaveBody && context.Request.ContentLength is long contentLength && contentLength > limit)
         {
             logger.LogWarning(
                 "Rejected request to {Path} because Content-Length {ContentLength} exceeded limit {Limit}.",
                 context.Request.Path,
-                context.Request.ContentLength,
+                contentLength,
                 limit);
             await WriteRejectionAsync(context, StatusCodes.Status413PayloadTooLarge, "Request body exceeds size limit.");
             return;

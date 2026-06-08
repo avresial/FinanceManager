@@ -32,10 +32,15 @@ public class RequestBodySizeLimitMiddlewareTests
     }
 
     [Fact]
-    public async Task Invoke_WhenRequestCanHaveBodyButContentLengthMissing_ReturnsLengthRequired()
+    public async Task Invoke_WhenRequestCanHaveBodyButContentLengthMissing_CallsNext()
     {
+        var nextCalled = false;
         var middleware = new RequestBodySizeLimitMiddleware(
-            _ => Task.CompletedTask,
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            },
             NullLogger<RequestBodySizeLimitMiddleware>.Instance);
 
         var context = new DefaultHttpContext();
@@ -45,8 +50,8 @@ public class RequestBodySizeLimitMiddlewareTests
 
         await middleware.Invoke(context);
 
-        Assert.Equal(StatusCodes.Status411LengthRequired, context.Response.StatusCode);
-        Assert.Equal("application/json", context.Response.ContentType);
+        Assert.True(nextCalled);
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
     }
 
     private sealed class TestRequestBodyDetectionFeature(bool canHaveBody) : IHttpRequestBodyDetectionFeature
