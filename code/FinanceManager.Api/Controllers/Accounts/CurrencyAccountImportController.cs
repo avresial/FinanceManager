@@ -20,6 +20,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
     : ControllerBase
 {
     [HttpPost("StartAsyncImport")]
+    [RequestSizeLimit(FinanceManager.Api.RequestBodySizeLimits.ImportEndpointBytes)]
     [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(CurrencyImportJobStartResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -96,6 +97,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
     }
 
     [HttpPost("ImportCurrencyEntries")]
+    [RequestSizeLimit(FinanceManager.Api.RequestBodySizeLimits.ImportEndpointBytes)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(object))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ImportCurrencyEntries([FromBody] CurrencyDataImportDto importDto)

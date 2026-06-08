@@ -17,6 +17,7 @@ public class BondAccountImportController(IBondAccountImportService importService
     : ControllerBase
 {
     [HttpPost("ImportBondEntries")]
+    [RequestSizeLimit(FinanceManager.Api.RequestBodySizeLimits.ImportEndpointBytes)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(object))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ImportBondEntries([FromBody] BondDataImportDto importDto)

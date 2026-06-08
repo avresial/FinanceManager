@@ -17,6 +17,7 @@ public class StockAccountImportController(IStockAccountImportService importServi
     : ControllerBase
 {
     [HttpPost("ImportStockEntries")]
+    [RequestSizeLimit(FinanceManager.Api.RequestBodySizeLimits.ImportEndpointBytes)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(object))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ImportStockEntries([FromBody] StockDataImportDto importDto)
