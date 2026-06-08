@@ -20,7 +20,7 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 
         var configuration = new ConfigurationBuilder()
             .SetBasePath(apiDirectory)
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
             .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development"}.json", optional: true)
             .AddEnvironmentVariables()
             .Build();
