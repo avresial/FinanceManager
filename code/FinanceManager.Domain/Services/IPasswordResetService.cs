@@ -22,8 +22,8 @@ public interface IPasswordResetService
     /// <summary>
     /// Issues a raw reset token for the given login. For a registered account this is a single-use, time-limited
     /// token that is persisted; for an unknown login it is a throwaway, non-persisted token of the same shape that
-    /// can never validate. Either way a token is always returned, so the API response (and the on-screen link the
-    /// client builds from it) is identical whether or not the account exists — leaking no account-enumeration signal.
+    /// can never validate. Either way a token is always returned to backend code so future email delivery can avoid
+    /// leaking an account-enumeration signal; controllers must not expose the raw token over HTTP.
     /// </summary>
     Task<string> RequestReset(string login, CancellationToken cancellationToken = default);
 

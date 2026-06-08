@@ -11,6 +11,7 @@ namespace FinanceManager.Tests.Integration.Controllers;
 [Collection("api")]
 public abstract class ControllerTests : IClassFixture<OptionsProvider>, IDisposable
 {
+    private readonly FinanceManagerApiTestApp _app;
     private readonly JwtTokenGenerator? _jwtTokenGenerator;
     protected HttpClient Client { get; }
 
@@ -31,12 +32,12 @@ public abstract class ControllerTests : IClassFixture<OptionsProvider>, IDisposa
         Client.DefaultRequestHeaders.Authorization = null;
     }
 
-    public ControllerTests(OptionsProvider optionsProvider)
+    public ControllerTests(OptionsProvider optionsProvider, string environmentName = "test")
     {
         var authOptions = optionsProvider.Get<JwtAuthOptions>("JwtConfig");
         _jwtTokenGenerator = new JwtTokenGenerator(new OptionsWrapper<JwtAuthOptions>(authOptions));
-        var app = new FinanceManagerApiTestApp(ConfigureServices);
-        Client = app.Client;
+        _app = new FinanceManagerApiTestApp(ConfigureServices, environmentName);
+        Client = _app.Client;
     }
 
     protected virtual void ConfigureServices(IServiceCollection services)
@@ -46,5 +47,6 @@ public abstract class ControllerTests : IClassFixture<OptionsProvider>, IDisposa
     public virtual void Dispose()
     {
         ClearAuthorization();
+        _app.Dispose();
     }
 }

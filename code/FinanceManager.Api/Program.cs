@@ -247,6 +247,10 @@ builder.Services.AddHostedService<LogRetentionBackgroundService>();
 
 var app = builder.Build();
 
+if (!app.Environment.IsDevelopment())
+    app.Logger.LogWarning(
+        "Password reset endpoints are disabled outside Development until transactional email delivery is implemented.");
+
 // Must run before any middleware that inspects the scheme or client IP (HTTPS redirect, CORS,
 // rate limiter): it rewrites Request.Scheme/IsHttps and the remote IP from the proxy's
 // X-Forwarded-* headers so the rest of the pipeline sees the original client request.
