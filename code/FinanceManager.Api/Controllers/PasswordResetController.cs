@@ -12,6 +12,7 @@ namespace FinanceManager.Api.Controllers;
 [EnableRateLimiting(RateLimitingServiceCollectionExtension.AuthPolicy)]
 public class PasswordResetController(
     IPasswordResetService passwordResetService,
+    IWebHostEnvironment environment,
     ILogger<PasswordResetController> logger) : ControllerBase
 {
     // Same wording regardless of whether the account exists, so the response carries no account-enumeration signal.
@@ -25,16 +26,15 @@ public class PasswordResetController(
     [AllowAnonymous]
     [HttpPost("forgot-password")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ForgotPasswordResponse))]
+    [ProducesResponseType(StatusCodes.Status501NotImplemented)]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request, CancellationToken cancellationToken = default)
     {
-        var rawToken = await passwordResetService.RequestReset(request.Login, cancellationToken);
+        if (UnavailableOutsideDevelopment() is { } unavailable) return unavailable;
 
-        // TEMPORARY (issue #280): no email provider is wired up yet, so the raw token is returned in the response
-        // and the client renders a direct "reset password" link from it. A token is returned for *every* request —
-        // a real persisted one for registered accounts, a throwaway one otherwise — so neither the response nor the
-        // link reveals whether the email is registered (#342). Once transactional email is in place the token must
-        // stop being returned here and be delivered only via the emailed link.
-        return Ok(new ForgotPasswordResponse(_genericMessage, rawToken));
+        await passwordResetService.RequestReset(request.Login, cancellationToken);
+
+        // The raw token must never be returned over HTTP; issue #280 will add email-only delivery.
+        return Ok(new ForgotPasswordResponse(_genericMessage));
     }
 
     /// <summary>Validates and consumes a reset token, setting the account's new password on success.</summary>
@@ -42,12 +42,25 @@ public class PasswordResetController(
     [HttpPost("reset-password")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status501NotImplemented)]
     public async Task<IActionResult> ResetPassword(ResetPasswordRequest request, CancellationToken cancellationToken = default)
     {
+        if (UnavailableOutsideDevelopment() is { } unavailable) return unavailable;
+
         var result = await passwordResetService.ResetPassword(request.Token, request.NewPassword, cancellationToken);
         if (result.Succeeded) return Ok();
 
         logger.LogInformation("Password reset rejected with status {Status}.", result.Status);
         return BadRequest("This password reset link is invalid or has expired. Please request a new one.");
+    }
+
+    private IActionResult? UnavailableOutsideDevelopment()
+    {
+        if (environment.IsDevelopment()) return null;
+
+        logger.LogWarning(
+            "Password reset endpoint {Path} rejected because reset token delivery is not configured outside Development.",
+            HttpContext.Request.Path);
+        return StatusCode(StatusCodes.Status501NotImplemented, "Password reset is not available.");
     }
 }

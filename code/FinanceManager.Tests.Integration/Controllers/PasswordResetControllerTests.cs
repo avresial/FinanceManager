@@ -2,20 +2,32 @@ using FinanceManager.Domain.Commands.User;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Moq;
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Xunit;
 
 namespace FinanceManager.Tests.Integration.Controllers;
 
 [Collection("api")]
 [Trait("Category", "Integration")]
-public class PasswordResetControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
+public class PasswordResetControllerTests : ControllerTests
 {
     private const string _login = "reset.user@example.com";
     private const int _userId = 7777;
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+    private InMemoryPasswordResetTokenRepository? _tokenRepository;
+
+    public PasswordResetControllerTests(OptionsProvider optionsProvider)
+        : base(optionsProvider, Environments.Development)
+    {
+    }
 
     protected override void ConfigureServices(IServiceCollection services)
     {
@@ -32,56 +44,85 @@ public class PasswordResetControllerTests(OptionsProvider optionsProvider) : Con
 
         // A real-but-in-memory token store so the full controller → service → repository flow runs without depending
         // on a configured database provider.
-        services.AddSingleton<IPasswordResetTokenRepository, InMemoryPasswordResetTokenRepository>();
+        _tokenRepository = new InMemoryPasswordResetTokenRepository();
+        services.AddSingleton<IPasswordResetTokenRepository>(_tokenRepository);
     }
 
     [Fact]
-    public async Task ForgotPassword_KnownUser_ReturnsMessageAndToken()
+    public async Task PasswordResetEndpoints_OutsideDevelopment_ReturnNotImplemented()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var app = new FinanceManagerApiTestApp(ConfigureServices);
+
+        var forgot = await app.Client.PostAsJsonAsync("api/PasswordReset/forgot-password", new ForgotPasswordRequest(_login), ct);
+        var reset = await app.Client.PostAsJsonAsync("api/PasswordReset/reset-password",
+            new ResetPasswordRequest("stolen-token", "brand-new-password"), ct);
+        var forgotBody = await forgot.Content.ReadAsStringAsync(ct);
+
+        Assert.Equal(HttpStatusCode.NotImplemented, forgot.StatusCode);
+        Assert.Equal(HttpStatusCode.NotImplemented, reset.StatusCode);
+        Assert.DoesNotContain("resetToken", forgotBody, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_KnownUser_ReturnsMessageWithoutTokenField()
     {
         var ct = TestContext.Current.CancellationToken;
 
         var response = await Client.PostAsJsonAsync("api/PasswordReset/forgot-password", new ForgotPasswordRequest(_login), ct);
+        var json = await response.Content.ReadAsStringAsync(ct);
 
         response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadFromJsonAsync<ForgotPasswordResponse>(cancellationToken: ct);
+        var body = JsonSerializer.Deserialize<ForgotPasswordResponse>(json, _jsonOptions);
         Assert.NotNull(body);
         Assert.False(string.IsNullOrWhiteSpace(body.Message));
-        // While no email provider is wired up the token rides back on the response so the UI can show a link.
-        Assert.False(string.IsNullOrWhiteSpace(body.ResetToken));
+        Assert.DoesNotContain("resetToken", json, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task ForgotPassword_KnownAndUnknownUser_ReturnIndistinguishableResponses()
+    public async Task ForgotPassword_DoesNotReturnRawTokenFromService()
+    {
+        const string rawToken = "known-raw-token-from-service";
+        var ct = TestContext.Current.CancellationToken;
+        using var app = new FinanceManagerApiTestApp(services =>
+        {
+            ConfigureServices(services);
+            services.AddSingleton<IPasswordResetService>(new StubPasswordResetService(rawToken));
+        }, Environments.Development);
+
+        var response = await app.Client.PostAsJsonAsync("api/PasswordReset/forgot-password", new ForgotPasswordRequest(_login), ct);
+        var json = await response.Content.ReadAsStringAsync(ct);
+
+        response.EnsureSuccessStatusCode();
+        Assert.DoesNotContain(rawToken, json, StringComparison.Ordinal);
+        Assert.DoesNotContain("resetToken", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_KnownAndUnknownUser_ReturnIndistinguishableResponsesWithoutTokens()
     {
         var ct = TestContext.Current.CancellationToken;
 
         var known = await Client.PostAsJsonAsync("api/PasswordReset/forgot-password", new ForgotPasswordRequest(_login), ct);
         var unknown = await Client.PostAsJsonAsync("api/PasswordReset/forgot-password", new ForgotPasswordRequest("ghost@example.com"), ct);
 
-        var knownBody = await known.Content.ReadFromJsonAsync<ForgotPasswordResponse>(cancellationToken: ct);
-        var unknownBody = await unknown.Content.ReadFromJsonAsync<ForgotPasswordResponse>(cancellationToken: ct);
+        var knownBody = await known.Content.ReadAsStringAsync(ct);
+        var unknownBody = await unknown.Content.ReadAsStringAsync(ct);
 
-        Assert.NotNull(knownBody);
-        Assert.NotNull(unknownBody);
-        // No account-enumeration signal: identical status, message, and response shape (both carry a token) for both.
+        Assert.Equal(HttpStatusCode.OK, known.StatusCode);
         Assert.Equal(HttpStatusCode.OK, unknown.StatusCode);
-        Assert.Equal(knownBody.Message, unknownBody.Message);
-        Assert.False(string.IsNullOrWhiteSpace(knownBody.ResetToken));
-        Assert.False(string.IsNullOrWhiteSpace(unknownBody.ResetToken));
+        Assert.Equal(knownBody, unknownBody);
+        Assert.DoesNotContain("resetToken", knownBody, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("resetToken", unknownBody, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task ResetPassword_WithTokenFromUnknownUser_IsRejected()
+    public async Task ResetPassword_WithUnpersistedToken_IsRejected()
     {
         var ct = TestContext.Current.CancellationToken;
 
-        // The throwaway token handed back for an unregistered email is never persisted, so it can't reset anything.
-        var forgot = await Client.PostAsJsonAsync("api/PasswordReset/forgot-password", new ForgotPasswordRequest("ghost@example.com"), ct);
-        var forgotBody = await forgot.Content.ReadFromJsonAsync<ForgotPasswordResponse>(cancellationToken: ct);
-        Assert.False(string.IsNullOrWhiteSpace(forgotBody!.ResetToken));
-
         var reset = await Client.PostAsJsonAsync("api/PasswordReset/reset-password",
-            new ResetPasswordRequest(forgotBody.ResetToken!, "brand-new-password"), ct);
+            new ResetPasswordRequest("unpersisted-token", "brand-new-password"), ct);
 
         Assert.Equal(HttpStatusCode.BadRequest, reset.StatusCode);
     }
@@ -90,13 +131,12 @@ public class PasswordResetControllerTests(OptionsProvider optionsProvider) : Con
     public async Task ResetPassword_WithIssuedToken_Succeeds()
     {
         var ct = TestContext.Current.CancellationToken;
+        const string rawToken = "issued-token";
 
-        var forgot = await Client.PostAsJsonAsync("api/PasswordReset/forgot-password", new ForgotPasswordRequest(_login), ct);
-        var forgotBody = await forgot.Content.ReadFromJsonAsync<ForgotPasswordResponse>(cancellationToken: ct);
-        Assert.NotNull(forgotBody?.ResetToken);
+        await AddResetToken(rawToken);
 
         var reset = await Client.PostAsJsonAsync("api/PasswordReset/reset-password",
-            new ResetPasswordRequest(forgotBody!.ResetToken!, "brand-new-password"), ct);
+            new ResetPasswordRequest(rawToken, "brand-new-password"), ct);
 
         reset.EnsureSuccessStatusCode();
     }
@@ -116,19 +156,47 @@ public class PasswordResetControllerTests(OptionsProvider optionsProvider) : Con
     public async Task ResetPassword_ReusedToken_IsRejectedOnSecondUse()
     {
         var ct = TestContext.Current.CancellationToken;
+        const string rawToken = "single-use-token";
 
-        var forgot = await Client.PostAsJsonAsync("api/PasswordReset/forgot-password", new ForgotPasswordRequest(_login), ct);
-        var forgotBody = await forgot.Content.ReadFromJsonAsync<ForgotPasswordResponse>(cancellationToken: ct);
-        var token = forgotBody!.ResetToken!;
+        await AddResetToken(rawToken);
 
         var first = await Client.PostAsJsonAsync("api/PasswordReset/reset-password",
-            new ResetPasswordRequest(token, "first-password"), ct);
+            new ResetPasswordRequest(rawToken, "first-password"), ct);
         var second = await Client.PostAsJsonAsync("api/PasswordReset/reset-password",
-            new ResetPasswordRequest(token, "second-password"), ct);
+            new ResetPasswordRequest(rawToken, "second-password"), ct);
 
         first.EnsureSuccessStatusCode();
         // Single-use: the consumed token can't be redeemed again.
         Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
+    }
+
+    private async Task AddResetToken(string rawToken)
+    {
+        await _tokenRepository!.Add(new PasswordResetToken
+        {
+            UserId = _userId,
+            TokenHash = Hash(rawToken),
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(30),
+        });
+    }
+
+    private static string Hash(string rawToken)
+    {
+        var bytes = Encoding.UTF8.GetBytes(rawToken);
+        return Convert.ToHexString(SHA256.HashData(bytes));
+    }
+
+    private sealed class StubPasswordResetService(string rawToken) : IPasswordResetService
+    {
+        public Task<string> RequestReset(string login, CancellationToken cancellationToken = default) =>
+            Task.FromResult(rawToken);
+
+        public Task<PasswordResetResult> ResetPassword(
+            string rawToken,
+            string newPassword,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(PasswordResetResult.Failure(PasswordResetStatus.InvalidToken));
     }
 
     private sealed class InMemoryPasswordResetTokenRepository : IPasswordResetTokenRepository

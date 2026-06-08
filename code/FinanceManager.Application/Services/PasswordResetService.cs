@@ -18,9 +18,9 @@ public class PasswordResetService(
 
     public async Task<string> RequestReset(string login, CancellationToken cancellationToken = default)
     {
-        // Always mint a token so the return value (and therefore the API response and the link the client renders)
-        // looks the same for every request. For an unknown login the token is returned but never persisted, so it
-        // can't reset anything — the caller cannot tell a registered email from an unregistered one.
+        // Always mint a token so future email delivery can use the same caller path for registered and unknown
+        // accounts. For an unknown login the token is returned to backend code but never persisted, so it can't
+        // reset anything; controllers must not expose the raw token over HTTP.
         var rawToken = GenerateRawToken();
 
         if (string.IsNullOrWhiteSpace(login)) return rawToken;

@@ -15,7 +15,6 @@ public partial class ForgotPasswordComponent
     private bool _isProcessing;
     private bool _requestSent;
     private string _message = string.Empty;
-    private string? _resetLink;
 
     [Inject] public required ILogger<ForgotPasswordComponent> Logger { get; set; }
     [Inject] public required PasswordResetHttpClient PasswordResetHttpClient { get; set; }
@@ -41,12 +40,6 @@ public partial class ForgotPasswordComponent
             }
 
             _message = response.Message;
-
-            // TEMPORARY (issue #280): with no email provider, the API hands back the raw token so we can build a
-            // direct reset link here. Once email delivery lands this returns null and the link disappears.
-            if (!string.IsNullOrEmpty(response.ResetToken))
-                _resetLink = $"reset-password?token={Uri.EscapeDataString(response.ResetToken)}";
-
             _requestSent = true;
         }
         catch (Exception ex)

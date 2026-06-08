@@ -7,8 +7,7 @@ public class PasswordResetHttpClient(HttpClient httpClient)
 {
     /// <summary>
     /// Requests a password reset link for the given login. Returns the server's response, whose message is identical
-    /// whether or not the account exists. While no email provider is wired up the response also carries the raw reset
-    /// token so the UI can show a direct link (issue #280).
+    /// whether or not the account exists.
     /// </summary>
     public async Task<ForgotPasswordResponse?> ForgotPassword(string login)
     {
