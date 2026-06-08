@@ -134,6 +134,8 @@ dotnet run --project code/FinanceManager.Api
 
 Then open `https://localhost:5001` in your browser.
 
+For production backup, restore, and rollback steps on Supabase, see [RUNBOOK.md](RUNBOOK.md).
+
 ### Run tests
 ```bash
 # All tests
