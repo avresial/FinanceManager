@@ -58,9 +58,13 @@ public class PasswordResetController(
     {
         if (environment.IsDevelopment()) return null;
 
+        var pathForLog = HttpContext.Request.Path.ToString()
+            .Replace("\r", string.Empty)
+            .Replace("\n", string.Empty);
+
         logger.LogWarning(
             "Password reset endpoint {Path} rejected because reset token delivery is not configured outside Development.",
-            HttpContext.Request.Path);
+            pathForLog);
         return StatusCode(StatusCodes.Status501NotImplemented, "Password reset is not available.");
     }
 }
