@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.Features;
 using System.Text.Json;
 
 namespace FinanceManager.Api.Middleware;
@@ -9,6 +10,13 @@ internal sealed class RequestBodySizeLimitMiddleware(
     public async Task Invoke(HttpContext context)
     {
         var limit = RequestBodySizeLimits.GetLimitForPath(context.Request.Path);
+        var canHaveBody = context.Features.Get<IHttpRequestBodyDetectionFeature>()?.CanHaveBody ?? false;
+        if (!canHaveBody)
+        {
+            await next(context);
+            return;
+        }
+
         if (context.Request.ContentLength is null)
         {
             logger.LogWarning("Rejected request to {Path} because Content-Length was missing.", context.Request.Path);
@@ -16,7 +24,7 @@ internal sealed class RequestBodySizeLimitMiddleware(
             return;
         }
 
-        if (context.Request.ContentLength > limit)
+        if (context.Request.ContentLength.Value > limit)
         {
             logger.LogWarning(
                 "Rejected request to {Path} because Content-Length {ContentLength} exceeded limit {Limit}.",

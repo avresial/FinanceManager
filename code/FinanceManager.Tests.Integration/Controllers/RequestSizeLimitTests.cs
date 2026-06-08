@@ -10,6 +10,14 @@ namespace FinanceManager.Tests.Integration.Controllers;
 public class RequestSizeLimitTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
     [Fact]
+    public async Task BodylessHealthRequest_WithoutContentLength_IsNotRejected()
+    {
+        var response = await Client.GetAsync("/alive", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
     public async Task ImportEndpoint_WithOversizedPayload_ReturnsRequestEntityTooLarge()
     {
         Authorize("user", 1, UserRole.User);
