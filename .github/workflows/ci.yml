@@ -297,6 +297,27 @@ jobs:
       url: https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ./code
+
+      - name: Install EF Core CLI
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.*
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Apply EF migrations
+        run: dotnet ef database update -s code/FinanceManager.Api/FinanceManager.Api.csproj
+        env:
+          ConnectionStrings__DefaultConnection: ${{ secrets.PROD_CONNECTION_STRING }}
+
       - name: Download publish artifact
         uses: actions/download-artifact@v5
         with:
@@ -324,6 +345,27 @@ jobs:
       url: https://${{ env.AZURE_WEBAPP_NAME_DEV }}.azurewebsites.net
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ./code
+
+      - name: Install EF Core CLI
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.*
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Apply EF migrations
+        run: dotnet ef database update -s code/FinanceManager.Api/FinanceManager.Api.csproj
+        env:
+          ConnectionStrings__DefaultConnection: ${{ secrets.DEV_CONNECTION_STRING }}
+
       - name: Download publish artifact
         uses: actions/download-artifact@v5
         with:
