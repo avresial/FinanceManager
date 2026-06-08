@@ -1,3 +1,4 @@
+using FinanceManager.Api;
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Services.Bonds;
 using FinanceManager.Domain.Dtos;
@@ -16,7 +17,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 public class BondAccountImportController(IBondAccountImportService importService, IAccountRepository<BondAccount> accountRepository)
     : ControllerBase
 {
-    [HttpPost("ImportBondEntries")]
+    [HttpPost(RequestBodySizeLimits.BondImportPath)]
+    [RequestSizeLimit(FinanceManager.Api.RequestBodySizeLimits.ImportEndpointBytes)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(object))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ImportBondEntries([FromBody] BondDataImportDto importDto)

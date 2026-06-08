@@ -336,8 +336,9 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
         return NoContent();
     }
 
-    [HttpPost("bulk-import-close-prices")]
+    [HttpPost(FinanceManager.Api.RequestBodySizeLimits.StockPriceBulkImportPath)]
     [Authorize(Roles = "Admin")]
+    [RequestSizeLimit(FinanceManager.Api.RequestBodySizeLimits.ImportEndpointBytes)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockPriceBulkImportResultDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> BulkImportClosePrices([FromForm] IFormFile? file, CancellationToken cancellationToken = default)

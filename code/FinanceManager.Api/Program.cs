@@ -9,6 +9,7 @@ using FinanceManager.Application.Options;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
@@ -65,6 +66,14 @@ builder.Services
     .AddInfrastructureApi()
     .AddControllers();
 
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = RequestBodySizeLimits.GlobalRequestBodyBytes;
+});
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = RequestBodySizeLimits.GlobalRequestBodyBytes;
+});
 
 builder.Services.Configure<JwtAuthOptions>(builder.Configuration.GetSection("JwtConfig"));
 builder.Services.Configure<RefreshTokenOptions>(builder.Configuration.GetSection(RefreshTokenOptions.SectionName));
@@ -259,6 +268,8 @@ app.UseForwardedHeaders();
 // Registered first so it wraps the whole pipeline: any unhandled exception is turned into a
 // consistent ProblemDetails response by GlobalExceptionHandler instead of leaking framework defaults.
 app.UseExceptionHandler();
+
+app.UseMiddleware<RequestBodySizeLimitMiddleware>();
 
 // HSTS only outside Development so local HTTP-only loops aren't pinned to HTTPS in the browser.
 if (!app.Environment.IsDevelopment())
