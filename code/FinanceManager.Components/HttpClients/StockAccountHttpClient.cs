@@ -39,12 +39,12 @@ public class StockAccountHttpClient(HttpClient httpClient)
     }
 
     public async Task<StockAccount?> GetInitialTransactionHistoryAsync(int accountId, DateTime startDate, DateTime endDate,
-        int minimumEntriesCount = 100)
+        int minimumEntryCount = 100)
     {
         var encodedStartDate = Uri.EscapeDataString(startDate.ToString("O"));
         var encodedEndDate = Uri.EscapeDataString(endDate.ToString("O"));
         var result = await httpClient.GetFromJsonAsync<StockAccountDto>(
-            $"{httpClient.BaseAddress}api/StockAccount/{accountId}/GetInitialTransactionHistory?startDate={encodedStartDate}&endDate={encodedEndDate}&minimumEntriesCount={minimumEntriesCount}");
+            $"{httpClient.BaseAddress}api/StockAccount/{accountId}/GetInitialTransactionHistory?startDate={encodedStartDate}&endDate={encodedEndDate}&minimumEntryCount={minimumEntryCount}");
         return MapAccount(result);
     }
 

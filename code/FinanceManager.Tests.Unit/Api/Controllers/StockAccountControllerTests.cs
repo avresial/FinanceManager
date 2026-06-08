@@ -219,33 +219,7 @@ public class StockAccountControllerTests
     [Fact]
     public async Task GetWithDateRange_BackfillsOlderEntriesUntilMinimumIsReached()
     {
-        var accountId = 1;
-        var startDate = new DateTime(2026, 4, 1);
-        var endDate = new DateTime(2026, 4, 30);
-        var expandedStartDate = new DateTime(2026, 3, 15);
-        StockAccount account = new(_testUserId, accountId, "Test Account");
-        List<StockAccountEntry> initialEntries =
-        [
-            new(accountId, 2, new DateTime(2026, 4, 20), 10500m, 500m, "AAPL", InvestmentType.Stock),
-        ];
-        List<StockAccountEntry> expandedEntries =
-        [
-            new(accountId, 2, new DateTime(2026, 4, 20), 10500m, 500m, "AAPL", InvestmentType.Stock),
-            new(accountId, 1, expandedStartDate, 10000m, 10000m, "AAPL", InvestmentType.Stock),
-        ];
-
-        _mockStockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
-        _mockStockAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns(initialEntries.ToAsyncEnumerable());
-        _mockStockAccountEntryRepository
-            .Setup(repo => repo.GetNextOlder(accountId, new DateTime(2026, 4, 20)))
-            .ReturnsAsync(new Dictionary<string, StockAccountEntry> { ["AAPL"] = new(accountId, 1, expandedStartDate, 10000m, 10000m, "AAPL", InvestmentType.Stock) });
-        _mockStockAccountEntryRepository.Setup(repo => repo.Get(accountId, expandedStartDate, endDate)).Returns(expandedEntries.ToAsyncEnumerable());
-        _mockStockAccountEntryRepository
-            .Setup(repo => repo.GetNextOlder(accountId, expandedStartDate))
-            .ReturnsAsync(new Dictionary<string, StockAccountEntry>());
-        _mockStockAccountEntryRepository
-            .Setup(repo => repo.GetNextYounger(accountId, endDate))
-            .ReturnsAsync(new Dictionary<string, StockAccountEntry>());
+        var (accountId, startDate, endDate) = SetupBackfillScenario();
 
         var result = await _controller.Get(accountId, startDate, endDate, minimumEntryCount: 2);
 
@@ -257,6 +231,18 @@ public class StockAccountControllerTests
 
     [Fact]
     public async Task GetInitialTransactionHistory_BackfillsOlderEntriesUntilMinimumIsReached()
+    {
+        var (accountId, startDate, endDate) = SetupBackfillScenario();
+
+        var result = await _controller.GetInitialTransactionHistory(accountId, startDate, endDate, minimumEntryCount: 2);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnValue = Assert.IsType<StockAccountDto>(okResult.Value);
+        Assert.Equal(2, returnValue.Entries.Count());
+        Assert.Equal([2, 1], returnValue.Entries.Select(x => x.EntryId));
+    }
+
+    private (int AccountId, DateTime StartDate, DateTime EndDate) SetupBackfillScenario()
     {
         var accountId = 1;
         var startDate = new DateTime(2026, 4, 1);
@@ -286,11 +272,7 @@ public class StockAccountControllerTests
             .Setup(repo => repo.GetNextYounger(accountId, endDate))
             .ReturnsAsync(new Dictionary<string, StockAccountEntry>());
 
-        var result = await _controller.GetInitialTransactionHistory(accountId, startDate, endDate, minimumEntriesCount: 2);
-
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<StockAccountDto>(okResult.Value);
-        Assert.Equal([2, 1], returnValue.Entries.Select(x => x.EntryId));
+        return (accountId, startDate, endDate);
     }
 
     [Fact]

@@ -240,34 +240,7 @@ public class CurrencyAccountControllerTests
     [Fact]
     public async Task Get_WithMinimumEntryCount_BackfillsOlderEntriesUntilMinimumIsReached()
     {
-        var userId = 1;
-        var accountId = 1;
-        var startDate = new DateTime(2026, 4, 1);
-        var endDate = new DateTime(2026, 4, 30);
-        var expandedStartDate = new DateTime(2026, 3, 15);
-        CurrencyAccount account = new(userId, accountId, "Test Account");
-        List<CurrencyAccountEntry> initialEntries =
-        [
-            new(accountId, 2, new DateTime(2026, 4, 20), 900m, -100m),
-        ];
-        List<CurrencyAccountEntry> expandedEntries =
-        [
-            new(accountId, 2, new DateTime(2026, 4, 20), 900m, -100m),
-            new(accountId, 1, expandedStartDate, 1000m, 1000m),
-        ];
-
-        _mockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
-        _mockAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns(initialEntries.ToAsyncEnumerable());
-        _mockAccountEntryRepository
-            .Setup(repo => repo.GetNextOlder(accountId, new DateTime(2026, 4, 20)))
-            .ReturnsAsync(new CurrencyAccountEntry(accountId, 1, expandedStartDate, 1000m, 1000m));
-        _mockAccountEntryRepository.Setup(repo => repo.Get(accountId, expandedStartDate, endDate)).Returns(expandedEntries.ToAsyncEnumerable());
-        _mockAccountEntryRepository
-            .Setup(repo => repo.GetNextOlder(accountId, expandedStartDate))
-            .ReturnsAsync((CurrencyAccountEntry?)null);
-        _mockAccountEntryRepository
-            .Setup(repo => repo.GetNextYounger(accountId, endDate))
-            .ReturnsAsync((CurrencyAccountEntry?)null);
+        var (accountId, startDate, endDate) = SetupBackfillScenario();
 
         var result = await _controller.Get(accountId, startDate, endDate, minimumEntryCount: 2);
 
@@ -279,6 +252,18 @@ public class CurrencyAccountControllerTests
 
     [Fact]
     public async Task GetInitialTransactionHistory_BackfillsOlderEntriesUntilMinimumIsReached()
+    {
+        var (accountId, startDate, endDate) = SetupBackfillScenario();
+
+        var result = await _controller.GetInitialTransactionHistory(accountId, startDate, endDate, minimumEntryCount: 2);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnValue = Assert.IsType<CurrencyAccountDto>(okResult.Value);
+        Assert.Equal(2, returnValue.Entries.Count());
+        Assert.Equal([2, 1], returnValue.Entries.Select(x => x.EntryId));
+    }
+
+    private (int AccountId, DateTime StartDate, DateTime EndDate) SetupBackfillScenario()
     {
         var userId = 1;
         var accountId = 1;
@@ -309,11 +294,7 @@ public class CurrencyAccountControllerTests
             .Setup(repo => repo.GetNextYounger(accountId, endDate))
             .ReturnsAsync((CurrencyAccountEntry?)null);
 
-        var result = await _controller.GetInitialTransactionHistory(accountId, startDate, endDate, minimumEntriesCount: 2);
-
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<CurrencyAccountDto>(okResult.Value);
-        Assert.Equal([2, 1], returnValue.Entries.Select(x => x.EntryId));
+        return (accountId, startDate, endDate);
     }
 
     [Fact]

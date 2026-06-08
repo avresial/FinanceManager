@@ -32,12 +32,12 @@ public class BondAccountHttpClient(HttpClient httpClient)
     }
 
     public async Task<BondAccount?> GetInitialTransactionHistoryAsync(int accountId, DateTime startDate, DateTime endDate,
-        int minimumEntriesCount = 100)
+        int minimumEntryCount = 100)
     {
         var encodedStartDate = Uri.EscapeDataString(startDate.ToString("O"));
         var encodedEndDate = Uri.EscapeDataString(endDate.ToString("O"));
         var result = await httpClient.GetFromJsonAsync<BondAccountDto>(
-            $"{httpClient.BaseAddress}api/BondAccount/{accountId}/GetInitialTransactionHistory?startDate={encodedStartDate}&endDate={encodedEndDate}&minimumEntriesCount={minimumEntriesCount}");
+            $"{httpClient.BaseAddress}api/BondAccount/{accountId}/GetInitialTransactionHistory?startDate={encodedStartDate}&endDate={encodedEndDate}&minimumEntryCount={minimumEntryCount}");
         return MapAccount(result);
     }
 

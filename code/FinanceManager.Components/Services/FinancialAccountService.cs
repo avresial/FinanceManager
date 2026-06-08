@@ -121,14 +121,14 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     }
 
     public async Task<T?> GetInitialTransactionHistory<T>(int userId, int id, DateTime dateStart, DateTime dateEnd,
-        int minimumEntriesCount = 100) where T : BasicAccountInformation
+        int minimumEntryCount = 100) where T : BasicAccountInformation
     {
         if (typeof(T) == typeof(CurrencyAccount))
-            return await currencyAccountHttpClient.GetInitialTransactionHistoryAsync(id, dateStart, dateEnd, minimumEntriesCount) as T;
+            return await currencyAccountHttpClient.GetInitialTransactionHistoryAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
         else if (typeof(T) == typeof(StockAccount))
-            return await stockAccountHttpClient.GetInitialTransactionHistoryAsync(id, dateStart, dateEnd, minimumEntriesCount) as T;
+            return await stockAccountHttpClient.GetInitialTransactionHistoryAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
         else if (typeof(T) == typeof(BondAccount))
-            return await bondAccountHttpClient.GetInitialTransactionHistoryAsync(id, dateStart, dateEnd, minimumEntriesCount) as T;
+            return await bondAccountHttpClient.GetInitialTransactionHistoryAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
 
         throw new NotSupportedException($"Account type {typeof(T)} not supported for getting initial transaction history.");
     }

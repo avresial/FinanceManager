@@ -53,16 +53,7 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate, [FromQuery] int minimumEntryCount = 0)
     {
-        var account = await bondAccountRepository.Get(accountId);
-
-        if (account is null) return NotFound();
-        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
-        if (startDate > endDate) return BadRequest("Start date cannot be after end date.");
-        if (minimumEntryCount < 0) return BadRequest("Minimum entry count cannot be negative.");
-
-        var loadResult = await bondEntryProvider.GetEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
-
-        return Ok(await CreateDtoAsync(account, loadResult.Entries, loadResult.EffectiveStartDate, endDate));
+        return await GetAccountWithEntries(accountId, startDate, endDate, minimumEntryCount);
     }
 
     [HttpGet("{accountId:int}/GetInitialTransactionHistory")]
@@ -71,16 +62,21 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetInitialTransactionHistory(int accountId, [FromQuery] DateTime startDate,
-        [FromQuery] DateTime endDate, [FromQuery] int minimumEntriesCount = 100)
+        [FromQuery] DateTime endDate, [FromQuery] int minimumEntryCount = 100)
+    {
+        return await GetAccountWithEntries(accountId, startDate, endDate, minimumEntryCount);
+    }
+
+    private async Task<IActionResult> GetAccountWithEntries(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount)
     {
         var account = await bondAccountRepository.Get(accountId);
 
         if (account is null) return NotFound();
         if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
         if (startDate > endDate) return BadRequest("Start date cannot be after end date.");
-        if (minimumEntriesCount < 0) return BadRequest("Minimum entries count cannot be negative.");
+        if (minimumEntryCount < 0) return BadRequest("Minimum entry count cannot be negative.");
 
-        var loadResult = await bondEntryProvider.GetEntriesAsync(accountId, startDate, endDate, minimumEntriesCount);
+        var loadResult = await bondEntryProvider.GetEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
 
         return Ok(await CreateDtoAsync(account, loadResult.Entries, loadResult.EffectiveStartDate, endDate));
     }

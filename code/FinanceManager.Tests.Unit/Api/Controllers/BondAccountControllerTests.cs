@@ -102,34 +102,7 @@ public class BondAccountControllerTests
     [Fact]
     public async Task Get_WithMinimumEntryCount_BackfillsOlderEntriesUntilMinimumIsReached()
     {
-        var userId = 1;
-        var accountId = 1;
-        var startDate = new DateTime(2026, 4, 1);
-        var endDate = new DateTime(2026, 4, 30);
-        var expandedStartDate = new DateTime(2026, 3, 15);
-        BondAccount account = new(userId, accountId, "Bond Account", AccountLabel.Other);
-        List<BondAccountEntry> initialEntries =
-        [
-            new(accountId, 2, new DateTime(2026, 4, 20), 10500m, 500m, 101),
-        ];
-        List<BondAccountEntry> expandedEntries =
-        [
-            new(accountId, 2, new DateTime(2026, 4, 20), 10500m, 500m, 101),
-            new(accountId, 1, expandedStartDate, 10000m, 10000m, 101),
-        ];
-
-        _mockBondAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
-        _mockBondAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns(initialEntries.ToAsyncEnumerable());
-        _mockBondAccountEntryRepository
-            .Setup(repo => repo.GetNextOlder(accountId, new DateTime(2026, 4, 20)))
-            .ReturnsAsync(new Dictionary<int, BondAccountEntry> { [101] = new(accountId, 1, expandedStartDate, 10000m, 10000m, 101) });
-        _mockBondAccountEntryRepository.Setup(repo => repo.Get(accountId, expandedStartDate, endDate)).Returns(expandedEntries.ToAsyncEnumerable());
-        _mockBondAccountEntryRepository
-            .Setup(repo => repo.GetNextOlder(accountId, expandedStartDate))
-            .ReturnsAsync(new Dictionary<int, BondAccountEntry>());
-        _mockBondAccountEntryRepository
-            .Setup(repo => repo.GetNextYounger(accountId, endDate))
-            .ReturnsAsync(new Dictionary<int, BondAccountEntry>());
+        var (accountId, startDate, endDate) = SetupBackfillScenario();
 
         var result = await _controller.Get(accountId, startDate, endDate, minimumEntryCount: 2);
 
@@ -141,6 +114,18 @@ public class BondAccountControllerTests
 
     [Fact]
     public async Task GetInitialTransactionHistory_BackfillsOlderEntriesUntilMinimumIsReached()
+    {
+        var (accountId, startDate, endDate) = SetupBackfillScenario();
+
+        var result = await _controller.GetInitialTransactionHistory(accountId, startDate, endDate, minimumEntryCount: 2);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnValue = Assert.IsType<BondAccountDto>(okResult.Value);
+        Assert.Equal(2, returnValue.Entries.Count());
+        Assert.Equal([2, 1], returnValue.Entries.Select(x => x.EntryId));
+    }
+
+    private (int AccountId, DateTime StartDate, DateTime EndDate) SetupBackfillScenario()
     {
         var userId = 1;
         var accountId = 1;
@@ -171,11 +156,7 @@ public class BondAccountControllerTests
             .Setup(repo => repo.GetNextYounger(accountId, endDate))
             .ReturnsAsync(new Dictionary<int, BondAccountEntry>());
 
-        var result = await _controller.GetInitialTransactionHistory(accountId, startDate, endDate, minimumEntriesCount: 2);
-
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<BondAccountDto>(okResult.Value);
-        Assert.Equal([2, 1], returnValue.Entries.Select(x => x.EntryId));
+        return (accountId, startDate, endDate);
     }
 
     [Fact]

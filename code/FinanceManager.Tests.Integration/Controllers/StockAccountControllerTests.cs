@@ -159,7 +159,7 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
         var startDate = DateTime.UtcNow.Date.AddDays(-3);
         var endDate = DateTime.UtcNow.Date;
 
-        var account = await client.GetInitialTransactionHistoryAsync(_testAccountId, startDate, endDate, minimumEntriesCount: 3);
+        var account = await client.GetInitialTransactionHistoryAsync(_testAccountId, startDate, endDate, minimumEntryCount: 3);
 
         Assert.NotNull(account);
         Assert.Equal(new[] { 3, 2, 1 }, account!.Entries.Select(x => x.EntryId));
