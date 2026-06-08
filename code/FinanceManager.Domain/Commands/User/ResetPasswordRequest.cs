@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Application.Commands.User;
+namespace FinanceManager.Domain.Commands.User;
 
 public record ResetPasswordRequest(
     [Required, StringLength(512)] string Token,

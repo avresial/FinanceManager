@@ -17,7 +17,7 @@ namespace FinanceManager.Tests.Integration.Controllers;
 public class LoginControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
     // Stored login is lowercased (logins are normalized at the API boundary); see the mixed-case test below.
-    private static readonly string _testUserName = "testuser";
+    private static readonly string _testUserName = "testuser@example.com";
     private static readonly string _testPassword = "password";
 
     protected override void ConfigureServices(IServiceCollection services)
@@ -64,7 +64,7 @@ public class LoginControllerTests(OptionsProvider optionsProvider) : ControllerT
     {
         // arrange: post the username with different casing than the stored (lowercased) login. The API normalizes
         // the username before lookup, so this must still authenticate.
-        LoginRequestModel request = new("TestUser", _testPassword);
+        LoginRequestModel request = new("TestUser@Example.com", _testPassword);
 
         // act
         var response = await Client.PostAsJsonAsync("api/Login", request, cancellationToken: TestContext.Current.CancellationToken);

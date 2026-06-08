@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Application.Commands.Account;
+namespace FinanceManager.Domain.Commands.Account;
 
 public record AddFinancialLabelClassification(
     [Range(1, int.MaxValue)] int LabelId,

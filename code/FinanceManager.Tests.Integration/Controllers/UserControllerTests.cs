@@ -1,7 +1,7 @@
-using FinanceManager.Application.Commands.User;
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Commands.User;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;

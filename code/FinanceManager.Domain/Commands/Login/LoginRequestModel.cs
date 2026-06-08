@@ -1,7 +1,8 @@
+using FinanceManager.Domain.Validation;
 using System.ComponentModel.DataAnnotations;
 
 namespace FinanceManager.Application.Commands.Login;
 
 public record LoginRequestModel(
-    [Required, StringLength(256)] string UserName,
+    [Required, LoginIdentifier, StringLength(256)] string UserName,
     [Required, StringLength(128, MinimumLength = 8)] string Password);

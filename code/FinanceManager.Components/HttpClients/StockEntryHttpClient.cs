@@ -1,4 +1,4 @@
-using FinanceManager.Application.Commands.Account;
+using FinanceManager.Domain.Commands.Account;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;

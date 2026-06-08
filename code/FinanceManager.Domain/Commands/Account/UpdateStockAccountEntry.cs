@@ -2,7 +2,7 @@ using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Validation;
 using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Application.Commands.Account;
+namespace FinanceManager.Domain.Commands.Account;
 
 public record UpdateStockAccountEntry(
     [Range(1, int.MaxValue)] int AccountId,
@@ -12,4 +12,4 @@ public record UpdateStockAccountEntry(
     decimal ValueChange,
     [Required, StringLength(32)] string Ticker,
     InvestmentType InvestmentType,
-    List<UpdateFiancialLabel> Labels);
+    List<UpdateFinancialLabel> Labels);

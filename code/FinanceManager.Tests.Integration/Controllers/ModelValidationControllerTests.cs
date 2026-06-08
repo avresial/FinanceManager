@@ -1,10 +1,9 @@
 using FinanceManager.Api.Controllers.Admin;
-using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Commands.Bonds;
 using FinanceManager.Application.Commands.Login;
-using FinanceManager.Application.Commands.User;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Commands.Stocks;
+using FinanceManager.Domain.Commands.User;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
@@ -23,6 +22,7 @@ public class ModelValidationControllerTests(OptionsProvider optionsProvider) : C
     public static TheoryData<string, HttpMethod, object, UserRole?> InvalidPayloads => new()
     {
         { "api/Login", HttpMethod.Post, new LoginRequestModel("user@example.com", ""), null },
+        { "api/Login", HttpMethod.Post, new LoginRequestModel("not-an-email", "password"), null },
         { "api/User/Add", HttpMethod.Post, new AddUser("not-an-email", "password", PricingLevel.Basic), null },
         { "api/User/UpdatePassword", HttpMethod.Put, new UpdatePassword(0, "password"), UserRole.Admin },
         { "api/User/UpdatePricingPlan", HttpMethod.Put, new UpdatePricingPlan(0, PricingLevel.Basic), UserRole.Admin },
@@ -31,7 +31,7 @@ public class ModelValidationControllerTests(OptionsProvider optionsProvider) : C
         { "api/StockAccount/Add", HttpMethod.Post, new AddAccount(""), UserRole.User },
         { "api/StockAccount/Update", HttpMethod.Put, new UpdateAccount(0, "", AccountLabel.Stock), UserRole.User },
         { "api/CurrencyEntry", HttpMethod.Post, new AddCurrencyAccountEntry(0, 0, new DateTime(1899, 12, 31), 0, -10, "", null), UserRole.User },
-        { "api/CurrencyEntry", HttpMethod.Put, new UpdateCurrencyAccountEntry(1, 0, DateTime.UtcNow.AddYears(2), 0, -10, "", null, [new UpdateFiancialLabel(0, "")]), UserRole.User },
+        { "api/CurrencyEntry", HttpMethod.Put, new UpdateCurrencyAccountEntry(1, 0, DateTime.UtcNow.AddYears(2), 0, -10, "", null, [new UpdateFinancialLabel(0, "")]), UserRole.User },
         { "api/BondEntry", HttpMethod.Post, new AddBondAccountEntry(0, 0, new DateTime(1899, 12, 31), 0, -10, 0), UserRole.User },
         { "api/BondEntry", HttpMethod.Put, new UpdateBondAccountEntry(0, 0, DateTime.UtcNow.AddYears(2), 0, -10, 0), UserRole.User },
         { "api/StockEntry/Add", HttpMethod.Post, new AddStockAccountEntry(null!), UserRole.User },

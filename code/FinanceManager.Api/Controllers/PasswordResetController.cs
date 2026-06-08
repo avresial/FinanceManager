@@ -1,4 +1,4 @@
-using FinanceManager.Application.Commands.User;
+using FinanceManager.Domain.Commands.User;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

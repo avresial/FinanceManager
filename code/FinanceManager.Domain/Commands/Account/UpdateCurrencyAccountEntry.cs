@@ -1,4 +1,4 @@
-using FinanceManager.Application.Commands.Account;
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Validation;
 using System.ComponentModel.DataAnnotations;
 
@@ -12,4 +12,4 @@ public record UpdateCurrencyAccountEntry(
     decimal ValueChange,
     [Required, StringLength(512)] string Description,
     [StringLength(512)] string? ContractorDetails,
-    List<UpdateFiancialLabel> Labels);
+    List<UpdateFinancialLabel> Labels);

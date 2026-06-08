@@ -1,7 +1,7 @@
 using FinanceManager.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Application.Commands.User;
+namespace FinanceManager.Domain.Commands.User;
 
 public record AddUser(
     [Required, EmailAddress, StringLength(256)] string UserName,

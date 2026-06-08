@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Application.Commands.User;
+namespace FinanceManager.Domain.Commands.User;
 
 public record GetUser(
     [Required, StringLength(256)] string UserName,

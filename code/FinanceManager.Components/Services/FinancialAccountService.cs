@@ -1,4 +1,3 @@
-﻿using FinanceManager.Application.Commands.Account;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Bonds;
@@ -271,10 +270,10 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         }
         else if (accountEntry is StockAccountEntry stockAccountEntry)
         {
-            List<UpdateFiancialLabel> labels = [];
+            List<UpdateFinancialLabel> labels = [];
 
             if (stockAccountEntry.Labels is not null && stockAccountEntry.Labels.Count != 0)
-                labels = stockAccountEntry.Labels.Select(x => new UpdateFiancialLabel(x.Id, x.Name)).ToList();
+                labels = stockAccountEntry.Labels.Select(x => new UpdateFinancialLabel(x.Id, x.Name)).ToList();
 
             UpdateStockAccountEntry updateStockAccountEntry = new(stockAccountEntry.AccountId, stockAccountEntry.EntryId,
                 stockAccountEntry.PostingDate, stockAccountEntry.Value, stockAccountEntry.ValueChange, stockAccountEntry.Ticker,

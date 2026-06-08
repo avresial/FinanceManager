@@ -1,5 +1,5 @@
-﻿using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services.Ai;
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
