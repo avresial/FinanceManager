@@ -25,6 +25,9 @@ public class StockAccountEntryConfiguration : IEntityTypeConfiguration<StockAcco
         builder.Property(e => e.Isin)
             .HasMaxLength(12);
 
+        builder.HasIndex(e => new { e.AccountId, e.PostingDate, e.EntryId });
+        builder.HasIndex(e => new { e.AccountId, e.Isin, e.PostingDate, e.EntryId });
+
         // Ensure PostingDate is always returned as UTC
         var dateTimeConverter = new ValueConverter<DateTime, DateTime>(
             v => v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime(),
