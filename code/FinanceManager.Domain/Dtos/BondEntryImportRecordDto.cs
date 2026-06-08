@@ -1,3 +1,9 @@
+using FinanceManager.Domain.Validation;
+using System.ComponentModel.DataAnnotations;
+
 namespace FinanceManager.Domain.Dtos;
 
-public record BondEntryImportRecordDto(DateTime PostingDate, decimal ValueChange, int BondDetailsId);
+public record BondEntryImportRecordDto(
+    [ReasonableDate] DateTime PostingDate,
+    decimal ValueChange,
+    [Range(1, int.MaxValue)] int BondDetailsId);

@@ -1,3 +1,7 @@
-namespace FinanceManager.Application.Commands.User;
+using System.ComponentModel.DataAnnotations;
 
-public record ResetPasswordRequest(string Token, string NewPassword);
+namespace FinanceManager.Domain.Commands.User;
+
+public record ResetPasswordRequest(
+    [Required, StringLength(512)] string Token,
+    [Required, StringLength(128, MinimumLength = 8)] string NewPassword);

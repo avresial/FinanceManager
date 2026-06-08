@@ -1,4 +1,4 @@
-﻿using FinanceManager.Application.Commands.Account;
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using System.Net.Http.Json;
 

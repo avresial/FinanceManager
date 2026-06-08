@@ -1,4 +1,4 @@
-namespace FinanceManager.Application.Commands.User;
+namespace FinanceManager.Domain.Commands.User;
 
 /// <summary>
 /// Response to a forgot-password request. <see cref="Message"/> is intentionally identical whether or not the

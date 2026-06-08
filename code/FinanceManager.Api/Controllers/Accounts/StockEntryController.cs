@@ -1,5 +1,5 @@
 using FinanceManager.Api.Helpers;
-using FinanceManager.Application.Commands.Account;
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Dtos;

@@ -16,7 +16,7 @@ namespace FinanceManager.Tests.Integration.Controllers;
 [Trait("Category", "Integration")]
 public class AuthControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
-    private const string _userName = "refreshuser";
+    private const string _userName = "refreshuser@example.com";
     private const string _password = "password";
     private const int _userId = 4242;
 

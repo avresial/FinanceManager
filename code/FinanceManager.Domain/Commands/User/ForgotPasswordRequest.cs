@@ -1,3 +1,6 @@
-namespace FinanceManager.Application.Commands.User;
+using System.ComponentModel.DataAnnotations;
 
-public record ForgotPasswordRequest(string Login);
+namespace FinanceManager.Domain.Commands.User;
+
+public record ForgotPasswordRequest(
+    [Required, EmailAddress, StringLength(256)] string Login);
