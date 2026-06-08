@@ -11,5 +11,7 @@ public class FinancialAccountBaseDtoConfiguration : IEntityTypeConfiguration<Fin
         builder.HasKey(e => e.AccountId);
         builder.Property(e => e.AccountId)
             .ValueGeneratedOnAdd();
+
+        builder.HasIndex(e => new { e.AccountType, e.UserId });
     }
 }
