@@ -1,6 +1,7 @@
 using ApexCharts;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using Microsoft.AspNetCore.Components;
+using MudBlazor;
 
 namespace FinanceManager.Components.Components.Features.FinancialAccounts.Shared;
 
@@ -14,11 +15,15 @@ public partial class AccountDetailsHero
     [Parameter] public decimal? BalanceChangePercent { get; set; }
     [Parameter] public string SelectedRange { get; set; } = "3M";
     [Parameter] public EventCallback<string> SelectedRangeChanged { get; set; }
+    [Parameter] public DateRange? CustomDateRange { get; set; }
+    [Parameter] public EventCallback<DateRange?> CustomDateRangeChanged { get; set; }
     [Parameter] public bool IsChartLoading { get; set; }
     [Parameter] public List<TimeSeriesModel> ChartData { get; set; } = [];
     [Parameter] public bool IsMobile { get; set; }
 
-    private readonly string[] _ranges = ["1W", "1M", "3M", "6M", "YTD", "All"];
+    public const string CustomRangeKey = "Range";
+
+    private readonly string[] _ranges = ["Month", "1M", "3M", "6M", "YTD"];
 
     private static readonly ApexChartOptions<TimeSeriesModel> _heroChartOptions = new()
     {
@@ -54,5 +59,12 @@ public partial class AccountDetailsHero
     {
         SelectedRange = value;
         await SelectedRangeChanged.InvokeAsync(value);
+    }
+
+    private async Task OnCustomDateRangeChanged(DateRange? value)
+    {
+        CustomDateRange = value;
+        SelectedRange = CustomRangeKey;
+        await CustomDateRangeChanged.InvokeAsync(value);
     }
 }

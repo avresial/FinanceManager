@@ -162,6 +162,22 @@ public class CurrencyAccountControllerTests(OptionsProvider optionsProvider) : C
     }
 
     [Fact]
+    public async Task GetInitialTransactionHistory_BackfillsOlderEntriesWhenMinimumEntryCountRequiresIt()
+    {
+        await SeedAccountWithEntries();
+        Authorize("testuser", _testUserId, UserRole.User);
+        var client = new CurrencyAccountHttpClient(Client);
+        var startDate = DateTime.UtcNow.Date.AddDays(-3);
+        var endDate = DateTime.UtcNow.Date;
+
+        var account = await client.GetInitialTransactionHistoryAsync(_testAccountId, startDate, endDate, minimumEntriesCount: 3);
+
+        Assert.NotNull(account);
+        Assert.Equal(new[] { 3, 2, 1 }, account!.Entries.Select(x => x.EntryId));
+        Assert.Null(account.NextOlderEntry);
+    }
+
+    [Fact]
     public async Task GetRecentEntries_ReturnsMostRecentEntriesWithOlderMetadata()
     {
         await SeedAccountWithEntries();

@@ -57,9 +57,30 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
 
         if (account is null) return NotFound();
         if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+        if (startDate > endDate) return BadRequest("Start date cannot be after end date.");
         if (minimumEntryCount < 0) return BadRequest("Minimum entry count cannot be negative.");
 
         var loadResult = await currencyEntryProvider.GetEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
+
+        return Ok(await CreateDtoAsync(account, loadResult.Entries, loadResult.EffectiveStartDate, endDate));
+    }
+
+    [HttpGet("{accountId:int}/GetInitialTransactionHistory")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetInitialTransactionHistory(int accountId, [FromQuery] DateTime startDate,
+        [FromQuery] DateTime endDate, [FromQuery] int minimumEntriesCount = 100)
+    {
+        var account = await accountRepository.Get(accountId);
+
+        if (account is null) return NotFound();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+        if (startDate > endDate) return BadRequest("Start date cannot be after end date.");
+        if (minimumEntriesCount < 0) return BadRequest("Minimum entries count cannot be negative.");
+
+        var loadResult = await currencyEntryProvider.GetEntriesAsync(accountId, startDate, endDate, minimumEntriesCount);
 
         return Ok(await CreateDtoAsync(account, loadResult.Entries, loadResult.EffectiveStartDate, endDate));
     }

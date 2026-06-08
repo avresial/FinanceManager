@@ -11,6 +11,8 @@ public interface IFinancialAccountService
 
     public Task<bool> AccountExists(int accountId);
     public Task<T?> GetAccount<T>(int userId, int id, DateTime dateStart, DateTime dateEnd, int minimumEntryCount = 0) where T : BasicAccountInformation;
+    public Task<T?> GetInitialTransactionHistory<T>(int userId, int id, DateTime dateStart, DateTime dateEnd,
+        int minimumEntriesCount = 100) where T : BasicAccountInformation;
     public Task<IEnumerable<T>> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation;
 
     public Task AddAccount<T>(T account) where T : BasicAccountInformation;

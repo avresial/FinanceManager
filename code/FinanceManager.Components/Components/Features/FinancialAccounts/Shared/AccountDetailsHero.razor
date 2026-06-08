@@ -35,6 +35,17 @@
                                    Style="@($"min-width: 40px; font-weight: {(SelectedRange == range ? 700 : 500)};")"
                                    OnClick="@(() => OnRangeChanged(range))">@range</MudButton>
                     }
+                    <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
+                        <ActivatorContent>
+                            <MudIconButton Icon="@Icons.Material.Filled.CalendarMonth" Size="MudBlazor.Size.Small"
+                                           Color="@(SelectedRange == CustomRangeKey ? MudBlazor.Color.Primary : MudBlazor.Color.Default)"
+                                           aria-label="Select custom date range" />
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudDateRangePicker DateRange="CustomDateRange" DateRangeChanged="OnCustomDateRangeChanged"
+                                                RelativeWidth="DropdownWidth.Ignore" Class="px-2 pt-2" />
+                        </ChildContent>
+                    </MudMenu>
                 </div>
             </MudStack>
 
@@ -97,7 +108,17 @@
                            Style="@($"min-width: 44px; font-weight: {(SelectedRange == range ? 700 : 500)};")"
                            OnClick="@(() => OnRangeChanged(range))">@range</MudButton>
             }
+            <MudMenu AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter" Dense="true">
+                <ActivatorContent>
+                    <MudIconButton Icon="@Icons.Material.Filled.CalendarMonth" Size="MudBlazor.Size.Small"
+                                   Color="@(SelectedRange == CustomRangeKey ? MudBlazor.Color.Primary : MudBlazor.Color.Default)"
+                                   aria-label="Select custom date range" />
+                </ActivatorContent>
+                <ChildContent>
+                    <MudDateRangePicker DateRange="CustomDateRange" DateRangeChanged="OnCustomDateRangeChanged"
+                                        RelativeWidth="DropdownWidth.Ignore" Class="px-2 pt-2" />
+                </ChildContent>
+            </MudMenu>
         </div>
     }
 </MudPaper>
-
