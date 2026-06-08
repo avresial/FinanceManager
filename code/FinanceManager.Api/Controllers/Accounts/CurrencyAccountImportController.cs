@@ -1,3 +1,4 @@
+using FinanceManager.Api;
 using FinanceManager.Api.Helpers;
 using FinanceManager.Api.Hubs;
 using FinanceManager.Api.Services;
@@ -19,7 +20,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 public class CurrencyAccountImportController(ICurrencyAccountImportService importService, ICurrencyAccountRepository<CurrencyAccount> accountRepository)
     : ControllerBase
 {
-    [HttpPost("StartAsyncImport")]
+    [HttpPost(RequestBodySizeLimits.CurrencyStartAsyncImportPath)]
     [RequestSizeLimit(FinanceManager.Api.RequestBodySizeLimits.ImportEndpointBytes)]
     [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(CurrencyImportJobStartResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -96,7 +97,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
         return Ok(status);
     }
 
-    [HttpPost("ImportCurrencyEntries")]
+    [HttpPost(RequestBodySizeLimits.CurrencyImportEntriesPath)]
     [RequestSizeLimit(FinanceManager.Api.RequestBodySizeLimits.ImportEndpointBytes)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(object))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

@@ -1,3 +1,4 @@
+using FinanceManager.Api;
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Dtos;
@@ -16,7 +17,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 public class StockAccountImportController(IStockAccountImportService importService, IAccountRepository<StockAccount> accountRepository)
     : ControllerBase
 {
-    [HttpPost("ImportStockEntries")]
+    [HttpPost(RequestBodySizeLimits.StockImportPath)]
     [RequestSizeLimit(FinanceManager.Api.RequestBodySizeLimits.ImportEndpointBytes)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(object))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

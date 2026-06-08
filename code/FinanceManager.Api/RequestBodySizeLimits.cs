@@ -1,9 +1,27 @@
+using Microsoft.AspNetCore.Http;
+using System.Collections.Generic;
+
 namespace FinanceManager.Api;
 
 internal static class RequestBodySizeLimits
 {
-    public const long GlobalRequestBodyBytes = 50 * 1024 * 1024;
-    public const int ImportEndpointBytes = 30 * 1024 * 1024;
+    public const long GlobalRequestBodyBytes = 50L * 1024 * 1024;
+    public const long ImportEndpointBytes = 30L * 1024 * 1024;
+
+    public const string BondImportPath = "/api/BondAccountImport/ImportBondEntries";
+    public const string CurrencyStartAsyncImportPath = "/api/CurrencyAccountImport/StartAsyncImport";
+    public const string CurrencyImportEntriesPath = "/api/CurrencyAccountImport/ImportCurrencyEntries";
+    public const string StockImportPath = "/api/StockAccountImport/ImportStockEntries";
+    public const string StockPriceBulkImportPath = "/api/StockPrice/bulk-import-close-prices";
+
+    private static readonly HashSet<string> _importEndpointPaths = new(StringComparer.OrdinalIgnoreCase)
+    {
+        BondImportPath,
+        CurrencyStartAsyncImportPath,
+        CurrencyImportEntriesPath,
+        StockImportPath,
+        StockPriceBulkImportPath,
+    };
 
     public static long GetLimitForPath(PathString path)
     {
@@ -11,11 +29,7 @@ internal static class RequestBodySizeLimits
         if (value is null)
             return GlobalRequestBodyBytes;
 
-        return value.Equals("/api/BondAccountImport/ImportBondEntries", StringComparison.OrdinalIgnoreCase)
-            || value.Equals("/api/CurrencyAccountImport/StartAsyncImport", StringComparison.OrdinalIgnoreCase)
-            || value.Equals("/api/CurrencyAccountImport/ImportCurrencyEntries", StringComparison.OrdinalIgnoreCase)
-            || value.Equals("/api/StockAccountImport/ImportStockEntries", StringComparison.OrdinalIgnoreCase)
-            || value.Equals("/api/StockPrice/bulk-import-close-prices", StringComparison.OrdinalIgnoreCase)
+        return _importEndpointPaths.Contains(value)
             ? ImportEndpointBytes
             : GlobalRequestBodyBytes;
     }

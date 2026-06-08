@@ -336,7 +336,7 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
         return NoContent();
     }
 
-    [HttpPost("bulk-import-close-prices")]
+    [HttpPost(FinanceManager.Api.RequestBodySizeLimits.StockPriceBulkImportPath)]
     [Authorize(Roles = "Admin")]
     [RequestSizeLimit(FinanceManager.Api.RequestBodySizeLimits.ImportEndpointBytes)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockPriceBulkImportResultDto))]

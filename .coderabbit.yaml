@@ -34,7 +34,7 @@ reviews:
     - path: "code/**/*Tests/*.cs"
       instructions: |
         - Verify test coverage and meaningful test names
-        - Check for proper arrange-act-act-act pattern
+        - Check for proper arrange-act-assert pattern
         - Ensure tests are isolated and independent
     - path: "code/**/Controllers/*.cs"
       instructions: |
