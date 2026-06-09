@@ -1,0 +1,32 @@
+@if (CurrencyAccountEntry is not null)
+{
+    <MudContainer MaxWidth="MaxWidth.Medium">
+        <MudGrid Justify="Justify.Center">
+            <MudItem xs="12" sm="12" md="12">
+                <MudText Typo="Typo.h4">Remove</MudText>
+                <MudText Typo="Typo.subtitle1">@CurrencyAccountName</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudAutocomplete @bind-Value="_entryType" Label="Entry type" Variant="Variant.Text" ReadOnly />
+            </MudItem>
+        
+            <MudItem xs="12" sm="6">
+                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="_balanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency.ShortName" Adornment="Adornment.End" ReadOnly />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudDatePicker Label="Posting date" @bind-Date="_date" ReadOnly />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="CurrencyAccountEntry.Description" T="string" Label="Description" Variant="Variant.Text" MaxLines="5" AutoGrow="true" ReadOnly />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" DropShadow="false" OnClick=Cancel>Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" DropShadow="false" OnClick=Confirm Class="mx-2">Confirm</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+}
+

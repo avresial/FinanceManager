@@ -3,13 +3,14 @@
   <a href="https://github.com/avresial/FinanceManager/issues"><img src="https://img.shields.io/github/issues/avresial/FinanceManager" alt="GitHub issues"/></a>
   <img src="https://img.shields.io/badge/.NET-10-512BD4" alt=".NET 10"/>
   <img src="https://img.shields.io/badge/Blazor-WASM-blue" alt="Blazor WASM"/>
+  <a href="https://financemanager.mikikarkowski.dev/login"><img src="https://img.shields.io/badge/Live%20App-online-brightgreen" alt="Live App"/></a>
 </p>
 
 # FinanceManager
 
 **FinanceManager** is an open-source personal finance tracker built with Blazor WebAssembly and ASP.NET Core. It lets you manage all your accounts — cash, stocks, and bonds — in one place, with a rich analytics dashboard, AI-powered insights, and real-time market data.
 
-> **[Live Demo](https://avresial.github.io/FinanceManager/landingpage)**
+> **[Live App](https://financemanager.mikikarkowski.dev/login)**
 
 ---
 
@@ -133,16 +134,18 @@ dotnet run --project code/FinanceManager.Api
 
 Then open `https://localhost:5001` in your browser.
 
+For production backup, restore, and rollback steps on Supabase, see [RUNBOOK.md](RUNBOOK.md).
+
 ### Run tests
 ```bash
 # All tests
 dotnet test ./code/FinanceManager.slnx
 
 # Unit tests only
-dotnet test ./code/FinanceManager.UnitTests/FinanceManager.UnitTests.csproj
+dotnet test ./code/FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj
 
 # Integration tests (uses in-memory DB)
-UseInMemoryDatabase=true dotnet test ./code/FinanceManager.IntegrationTests/FinanceManager.IntegrationTests.csproj
+UseInMemoryDatabase=true dotnet test ./code/FinanceManager.Tests.Integration/FinanceManager.Tests.Integration.csproj
 ```
 
 ### External API keys (optional)

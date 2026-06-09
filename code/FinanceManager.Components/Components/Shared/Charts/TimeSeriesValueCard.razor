@@ -1,0 +1,82 @@
+@using System.Globalization
+@using ApexCharts
+@using FinanceManager.Domain.Entities.MoneyFlowModels
+
+<MudCard Outlined="true" Class="rounded-lg fm-tsvc-card" Style="@($"overflow:hidden;height:{Height};display:flex;flex-direction:column;")">
+
+    @* ---------- Header: title + caption (left), value + delta (right). Stacks on mobile. ---------- *@
+    <div class="fm-tsvc-header">
+        <div class="fm-tsvc-header-row">
+            <div class="fm-tsvc-left">
+                <MudText Typo="Typo.h5" Class="fm-tsvc-title">@Title</MudText>
+                <span class="fm-tsvc-caption">@CaptionText</span>
+            </div>
+
+            @if (State == LoadState.Loading)
+            {
+                <div class="fm-tsvc-shimmer"></div>
+            }
+            else if (State == LoadState.Ready)
+            {
+                <div class="fm-tsvc-right">
+                    <span class="fm-tsvc-value">@FormatMoney(HeaderValue)</span>
+                    @if (ShowDelta)
+                    {
+                        <span class="fm-tsvc-delta" style="@($"color:{DeltaColor};background:{DeltaBackground};")">@DeltaText</span>
+                    }
+                </div>
+            }
+            else
+            {
+                <span class="fm-tsvc-value fm-tsvc-value--muted">&mdash;</span>
+            }
+        </div>
+    </div>
+
+    @* ---------- Body: chart / loading / empty / error. Chart fills remaining space edge-to-edge. ---------- *@
+    <div style="flex:1;min-height:0;position:relative;">
+        @switch (State)
+        {
+            case LoadState.Loading:
+                <div style="height:100%;display:flex;align-items:center;justify-content:center;">
+                    <MudProgressCircular Color="MudBlazor.Color.Primary" Indeterminate="true" Size="MudBlazor.Size.Medium" />
+                </div>
+                break;
+
+            case LoadState.Empty:
+                <div style="height:100%;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;color:var(--mud-palette-text-secondary);">
+                    <MudIcon Icon="@Icons.Material.Filled.ShowChart" Size="MudBlazor.Size.Large" Style="color:var(--mud-palette-text-disabled);" />
+                    <span style="font-size:14px;">No data</span>
+                </div>
+                break;
+
+            case LoadState.Error:
+                <div style="height:100%;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;color:var(--mud-palette-error);">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="MudBlazor.Size.Large" />
+                    <span style="font-size:14px;">Couldn't load data</span>
+                    @if (OnRetry.HasDelegate)
+                    {
+                        <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small" OnClick="OnRetry">Retry</MudButton>
+                    }
+                </div>
+                break;
+
+            case LoadState.Ready:
+                @* Full-bleed area chart. The inner div extends 30px below the card so
+                   ApexCharts' reserved x-axis label row is pushed out of view; the card's
+                   overflow:hidden clips it, leaving the gradient flush with the bottom border. *@
+                <div style="position:absolute;top:0;left:0;right:0;bottom:-30px;">
+                    <ApexChart @ref="_chart" TItem="TimeSeriesModel" Options="_options" Height="@("100%")"
+                               OnDataPointEnter="OnPointEnter" OnDataPointLeave="OnPointLeave">
+                        <ApexPointSeries TItem="TimeSeriesModel"
+                                         Items="Data"
+                                         Name="@Title"
+                                         SeriesType="SeriesType.Area"
+                                         XValue="@(p => p.DateTime.ToLocalTime())"
+                                         YValue="@(p => p.Value)" />
+                    </ApexChart>
+                </div>
+                break;
+        }
+    </div>
+</MudCard>

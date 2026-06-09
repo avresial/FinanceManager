@@ -31,8 +31,7 @@ public class StockPriceHttpClient(HttpClient httpClient, ILogger<StockPriceHttpC
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, ex.Message);
-            Console.WriteLine($"Error fetching stock price: {ex.Message}");
+            logger?.LogError(ex, "Error fetching stock price: {Message}", ex.Message);
         }
         return default;
 

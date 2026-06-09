@@ -1,4 +1,3 @@
-﻿using FinanceManager.Application.Commands.Account;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Bonds;
@@ -120,6 +119,20 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         throw new NotSupportedException($"Account type {typeof(T)} not supported for getting start date.");
 
     }
+
+    public async Task<T?> GetInitialTransactionHistory<T>(int userId, int id, DateTime dateStart, DateTime dateEnd,
+        int minimumEntryCount = 100) where T : BasicAccountInformation
+    {
+        if (typeof(T) == typeof(CurrencyAccount))
+            return await currencyAccountHttpClient.GetInitialTransactionHistoryAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
+        else if (typeof(T) == typeof(StockAccount))
+            return await stockAccountHttpClient.GetInitialTransactionHistoryAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
+        else if (typeof(T) == typeof(BondAccount))
+            return await bondAccountHttpClient.GetInitialTransactionHistoryAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
+
+        throw new NotSupportedException($"Account type {typeof(T)} not supported for getting initial transaction history.");
+    }
+
     public async Task<IEnumerable<T>> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
     {
         List<T> result = [];
@@ -271,10 +284,10 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         }
         else if (accountEntry is StockAccountEntry stockAccountEntry)
         {
-            List<UpdateFiancialLabel> labels = [];
+            List<UpdateFinancialLabel> labels = [];
 
             if (stockAccountEntry.Labels is not null && stockAccountEntry.Labels.Count != 0)
-                labels = stockAccountEntry.Labels.Select(x => new UpdateFiancialLabel(x.Id, x.Name)).ToList();
+                labels = stockAccountEntry.Labels.Select(x => new UpdateFinancialLabel(x.Id, x.Name)).ToList();
 
             UpdateStockAccountEntry updateStockAccountEntry = new(stockAccountEntry.AccountId, stockAccountEntry.EntryId,
                 stockAccountEntry.PostingDate, stockAccountEntry.Value, stockAccountEntry.ValueChange, stockAccountEntry.Ticker,

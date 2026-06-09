@@ -1,0 +1,176 @@
+@using Microsoft.AspNetCore.Components.Forms
+@inherits ImportEntriesComponentBase<FinanceManager.Domain.Entities.Bonds.BondAccount, ImportBondEntriesComponent>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="pa-2">
+
+    <MudStack Spacing="1" Class="mb-6">
+        <MudText Typo="Typo.h5">
+            Import to <MudText Inline="true" Typo="Typo.h5" Color="Color.Primary"><b>@AccountName</b></MudText>
+        </MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">
+            Upload a CSV export, map your columns, and resolve any conflicts with existing entries.
+        </MudText>
+    </MudStack>
+
+    <MudPaper Outlined="true" Elevation="0" Class="rounded-lg">
+        <MudStepper @bind-ActiveIndex="_stepIndex" OnPreviewInteraction="OnPreviewInteraction">
+            <ChildContent>
+
+                <MudStep Title="Select file" SecondaryText="CSV upload" @bind-Completed="_step1Complete">
+                    <ImportCsvFileStep Errors="_erorrs"
+                                       RawPreview="_rawPreview"
+                                       Headers="_headers"
+                                       IsLoading="_isImportingData"
+                                       FileName="_fileName"
+                                       FileSize="_fileSize"
+                                       TotalRowCount="_totalRowCount"
+                                       Description="Bond CSVs should include the bond id or name in one of the columns."
+                                       DragClass="_dragClass"
+                                       @bind-Delimiter="Delimiter"
+                                       OnFilesChanged="UploadFiles"
+                                       Clear="Clear"
+                                       SetDragClass="SetDragClass"
+                                       ClearDragClass="ClearDragClass" />
+                </MudStep>
+
+                <MudStep Title="Map columns" SecondaryText="Required fields" @bind-Completed="_step2Complete"
+                         Disabled="@(_step1Complete == false)">
+                    <MudStack Spacing="4" Class="pa-4">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.subtitle2">Column mapping</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                Map your CSV headers to the fields the bond import expects. Preview the result below.
+                            </MudText>
+                        </MudStack>
+
+                        <MudGrid Spacing="3">
+                            <MudItem xs="12" sm="4">
+                                <MudSelect T="string" Label="Posting date" Required="true"
+                                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                                           HelperText="Date and time the transaction was booked"
+                                           Value="_selectedPostingDateHeader"
+                                           ValueChanged="@((string v) => { _selectedPostingDateHeader = v; OnMappingChanged(); })">
+                                    @foreach (var h in _headers)
+                                    {
+                                        <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="12" sm="4">
+                                <MudSelect T="string" Label="Units change" Required="true"
+                                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                                           HelperText="Signed bond unit count"
+                                           Value="_selectedValueChangeHeader"
+                                           ValueChanged="@((string v) => { _selectedValueChangeHeader = v; OnMappingChanged(); })">
+                                    @foreach (var h in _headers)
+                                    {
+                                        <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="12" sm="4">
+                                <MudSelect T="string" Label="Bond" Required="true"
+                                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                                           HelperText="Bond id or name as defined in bond details"
+                                           Value="_selectedBondHeader"
+                                           ValueChanged="@((string v) => { _selectedBondHeader = v; OnMappingChanged(); })">
+                                    @foreach (var h in _headers)
+                                    {
+                                        <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudItem>
+                        </MudGrid>
+
+                        <MudDivider />
+
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Outlined.SwapHoriz" Size="Size.Small" Color="Color.Primary" />
+                            <MudText Typo="Typo.subtitle2">Mapped preview</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">· how rows will be imported</MudText>
+                        </MudStack>
+
+                        @if (_mappedPreview.Any())
+                        {
+                            <MudSimpleTable Dense="true" Hover="true" Style="overflow-x: auto;" Elevation="0">
+                                <thead>
+                                    <tr>
+                                        <th>Posting date</th>
+                                        <th>Units change</th>
+                                        <th>Bond</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var row in _mappedPreview)
+                                    {
+                                        <tr>
+                                            <td>@row.PostingDate.ToString("dd-MM-yyyy")</td>
+                                            <td>
+                                                <MudText Inline="true" Color="@(row.ValueChange < 0 ? Color.Error : Color.Success)">
+                                                    @(row.ValueChange > 0 ? "+" : "")@row.ValueChange.ToString("0.00")
+                                                </MudText>
+                                            </td>
+                                            <td>@row.BondName</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </MudSimpleTable>
+                        }
+
+                        @foreach (var error in _erorrs)
+                        {
+                            <MudAlert Severity="Severity.Error" Variant="Variant.Text" Dense="true">@error</MudAlert>
+                        }
+                    </MudStack>
+                </MudStep>
+
+                <MudStep Title="Review" SecondaryText="Resolve conflicts" @bind-Completed="_step3Complete"
+                         Disabled="@(_step2Complete == false)">
+                    <MudStack Spacing="3" Class="pa-4">
+
+                        @if (_isImportingData)
+                        {
+                            <MudSkeleton Height="40px" Animation="Animation.Wave" />
+                        }
+
+                        @foreach (var errorInfo in _erorrs)
+                        {
+                            <MudAlert Severity="Severity.Error" Variant="Variant.Text" Dense="true">@errorInfo</MudAlert>
+                        }
+
+                        @foreach (var warningInfo in _warnings)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Text" Dense="true">@warningInfo</MudAlert>
+                        }
+
+                        @if (HasUnresolvedConflicts && _importResult is not null)
+                        {
+                            <BondEntryConflictResolver @ref="_resolverRef"
+                                Conflicts="_importResult.Conflicts" AccountName="@AccountName"
+                                OnResolutionChanged="StateHasChanged"
+                                OnSubmitted="OnConflictsSubmitted" />
+                        }
+                        else if (ShowImportCompletedMessage)
+                        {
+                            <ImportCompletePanel AccountId="AccountId" AccountName="@AccountName" Clear="Clear" />
+                        }
+
+                    </MudStack>
+                </MudStep>
+            </ChildContent>
+
+            <ActionContent Context="stepper">
+                @* Custom footer rendered below the stepper instead — keep this empty to suppress default buttons. *@
+            </ActionContent>
+        </MudStepper>
+
+        <ImportStepperFooter DisableClear="@(_step3Complete && !HasUnresolvedConflicts)"
+                             ShowBackAction="ShowBackAction"
+                             ShowPrimaryAction="ShowPrimaryAction"
+                             CanContinue="CanContinue"
+                             PrimaryLabel="@PrimaryLabel"
+                             Clear="Clear"
+                             Back="GoToPreviousStep"
+                             PrimaryClick="OnPrimaryClick" />
+    </MudPaper>
+</MudContainer>

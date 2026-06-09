@@ -1,5 +1,5 @@
-﻿using FinanceManager.Application.Commands.User;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Commands.User;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;
@@ -11,42 +11,44 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
 {
     public event Action<User>? OnUserChangeEvent;
 
-    public Task<bool> AddUser(string login, string password, PricingLevel pricingLevel)
+    public async Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, string? firstName = null, string? lastName = null)
     {
         try
         {
-            return httpClient.AddUser(new AddUser(login, password, pricingLevel));
+            return await httpClient.AddUser(new AddUser(login, password, pricingLevel, firstName, lastName));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, $"Error adding user {login}", login);
         }
-        return Task.FromResult(false);
+        return false;
     }
-    public Task<User?> GetUser(int id)
+    public async Task<User?> GetUser(int id)
     {
         try
         {
-            return httpClient.GetUser(id);
+            // Must await here: returning the un-awaited task let the async 401 (e.g. an expired token) escape this
+            // try/catch and surface as an unhandled exception in callers such as MainLayout.OnInitializedAsync.
+            return await httpClient.GetUser(id);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, $"Error getting user {id}", id);
         }
-        return Task.FromResult((User?)null);
+        return null;
     }
-    public Task<RecordCapacity?> GetRecordCapacity(int userId)
+    public async Task<RecordCapacity?> GetRecordCapacity(int userId)
     {
         try
         {
-            httpClient.GetRecordCapacity(userId);
+            return await httpClient.GetRecordCapacity(userId);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, $"Error getting user record capacity {userId}", userId);
         }
 
-        return Task.FromResult((RecordCapacity?)null); ;
+        return null;
     }
     public async Task<bool> Delete(int userId)
     {
@@ -68,13 +70,13 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
 
         return false;
     }
-    public async Task<bool> UpdatePassword(int userId, string newPassword)
+    public async Task<bool> UpdatePassword(int userId, string newPassword, string? currentPassword = null)
     {
         try
         {
             var existingUser = await GetUser(userId);
             if (existingUser is null) return false;
-            if (await httpClient.UpdatePassword(new(userId, newPassword)))
+            if (await httpClient.UpdatePassword(new(userId, newPassword, currentPassword)))
             {
                 OnUserChangeEvent?.Invoke(existingUser);
                 return true;

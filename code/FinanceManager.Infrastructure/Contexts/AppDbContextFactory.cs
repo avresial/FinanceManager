@@ -8,7 +8,7 @@ namespace FinanceManager.Infrastructure.Contexts;
 /// Design-time factory for EF Core migrations.
 /// This is used by EF Core tools when creating, updating, or removing migrations.
 /// It ensures a relational database provider is configured (PostgreSQL by default for migrations).
-/// 
+///
 /// For production use, set the environment variable or pass the connection string via:
 /// dotnet ef database update --connection "Host=...;Database=..."
 /// </summary>
@@ -20,7 +20,7 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 
         var configuration = new ConfigurationBuilder()
             .SetBasePath(apiDirectory)
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
             .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development"}.json", optional: true)
             .AddEnvironmentVariables()
             .Build();

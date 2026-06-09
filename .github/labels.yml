@@ -1,0 +1,101 @@
+# Repository labels, managed as code.
+# Synced to the repository by `.github/workflows/sync-labels.yml`
+# using EndBug/label-sync. The workflow runs on push to `main` (when this
+# file changes) and via manual dispatch. `delete-other-labels` is false, so
+# labels not listed here are left untouched rather than deleted.
+#
+# See CLAUDE.md ("T-Shirt Size Estimation") for the size rubric.
+
+# --- T-shirt size: issue/PR complexity estimation ---
+
+- name: size/XS
+  color: c2e0c6
+  description: "Trivial change (< 1 hour). One file, no logic, no tests needed."
+
+- name: size/S
+  color: 0e8a16
+  description: "Small change (a few hours). One layer, narrow blast radius, light tests."
+
+- name: size/M
+  color: fbca04
+  description: "Medium change (0.5–2 days). Multi-file, may cross layers, real test coverage."
+
+- name: size/L
+  color: d93f0b
+  description: "Large change (2–5 days). Multiple layers, new abstractions, broad test coverage."
+
+- name: size/XL
+  color: b60205
+  description: "Extra large (> 5 days). Should likely be split into smaller issues before starting."
+
+# --- Type: what kind of work this is ---
+
+- name: bug
+  color: d73a4a
+  description: "Something isn't working"
+
+- name: enhancement
+  color: a2eeef
+  description: "New feature or request"
+
+- name: documentation
+  color: 0075ca
+  description: "Improvements or additions to documentation"
+
+- name: optimization
+  color: e603c9
+  description: "Performance or efficiency improvement"
+
+- name: security
+  color: a677c1
+  description: "Security hardening or vulnerability fix"
+
+# --- Area: which part of the stack ---
+
+- name: Backend
+  color: 9b03fc
+  description: "Backend / server-side work"
+
+- name: UI
+  color: 0d9c35
+  description: "Front-end / UI work"
+
+# --- Workflow: lifecycle / triage state ---
+
+- name: idea
+  color: fbca04
+  description: "Early-stage idea, not yet scoped for implementation"
+
+- name: "ready for implementation"
+  color: 1ea114
+  description: "Scoped and ready to be picked up"
+
+- name: "in progress"
+  color: 7d6993
+  description: "Actively being worked on"
+
+- name: "Nice to have"
+  color: 006b75
+  description: "Desirable but not prioritised"
+
+# --- Triage: standard GitHub dispositions ---
+
+- name: "help wanted"
+  color: 008672
+  description: "Extra attention is needed"
+
+- name: question
+  color: d876e3
+  description: "Further information is requested"
+
+- name: duplicate
+  color: cfd3d7
+  description: "This issue or pull request already exists"
+
+- name: invalid
+  color: e4e669
+  description: "This doesn't seem right"
+
+- name: wontfix
+  color: ffffff
+  description: "This will not be worked on"

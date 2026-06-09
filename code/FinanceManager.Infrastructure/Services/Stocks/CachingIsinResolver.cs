@@ -36,6 +36,11 @@ internal sealed class CachingIsinResolver(
             return cached;
 
         var fromDb = await stockDetailsRepository.GetByTicker(normalized, ct);
+        // GetStoredTickers() on StockAccount actually returns ISINs post-#195; the upstream
+        // call site forwards the entry's Isin in the "ticker" slot, so fall back to an ISIN
+        // lookup before paying the OpenFIGI round-trip.
+        if (fromDb is null)
+            fromDb = await stockDetailsRepository.Get(normalized, ct);
         if (fromDb is not null && !string.IsNullOrWhiteSpace(fromDb.Isin))
         {
             cache.Set(cacheKey, fromDb.Isin, _positiveTtl);

@@ -1,7 +1,6 @@
-using FinanceManager.Application.Options;
+using FinanceManager.Application.Services.ExternalServices;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -14,7 +13,7 @@ namespace FinanceManager.Infrastructure.Services.Stocks;
 internal sealed class OpenFigiClient(
     HttpClient httpClient,
     ILogger<OpenFigiClient> logger,
-    IOptions<OpenFigiOptions> options) : IIsinResolver
+    IExternalServiceConfigService configService) : IIsinResolver
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -26,6 +25,7 @@ internal sealed class OpenFigiClient(
         if (string.IsNullOrWhiteSpace(ticker))
             return null;
 
+        var serviceConfig = await configService.GetServiceAsync("OpenFigi", ct);
         var request = new OpenFigiMappingRequest
         {
             IdType = "TICKER",
@@ -33,15 +33,15 @@ internal sealed class OpenFigiClient(
             ExchCode = region ?? string.Empty
         };
 
-        var url = $"{options.Value.BaseUrl.TrimEnd('/')}/mapping";
+        var url = $"{serviceConfig.BaseUrl.TrimEnd('/')}/mapping";
 
         try
         {
             var content = JsonSerializer.Serialize(new[] { request });
             var httpContent = new StringContent(content, System.Text.Encoding.UTF8, "application/json");
 
-            if (!string.IsNullOrWhiteSpace(options.Value.ApiKey))
-                httpContent.Headers.Add("X-OPENFIGI-APIKEY", options.Value.ApiKey);
+            if (!string.IsNullOrWhiteSpace(serviceConfig.ApiKey))
+                httpContent.Headers.Add("X-OPENFIGI-APIKEY", serviceConfig.ApiKey);
 
             var response = await httpClient.PostAsync(url, httpContent, ct);
             if (!response.IsSuccessStatusCode)

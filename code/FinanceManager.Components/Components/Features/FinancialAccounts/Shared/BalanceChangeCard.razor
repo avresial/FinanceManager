@@ -1,0 +1,25 @@
+<MudCard Outlined="true" Style="background-color: transparent;">
+    <MudCardContent>
+        <MudText Typo="Typo.overline" Color="Color.Default">Balance change · @RangeLabel</MudText>
+        <MudText Typo="Typo.h3" Class="fm-tabular"
+                 Color="@(BalanceChange >= 0 ? Color.Success : Color.Error)">
+            @(BalanceChange >= 0 ? "+" : "")@BalanceChange.ToString("N2") @Currency
+        </MudText>
+        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mt-2">
+            <MudIcon Size="Size.Small"
+                     Icon="@(BalanceChange >= 0 ? Icons.Material.Filled.ArrowUpward : Icons.Material.Filled.ArrowDownward)"
+                     Color="@(BalanceChange >= 0 ? Color.Success : Color.Error)" />
+            <MudText Typo="Typo.caption" Color="Color.Default">
+                From @FromDate.ToString("dd MMM yyyy") to @ToDate.ToString("dd MMM yyyy")
+            </MudText>
+        </MudStack>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public decimal BalanceChange { get; set; }
+    [Parameter] public required string Currency { get; set; }
+    [Parameter] public string RangeLabel { get; set; } = string.Empty;
+    [Parameter] public DateTime FromDate { get; set; }
+    [Parameter] public DateTime ToDate { get; set; }
+}

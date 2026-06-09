@@ -1,5 +1,5 @@
 ﻿@using FinanceManager.Domain.Enums
-<MudNavMenu Class="pt-2">
+<MudNavMenu Class="pt-2" aria-label="Primary">
     <AuthorizeView>
         <Authorized>
             @if (@context.User.IsInRole(UserRole.Admin.ToString()))
@@ -23,16 +23,16 @@
         </Authorized>
     </AuthorizeView>
     <MudDivider Class="my-2" />
-    <MudNavLink Icon="@Icons.Material.Filled.Dashboard" Href="" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+    <MudNavLink Icon="@Icons.Material.Filled.Dashboard" Href="" Match="NavLinkMatch.All" data-testid="nav-dashboard">Dashboard</MudNavLink>
 
     @if (_displayAssetsLink)
     {
-        <MudNavLink Icon="@Icons.Material.Filled.TrendingUp" Href="Assets">Assets</MudNavLink>
+        <MudNavLink Icon="@Icons.Material.Filled.TrendingUp" Href="Assets" data-testid="nav-assets">Assets</MudNavLink>
     }
 
     @if (_displayLiabilitiesLink)
     {
-        <MudNavLink Icon="@Icons.Material.Filled.TrendingDown" Href="Liabilities">Liabilities</MudNavLink>
+        <MudNavLink Icon="@Icons.Material.Filled.TrendingDown" Href="Liabilities" data-testid="nav-liabilities">Liabilities</MudNavLink>
     }
     <MudDivider Class="my-2" />
 
@@ -54,13 +54,13 @@
         }
     }
 
-    <MudNavLink Icon="@Icons.Material.Filled.Add" Href="AddAccount">Add</MudNavLink>
+    <MudNavLink Icon="@Icons.Material.Filled.Add" Href="AddAccount" data-testid="nav-add-account" aria-label="Add account">Add</MudNavLink>
 
     <AuthorizeView>
         <Authorized>
             @if (@context.User.IsInRole(UserRole.Admin.ToString()))
             {
-                <MudNavLink Icon="@Icons.Material.Filled.AdminPanelSettings" Href="Admin/Dashboard">Admin page</MudNavLink>
+                <MudNavLink Icon="@Icons.Material.Filled.AdminPanelSettings" Href="Admin/Dashboard" data-testid="nav-admin">Admin page</MudNavLink>
             }
         </Authorized>
     </AuthorizeView>

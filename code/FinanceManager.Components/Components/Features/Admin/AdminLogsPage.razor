@@ -1,0 +1,82 @@
+@page "/Admin/Logs"
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+
+@using FinanceManager.Domain.Dtos
+@using FinanceManager.Domain.Enums
+@using Microsoft.AspNetCore.Authorization
+@implements IAsyncDisposable
+
+<PageTitle>Logs - Admin</PageTitle>
+
+<MudStack Spacing="3">
+    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+        <MudIcon Icon="@Icons.Material.Filled.ReportProblem" Color="Color.Warning" />
+        <MudText Typo="Typo.h5">Application logs</MudText>
+        <MudSpacer />
+        <MudToggleGroup T="string" SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary"
+                        Outlined="true" Dense="true" Value="@_levelFilter" ValueChanged="OnLevelChanged">
+            <MudToggleItem Value="@("all")">All</MudToggleItem>
+            <MudToggleItem Value="@("warning")">Warning</MudToggleItem>
+            <MudToggleItem Value="@("error")">Error</MudToggleItem>
+        </MudToggleGroup>
+    </MudStack>
+
+    @if (_loadError is not null)
+    {
+        <MudAlert Severity="Severity.Error" Dense>@_loadError</MudAlert>
+    }
+
+    <MudPaper Outlined Class="pa-0">
+        <MudTable T="LogEntryDto" Items="@_page" Loading="@_loading" Hover Dense Bordered="false"
+                  Breakpoint="Breakpoint.Sm">
+            <HeaderContent>
+                <MudTh Style="width:110px">Level</MudTh>
+                <MudTh Style="width:180px">When</MudTh>
+                <MudTh>Message</MudTh>
+                <MudTh Style="width:280px">Category</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="@LevelColor(context.Level)" Variant="Variant.Filled">
+                        @context.Level.ToString()
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    <MudText Typo="Typo.caption">@context.TimestampUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                </MudTd>
+                <MudTd>
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.body2">@context.Message</MudText>
+                        @if (!string.IsNullOrEmpty(context.Exception))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Error" Style="white-space:pre-wrap;max-height:160px;overflow:auto">
+                                @context.Exception
+                            </MudText>
+                        }
+                    </MudStack>
+                </MudTd>
+                <MudTd>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Category</MudText>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-3">
+                    No log entries match the current filter.
+                </MudText>
+            </NoRecordsContent>
+        </MudTable>
+
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="pa-3">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                Showing @FromDisplay()&ndash;@ToDisplay() of @_totalCount
+            </MudText>
+            <MudSpacer />
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Disabled="@(_skip <= 0 || _loading)"
+                           OnClick="PrevPage" Size="Size.Small" aria-label="Previous page" />
+            <MudText Typo="Typo.body2">Page @CurrentPage / @TotalPages</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Disabled="@(_skip + _take >= _totalCount || _loading)"
+                           OnClick="NextPage" Size="Size.Small" aria-label="Next page" />
+        </MudStack>
+    </MudPaper>
+</MudStack>

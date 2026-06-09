@@ -1,0 +1,20 @@
+﻿@page "/register/{PricingLevel?}"
+@using FinanceManager.Domain.Enums
+@layout NoNavbarLayout
+
+<PageTitle>Register</PageTitle>
+
+<RegisterComponent PricingLevel="pricing" />
+
+@code {
+    [Parameter] public string? PricingLevel { get; set; } = Domain.Enums.PricingLevel.Free.ToString();
+
+    private PricingLevel pricing = Domain.Enums.PricingLevel.Free;
+    protected override void OnParametersSet()
+    {
+        if (!Enum.TryParse<PricingLevel>(PricingLevel, true, out pricing))
+            pricing = Domain.Enums.PricingLevel.Free;
+
+        base.OnParametersSet();
+    }
+}

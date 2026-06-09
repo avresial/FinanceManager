@@ -1,0 +1,21 @@
+@if (IsLoading)
+{
+    <DisplaySpinner />
+}
+else if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <MudAlert Severity="@ErrorSeverity">
+        @ErrorMessage
+    </MudAlert>
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public Severity ErrorSeverity { get; set; } = Severity.Error;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

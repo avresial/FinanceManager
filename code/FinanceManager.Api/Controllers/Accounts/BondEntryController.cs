@@ -1,6 +1,6 @@
 using FinanceManager.Api.Helpers;
-using FinanceManager.Application.Commands.Account;
 using FinanceManager.Application.Services;
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Dtos;
@@ -23,6 +23,9 @@ public class BondEntryController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetEntry([FromQuery] int accountId, [FromQuery] int entryId)
     {
+        var account = await bondAccountRepository.Get(accountId);
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+
         var entry = await bondAccountEntryRepository.Get(accountId, entryId);
         if (entry is null) return NotFound();
         return Ok(entry);
@@ -36,7 +39,7 @@ public class BondEntryController(
     {
         var account = await bondAccountRepository.Get(accountId);
         if (account is null) return NotFound();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         var entry = await bondAccountEntryRepository.GetYoungest(accountId);
         if (entry is null) return NotFound();
@@ -52,7 +55,7 @@ public class BondEntryController(
     {
         var account = await bondAccountRepository.Get(accountId);
         if (account is null) return NotFound();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         var entry = await bondAccountEntryRepository.GetOldest(accountId);
         return entry is null ? NoContent() : Ok(entry.PostingDate);
@@ -65,7 +68,7 @@ public class BondEntryController(
     public async Task<IActionResult> AddEntry(AddBondAccountEntry addEntry)
     {
         var account = await bondAccountRepository.Get(addEntry.AccountId);
-        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
         if (!await userPlanVerifier.CanAddMoreEntries(ApiAuthenticationHelper.GetUserId(User)))
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
@@ -90,7 +93,7 @@ public class BondEntryController(
     public async Task<IActionResult> DeleteEntry(int accountId, int entryId)
     {
         var account = await bondAccountRepository.Get(accountId);
-        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         return Ok(await bondAccountEntryRepository.Delete(accountId, entryId));
     }
@@ -102,7 +105,7 @@ public class BondEntryController(
     public async Task<IActionResult> UpdateEntry(UpdateBondAccountEntry updateEntry)
     {
         var account = await bondAccountRepository.Get(updateEntry.AccountId);
-        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         var entryToUpdate = await bondAccountEntryRepository.Get(updateEntry.AccountId, updateEntry.EntryId);
         if (entryToUpdate is null) return NotFound();

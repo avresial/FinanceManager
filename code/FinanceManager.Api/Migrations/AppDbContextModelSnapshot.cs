@@ -147,6 +147,10 @@ namespace FinanceManager.Api.Migrations
 
                     b.HasKey("EntryId");
 
+                    b.HasIndex("AccountId", "PostingDate", "EntryId");
+
+                    b.HasIndex("AccountId", "BondDetailsId", "PostingDate", "EntryId");
+
                     b.ToTable("BondEntries");
                 });
 
@@ -246,6 +250,30 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("Currencies");
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.Entities.ExternalServices.ExternalServiceConfiguration", b =>
+                {
+                    b.Property<string>("ServiceName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ApiKey")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("BaseUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("ServiceName");
+
+                    b.ToTable("ExternalServiceConfigurations");
+                });
+
             modelBuilder.Entity("FinanceManager.Domain.Entities.FinancialAccounts.Currencies.CurrencyAccountEntry", b =>
                 {
                     b.Property<int>("EntryId")
@@ -277,6 +305,8 @@ namespace FinanceManager.Api.Migrations
                         .HasColumnType("numeric(18,2)");
 
                     b.HasKey("EntryId");
+
+                    b.HasIndex("AccountId", "PostingDate", "EntryId");
 
                     b.ToTable("CurrencyEntries");
                 });
@@ -454,6 +484,10 @@ namespace FinanceManager.Api.Migrations
 
                     b.HasKey("EntryId");
 
+                    b.HasIndex("AccountId", "PostingDate", "EntryId");
+
+                    b.HasIndex("AccountId", "Isin", "PostingDate", "EntryId");
+
                     b.ToTable("StockEntries");
                 });
 
@@ -572,6 +606,86 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("NewVisits");
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Users.PasswordResetToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PasswordResetTokens");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Entities.Users.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AbsoluteExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReplacedByTokenHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("RefreshTokens");
+                });
+
             modelBuilder.Entity("FinanceManager.Infrastructure.Dtos.FinancialAccountBaseDto", b =>
                 {
                     b.Property<int>("AccountId")
@@ -594,6 +708,8 @@ namespace FinanceManager.Api.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("AccountId");
+
+                    b.HasIndex("AccountType", "UserId");
 
                     b.ToTable("Accounts");
                 });
@@ -636,6 +752,18 @@ namespace FinanceManager.Api.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("FailedLoginAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FirstName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastName")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LockoutEndUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Login")
                         .IsRequired()
                         .HasColumnType("text");
@@ -651,6 +779,9 @@ namespace FinanceManager.Api.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Login")
+                        .IsUnique();
 
                     b.ToTable("Users");
                 });

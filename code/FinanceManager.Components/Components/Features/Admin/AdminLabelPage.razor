@@ -1,0 +1,142 @@
+@page "/Admin/Labels"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+
+<PageTitle>Labels - Admin</PageTitle>
+
+@if (!_isLoading)
+{
+    <MudStack Spacing="2">
+        @foreach (var message in _errors)
+        {
+            <MudAlert Severity="Severity.Error">@message</MudAlert>
+        }
+    </MudStack>
+
+    <MudGrid Spacing="3" Class="mt-1">
+        <MudItem xs="12" md="@(_showSuggestions ? 7 : 12)">
+            <MudStack Spacing="2">
+                <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                    <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearchChanged"
+                                  Placeholder="Search by name" Immediate="true" Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" Class="flex-grow-1" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="Add label" Href="Admin/AddLabel"
+                                   Color="Color.Primary" />
+                    @if (!_showSuggestions)
+                    {
+                        <MudButton StartIcon="@Icons.Material.Filled.AutoAwesome" Variant="Variant.Outlined"
+                                   Color="Color.Primary" OnClick="LoadSuggestions" Disabled="_isLoadingSuggestions">
+                            AI suggestions
+                        </MudButton>
+                    }
+                </MudStack>
+
+                @if (_elements.Any())
+                {
+                    <MudTable @ref="@Table" Items="@_elements" RowsPerPage="@_elementsPerPage" Dense Breakpoint="Breakpoint.Md"
+                              LoadingProgressColor="Color.Info" Elevation="0">
+                        <HeaderContent>
+                            <MudTh>Label id</MudTh>
+                            <MudTh>Label name</MudTh>
+                            <MudTh>Action</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Label id">@context.Id</MudTd>
+                            <MudTd DataLabel="Label name">@context.Name</MudTd>
+                            <MudTd DataLabel="Action">
+                                <MudMenu Label="Action" Variant="Variant.Text">
+                                    <MudMenuItem Label="Edit" Href=@($"Admin/EditLabel/{context.Id}") />
+                                    <MudMenuItem Label="Remove" OnClick="@(() => RemoveLabel(context.Id))" />
+                                </MudMenu>
+                            </MudTd>
+                        </RowTemplate>
+                        <PagerContent>
+                            @if (Table is not null && _pagesCount > 1)
+                            {
+                                <MudPagination SelectedChanged="PageChanged" Count="@_pagesCount" Selected="@SelectedPage"
+                                               Class="pa-4" />
+                            }
+                        </PagerContent>
+                    </MudTable>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">
+                        No labels found.
+                    </MudAlert>
+                }
+            </MudStack>
+        </MudItem>
+
+        @if (_showSuggestions)
+        {
+            <MudItem xs="12" md="5">
+                <MudStack Spacing="2">
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6">AI suggestions</MudText>
+                        <MudSpacer />
+                        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="CloseSuggestions"
+                                       aria-label="Close AI suggestions" />
+                    </MudStack>
+
+                    @foreach (var message in _suggestionErrors)
+                    {
+                        <MudAlert Severity="Severity.Error" Dense>@message</MudAlert>
+                    }
+
+                    @if (_isLoadingSuggestions)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Running the AI model — typically 20–60 seconds.
+                        </MudText>
+                    }
+                    else if (_visibleSuggestions.Count == 0 && _suggestionsRan)
+                    {
+                        <MudAlert Severity="Severity.Info" Dense>
+                            No new suggestions. Existing labels already cover this sample.
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        @foreach (var suggestion in _visibleSuggestions)
+                        {
+                            <MudCard>
+                                <MudCardContent>
+                                    <MudStack Spacing="1">
+                                        <MudText Typo="Typo.subtitle1"><b>@suggestion.Name</b></MudText>
+                                        <MudText Typo="Typo.body2">@suggestion.Rationale</MudText>
+                                        @if (suggestion.ExampleDescriptions.Count > 0)
+                                        {
+                                            <MudStack Row Wrap="Wrap.Wrap" Spacing="1" Class="mt-1">
+                                                @foreach (var example in suggestion.ExampleDescriptions)
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
+                                                        @example
+                                                    </MudChip>
+                                                }
+                                            </MudStack>
+                                        }
+                                    </MudStack>
+                                </MudCardContent>
+                                <MudCardActions>
+                                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                                               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddSuggestion(suggestion))"
+                                               Disabled="_processing.Contains(suggestion.Name)">
+                                        Add
+                                    </MudButton>
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
+                                               OnClick="@(() => DismissSuggestion(suggestion))">
+                                        Dismiss
+                                    </MudButton>
+                                </MudCardActions>
+                            </MudCard>
+                        }
+                    }
+                </MudStack>
+            </MudItem>
+        }
+    </MudGrid>
+}

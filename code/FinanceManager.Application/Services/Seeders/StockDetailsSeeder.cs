@@ -1,16 +1,26 @@
+using FinanceManager.Application.Options;
 using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace FinanceManager.Application.Services.Seeders;
 
 public class StockDetailsSeeder(
     IStockDetailsRepository stockDetailsRepository,
     IStockMarketService stockMarketService,
+    IOptions<StockDetailsSeederOptions> options,
     ILogger<StockDetailsSeeder> logger) : ISeeder
 {
     public async Task Seed(CancellationToken cancellationToken = default)
     {
+        if (!options.Value.Enabled)
+        {
+            logger.LogInformation("Stock details seeding is disabled. Set {SectionName}:Enabled=true to run the startup import.",
+                StockDetailsSeederOptions.SectionName);
+            return;
+        }
+
         var existingDetails = await stockDetailsRepository.GetAll(cancellationToken);
 
         if (existingDetails.Count > 2)
@@ -52,6 +62,10 @@ public class StockDetailsSeeder(
 
             logger.LogInformation("StockDetails seeding completed. Successfully added {Count} out of {Total} stocks.",
                 seededCount, stockListings.Count);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            logger.LogInformation("Stock details seeding was cancelled.");
         }
         catch (Exception ex)
         {

@@ -1,0 +1,15 @@
+﻿@page "/"
+
+<PageTitle>Finance manager</PageTitle>
+
+@if (!_isLoading)
+{
+    @if (_showWelcome)
+    {
+        <WelcomePage />
+    }
+    else
+    {
+        <Dashboard />
+    }
+}

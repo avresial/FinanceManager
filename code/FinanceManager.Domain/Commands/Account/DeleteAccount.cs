@@ -1,3 +1,6 @@
-﻿namespace FinanceManager.Application.Commands.Account;
+using System.ComponentModel.DataAnnotations;
 
-public record DeleteAccount(int AccountId);
+namespace FinanceManager.Domain.Commands.Account;
+
+public record DeleteAccount(
+    [Range(1, int.MaxValue)] int AccountId);

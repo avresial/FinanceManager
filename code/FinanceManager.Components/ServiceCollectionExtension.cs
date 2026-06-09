@@ -13,7 +13,8 @@ public static class ServiceCollectionExtension
     {
         services.AddMemoryCache();
 
-        services.AddScoped<ILoginService, LoginService>()
+        services.AddScoped<IAntiforgeryTokenService, AntiforgeryTokenService>()
+                .AddScoped<ILoginService, LoginService>()
 
                 .AddScoped<StockPriceHttpClient>()
                 .AddScoped<StockAccountHttpClient>()
@@ -34,6 +35,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<AssetsHttpClient>()
                 .AddScoped<LiabilitiesHttpClient>()
                 .AddScoped<UserHttpClient>()
+                .AddScoped<PasswordResetHttpClient>()
                 .AddScoped<FinancialLabelHttpClient>()
                 .AddScoped<LabelSetterProgressHttpClient>()
                 .AddScoped<FinancialInsightsHttpClient>()
@@ -41,6 +43,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<DiversificationHttpClient>()
                 .AddScoped<AdministrationUsersHttpClient>()
                 .AddScoped<AdminAiProvidersHttpClient>()
+                .AddScoped<AdminServiceKeysHttpClient>()
                 .AddScoped<AdminLogsHttpClient>()
                 .AddScoped<NewVisitorsHttpClient>()
                 .AddScoped<CsvHeaderMappingHttpClient>()

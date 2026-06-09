@@ -1,0 +1,11 @@
+@using FinanceManager.Components.Components.Shared.Charts
+
+<TimeSeriesValueCard Title="Net cash flow"
+                     Data="_series"
+                     SummaryValue="_totalNetCashFlow"
+                     SummaryCaption="@PeriodCaption"
+                     IsLoading="_isLoading"
+                     HasError="_hasError"
+                     OnRetry="Reload"
+                     CurrencyShortName="@_currency"
+                     Height="@Height" />

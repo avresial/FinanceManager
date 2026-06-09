@@ -1,0 +1,112 @@
+/* Shared utilities and layout patterns used across dashboard cards.
+   Linked from index.html as a plain global stylesheet so they apply
+   to MudBlazor component internals that scoped .razor.css can't reach. */
+
+/* ---- Utilities ---- */
+
+/* Tabular figures — keeps currency columns aligned across rows. */
+.fm-tabular {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Uppercase eyebrow / overline label with tight tracking. */
+.fm-caps {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+/* Large muted total shown below a card title (e.g. "41 033.10 PLN"). */
+.fm-card-total {
+    font-size: 1.25rem;
+    font-weight: 300;
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* ---- Pie / donut distribution card body ---- */
+
+/* Flex row containing a fixed chart and a scrollable legend. */
+.fm-pie-body {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    height: 100%;
+    padding: 4px 12px 12px;
+    min-height: 0;
+}
+
+/* Fixed-size 150×150 chart container; hides ApexCharts toolbar and
+   ensures the canvas background is transparent. */
+.fm-chart-wrap {
+    flex: 0 0 150px;
+    width: 150px;
+    overflow: hidden;
+}
+
+.fm-chart-wrap .apexcharts-canvas {
+    background: transparent !important;
+}
+
+.fm-chart-wrap .apexcharts-toolbar {
+    display: none !important;
+}
+
+/* ---- Scrollable legend beside a pie chart ---- */
+
+.fm-legend {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.fm-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--mud-palette-divider);
+}
+
+.fm-legend-row:last-child {
+    border-bottom: none;
+}
+
+.fm-legend-dot {
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+.fm-legend-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fm-legend-vals {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    white-space: nowrap;
+}
+
+.fm-legend-amt {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.fm-legend-pct {
+    font-size: 11px;
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+}

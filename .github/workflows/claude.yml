@@ -14,6 +14,7 @@ permissions:
   issues: write
 
 jobs:
+  # Responds to explicit @claude mentions in comments and issues.
   claude:
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||

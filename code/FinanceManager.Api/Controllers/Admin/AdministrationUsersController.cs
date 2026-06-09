@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace FinanceManager.Api.Controllers;
 
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Roles = "Admin")]
 [ApiController]
 [Tags("Administration")]
 public class AdministrationUsersController(IAdministrationUsersService administrationUsersService) : ControllerBase

@@ -25,6 +25,9 @@ public class CurrencyEntryController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetEntry([FromQuery] int accountId, [FromQuery] int entryId)
     {
+        var account = await accountRepository.Get(accountId);
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+
         var entry = await accountEntryRepository.Get(accountId, entryId);
         if (entry is null) return NotFound();
         return Ok(entry);
@@ -38,7 +41,7 @@ public class CurrencyEntryController(
     {
         var account = await accountRepository.Get(accountId);
         if (account is null) return NotFound();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         var entry = await accountEntryRepository.GetYoungest(accountId);
         if (entry is null) return NotFound();
@@ -54,7 +57,7 @@ public class CurrencyEntryController(
     {
         var account = await accountRepository.Get(accountId);
         if (account is null) return NotFound();
-        if (account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         var entry = await accountEntryRepository.GetOldest(accountId);
         return entry is null ? NoContent() : Ok(entry.PostingDate);
@@ -65,6 +68,9 @@ public class CurrencyEntryController(
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> AddEntry(AddCurrencyAccountEntry addEntry)
     {
+        var account = await accountRepository.Get(addEntry.AccountId);
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+
         if (!await userPlanVerifier.CanAddMoreEntries(ApiAuthenticationHelper.GetUserId(User)))
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
@@ -87,7 +93,7 @@ public class CurrencyEntryController(
     public async Task<IActionResult> DeleteEntry(int accountId, int entryId)
     {
         var account = await accountRepository.Get(accountId);
-        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         return Ok(await accountEntryRepository.Delete(accountId, entryId));
     }
@@ -98,7 +104,7 @@ public class CurrencyEntryController(
     public async Task<IActionResult> UpdateEntry(UpdateCurrencyAccountEntry updateEntry)
     {
         var account = await accountRepository.Get(updateEntry.AccountId);
-        if (account is null || account.UserId != ApiAuthenticationHelper.GetUserId(User)) return Forbid();
+        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         var newEntry = new CurrencyAccountEntry(updateEntry.AccountId, updateEntry.EntryId, updateEntry.PostingDate, updateEntry.Value,
             updateEntry.ValueChange)

@@ -1,0 +1,38 @@
+@using FinanceManager.Components.CustomValidationAttributes
+
+<MudForm @ref="_form" FieldChanged="OnFieldChanged">
+    <MudContainer MaxWidth="MaxWidth.Medium">
+        <MudGrid Justify="Justify.Center">
+            <MudItem xs="12" sm="12" md="12">
+                <MudText Typo="Typo.h4">Update</MudText>
+                <MudText Typo="Typo.subtitle1">@StockAccount.Name</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker Label="Posting date" @bind-Date="_postingDate" Validation="@(new NotInFutureAttribute())" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTimePicker Label="Time" @bind-Time="_time" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField Value="_isin" T="string" Label="ISIN" Variant="Variant.Text" ReadOnly />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField ReadOnly HideSpinButtons="true" @bind-Value="_pricePerUnit" Label="Price per unit"
+                                 Variant="Variant.Text" AdornmentText="@_currency.ShortName" Adornment="Adornment.End" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="_balanceChange"
+                                 Label="Balance change" Variant="Variant.Text" Immediate />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudAutocomplete @bind-Value="_investmentTypeName" Label="Investment type" Variant="Variant.Text"
+                                 SearchFunc="SearchInvestmentTypes" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick="Update">Update</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick="Cancel" Class="mx-2">Cancel</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+</MudForm>

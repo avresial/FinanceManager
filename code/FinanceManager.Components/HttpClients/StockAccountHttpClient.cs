@@ -1,4 +1,3 @@
-using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.ValueObjects;
@@ -36,6 +35,16 @@ public class StockAccountHttpClient(HttpClient httpClient)
     {
         var minimumEntryCountQuery = minimumEntryCount > 0 ? $"?minimumEntryCount={minimumEntryCount}" : string.Empty;
         var result = await httpClient.GetFromJsonAsync<StockAccountDto>($"{httpClient.BaseAddress}api/StockAccount/{accountId}&{startDate:O}&{endDate:O}{minimumEntryCountQuery}");
+        return MapAccount(result);
+    }
+
+    public async Task<StockAccount?> GetInitialTransactionHistoryAsync(int accountId, DateTime startDate, DateTime endDate,
+        int minimumEntryCount = 100)
+    {
+        var encodedStartDate = Uri.EscapeDataString(startDate.ToString("O"));
+        var encodedEndDate = Uri.EscapeDataString(endDate.ToString("O"));
+        var result = await httpClient.GetFromJsonAsync<StockAccountDto>(
+            $"{httpClient.BaseAddress}api/StockAccount/{accountId}/GetInitialTransactionHistory?startDate={encodedStartDate}&endDate={encodedEndDate}&minimumEntryCount={minimumEntryCount}");
         return MapAccount(result);
     }
 

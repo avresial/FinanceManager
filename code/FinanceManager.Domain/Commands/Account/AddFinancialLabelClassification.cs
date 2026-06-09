@@ -1,3 +1,8 @@
-namespace FinanceManager.Application.Commands.Account;
+using System.ComponentModel.DataAnnotations;
 
-public record AddFinancialLabelClassification(int LabelId, string Kind, string Value);
+namespace FinanceManager.Domain.Commands.Account;
+
+public record AddFinancialLabelClassification(
+    [Range(1, int.MaxValue)] int LabelId,
+    [Required, StringLength(64)] string Kind,
+    [Required, StringLength(256)] string Value);

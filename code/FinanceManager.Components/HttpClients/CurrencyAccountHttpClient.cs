@@ -1,4 +1,3 @@
-using FinanceManager.Application.Commands.Account;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
@@ -31,6 +30,16 @@ public class CurrencyAccountHttpClient(HttpClient httpClient)
     {
         var minimumEntryCountQuery = minimumEntryCount > 0 ? $"?minimumEntryCount={minimumEntryCount}" : string.Empty;
         var result = await httpClient.GetFromJsonAsync<CurrencyAccountDto>($"{httpClient.BaseAddress}api/CurrencyAccount/{accountId}&{startDate:O}&{endDate:O}{minimumEntryCountQuery}");
+        return MapAccount(result);
+    }
+
+    public async Task<CurrencyAccount?> GetInitialTransactionHistoryAsync(int accountId, DateTime startDate, DateTime endDate,
+        int minimumEntryCount = 100)
+    {
+        var encodedStartDate = Uri.EscapeDataString(startDate.ToString("O"));
+        var encodedEndDate = Uri.EscapeDataString(endDate.ToString("O"));
+        var result = await httpClient.GetFromJsonAsync<CurrencyAccountDto>(
+            $"{httpClient.BaseAddress}api/CurrencyAccount/{accountId}/GetInitialTransactionHistory?startDate={encodedStartDate}&endDate={encodedEndDate}&minimumEntryCount={minimumEntryCount}");
         return MapAccount(result);
     }
 

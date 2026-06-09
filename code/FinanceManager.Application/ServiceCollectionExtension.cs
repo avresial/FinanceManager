@@ -27,6 +27,9 @@ public static class ServiceCollectionExtension
     public static IServiceCollection AddApplicationApi(this IServiceCollection services)
     {
         services.AddScoped<ISettingsService, SettingsService>()
+                .AddScoped<IRefreshTokenService, RefreshTokenService>()
+                .AddScoped<IPasswordResetService, PasswordResetService>()
+                .AddScoped<IAccountLockoutService, AccountLockoutService>()
                 .AddScoped<IMoneyFlowService, MoneyFlowService>()
                 .AddScoped<IInvestmentPaycheckEstimatorService, InvestmentPaycheckEstimatorService>()
             .AddScoped<IEssentialSpendingServiceTyped, CurrencyEssentialSpendingService>()
@@ -50,6 +53,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<CurrencyAccountSeeder>()
                 .AddScoped<StockAccountSeeder>()
                 .AddScoped<BondAccountSeeder>()
+                .AddScoped<FinancialInsightsSeeder>()
                 .AddScoped<FinancialLabelSeeder>()
                 .AddScoped<BondDetailsSeeder>()
                 .AddScoped<ISeeder, AdminAccountSeeder>()

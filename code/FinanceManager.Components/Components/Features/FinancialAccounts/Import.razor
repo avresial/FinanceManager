@@ -1,0 +1,27 @@
+@page "/Import/{AccountId:int}"
+@inherits AccountTypePageBase
+
+<PageTitle>Import transactions</PageTitle>
+
+<ComponentStateView IsLoading="@IsLoading" ErrorMessage="@ErrorMessage" ErrorSeverity="Severity.Warning">
+    <div class="container-fluid px-0" @ref="MyElementReference">
+        @if (AccountDescriptor?.Kind == FinancialAccountKind.Currency)
+        {
+            <ImportCurrencyEntriesComponent AccountId="@AccountId" />
+        }
+        else if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
+        {
+            <ImportStockEntriesComponent AccountId="@AccountId" />
+        }
+        else if (AccountDescriptor?.Kind == FinancialAccountKind.Bond)
+        {
+            <ImportBondEntriesComponent AccountId="@AccountId" />
+        }
+        else
+        {
+            <div class="alert alert-danger" role="alert">
+                @AccountType type is not supported.
+            </div>
+        }
+    </div>
+</ComponentStateView>

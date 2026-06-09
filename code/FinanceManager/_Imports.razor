@@ -1,4 +1,4 @@
-﻿@using System.Net.Http
+@using System.Net.Http
 @using System.Net.Http.Json
 
 @using Microsoft.AspNetCore.Authorization
@@ -12,11 +12,14 @@
 
 @using FinanceManager.WebUi
 @using FinanceManager.Components
-@using FinanceManager.Components.Components
 @using FinanceManager.Components.Components.Layout
-@using FinanceManager.Components.Components.FinancialAccounts.CurrencyAccountComponents
-@using FinanceManager.Components.Components.FinancialAccounts.StockAccountComponents
-@using FinanceManager.Components.Components.SharedComponents
+@using FinanceManager.Components.Components.Features.FinancialAccounts.CurrencyAccountComponents
+@using FinanceManager.Components.Components.Features.FinancialAccounts.StockAccountComponents
+@using FinanceManager.Components.Components.Shared
+@using FinanceManager.Components.Components.Shared.Charts
+@using FinanceManager.Components.Components.Shared.Dialogs
+@using FinanceManager.Components.Components.Shared.Loading
+@using FinanceManager.Components.Components.Shared.State
 
 @using CsvHelper
 @using System.Globalization
@@ -26,6 +29,13 @@
 
 @using MudBlazor
 
-@using FinanceManager.Components.Components.Dashboard
-@using FinanceManager.Components.Components.Dashboard.Cards
-@using FinanceManager.Components.Components.Dashboard.Cards.TimeSeries
+@using FinanceManager.Components.Components.Features.App
+@using FinanceManager.Components.Components.Features.Dashboard
+@using FinanceManager.Components.Components.Features.Dashboard.Cards
+@using FinanceManager.Components.Components.Features.Dashboard.Cards.TimeSeries
+@using FinanceManager.Components.Components.Features.Dashboard.Cards.Assets
+@using FinanceManager.Components.Components.Features.Dashboard.Cards.Liabilities
+@using FinanceManager.Components.Components.Features.Dashboard.Pages
+@using FinanceManager.Components.Components.Features.MarketData.Components
+@using FinanceManager.Components.Components.Features.MarketData.Pages
+@using FinanceManager.Components.Components.Features.User.Components

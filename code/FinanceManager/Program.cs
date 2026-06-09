@@ -18,10 +18,10 @@ builder.Services.AddMudServices();
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddBlazoredSessionStorage();
 
-builder.Services.AddTransient<UnauthorizedRedirectHandler>();
+builder.Services.AddTransient<TokenRefreshRedirectHandler>();
 builder.Services.AddScoped(sp =>
 {
-    var handler = sp.GetRequiredService<UnauthorizedRedirectHandler>();
+    var handler = sp.GetRequiredService<TokenRefreshRedirectHandler>();
     handler.InnerHandler = new HttpClientHandler();
     return new HttpClient(handler) { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
 });

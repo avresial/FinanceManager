@@ -1,0 +1,54 @@
+@using FinanceManager.Components.Components.Features.Dashboard.Cards
+@using FinanceManager.Components.Components.Features.Dashboard.Cards.Assets
+@using FinanceManager.Components.Components.Features.Dashboard.Cards.Liabilities
+@using FinanceManager.Components.Components.Features.Dashboard.Cards.TimeSeries
+
+<MudContainer Class="py-2">
+    <MudGrid Spacing="2">
+
+        <MudItem xs="12">
+            <NetWorthTimeSeriesCard StartDateTime="@StartDate" EndDateTime="@EndDate" />
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <NetCashFlowOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@StartDate"
+                                     EndDateTime="@EndDate" />
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <ClosingBalanceOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@StartDate"
+                                        EndDateTime="@EndDate" />
+        </MudItem>
+
+        <MudItem xs="12" md="6" lg="4">
+            <LiabilitiesDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
+                                                 EndDateTime="@EndDate" />
+        </MudItem>
+
+        <MudItem xs="12" md="6" lg="4">
+            <FinancialLabelsListCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
+                                     EndDateTime="@EndDate" />
+        </MudItem>
+
+        <MudItem xs="12" md="6" lg="4">
+            <AssetsDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
+                                            EndDateTime="@EndDate" />
+        </MudItem>
+
+        <MudItem xs="12" md="6" lg="4">
+            <ExpenseDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
+                                             EndDateTime="@EndDate" />
+        </MudItem>
+
+        <MudItem xs="12" md="6" lg="4">
+            <FinancialInsightsCarousel Height="@($"{_unitHeight * 3}px")" Count="3" />
+        </MudItem>
+
+        <MudItem xs="12" md="6" lg="4">
+            <RecurringTransactionDetectorCard Height="@($"{_unitHeight * 3}px")" />
+        </MudItem>
+
+    </MudGrid>
+</MudContainer>
+
+<DashboardDatePicker DateChanged=DateChanged StartingOption="ThisMonth" />

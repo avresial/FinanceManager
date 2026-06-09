@@ -1,3 +1,4 @@
+using FinanceManager.Application.Diagnostics;
 using FinanceManager.Application.Services.Ai;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -26,8 +27,12 @@ internal sealed class FallbackChatClient(
             {
                 var response = await attempt.Client.GetResponseAsync(messages, effectiveOptions, cancellationToken);
                 if (!string.IsNullOrWhiteSpace(response.Text))
+                {
+                    RecordAttempt(attempt.ProviderName, "success");
                     return response;
+                }
 
+                RecordAttempt(attempt.ProviderName, "empty");
                 logger.LogWarning(
                     "Chat provider {Provider} with model {Model} returned empty response. Trying fallback.",
                     attempt.ProviderName,
@@ -39,6 +44,7 @@ internal sealed class FallbackChatClient(
             }
             catch (Exception ex)
             {
+                RecordAttempt(attempt.ProviderName, "error");
                 exceptions ??= [];
                 exceptions.Add(ex);
                 logger.LogWarning(
@@ -77,10 +83,12 @@ internal sealed class FallbackChatClient(
 
                 if (bufferedUpdates.Count > 0)
                 {
+                    RecordAttempt(entry.ProviderName, "success");
                     selectedUpdates = bufferedUpdates;
                     break;
                 }
 
+                RecordAttempt(entry.ProviderName, "empty");
                 logger.LogWarning(
                     "Streaming chat provider {Provider} with model {Model} yielded no updates. Trying fallback.",
                     entry.ProviderName,
@@ -92,6 +100,7 @@ internal sealed class FallbackChatClient(
             }
             catch (Exception ex)
             {
+                RecordAttempt(entry.ProviderName, "error");
                 exceptions ??= [];
                 exceptions.Add(ex);
                 logger.LogWarning(
@@ -117,6 +126,12 @@ internal sealed class FallbackChatClient(
         if (exceptions is not null && exceptions.Count > 0)
             throw new AggregateException("All streaming chat providers failed.", exceptions);
     }
+
+    private static void RecordAttempt(string providerName, string outcome) =>
+        FinanceManagerTelemetry.AiChatRequests.Add(
+            1,
+            new KeyValuePair<string, object?>("provider", providerName),
+            new KeyValuePair<string, object?>("outcome", outcome));
 
     public object? GetService(Type serviceType, object? serviceKey = null) => null;
 

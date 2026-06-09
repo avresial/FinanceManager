@@ -1,0 +1,73 @@
+<div class="d-flex align-center gap-2 mb-4 @(IsMobile ? "flex-wrap" : "")"
+     style="@(IsMobile ? "" : "overflow-x: auto; ") min-height: 40px;">
+    @* Search — full-width on mobile so filters wrap to their own row *@
+    <MudTextField T="string" Value="SearchText" ValueChanged="OnSearchChanged"
+                  Placeholder="Search transactions, notes, labels…" Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate
+                  DebounceInterval="150" Clearable Class="flex-grow-1"
+                  Style="@(IsMobile ? "flex: 0 0 100%;" : "min-width: 160px;")" />
+
+    @* Income / Expense toggle group *@
+    <MudToggleGroup T="TxFilter?" Value="ActiveFilter" ValueChanged="ActiveFilterChanged"
+                    SelectionMode="SelectionMode.ToggleSelection" Color="Color.Default" Dense="true" Size="Size.Small" Outlined
+                    Delimiters Style="flex-shrink: 0; padding: 2.65px;">
+        <MudToggleItem Value="@((TxFilter?)TxFilter.All)">All</MudToggleItem>
+        <MudToggleItem Value="@((TxFilter?)TxFilter.Income)">Income</MudToggleItem>
+        <MudToggleItem Value="@((TxFilter?)TxFilter.Expense)">Expense</MudToggleItem>
+    </MudToggleGroup>
+
+    @* Category filter *@
+    @if (AvailableLabels is not null && AvailableLabels.Any())
+    {
+        <MudMenu @ref="_labelMenu" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+            <ActivatorContent>
+                <MudButton Variant="Variant.Outlined" Color="@(SelectedLabels.Count > 0 ? Color.Primary : Color.Default)"
+                           Size="Size.Medium" StartIcon="@Icons.Material.Filled.FilterList"
+                           EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
+                           Style="text-transform: none; white-space: nowrap; flex-shrink: 0; padding: 6.5px;">
+                    @CategoryButtonText
+                </MudButton>
+            </ActivatorContent>
+            <ChildContent>
+                <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1" Style="display:block">Filter by category</MudText>
+                @foreach (var label in AvailableLabels)
+                {
+                    <MudMenuItem OnClick="@(() => ToggleLabel(label))" AutoClose="false" Style="padding: 2.65px;">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudCheckBox Value="@SelectedLabels.Contains(label)" T="bool" Dense="true" ReadOnly="true" />
+                            <MudText Typo="Typo.body2">@label</MudText>
+                        </MudStack>
+                    </MudMenuItem>
+                }
+                <MudDivider />
+                <div class="d-flex justify-space-between px-2 py-1">
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@(SelectedLabels.Count == 0)"
+                               OnClick="ClearLabels">Clear all</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="CloseLabelMenu">
+                        Done</MudButton>
+                    </div>
+                </ChildContent>
+            </MudMenu>
+        }
+
+        @* Add entry split button — primary action + Import / Export / Manage in dropdown *@
+        <MudButtonGroup Variant="Variant.Outlined" Color="Color.Default" Size="Size.Medium"
+                        Style="@($"flex-shrink: 0;  {(IsMobile ? " margin-left: auto;" : "")}")">
+            <MudButton OnClick="OnAddEntry" Style="text-transform: none; white-space: nowrap; padding: 7.5px;">Add entry
+            </MudButton>
+            <MudMenu Icon="@Icons.Material.Filled.ArrowDropDown" AnchorOrigin="Origin.BottomRight"
+                     TransformOrigin="Origin.TopRight" Dense Style="align-self: auto;" class="p-0">
+                @if (ShowInsightsButton)
+                {
+                    <MudMenuItem Icon="@Icons.Material.Filled.Insights" OnClick="OnInsightsClick">Insights</MudMenuItem>
+                    <MudDivider />
+                }
+                <MudMenuItem Icon="@Icons.Material.Filled.FileUpload" Href="@($"/Import/{AccountId}")">Import…</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.FileDownload" Href="@($"/Export/{AccountId}")">Export CSV
+                </MudMenuItem>
+                <MudDivider />
+                <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="@($"/ManageAccount/{AccountId}")">Manage account
+                </MudMenuItem>
+            </MudMenu>
+        </MudButtonGroup>
+    </div>

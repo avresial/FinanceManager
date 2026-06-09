@@ -507,7 +507,6 @@ Components/
    ExpenseDistributionOverviewCard.razor
    FinancialInsightsCarousel.razor
    FinancialLabelsListCard.razor
-   IncomeSourceOverviewCard.razor
    InflowVsOutflowOverviewCard.razor
    Liabilities/
     LiabilitiesPerAccountOverviewCard.razor

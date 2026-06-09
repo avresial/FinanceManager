@@ -1,0 +1,33 @@
+/* Light/dark preview images: both variants are rendered, and the one matching the
+   active theme is shown. The app flips theme from the OS via prefers-color-scheme
+   (App.razor uses GetSystemDarkModeAsync), so the same media query keeps these
+   screenshots in sync with the rest of the UI. */
+.onb-img {
+    display: block;
+}
+
+/* Default (light theme): hide the dark variant. Declared after .onb-img so it wins. */
+.onb-dark {
+    display: none;
+}
+
+.onb-hero {
+    width: 100%;
+    height: auto;
+}
+
+.onb-carousel {
+    max-height: 400px;
+    max-width: 100%;
+    height: auto;
+}
+
+@media (prefers-color-scheme: dark) {
+    .onb-light {
+        display: none;
+    }
+
+    .onb-dark {
+        display: block;
+    }
+}

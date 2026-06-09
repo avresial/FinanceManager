@@ -1,0 +1,14 @@
+.investment-rate-card__chart {
+    width: 100%;
+    overflow: hidden;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.investment-rate-card__chart ::deep .apexcharts-canvas {
+    background: transparent !important;
+}
+
+.investment-rate-card__chart ::deep .apexcharts-toolbar {
+    display: none !important;
+}

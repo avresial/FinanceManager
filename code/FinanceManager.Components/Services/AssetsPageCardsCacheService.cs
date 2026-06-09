@@ -2,6 +2,7 @@ using Blazored.LocalStorage;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Models;
 using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.MoneyFlowModels;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
@@ -37,8 +38,9 @@ public class AssetsPageCardsCacheService(
         var assetsPerTypeTask = assetsHttpClient.GetEndAssetsPerType(refreshContext.UserId, DefaultCurrency.PLN, endDate);
         var assetsPerAccountTask = assetsHttpClient.GetEndAssetsPerAccount(refreshContext.UserId, DefaultCurrency.PLN, endDate);
         var investmentRateTask = moneyFlowHttpClient.GetInvestmentRate(refreshContext.UserId, startDate, endDate).ToListAsync().AsTask();
+        var monthlyInvestmentRatesTask = GetMonthlyInvestmentRatesAsync(refreshContext.UserId, endDate);
 
-        await Task.WhenAll(assetsTimeSeriesTask, assetsPerTypeTask, assetsPerAccountTask, investmentRateTask);
+        await Task.WhenAll(assetsTimeSeriesTask, assetsPerTypeTask, assetsPerAccountTask, investmentRateTask, monthlyInvestmentRatesTask);
 
         return new AssetsPageCardsCacheSnapshot
         {
@@ -52,7 +54,32 @@ public class AssetsPageCardsCacheService(
             EndAssetsPerType = [.. (await assetsPerTypeTask)],
             EndAssetsPerAccount = [.. (await assetsPerAccountTask)],
             InvestmentRates = [.. (await investmentRateTask)],
+            MonthlyInvestmentRates = await monthlyInvestmentRatesTask,
         };
+    }
+
+    private async Task<List<InvestmentRate>> GetMonthlyInvestmentRatesAsync(int userId, DateTime endDate)
+    {
+        const int monthsBack = 12;
+        var anchor = new DateTime(endDate.Year, endDate.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var tasks = new Task<(DateTime start, DateTime end, List<InvestmentRate> rates)>[monthsBack];
+        for (int i = 0; i < monthsBack; i++)
+        {
+            var monthStart = anchor.AddMonths(-(monthsBack - 1 - i));
+            var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
+            if (monthEnd > endDate) monthEnd = endDate;
+            tasks[i] = FetchMonthAsync(userId, monthStart, monthEnd);
+        }
+
+        var results = await Task.WhenAll(tasks);
+        return [.. results.Select(r => r.rates.FirstOrDefault() ?? new InvestmentRate { Start = r.start, End = r.end })];
+    }
+
+    private async Task<(DateTime start, DateTime end, List<InvestmentRate> rates)> FetchMonthAsync(int userId, DateTime start, DateTime end)
+    {
+        var rates = await moneyFlowHttpClient.GetInvestmentRate(userId, start, end).ToListAsync();
+        return (start, end, rates);
     }
 
     protected override bool IsUsable(AssetsPageCardsCacheSnapshot? state, string cacheKey, DateTime utcNow)

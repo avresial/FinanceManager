@@ -1,4 +1,5 @@
 using FinanceManager.Application.Options;
+using FinanceManager.Application.Services.ExternalServices;
 using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Currencies;
@@ -14,7 +15,8 @@ namespace FinanceManager.Infrastructure.Services.Stocks;
 internal sealed class AlphaVantageClient(
     HttpClient httpClient,
     ILogger<AlphaVantageClient> logger,
-    IOptions<StockApiOptions> options) : IAlphaVantageClient
+    IOptions<StockApiOptions> options,
+    IExternalServiceConfigService configService) : IAlphaVantageClient
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -25,14 +27,15 @@ internal sealed class AlphaVantageClient(
     {
         if (string.IsNullOrWhiteSpace(keywords)) return [];
 
-        var apiKey = options.Value.ApiKey;
+        var config = await configService.GetServiceAsync("AlphaVantage", ct);
+        var apiKey = config.ApiKey;
         if (string.IsNullOrWhiteSpace(apiKey))
         {
             logger.LogWarning("Stock API key is missing.");
             return [];
         }
 
-        var url = BuildUrl($"function=SYMBOL_SEARCH&keywords={Uri.EscapeDataString(keywords)}&apikey={apiKey}");
+        var url = BuildUrl($"function=SYMBOL_SEARCH&keywords={Uri.EscapeDataString(keywords)}&apikey={apiKey}", config.BaseUrl);
 
         try
         {
@@ -82,7 +85,8 @@ internal sealed class AlphaVantageClient(
     {
         if (string.IsNullOrWhiteSpace(ticker)) return [];
 
-        var apiKey = options.Value.ApiKey;
+        var config = await configService.GetServiceAsync("AlphaVantage", ct);
+        var apiKey = config.ApiKey;
         if (string.IsNullOrWhiteSpace(apiKey))
         {
             logger.LogWarning("Stock API key is missing.");
@@ -90,7 +94,7 @@ internal sealed class AlphaVantageClient(
         }
 
         var outputSize = string.IsNullOrWhiteSpace(options.Value.OutputSize) ? "compact" : options.Value.OutputSize;
-        var url = BuildUrl($"function=TIME_SERIES_DAILY&symbol={Uri.EscapeDataString(ticker)}&outputsize={outputSize}&apikey={apiKey}");
+        var url = BuildUrl($"function=TIME_SERIES_DAILY&symbol={Uri.EscapeDataString(ticker)}&outputsize={outputSize}&apikey={apiKey}", config.BaseUrl);
 
         try
         {
@@ -134,14 +138,15 @@ internal sealed class AlphaVantageClient(
 
     public async Task<IReadOnlyList<StockListing>> GetListings(CancellationToken ct = default)
     {
-        var apiKey = options.Value.ApiKey;
+        var config = await configService.GetServiceAsync("AlphaVantage", ct);
+        var apiKey = config.ApiKey;
         if (string.IsNullOrWhiteSpace(apiKey))
         {
             logger.LogWarning("Stock API key is missing.");
             return [];
         }
 
-        var url = BuildUrl($"function=LISTING_STATUS&apikey={apiKey}");
+        var url = BuildUrl($"function=LISTING_STATUS&apikey={apiKey}", config.BaseUrl);
 
         try
         {
@@ -162,9 +167,8 @@ internal sealed class AlphaVantageClient(
         }
     }
 
-    private string BuildUrl(string query)
+    private static string BuildUrl(string query, string baseUrl)
     {
-        var baseUrl = options.Value.BaseUrl;
         if (string.IsNullOrWhiteSpace(baseUrl)) return query;
 
         if (baseUrl.Contains('?'))

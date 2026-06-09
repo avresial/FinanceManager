@@ -10,16 +10,16 @@
 
 ```bash
 dotnet test .\code\FinanceManager.slnx
-dotnet test .\code\FinanceManager.UnitTests\FinanceManager.UnitTests.csproj
-dotnet test .\code\FinanceManager.IntegrationTests\FinanceManager.IntegrationTests.csproj
-dotnet test .\code\FinanceManager.UnitTests\FinanceManager.UnitTests.csproj --collect:"XPlat Code Coverage"
+dotnet test .\code\FinanceManager.Tests.Unit\FinanceManager.Tests.Unit.csproj
+dotnet test .\code\FinanceManager.Tests.Integration\FinanceManager.Tests.Integration.csproj
+dotnet test .\code\FinanceManager.Tests.Unit\FinanceManager.Tests.Unit.csproj --collect:"XPlat Code Coverage"
 ```
 
 ### 2) Test Layout
 
 - Test file placement pattern: dedicated test projects instead of co-located tests
 - Naming convention: `*Tests.cs` classes grouped by layer/feature (for example `Api\Controllers\StockPriceControllerTests.cs`)
-- Setup files and where they run: `code\FinanceManager.IntegrationTests\FinanceManagerApiTestApp.cs`, `code\FinanceManager.IntegrationTests\Controllers\ControllerTests.cs`, `code\FinanceManager.IntegrationTests\TestDatabase.cs`, `code\FinanceManager.IntegrationTests\OptionsProvider.cs`
+- Setup files and where they run: `code\FinanceManager.Tests.Integration\FinanceManagerApiTestApp.cs`, `code\FinanceManager.Tests.Integration\Controllers\ControllerTests.cs`, `code\FinanceManager.Tests.Integration\TestDatabase.cs`, `code\FinanceManager.Tests.Integration\OptionsProvider.cs`
 
 ### 3) Test Scope Matrix
 
@@ -44,10 +44,10 @@ dotnet test .\code\FinanceManager.UnitTests\FinanceManager.UnitTests.csproj --co
 ### 6) Evidence
 
 - `code\global.json`
-- `code\FinanceManager.UnitTests\FinanceManager.UnitTests.csproj`
-- `code\FinanceManager.IntegrationTests\FinanceManager.IntegrationTests.csproj`
-- `code\FinanceManager.UnitTests\Api\Controllers\StockPriceControllerTests.cs`
-- `code\FinanceManager.IntegrationTests\Controllers\ControllerTests.cs`
-- `code\FinanceManager.IntegrationTests\FinanceManagerApiTestApp.cs`
+- `code\FinanceManager.Tests.Unit\FinanceManager.Tests.Unit.csproj`
+- `code\FinanceManager.Tests.Integration\FinanceManager.Tests.Integration.csproj`
+- `code\FinanceManager.Tests.Unit\Api\Controllers\StockPriceControllerTests.cs`
+- `code\FinanceManager.Tests.Integration\Controllers\ControllerTests.cs`
+- `code\FinanceManager.Tests.Integration\FinanceManagerApiTestApp.cs`
 - `.github\workflows\ci.yml`
 

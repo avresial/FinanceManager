@@ -4,7 +4,7 @@ namespace FinanceManager.Components.Models;
 
 public sealed class AssetsPageCardsCacheSnapshot
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
     public int UserId { get; set; }
@@ -17,6 +17,7 @@ public sealed class AssetsPageCardsCacheSnapshot
     public List<NameValueResult> EndAssetsPerType { get; set; } = [];
     public List<NameValueResult> EndAssetsPerAccount { get; set; } = [];
     public List<InvestmentRate> InvestmentRates { get; set; } = [];
+    public List<InvestmentRate> MonthlyInvestmentRates { get; set; } = [];
 }
 
 public sealed class AssetsPageCardsRefreshContext

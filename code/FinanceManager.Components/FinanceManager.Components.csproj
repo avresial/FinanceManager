@@ -5,8 +5,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<InternalsVisibleTo Include="FinanceManager.IntegrationTests" />
-		<InternalsVisibleTo Include="FinanceManager.UnitTests" />
+		<InternalsVisibleTo Include="FinanceManager.Tests.Integration" />
+		<InternalsVisibleTo Include="FinanceManager.Tests.Unit" />
 	</ItemGroup>
 	
 	<ItemGroup>
@@ -28,17 +28,11 @@
 		<PackageReference Include="Microsoft.Extensions.Caching.Memory" />
 		<PackageReference Include="Microsoft.Extensions.Localization" />
 		<PackageReference Include="MudBlazor" />
-		<PackageReference Include="Newtonsoft.Json" />
-		<PackageReference Include="System.Configuration.ConfigurationManager" />
-		<PackageReference Include="System.Memory.Data" />
-		<PackageReference Include="System.Security.Cryptography.Xml" />
-		<PackageReference Include="System.Security.Permissions" />
-		<PackageReference Include="System.Windows.Extensions" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<InternalsVisibleTo Include="FinanceManager.IntegrationTests" />
-		<InternalsVisibleTo Include="FinanceManager.UnitTests" />
+		<InternalsVisibleTo Include="FinanceManager.Tests.Integration" />
+		<InternalsVisibleTo Include="FinanceManager.Tests.Unit" />
 	</ItemGroup>
 
 	<ItemGroup>

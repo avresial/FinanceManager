@@ -10,7 +10,7 @@ env:
   AZURE_WEBAPP_NAME_DEV: 'FinanceManagerApi-dev'
   AZURE_WEBAPP_PACKAGE_PATH: './code/FinanceManager.Api/publish'
   DOTNET_VERSION: '10.x'
-  SOLUTION_PATH: './code/FinanceManager.slx'
+  SOLUTION_PATH: './code/FinanceManager.slnx'
   API_PROJECT_PATH: './code/FinanceManager.Api/FinanceManager.Api.csproj'
   PUBLISH_DIR: './code/FinanceManager.Api/publish'
 
@@ -51,7 +51,7 @@ jobs:
   code-quality:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
 
     steps:
       - name: Checkout code
@@ -71,18 +71,22 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore ./code
 
+      # Naming-rule violations (IDE1006) are a hard failure: the .editorconfig naming rules
+      # are set to error severity, but the C# compiler does not run the naming analyzer during
+      # `dotnet build`, so this `dotnet format` check is what actually enforces them in CI.
+      - name: Enforce naming conventions
+        run: dotnet format style ./code --verify-no-changes --diagnostics IDE1006 --severity error
+
       - name: Check code formatting
         run: dotnet format ./code --verify-no-changes --verbosity diagnostic
-        continue-on-error: true
 
       - name: Build with code analysis
         run: dotnet build ./code --no-restore --configuration Release /p:EnforceCodeStyleInBuild=true
-        continue-on-error: true
 
   security-scan:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
 
     steps:
       - name: Checkout code
@@ -102,9 +106,17 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore ./code
 
+      # `dotnet list package --vulnerable` exits 0 even when it finds vulnerabilities, so grep the
+      # output and fail the step ourselves — a known CVE must block the build, not just be reported.
       - name: Check for vulnerable packages
-        run: dotnet list ./code package --vulnerable --include-transitive
-        continue-on-error: true
+        run: |
+          output=$(dotnet list ./code package --vulnerable --include-transitive 2>&1)
+          echo "$output"
+          if echo "$output" | grep -q "has the following vulnerable packages"; then
+            echo "::error::Vulnerable packages detected."
+            exit 1
+          fi
+        continue-on-error: false
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -120,7 +132,7 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
     env:
       FINANCE_MANAGER_DB_KEY: ${{ secrets.FINANCE_MANAGER_DB_KEY }}
 
@@ -145,7 +157,7 @@ jobs:
       - name: Run unit tests
         run: |
           mkdir -p ${{ github.workspace }}/TestResults
-          ./code/FinanceManager.UnitTests/bin/Release/net10.0/FinanceManager.UnitTests -trx ${{ github.workspace }}/TestResults/unit-test-results.trx
+          ./code/FinanceManager.Tests.Unit/bin/Release/net10.0/FinanceManager.Tests.Unit -trx ${{ github.workspace }}/TestResults/unit-test-results.trx
 
       - name: Publish unit test results
         uses: dorny/test-reporter@v1
@@ -158,7 +170,7 @@ jobs:
   integration-tests:
     runs-on: ubuntu-latest
     needs: [build, unit-tests]
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
     env:
       FINANCE_MANAGER_DB_KEY: ${{ secrets.FINANCE_MANAGER_DB_KEY }}
       UseInMemoryDatabase: true
@@ -181,8 +193,8 @@ jobs:
       - name: Run integration tests
         run: |
           mkdir -p ${{ github.workspace }}/TestResults
-          chmod +x ./code/FinanceManager.IntegrationTests/bin/Release/net10.0/FinanceManager.IntegrationTests
-          ./code/FinanceManager.IntegrationTests/bin/Release/net10.0/FinanceManager.IntegrationTests -trx ${{ github.workspace }}/TestResults/integration-test-results.trx
+          chmod +x ./code/FinanceManager.Tests.Integration/bin/Release/net10.0/FinanceManager.Tests.Integration
+          ./code/FinanceManager.Tests.Integration/bin/Release/net10.0/FinanceManager.Tests.Integration -trx ${{ github.workspace }}/TestResults/integration-test-results.trx
 
       - name: Publish integration test results
         uses: dorny/test-reporter@v1
@@ -192,18 +204,56 @@ jobs:
           path: '${{ github.workspace }}/TestResults/**/integration-test-results.trx'
           reporter: dotnet-trx
 
+  architecture-tests:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ./code
+
+      # ArchUnitNET analyzes compiled IL; Release optimizations (elided casts/locals,
+      # inlined typeof) can distort the dependency graph, so the maintainers recommend
+      # running architecture tests against a Debug build.
+      - name: Build architecture tests (Debug)
+        run: dotnet build ./code/FinanceManager.Tests.Architecture/FinanceManager.Tests.Architecture.csproj --configuration Debug
+
+      - name: Run architecture tests
+        run: |
+          mkdir -p ${{ github.workspace }}/TestResults
+          chmod +x ./code/FinanceManager.Tests.Architecture/bin/Debug/net10.0/FinanceManager.Tests.Architecture
+          ./code/FinanceManager.Tests.Architecture/bin/Debug/net10.0/FinanceManager.Tests.Architecture -trx ${{ github.workspace }}/TestResults/architecture-test-results.trx
+
+      - name: Publish architecture test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: 'Architecture Test Results'
+          path: '${{ github.workspace }}/TestResults/**/architecture-test-results.trx'
+          reporter: dotnet-trx
+
   publish:
     runs-on: ubuntu-latest
-    needs: [build, unit-tests, integration-tests, code-quality, security-scan]
+    needs: [build, unit-tests, integration-tests, architecture-tests, code-quality, security-scan]
     if: |
       always()
       && github.event_name == 'push'
       && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
       && needs.build.result == 'success'
-      && (needs.unit-tests.result == 'success' || needs.unit-tests.result == 'skipped')
-      && (needs.integration-tests.result == 'success' || needs.integration-tests.result == 'skipped')
-      && (needs.code-quality.result == 'success' || needs.code-quality.result == 'skipped')
-      && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped')
+      && needs.unit-tests.result == 'success'
+      && needs.integration-tests.result == 'success'
+      && needs.architecture-tests.result == 'success'
+      && needs.code-quality.result == 'success'
+      && needs.security-scan.result == 'success'
 
     steps:
       - name: Checkout code
@@ -237,12 +287,37 @@ jobs:
     name: Deploy to Azure Web App (production)
     runs-on: ubuntu-latest
     needs: publish
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: |
+      always()
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/main'
+      && needs.publish.result == 'success'
     environment:
       name: production
       url: https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ./code
+
+      - name: Install EF Core CLI
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.*
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Apply EF migrations
+        run: dotnet ef database update -s code/FinanceManager.Api/FinanceManager.Api.csproj
+        env:
+          ConnectionStrings__DefaultConnection: ${{ secrets.PROD_CONNECTION_STRING }}
+
       - name: Download publish artifact
         uses: actions/download-artifact@v5
         with:
@@ -260,12 +335,37 @@ jobs:
     name: Deploy to Azure Web App (develop)
     runs-on: ubuntu-latest
     needs: publish
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    if: |
+      always()
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/develop'
+      && needs.publish.result == 'success'
     environment:
       name: development
       url: https://${{ env.AZURE_WEBAPP_NAME_DEV }}.azurewebsites.net
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ./code
+
+      - name: Install EF Core CLI
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.*
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Apply EF migrations
+        run: dotnet ef database update -s code/FinanceManager.Api/FinanceManager.Api.csproj
+        env:
+          ConnectionStrings__DefaultConnection: ${{ secrets.DEV_CONNECTION_STRING }}
+
       - name: Download publish artifact
         uses: actions/download-artifact@v5
         with:

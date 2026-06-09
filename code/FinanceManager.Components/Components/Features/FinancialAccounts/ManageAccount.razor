@@ -1,0 +1,27 @@
+@page "/ManageAccount/{AccountId:int}"
+@inherits AccountTypePageBase
+
+<PageTitle>Manage account</PageTitle>
+
+<ComponentStateView IsLoading="@IsLoading" ErrorMessage="@ErrorMessage" ErrorSeverity="Severity.Warning">
+    <div class="container-fluid px-0 mt-3" @ref="MyElementReference">
+        @if (AccountDescriptor?.Kind == FinancialAccountKind.Currency)
+        {
+            <ManageCurrencyAccount AccountId="@AccountId" />
+        }
+        else if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
+        {
+            <ManageStockAccount AccountId="@AccountId" />
+        }
+        else if (AccountDescriptor?.Kind == FinancialAccountKind.Bond)
+        {
+            <ManageBondAccount AccountId="@AccountId" />
+        }
+        else
+        {
+            <div class="alert alert-danger" role="alert">
+                @AccountType type is not supported.
+            </div>
+        }
+    </div>
+</ComponentStateView>

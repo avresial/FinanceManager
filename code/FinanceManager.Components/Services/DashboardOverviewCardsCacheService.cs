@@ -21,7 +21,7 @@ public class DashboardOverviewCardsCacheService(
     private const string _cacheKeyPrefix = "dashboard-overview-cards-cache-v1";
     private static readonly TimeSpan _maxStale = TimeSpan.FromMinutes(5);
 
-    public Task<DashboardOverviewCardsCacheSnapshot> GetSnapshotAsync(DashboardOverviewCardsRefreshContext context)
+    public virtual Task<DashboardOverviewCardsCacheSnapshot> GetSnapshotAsync(DashboardOverviewCardsRefreshContext context)
         => GetOrRefreshAsync(context);
 
     protected override string GetCacheKey(DashboardOverviewCardsRefreshContext refreshContext)
@@ -34,9 +34,8 @@ public class DashboardOverviewCardsCacheService(
 
         var netCashFlowTask = moneyFlowHttpClient.GetNetCashFlow(refreshContext.UserId, DefaultCurrency.PLN, startDate, endDate);
         var closingBalanceTask = moneyFlowHttpClient.GetClosingBalance(refreshContext.UserId, DefaultCurrency.PLN, startDate, endDate);
-        var netWorthTask = moneyFlowHttpClient.GetNetWorth(refreshContext.UserId, DefaultCurrency.PLN, endDate);
 
-        await Task.WhenAll(netCashFlowTask, closingBalanceTask, netWorthTask);
+        await Task.WhenAll(netCashFlowTask, closingBalanceTask);
 
         var snapshot = new DashboardOverviewCardsCacheSnapshot
         {
@@ -48,7 +47,6 @@ public class DashboardOverviewCardsCacheService(
             FetchedAtUtc = DateTime.UtcNow,
             NetCashFlowSeries = [.. (await netCashFlowTask)],
             ClosingBalanceSeries = [.. (await closingBalanceTask)],
-            NetWorth = await netWorthTask,
         };
 
         return snapshot;

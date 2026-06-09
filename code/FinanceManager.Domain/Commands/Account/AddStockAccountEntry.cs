@@ -1,5 +1,7 @@
-﻿using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Entities.Stocks;
+using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Application.Commands.Account;
+namespace FinanceManager.Domain.Commands.Account;
 
-public record AddStockAccountEntry(StockAccountEntry Entry);
+public record AddStockAccountEntry(
+    [Required] StockAccountEntry Entry);

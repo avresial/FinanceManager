@@ -21,7 +21,7 @@
 | Store | Role | Access layer | Key risk | Evidence |
 |-------|------|--------------|----------|----------|
 | EF Core relational database (`AppDbContext`) | System-of-record for users, accounts, entries, prices, labels, imports | `FinanceManager.Infrastructure\Repositories\*` via `AppDbContext` | Database-provider drift between SQL Server and PostgreSQL setups | `code\FinanceManager.Infrastructure\Contexts\AppDbContext.cs`, `code\FinanceManager.Infrastructure\ServiceCollectionExtension.cs` |
-| In-memory EF Core database | Test-only persistence for integration tests | `FinanceManager.IntegrationTests\TestDatabase.cs` | Divergence from relational behavior in production | `code\FinanceManager.IntegrationTests\TestDatabase.cs`, `code\FinanceManager.IntegrationTests\FinanceManagerApiTestApp.cs` |
+| In-memory EF Core database | Test-only persistence for integration tests | `FinanceManager.Tests.Integration\TestDatabase.cs` | Divergence from relational behavior in production | `code\FinanceManager.Tests.Integration\TestDatabase.cs`, `code\FinanceManager.Tests.Integration\FinanceManagerApiTestApp.cs` |
 | `IMemoryCache` | Client caches and stock-price memoization | `FinanceManager.Components` and `FinanceManager.Application\Providers` | Cache scope is per process/browser and not shared across instances | `code\FinanceManager.Components\ServiceCollectionExtension.cs`, `code\FinanceManager.Application\Providers\StockPriceProvider.cs` |
 | Browser local/session storage | User session persistence in the frontend | `LoginService` | Token/session handling depends on browser storage state | `code\FinanceManager.Components\Services\LoginService.cs` |
 
