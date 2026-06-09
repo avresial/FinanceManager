@@ -22,6 +22,7 @@ public class LoginService : ILoginService
     private readonly IUserRepository _loginRepository;
     private readonly HttpClient _httpClient;
     private readonly ILogger<LoginService> _logger;
+    private readonly IAntiforgeryTokenService _antiforgeryTokenService;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     // Once we've tried (and failed) to silently restore a session we don't keep hammering the refresh endpoint on
@@ -36,7 +37,8 @@ public class LoginService : ILoginService
 
     private readonly AuthenticationStateProvider _authStateProvider;
     public LoginService(ISessionStorageService sessionStorageService, ILocalStorageService localStorageService,
-        AuthenticationStateProvider authState, IUserRepository loginRepository, HttpClient httpClient, ILogger<LoginService> logger)
+        AuthenticationStateProvider authState, IUserRepository loginRepository, HttpClient httpClient,
+        IAntiforgeryTokenService antiforgeryTokenService, ILogger<LoginService> logger)
     {
         _sessionStorageService = sessionStorageService;
         _localStorageService = localStorageService;
@@ -44,6 +46,7 @@ public class LoginService : ILoginService
 
         _loginRepository = loginRepository;
         _httpClient = httpClient;
+        _antiforgeryTokenService = antiforgeryTokenService;
         _logger = logger;
         _ = _loginRepository.AddUser("Guest", PasswordEncryptionProvider.EncryptPassword("GuestPassword"), PricingLevel.Basic, UserRole.User);
     }
@@ -125,7 +128,9 @@ public class LoginService : ILoginService
         await _refreshLock.WaitAsync();
         try
         {
-            using var response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/Auth/refresh", content: null);
+            using var request = await _antiforgeryTokenService.CreateRequest(
+                HttpMethod.Post, "api/Auth/refresh", CancellationToken.None);
+            using var response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode) return false;
 
             var result = await response.Content.ReadFromJsonAsync<LoginResponseModel>();
@@ -150,7 +155,9 @@ public class LoginService : ILoginService
     {
         try
         {
-            using var _ = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/Auth/logout", content: null);
+            using var request = await _antiforgeryTokenService.CreateRequest(
+                HttpMethod.Post, "api/Auth/logout", CancellationToken.None);
+            using var _ = await _httpClient.SendAsync(request);
         }
         catch (Exception ex)
         {
@@ -167,6 +174,7 @@ public class LoginService : ILoginService
         _httpClient.DefaultRequestHeaders.Authorization = null;
         await ((CustomAuthenticationStateProvider)_authStateProvider).Logout();
         _loggedUser = null;
+        _antiforgeryTokenService.ClearToken();
         // Block GetLoggedUser from silently re-authenticating with a stale cookie after the session has ended.
         _initialRefreshAttempted = true;
         LogginStateChanged?.Invoke(false);
@@ -193,6 +201,7 @@ public class LoginService : ILoginService
         _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.AccessToken);
         _loggedUser = session;
         _initialRefreshAttempted = true;
+        _antiforgeryTokenService.ClearToken();
 
         await ((CustomAuthenticationStateProvider)_authStateProvider)
             .ChangeUser(session.UserName, session.UserId.ToString(), session.UserRole.ToString());

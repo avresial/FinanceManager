@@ -61,7 +61,8 @@ public sealed class TokenRefreshRedirectHandler(
         if (uri is null) return false;
 
         var path = uri.AbsolutePath;
-        return path.EndsWith("/api/Auth/refresh", StringComparison.OrdinalIgnoreCase)
+        return path.EndsWith("/api/Auth/csrf-token", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith("/api/Auth/refresh", StringComparison.OrdinalIgnoreCase)
             || path.EndsWith("/api/Auth/logout", StringComparison.OrdinalIgnoreCase)
             || path.EndsWith("/api/Login", StringComparison.OrdinalIgnoreCase);
     }

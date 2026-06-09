@@ -26,7 +26,7 @@ public class RateLimitingTests(OptionsProvider optionsProvider) : ControllerTest
     [Fact]
     public async Task AuthEndpoint_ReturnsTooManyRequestsWithRetryAfter_OnceLimitExceeded()
     {
-        // refresh is anonymous and dependency-free (no cookie => 401), so it exercises the auth policy
+        // refresh is anonymous and dependency-free (no CSRF token => 403), so it exercises the auth policy
         // with no setup. Sending one more request than the permit limit must trip the limiter.
         HttpResponseMessage? limited = null;
         for (var attempt = 0; attempt < _authPermitLimit + 1; attempt++)
@@ -38,7 +38,7 @@ public class RateLimitingTests(OptionsProvider optionsProvider) : ControllerTest
                 break;
             }
 
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
         Assert.NotNull(limited);

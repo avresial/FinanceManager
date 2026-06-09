@@ -1,5 +1,7 @@
+using FinanceManager.Api.Controllers;
 using FinanceManager.Application.Commands.Login;
 using FinanceManager.Application.Providers;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
@@ -69,8 +71,10 @@ public class AuthControllerTests(OptionsProvider optionsProvider) : ControllerTe
         // Secure is intentionally NOT asserted here: the test client talks plain HTTP, and the cookie's Secure flag
         // tracks Request.IsHttps (verified over HTTPS in the AuthController unit tests instead).
 
-        // Refresh exchanges the cookie for a new access token without any credentials.
-        var refreshResponse = await Client.PostAsync("api/Auth/refresh", content: null, ct);
+        var csrfToken = await BootstrapCsrfToken(ct);
+
+        // Refresh exchanges the cookie plus CSRF header for a new access token without any credentials.
+        var refreshResponse = await PostWithCsrf("api/Auth/refresh", csrfToken, ct);
         refreshResponse.EnsureSuccessStatusCode();
         var refreshed = await refreshResponse.Content.ReadFromJsonAsync<LoginResponseModel>(ct);
         Assert.NotNull(refreshed);
@@ -78,18 +82,74 @@ public class AuthControllerTests(OptionsProvider optionsProvider) : ControllerTe
         Assert.False(string.IsNullOrWhiteSpace(refreshed.AccessToken));
 
         // Logout revokes the token server-side and clears the cookie.
-        var logoutResponse = await Client.PostAsync("api/Auth/logout", content: null, ct);
+        var logoutResponse = await PostWithCsrf("api/Auth/logout", csrfToken, ct);
         logoutResponse.EnsureSuccessStatusCode();
 
         // After logout there is no usable refresh cookie, so a further refresh is rejected.
-        var afterLogout = await Client.PostAsync("api/Auth/refresh", content: null, ct);
+        var afterLogout = await PostWithCsrf("api/Auth/refresh", csrfToken, ct);
         Assert.Equal(HttpStatusCode.Unauthorized, afterLogout.StatusCode);
     }
 
     [Fact]
-    public async Task Refresh_WithoutCookie_ReturnsUnauthorized()
+    public async Task Refresh_WithoutCsrfToken_ReturnsForbidden()
     {
-        var response = await Client.PostAsync("api/Auth/refresh", content: null, TestContext.Current.CancellationToken);
+        var ct = TestContext.Current.CancellationToken;
+        var loginRequest = new LoginRequestModel(_userName, _password);
+        var loginResponse = await Client.PostAsJsonAsync("api/Login", loginRequest, ct);
+        loginResponse.EnsureSuccessStatusCode();
+
+        var response = await Client.PostAsync("api/Auth/refresh", content: null, ct);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Refresh_WithValidCsrfButWithoutCookie_ReturnsUnauthorized()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var csrfToken = await BootstrapCsrfToken(ct);
+
+        var response = await PostWithCsrf("api/Auth/refresh", csrfToken, ct);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CsrfToken_SetsReadableRequestTokenAndFrameworkCookie()
+    {
+        var response = await Client.GetAsync("api/Auth/csrf-token", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var cookies = response.Headers.TryGetValues("Set-Cookie", out var values)
+            ? values.ToArray()
+            : [];
+        var setCookie = string.Join(";", cookies);
+        var requestTokenCookie = cookies.Single(value => value.StartsWith(
+            $"{AuthController.CsrfTokenCookieName}=", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Contains(AuthController.CsrfTokenCookieName, setCookie);
+        Assert.Contains("fm_antiforgery", setCookie);
+        Assert.Contains("samesite=strict", setCookie, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("httponly", requestTokenCookie, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<string> BootstrapCsrfToken(CancellationToken cancellationToken)
+    {
+        var response = await Client.GetAsync("api/Auth/csrf-token", cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var setCookie = response.Headers.TryGetValues("Set-Cookie", out var values)
+            ? values
+            : throw new InvalidOperationException("CSRF endpoint did not return cookies.");
+
+        var csrfCookie = setCookie.Single(value => value.StartsWith(
+            $"{AuthController.CsrfTokenCookieName}=", StringComparison.OrdinalIgnoreCase));
+        return WebUtility.UrlDecode(csrfCookie.Split(';', 2)[0]
+            .Substring(AuthController.CsrfTokenCookieName.Length + 1));
+    }
+
+    private Task<HttpResponseMessage> PostWithCsrf(string requestUri, string csrfToken, CancellationToken cancellationToken)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
+        request.Headers.TryAddWithoutValidation(IAntiforgeryTokenService.HeaderName, csrfToken);
+        return Client.SendAsync(request, cancellationToken);
     }
 }

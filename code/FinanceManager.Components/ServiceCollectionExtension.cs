@@ -13,7 +13,8 @@ public static class ServiceCollectionExtension
     {
         services.AddMemoryCache();
 
-        services.AddScoped<ILoginService, LoginService>()
+        services.AddScoped<IAntiforgeryTokenService, AntiforgeryTokenService>()
+                .AddScoped<ILoginService, LoginService>()
 
                 .AddScoped<StockPriceHttpClient>()
                 .AddScoped<StockAccountHttpClient>()
