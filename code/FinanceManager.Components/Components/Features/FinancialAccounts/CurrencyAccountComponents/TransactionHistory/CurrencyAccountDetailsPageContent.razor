@@ -5,7 +5,7 @@
         <AccountDetailsPageContentSkeleton />
     }
 }
-else if (IsLoading || Account.Entries?.Any() == true)
+else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
 {
                         <AccountDetailsHero AccountName="@Account.Name" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
                         Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
@@ -36,7 +36,7 @@ else if (IsLoading || Account.Entries?.Any() == true)
                 }
                 else if (!filteredEntries.Any())
                 {
-                    <MudAlert Severity="Severity.Info" Class="my-3">No entries in the selected range.</MudAlert>
+                    <MudAlert Severity="Severity.Info" Class="my-3">@AccountHistoryState.EmptyRangeMessage(_dateStart, _dateEnd)</MudAlert>
                 }
                 else
                 {
@@ -89,7 +89,7 @@ else if (IsLoading || Account.Entries?.Any() == true)
         </MudPaper>
     </MudOverlay>
 }
-else if (Account.Entries?.Any() != true)
+else if (!AccountHistoryState.HasTransactionHistory(Account))
 {
     <AddCurrencyEntry CurrencyAccount=Account ActionCompleted="HideAddOverlay">
         <CustomButton>
