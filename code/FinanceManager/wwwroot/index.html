@@ -107,6 +107,17 @@
                     docEl.classList.remove('preload');
                 } catch (e) { console.warn(e); }
             },
+            getCookie: function (name) {
+                const prefix = name + '=';
+                const cookies = document.cookie ? document.cookie.split('; ') : [];
+                for (const cookie of cookies) {
+                    if (cookie.startsWith(prefix)) {
+                        return decodeURIComponent(cookie.substring(prefix.length));
+                    }
+                }
+
+                return null;
+            },
             downloadFileFromBase64: function (fileName, contentType, base64Content) {
                 const byteCharacters = atob(base64Content);
                 const byteNumbers = new Array(byteCharacters.length);

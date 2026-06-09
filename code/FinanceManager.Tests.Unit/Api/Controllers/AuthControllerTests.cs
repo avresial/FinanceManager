@@ -6,6 +6,7 @@ using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -21,6 +22,7 @@ public class AuthControllerTests
 
     private readonly Mock<IRefreshTokenService> _refreshTokenService = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<IAntiforgery> _antiforgery = new();
     private readonly RefreshTokenOptions _options = new() { CookieName = _cookieName, SlidingValidityDays = 14 };
     private readonly JwtTokenGenerator _jwtTokenGenerator = new(Options.Create(new JwtAuthOptions
     {
@@ -38,8 +40,11 @@ public class AuthControllerTests
         if (cookieValue is not null)
             httpContext.Request.Headers["Cookie"] = $"{_cookieName}={cookieValue}";
 
+        var context = httpContext;
+        _antiforgery.Setup(a => a.ValidateRequestAsync(context)).Returns(Task.CompletedTask);
+
         return new AuthController(_refreshTokenService.Object, _jwtTokenGenerator, _userRepository.Object,
-            Options.Create(_options), NullLogger<AuthController>.Instance)
+            Options.Create(_options), _antiforgery.Object, NullLogger<AuthController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
@@ -59,6 +64,19 @@ public class AuthControllerTests
         var result = await controller.Refresh(TestContext.Current.CancellationToken);
 
         Assert.IsType<UnauthorizedResult>(result);
+        _refreshTokenService.Verify(s => s.ValidateAndRotate(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Refresh_InvalidAntiforgeryToken_ReturnsForbidden()
+    {
+        var controller = CreateController("rawtoken", out var ctx);
+        _antiforgery.Setup(a => a.ValidateRequestAsync(ctx))
+            .ThrowsAsync(new AntiforgeryValidationException("invalid"));
+
+        var result = await controller.Refresh(TestContext.Current.CancellationToken);
+
+        Assert.IsType<ForbidResult>(result);
         _refreshTokenService.Verify(s => s.ValidateAndRotate(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 

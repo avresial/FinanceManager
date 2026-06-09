@@ -78,6 +78,14 @@ builder.WebHost.ConfigureKestrel(options =>
 builder.Services.Configure<JwtAuthOptions>(builder.Configuration.GetSection("JwtConfig"));
 builder.Services.Configure<RefreshTokenOptions>(builder.Configuration.GetSection(RefreshTokenOptions.SectionName));
 builder.Services.Configure<PasswordResetOptions>(builder.Configuration.GetSection(PasswordResetOptions.SectionName));
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-Token";
+    options.Cookie.Name = "fm_antiforgery";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+});
 builder.Services.AddOptions<AccountLockoutOptions>()
     .Bind(builder.Configuration.GetSection(AccountLockoutOptions.SectionName))
     .Validate(o => o.MaxFailedAttempts > 0, "AccountLockout:MaxFailedAttempts must be greater than 0.")
