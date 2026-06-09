@@ -1,4 +1,5 @@
 using FinanceManager.Components.Components.Features.FinancialAccounts.Shared;
+using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
@@ -19,9 +20,12 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private bool _isMobile;
     private bool _insightsDrawerOpen;
 
-    private string _selectedRange = "3M";
+    private const int _initialMinimumEntriesCount = 100;
+
+    private string _selectedRange = "Month";
     private DateTime _dateStart;
     private DateTime _dateEnd = DateTime.UtcNow;
+    private DateRange? _customDateRange;
 
     private bool _addEntryVisibility;
 
@@ -165,7 +169,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
 
             SetDateRangeForSelection();
 
-            var loadTask = UpdateEntries();
+            var loadTask = UpdateEntries(initialLoad: true);
             var delayTask = Task.Delay(2000);
             var completedTask = await Task.WhenAny(loadTask, delayTask);
             if (completedTask == delayTask)
@@ -190,7 +194,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
             if (Account is not null && Account.AccountId == AccountId) return;
             IsLoading = true;
             SetDateRangeForSelection();
-            await UpdateEntries();
+            await UpdateEntries(initialLoad: true);
         }
         catch (Exception ex)
         {
@@ -202,14 +206,23 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         }
     }
 
-    private async Task UpdateEntries()
+    private async Task UpdateEntries(bool initialLoad = false)
     {
         try
         {
             if (_user is null) return;
 
-            _dateEnd = DateTime.UtcNow;
-            Account = await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
+            if (_selectedRange != AccountDetailsHero.CustomRangeKey)
+                _dateEnd = DateTime.UtcNow;
+
+            var selectedStart = _dateStart;
+            Account = initialLoad
+                ? await FinancialAccountService.GetInitialTransactionHistory<CurrencyAccount>(_user.UserId, AccountId, _dateStart, _dateEnd,
+                    _initialMinimumEntriesCount)
+                : await FinancialAccountService.GetAccount<CurrencyAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
+
+            if (initialLoad)
+                ApplyAutomaticCustomRange(selectedStart);
 
             if (Account?.Entries is not null)
                 await UpdateInfo();
@@ -250,6 +263,24 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private async Task OnRangeChanged(string value)
     {
         _selectedRange = value;
+        SetDateRangeForSelection();
+        IsLoading = true;
+        StateHasChanged();
+        try
+        {
+            await UpdateEntries();
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnCustomDateRangeChanged(DateRange? range)
+    {
+        _customDateRange = range;
+        _selectedRange = AccountDetailsHero.CustomRangeKey;
         SetDateRangeForSelection();
         IsLoading = true;
         StateHasChanged();
@@ -318,16 +349,35 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private void SetDateRangeForSelection()
     {
         var today = DateTime.UtcNow;
+        if (_selectedRange == AccountDetailsHero.CustomRangeKey)
+        {
+            _dateStart = _customDateRange?.Start ?? Account?.Start ?? today.AddMonths(-3);
+            _dateEnd = _customDateRange?.End ?? today;
+            if (_dateEnd > today)
+                _dateEnd = today;
+            return;
+        }
+
         _dateStart = _selectedRange switch
         {
-            "1W" => today.AddDays(-7),
+            "Month" => DateRangeHelper.GetCurrentMonthRange().Start,
             "1M" => today.AddMonths(-1),
             "3M" => today.AddMonths(-3),
             "6M" => today.AddMonths(-6),
             "YTD" => new DateTime(today.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            "All" => Account?.Start ?? today.AddYears(-10),
-            _ => today.AddMonths(-3),
+            _ => DateRangeHelper.GetCurrentMonthRange().Start,
         };
         _dateEnd = today;
+    }
+
+    private void ApplyAutomaticCustomRange(DateTime selectedStart)
+    {
+        var oldestFetchedEntryDate = Account?.Entries?.MinBy(x => x.PostingDate)?.PostingDate;
+        if (oldestFetchedEntryDate is null || oldestFetchedEntryDate.Value >= selectedStart)
+            return;
+
+        _selectedRange = AccountDetailsHero.CustomRangeKey;
+        _dateStart = oldestFetchedEntryDate.Value;
+        _customDateRange = new DateRange(_dateStart, _dateEnd);
     }
 }

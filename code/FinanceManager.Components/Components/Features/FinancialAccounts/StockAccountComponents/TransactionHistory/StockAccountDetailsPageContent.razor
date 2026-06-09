@@ -9,9 +9,10 @@
 }
 else if (IsLoading || Account.Entries?.Any() == true)
 {
-    <AccountDetailsHero AccountName="@Account.Name" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
+                        <AccountDetailsHero AccountName="@Account.Name" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
                         Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
                         SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged" IsChartLoading="@IsLoading"
+                        CustomDateRange="@_customDateRange" CustomDateRangeChanged="OnCustomDateRangeChanged"
                         ChartData="@ChartData" IsMobile="@_isMobile" />
 
     <MudContainer MaxWidth="MaxWidth.Large" Class="px-0">

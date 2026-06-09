@@ -219,6 +219,31 @@ public class StockAccountControllerTests
     [Fact]
     public async Task GetWithDateRange_BackfillsOlderEntriesUntilMinimumIsReached()
     {
+        var (accountId, startDate, endDate) = SetupBackfillScenario();
+
+        var result = await _controller.Get(accountId, startDate, endDate, minimumEntryCount: 2);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnValue = Assert.IsType<StockAccountDto>(okResult.Value);
+        Assert.Equal(2, returnValue.Entries.Count());
+        Assert.Equal([2, 1], returnValue.Entries.Select(x => x.EntryId));
+    }
+
+    [Fact]
+    public async Task GetInitialTransactionHistory_BackfillsOlderEntriesUntilMinimumIsReached()
+    {
+        var (accountId, startDate, endDate) = SetupBackfillScenario();
+
+        var result = await _controller.GetInitialTransactionHistory(accountId, startDate, endDate, minimumEntryCount: 2);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnValue = Assert.IsType<StockAccountDto>(okResult.Value);
+        Assert.Equal(2, returnValue.Entries.Count());
+        Assert.Equal([2, 1], returnValue.Entries.Select(x => x.EntryId));
+    }
+
+    private (int AccountId, DateTime StartDate, DateTime EndDate) SetupBackfillScenario()
+    {
         var accountId = 1;
         var startDate = new DateTime(2026, 4, 1);
         var endDate = new DateTime(2026, 4, 30);
@@ -247,11 +272,18 @@ public class StockAccountControllerTests
             .Setup(repo => repo.GetNextYounger(accountId, endDate))
             .ReturnsAsync(new Dictionary<string, StockAccountEntry>());
 
-        var result = await _controller.Get(accountId, startDate, endDate, minimumEntryCount: 2);
+        return (accountId, startDate, endDate);
+    }
 
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<StockAccountDto>(okResult.Value);
-        Assert.Equal(2, returnValue.Entries.Count());
-        Assert.Equal([2, 1], returnValue.Entries.Select(x => x.EntryId));
+    [Fact]
+    public async Task GetInitialTransactionHistory_ReturnsBadRequest_WhenDateRangeIsInvalid()
+    {
+        var accountId = 1;
+        StockAccount account = new(_testUserId, accountId, "Test Account");
+        _mockStockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
+
+        var result = await _controller.GetInitialTransactionHistory(accountId, new DateTime(2026, 5, 1), new DateTime(2026, 4, 1));
+
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 }

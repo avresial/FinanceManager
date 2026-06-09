@@ -151,6 +151,22 @@ public class StockAccountControllerTests(OptionsProvider optionsProvider) : Cont
     }
 
     [Fact]
+    public async Task GetInitialTransactionHistory_BackfillsOlderEntriesWhenMinimumEntryCountRequiresIt()
+    {
+        await SeedAccountWithEntries();
+        Authorize("testuser", _testUserId, UserRole.User);
+        var client = new StockAccountHttpClient(Client);
+        var startDate = DateTime.UtcNow.Date.AddDays(-3);
+        var endDate = DateTime.UtcNow.Date;
+
+        var account = await client.GetInitialTransactionHistoryAsync(_testAccountId, startDate, endDate, minimumEntryCount: 3);
+
+        Assert.NotNull(account);
+        Assert.Equal(new[] { 3, 2, 1 }, account!.Entries.Select(x => x.EntryId));
+        Assert.Empty(account.NextOlderEntries);
+    }
+
+    [Fact]
     public async Task Add_CreatesNewAccount()
     {
         // arrange
