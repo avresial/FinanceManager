@@ -10,6 +10,7 @@ namespace FinanceManager.Infrastructure.Services;
 internal class DatabaseInitializer(
     IServiceProvider serviceProvider,
     IHostEnvironment environment,
+    IHostApplicationLifetime applicationLifetime,
     ILogger<DatabaseInitializer> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken = default)
@@ -48,13 +49,26 @@ internal class DatabaseInitializer(
             logger.LogInformation("Relational database not configured. Skipping migrations.");
         }
 
+        _ = Task.Run(() => SeedData(applicationLifetime.ApplicationStopping), CancellationToken.None);
+        logger.LogInformation("Data seeding scheduled in the background");
+    }
+
+    private async Task SeedData(CancellationToken cancellationToken)
+    {
         logger.LogInformation("Starting data seeding");
+
+        using var scope = serviceProvider.CreateScope();
         foreach (var seeder in scope.ServiceProvider.GetServices<ISeeder>())
         {
             try
             {
                 logger.LogInformation("Seeding data with {Seeder}", seeder.GetType().Name);
                 await seeder.Seed(cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                logger.LogInformation("Data seeding cancelled while running {Seeder}", seeder.GetType().Name);
+                return;
             }
             catch (Exception ex)
             {
