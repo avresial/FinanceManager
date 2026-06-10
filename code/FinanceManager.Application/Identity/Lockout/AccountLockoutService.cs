@@ -1,4 +1,4 @@
-using FinanceManager.Application.Options;
+using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Options;

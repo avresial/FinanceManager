@@ -1,5 +1,4 @@
 using FinanceManager.Application.Labels.Setter;
-using FinanceManager.Application.Services.Ai;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;

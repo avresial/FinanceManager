@@ -1,4 +1,4 @@
-namespace FinanceManager.Application.Options;
+namespace FinanceManager.Application.Shared.Options;
 
 /// <summary>
 /// Configures ASP.NET Core rate limiting. A lenient <see cref="Global"/> limiter guards every request;

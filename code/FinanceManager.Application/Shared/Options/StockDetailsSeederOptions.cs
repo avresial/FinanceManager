@@ -1,6 +1,6 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Seeders;
 
-namespace FinanceManager.Application.Options;
+namespace FinanceManager.Application.Shared.Options;
 
 public sealed class StockDetailsSeederOptions
 {

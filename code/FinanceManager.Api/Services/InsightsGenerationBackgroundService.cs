@@ -1,5 +1,5 @@
-using FinanceManager.Application.Diagnostics;
 using FinanceManager.Application.Insights.Generation;
+using FinanceManager.Application.Shared.Diagnostics;
 using FinanceManager.Domain.Repositories;
 using System.Diagnostics;
 

@@ -1,7 +1,7 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Market;
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
-using FinanceManager.Application.Options;
-using FinanceManager.Application.Services.ExternalServices;
+using FinanceManager.Application.Shared.ExternalServices;
+using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;

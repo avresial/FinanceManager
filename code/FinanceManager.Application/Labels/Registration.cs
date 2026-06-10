@@ -2,7 +2,7 @@ using FinanceManager.Application.Labels.RecurringTransactions;
 using FinanceManager.Application.Labels.Seeders;
 using FinanceManager.Application.Labels.Setter;
 using FinanceManager.Application.Labels.Suggestions;
-using FinanceManager.Application.Services.Seeders;
+using FinanceManager.Application.Shared.Seeders;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.DependencyInjection;
 

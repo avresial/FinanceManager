@@ -1,6 +1,7 @@
-﻿using System.Globalization;
+﻿using FinanceManager.Application.Services;
+using System.Globalization;
 
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.Shared;
 
 public static class TimeBucketService
 {

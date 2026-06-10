@@ -22,7 +22,7 @@ using FinanceManager.Application.FinancialAccounts.Stock.Import;
 using FinanceManager.Application.FinancialAccounts.Stock.Market;
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Application.FinancialAccounts.Stock.Seeders;
-using FinanceManager.Application.Services.Seeders;
+using FinanceManager.Application.Shared.Seeders;
 using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.DependencyInjection;

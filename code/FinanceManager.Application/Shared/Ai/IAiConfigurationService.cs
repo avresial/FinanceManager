@@ -1,6 +1,6 @@
 using FinanceManager.Domain.Entities.Ai;
 
-namespace FinanceManager.Application.Services.Ai;
+namespace FinanceManager.Application.Shared.Ai;
 
 public interface IAiConfigurationService
 {

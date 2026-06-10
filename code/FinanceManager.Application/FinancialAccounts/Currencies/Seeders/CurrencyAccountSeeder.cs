@@ -1,7 +1,6 @@
 using FinanceManager.Application.FinancialAccounts.Bond.Seeders;
 using FinanceManager.Application.FinancialAccounts.Stock.Seeders;
 using FinanceManager.Application.Identity.Seeders;
-using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;

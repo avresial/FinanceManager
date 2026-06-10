@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
-namespace FinanceManager.Application.Diagnostics;
+namespace FinanceManager.Application.Shared.Diagnostics;
 
 /// <summary>
 /// Central OpenTelemetry instrumentation for FinanceManager's business operations.

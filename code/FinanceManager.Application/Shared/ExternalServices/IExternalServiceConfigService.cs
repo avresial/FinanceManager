@@ -1,6 +1,6 @@
 using FinanceManager.Domain.Entities.ExternalServices;
 
-namespace FinanceManager.Application.Services.ExternalServices;
+namespace FinanceManager.Application.Shared.ExternalServices;
 
 public interface IExternalServiceConfigService
 {

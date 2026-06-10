@@ -1,5 +1,4 @@
 using FinanceManager.Application.Labels.Suggestions;
-using FinanceManager.Application.Services.Ai;
 using System.Globalization;
 
 namespace FinanceManager.Infrastructure.Services.Ai;

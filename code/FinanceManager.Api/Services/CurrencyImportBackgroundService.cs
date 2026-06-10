@@ -1,6 +1,6 @@
 using FinanceManager.Api.Hubs;
-using FinanceManager.Application.Diagnostics;
 using FinanceManager.Application.FinancialAccounts.Currencies.Import;
+using FinanceManager.Application.Shared.Diagnostics;
 using FinanceManager.Domain.Entities.Imports;
 using Microsoft.AspNetCore.SignalR;
 using System.Diagnostics;

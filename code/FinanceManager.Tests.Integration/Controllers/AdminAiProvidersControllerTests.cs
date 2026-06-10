@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services.Ai;
+using FinanceManager.Application.Shared.Ai;
 using FinanceManager.Domain.Entities.Ai;
 using FinanceManager.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;

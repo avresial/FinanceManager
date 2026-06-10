@@ -1,4 +1,4 @@
-using FinanceManager.Application.Options;
+using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;

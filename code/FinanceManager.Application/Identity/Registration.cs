@@ -3,7 +3,7 @@ using FinanceManager.Application.Identity.PasswordReset;
 using FinanceManager.Application.Identity.RefreshTokens;
 using FinanceManager.Application.Identity.Seeders;
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Application.Services.Seeders;
+using FinanceManager.Application.Shared.Seeders;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.DependencyInjection;
 

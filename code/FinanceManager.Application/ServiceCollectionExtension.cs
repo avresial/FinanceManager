@@ -5,9 +5,6 @@ using FinanceManager.Application.Identity.Users;
 using FinanceManager.Application.Insights;
 using FinanceManager.Application.Labels;
 using FinanceManager.Application.MoneyFlow;
-using FinanceManager.Application.Services;
-using FinanceManager.Application.Services.Ai;
-using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,15 +23,16 @@ public static class ServiceCollectionExtension
 
     public static IServiceCollection AddApplicationApi(this IServiceCollection services)
     {
-        // Seeders run in ISeeder registration order: identity's admin/test users
-        // first, then the financial-account detail seeders, then labels.
-        services.AddIdentityApplication();
-        services.AddFinancialAccountsApplication();
-        services.AddLabelsApplication();
-        services.AddInsightsApplication();
-        services.AddMoneyFlowApplication();
-
-        services.AddAdministrationApplication();
+        // Identity must come before FinancialAccounts and Labels: seeders run in
+        // ISeeder registration order (admin/test users, then financial-account
+        // detail seeders, then labels).
+        services
+            .AddIdentityApplication()
+            .AddFinancialAccountsApplication()
+            .AddLabelsApplication()
+            .AddInsightsApplication()
+            .AddMoneyFlowApplication()
+            .AddAdministrationApplication();
 
         return services;
     }

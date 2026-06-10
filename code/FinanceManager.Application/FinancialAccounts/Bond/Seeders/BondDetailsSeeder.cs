@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services.Seeders;
+using FinanceManager.Application.Shared.Seeders;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Enums;

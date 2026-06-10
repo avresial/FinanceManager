@@ -1,4 +1,4 @@
-﻿using FinanceManager.Application.Services.Seeders;
+﻿using FinanceManager.Application.Shared.Seeders;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 

@@ -1,4 +1,4 @@
-namespace FinanceManager.Application.Services.Seeders;
+namespace FinanceManager.Application.Shared.Seeders;
 
 public interface ISeeder
 {

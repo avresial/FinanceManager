@@ -1,4 +1,4 @@
-namespace FinanceManager.Application.Options;
+namespace FinanceManager.Application.Shared.Options;
 
 public sealed class AiProviderFallbackStrategyOption
 {
