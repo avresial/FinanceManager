@@ -1,5 +1,4 @@
-using FinanceManager.Application.Providers;
-using FinanceManager.Application.Services;
+using FinanceManager.Application.Identity.Users;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;

@@ -1,5 +1,5 @@
-using FinanceManager.Application.Providers;
-using FinanceManager.Application.Services;
+using FinanceManager.Application.Identity;
+using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Commands.User;
 using FinanceManager.Domain.Enums;

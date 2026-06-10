@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services;
+using FinanceManager.Application.Insights.Diversification;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;

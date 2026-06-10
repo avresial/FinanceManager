@@ -1,5 +1,5 @@
-using FinanceManager.Application.Options;
-using FinanceManager.Application.Services;
+using FinanceManager.Application.Identity.Lockout;
+using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Options;

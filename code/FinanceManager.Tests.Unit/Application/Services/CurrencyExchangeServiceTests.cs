@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services;
+using FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Services;

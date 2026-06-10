@@ -1,5 +1,5 @@
-using FinanceManager.Application.Options;
-using FinanceManager.Application.Services.Ai;
+using FinanceManager.Application.Shared.Ai;
+using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Entities.Ai;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.DependencyInjection;

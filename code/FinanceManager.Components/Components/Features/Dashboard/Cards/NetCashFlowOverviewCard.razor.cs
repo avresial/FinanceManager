@@ -1,3 +1,4 @@
+using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Models;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.MoneyFlowModels;

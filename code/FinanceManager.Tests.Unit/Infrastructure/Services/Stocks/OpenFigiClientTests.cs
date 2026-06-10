@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services.ExternalServices;
+using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Domain.Entities.ExternalServices;
 using FinanceManager.Infrastructure.Services.Stocks;
 using Microsoft.Extensions.Logging;

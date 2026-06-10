@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services.Ai;
+using FinanceManager.Application.Labels.Suggestions;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories;

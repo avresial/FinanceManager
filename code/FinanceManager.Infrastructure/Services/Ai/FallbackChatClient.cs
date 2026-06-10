@@ -1,5 +1,5 @@
-using FinanceManager.Application.Diagnostics;
-using FinanceManager.Application.Services.Ai;
+using FinanceManager.Application.Shared.Ai;
+using FinanceManager.Application.Shared.Diagnostics;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 

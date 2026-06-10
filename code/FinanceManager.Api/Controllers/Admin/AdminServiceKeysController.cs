@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services.ExternalServices;
+using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Domain.Entities.ExternalServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

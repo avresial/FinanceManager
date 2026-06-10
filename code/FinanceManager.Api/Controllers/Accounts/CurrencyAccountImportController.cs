@@ -2,7 +2,7 @@ using FinanceManager.Api;
 using FinanceManager.Api.Helpers;
 using FinanceManager.Api.Hubs;
 using FinanceManager.Api.Services;
-using FinanceManager.Application.Services.Currencies;
+using FinanceManager.Application.FinancialAccounts.Currencies.Import;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Imports;

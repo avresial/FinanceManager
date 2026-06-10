@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services;
+using FinanceManager.Application.MoneyFlow.NetWorth;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories.Account;

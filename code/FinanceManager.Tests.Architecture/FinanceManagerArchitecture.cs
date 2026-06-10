@@ -1,6 +1,7 @@
 using ArchUnitNET.Domain;
 using ArchUnitNET.Fluent;
 using ArchUnitNET.Loader;
+using FinanceManager.Application.Administration.Users;
 using static ArchUnitNET.Fluent.ArchRuleDefinition;
 using ArchitectureModel = ArchUnitNET.Domain.Architecture;
 
@@ -22,7 +23,7 @@ public static class FinanceManagerArchitecture
     // One marker type per project: locates the assembly and forces the compiler to keep the
     // project reference (so the assembly is copied to the output dir for the loader).
     private static readonly System.Reflection.Assembly _domainAssembly = typeof(FinanceManager.Domain.Entities.Logging.LogEntry).Assembly;
-    private static readonly System.Reflection.Assembly _applicationAssembly = typeof(FinanceManager.Application.Services.AdministrationUsersService).Assembly;
+    private static readonly System.Reflection.Assembly _applicationAssembly = typeof(FinanceManager.Application.Administration.Users.AdministrationUsersService).Assembly;
     private static readonly System.Reflection.Assembly _infrastructureAssembly = typeof(FinanceManager.Infrastructure.Repositories.AccountRepository).Assembly;
     private static readonly System.Reflection.Assembly _apiAssembly = typeof(FinanceManager.Api.Controllers.AssetsController).Assembly;
     private static readonly System.Reflection.Assembly _componentsAssembly = typeof(FinanceManager.Components.HttpClients.AdminAiProvidersHttpClient).Assembly;

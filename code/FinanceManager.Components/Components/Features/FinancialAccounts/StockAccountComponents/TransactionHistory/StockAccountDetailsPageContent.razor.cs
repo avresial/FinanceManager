@@ -1,3 +1,4 @@
+using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Components.Features.FinancialAccounts.Shared;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;

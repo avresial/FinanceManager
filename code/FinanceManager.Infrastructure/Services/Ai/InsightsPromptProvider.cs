@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services.Ai;
+using FinanceManager.Application.Insights.Generation;
 
 namespace FinanceManager.Infrastructure.Services.Ai;
 

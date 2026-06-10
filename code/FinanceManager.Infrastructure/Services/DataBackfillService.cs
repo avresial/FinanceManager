@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services;
+using FinanceManager.Application.FinancialAccounts.Stock.Market;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Contexts;

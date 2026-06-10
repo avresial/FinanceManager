@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services.FinancialInsights;
+using FinanceManager.Application.Insights.Generation;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;

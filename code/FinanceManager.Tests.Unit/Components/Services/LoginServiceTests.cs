@@ -1,7 +1,7 @@
 using Blazored.LocalStorage;
 using Blazored.SessionStorage;
 using FinanceManager.Application.Commands.Login;
-using FinanceManager.Application.Providers;
+using FinanceManager.Application.Identity;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;

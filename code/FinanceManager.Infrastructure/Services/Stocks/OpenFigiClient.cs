@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services.ExternalServices;
+using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;

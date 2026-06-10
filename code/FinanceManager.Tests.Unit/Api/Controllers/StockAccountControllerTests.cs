@@ -1,6 +1,6 @@
 using FinanceManager.Api.Controllers.Accounts;
-using FinanceManager.Application.Services.Exports;
-using FinanceManager.Application.Services.Stocks;
+using FinanceManager.Application.FinancialAccounts.Shared.Exports;
+using FinanceManager.Application.FinancialAccounts.Stock;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Entities.Stocks;

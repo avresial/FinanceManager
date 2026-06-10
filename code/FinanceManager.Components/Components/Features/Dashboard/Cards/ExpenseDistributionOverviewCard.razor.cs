@@ -1,4 +1,5 @@
 using ApexCharts;
+using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Currencies;

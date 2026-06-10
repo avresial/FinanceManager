@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services.Seeders;
+using FinanceManager.Application.Labels.Seeders;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Logging.Abstractions;
