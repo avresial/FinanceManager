@@ -16,34 +16,20 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 
 [Collection("Application")]
 [Trait("Category", "Unit")]
-public class MoneyFlowServiceTests
+public class NetWorthServiceTests
 {
     private readonly DateTime _startDate = new(DateTime.UtcNow.Year - 1, 1, 1);
     private readonly DateTime _endDate = DateTime.UtcNow;
 
-    private readonly MoneyFlowService _moneyFlowService;
+    private readonly NetWorthService _netWorthService;
     private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
     private readonly Mock<IStockPriceRepository> _stockRepository = new();
     private readonly Mock<ICurrencyExchangeService> _currencyExchangeService = new();
-    private readonly Mock<IFinancialLabelsRepository> _financialLabelsRepositoryMock = new();
     private readonly Mock<IBondDetailsRepository> _bondDetailsRepositoryMock = new();
-    private readonly List<CurrencyAccount> _currencyAccounts;
     private readonly List<StockAccount> _investmentAccountAccounts;
 
-    public MoneyFlowServiceTests()
+    public NetWorthServiceTests()
     {
-        CurrencyAccount currencyAccount1 = new(1, 1, "testCurrency1", AccountLabel.Cash);
-        currencyAccount1.Add(new CurrencyAccountEntry(1, 1, _startDate.AddYears(-1), 10, 10));
-        currencyAccount1.Add(new CurrencyAccountEntry(1, 2, _startDate, 20, 10));
-        currencyAccount1.Add(new CurrencyAccountEntry(1, 3, _startDate.AddDays(1), 30, 10));
-
-        CurrencyAccount currencyAccount2 = new(1, 2, "testCurrency2", AccountLabel.Cash);
-        currencyAccount2.Add(new CurrencyAccountEntry(1, 1, _endDate, 10, 10));
-
-        _currencyAccounts = [currencyAccount1, currencyAccount2];
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(1, _startDate, _endDate))
-                                      .Returns(_currencyAccounts.ToAsyncEnumerable());
-
         StockAccount investmentAccount1 = new(1, 3, "testInvestmentAccount1");
         investmentAccount1.Add(new StockAccountEntry(1, 1, _startDate, 10, 10, "testStock1", InvestmentType.Stock));
         investmentAccount1.Add(new StockAccountEntry(1, 2, _endDate, 10, 10, "testStock2", InvestmentType.Stock));
@@ -90,8 +76,6 @@ public class MoneyFlowServiceTests
             .ReturnsAsync("US5949181045");
         isinResolverMock.Setup(x => x.ResolveAsync("UNKNOWN", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
-        isinResolverMock.Setup(x => x.ResolveAsync("TICKER", It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync("US0000000001");
         var stockPriceProvider = new StockPriceProvider(
             _stockRepository.Object,
             new Mock<IAlphaVantageClient>().Object,
@@ -103,7 +87,7 @@ public class MoneyFlowServiceTests
 
         _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>())).Returns(AsyncEnumerable.Empty<BondDetails>());
 
-        _moneyFlowService = new MoneyFlowService(_financialAccountRepositoryMock.Object, _financialLabelsRepositoryMock.Object, stockPriceProvider, _bondDetailsRepositoryMock.Object);
+        _netWorthService = new NetWorthService(_financialAccountRepositoryMock.Object, stockPriceProvider, _bondDetailsRepositoryMock.Object);
     }
 
     private static BondDetails CreateBondDetails(int id, DateTime date, decimal unitValue = 1m) =>
@@ -119,8 +103,6 @@ public class MoneyFlowServiceTests
         {
             Id = id
         };
-
-
 
     [Fact]
     public async Task GetNetWorth_ReturnsNetWorth()
@@ -138,7 +120,7 @@ public class MoneyFlowServiceTests
             .Returns(bondAccounts.ToAsyncEnumerable());
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, date);
 
         // Assert
         Assert.Equal(1000, result);
@@ -166,65 +148,12 @@ public class MoneyFlowServiceTests
             .Returns(_investmentAccountAccounts.ToAsyncEnumerable());
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, _startDate, _endDate);
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, _startDate, _endDate);
 
         // Assert
         Assert.NotEmpty(result);
         // Currency account: 1000, Stock account: testStock1 (10 * 2) + testStock2 (10 * 4) = 20 + 40 = 60
         Assert.Equal(1060m, result[_endDate]);
-    }
-
-    [Fact]
-    public async Task GetLabelsValue_ReturnsLabelsValue()
-    {
-        // Arrange
-        var userId = 1;
-        var label = new FinancialLabel { Id = 1, Name = "Salary" };
-        _financialLabelsRepositoryMock.Setup(repo => repo.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { label }.ToAsyncEnumerable());
-
-        var account = new CurrencyAccount(userId, 1, "Currency Account 1", AccountLabel.Cash);
-        account.Add(new CurrencyAccountEntry(1, 1, _startDate, 500, 500) { Labels = [label] });
-
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(new[] { account }.ToAsyncEnumerable());
-
-        // Act
-        var result = await _moneyFlowService.GetLabelsValue(userId, _startDate, _endDate);
-
-        // Assert
-        Assert.NotEmpty(result);
-        Assert.Equal(500, result.First(x => x.Name == label.Name).Value);
-    }
-
-    [Fact]
-    public async Task GetInvestmentRate_ReturnsInvestmentRate()
-    {
-        // Arrange
-        var userId = 1;
-        var salaryLabel = new FinancialLabel { Id = 1, Name = "Salary" };
-        _financialLabelsRepositoryMock.Setup(repo => repo.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { salaryLabel }.ToAsyncEnumerable());
-
-        var currencyAccount = new CurrencyAccount(userId, 1, "Currency Account 1", AccountLabel.Cash);
-        currencyAccount.Add(new CurrencyAccountEntry(1, 1, _startDate, 1000, 1000) { Labels = [salaryLabel] }, false);
-
-        var stockAccount = new StockAccount(userId, 2, "Stock Account 1");
-        stockAccount.Add(new StockAccountEntry(1, 1, _startDate, 10, 10, "TICKER", InvestmentType.Stock), false);
-
-        // Setup mock for TICKER
-        _stockRepository.Setup(x => x.GetThisOrNextOlder("US0000000001", It.IsAny<DateTime>()))
-            .ReturnsAsync(new StockPrice() { Isin = "US0000000001", Currency = DefaultCurrency.PLN, PricePerUnit = 1m });
-
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
-            .Returns(new[] { currencyAccount }.ToAsyncEnumerable());
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
-            .Returns(new[] { stockAccount }.ToAsyncEnumerable());
-
-        // Act
-        var result = await _moneyFlowService.GetInvestmentRate(userId, _startDate, _endDate).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Single(result);
-        Assert.Equal(1000, result.First().Salary);
-        Assert.Equal(10, result.First().InvestmentsChange);
     }
 
     [Fact]
@@ -259,7 +188,7 @@ public class MoneyFlowServiceTests
             .ReturnsAsync(new StockPrice { Isin = "US5949181045", Currency = DefaultCurrency.PLN, PricePerUnit = 100m });
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, date);
 
         // Assert - Should be 5000 + 1000 + 3000 = 9000
         Assert.NotNull(result);
@@ -288,7 +217,7 @@ public class MoneyFlowServiceTests
             .ReturnsAsync((StockPrice?)null);
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, date);
 
         // Assert - Should be 0 (10 shares * 0 price)
         Assert.NotNull(result);
@@ -315,7 +244,7 @@ public class MoneyFlowServiceTests
             .Returns(new[] { bondAccount }.ToAsyncEnumerable());
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, date);
 
         // Assert
         Assert.NotNull(result);
@@ -340,7 +269,7 @@ public class MoneyFlowServiceTests
             .Returns(AsyncEnumerable.Empty<BondAccount>());
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, futureDate);
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, futureDate);
 
         // Assert - Should calculate using DateTime.UtcNow instead
         Assert.NotNull(result);
@@ -377,7 +306,7 @@ public class MoneyFlowServiceTests
             .ReturnsAsync(new StockPrice { Isin = "US5949181045", Currency = DefaultCurrency.PLN, PricePerUnit = 1.11m });
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, date);
 
         // Assert - Should handle large values: 999999999.99 + (1000000 * 1.11) + 888888888.88
         Assert.NotNull(result);
@@ -412,7 +341,7 @@ public class MoneyFlowServiceTests
             .ReturnsAsync(new StockPrice { Isin = "US5949181045", Currency = DefaultCurrency.PLN, PricePerUnit = 200m });
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, date);
 
         // Assert - (10 * 150) + (20 * 100) + (15 * 200) = 1500 + 2000 + 3000 = 6500
         Assert.NotNull(result);
@@ -446,7 +375,7 @@ public class MoneyFlowServiceTests
             }.ToAsyncEnumerable());
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date);
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, date);
 
         // Assert - 1000 + 2000 + 1500 = 4500
         Assert.NotNull(result);
@@ -472,7 +401,7 @@ public class MoneyFlowServiceTests
             .Returns(AsyncEnumerable.Empty<BondAccount>());
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, queryDate);
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, queryDate);
 
         // Assert - GetThisOrNextOlder should return null for dates before all entries
         Assert.NotNull(result);
@@ -499,7 +428,7 @@ public class MoneyFlowServiceTests
             .Returns(AsyncEnumerable.Empty<BondAccount>());
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, date.AddDays(1));
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, date.AddDays(1));
 
         // Assert - Should be -500 (1000 - 1500)
         Assert.NotNull(result);
@@ -525,7 +454,7 @@ public class MoneyFlowServiceTests
             .Returns(AsyncEnumerable.Empty<BondAccount>());
 
         // Act
-        var result = await _moneyFlowService.GetNetWorth(userId, DefaultCurrency.PLN, startDate, endDate);
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, startDate, endDate);
 
         // Assert - Should have 5 days (Jan 1-5)
         Assert.Equal(5, result.Count);

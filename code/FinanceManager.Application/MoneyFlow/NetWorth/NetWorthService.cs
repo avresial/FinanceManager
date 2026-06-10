@@ -1,7 +1,6 @@
-﻿using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories;
@@ -10,8 +9,8 @@ using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.MoneyFlow.NetWorth;
 
-public class MoneyFlowService(IFinancialAccountRepository financialAccountRepository, IFinancialLabelsRepository financialLabelsRepository,
-IStockPriceProvider stockPriceProvider, IBondDetailsRepository bondDetailsRepository) : IMoneyFlowService
+public class NetWorthService(IFinancialAccountRepository financialAccountRepository, IStockPriceProvider stockPriceProvider,
+IBondDetailsRepository bondDetailsRepository) : INetWorthService
 {
     public async Task<decimal?> GetNetWorth(int userId, Currency currency, DateTime date)
     {
@@ -26,7 +25,7 @@ IStockPriceProvider stockPriceProvider, IBondDetailsRepository bondDetailsReposi
 
             result += newestEntry.Value;
         }
-;
+
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, date.Date, date))
         {
             foreach (var detailsId in account.GetStoredBondsIds())
@@ -133,57 +132,5 @@ IStockPriceProvider stockPriceProvider, IBondDetailsRepository bondDetailsReposi
             result.Add(date, Math.Round(dailyTotal, 2));
         }
         return result;
-    }
-    public async Task<List<NameValueResult>> GetLabelsValue(int userId, DateTime start, DateTime end)
-    {
-        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
-
-        var labels = await financialLabelsRepository.GetLabels().ToListAsync();
-
-        var result = labels.ToDictionary(x => x.Id, x => new NameValueResult() { Name = x.Name, Value = 0 });
-        await foreach (CurrencyAccount account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
-        {
-            if (account is null || account.Entries is null) continue;
-            if (account.Entries is null || !account.Entries.Any()) continue;
-
-            foreach (var entry in account.Entries.Where(x => x.Labels is not null && x.Labels.Any()))
-            {
-                foreach (var label in entry.Labels)
-                {
-                    if (!result.ContainsKey(label.Id)) continue;
-                    result[label.Id].Value += entry.ValueChange;
-                }
-            }
-        }
-
-        // TODO: Add labels for stock accounts?
-
-        return result.Values.OrderByDescending(x => x.Value).ToList();
-    }
-    public async IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end)
-    {
-        var labels = await financialLabelsRepository.GetLabels().ToListAsync();
-        var salaryLabel = labels.Single(x => x.Name.ToLower() == "salary");
-
-        Currency currency = DefaultCurrency.PLN; // TODO: use user currency settings
-
-        decimal salary = 0;
-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
-            salary += account.Entries.Where(x => x.Labels is not null && x.Labels.Any(y => y.Id == salaryLabel.Id)).Sum(x => x.ValueChange);
-
-        if (salary == 0) yield break;
-
-        decimal investmentsChange = 0;
-        await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, start, end))
-            foreach (var entry in account.Entries)
-                investmentsChange += entry.ValueChange * await stockPriceProvider.GetPricePerUnitAsync(entry.Isin, currency, entry.PostingDate);
-
-        yield return new()
-        {
-            Start = start,
-            End = end,
-            Salary = salary,
-            InvestmentsChange = investmentsChange
-        };
     }
 }

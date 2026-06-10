@@ -1,4 +1,6 @@
 using FinanceManager.Application.MoneyFlow.InvestmentPaycheck;
+using FinanceManager.Application.MoneyFlow.InvestmentRate;
+using FinanceManager.Application.MoneyFlow.LabelsValue;
 using FinanceManager.Application.MoneyFlow.NetWorth;
 using FinanceManager.Application.MoneyFlow.Spending;
 using FinanceManager.Domain.Services;
@@ -11,6 +13,9 @@ internal static class Registration
     public static IServiceCollection AddMoneyFlowApplication(this IServiceCollection services)
     {
         services.AddScoped<IMoneyFlowService, MoneyFlowService>()
+                .AddScoped<INetWorthService, NetWorthService>()
+                .AddScoped<ILabelsValueService, LabelsValueService>()
+                .AddScoped<IInvestmentRateService, InvestmentRateService>()
                 .AddScoped<ILiabilitiesService, LiabilitiesService>()
                 .AddScoped<IInvestmentPaycheckEstimatorService, InvestmentPaycheckEstimatorService>()
                 .AddScoped<IEssentialSpendingServiceTyped, CurrencyEssentialSpendingService>()
