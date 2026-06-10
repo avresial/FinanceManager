@@ -5,7 +5,7 @@ using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.Administration.Users;
 
 public class AdministrationUsersService(IFinancialAccountRepository financialAccountRepository, IUserRepository userRepository,
     IActiveUsersRepository activeUsersRepository, IUserPlanVerifier userPlanVerifier) : IAdministrationUsersService

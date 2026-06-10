@@ -1,3 +1,4 @@
+using FinanceManager.Application.Administration;
 using FinanceManager.Application.FinancialAccounts;
 using FinanceManager.Application.Identity;
 using FinanceManager.Application.Identity.Users;
@@ -33,7 +34,7 @@ public static class ServiceCollectionExtension
         services.AddInsightsApplication();
         services.AddMoneyFlowApplication();
 
-        services.AddScoped<IAdministrationUsersService, AdministrationUsersService>();
+        services.AddAdministrationApplication();
 
         return services;
     }
