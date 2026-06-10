@@ -1,10 +1,10 @@
 using FinanceManager.Application.FinancialAccounts;
+using FinanceManager.Application.Insights;
 using FinanceManager.Application.Labels;
 using FinanceManager.Application.MoneyFlow;
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
 using FinanceManager.Application.Services.Ai;
-using FinanceManager.Application.Services.FinancialInsights;
 using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -31,7 +31,6 @@ public static class ServiceCollectionExtension
                 .AddScoped<UsersService>()
                 .AddScoped<PricingProvider>()
                 .AddScoped<GuestAccountSeeder>()
-                .AddScoped<FinancialInsightsSeeder>()
                 .AddScoped<ISeeder, AdminAccountSeeder>()
                 .AddScoped<ISeeder, TestUserAccountSeeder>();
 
@@ -39,15 +38,11 @@ public static class ServiceCollectionExtension
         // then the financial-account detail seeders, then labels (below).
         services.AddFinancialAccountsApplication();
         services.AddLabelsApplication();
+        services.AddInsightsApplication();
         services.AddMoneyFlowApplication();
 
-        services
-                // .AddScoped<ISeeder, FinancialInsightsSeeder>()
-                .AddScoped<IUserPlanVerifier, UserPlanVerifier>()
-                .AddScoped<IAdministrationUsersService, AdministrationUsersService>()
-
-                .AddScoped<IFinancialInsightsAiGenerator, FinancialInsightsAiGenerator>()
-                .AddScoped<IDiversificationService, DiversificationService>();
+        services.AddScoped<IUserPlanVerifier, UserPlanVerifier>()
+                .AddScoped<IAdministrationUsersService, AdministrationUsersService>();
 
         return services;
     }

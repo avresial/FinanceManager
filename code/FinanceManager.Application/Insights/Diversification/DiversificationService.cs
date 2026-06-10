@@ -7,7 +7,7 @@ using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.Insights.Diversification;
 
 public class DiversificationService(
     IFinancialAccountRepository financialAccountRepository,

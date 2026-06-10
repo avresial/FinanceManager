@@ -1,6 +1,6 @@
 using FinanceManager.Domain.Entities.Users;
 
-namespace FinanceManager.Application.Services.FinancialInsights;
+namespace FinanceManager.Application.Insights.Generation;
 
 public interface IFinancialInsightsAiGenerator
 {

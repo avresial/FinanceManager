@@ -1,5 +1,4 @@
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
-using FinanceManager.Application.Services.FinancialInsights;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
@@ -12,7 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace FinanceManager.Application.Services.Ai;
+namespace FinanceManager.Application.Insights.Generation;
 
 internal sealed class FinancialInsightsAiGenerator(
     ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,

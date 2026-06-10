@@ -1,9 +1,10 @@
+using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Application.Services.Seeders;
+namespace FinanceManager.Application.Insights.Seeders;
 
 public class FinancialInsightsSeeder(IFinancialInsightsRepository financialInsightsRepository, IUserRepository userRepository,
     IConfiguration configuration, ILogger<FinancialInsightsSeeder> logger) : ISeeder

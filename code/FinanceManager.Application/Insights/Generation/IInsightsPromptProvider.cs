@@ -1,4 +1,4 @@
-namespace FinanceManager.Application.Services.Ai;
+namespace FinanceManager.Application.Insights.Generation;
 
 public interface IInsightsPromptProvider
 {
