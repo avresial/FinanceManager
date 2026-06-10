@@ -13,6 +13,8 @@ internal static class Registration
     public static IServiceCollection AddLabelsApplication(this IServiceCollection services)
     {
         services.AddScoped<ILabelSetterAiService, LabelSetterAiService>()
+                .AddSingleton<LabelAssignmentResponseParser>()
+                .AddSingleton<LabelAssignmentValidator>()
                 .AddScoped<ILabelSuggestionAiService, LabelSuggestionAiService>()
                 .AddScoped<IRecurringTransactionDetectorService, RecurringTransactionDetectorService>()
                 .AddScoped<FinancialLabelSeeder>()

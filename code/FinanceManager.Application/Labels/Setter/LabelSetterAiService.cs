@@ -1,11 +1,8 @@
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace FinanceManager.Application.Labels.Setter;
 
@@ -13,16 +10,13 @@ internal sealed class LabelSetterAiService(
     IAccountEntryRepository<CurrencyAccountEntry> currencyEntryRepository,
     IFinancialLabelsRepository financialLabelsRepository,
     ILabelSetterPromptProvider promptProvider,
+    LabelAssignmentResponseParser responseParser,
+    LabelAssignmentValidator assignmentValidator,
     IChatClient chatClient,
     ILogger<LabelSetterAiService> logger) : ILabelSetterAiService
 {
     private const string _systemPrompt = "You are a finance assistant that outputs strict JSON.";
     private const string _modelId = "gpt-5-mini";
-
-    private static readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
 
     public async Task<Dictionary<int, string>> AssignLabels(
         IReadOnlyCollection<int> entryIds,
@@ -77,36 +71,10 @@ internal sealed class LabelSetterAiService(
                 return [];
             }
 
-            var parsed = TryParseAssignments(content);
+            var parsed = responseParser.Parse(content);
             logger.LogDebug("Parsed {Count} assignments from AI response.", parsed.Count);
 
-            var result = new Dictionary<int, string>();
-            var entryIdSet = new HashSet<int>(entryIds);
-            var hasNoMatchSentinel = labelNameSet.Contains(WellKnownFinancialLabels.NoMatch);
-
-            foreach (var assignment in parsed)
-            {
-                if (assignment.EntryId is null) continue;
-                if (!entryIdSet.Contains(assignment.EntryId.Value)) continue;
-
-                // AI returned null / empty / unknown label → use the NoMatch sentinel so the entry
-                // still gets a label and won't be re-queued on the next startup scan.
-                var labelName = assignment.LabelName;
-                if (string.IsNullOrWhiteSpace(labelName) || !labelNameSet.Contains(labelName))
-                {
-                    if (!hasNoMatchSentinel)
-                    {
-                        logger.LogWarning(
-                            "AI returned no fitting label for entry {EntryId} and the '{Sentinel}' label is missing — entry will stay unlabelled and be re-queued.",
-                            assignment.EntryId.Value,
-                            WellKnownFinancialLabels.NoMatch);
-                        continue;
-                    }
-                    labelName = WellKnownFinancialLabels.NoMatch;
-                }
-
-                result[assignment.EntryId.Value] = labelName;
-            }
+            var result = assignmentValidator.Validate(parsed, entryIds, labelNameSet);
 
             logger.LogDebug("Valid assignments after filtering: {Count} out of {ParsedCount}.", result.Count, parsed.Count);
 
@@ -117,55 +85,5 @@ internal sealed class LabelSetterAiService(
             logger.LogError(ex, "AI model label assignment failed for batch of {Count} entries.", entryIds.Count);
             return [];
         }
-    }
-
-    private static List<AssignmentItem> TryParseAssignments(string content)
-    {
-        var trimmed = content.Trim();
-
-        if (TryDeserialize(trimmed, out var parsed))
-            return parsed;
-
-        var start = trimmed.IndexOf('{');
-        var end = trimmed.LastIndexOf('}');
-        if (start >= 0 && end > start)
-        {
-            var candidate = trimmed[start..(end + 1)];
-            if (TryDeserialize(candidate, out parsed))
-                return parsed;
-        }
-
-        return [];
-
-        static bool TryDeserialize(string json, out List<AssignmentItem> items)
-        {
-            items = [];
-            try
-            {
-                var root = JsonSerializer.Deserialize<AssignmentsRoot>(json, _jsonOptions);
-                if (root?.Assignments is null) return false;
-                items = root.Assignments;
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-    }
-
-    private sealed class AssignmentsRoot
-    {
-        [JsonPropertyName("assignments")]
-        public List<AssignmentItem> Assignments { get; set; } = [];
-    }
-
-    private sealed class AssignmentItem
-    {
-        [JsonPropertyName("entryId")]
-        public int? EntryId { get; set; }
-
-        [JsonPropertyName("labelName")]
-        public string? LabelName { get; set; }
     }
 }
