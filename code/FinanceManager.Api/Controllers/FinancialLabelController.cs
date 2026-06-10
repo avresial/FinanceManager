@@ -1,3 +1,4 @@
+using FinanceManager.Application.Labels.Suggestions;
 using FinanceManager.Application.Services.Ai;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Shared.Accounts;

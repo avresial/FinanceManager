@@ -1,4 +1,4 @@
-namespace FinanceManager.Application.Services.Ai;
+namespace FinanceManager.Application.Labels.Setter;
 
 public interface ILabelSetterPromptProvider
 {

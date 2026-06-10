@@ -1,4 +1,5 @@
 using FinanceManager.Application.FinancialAccounts;
+using FinanceManager.Application.Labels;
 using FinanceManager.Application.MoneyFlow;
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
@@ -31,24 +32,21 @@ public static class ServiceCollectionExtension
                 .AddScoped<PricingProvider>()
                 .AddScoped<GuestAccountSeeder>()
                 .AddScoped<FinancialInsightsSeeder>()
-                .AddScoped<FinancialLabelSeeder>()
                 .AddScoped<ISeeder, AdminAccountSeeder>()
                 .AddScoped<ISeeder, TestUserAccountSeeder>();
 
         // Seeders run in ISeeder registration order: admin/test users first (above),
         // then the financial-account detail seeders, then labels (below).
         services.AddFinancialAccountsApplication();
+        services.AddLabelsApplication();
         services.AddMoneyFlowApplication();
 
-        services.AddScoped<ISeeder, FinancialLabelSeeder>(sp => sp.GetRequiredService<FinancialLabelSeeder>())
+        services
                 // .AddScoped<ISeeder, FinancialInsightsSeeder>()
                 .AddScoped<IUserPlanVerifier, UserPlanVerifier>()
                 .AddScoped<IAdministrationUsersService, AdministrationUsersService>()
 
                 .AddScoped<IFinancialInsightsAiGenerator, FinancialInsightsAiGenerator>()
-                .AddScoped<ILabelSetterAiService, LabelSetterAiService>()
-                .AddScoped<ILabelSuggestionAiService, LabelSuggestionAiService>()
-                .AddScoped<IRecurringTransactionDetectorService, RecurringTransactionDetectorService>()
                 .AddScoped<IDiversificationService, DiversificationService>();
 
         return services;

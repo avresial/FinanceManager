@@ -1,6 +1,6 @@
 using FinanceManager.Domain.Entities.Shared.Accounts;
 
-namespace FinanceManager.Application.Services.Ai;
+namespace FinanceManager.Application.Labels.Suggestions;
 
 public interface ILabelSuggestionAiService
 {

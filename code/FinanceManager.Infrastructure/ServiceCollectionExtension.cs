@@ -1,5 +1,7 @@
 ﻿using FinanceManager.Application.FinancialAccounts.Stock.Market;
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
+using FinanceManager.Application.Labels.Setter;
+using FinanceManager.Application.Labels.Suggestions;
 using FinanceManager.Application.Options;
 using FinanceManager.Application.Services;
 using FinanceManager.Application.Services.Ai;

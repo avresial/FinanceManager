@@ -1,3 +1,4 @@
+using FinanceManager.Application.Labels.Setter;
 using FinanceManager.Application.Services.Ai;
 
 namespace FinanceManager.Infrastructure.Services.Ai;

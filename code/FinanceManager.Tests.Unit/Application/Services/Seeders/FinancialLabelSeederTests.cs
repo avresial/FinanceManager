@@ -1,3 +1,4 @@
+using FinanceManager.Application.Labels.Seeders;
 using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories;

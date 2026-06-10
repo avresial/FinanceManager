@@ -3,7 +3,7 @@ using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.Labels.RecurringTransactions;
 
 public class RecurringTransactionDetectorService(IFinancialAccountRepository financialAccountRepository) : IRecurringTransactionDetectorService
 {

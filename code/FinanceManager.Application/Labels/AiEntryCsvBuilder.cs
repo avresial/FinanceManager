@@ -2,7 +2,7 @@ using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using System.Globalization;
 using System.Text;
 
-namespace FinanceManager.Application.Services.Ai;
+namespace FinanceManager.Application.Labels;
 
 internal static class AiEntryCsvBuilder
 {

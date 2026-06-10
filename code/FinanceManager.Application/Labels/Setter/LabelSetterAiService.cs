@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace FinanceManager.Application.Services.Ai;
+namespace FinanceManager.Application.Labels.Setter;
 
 internal sealed class LabelSetterAiService(
     IAccountEntryRepository<CurrencyAccountEntry> currencyEntryRepository,

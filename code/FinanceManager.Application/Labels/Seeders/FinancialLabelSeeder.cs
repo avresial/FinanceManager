@@ -1,9 +1,10 @@
 using FinanceManager.Application.MoneyFlow.Spending;
+using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Application.Services.Seeders;
+namespace FinanceManager.Application.Labels.Seeders;
 
 public class FinancialLabelSeeder(IFinancialLabelsRepository financialLabelsRepository, ILogger<FinancialLabelSeeder> logger) : ISeeder
 {
