@@ -55,7 +55,7 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                 var dailyConflicts = new List<ImportConflict>();
                 dailyConflicts.AddRange(exactMatches.Select(x => new ImportConflict(accountId, x.Import, x.Existing, "Exact match")));
                 dailyConflicts.AddRange(importsOnly.Select(x => new ImportConflict(accountId, x, null, "Import not found in existing")));
-                dailyConflicts.AddRange(existingOnly.Select(x => new ImportConflict(accountId, null, x, "Existing not fount in import")));
+                dailyConflicts.AddRange(existingOnly.Select(x => new ImportConflict(accountId, null, x, "Existing not found in import")));
 
                 conflicts.AddRange(dailyConflicts);
 
