@@ -1,4 +1,4 @@
-using FinanceManager.Application.Identity.Users;
+using FinanceManager.Application.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Repositories.Account;
@@ -9,7 +9,7 @@ namespace FinanceManager.Application.FinancialAccounts.Bond.Import;
 public class BondAccountImportService(
     IAccountRepository<BondAccount> bondAccountRepository,
     IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
-    IUserPlanVerifier userPlanVerifier,
+    ImportAccountValidator importAccountValidator,
     ILogger<BondAccountImportService> logger) : IBondAccountImportService
 {
     public async Task<BondImportResult> ImportEntries(int userId, int accountId, IEnumerable<BondEntryImport> entries)
@@ -20,12 +20,10 @@ public class BondAccountImportService(
         if (entryList.Count == 0)
             return new(accountId, 0, 0, [], []);
 
-        if (!await userPlanVerifier.CanAddMoreEntries(userId, entryList.Count))
-            throw new InvalidOperationException("Plan does not allow importing this many entries.");
+        await importAccountValidator.EnsureWithinPlanLimit(userId, entryList.Count);
 
         var account = await bondAccountRepository.Get(accountId);
-        if (account is null || account.UserId != userId)
-            throw new InvalidOperationException("Account not found or access denied.");
+        importAccountValidator.EnsureOwnership(account, userId);
 
         var minDay = entryList.Min(x => x.PostingDate).Date;
         var maxDay = entryList.Max(x => x.PostingDate).Date;
@@ -44,15 +42,15 @@ public class BondAccountImportService(
             if (importsThisDay.Count == 0)
                 continue;
 
-            var exactMatches = GetExactMatches(importsThisDay, existingThisDay).ToList();
-            var importsOnlyConflicts = GetImportsWhichAreMissingFromExisting(accountId, importsThisDay, existingThisDay).ToList();
-            var existingOnlyConflicts = GetExistingWhichAreMissingFromImports(accountId, existingThisDay, importsThisDay).ToList();
+            var exactMatches = ImportConflictDetector.GetExactMatches(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
+            var importsOnly = ImportConflictDetector.GetImportsMissingFromExisting(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
+            var existingOnly = ImportConflictDetector.GetExistingMissingFromImports(existingThisDay, importsThisDay, ExistingKey, ImportKey).ToList();
 
-            if (exactMatches.Count != 0 || existingOnlyConflicts.Count != 0)
+            if (exactMatches.Count != 0 || existingOnly.Count != 0)
             {
                 conflicts.AddRange(exactMatches.Select(x => new BondImportConflict(accountId, x.Import, x.Existing, "Exact match")));
-                conflicts.AddRange(importsOnlyConflicts);
-                conflicts.AddRange(existingOnlyConflicts);
+                conflicts.AddRange(importsOnly.Select(x => new BondImportConflict(accountId, x, null, "Import not found in existing")));
+                conflicts.AddRange(existingOnly.Select(x => new BondImportConflict(accountId, null, x, "Existing not found in import")));
                 continue;
             }
 
@@ -63,7 +61,7 @@ public class BondAccountImportService(
                     if (import.PostingDate.Kind != DateTimeKind.Utc)
                         throw new Exception($"Date kind of this entry posting date: {import.PostingDate}, value change: {import.ValueChange} is not UTC - {import.PostingDate.Kind}");
 
-                    var newEntry = new BondAccountEntry(accountId, 0, ToSecond(import.PostingDate), import.ValueChange, import.ValueChange, import.BondDetailsId);
+                    var newEntry = new BondAccountEntry(accountId, 0, ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange, import.ValueChange, import.BondDetailsId);
                     if (await bondAccountEntryRepository.Add(newEntry, recalculate: false))
                     {
                         imported++;
@@ -127,58 +125,10 @@ public class BondAccountImportService(
         }
     }
 
-    // Posting dates are stored and compared at second precision across the app.
-    // Truncating here keeps fractional-second legacy DB entries comparable with
-    // freshly imported / exported CSV rows, which carry second precision.
-    private static DateTime ToSecond(DateTime d) =>
-        new(d.Year, d.Month, d.Day, d.Hour, d.Minute, d.Second, d.Kind);
+    // Bond entries are compared on posting date (second precision), value change and bond details.
+    private static (DateTime Date, decimal ValueChange, int BondDetailsId) ImportKey(BondEntryImport import) =>
+        (ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange, import.BondDetailsId);
 
-    private static IEnumerable<(BondEntryImport Import, BondAccountEntry Existing)> GetExactMatches(List<BondEntryImport> imports, List<BondAccountEntry> existing)
-    {
-        foreach (var import in imports.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, BondDetailsId: x.BondDetailsId)))
-        {
-            var sameExisting = existing
-                .Where(e => ToSecond(e.PostingDate) == import.Key.Date && e.ValueChange == import.Key.ValueChange && e.BondDetailsId == import.Key.BondDetailsId)
-                .ToList();
-
-            if (sameExisting.Count != 0 && import.Any())
-            {
-                List<int> counts = [sameExisting.Count, import.Count()];
-                for (int i = 0; i < counts.Min(); i++)
-                    yield return (import.ToArray()[i], sameExisting.ToArray()[i]);
-            }
-        }
-    }
-
-    private static IEnumerable<BondImportConflict> GetImportsWhichAreMissingFromExisting(int accountId, IEnumerable<BondEntryImport> imports, IEnumerable<BondAccountEntry> existing)
-    {
-        foreach (var import in imports.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, BondDetailsId: x.BondDetailsId)))
-        {
-            var importItemList = import.ToList();
-            var sameExistingCount = existing.Count(e =>
-                ToSecond(e.PostingDate) == import.Key.Date && e.ValueChange == import.Key.ValueChange && e.BondDetailsId == import.Key.BondDetailsId);
-
-            if (importItemList.Count > sameExistingCount && importItemList.Count != 0)
-            {
-                for (int i = 0; i < importItemList.Count - sameExistingCount; i++)
-                    yield return new BondImportConflict(accountId, importItemList.First(), null, "Import not found in existing");
-            }
-        }
-    }
-
-    private static IEnumerable<BondImportConflict> GetExistingWhichAreMissingFromImports(int accountId, IEnumerable<BondAccountEntry> existing, IEnumerable<BondEntryImport> imports)
-    {
-        foreach (var existingItem in existing.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, BondDetailsId: x.BondDetailsId)))
-        {
-            var existingItemList = existingItem.ToList();
-            var sameImportsCount = imports.Count(e =>
-                ToSecond(e.PostingDate) == existingItem.Key.Date && e.ValueChange == existingItem.Key.ValueChange && e.BondDetailsId == existingItem.Key.BondDetailsId);
-
-            if (existingItemList.Count <= sameImportsCount || existingItemList.Count == 0)
-                continue;
-
-            for (int i = sameImportsCount; i < existingItemList.Count; i++)
-                yield return new BondImportConflict(accountId, null, existingItemList[i], "Existing not found in import");
-        }
-    }
+    private static (DateTime Date, decimal ValueChange, int BondDetailsId) ExistingKey(BondAccountEntry entry) =>
+        (ImportDateNormalizer.ToSecond(entry.PostingDate), entry.ValueChange, entry.BondDetailsId);
 }

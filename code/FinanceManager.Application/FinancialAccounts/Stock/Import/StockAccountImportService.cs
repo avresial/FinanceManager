@@ -1,4 +1,4 @@
-using FinanceManager.Application.Identity.Users;
+using FinanceManager.Application.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
@@ -13,7 +13,7 @@ public class StockAccountImportService(
     IAccountRepository<StockAccount> stockAccountRepository,
     IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository,
     IStockDetailsRepository stockDetailsRepository,
-    IUserPlanVerifier userPlanVerifier,
+    ImportAccountValidator importAccountValidator,
     ILogger<StockAccountImportService> logger) : IStockAccountImportService
 {
     public async Task<StockImportResult> ImportEntries(int userId, int accountId, IEnumerable<StockEntryImport> entries)
@@ -24,12 +24,10 @@ public class StockAccountImportService(
         if (entryList.Count == 0)
             return new(accountId, 0, 0, [], []);
 
-        if (!await userPlanVerifier.CanAddMoreEntries(userId, entryList.Count))
-            throw new InvalidOperationException("Plan does not allow importing this many entries.");
+        await importAccountValidator.EnsureWithinPlanLimit(userId, entryList.Count);
 
         var account = await stockAccountRepository.Get(accountId);
-        if (account is null || account.UserId != userId)
-            throw new InvalidOperationException("Account not found or access denied.");
+        importAccountValidator.EnsureOwnership(account, userId);
 
         var minDay = entryList.Min(x => x.PostingDate).Date;
         var maxDay = entryList.Max(x => x.PostingDate).Date;
@@ -47,15 +45,15 @@ public class StockAccountImportService(
 
             if (importsThisDay.Count == 0) continue;
 
-            var exactMatches = GetExactMatches(importsThisDay, existingThisDay).ToList();
-            var importsOnlyConflicts = GetImportsWhichAreMissingFromExisting(accountId, importsThisDay, existingThisDay).ToList();
-            var existingOnlyConflicts = GetExistingWhichAreMissingFromImports(accountId, existingThisDay, importsThisDay).ToList();
+            var exactMatches = ImportConflictDetector.GetExactMatches(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
+            var importsOnly = ImportConflictDetector.GetImportsMissingFromExisting(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
+            var existingOnly = ImportConflictDetector.GetExistingMissingFromImports(existingThisDay, importsThisDay, ExistingKey, ImportKey).ToList();
 
-            if (exactMatches.Count != 0 || existingOnlyConflicts.Count != 0)
+            if (exactMatches.Count != 0 || existingOnly.Count != 0)
             {
                 conflicts.AddRange(exactMatches.Select(x => new StockImportConflict(accountId, x.Import, x.Existing, "Exact match")));
-                conflicts.AddRange(importsOnlyConflicts);
-                conflicts.AddRange(existingOnlyConflicts);
+                conflicts.AddRange(importsOnly.Select(x => new StockImportConflict(accountId, x, null, "Import not found in existing")));
+                conflicts.AddRange(existingOnly.Select(x => new StockImportConflict(accountId, null, x, "Existing not found in import")));
                 continue;
             }
 
@@ -69,7 +67,7 @@ public class StockAccountImportService(
                     var stockDetails = await stockDetailsRepository.Get(import.Isin);
                     var ticker = stockDetails?.Ticker ?? string.Empty;
 
-                    var newEntry = new StockAccountEntry(accountId, 0, ToSecond(import.PostingDate), import.ValueChange, import.ValueChange, import.Isin, InvestmentType.Stock)
+                    var newEntry = new StockAccountEntry(accountId, 0, ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange, import.ValueChange, import.Isin, InvestmentType.Stock)
                     {
                         Ticker = ticker
                     };
@@ -137,59 +135,12 @@ public class StockAccountImportService(
         }
     }
 
-    // Posting dates are stored and compared at second precision across the app.
-    // Truncating here keeps fractional-second legacy DB entries comparable with
-    // freshly imported / exported CSV rows, which carry second precision.
-    private static DateTime ToSecond(DateTime d) =>
-        new(d.Year, d.Month, d.Day, d.Hour, d.Minute, d.Second, d.Kind);
+    // Stock entries are compared on posting date (second precision), value change and ISIN.
+    // ISIN is upper-cased so the key comparison is case-insensitive, matching the legacy
+    // OrdinalIgnoreCase comparison.
+    private static (DateTime Date, decimal ValueChange, string Isin) ImportKey(StockEntryImport import) =>
+        (ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange, import.Isin.ToUpperInvariant());
 
-    private static IEnumerable<(StockEntryImport Import, StockAccountEntry Existing)> GetExactMatches(List<StockEntryImport> imports, List<StockAccountEntry> existing)
-    {
-        foreach (var import in imports.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, Isin: x.Isin)))
-        {
-            var sameExisting = existing
-                .Where(e => ToSecond(e.PostingDate) == import.Key.Date && e.ValueChange == import.Key.ValueChange &&
-                            string.Equals(e.Isin, import.Key.Isin, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            if (sameExisting.Count != 0 && import.Any())
-            {
-                List<int> counts = [sameExisting.Count, import.Count()];
-                for (int i = 0; i < counts.Min(); i++)
-                    yield return (import.ToArray()[i], sameExisting.ToArray()[i]);
-            }
-        }
-    }
-
-    private static IEnumerable<StockImportConflict> GetImportsWhichAreMissingFromExisting(int accountId, IEnumerable<StockEntryImport> imports, IEnumerable<StockAccountEntry> existing)
-    {
-        foreach (var import in imports.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, Isin: x.Isin)))
-        {
-            var importItemList = import.ToList();
-            var sameExistingCount = existing.Count(e => ToSecond(e.PostingDate) == import.Key.Date && e.ValueChange == import.Key.ValueChange &&
-                string.Equals(e.Isin, import.Key.Isin, StringComparison.OrdinalIgnoreCase));
-
-            if (importItemList.Count > sameExistingCount && importItemList.Count != 0)
-            {
-                for (int i = 0; i < importItemList.Count - sameExistingCount; i++)
-                    yield return new StockImportConflict(accountId, importItemList.First(), null, "Import not found in existing");
-            }
-        }
-    }
-
-    private static IEnumerable<StockImportConflict> GetExistingWhichAreMissingFromImports(int accountId, IEnumerable<StockAccountEntry> existing, IEnumerable<StockEntryImport> imports)
-    {
-        foreach (var existingItem in existing.GroupBy(x => (Date: ToSecond(x.PostingDate), ValueChange: x.ValueChange, Isin: x.Isin)))
-        {
-            var existingItemList = existingItem.ToList();
-            var sameImportsCount = imports.Count(e => ToSecond(e.PostingDate) == existingItem.Key.Date && e.ValueChange == existingItem.Key.ValueChange &&
-                string.Equals(e.Isin, existingItem.Key.Isin, StringComparison.OrdinalIgnoreCase));
-
-            if (existingItemList.Count <= sameImportsCount || existingItemList.Count == 0)
-                continue;
-
-            for (int i = sameImportsCount; i < existingItemList.Count; i++)
-                yield return new StockImportConflict(accountId, null, existingItemList[i], "Existing not found in import");
-        }
-    }
+    private static (DateTime Date, decimal ValueChange, string Isin) ExistingKey(StockAccountEntry entry) =>
+        (ImportDateNormalizer.ToSecond(entry.PostingDate), entry.ValueChange, entry.Isin.ToUpperInvariant());
 }

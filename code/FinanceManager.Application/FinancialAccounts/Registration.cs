@@ -14,6 +14,7 @@ using FinanceManager.Application.FinancialAccounts.Currencies.Import;
 using FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
 using FinanceManager.Application.FinancialAccounts.Shared.Csv;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
+using FinanceManager.Application.FinancialAccounts.Shared.Imports;
 using FinanceManager.Application.FinancialAccounts.Stock;
 using FinanceManager.Application.FinancialAccounts.Stock.Assets;
 using FinanceManager.Application.FinancialAccounts.Stock.Balance;
@@ -54,7 +55,8 @@ internal static class Registration
                 .AddScoped<ICurrencyExchangeService, CurrencyExchangeService>()
                 .Decorate<ICurrencyExchangeService, CachedCurrencyExchangeService>();
 
-        services.AddScoped<ICsvHeaderMappingService, CsvHeaderMappingService>()
+        services.AddScoped<ImportAccountValidator>()
+                .AddScoped<ICsvHeaderMappingService, CsvHeaderMappingService>()
                 .AddScoped<ICurrencyAccountImportService, CurrencyAccountImportService>()
                 .AddScoped<ICurrencyAccountExportService, CurrencyAccountExportService>()
                 .AddScoped<IAccountCsvExportService<CurrencyAccountExportDto>, CurrencyAccountCsvExportService>()
