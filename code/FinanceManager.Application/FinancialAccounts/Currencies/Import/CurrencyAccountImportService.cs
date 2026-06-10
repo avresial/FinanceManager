@@ -1,4 +1,4 @@
-using FinanceManager.Application.Identity.Users;
+using FinanceManager.Application.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Repositories.Account;
@@ -8,7 +8,7 @@ namespace FinanceManager.Application.FinancialAccounts.Currencies.Import;
 
 public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,
-    IUserPlanVerifier userPlanVerifier, ILogger<CurrencyAccountImportService> logger) : ICurrencyAccountImportService
+    ImportAccountValidator importAccountValidator, ILogger<CurrencyAccountImportService> logger) : ICurrencyAccountImportService
 {
     public async Task<ImportResult> ImportEntries(
         int userId,
@@ -23,11 +23,10 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
         if (entryList.Count == 0)
             return new(accountId, 0, 0, [], []);
 
-        if (!await userPlanVerifier.CanAddMoreEntries(userId, entryList.Count))
-            throw new InvalidOperationException("Plan does not allow importing this many entries.");
+        await importAccountValidator.EnsureWithinPlanLimit(userId, entryList.Count);
 
         var account = await currencyAccountRepository.Get(accountId);
-        if (account is null || account.UserId != userId) throw new InvalidOperationException("Account not found or access denied.");
+        importAccountValidator.EnsureOwnership(account, userId);
 
         var minDay = entryList.Min(x => x.PostingDate).Date;
         var maxDay = entryList.Max(x => x.PostingDate).Date;
@@ -47,16 +46,16 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
 
             if (importsThisDay.Count == 0) continue;
 
-            var exactMatches = GetExactMatches(importsThisDay, existingThisDay).ToList();
-            var importsOnlyConflicts = GetImportsWhichAreMissingFromExisting(accountId, importsThisDay, existingThisDay).ToList();
-            var existingOnlyConflicts = GetExistingWhichAreMissingFromImports(accountId, existingThisDay, importsThisDay).ToList();
+            var exactMatches = ImportConflictDetector.GetExactMatches(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
+            var importsOnly = ImportConflictDetector.GetImportsMissingFromExisting(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
+            var existingOnly = ImportConflictDetector.GetExistingMissingFromImports(existingThisDay, importsThisDay, ExistingKey, ImportKey).ToList();
 
-            if (exactMatches.Count != 0 || existingOnlyConflicts.Count != 0)
+            if (exactMatches.Count != 0 || existingOnly.Count != 0)
             {
                 var dailyConflicts = new List<ImportConflict>();
                 dailyConflicts.AddRange(exactMatches.Select(x => new ImportConflict(accountId, x.Import, x.Existing, "Exact match")));
-                dailyConflicts.AddRange(importsOnlyConflicts);
-                dailyConflicts.AddRange(existingOnlyConflicts);
+                dailyConflicts.AddRange(importsOnly.Select(x => new ImportConflict(accountId, x, null, "Import not found in existing")));
+                dailyConflicts.AddRange(existingOnly.Select(x => new ImportConflict(accountId, null, x, "Existing not fount in import")));
 
                 conflicts.AddRange(dailyConflicts);
 
@@ -77,7 +76,7 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                     if (import.PostingDate.Kind != DateTimeKind.Utc)
                         throw new Exception($"Date kind of this entry posting date: {import.PostingDate}, value change: {import.ValueChange} is not UTC - {import.PostingDate.Kind}");
 
-                    CurrencyAccountEntry newEntry = new(accountId, 0, ToSecond(import.PostingDate), import.ValueChange, import.ValueChange)
+                    CurrencyAccountEntry newEntry = new(accountId, 0, ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange, import.ValueChange)
                     {
                         Description = import.Description ?? string.Empty,
                         ContractorDetails = import.ContractorDetails,
@@ -140,54 +139,10 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
         }
     }
 
-    // Posting dates are stored and compared at second precision across the app.
-    // Truncating both sides keeps legacy fractional-second DB entries comparable
-    // with second-precision CSV imports.
-    private static DateTime ToSecond(DateTime d) =>
-        new(d.Year, d.Month, d.Day, d.Hour, d.Minute, d.Second, d.Kind);
+    // Currency entries are compared on posting date (second precision) and value change.
+    private static (DateTime Date, decimal ValueChange) ImportKey(CurrencyEntryImport import) =>
+        (ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange);
 
-    private static IEnumerable<(CurrencyEntryImport Import, CurrencyAccountEntry Existing)> GetExactMatches(List<CurrencyEntryImport> imports, List<CurrencyAccountEntry> existing)
-    {
-        foreach (var import in imports.GroupBy(x => (Date: ToSecond(x.PostingDate), ValuceChange: x.ValueChange)))
-        {
-            var sameExisting = existing.Where(e => ToSecond(e.PostingDate) == import.Key.Date && e.ValueChange == import.Key.ValuceChange).ToList();
-
-            if (sameExisting.Count != 0 && import.Any())
-            {
-                List<int> counts = [sameExisting.Count, import.Count()];
-                for (int i = 0; i < counts.Min(); i++)
-                    yield return (import.ToArray()[i], sameExisting.ToArray()[i]);
-            }
-        }
-    }
-
-    private static IEnumerable<ImportConflict> GetImportsWhichAreMissingFromExisting(int accountId, IEnumerable<CurrencyEntryImport> imports, IEnumerable<CurrencyAccountEntry> existing)
-    {
-        foreach (var import in imports.GroupBy(x => (Date: ToSecond(x.PostingDate), ValuceChange: x.ValueChange)))
-        {
-            var importItemList = import.ToList();
-            var sameExistingCount = existing.Count(e => ToSecond(e.PostingDate) == import.Key.Date && e.ValueChange == import.Key.ValuceChange);
-
-            if (importItemList.Count > sameExistingCount && importItemList.Count != 0)
-            {
-                for (int i = 0; i < importItemList.Count - sameExistingCount; i++)
-                    yield return new ImportConflict(accountId, importItemList.First(), null, "Import not found in existing");
-            }
-        }
-    }
-
-    private static IEnumerable<ImportConflict> GetExistingWhichAreMissingFromImports(int accountId, IEnumerable<CurrencyAccountEntry> existing, IEnumerable<CurrencyEntryImport> imports)
-    {
-        foreach (var existingItem in existing.GroupBy(x => (Date: ToSecond(x.PostingDate), ValuceChange: x.ValueChange)))
-        {
-            var existingItemList = existingItem.ToList();
-            var sameImportsCount = imports.Count(e => ToSecond(e.PostingDate) == existingItem.Key.Date && e.ValueChange == existingItem.Key.ValuceChange);
-
-            if (existingItemList.Count <= sameImportsCount || existingItemList.Count == 0)
-                continue;
-
-            for (int i = sameImportsCount; i < existingItemList.Count; i++)
-                yield return new ImportConflict(accountId, null, existingItemList[i], "Existing not fount in import");
-        }
-    }
+    private static (DateTime Date, decimal ValueChange) ExistingKey(CurrencyAccountEntry entry) =>
+        (ImportDateNormalizer.ToSecond(entry.PostingDate), entry.ValueChange);
 }

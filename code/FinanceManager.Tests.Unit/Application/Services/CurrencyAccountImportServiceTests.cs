@@ -1,4 +1,5 @@
 using FinanceManager.Application.FinancialAccounts.Currencies.Import;
+using FinanceManager.Application.FinancialAccounts.Shared.Imports;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Imports;
@@ -35,7 +36,8 @@ public class CurrencyAccountImportServiceTests
         _userPlanVerifier = new UserPlanVerifier(_mockAccountRepository.Object, _mockAccountEntryRepository.Object, _mockUserRepository.Object);
 
         var mockLogger = new Mock<ILogger<CurrencyAccountImportService>>();
-        _service = new CurrencyAccountImportService(_mockAccountRepository.Object, _mockAccountEntryRepository.Object, _userPlanVerifier, mockLogger.Object);
+        var importAccountValidator = new ImportAccountValidator(_userPlanVerifier);
+        _service = new CurrencyAccountImportService(_mockAccountRepository.Object, _mockAccountEntryRepository.Object, importAccountValidator, mockLogger.Object);
     }
 
     [Fact]
