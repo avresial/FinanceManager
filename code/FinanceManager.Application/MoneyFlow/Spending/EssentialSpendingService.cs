@@ -2,7 +2,7 @@ using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Services;
 
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.MoneyFlow.Spending;
 
 public class EssentialSpendingService(IEnumerable<IEssentialSpendingServiceTyped> typedServices) : IEssentialSpendingService
 {

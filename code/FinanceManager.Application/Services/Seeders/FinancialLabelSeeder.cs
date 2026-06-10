@@ -1,3 +1,4 @@
+using FinanceManager.Application.MoneyFlow.Spending;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Logging;

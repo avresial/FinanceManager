@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services.Currencies;
+using FinanceManager.Application.MoneyFlow.Spending;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;

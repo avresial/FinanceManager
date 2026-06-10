@@ -7,7 +7,7 @@ using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.MoneyFlow.InvestmentPaycheck;
 
 public class InvestmentPaycheckEstimatorService(
     IFinancialAccountRepository financialAccountRepository,

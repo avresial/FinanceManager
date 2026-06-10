@@ -1,5 +1,4 @@
 using FinanceManager.Application.FinancialAccounts.Currencies.Balance;
-using FinanceManager.Application.Services.Currencies;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Enums;

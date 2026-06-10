@@ -1,3 +1,4 @@
+using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
@@ -5,7 +6,7 @@ using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
-namespace FinanceManager.Application.Services.Currencies;
+namespace FinanceManager.Application.MoneyFlow.Spending;
 
 public class CurrencyEssentialSpendingService(IFinancialAccountRepository financialAccountRepository) : IEssentialSpendingServiceTyped
 {

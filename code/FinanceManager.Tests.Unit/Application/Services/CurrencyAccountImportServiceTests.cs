@@ -1,6 +1,5 @@
 using FinanceManager.Application.FinancialAccounts.Currencies.Import;
 using FinanceManager.Application.Services;
-using FinanceManager.Application.Services.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Entities.Users;

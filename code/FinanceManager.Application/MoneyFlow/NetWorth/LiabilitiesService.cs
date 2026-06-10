@@ -1,9 +1,10 @@
-﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+﻿using FinanceManager.Application.Services;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.MoneyFlow.NetWorth;
 
 public class LiabilitiesService(IFinancialAccountRepository financialAccountService) : ILiabilitiesService
 {

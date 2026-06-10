@@ -5,7 +5,7 @@ using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
 
-namespace FinanceManager.Application.Services.Currencies;
+namespace FinanceManager.Application.MoneyFlow.Spending;
 
 public class CurrencyExpenseDistributionService(IFinancialAccountRepository financialAccountRepository) : IExpenseDistributionServiceTyped
 {

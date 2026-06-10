@@ -1,8 +1,8 @@
 using FinanceManager.Application.FinancialAccounts;
+using FinanceManager.Application.MoneyFlow;
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
 using FinanceManager.Application.Services.Ai;
-using FinanceManager.Application.Services.Currencies;
 using FinanceManager.Application.Services.FinancialInsights;
 using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Services;
@@ -27,14 +27,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IRefreshTokenService, RefreshTokenService>()
                 .AddScoped<IPasswordResetService, PasswordResetService>()
                 .AddScoped<IAccountLockoutService, AccountLockoutService>()
-                .AddScoped<IMoneyFlowService, MoneyFlowService>()
-                .AddScoped<IInvestmentPaycheckEstimatorService, InvestmentPaycheckEstimatorService>()
-                .AddScoped<IEssentialSpendingServiceTyped, CurrencyEssentialSpendingService>()
-                .AddScoped<IEssentialSpendingService, EssentialSpendingService>()
-                .AddScoped<IExpenseDistributionServiceTyped, CurrencyExpenseDistributionService>()
-                .AddScoped<IExpenseDistributionService, ExpenseDistributionService>()
                 .AddScoped<UsersService>()
-                .AddScoped<ILiabilitiesService, LiabilitiesService>()
                 .AddScoped<PricingProvider>()
                 .AddScoped<GuestAccountSeeder>()
                 .AddScoped<FinancialInsightsSeeder>()
@@ -45,6 +38,7 @@ public static class ServiceCollectionExtension
         // Seeders run in ISeeder registration order: admin/test users first (above),
         // then the financial-account detail seeders, then labels (below).
         services.AddFinancialAccountsApplication();
+        services.AddMoneyFlowApplication();
 
         services.AddScoped<ISeeder, FinancialLabelSeeder>(sp => sp.GetRequiredService<FinancialLabelSeeder>())
                 // .AddScoped<ISeeder, FinancialInsightsSeeder>()
