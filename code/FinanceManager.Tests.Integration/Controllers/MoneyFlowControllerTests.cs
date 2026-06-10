@@ -1,3 +1,4 @@
+using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Bonds;

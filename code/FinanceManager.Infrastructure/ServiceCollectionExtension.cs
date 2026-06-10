@@ -1,9 +1,10 @@
-﻿using FinanceManager.Application.Options;
+﻿using FinanceManager.Application.FinancialAccounts.Stock.Market;
+using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
+using FinanceManager.Application.Options;
 using FinanceManager.Application.Services;
 using FinanceManager.Application.Services.Ai;
 using FinanceManager.Application.Services.ExternalServices;
 using FinanceManager.Application.Services.FinancialInsights;
-using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;

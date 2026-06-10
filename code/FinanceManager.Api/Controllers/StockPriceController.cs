@@ -1,4 +1,5 @@
-﻿using FinanceManager.Application.Services.Stocks;
+﻿using FinanceManager.Application.FinancialAccounts.Stock.Import;
+using FinanceManager.Application.FinancialAccounts.Stock.Market;
 using FinanceManager.Domain.Commands.Stocks;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Stocks;

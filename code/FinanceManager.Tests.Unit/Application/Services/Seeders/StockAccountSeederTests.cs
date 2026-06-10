@@ -1,3 +1,4 @@
+using FinanceManager.Application.FinancialAccounts.Stock.Seeders;
 using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;

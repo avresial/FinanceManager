@@ -1,3 +1,4 @@
+using FinanceManager.Application.FinancialAccounts;
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;

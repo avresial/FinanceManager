@@ -1,6 +1,6 @@
+using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
-using FinanceManager.Application.Services.Stocks;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;

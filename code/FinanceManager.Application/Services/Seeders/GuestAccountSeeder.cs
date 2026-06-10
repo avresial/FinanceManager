@@ -1,3 +1,6 @@
+using FinanceManager.Application.FinancialAccounts.Bond.Seeders;
+using FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
+using FinanceManager.Application.FinancialAccounts.Stock.Seeders;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Logging;
