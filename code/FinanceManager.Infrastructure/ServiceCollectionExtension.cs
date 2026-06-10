@@ -3,7 +3,6 @@ using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Application.Insights.Generation;
 using FinanceManager.Application.Labels.Setter;
 using FinanceManager.Application.Labels.Suggestions;
-using FinanceManager.Application.Services;
 using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;

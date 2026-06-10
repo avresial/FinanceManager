@@ -1,5 +1,4 @@
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;

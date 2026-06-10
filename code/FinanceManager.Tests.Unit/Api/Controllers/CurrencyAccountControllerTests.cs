@@ -2,7 +2,6 @@ using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.FinancialAccounts.Currencies;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Application.Services;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Exports;

@@ -1,5 +1,4 @@
-﻿using FinanceManager.Application.Services;
-using FinanceManager.Application.Shared;
+﻿using FinanceManager.Application.Shared;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;

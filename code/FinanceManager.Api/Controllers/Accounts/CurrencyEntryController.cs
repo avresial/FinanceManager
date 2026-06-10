@@ -1,7 +1,6 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Api.Services;
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Application.Services;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;

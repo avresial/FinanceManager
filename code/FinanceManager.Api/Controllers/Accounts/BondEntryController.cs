@@ -1,6 +1,5 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Application.Services;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Repositories.Account;
