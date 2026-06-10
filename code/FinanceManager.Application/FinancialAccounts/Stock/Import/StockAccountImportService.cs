@@ -1,3 +1,4 @@
+using FinanceManager.Application.Identity.Users;
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Entities.Stocks;

@@ -1,7 +1,7 @@
 ﻿using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Services;
 
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.Identity.Users;
 
 public class SettingsService : ISettingsService
 {

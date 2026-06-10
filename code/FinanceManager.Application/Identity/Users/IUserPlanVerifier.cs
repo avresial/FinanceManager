@@ -1,5 +1,5 @@
 ﻿
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.Identity.Users;
 
 public interface IUserPlanVerifier
 {

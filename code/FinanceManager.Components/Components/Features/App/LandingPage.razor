@@ -1,9 +1,9 @@
 ﻿@page "/landingpage"
 
-@using FinanceManager.Application.Providers
 @using FinanceManager.Domain.Enums
 @using FinanceManager.Domain.Services
 @layout NoNavbarLayout
+@using FinanceManager.Application.Identity.Users
 
 @inject NavigationManager Navigation
 @inject ILoginService LoginService
@@ -212,7 +212,7 @@
                                     Currency synchronization
                                 </MudListItem>
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
-                                    @Application.Providers.PricingProvider.GetMaxAllowedEntries(Domain.Enums.PricingLevel.Premium) transactions
+                                    @PricingProvider.GetMaxAllowedEntries(Domain.Enums.PricingLevel.Premium) transactions
                                 </MudListItem>
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
                                     Unlimited accounts

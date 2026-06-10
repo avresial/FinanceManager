@@ -1,8 +1,9 @@
 using FinanceManager.Application.FinancialAccounts;
+using FinanceManager.Application.Identity;
+using FinanceManager.Application.Identity.Users;
 using FinanceManager.Application.Insights;
 using FinanceManager.Application.Labels;
 using FinanceManager.Application.MoneyFlow;
-using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services;
 using FinanceManager.Application.Services.Ai;
 using FinanceManager.Application.Services.Seeders;
@@ -24,25 +25,15 @@ public static class ServiceCollectionExtension
 
     public static IServiceCollection AddApplicationApi(this IServiceCollection services)
     {
-        services.AddScoped<ISettingsService, SettingsService>()
-                .AddScoped<IRefreshTokenService, RefreshTokenService>()
-                .AddScoped<IPasswordResetService, PasswordResetService>()
-                .AddScoped<IAccountLockoutService, AccountLockoutService>()
-                .AddScoped<UsersService>()
-                .AddScoped<PricingProvider>()
-                .AddScoped<GuestAccountSeeder>()
-                .AddScoped<ISeeder, AdminAccountSeeder>()
-                .AddScoped<ISeeder, TestUserAccountSeeder>();
-
-        // Seeders run in ISeeder registration order: admin/test users first (above),
-        // then the financial-account detail seeders, then labels (below).
+        // Seeders run in ISeeder registration order: identity's admin/test users
+        // first, then the financial-account detail seeders, then labels.
+        services.AddIdentityApplication();
         services.AddFinancialAccountsApplication();
         services.AddLabelsApplication();
         services.AddInsightsApplication();
         services.AddMoneyFlowApplication();
 
-        services.AddScoped<IUserPlanVerifier, UserPlanVerifier>()
-                .AddScoped<IAdministrationUsersService, AdministrationUsersService>();
+        services.AddScoped<IAdministrationUsersService, AdministrationUsersService>();
 
         return services;
     }

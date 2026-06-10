@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 
-namespace FinanceManager.Application.Providers;
+namespace FinanceManager.Application.Identity;
 
 public static class PasswordEncryptionProvider
 {

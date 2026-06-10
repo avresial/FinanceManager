@@ -5,7 +5,7 @@ using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.Identity.RefreshTokens;
 
 public class RefreshTokenService(IRefreshTokenRepository repository, IOptions<RefreshTokenOptions> options) : IRefreshTokenService
 {

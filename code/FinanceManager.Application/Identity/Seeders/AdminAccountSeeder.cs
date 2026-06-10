@@ -1,8 +1,8 @@
-﻿using FinanceManager.Application.Providers;
+﻿using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 
-namespace FinanceManager.Application.Services.Seeders;
+namespace FinanceManager.Application.Identity.Seeders;
 
 public class AdminAccountSeeder(IUserRepository userRepository) : ISeeder
 {

@@ -2,7 +2,7 @@ using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.Logging;
 
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.Identity.Users;
 
 public class UsersService(IFinancialAccountRepository financialAccountRepository, IUserRepository userRepository, ILogger<UsersService> logger)
 {

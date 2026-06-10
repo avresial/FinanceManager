@@ -1,12 +1,11 @@
 using FinanceManager.Application.Options;
-using FinanceManager.Application.Providers;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.Identity.PasswordReset;
 
 public class PasswordResetService(
     IUserRepository userRepository,

@@ -1,4 +1,4 @@
-namespace FinanceManager.Application.Services.Seeders;
+namespace FinanceManager.Application.Identity.Seeders;
 
 // Single source of truth for the guest demo's correlated money flows so every account seeder stays in sync:
 // the cash account is the hub, and loan proceeds flow into it while stock and bond purchases flow out of it.

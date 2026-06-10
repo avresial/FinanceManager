@@ -1,3 +1,4 @@
+using FinanceManager.Application.Identity.Seeders;
 using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Repositories;

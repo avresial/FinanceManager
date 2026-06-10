@@ -1,4 +1,5 @@
-using FinanceManager.Application.Providers;
+using FinanceManager.Application.Identity;
+using FinanceManager.Application.Identity.Users;
 using FinanceManager.Application.Services;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Commands.User;

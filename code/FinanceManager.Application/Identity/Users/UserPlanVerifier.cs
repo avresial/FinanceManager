@@ -1,9 +1,8 @@
-﻿using FinanceManager.Application.Providers;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.Identity.Users;
 
 public class UserPlanVerifier(ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,

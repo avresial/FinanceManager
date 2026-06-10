@@ -3,7 +3,7 @@ using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Options;
 
-namespace FinanceManager.Application.Services;
+namespace FinanceManager.Application.Identity.Lockout;
 
 /// <summary>
 /// Locks an account for a fixed cooldown window once <see cref="AccountLockoutOptions.MaxFailedAttempts"/>

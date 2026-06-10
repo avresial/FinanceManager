@@ -1,4 +1,4 @@
-using FinanceManager.Application.Providers;
+using FinanceManager.Application.Identity.Users;
 using FinanceManager.Application.Services;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Users;

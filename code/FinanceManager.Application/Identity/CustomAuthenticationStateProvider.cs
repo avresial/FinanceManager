@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;
 
-namespace FinanceManager.Application.Providers;
+namespace FinanceManager.Application.Identity;
 
 public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 {

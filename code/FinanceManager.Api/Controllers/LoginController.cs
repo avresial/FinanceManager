@@ -1,8 +1,9 @@
 using FinanceManager.Api.Services;
 using FinanceManager.Api.Services.Guest;
 using FinanceManager.Application.Commands.Login;
+using FinanceManager.Application.Identity;
+using FinanceManager.Application.Identity.Seeders;
 using FinanceManager.Application.Options;
-using FinanceManager.Application.Providers;
 using FinanceManager.Application.Services.Seeders;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;

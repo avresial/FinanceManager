@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Domain.Enums;
 
-namespace FinanceManager.Application.Providers;
+namespace FinanceManager.Application.Identity.Users;
 
 public class PricingProvider
 {
