@@ -1,4 +1,5 @@
 using FinanceManager.Application.Administration;
+using FinanceManager.Application.Dashboard;
 using FinanceManager.Application.FinancialAccounts;
 using FinanceManager.Application.Identity;
 using FinanceManager.Application.Identity.Users;
@@ -32,6 +33,7 @@ public static class ServiceCollectionExtension
             .AddLabelsApplication()
             .AddInsightsApplication()
             .AddMoneyFlowApplication()
+            .AddDashboardApplication()
             .AddAdministrationApplication();
 
         return services;
