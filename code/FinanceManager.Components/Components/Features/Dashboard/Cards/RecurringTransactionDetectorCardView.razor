@@ -13,7 +13,7 @@
             }
             else if (Data.Count > 0)
             {
-                <MudText Typo=Typo.subtitle1 Class="text-muted">@TotalMonthlySpend.ToString("0.00") PLN/mo</MudText>
+                <MudText Typo=Typo.subtitle1 Class="text-muted">@TotalMonthlySpend.ToString("0.00") @Currency/mo</MudText>
             }
         }
         else
@@ -53,7 +53,7 @@
                                 </div>
                                 <MudText Typo="Typo.body2" Color="Color.Warning" Class="font-weight-600"
                                          Style="min-width: 120px; text-align: right;">
-                                    @($"{item.Value:0.00} PLN/mo")
+                                    @($"{item.Value:0.00} {Currency}/mo")
                                 </MudText>
                             </div>
                         </MudListItem>
@@ -96,7 +96,7 @@
                             </MudTooltip>
                         </MudTd>
                         <MudTd DataLabel="Amount" Style="text-align:right">
-                            <MudText Color="Color.Error">@($"{Math.Abs(context.ValueChange):0.00} PLN")</MudText>
+                            <MudText Color="Color.Error">@($"{Math.Abs(context.ValueChange):0.00} {Currency}")</MudText>
                         </MudTd>
                     </RowTemplate>
                 </MudTable>

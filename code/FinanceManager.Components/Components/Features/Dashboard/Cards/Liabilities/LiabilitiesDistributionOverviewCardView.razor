@@ -50,11 +50,11 @@
                     @{
                         var sorted = ActiveData.OrderByDescending(x => x.Value).ToList();
                         var colors = ColorsProvider.GetColors();
+                        var total = TotalLiabilities;
                         for (int i = 0; i < sorted.Count; i++)
                         {
                             var item = sorted[i];
                             var color = colors[i % colors.Count];
-                            var total = TotalLiabilities;
                             var pct = total == 0 ? 0m : Math.Round(item.Value / total * 100m, 1);
                             <div class="fm-legend-row">
                                 <span class="fm-legend-dot" style="background: @color"></span>

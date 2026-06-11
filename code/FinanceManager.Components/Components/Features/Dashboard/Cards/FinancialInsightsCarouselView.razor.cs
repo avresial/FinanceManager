@@ -64,6 +64,13 @@ public partial class FinancialInsightsCarouselView : IDisposable
     private void OnAutoAdvance(object? _) =>
         InvokeAsync(() =>
         {
+            // The insights list can be swapped for an empty one between the timer firing and this
+            // callback running on the renderer's sync context; bail out instead of dividing by zero.
+            if (_insights.Count <= 1)
+            {
+                StopAutoAdvance();
+                return;
+            }
             _currentIndex = (_currentIndex + 1) % _insights.Count;
             StartAutoAdvance();
             StateHasChanged();

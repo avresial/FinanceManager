@@ -11,6 +11,7 @@ public partial class RecurringTransactionDetectorCardView
     [Parameter] public bool IsLoadingDetail { get; set; }
     [Parameter] public List<RecurringTransactionResult> Data { get; set; } = [];
     [Parameter] public decimal TotalMonthlySpend { get; set; }
+    [Parameter] public string Currency { get; set; } = "PLN";
     [Parameter] public RecurringTransactionResult? SelectedItem { get; set; }
     [Parameter] public List<CurrencyAccountEntry> DetailEntries { get; set; } = [];
     [Parameter] public EventCallback<RecurringTransactionResult> OnItemSelected { get; set; }
