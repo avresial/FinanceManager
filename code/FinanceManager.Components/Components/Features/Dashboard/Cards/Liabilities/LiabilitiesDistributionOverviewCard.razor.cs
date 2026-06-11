@@ -1,10 +1,7 @@
-using ApexCharts;
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -13,15 +10,10 @@ namespace FinanceManager.Components.Components.Features.Dashboard.Cards.Liabilit
 
 public partial class LiabilitiesDistributionOverviewCard
 {
-    private const string _viewByType = "type";
-    private const string _viewByAccount = "account";
-
-    private string _view = _viewByType;
     private bool _isLoading;
     private Currency _currency = DefaultCurrency.PLN;
     private List<NameValueResult> _typeData = [];
     private List<NameValueResult> _accountData = [];
-    private ApexChart<NameValueResult>? _chart;
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
@@ -32,32 +24,9 @@ public partial class LiabilitiesDistributionOverviewCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    private List<NameValueResult> ActiveData => _view == _viewByAccount ? _accountData : _typeData;
-
-    // Derive the total from the active dataset so per-view percentages and the header stay self-consistent.
-    private decimal TotalLiabilities => ActiveData.Count == 0 ? 0 : Math.Round(ActiveData.Sum(x => x.Value), 2);
-
-    private readonly ApexChartOptions<NameValueResult> _chartOptions = new()
-    {
-        Chart = new Chart
-        {
-            Toolbar = new Toolbar { Show = false },
-            Background = "transparent",
-        },
-        Legend = new Legend { Show = false },
-        Colors = ColorsProvider.GetColors(),
-    };
-
     protected override void OnInitialized()
     {
         _currency = SettingsService.GetCurrency();
-        _chartOptions.Tooltip = new Tooltip
-        {
-            Y = new TooltipY
-            {
-                Formatter = ChartHelper.GetCurrencyFormatter(_currency.ShortName),
-            },
-        };
     }
 
     protected override async Task OnParametersSetAsync()
@@ -88,9 +57,6 @@ public partial class LiabilitiesDistributionOverviewCard
 
             _typeData = ToPositive(await typeTask);
             _accountData = ToPositive(await accountTask);
-
-            if (_chart is not null)
-                await _chart.UpdateSeriesAsync(true);
         }
         catch (Exception ex)
         {
@@ -106,12 +72,4 @@ public partial class LiabilitiesDistributionOverviewCard
     // Liabilities are returned as negative magnitudes; flip them so the pie and legend show positive amounts.
     private static List<NameValueResult> ToPositive(IEnumerable<NameValueResult> data) =>
         [.. data.Select(x => new NameValueResult { Name = x.Name, Value = Math.Abs(x.Value) })];
-
-    private async Task OnViewChangedAsync(string view)
-    {
-        _view = view;
-        StateHasChanged();
-        if (_chart is not null)
-            await _chart.UpdateSeriesAsync(true);
-    }
 }
