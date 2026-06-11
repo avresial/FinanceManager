@@ -12,6 +12,9 @@ internal static class Registration
     public static IServiceCollection AddInsightsApplication(this IServiceCollection services)
     {
         services.AddScoped<IFinancialInsightsAiGenerator, FinancialInsightsAiGenerator>()
+                .AddScoped<InsightsContextBuilder>()
+                .AddSingleton<InsightsResponseParser>()
+                .AddSingleton<FinancialInsightNormalizer>()
                 .AddScoped<IDiversificationService, DiversificationService>()
                 .AddScoped<FinancialInsightsSeeder>();
         // .AddScoped<ISeeder, FinancialInsightsSeeder>()
