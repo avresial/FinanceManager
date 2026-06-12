@@ -10,6 +10,9 @@
 	<ItemGroup>
 		<PackageReference Include="Aspire.Hosting.AppHost" />
 		<PackageReference Include="Aspire.Hosting.PostgreSQL" />
+		<!-- Direct reference to lift the transitive MessagePack to a patched version
+		     (GHSA-hv8m-jj95-wg3x); transitive pinning is disabled solution-wide. -->
+		<PackageReference Include="MessagePack" />
 	</ItemGroup>
 
 	<ItemGroup>

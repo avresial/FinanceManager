@@ -1,4 +1,5 @@
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Components.Components.Features.Dashboard.Models;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
@@ -19,6 +20,10 @@ public partial class ExpenseDistributionOverviewCard
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
+    // When the dashboard supplies a prepared model the card renders it directly;
+    // otherwise it self-loads from the API as in standalone usage.
+    [Parameter] public NameValueListCardModel? Model { get; set; }
+
     [Inject] public required ILogger<ExpenseDistributionOverviewCard> Logger { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
@@ -37,6 +42,12 @@ public partial class ExpenseDistributionOverviewCard
 
         try
         {
+            if (Model is not null)
+            {
+                _data = [.. Model.Items];
+                return;
+            }
+
             var user = await LoginService.GetLoggedUser();
             if (user is null)
             {

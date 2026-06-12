@@ -1,4 +1,5 @@
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Components.Components.Features.Dashboard.Models;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
@@ -19,6 +20,10 @@ public partial class LiabilitiesDistributionOverviewCard
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
+    // When the dashboard supplies a prepared model the card renders it directly;
+    // otherwise it self-loads from the API as in standalone usage.
+    [Parameter] public DistributionCardModel? Model { get; set; }
+
     [Inject] public required ILogger<LiabilitiesDistributionOverviewCard> Logger { get; set; }
     [Inject] public required LiabilitiesHttpClient LiabilitiesHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
@@ -36,6 +41,13 @@ public partial class LiabilitiesDistributionOverviewCard
 
         try
         {
+            if (Model is not null)
+            {
+                _typeData = ToPositive(Model.TypeData);
+                _accountData = ToPositive(Model.AccountData);
+                return;
+            }
+
             if (StartDateTime == new DateTime())
             {
                 _typeData = [];

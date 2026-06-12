@@ -4,51 +4,87 @@
 @using FinanceManager.Components.Components.Features.Dashboard.Cards.TimeSeries
 
 <MudContainer Class="py-2">
-    <MudGrid Spacing="2">
+    @if (_overview is null && _isLoading)
+    {
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@($"{_unitHeight * 2}px")" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@($"{_unitHeight * 2}px")" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@($"{_unitHeight * 2}px")" />
+            </MudItem>
+            <MudItem xs="12" md="6" lg="4">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@($"{_unitHeight * 3}px")" />
+            </MudItem>
+            <MudItem xs="12" md="6" lg="4">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@($"{_unitHeight * 3}px")" />
+            </MudItem>
+            <MudItem xs="12" md="6" lg="4">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@($"{_unitHeight * 3}px")" />
+            </MudItem>
+        </MudGrid>
+    }
+    else
+    {
+        @if (_hasError)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-2" ShowCloseIcon="false">
+                <div class="d-flex align-center justify-space-between" style="width:100%">
+                    <span>Unable to load dashboard data.</span>
+                    <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="LoadOverview">Retry</MudButton>
+                </div>
+            </MudAlert>
+        }
 
-        <MudItem xs="12">
-            <NetWorthTimeSeriesCard StartDateTime="@StartDate" EndDateTime="@EndDate" />
-        </MudItem>
+        <MudGrid Spacing="2">
 
-        <MudItem xs="12" md="6">
-            <NetCashFlowOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@StartDate"
-                                     EndDateTime="@EndDate" />
-        </MudItem>
+            <MudItem xs="12">
+                <NetWorthTimeSeriesCard StartDateTime="@DisplayStartDate" EndDateTime="@DisplayEndDate" Model="@NetWorthModel" />
+            </MudItem>
 
-        <MudItem xs="12" md="6">
-            <ClosingBalanceOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@StartDate"
-                                        EndDateTime="@EndDate" />
-        </MudItem>
+            <MudItem xs="12" md="6">
+                <NetCashFlowOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@DisplayStartDate"
+                                         EndDateTime="@DisplayEndDate" Model="@NetCashFlowModel" />
+            </MudItem>
 
-        <MudItem xs="12" md="6" lg="4">
-            <LiabilitiesDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
-                                                 EndDateTime="@EndDate" />
-        </MudItem>
+            <MudItem xs="12" md="6">
+                <ClosingBalanceOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@DisplayStartDate"
+                                            EndDateTime="@DisplayEndDate" Model="@ClosingBalanceModel" />
+            </MudItem>
 
-        <MudItem xs="12" md="6" lg="4">
-            <FinancialLabelsListCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
-                                     EndDateTime="@EndDate" />
-        </MudItem>
+            <MudItem xs="12" md="6" lg="4">
+                <LiabilitiesDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@DisplayStartDate"
+                                                     EndDateTime="@DisplayEndDate" Model="@LiabilitiesModel" />
+            </MudItem>
 
-        <MudItem xs="12" md="6" lg="4">
-            <AssetsDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
-                                            EndDateTime="@EndDate" />
-        </MudItem>
+            <MudItem xs="12" md="6" lg="4">
+                <FinancialLabelsListCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@DisplayStartDate"
+                                         EndDateTime="@DisplayEndDate" Model="@LabelsModel" />
+            </MudItem>
 
-        <MudItem xs="12" md="6" lg="4">
-            <ExpenseDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
-                                             EndDateTime="@EndDate" />
-        </MudItem>
+            <MudItem xs="12" md="6" lg="4">
+                <AssetsDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@DisplayStartDate"
+                                                EndDateTime="@DisplayEndDate" Model="@AssetsModel" />
+            </MudItem>
 
-        <MudItem xs="12" md="6" lg="4">
-            <FinancialInsightsCarousel Height="@($"{_unitHeight * 3}px")" Count="3" />
-        </MudItem>
+            <MudItem xs="12" md="6" lg="4">
+                <ExpenseDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@DisplayStartDate"
+                                                 EndDateTime="@DisplayEndDate" Model="@ExpenseModel" />
+            </MudItem>
 
-        <MudItem xs="12" md="6" lg="4">
-            <RecurringTransactionDetectorCard Height="@($"{_unitHeight * 3}px")" />
-        </MudItem>
+            <MudItem xs="12" md="6" lg="4">
+                <FinancialInsightsCarousel Height="@($"{_unitHeight * 3}px")" Count="3" />
+            </MudItem>
 
-    </MudGrid>
+            <MudItem xs="12" md="6" lg="4">
+                <RecurringTransactionDetectorCard Height="@($"{_unitHeight * 3}px")" />
+            </MudItem>
+
+        </MudGrid>
+    }
 </MudContainer>
 
 <DashboardDatePicker DateChanged=DateChanged StartingOption="ThisMonth" />

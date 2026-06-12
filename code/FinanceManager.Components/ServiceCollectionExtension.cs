@@ -49,6 +49,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<CsvHeaderMappingHttpClient>()
                 .AddScoped<AccountDataSynchronizationService>()
                 .AddScoped<NavMenuStateCacheService>()
+                .AddScoped<DashboardHttpClient>()
                 .AddScoped<DashboardOverviewCardsCacheService>()
                 .AddScoped<AssetsPageCardsCacheService>()
                 .AddScoped<InvestmentPaycheckEstimateCacheService>()

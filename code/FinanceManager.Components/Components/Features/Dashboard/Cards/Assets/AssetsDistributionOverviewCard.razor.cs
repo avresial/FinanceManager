@@ -1,4 +1,5 @@
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Components.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Models;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
@@ -20,6 +21,10 @@ public partial class AssetsDistributionOverviewCard
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
+    // When the dashboard supplies a prepared model the card renders it directly;
+    // otherwise it self-loads from the cache service as in standalone usage.
+    [Parameter] public DistributionCardModel? Model { get; set; }
+
     [Inject] public required ILogger<AssetsDistributionOverviewCard> Logger { get; set; }
     [Inject] public required AssetsPageCardsCacheService AssetsPageCardsCacheService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
@@ -37,6 +42,13 @@ public partial class AssetsDistributionOverviewCard
 
         try
         {
+            if (Model is not null)
+            {
+                _typeData = [.. Model.TypeData];
+                _walletData = [.. Model.AccountData];
+                return;
+            }
+
             var user = await LoginService.GetLoggedUser();
             if (user is null)
             {

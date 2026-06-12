@@ -1,4 +1,5 @@
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Components.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Models;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
@@ -19,6 +20,10 @@ public partial class ClosingBalanceOverviewCard
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
+    // When the dashboard supplies a prepared model the card renders it directly;
+    // otherwise it self-loads from the cache service as in standalone usage.
+    [Parameter] public TimeSeriesCardModel? Model { get; set; }
+
     [Inject] public required ILogger<ClosingBalanceOverviewCard> Logger { get; set; }
     [Inject] public required DashboardOverviewCardsCacheService DashboardOverviewCardsCacheService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
@@ -30,6 +35,14 @@ public partial class ClosingBalanceOverviewCard
     {
         var currency = SettingsService.GetCurrency();
         _currency = currency.ShortName;
+
+        if (Model is not null)
+        {
+            _series = [.. Model.Series.OrderBy(x => x.DateTime).Select(x => new TimeSeriesModel(x.DateTime, Math.Round(x.Value, 2)))];
+            _hasError = false;
+            _isLoading = false;
+            return;
+        }
 
         var user = await LoginService.GetLoggedUser();
         if (user is null)
