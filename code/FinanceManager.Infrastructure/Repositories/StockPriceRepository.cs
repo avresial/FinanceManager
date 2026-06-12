@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Contexts;
@@ -29,11 +29,11 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
     public async Task<DateTime?> GetLatestMissing(string isin)
     {
         var today = DateTime.UtcNow.Date;
-        var ninetyNineYearsAgo = today.AddYears(-99);
+        var twoYearsAgo = today.AddYears(-2);
 
         var stockPrices = await context.StockPrices
-            .Where(x => x.StockDetails!.Isin == isin && x.Date >= ninetyNineYearsAgo)
-            .Select(x => x.Date.Date)
+            .Where(x => x.StockDetails!.Isin == isin && x.Date >= twoYearsAgo)
+            .Select(x => x.Date)
             .Distinct()
             .OrderByDescending(x => x)
             .ToListAsync();
@@ -59,7 +59,7 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         var stockPrice = await context.StockPrices
             .Include(x => x.StockDetails)
             .ThenInclude(x => x.Currency)
-            .FirstOrDefaultAsync(x => x.StockDetails!.Isin == isin && x.Date.Date == date.Date);
+            .FirstOrDefaultAsync(x => x.StockDetails!.Isin == isin && x.Date == date.Date);
         if (stockPrice is null || stockPrice.StockDetails is null) return null;
 
         return stockPrice.ToStockPrice();
@@ -70,11 +70,12 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         return await context.StockPrices
             .Include(x => x.StockDetails)
             .ThenInclude(x => x.Currency)
-            .Where(x => x.StockDetails!.Isin == isin && x.Date.Date >= start.Date && x.Date.Date <= end.Date)
+            .Where(x => x.StockDetails!.Isin == isin && x.Date >= start.Date && x.Date < end.Date.AddDays(1))
             .OrderByDescending(x => x.Date)
             .Select(x => x.ToStockPrice())
             .ToListAsync();
     }
+
     public async Task<StockPrice?> GetThisOrNextOlder(string isin, DateTime date)
     {
         var result = await Get(isin, date);
@@ -100,29 +101,52 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
 
     public async Task Add(IEnumerable<StockPrice> prices)
     {
-        foreach (var price in prices)
+        var priceList = prices.ToList();
+        if (priceList.Count == 0) return;
+
+        var isins = priceList.Select(p => p.Isin).Distinct().ToList();
+
+        var stockDetailsByIsin = await context.StockDetails
+            .Where(sd => isins.Contains(sd.Isin))
+            .ToDictionaryAsync(sd => sd.Isin);
+
+        var minDate = priceList.Min(p => p.Date.Date);
+        var maxDate = priceList.Max(p => p.Date.Date);
+        var dayAfterMax = maxDate.AddDays(1);
+
+        var existingPrices = await context.StockPrices
+            .Include(x => x.StockDetails)
+            .Where(x => isins.Contains(x.StockDetails!.Isin) && x.Date >= minDate && x.Date < dayAfterMax)
+            .ToListAsync();
+
+        var existingByKey = existingPrices.ToDictionary(x => (x.StockDetails!.Isin, x.Date));
+
+        var attachedCurrencyIds = new HashSet<int>();
+        var toAdd = new List<StockPriceDto>();
+
+        foreach (var price in priceList)
         {
-            if (context.Entry(price.Currency).State == EntityState.Detached)
+            if (!stockDetailsByIsin.TryGetValue(price.Isin, out var stockDetails)) continue;
+
+            if (attachedCurrencyIds.Add(price.Currency.Id) && context.Entry(price.Currency).State == EntityState.Detached)
                 context.Attach(price.Currency);
 
-            var stockDetails = await context.StockDetails.FirstOrDefaultAsync(x => x.Isin == price.Isin);
-            if (stockDetails is null) continue;
-
             var date = price.Date.Date;
-            var existing = await context.StockPrices
-                .Include(x => x.StockDetails)
-                .FirstOrDefaultAsync(x => x.StockDetails!.Isin == price.Isin && x.Date.Date == date);
-            if (existing is null)
-            {
-                var dto = new StockPriceDto(0, stockDetails, price.PricePerUnit, date);
-                await context.StockPrices.AddAsync(dto);
-            }
-            else
+
+            if (existingByKey.TryGetValue((price.Isin, date), out var existing))
             {
                 existing.PricePerUnit = price.PricePerUnit;
                 existing.StockDetails = stockDetails;
             }
+            else
+            {
+                toAdd.Add(new StockPriceDto(0, stockDetails, price.PricePerUnit, date));
+                existingByKey[(price.Isin, date)] = toAdd[^1];
+            }
         }
+
+        if (toAdd.Count > 0)
+            await context.StockPrices.AddRangeAsync(toAdd);
 
         await context.SaveChangesAsync();
     }
@@ -141,7 +165,7 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
     {
         var stockPrice = await context.StockPrices
             .Include(x => x.StockDetails)
-            .FirstOrDefaultAsync(x => x.StockDetails!.Isin == isin && x.Date.Date == date.Date)
+            .FirstOrDefaultAsync(x => x.StockDetails!.Isin == isin && x.Date == date.Date)
             ?? throw new Exception("Update failed");
 
         var stockDetails = await GetOrCreateStockDetails(isin, currency);
