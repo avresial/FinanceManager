@@ -18,8 +18,7 @@ internal class FinancialLabelsRepository(AppDbContext context) : IFinancialLabel
         var elementToRemove = await context.FinancialLabels.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (elementToRemove is null) return false;
         context.FinancialLabels.Remove(elementToRemove);
-        await context.SaveChangesAsync(cancellationToken);
-        return true;
+        return await context.SaveChangesAsync(cancellationToken) == 1;
     }
 
     public Task<int> GetCount(CancellationToken cancellationToken = default) => context.FinancialLabels.CountAsync(cancellationToken);

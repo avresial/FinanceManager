@@ -56,7 +56,7 @@ internal class StockAccountRepository(AppDbContext context) : IAccountRepository
         return new StockAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name);
     }
     public Task<int?> GetLastAccountId() =>
-        context.Accounts.MaxAsync(x => (int?)x.AccountId);
+        context.Accounts.Where(x => x.AccountType == AccountType.Stock).MaxAsync(x => (int?)x.AccountId);
     public async Task<bool> Update(int accountId, string accountName)
     {
         var stockAccount = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Stock);
