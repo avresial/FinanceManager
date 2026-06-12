@@ -1,32 +1,91 @@
+using FinanceManager.Components.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Helpers;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.Dtos.Dashboard;
+using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Components.Features.Dashboard;
 
 public partial class Dashboard : ComponentBase
 {
     private const int _unitHeight = 130;
+
+    private DashboardOverviewDto? _overview;
+    private bool _isLoading = true;
+    private bool _hasError;
+
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; } = DateTime.UtcNow;
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required DashboardHttpClient DashboardHttpClient { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
+    [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required ILogger<Dashboard> Logger { get; set; }
 
-    protected override void OnInitialized()
+    // Card-specific models mapped from the single overview response. They are null
+    // until the first load resolves (and when the overview is unavailable), in which
+    // case the cards fall back to their existing standalone self-loading behavior.
+    private TimeSeriesCardModel? NetWorthModel => _overview is null ? null : new(_overview.NetWorthSeries);
+    private TimeSeriesCardModel? NetCashFlowModel => _overview is null ? null : new(_overview.NetCashFlowSeries);
+    private TimeSeriesCardModel? ClosingBalanceModel => _overview is null ? null : new(_overview.ClosingBalanceSeries);
+    private DistributionCardModel? LiabilitiesModel => _overview is null ? null : new(_overview.LiabilitiesPerType, _overview.LiabilitiesPerAccount);
+    private NameValueListCardModel? LabelsModel => _overview is null ? null : new(_overview.LabelsValue);
+    private DistributionCardModel? AssetsModel => _overview is null ? null : new(_overview.AssetsPerType, _overview.AssetsPerAccount);
+    private NameValueListCardModel? ExpenseModel => _overview is null ? null : new(_overview.ExpenseDistribution);
+
+    protected override async Task OnInitializedAsync()
     {
         var (Start, End) = DateRangeHelper.GetCurrentMonthRange();
-
         StartDate = Start;
         EndDate = End;
 
-        base.OnInitialized();
+        await LoadOverview();
     }
 
+    // DashboardDatePicker exposes a synchronous Action callback, so kick off the
+    // reload without awaiting; LoadOverview owns its own state and error handling.
     public void DateChanged((DateTime Start, DateTime End) changed)
     {
         StartDate = changed.Start;
         EndDate = changed.End;
-        StateHasChanged();
+        _ = LoadOverview();
     }
 
+    private async Task LoadOverview()
+    {
+        _isLoading = true;
+        _hasError = false;
+        StateHasChanged();
+
+        try
+        {
+            var user = await LoginService.GetLoggedUser();
+            if (user is null)
+            {
+                _overview = null;
+                return;
+            }
+
+            var currency = SettingsService.GetCurrency();
+
+            // Swap the held overview only after the call succeeds so cards keep
+            // rendering the previous data (and never self-load) during a reload.
+            _overview = await DashboardHttpClient.GetOverview(user.UserId, currency.Id, StartDate, EndDate);
+        }
+        catch (Exception ex)
+        {
+            _overview = null;
+            _hasError = true;
+            Logger.LogError(ex, "Error loading dashboard overview");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
 }

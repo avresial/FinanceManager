@@ -1,4 +1,5 @@
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Components.Components.Features.Dashboard.Models;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
@@ -24,6 +25,10 @@ public partial class FinancialLabelsListCard
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
     [Parameter] public CardMode CardMode { get; set; } = CardMode.List;
 
+    // When the dashboard supplies a prepared model the card renders it directly;
+    // otherwise it self-loads from the API as in standalone usage.
+    [Parameter] public NameValueListCardModel? Model { get; set; }
+
     protected override Task OnParametersSetAsync() => LoadData();
 
     private async Task LoadData()
@@ -31,6 +36,14 @@ public partial class FinancialLabelsListCard
         _isLoading = true;
         _hasError = false;
         _currency = SettingsService.GetCurrency();
+
+        if (Model is not null)
+        {
+            _data = Model.Items.Where(x => x.Value != 0).ToList();
+            _isLoading = false;
+            return;
+        }
+
         var userId = await LoginService.GetLoggedUser();
 
         try
