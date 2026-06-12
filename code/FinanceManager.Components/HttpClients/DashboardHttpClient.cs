@@ -12,7 +12,12 @@ public class DashboardHttpClient(HttpClient httpClient)
 {
     public async Task<DashboardOverviewDto?> GetOverview(int userId, int currencyId, DateTime start, DateTime end)
     {
-        string endpoint = $"{httpClient.BaseAddress}api/Dashboard/overview?userId={userId}&currencyId={currencyId}&start={start:O}&end={end:O}";
+        // Encode the round-trip dates: the "O" format contains '+' and ':', which a
+        // query-string decoder would otherwise misread (e.g. '+' becomes a space).
+        var encodedStart = Uri.EscapeDataString(start.ToString("O"));
+        var encodedEnd = Uri.EscapeDataString(end.ToString("O"));
+
+        string endpoint = $"{httpClient.BaseAddress}api/Dashboard/overview?userId={userId}&currencyId={currencyId}&start={encodedStart}&end={encodedEnd}";
         return await httpClient.GetFromJsonAsync<DashboardOverviewDto>(endpoint);
     }
 }

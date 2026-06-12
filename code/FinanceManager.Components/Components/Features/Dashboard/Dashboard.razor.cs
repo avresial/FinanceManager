@@ -17,6 +17,11 @@ public partial class Dashboard : ComponentBase
     private bool _isLoading = true;
     private bool _hasError;
 
+    // Guards against a slower, earlier reload overwriting a newer date selection:
+    // every LoadOverview claims an incrementing version and only commits its result
+    // if it is still the latest in-flight request.
+    private int _loadOverviewVersion;
+
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; } = DateTime.UtcNow;
 
@@ -57,6 +62,10 @@ public partial class Dashboard : ComponentBase
 
     private async Task LoadOverview()
     {
+        var requestVersion = Interlocked.Increment(ref _loadOverviewVersion);
+        var startDate = StartDate;
+        var endDate = EndDate;
+
         _isLoading = true;
         _hasError = false;
         StateHasChanged();
@@ -66,26 +75,41 @@ public partial class Dashboard : ComponentBase
             var user = await LoginService.GetLoggedUser();
             if (user is null)
             {
-                _overview = null;
+                if (requestVersion == _loadOverviewVersion)
+                {
+                    _overview = null;
+                }
                 return;
             }
 
             var currency = SettingsService.GetCurrency();
 
-            // Swap the held overview only after the call succeeds so cards keep
-            // rendering the previous data (and never self-load) during a reload.
-            _overview = await DashboardHttpClient.GetOverview(user.UserId, currency.Id, StartDate, EndDate);
+            var overview = await DashboardHttpClient.GetOverview(user.UserId, currency.Id, startDate, endDate);
+
+            // Swap the held overview only after the call succeeds, and only if this is
+            // still the latest reload, so cards keep rendering the previous data (and
+            // never self-load) during a reload and stay in sync with the date range.
+            if (requestVersion == _loadOverviewVersion)
+            {
+                _overview = overview;
+            }
         }
         catch (Exception ex)
         {
-            _overview = null;
-            _hasError = true;
+            if (requestVersion == _loadOverviewVersion)
+            {
+                _overview = null;
+                _hasError = true;
+            }
             Logger.LogError(ex, "Error loading dashboard overview");
         }
         finally
         {
-            _isLoading = false;
-            StateHasChanged();
+            if (requestVersion == _loadOverviewVersion)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
         }
     }
 }

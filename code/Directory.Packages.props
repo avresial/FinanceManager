@@ -15,6 +15,9 @@
     <PackageVersion Include="CsvHelper" Version="33.1.0" />
     <PackageVersion Include="GitHub.Copilot.SDK" Version="1.0.0-beta.4" />
     <PackageVersion Include="GitHubActionsTestLogger" Version="3.0.4" />
+    <!-- Pinned to patch the transitive MessagePack pulled in by Aspire.Hosting: versions
+         below 2.5.301 carry the high-severity LZ4 out-of-bounds read (GHSA-hv8m-jj95-wg3x). -->
+    <PackageVersion Include="MessagePack" Version="2.5.301" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.8" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.8" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.8" />
