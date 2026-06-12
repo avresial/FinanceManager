@@ -15,10 +15,10 @@ internal class FinancialLabelsRepository(AppDbContext context) : IFinancialLabel
 
     public async Task<bool> Delete(int id, CancellationToken cancellationToken = default)
     {
-        var elementToRemove = context.FinancialLabels.Single(x => x.Id == id);
+        var elementToRemove = await context.FinancialLabels.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (elementToRemove is null) return false;
         context.FinancialLabels.Remove(elementToRemove);
-        await context.SaveChangesAsync(cancellationToken);
-        return true;
+        return await context.SaveChangesAsync(cancellationToken) == 1;
     }
 
     public Task<int> GetCount(CancellationToken cancellationToken = default) => context.FinancialLabels.CountAsync(cancellationToken);
@@ -37,8 +37,9 @@ internal class FinancialLabelsRepository(AppDbContext context) : IFinancialLabel
 
     public async Task<bool> UpdateName(int id, string name, CancellationToken cancellationToken = default)
     {
-        var elementToRemove = context.FinancialLabels.Single(x => x.Id == id);
-        elementToRemove.Name = name;
+        var element = await context.FinancialLabels.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (element is null) return false;
+        element.Name = name;
 
         return await context.SaveChangesAsync(cancellationToken) == 1;
     }

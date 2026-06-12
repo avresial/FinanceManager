@@ -165,16 +165,10 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         var existingEntry = await context.CurrencyEntries.Include(x => x.Labels).FirstOrDefaultAsync(e => e.AccountId == entry.AccountId && e.EntryId == entry.EntryId);
         if (existingEntry is null) return false;
 
-        List<FinancialLabel> newLabels = [];
-        foreach (var label in entry.Labels)
-        {
-            var existingLabel = await context.FinancialLabels.FirstOrDefaultAsync(x => x.Id == label.Id);
-            if (existingLabel is null) continue;
-
-            newLabels.Add(existingLabel);
-        }
-
-        entry.Labels = newLabels;
+        var labelIds = entry.Labels.Select(x => x.Id).ToList();
+        entry.Labels = await context.FinancialLabels
+            .Where(x => labelIds.Contains(x.Id))
+            .ToListAsync();
 
         existingEntry.Update(entry);
         await context.SaveChangesAsync();

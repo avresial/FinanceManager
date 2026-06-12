@@ -49,12 +49,8 @@ internal class BondAccountRepository(AppDbContext context) : IAccountRepository<
         return new BondAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name);
     }
 
-    public async Task<int?> GetLastAccountId()
-    {
-        if (await context.Accounts.AnyAsync())
-            return await context.Accounts.MaxAsync(x => x.AccountId);
-        return null;
-    }
+    public Task<int?> GetLastAccountId() =>
+        context.Accounts.Where(x => x.AccountType == AccountType.Bond).MaxAsync(x => (int?)x.AccountId);
 
     public async Task<bool> Update(int accountId, string accountName)
     {
