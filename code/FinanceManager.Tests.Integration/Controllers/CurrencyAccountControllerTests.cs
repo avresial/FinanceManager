@@ -294,6 +294,25 @@ public class CurrencyAccountControllerTests(OptionsProvider optionsProvider) : C
     }
 
     [Fact]
+    public async Task GetWithDateRange_PopulatesDistinctYoungerAndOlderBoundaryEntries()
+    {
+        await SeedAccountWithEntries();
+        Authorize("testuser", _testUserId, UserRole.User);
+        var client = new CurrencyAccountHttpClient(Client);
+        var startDate = DateTime.UtcNow.Date.AddDays(-3);
+        var endDate = DateTime.UtcNow.Date;
+
+        var account = await client.GetAccountWithEntriesAsync(_testAccountId, startDate, endDate);
+
+        Assert.NotNull(account);
+        // NextOlderEntry should be entry 2 (from -5 days, before the range starting at -3)
+        Assert.NotNull(account!.NextOlderEntry);
+        Assert.Equal(2, account.NextOlderEntry!.EntryId);
+        // NextYoungerEntry should be null (no entries after the range ending at today)
+        Assert.Null(account.NextYoungerEntry);
+    }
+
+    [Fact]
     public async Task ExportCsv_ReturnsCsvFile()
     {
         await SeedAccountWithEntries();
