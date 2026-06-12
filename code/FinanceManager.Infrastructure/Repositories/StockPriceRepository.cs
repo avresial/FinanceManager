@@ -33,7 +33,7 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
 
         var stockPrices = await context.StockPrices
             .Where(x => x.StockDetails!.Isin == isin && x.Date >= twoYearsAgo)
-            .Select(x => x.Date)
+            .Select(x => x.Date.Date)
             .Distinct()
             .OrderByDescending(x => x)
             .ToListAsync();
@@ -119,7 +119,7 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
             .Where(x => isins.Contains(x.StockDetails!.Isin) && x.Date >= minDate && x.Date < dayAfterMax)
             .ToListAsync();
 
-        var existingByKey = existingPrices.ToDictionary(x => (x.StockDetails!.Isin, x.Date));
+        var existingByKey = existingPrices.ToDictionary(x => (x.StockDetails!.Isin, x.Date.Date));
 
         var attachedCurrencyIds = new HashSet<int>();
         var toAdd = new List<StockPriceDto>();
@@ -130,6 +130,9 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
 
             if (attachedCurrencyIds.Add(price.Currency.Id) && context.Entry(price.Currency).State == EntityState.Detached)
                 context.Attach(price.Currency);
+
+            if (stockDetails.Currency.Id != price.Currency.Id)
+                stockDetails.Currency = price.Currency;
 
             var date = price.Date.Date;
 
