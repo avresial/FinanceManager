@@ -61,6 +61,14 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
     }
     public async Task<bool> Delete(int accountId)
     {
+        if (context.Database.IsRelational())
+        {
+            var deleted = await context.StockEntries
+                .Where(e => e.AccountId == accountId)
+                .ExecuteDeleteAsync();
+            return deleted > 0;
+        }
+
         var entries = await context.StockEntries.Where(e => e.AccountId == accountId).ToListAsync();
         context.StockEntries.RemoveRange(entries);
         await context.SaveChangesAsync();
