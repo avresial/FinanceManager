@@ -17,6 +17,12 @@ public partial class Dashboard : ComponentBase
     private bool _isLoading = true;
     private bool _hasError;
 
+    // The date range that the currently-held _overview was loaded for. Cards render
+    // these (via DisplayStartDate/DisplayEndDate) rather than the live selection so
+    // the displayed period label always matches the displayed amounts, even mid-reload.
+    private DateTime _overviewStart;
+    private DateTime _overviewEnd;
+
     // Guards against a slower, earlier reload overwriting a newer date selection:
     // every LoadOverview claims an incrementing version and only commits its result
     // if it is still the latest in-flight request.
@@ -24,6 +30,12 @@ public partial class Dashboard : ComponentBase
 
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; } = DateTime.UtcNow;
+
+    // Dates handed to the cards: while an overview is held they track that overview's
+    // range so amounts and period labels stay paired during a reload; with no overview
+    // (first paint / self-load fallback) they fall back to the live selection.
+    private DateTime DisplayStartDate => _overview is null ? StartDate : _overviewStart;
+    private DateTime DisplayEndDate => _overview is null ? EndDate : _overviewEnd;
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required DashboardHttpClient DashboardHttpClient { get; set; }
@@ -88,10 +100,13 @@ public partial class Dashboard : ComponentBase
 
             // Swap the held overview only after the call succeeds, and only if this is
             // still the latest reload, so cards keep rendering the previous data (and
-            // never self-load) during a reload and stay in sync with the date range.
+            // never self-load) during a reload. The matching range is committed in the
+            // same step so the displayed dates and amounts always move together.
             if (requestVersion == _loadOverviewVersion)
             {
                 _overview = overview;
+                _overviewStart = startDate;
+                _overviewEnd = endDate;
             }
         }
         catch (Exception ex)

@@ -42,37 +42,37 @@
         <MudGrid Spacing="2">
 
             <MudItem xs="12">
-                <NetWorthTimeSeriesCard StartDateTime="@StartDate" EndDateTime="@EndDate" Model="@NetWorthModel" />
+                <NetWorthTimeSeriesCard StartDateTime="@DisplayStartDate" EndDateTime="@DisplayEndDate" Model="@NetWorthModel" />
             </MudItem>
 
             <MudItem xs="12" md="6">
-                <NetCashFlowOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@StartDate"
-                                         EndDateTime="@EndDate" Model="@NetCashFlowModel" />
+                <NetCashFlowOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@DisplayStartDate"
+                                         EndDateTime="@DisplayEndDate" Model="@NetCashFlowModel" />
             </MudItem>
 
             <MudItem xs="12" md="6">
-                <ClosingBalanceOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@StartDate"
-                                            EndDateTime="@EndDate" Model="@ClosingBalanceModel" />
+                <ClosingBalanceOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@DisplayStartDate"
+                                            EndDateTime="@DisplayEndDate" Model="@ClosingBalanceModel" />
             </MudItem>
 
             <MudItem xs="12" md="6" lg="4">
-                <LiabilitiesDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
-                                                     EndDateTime="@EndDate" Model="@LiabilitiesModel" />
+                <LiabilitiesDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@DisplayStartDate"
+                                                     EndDateTime="@DisplayEndDate" Model="@LiabilitiesModel" />
             </MudItem>
 
             <MudItem xs="12" md="6" lg="4">
-                <FinancialLabelsListCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
-                                         EndDateTime="@EndDate" Model="@LabelsModel" />
+                <FinancialLabelsListCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@DisplayStartDate"
+                                         EndDateTime="@DisplayEndDate" Model="@LabelsModel" />
             </MudItem>
 
             <MudItem xs="12" md="6" lg="4">
-                <AssetsDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
-                                                EndDateTime="@EndDate" Model="@AssetsModel" />
+                <AssetsDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@DisplayStartDate"
+                                                EndDateTime="@DisplayEndDate" Model="@AssetsModel" />
             </MudItem>
 
             <MudItem xs="12" md="6" lg="4">
-                <ExpenseDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@StartDate"
-                                                 EndDateTime="@EndDate" Model="@ExpenseModel" />
+                <ExpenseDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@DisplayStartDate"
+                                                 EndDateTime="@DisplayEndDate" Model="@ExpenseModel" />
             </MudItem>
 
             <MudItem xs="12" md="6" lg="4">
