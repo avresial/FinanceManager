@@ -60,6 +60,14 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
 
     public async Task<bool> Delete(int accountId)
     {
+        if (context.Database.IsRelational())
+        {
+            var deleted = await context.CurrencyEntries
+                .Where(e => e.AccountId == accountId)
+                .ExecuteDeleteAsync();
+            return deleted > 0;
+        }
+
         var entriesToRemove = await context.CurrencyEntries.Where(e => e.AccountId == accountId).ToListAsync();
         context.CurrencyEntries.RemoveRange(entriesToRemove);
         await context.SaveChangesAsync();

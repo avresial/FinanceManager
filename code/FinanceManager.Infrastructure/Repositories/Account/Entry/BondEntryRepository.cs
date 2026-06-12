@@ -63,6 +63,14 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
     public async Task<bool> Delete(int accountId)
     {
+        if (context.Database.IsRelational())
+        {
+            var deleted = await context.BondEntries
+                .Where(e => e.AccountId == accountId)
+                .ExecuteDeleteAsync();
+            return deleted > 0;
+        }
+
         var entriesToRemove = await context.BondEntries.Where(e => e.AccountId == accountId).ToListAsync();
         context.BondEntries.RemoveRange(entriesToRemove);
         await context.SaveChangesAsync();

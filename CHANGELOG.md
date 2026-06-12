@@ -9,6 +9,9 @@ rules agents must follow when updating this file.
 
 ## [Unreleased]
 
+### Changed
+- Deleting an account with many entries is now significantly faster; the server no longer loads every entry into memory before deleting. #413
+
 ### Added
 - Admin page (`/Admin/ServiceKeys`) for managing external service API credentials (Alpha Vantage, OpenFIGI); keys are persisted in the database and take effect immediately without redeployment. #358
 
