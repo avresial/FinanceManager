@@ -13,13 +13,8 @@ internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccoun
 
     public Task<int> GetAccountsCount() => context.Accounts.CountAsync();
 
-    public async Task<int?> GetLastAccountId()
-    {
-        if (await context.Accounts.AnyAsync())
-            return await context.Accounts.MaxAsync(x => x.AccountId);
-
-        return null;
-    }
+    public Task<int?> GetLastAccountId() =>
+        context.Accounts.MaxAsync(x => (int?)x.AccountId);
     public Task<int?> Add(int userId, string accountName) => Add(userId, accountName, AccountLabel.Other);
     public async Task<int?> Add(int userId, string accountName, AccountLabel accountLabel)
     {

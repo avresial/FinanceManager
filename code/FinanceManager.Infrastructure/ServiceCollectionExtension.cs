@@ -107,15 +107,8 @@ public static class ServiceCollectionExtension
             var databaseProvider = InferDatabaseProvider(connectionString,
                 configuration.GetValue("DatabaseProvider", "SqlServer") ?? "SqlServer");
 
-            services.AddDbContext<AppDbContext>((sp, options) =>
+            void ConfigureRelational(DbContextOptionsBuilder options)
             {
-                var guestDbName = GuestDatabaseNaming.TryGetGuestDatabaseName(sp);
-                if (guestDbName is not null)
-                {
-                    options.UseInMemoryDatabase(databaseName: guestDbName, sp.GetRequiredService<InMemoryDatabaseRoot>());
-                    return;
-                }
-
                 if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) ||
                     databaseProvider.Equals("Supabase", StringComparison.OrdinalIgnoreCase))
                 {
@@ -125,7 +118,28 @@ public static class ServiceCollectionExtension
                 {
                     options.UseSqlServer(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
                 }
-            });
+            }
+
+            // Guest sandbox resolves a per-user in-memory database name at request time; that
+            // per-request variability is incompatible with DbContext pooling.
+            var enableGuestSessionSandbox = configuration.GetValue("EnableGuestSessionSandbox", false);
+            if (enableGuestSessionSandbox)
+            {
+                services.AddDbContext<AppDbContext>((sp, options) =>
+                {
+                    var guestDbName = GuestDatabaseNaming.TryGetGuestDatabaseName(sp);
+                    if (guestDbName is not null)
+                    {
+                        options.UseInMemoryDatabase(databaseName: guestDbName, sp.GetRequiredService<InMemoryDatabaseRoot>());
+                        return;
+                    }
+                    ConfigureRelational(options);
+                });
+            }
+            else
+            {
+                services.AddDbContextPool<AppDbContext>((_, options) => ConfigureRelational(options));
+            }
         }
 
         return services;
