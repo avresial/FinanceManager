@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Changed
+- Adding, editing, or deleting a historical transaction on a large account is now significantly faster; the running-balance recalculation is performed as a single database statement instead of one update per row. #412
 - Deleting an account with many entries is now significantly faster; the server no longer loads every entry into memory before deleting. #413
 
 ### Added
