@@ -269,17 +269,23 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             .ThenBy(e => e.EntryId)
             .ToListAsync();
 
-        foreach (var bondGroup in entries.GroupBy(e => e.BondDetailsId))
-        {
-            var anchor = await context.BondEntries
+        if (entries.Count == 0) return;
+
+        var bondIds = entries.Select(e => e.BondDetailsId).Distinct().ToList();
+
+        // Single query for all bond anchors instead of one per BondDetailsId group.
+        var anchors = (await context.BondEntries
                 .AsNoTracking()
-                .Where(e => e.AccountId == accountId && e.BondDetailsId == bondGroup.Key && e.PostingDate < startDate)
+                .Where(e => e.AccountId == accountId && bondIds.Contains(e.BondDetailsId) && e.PostingDate < startDate)
                 .OrderByDescending(e => e.PostingDate)
                 .ThenByDescending(e => e.EntryId)
-                .Select(e => (decimal?)e.Value)
-                .FirstOrDefaultAsync();
+                .ToListAsync())
+            .GroupBy(e => e.BondDetailsId)
+            .ToDictionary(g => g.Key, g => g.First().Value);
 
-            decimal running = anchor ?? 0m;
+        foreach (var bondGroup in entries.GroupBy(e => e.BondDetailsId))
+        {
+            decimal running = anchors.TryGetValue(bondGroup.Key, out var anchor) ? anchor : 0m;
             foreach (var e in bondGroup.OrderBy(e => e.PostingDate).ThenBy(e => e.EntryId))
             {
                 running += e.ValueChange;
