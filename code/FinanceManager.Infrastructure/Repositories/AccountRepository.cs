@@ -76,7 +76,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
                 var entries = await currencyEntryRepository.Get(resultAccount.AccountId, dateStart, dateEnd).ToListAsync();
 
                 var nextOlderEntry = await currencyEntryRepository.GetNextOlder(resultAccount.AccountId, dateStart);
-                var nextYoungerEntry = await currencyEntryRepository.GetNextOlder(resultAccount.AccountId, dateStart);
+                var nextYoungerEntry = await currencyEntryRepository.GetNextYounger(resultAccount.AccountId, dateStart);
 
                 if (entries.Count == 0 && nextOlderEntry is not null)
                     entries = [nextOlderEntry];
