@@ -184,75 +184,112 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
     public async Task RecalculateValues(int accountId, int entryId)
     {
-        var entry = await context.BondEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
-        if (entry is null) return;
+        var startDate = await context.BondEntries
+            .AsNoTracking()
+            .Where(e => e.AccountId == accountId && e.EntryId == entryId)
+            .Select(e => (DateTime?)e.PostingDate)
+            .FirstOrDefaultAsync();
 
-        // Get all entries from the posting date onwards, ordered by date and id
-        var entriesToUpdate = await Get(accountId, entry.PostingDate, DateTime.UtcNow)
-            .OrderBy(x => x.PostingDate)
-            .ThenBy(x => x.EntryId)
-            .ToListAsync();
+        if (startDate is not DateTime date) return;
 
-        // Group by BondDetailsId to calculate values independently per bond
-        var entriesByBond = entriesToUpdate.GroupBy(e => e.BondDetailsId);
-        foreach (var bondGroup in entriesByBond)
-        {
-            // Get the previous entry for this specific bond
-            var previousEntry = await context.BondEntries
-                .Where(x => x.AccountId == accountId &&
-                           x.BondDetailsId == bondGroup.Key &&
-                           x.PostingDate < entry.PostingDate
-                           && x.EntryId != entry.EntryId)
-                .OrderByDescending(x => x.PostingDate)
-                .ThenByDescending(x => x.EntryId)
-                .FirstOrDefaultAsync();
-
-            // Recalculate values for this bond's entries
-            foreach (var entryToUpdate in bondGroup.OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
-            {
-                if (previousEntry is not null)
-                    entryToUpdate.Value = previousEntry.Value + entryToUpdate.ValueChange;
-                else
-                    entryToUpdate.Value = entryToUpdate.ValueChange;
-
-                previousEntry = entryToUpdate;
-            }
-        }
-
-        await context.SaveChangesAsync();
+        await RecalculateValues(accountId, date);
     }
 
     private async Task RecalculateValues(int accountId, DateTime startDate)
     {
-        // Get all entries from the start date onwards, ordered by date and id
-        var entriesToUpdate = await Get(accountId, startDate, DateTime.UtcNow)
-            .OrderBy(x => x.PostingDate)
-            .ThenBy(x => x.EntryId)
+        if (!context.Database.IsRelational())
+        {
+            await RecalculateValuesInMemory(accountId, startDate);
+            return;
+        }
+
+        if (context.Database.ProviderName?.StartsWith("Npgsql") == true)
+        {
+            // DISTINCT ON picks the most-recent entry per BondDetailsId before startDate as the anchor.
+            await context.Database.ExecuteSqlAsync($"""
+                WITH anchors AS (
+                    SELECT DISTINCT ON ("BondDetailsId") "BondDetailsId", "Value" AS "AnchorValue"
+                    FROM "BondEntries"
+                    WHERE "AccountId" = {accountId} AND "PostingDate" < {startDate}
+                    ORDER BY "BondDetailsId", "PostingDate" DESC, "EntryId" DESC
+                ),
+                running AS (
+                    SELECT e."EntryId",
+                           COALESCE(a."AnchorValue", 0) + SUM(e."ValueChange") OVER (
+                               PARTITION BY e."BondDetailsId"
+                               ORDER BY e."PostingDate", e."EntryId"
+                               ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                           ) AS "NewValue"
+                    FROM "BondEntries" e
+                    LEFT JOIN anchors a ON a."BondDetailsId" = e."BondDetailsId"
+                    WHERE e."AccountId" = {accountId} AND e."PostingDate" >= {startDate}
+                )
+                UPDATE "BondEntries" AS e
+                SET "Value" = r."NewValue"
+                FROM running AS r
+                WHERE e."EntryId" = r."EntryId"
+                """);
+        }
+        else
+        {
+            await context.Database.ExecuteSqlAsync($"""
+                WITH anchors_raw AS (
+                    SELECT BondDetailsId, Value AS AnchorValue,
+                           ROW_NUMBER() OVER (PARTITION BY BondDetailsId ORDER BY PostingDate DESC, EntryId DESC) AS rn
+                    FROM BondEntries
+                    WHERE AccountId = {accountId} AND PostingDate < {startDate}
+                ),
+                anchors AS (
+                    SELECT BondDetailsId, AnchorValue FROM anchors_raw WHERE rn = 1
+                ),
+                running AS (
+                    SELECT e.EntryId,
+                           COALESCE(a.AnchorValue, 0) + SUM(e.ValueChange) OVER (
+                               PARTITION BY e.BondDetailsId
+                               ORDER BY e.PostingDate, e.EntryId
+                               ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                           ) AS NewValue
+                    FROM BondEntries e
+                    LEFT JOIN anchors a ON a.BondDetailsId = e.BondDetailsId
+                    WHERE e.AccountId = {accountId} AND e.PostingDate >= {startDate}
+                )
+                UPDATE e
+                SET Value = r.NewValue
+                FROM BondEntries e
+                INNER JOIN running r ON e.EntryId = r.EntryId
+                """);
+        }
+    }
+
+    private async Task RecalculateValuesInMemory(int accountId, DateTime startDate)
+    {
+        var entries = await context.BondEntries
+            .Where(e => e.AccountId == accountId && e.PostingDate >= startDate)
+            .OrderBy(e => e.PostingDate)
+            .ThenBy(e => e.EntryId)
             .ToListAsync();
 
-        // Group by BondDetailsId to calculate values independently per bond
-        var entriesByBond = entriesToUpdate.GroupBy(e => e.BondDetailsId);
+        if (entries.Count == 0) return;
 
-        foreach (var bondGroup in entriesByBond)
+        var bondIds = entries.Select(e => e.BondDetailsId).Distinct().ToList();
+
+        // Single query for all bond anchors instead of one per BondDetailsId group.
+        var anchors = (await context.BondEntries
+                .AsNoTracking()
+                .Where(e => e.AccountId == accountId && bondIds.Contains(e.BondDetailsId) && e.PostingDate < startDate)
+                .OrderByDescending(e => e.PostingDate)
+                .ThenByDescending(e => e.EntryId)
+                .ToListAsync())
+            .GroupBy(e => e.BondDetailsId)
+            .ToDictionary(g => g.Key, g => g.First().Value);
+
+        foreach (var bondGroup in entries.GroupBy(e => e.BondDetailsId))
         {
-            // Get the previous entry for this specific bond
-            var previousEntry = await context.BondEntries
-                .Where(x => x.AccountId == accountId &&
-                           x.BondDetailsId == bondGroup.Key &&
-                           x.PostingDate < startDate)
-                .OrderByDescending(x => x.PostingDate)
-                .ThenByDescending(x => x.EntryId)
-                .FirstOrDefaultAsync();
-
-            // Recalculate values for this bond's entries
-            foreach (var entryToUpdate in bondGroup.OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
+            decimal running = anchors.TryGetValue(bondGroup.Key, out var anchor) ? anchor : 0m;
+            foreach (var e in bondGroup.OrderBy(e => e.PostingDate).ThenBy(e => e.EntryId))
             {
-                if (previousEntry is not null)
-                    entryToUpdate.Value = previousEntry.Value + entryToUpdate.ValueChange;
-                else
-                    entryToUpdate.Value = entryToUpdate.ValueChange;
-
-                previousEntry = entryToUpdate;
+                running += e.ValueChange;
+                e.Value = running;
             }
         }
 

@@ -221,24 +221,80 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
 
     public async Task RecalculateValues(int accountId, int entryId)
     {
-        var entry = await context.StockEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
-        if (entry is null) return;
+        var entryInfo = await context.StockEntries
+            .AsNoTracking()
+            .Where(e => e.AccountId == accountId && e.EntryId == entryId)
+            .Select(e => new { e.PostingDate, e.Isin })
+            .FirstOrDefaultAsync();
 
-        var previousEntries = await ((IStockAccountEntryRepository<StockAccountEntry>)this).GetNextOlder(accountId, entry.PostingDate);
+        if (entryInfo is null) return;
 
-        StockAccountEntry? previousEntry = previousEntries.ContainsKey(entry.Isin) ? previousEntries[entry.Isin] : null;
+        var anchor = await context.StockEntries
+            .AsNoTracking()
+            .Where(e => e.AccountId == accountId && e.Isin == entryInfo.Isin && e.PostingDate < entryInfo.PostingDate)
+            .OrderByDescending(e => e.PostingDate)
+            .ThenByDescending(e => e.EntryId)
+            .Select(e => (decimal?)e.Value)
+            .FirstOrDefaultAsync();
 
-        await foreach (var entryToUpdate in Get(accountId, entry.Isin, entry.PostingDate, DateTime.UtcNow).OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
+        if (!context.Database.IsRelational())
         {
-            if (previousEntry is not null)
-                entryToUpdate.Value = previousEntry.Value + entryToUpdate.ValueChange;
-            else
-                entryToUpdate.Value = entryToUpdate.ValueChange;
+            var entries = await context.StockEntries
+                .Where(e => e.AccountId == accountId && e.Isin == entryInfo.Isin && e.PostingDate >= entryInfo.PostingDate)
+                .OrderBy(e => e.PostingDate)
+                .ThenBy(e => e.EntryId)
+                .ToListAsync();
 
-            previousEntry = entryToUpdate;
+            decimal running = anchor ?? 0m;
+            foreach (var e in entries)
+            {
+                running += e.ValueChange;
+                e.Value = running;
+            }
+            await context.SaveChangesAsync();
+            return;
         }
 
-        await context.SaveChangesAsync();
+        if (context.Database.ProviderName?.StartsWith("Npgsql") == true)
+        {
+            await context.Database.ExecuteSqlAsync($"""
+                WITH running AS (
+                    SELECT "EntryId",
+                           {anchor ?? 0m} + SUM("ValueChange") OVER (
+                               ORDER BY "PostingDate", "EntryId"
+                               ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                           ) AS "NewValue"
+                    FROM "StockEntries"
+                    WHERE "AccountId" = {accountId}
+                      AND "Isin" = {entryInfo.Isin}
+                      AND "PostingDate" >= {entryInfo.PostingDate}
+                )
+                UPDATE "StockEntries" AS e
+                SET "Value" = r."NewValue"
+                FROM running AS r
+                WHERE e."EntryId" = r."EntryId"
+                """);
+        }
+        else
+        {
+            await context.Database.ExecuteSqlAsync($"""
+                WITH running AS (
+                    SELECT EntryId,
+                           {anchor ?? 0m} + SUM(ValueChange) OVER (
+                               ORDER BY PostingDate, EntryId
+                               ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                           ) AS NewValue
+                    FROM StockEntries
+                    WHERE AccountId = {accountId}
+                      AND Isin = {entryInfo.Isin}
+                      AND PostingDate >= {entryInfo.PostingDate}
+                )
+                UPDATE e
+                SET Value = r.NewValue
+                FROM StockEntries AS e
+                INNER JOIN running AS r ON e.EntryId = r.EntryId
+                """);
+        }
     }
     public async Task<bool> AddLabel(int entryId, int labelId)
     {
