@@ -43,6 +43,12 @@ public class BondEntryHttpClient(HttpClient httpClient)
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<bool> RecalculateBalanceAsync(int accountId)
+    {
+        var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/BondEntry/Recalculate/{accountId}", null);
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<bool> UpdateEntryAsync(UpdateBondAccountEntry entry)
     {
         var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/BondEntry", entry);

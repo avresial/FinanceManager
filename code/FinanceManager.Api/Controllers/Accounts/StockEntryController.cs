@@ -78,6 +78,20 @@ public class StockEntryController(
         return Ok(await stockAccountEntryRepository.Delete(accountId, entryId));
     }
 
+    [HttpPost("Recalculate/{accountId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RecalculateBalance(int accountId)
+    {
+        var account = await stockAccountRepository.Get(accountId);
+        if (account is null) return NotFound();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+
+        await stockAccountEntryRepository.RecalculateValues(accountId);
+        return Ok();
+    }
+
     [HttpPut("Update")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockAccountEntryDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

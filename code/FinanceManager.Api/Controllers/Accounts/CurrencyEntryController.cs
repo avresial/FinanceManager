@@ -98,6 +98,20 @@ public class CurrencyEntryController(
         return Ok(await accountEntryRepository.Delete(accountId, entryId));
     }
 
+    [HttpPost("Recalculate/{accountId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RecalculateBalance(int accountId)
+    {
+        var account = await accountRepository.Get(accountId);
+        if (account is null) return NotFound();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+
+        await accountEntryRepository.RecalculateValues(accountId);
+        return Ok();
+    }
+
     [HttpPut]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountEntryDto))]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

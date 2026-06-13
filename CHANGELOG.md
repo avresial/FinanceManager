@@ -22,6 +22,7 @@ rules agents must follow when updating this file.
 - Stock account per-ISIN boundary lookups (`GetNextOlder`/`GetNextYounger`), used on the running-balance recalculation hot write path, now resolve every ISIN with one grouped query plus a single fetch instead of one query per ISIN; `GetNextYounger` also gains the missing account filter so it no longer scans every account's entries for the ISIN list. #410
 
 ### Added
+- "Recalculate balance" action on the account management screen for currency, stock and bond accounts that rebuilds every entry's running balance from its value-change series (per instrument for stock/bond), repairing accounts whose stored balances drifted — e.g. legacy imports where each entry's value equals its value change. #435
 - Admin page (`/Admin/ServiceKeys`) for managing external service API credentials (Alpha Vantage, OpenFIGI); keys are persisted in the database and take effect immediately without redeployment. #358
 
 ### Changed

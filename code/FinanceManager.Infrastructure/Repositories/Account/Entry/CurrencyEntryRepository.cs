@@ -341,6 +341,23 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         await RecalculateValues(accountId, date);
     }
 
+    public async Task RecalculateValues(int accountId)
+    {
+        // Recalculate from the oldest entry: the anchor before it is empty, so the whole account is
+        // rebuilt from a zero running balance.
+        var startDate = await context.CurrencyEntries
+            .AsNoTracking()
+            .Where(e => e.AccountId == accountId)
+            .OrderBy(e => e.PostingDate)
+            .ThenBy(e => e.EntryId)
+            .Select(e => (DateTime?)e.PostingDate)
+            .FirstOrDefaultAsync();
+
+        if (startDate is not DateTime date) return;
+
+        await RecalculateValues(accountId, date);
+    }
+
     private async Task RecalculateValues(int accountId, DateTime startDate)
     {
         var anchor = await context.CurrencyEntries

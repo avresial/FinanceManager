@@ -330,6 +330,32 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
         return true;
     }
 
+    public async Task RecalculateValues(int accountId)
+    {
+        // Each ISIN holds an independent running balance, so recalculate every instrument separately
+        // from its own oldest entry (which anchors at a zero running balance).
+        var isins = await context.StockEntries
+            .AsNoTracking()
+            .Where(e => e.AccountId == accountId)
+            .Select(e => e.Isin)
+            .Distinct()
+            .ToListAsync();
+
+        foreach (var isin in isins)
+        {
+            var oldestEntryId = await context.StockEntries
+                .AsNoTracking()
+                .Where(e => e.AccountId == accountId && e.Isin == isin)
+                .OrderBy(e => e.PostingDate)
+                .ThenBy(e => e.EntryId)
+                .Select(e => (int?)e.EntryId)
+                .FirstOrDefaultAsync();
+
+            if (oldestEntryId is int entryId)
+                await RecalculateValues(accountId, entryId);
+        }
+    }
+
     public async Task RecalculateValues(int accountId, int entryId)
     {
         var entryInfo = await context.StockEntries

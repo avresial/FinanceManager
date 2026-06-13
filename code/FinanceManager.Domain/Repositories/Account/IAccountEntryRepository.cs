@@ -43,6 +43,14 @@ public interface IAccountEntryRepository<T>
     Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default);
 
     Task RecalculateValues(int accountId, int entryId);
+
+    /// <summary>
+    /// Recomputes the running <c>Value</c> of every entry in the account from its <c>ValueChange</c>
+    /// series, anchored at zero from the oldest entry. Instrument-aware repositories (stock/bond)
+    /// recalculate each instrument independently. Used to repair accounts whose stored balances drifted
+    /// (e.g. legacy imports that never ran a recalculation pass).
+    /// </summary>
+    Task RecalculateValues(int accountId);
     Task<bool> Add(T entry, bool recalculate = true);
     Task<bool> Add(IEnumerable<T> entries, bool recalculate = true);
     Task<bool> AddLabel(int entryId, int labelId);
