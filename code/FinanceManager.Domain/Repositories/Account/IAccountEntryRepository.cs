@@ -15,6 +15,14 @@ public interface IAccountEntryRepository<T>
     Task<T?> GetOldest(int accountId);
     Task<int> GetCount(int accountId);
 
+    /// <summary>
+    /// Counts entries of this type for each of the supplied users in a single grouped query that joins the
+    /// entry table to the accounts table on <c>AccountId</c> and groups by <c>UserId</c>. Users with no
+    /// entries of this type are omitted from the result, so callers should treat a missing key as a count
+    /// of zero. Used for plan record-capacity calculations.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default);
+
     Task RecalculateValues(int accountId, int entryId);
     Task<bool> Add(T entry, bool recalculate = true);
     Task<bool> Add(IEnumerable<T> entries, bool recalculate = true);

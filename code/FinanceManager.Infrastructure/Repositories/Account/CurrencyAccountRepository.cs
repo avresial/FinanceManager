@@ -46,21 +46,6 @@ internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccoun
         .Select(x => new AvailableAccount(x.AccountId, x.Name))
         .AsAsyncEnumerable();
 
-    public async Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default)
-    {
-        if (userIds.Count == 0) return new Dictionary<int, int>();
-
-        var counts = await (
-            from account in context.Accounts
-            where account.AccountType == AccountType.Currency && userIds.Contains(account.UserId)
-            join entry in context.CurrencyEntries on account.AccountId equals entry.AccountId
-            group entry by account.UserId into grouped
-            select new { UserId = grouped.Key, Count = grouped.Count() })
-            .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken);
-
-        return counts;
-    }
-
     public Task<bool> Exists(int accountId) => context.Accounts.AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
 
     public async Task<CurrencyAccount?> Get(int accountId)

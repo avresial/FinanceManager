@@ -1,8 +1,10 @@
 using FinanceManager.Application.FinancialAccounts.Currencies.Import;
 using FinanceManager.Application.FinancialAccounts.Shared.Imports;
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Imports;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
@@ -19,6 +21,8 @@ public class CurrencyAccountImportServiceTests
 {
     private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _mockAccountRepository;
     private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _mockAccountEntryRepository;
+    private readonly Mock<IStockAccountEntryRepository<StockAccountEntry>> _mockStockEntryRepository;
+    private readonly Mock<IBondAccountEntryRepository<BondAccountEntry>> _mockBondEntryRepository;
     private readonly Mock<IUserRepository> _mockUserRepository;
     private readonly UserPlanVerifier _userPlanVerifier;
     private readonly CurrencyAccountImportService _service;
@@ -27,16 +31,23 @@ public class CurrencyAccountImportServiceTests
     {
         _mockAccountRepository = new Mock<ICurrencyAccountRepository<CurrencyAccount>>();
         _mockAccountEntryRepository = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        _mockStockEntryRepository = new Mock<IStockAccountEntryRepository<StockAccountEntry>>();
+        _mockBondEntryRepository = new Mock<IBondAccountEntryRepository<BondAccountEntry>>();
 
         _mockUserRepository = new Mock<IUserRepository>();
         var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = PricingLevel.Premium, CreationDate = DateTime.UtcNow };
         _mockUserRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
 
         // create a real UserPlanVerifier so its CanAddMoreEntries method can be used in test
-        _userPlanVerifier = new UserPlanVerifier(_mockAccountRepository.Object, _mockUserRepository.Object);
+        _userPlanVerifier = new UserPlanVerifier(_mockAccountRepository.Object, _mockAccountEntryRepository.Object,
+            _mockStockEntryRepository.Object, _mockBondEntryRepository.Object, _mockUserRepository.Object);
 
-        // Default: users have no recorded entries, so plan checks pass unless a test overrides this.
-        _mockAccountRepository.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+        // Default: users have no recorded entries of any type, so plan checks pass unless a test overrides this.
+        _mockAccountEntryRepository.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int>());
+        _mockStockEntryRepository.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int>());
+        _mockBondEntryRepository.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, int>());
 
         var mockLogger = new Mock<ILogger<CurrencyAccountImportService>>();
@@ -119,8 +130,8 @@ public class CurrencyAccountImportServiceTests
         var account = new CurrencyAccount(userId, accountId, "Test");
         _mockAccountRepository.Setup(x => x.Get(accountId)).ReturnsAsync(account);
 
-        // Already at the Free plan limit
-        _mockAccountRepository.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+        // Already at the Free plan limit (1000) from currency entries alone
+        _mockAccountEntryRepository.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, int> { [userId] = 1000 });
 
         var entries = new[] { new CurrencyEntryImport(DateTime.UtcNow, 100m, "Test") };

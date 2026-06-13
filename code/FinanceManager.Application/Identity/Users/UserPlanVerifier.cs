@@ -1,15 +1,20 @@
-﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 
 namespace FinanceManager.Application.Identity.Users;
 
 public class UserPlanVerifier(ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
+    IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,
+    IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository,
+    IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
     IUserRepository userRepository) : IUserPlanVerifier
 {
     public async Task<int> GetUsedRecordsCapacity(int userId)
     {
-        var counts = await currencyAccountRepository.GetEntriesCountPerUser([userId]);
+        var counts = await GetUsedRecordsCapacity([userId]);
         return counts.TryGetValue(userId, out var count) ? count : 0;
     }
 
@@ -17,8 +22,16 @@ public class UserPlanVerifier(ICurrencyAccountRepository<CurrencyAccount> curren
     {
         if (userIds.Count == 0) return new Dictionary<int, int>();
 
-        var counts = await currencyAccountRepository.GetEntriesCountPerUser(userIds);
-        return userIds.Distinct().ToDictionary(id => id, id => counts.TryGetValue(id, out var count) ? count : 0);
+        // Used capacity is every record the user owns, summed across all account types — currency, stock and bond.
+        var currencyCounts = await currencyAccountEntryRepository.GetEntriesCountPerUser(userIds);
+        var stockCounts = await stockAccountEntryRepository.GetEntriesCountPerUser(userIds);
+        var bondCounts = await bondAccountEntryRepository.GetEntriesCountPerUser(userIds);
+
+        return userIds.Distinct().ToDictionary(
+            id => id,
+            id => CountFor(currencyCounts, id) + CountFor(stockCounts, id) + CountFor(bondCounts, id));
+
+        static int CountFor(IReadOnlyDictionary<int, int> counts, int id) => counts.TryGetValue(id, out var count) ? count : 0;
     }
 
     public async Task<bool> CanAddMoreEntries(int userId, int entriesCount = 1)
