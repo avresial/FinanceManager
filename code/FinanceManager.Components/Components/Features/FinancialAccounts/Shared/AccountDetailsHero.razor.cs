@@ -25,6 +25,11 @@ public partial class AccountDetailsHero
 
     private readonly string[] _ranges = ["Month", "1M", "3M", "6M", "YTD"];
 
+    private MudDateRangePicker? _customDateRangePicker;
+
+    private Task OpenCustomDateRangePicker() =>
+        _customDateRangePicker?.OpenAsync() ?? Task.CompletedTask;
+
     private static readonly ApexChartOptions<TimeSeriesModel> _heroChartOptions = new()
     {
         Chart = new Chart
