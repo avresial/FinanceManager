@@ -148,27 +148,15 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
 
     async Task<Dictionary<string, StockAccountEntry>> IStockAccountEntryRepository<StockAccountEntry>.GetNextOlder(int accountId, DateTime date)
     {
-        Dictionary<string, StockAccountEntry> result = [];
+        // Per ISIN held by this account, find the boundary date of the youngest entry
+        // strictly older than the cutoff. One grouped query instead of one query per ISIN.
+        var boundaries = await context.StockEntries
+            .Where(e => e.AccountId == accountId && e.PostingDate < date)
+            .GroupBy(e => e.Isin)
+            .Select(g => new { Isin = g.Key, Date = g.Max(e => e.PostingDate) })
+            .ToListAsync();
 
-        var isins = await context.StockEntries
-                                .Where(e => e.AccountId == accountId)
-                                .Select(m => m.Isin)
-                                .Distinct()
-                                .ToListAsync();
-
-        foreach (var isin in isins)
-        {
-            var nextOlder = await context.StockEntries
-                   .Where(e => e.Isin == isin && e.AccountId == accountId && e.PostingDate < date)
-                   .OrderByDescending(e => e.PostingDate)
-                   .FirstOrDefaultAsync();
-
-            if (nextOlder is null) continue;
-
-            result.Add(isin, nextOlder);
-        }
-
-        return result;
+        return await ResolveBoundaryEntries(accountId, boundaries.Select(b => (b.Isin, b.Date)).ToList());
     }
 
     public async Task<StockAccountEntry?> GetNextYounger(int accountId, int entryId)
@@ -189,19 +177,41 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
 
     async Task<Dictionary<string, StockAccountEntry>> IStockAccountEntryRepository<StockAccountEntry>.GetNextYounger(int accountId, DateTime date)
     {
+        // Per ISIN held by this account, find the boundary date of the oldest entry
+        // strictly younger than the cutoff. The AccountId filter is essential: without
+        // it the ISIN scan leaks across every account in the table.
+        var boundaries = await context.StockEntries
+            .Where(e => e.AccountId == accountId && e.PostingDate > date)
+            .GroupBy(e => e.Isin)
+            .Select(g => new { Isin = g.Key, Date = g.Min(e => e.PostingDate) })
+            .ToListAsync();
+
+        return await ResolveBoundaryEntries(accountId, boundaries.Select(b => (b.Isin, b.Date)).ToList());
+    }
+
+    // Resolves each (ISIN, boundary date) pair to its entry with a single fetch of the
+    // candidate rows, replacing the previous per-ISIN N+1 round trips.
+    private async Task<Dictionary<string, StockAccountEntry>> ResolveBoundaryEntries(
+        int accountId,
+        IReadOnlyList<(string Isin, DateTime Date)> boundaries)
+    {
         Dictionary<string, StockAccountEntry> result = [];
-        var isins = await context.StockEntries.Select(m => m.Isin).Distinct().ToListAsync();
+        if (boundaries.Count == 0) return result;
 
-        foreach (var isin in isins)
+        var dates = boundaries.Select(b => b.Date).Distinct().ToList();
+
+        var rows = await context.StockEntries
+            .Where(e => e.AccountId == accountId && dates.Contains(e.PostingDate))
+            .ToListAsync();
+
+        var byIsinDate = rows
+            .GroupBy(e => (e.Isin, e.PostingDate))
+            .ToDictionary(g => g.Key, g => g.First());
+
+        foreach (var (isin, date) in boundaries)
         {
-            var nextOlder = await context.StockEntries
-                   .Where(e => e.Isin == isin && e.AccountId == accountId && e.PostingDate > date)
-                   .OrderBy(e => e.PostingDate)
-                   .FirstOrDefaultAsync();
-
-            if (nextOlder is null) continue;
-
-            result.Add(isin, nextOlder);
+            if (byIsinDate.TryGetValue((isin, date), out var entry))
+                result[isin] = entry;
         }
 
         return result;
