@@ -118,11 +118,18 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
 
     public async Task<int> GetCount(int accountId) => await context.CurrencyEntries.CountAsync(x => x.AccountId == accountId);
 
-    public Task<int> GetCountForUser(int userId, CancellationToken cancellationToken = default) =>
-        (from entry in context.CurrencyEntries
-         join account in context.Accounts on entry.AccountId equals account.AccountId
-         where account.UserId == userId
-         select entry).CountAsync(cancellationToken);
+    public async Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default)
+    {
+        if (userIds.Count == 0) return new Dictionary<int, int>();
+
+        return await (
+            from entry in context.CurrencyEntries
+            join account in context.Accounts on entry.AccountId equals account.AccountId
+            where userIds.Contains(account.UserId)
+            group entry by account.UserId into grouped
+            select new { UserId = grouped.Key, Count = grouped.Count() })
+            .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken);
+    }
 
     public async Task<CurrencyAccountEntry?> GetNextOlder(int accountId, int entryId)
     {

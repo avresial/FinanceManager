@@ -26,12 +26,15 @@ public class UserPlanVerifierTests
         _currencyAccountRepositoryMock.Object, _currencyEntryRepositoryMock.Object,
         _stockEntryRepositoryMock.Object, _bondEntryRepositoryMock.Object, _userRepositoryMock.Object);
 
-    // Used capacity is the sum of the user's entries across every account type. Unset types default to 0.
+    // Used capacity is the sum of the user's entries across every account type, so a test fixes a count per type.
     private void SetupUsedEntries(int userId, int currency = 0, int stock = 0, int bond = 0)
     {
-        _currencyEntryRepositoryMock.Setup(repo => repo.GetCountForUser(userId, It.IsAny<CancellationToken>())).ReturnsAsync(currency);
-        _stockEntryRepositoryMock.Setup(repo => repo.GetCountForUser(userId, It.IsAny<CancellationToken>())).ReturnsAsync(stock);
-        _bondEntryRepositoryMock.Setup(repo => repo.GetCountForUser(userId, It.IsAny<CancellationToken>())).ReturnsAsync(bond);
+        _currencyEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int> { [userId] = currency });
+        _stockEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int> { [userId] = stock });
+        _bondEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int> { [userId] = bond });
     }
 
     [Fact]
@@ -49,18 +52,6 @@ public class UserPlanVerifierTests
     }
 
     [Fact]
-    public async Task GetUsedRecordsCapacity_NoEntries_ReturnsZero()
-    {
-        // Arrange - no setup: every entry type defaults to a count of 0
-
-        // Act
-        var result = await _userPlanVerifier.GetUsedRecordsCapacity(1);
-
-        // Assert
-        Assert.Equal(0, result);
-    }
-
-    [Fact]
     public async Task GetUsedRecordsCapacity_CountsStockEntries_EvenWithoutCurrencyEntries()
     {
         // Arrange
@@ -72,6 +63,58 @@ public class UserPlanVerifierTests
 
         // Assert
         Assert.Equal(42, result);
+    }
+
+    [Fact]
+    public async Task GetUsedRecordsCapacity_NoEntries_ReturnsZero()
+    {
+        // Arrange
+        var userId = 1;
+        SetupUsedEntries(userId);
+
+        // Act
+        var result = await _userPlanVerifier.GetUsedRecordsCapacity(userId);
+
+        // Assert
+        Assert.Equal(0, result);
+    }
+
+    [Fact]
+    public async Task GetUsedRecordsCapacity_Batch_SumsPerUserAcrossTypes_AndZeroDefaults()
+    {
+        // Arrange - user 1 has a mix of all types, user 2 only stock, user 3 nothing.
+        var userIds = new[] { 1, 2, 3 };
+        _currencyEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int> { [1] = 100 });
+        _stockEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int> { [1] = 25, [2] = 50 });
+        _bondEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int> { [1] = 5 });
+
+        // Act
+        var result = await _userPlanVerifier.GetUsedRecordsCapacity(userIds);
+
+        // Assert
+        Assert.Equal(3, result.Count);
+        Assert.Equal(130, result[1]);
+        Assert.Equal(50, result[2]);
+        Assert.Equal(0, result[3]);
+    }
+
+    [Fact]
+    public async Task GetUsedRecordsCapacity_Batch_EmptyInput_ReturnsEmpty()
+    {
+        // Act
+        var result = await _userPlanVerifier.GetUsedRecordsCapacity(Array.Empty<int>());
+
+        // Assert
+        Assert.Empty(result);
+        _currencyEntryRepositoryMock.Verify(repo => repo.GetEntriesCountPerUser(
+            It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()), Times.Never);
+        _stockEntryRepositoryMock.Verify(repo => repo.GetEntriesCountPerUser(
+            It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()), Times.Never);
+        _bondEntryRepositoryMock.Verify(repo => repo.GetEntriesCountPerUser(
+            It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Theory]

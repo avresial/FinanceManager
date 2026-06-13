@@ -16,11 +16,12 @@ public interface IAccountEntryRepository<T>
     Task<int> GetCount(int accountId);
 
     /// <summary>
-    /// Counts every entry the user owns across all of their accounts of this entry type, computed with a
-    /// single query that joins the entry table to the accounts table on <c>AccountId</c> and filters by
-    /// <c>UserId</c>. Used for plan record-capacity calculations.
+    /// Counts entries of this type for each of the supplied users in a single grouped query that joins the
+    /// entry table to the accounts table on <c>AccountId</c> and groups by <c>UserId</c>. Users with no
+    /// entries of this type are omitted from the result, so callers should treat a missing key as a count
+    /// of zero. Used for plan record-capacity calculations.
     /// </summary>
-    Task<int> GetCountForUser(int userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default);
 
     Task RecalculateValues(int accountId, int entryId);
     Task<bool> Add(T entry, bool recalculate = true);
