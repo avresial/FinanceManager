@@ -14,7 +14,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         {
             Description = entry.Description,
             ContractorDetails = entry.ContractorDetails,
-            Labels = entry.Labels,
+            Labels = await ResolveTrackedLabels(entry.Labels),
         };
 
         context.CurrencyEntries.Add(newAccountEntry);
@@ -25,15 +25,25 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
     }
     public async Task<bool> Add(IEnumerable<CurrencyAccountEntry> entries, bool recalculate = true)
     {
+        var entryList = entries as IList<CurrencyAccountEntry> ?? entries.ToList();
+
+        // Re-resolve already-persisted labels to context-tracked instances in one query so EF reuses the
+        // existing rows instead of trying to INSERT detached copies — the guest seeder reads labels via
+        // AsNoTracking and attaches them to these new entries. #408
+        var existingLabelIds = entryList.SelectMany(e => e.Labels).Where(l => l.Id != 0).Select(l => l.Id).Distinct().ToList();
+        var trackedById = existingLabelIds.Count == 0
+            ? []
+            : await context.FinancialLabels.Where(l => existingLabelIds.Contains(l.Id)).ToDictionaryAsync(l => l.Id);
+
         CurrencyAccountEntry? firstEntry = null;
 
-        foreach (var entry in entries)
+        foreach (var entry in entryList)
         {
             CurrencyAccountEntry newEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange)
             {
                 Description = entry.Description,
                 ContractorDetails = entry.ContractorDetails,
-                Labels = entry.Labels,
+                Labels = entry.Labels.Select(l => l.Id != 0 && trackedById.TryGetValue(l.Id, out var tracked) ? tracked : l).ToList(),
             };
 
             if (firstEntry is null) firstEntry = newEntry;
@@ -45,6 +55,22 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         if (recalculate && firstEntry is not null)
             await RecalculateValues(firstEntry.AccountId, firstEntry.EntryId);
         return true;
+    }
+
+    // Maps existing labels (Id != 0) to their context-tracked instances so EF does not re-insert detached
+    // copies; brand-new labels (Id == 0) are passed through unchanged to be inserted. #408
+    private async Task<List<FinancialLabel>> ResolveTrackedLabels(ICollection<FinancialLabel> labels)
+    {
+        if (labels.Count == 0) return [];
+
+        var existingIds = labels.Where(l => l.Id != 0).Select(l => l.Id).Distinct().ToList();
+        var trackedById = existingIds.Count == 0
+            ? []
+            : await context.FinancialLabels.Where(l => existingIds.Contains(l.Id)).ToDictionaryAsync(l => l.Id);
+
+        return labels
+            .Select(l => l.Id != 0 && trackedById.TryGetValue(l.Id, out var tracked) ? tracked : l)
+            .ToList();
     }
 
     public async Task<bool> Delete(int accountId, int entryId)
