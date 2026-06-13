@@ -42,12 +42,13 @@ public class AdministrationUsersService(IFinancialAccountRepository financialAcc
     public Task<int?> GetTotalTrackedMoney() => Task.FromResult<int?>(null);
     public async IAsyncEnumerable<UserDetails> GetUsers(int recordIndex, int recordsCount)
     {
+        var users = await userRepository.GetUsers(recordIndex, recordsCount).ToListAsync();
+        if (users.Count == 0) yield break;
 
-        foreach (var userId in await userRepository.GetUsersIds(recordIndex, recordsCount).ToListAsync())
+        var usedCapacities = await userPlanVerifier.GetUsedRecordsCapacity(users.Select(x => x.UserId).ToList());
+
+        foreach (var user in users)
         {
-            var user = await userRepository.GetUser(userId);
-            if (user is null) continue;
-
             yield return new()
             {
                 UserId = user.UserId,
@@ -55,7 +56,7 @@ public class AdministrationUsersService(IFinancialAccountRepository financialAcc
                 PricingLevel = user.PricingLevel,
                 RecordCapacity = new RecordCapacity()
                 {
-                    UsedCapacity = userPlanVerifier.GetUsedRecordsCapacity(user.UserId).Result,
+                    UsedCapacity = usedCapacities.TryGetValue(user.UserId, out var used) ? used : 0,
                     TotalCapacity = PricingProvider.GetMaxAllowedEntries(user.PricingLevel)
                 }
             };

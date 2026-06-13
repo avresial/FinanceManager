@@ -5,17 +5,20 @@ using FinanceManager.Domain.Repositories.Account;
 namespace FinanceManager.Application.Identity.Users;
 
 public class UserPlanVerifier(ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
-    IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,
     IUserRepository userRepository) : IUserPlanVerifier
 {
     public async Task<int> GetUsedRecordsCapacity(int userId)
     {
-        int totalEntries = 0;
+        var counts = await currencyAccountRepository.GetEntriesCountPerUser([userId]);
+        return counts.TryGetValue(userId, out var count) ? count : 0;
+    }
 
-        foreach (var account in await currencyAccountRepository.GetAvailableAccounts(userId).ToListAsync())
-            totalEntries += await currencyAccountEntryRepository.GetCount(account.AccountId);
+    public async Task<IReadOnlyDictionary<int, int>> GetUsedRecordsCapacity(IReadOnlyCollection<int> userIds)
+    {
+        if (userIds.Count == 0) return new Dictionary<int, int>();
 
-        return await Task.FromResult(totalEntries);
+        var counts = await currencyAccountRepository.GetEntriesCountPerUser(userIds);
+        return userIds.Distinct().ToDictionary(id => id, id => counts.TryGetValue(id, out var count) ? count : 0);
     }
 
     public async Task<bool> CanAddMoreEntries(int userId, int entriesCount = 1)
