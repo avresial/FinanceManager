@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Fixed
+- The custom date-range icon in the account-details range selector now works: clicking the calendar icon opens a date-range picker (previously it was embedded in a menu and never appeared), letting users pick an arbitrary start/end range for the account history and chart. #436
 - The next-younger boundary entry attached to a loaded account (used to extend balance series past the selected window) is now resolved from the end of the date range instead of the start, so it correctly points at the first entry *after* the window rather than the earliest in-range entry. Affects both single-account and whole-portfolio loads. #411
 
 ### Changed
