@@ -11,10 +11,10 @@ namespace FinanceManager.Infrastructure.Repositories.Account;
 internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccountRepository<CurrencyAccount>
 {
 
-    public Task<int> GetAccountsCount() => context.Accounts.CountAsync();
+    public Task<int> GetAccountsCount() => context.Accounts.AsNoTracking().CountAsync();
 
     public Task<int?> GetLastAccountId() =>
-        context.Accounts.Where(x => x.AccountType == AccountType.Currency).MaxAsync(x => (int?)x.AccountId);
+        context.Accounts.AsNoTracking().Where(x => x.AccountType == AccountType.Currency).MaxAsync(x => (int?)x.AccountId);
     public Task<int?> Add(int userId, string accountName) => Add(userId, accountName, AccountLabel.Other);
     public async Task<int?> Add(int userId, string accountName, AccountLabel accountLabel)
     {
@@ -42,15 +42,17 @@ internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccoun
         return true;
     }
     public IAsyncEnumerable<AvailableAccount> GetAvailableAccounts(int userId) => context.Accounts
+        .AsNoTracking()
         .Where(x => x.UserId == userId && x.AccountType == AccountType.Currency)
         .Select(x => new AvailableAccount(x.AccountId, x.Name))
         .AsAsyncEnumerable();
 
-    public Task<bool> Exists(int accountId) => context.Accounts.AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
+    public Task<bool> Exists(int accountId) => context.Accounts.AsNoTracking().AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
 
     public async Task<List<CurrencyAccount>> GetAll(int userId)
     {
         var accounts = await context.Accounts
+            .AsNoTracking()
             .Where(x => x.UserId == userId && x.AccountType == AccountType.Currency)
             .ToListAsync();
 
@@ -61,7 +63,7 @@ internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccoun
 
     public async Task<CurrencyAccount?> Get(int accountId)
     {
-        var accountToReturn = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
+        var accountToReturn = await context.Accounts.AsNoTracking().FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
         if (accountToReturn is null) return null;
         return new CurrencyAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name, accountToReturn.AccountLabel);
     }

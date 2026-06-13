@@ -10,7 +10,7 @@ namespace FinanceManager.Infrastructure.Repositories.Account;
 
 internal class StockAccountRepository(AppDbContext context) : IAccountRepository<StockAccount>
 {
-    public Task<int> GetAccountsCount() => context.Accounts.Where(x => x.AccountType == AccountType.Stock).CountAsync();
+    public Task<int> GetAccountsCount() => context.Accounts.AsNoTracking().Where(x => x.AccountType == AccountType.Stock).CountAsync();
     public async Task<int?> Add(int userId, string accountName)
     {
         var result = context.Accounts.Add(new FinancialAccountBaseDto
@@ -43,15 +43,17 @@ internal class StockAccountRepository(AppDbContext context) : IAccountRepository
     }
 
     public IAsyncEnumerable<AvailableAccount> GetAvailableAccounts(int userId) => context.Accounts
+            .AsNoTracking()
             .Where(x => x.UserId == userId && x.AccountType == AccountType.Stock)
             .Select(x => new AvailableAccount(x.AccountId, x.Name))
             .AsAsyncEnumerable();
 
-    public Task<bool> Exists(int accountId) => context.Accounts.AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Stock);
+    public Task<bool> Exists(int accountId) => context.Accounts.AsNoTracking().AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Stock);
 
     public async Task<List<StockAccount>> GetAll(int userId)
     {
         var accounts = await context.Accounts
+            .AsNoTracking()
             .Where(x => x.UserId == userId && x.AccountType == AccountType.Stock)
             .ToListAsync();
 
@@ -62,12 +64,12 @@ internal class StockAccountRepository(AppDbContext context) : IAccountRepository
 
     public async Task<StockAccount?> Get(int accountId)
     {
-        var accountToReturn = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Stock);
+        var accountToReturn = await context.Accounts.AsNoTracking().FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Stock);
         if (accountToReturn is null) return null;
         return new StockAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name);
     }
     public Task<int?> GetLastAccountId() =>
-        context.Accounts.Where(x => x.AccountType == AccountType.Stock).MaxAsync(x => (int?)x.AccountId);
+        context.Accounts.AsNoTracking().Where(x => x.AccountType == AccountType.Stock).MaxAsync(x => (int?)x.AccountId);
     public async Task<bool> Update(int accountId, string accountName)
     {
         var stockAccount = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Stock);

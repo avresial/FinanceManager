@@ -54,6 +54,22 @@ public class EssentialSpendingControllerTests(OptionsProvider optionsProvider) :
             ]
         };
 
+        // A second, distinct Essential label so an entry can have a 2-to-1 Essential majority via
+        // separate labels. The many-to-many join table keys on (EntryId, LabelId), so attaching the
+        // same label twice never persists a second row — a real Essential majority needs distinct labels.
+        var essentialLabel2 = new FinancialLabel
+        {
+            Name = "Groceries",
+            Classifications =
+            [
+                new FinancialLabelClassification
+                {
+                    Kind = FinancialLabelClassificationCatalog.SpendingNecessityKind,
+                    Value = FinancialLabelClassificationCatalog.EssentialValue
+                }
+            ]
+        };
+
         var wantLabel = new FinancialLabel
         {
             Name = "Entertainment",
@@ -67,7 +83,7 @@ public class EssentialSpendingControllerTests(OptionsProvider optionsProvider) :
             ]
         };
 
-        _testDatabase!.Context.FinancialLabels.AddRange(essentialLabel, wantLabel);
+        _testDatabase!.Context.FinancialLabels.AddRange(essentialLabel, essentialLabel2, wantLabel);
 
         var account = new FinancialAccountBaseDto
         {
@@ -88,7 +104,7 @@ public class EssentialSpendingControllerTests(OptionsProvider optionsProvider) :
             },
             new CurrencyAccountEntry(1, 2, _nowUtc, 930m, -20m)
             {
-                Labels = [essentialLabel, wantLabel, essentialLabel]
+                Labels = [essentialLabel, wantLabel, essentialLabel2]
             },
             new CurrencyAccountEntry(1, 3, _nowUtc, 920m, -10m)
             {
