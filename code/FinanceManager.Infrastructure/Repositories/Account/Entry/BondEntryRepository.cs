@@ -163,6 +163,74 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .LastOrDefaultAsync();
 
+    public async Task<List<BondAccountEntry>> GetRange(IReadOnlyCollection<int> accountIds, DateTime startDate, DateTime endDate)
+    {
+        if (accountIds.Count == 0) return [];
+
+        return await context.BondEntries
+            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate >= startDate && x.PostingDate <= endDate)
+            .Include(x => x.Labels)
+            .OrderByDescending(x => x.PostingDate)
+            .ThenByDescending(x => x.EntryId)
+            .ToListAsync();
+    }
+
+    public async Task<Dictionary<int, BondAccountEntry>> GetNextOlder(IReadOnlyCollection<int> accountIds, DateTime date)
+    {
+        if (accountIds.Count == 0) return [];
+
+        var rows = await context.BondEntries
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate < date)
+            .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.PostingDate < date
+                && (o.PostingDate > e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId > e.EntryId))))
+            .ToListAsync();
+
+        return rows.ToDictionary(e => e.AccountId);
+    }
+
+    public async Task<Dictionary<int, BondAccountEntry>> GetNextYounger(IReadOnlyCollection<int> accountIds, DateTime date)
+    {
+        if (accountIds.Count == 0) return [];
+
+        var rows = await context.BondEntries
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate > date)
+            .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.PostingDate > date
+                && (o.PostingDate < e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId < e.EntryId))))
+            .ToListAsync();
+
+        return rows.ToDictionary(e => e.AccountId);
+    }
+
+    public async Task<Dictionary<int, Dictionary<int, BondAccountEntry>>> GetNextOlderPerInstrument(IReadOnlyCollection<int> accountIds, DateTime date)
+    {
+        if (accountIds.Count == 0) return [];
+
+        // One row per (account, bond details id): the entry no other older-than-date entry of the same
+        // account+bond beats on (PostingDate, EntryId).
+        var rows = await context.BondEntries
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate < date)
+            .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.BondDetailsId == e.BondDetailsId && o.PostingDate < date
+                && (o.PostingDate > e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId > e.EntryId))))
+            .ToListAsync();
+
+        return rows.GroupBy(e => e.AccountId)
+            .ToDictionary(g => g.Key, g => g.ToDictionary(e => e.BondDetailsId));
+    }
+
+    public async Task<Dictionary<int, Dictionary<int, BondAccountEntry>>> GetNextYoungerPerInstrument(IReadOnlyCollection<int> accountIds, DateTime date)
+    {
+        if (accountIds.Count == 0) return [];
+
+        var rows = await context.BondEntries
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate > date)
+            .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.BondDetailsId == e.BondDetailsId && o.PostingDate > date
+                && (o.PostingDate < e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId < e.EntryId))))
+            .ToListAsync();
+
+        return rows.GroupBy(e => e.AccountId)
+            .ToDictionary(g => g.Key, g => g.ToDictionary(e => e.BondDetailsId));
+    }
+
     public async Task<BondAccountEntry?> GetOldest(int accountId) => await context.BondEntries
             .Where(x => x.AccountId == accountId)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)

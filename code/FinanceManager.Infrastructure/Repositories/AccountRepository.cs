@@ -76,7 +76,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
                 var entries = await currencyEntryRepository.Get(resultAccount.AccountId, dateStart, dateEnd).ToListAsync();
 
                 var nextOlderEntry = await currencyEntryRepository.GetNextOlder(resultAccount.AccountId, dateStart);
-                var nextYoungerEntry = await currencyEntryRepository.GetNextYounger(resultAccount.AccountId, dateStart);
+                var nextYoungerEntry = await currencyEntryRepository.GetNextYounger(resultAccount.AccountId, dateEnd);
 
                 if (entries.Count == 0 && nextOlderEntry is not null)
                     entries = [nextOlderEntry];
@@ -96,7 +96,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
                 var stockAccount = await stockAccountRepository.Get(accountId) ?? throw new ArgumentNullException();
                 var stockEntries = await stockEntryRepository.Get(stockAccount.AccountId, dateStart, dateEnd).ToListAsync();
                 var stockNextOlderEntry = await stockEntryRepository.GetNextOlder(stockAccount.AccountId, dateStart);
-                var stockNextYoungerEntry = await stockEntryRepository.GetNextYounger(stockAccount.AccountId, dateStart);
+                var stockNextYoungerEntry = await stockEntryRepository.GetNextYounger(stockAccount.AccountId, dateEnd);
 
                 if (stockEntries.Count == 0 && stockNextOlderEntry is not null)
                     stockEntries = stockNextOlderEntry.Values.ToList();
@@ -114,7 +114,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
                 var bondAccount = await bondAccountRepository.Get(accountId) ?? throw new ArgumentNullException();
                 var bondEntries = await bondEntryRepository.Get(bondAccount.AccountId, dateStart, dateEnd).ToListAsync();
                 var bondNextOlderEntry = await bondEntryRepository.GetNextOlder(bondAccount.AccountId, dateStart);
-                var bondNextYoungerEntry = await bondEntryRepository.GetNextYounger(bondAccount.AccountId, dateStart);
+                var bondNextYoungerEntry = await bondEntryRepository.GetNextYounger(bondAccount.AccountId, dateEnd);
 
                 if (bondEntries.Count == 0 && bondNextOlderEntry is not null)
                     bondEntries = bondNextOlderEntry.Values.ToList();
@@ -133,21 +133,109 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
         switch (typeof(T))
         {
             case Type t when t == typeof(CurrencyAccount):
-                foreach (var currencyAccount in await currencyAccountRepository.GetAvailableAccounts(userId).ToListAsync())
-                    yield return (await GetAccount<T>(userId, currencyAccount.AccountId, dateStart, dateEnd))!;
+                foreach (var account in await GetCurrencyAccounts(userId, dateStart, dateEnd))
+                    yield return (T)(BasicAccountInformation)account;
                 yield break;
 
             case Type t when t == typeof(StockAccount):
-                foreach (var stockAccount in await stockAccountRepository.GetAvailableAccounts(userId).ToListAsync())
-                    yield return (await GetAccount<T>(userId, stockAccount.AccountId, dateStart, dateEnd))!;
+                foreach (var account in await GetStockAccounts(userId, dateStart, dateEnd))
+                    yield return (T)(BasicAccountInformation)account;
                 yield break;
+
             case Type t when t == typeof(BondAccount):
-                foreach (var bondAccount in await bondAccountRepository.GetAvailableAccounts(userId).ToListAsync())
-                    yield return (await GetAccount<T>(userId, bondAccount.AccountId, dateStart, dateEnd))!;
+                foreach (var account in await GetBondAccounts(userId, dateStart, dateEnd))
+                    yield return (T)(BasicAccountInformation)account;
                 yield break;
         }
 
         throw new NotSupportedException($"Account type {typeof(T)} is not supported.");
+    }
+
+    // The methods below load a whole user's accounts of one type in a constant number of queries
+    // (accounts, in-range entries, next-older boundary, next-younger boundary) instead of the ~5 queries
+    // per account that GetAccount issues. This collapses the dashboard N+1 described in issue #411.
+    private async Task<List<CurrencyAccount>> GetCurrencyAccounts(int userId, DateTime dateStart, DateTime dateEnd)
+    {
+        var accounts = await currencyAccountRepository.GetAll(userId);
+        if (accounts.Count == 0) return [];
+
+        var accountIds = accounts.Select(a => a.AccountId).ToList();
+        var entriesByAccount = (await currencyEntryRepository.GetRange(accountIds, dateStart, dateEnd))
+            .GroupBy(e => e.AccountId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+        var nextOlder = await currencyEntryRepository.GetNextOlder(accountIds, dateStart);
+        var nextYounger = await currencyEntryRepository.GetNextYounger(accountIds, dateEnd);
+
+        List<CurrencyAccount> result = [];
+        foreach (var account in accounts)
+        {
+            List<CurrencyAccountEntry> entries = entriesByAccount.TryGetValue(account.AccountId, out var e) ? e : [];
+            nextOlder.TryGetValue(account.AccountId, out var older);
+            nextYounger.TryGetValue(account.AccountId, out var younger);
+
+            if (entries.Count == 0 && older is not null)
+                entries = [older];
+
+            result.Add(new CurrencyAccount(account.UserId, account.AccountId, account.Name, entries, account.AccountType, older, younger));
+        }
+
+        return result;
+    }
+
+    private async Task<List<StockAccount>> GetStockAccounts(int userId, DateTime dateStart, DateTime dateEnd)
+    {
+        var accounts = await stockAccountRepository.GetAll(userId);
+        if (accounts.Count == 0) return [];
+
+        var accountIds = accounts.Select(a => a.AccountId).ToList();
+        var entriesByAccount = (await stockEntryRepository.GetRange(accountIds, dateStart, dateEnd))
+            .GroupBy(e => e.AccountId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+        var nextOlder = await stockEntryRepository.GetNextOlderPerInstrument(accountIds, dateStart);
+        var nextYounger = await stockEntryRepository.GetNextYoungerPerInstrument(accountIds, dateEnd);
+
+        List<StockAccount> result = [];
+        foreach (var account in accounts)
+        {
+            List<StockAccountEntry> entries = entriesByAccount.TryGetValue(account.AccountId, out var e) ? e : [];
+            var older = nextOlder.TryGetValue(account.AccountId, out var o) ? o : [];
+            var younger = nextYounger.TryGetValue(account.AccountId, out var y) ? y : [];
+
+            if (entries.Count == 0 && older.Count > 0)
+                entries = older.Values.ToList();
+
+            result.Add(new StockAccount(account.UserId, account.AccountId, account.Name, entries, older, younger));
+        }
+
+        return result;
+    }
+
+    private async Task<List<BondAccount>> GetBondAccounts(int userId, DateTime dateStart, DateTime dateEnd)
+    {
+        var accounts = await bondAccountRepository.GetAll(userId);
+        if (accounts.Count == 0) return [];
+
+        var accountIds = accounts.Select(a => a.AccountId).ToList();
+        var entriesByAccount = (await bondEntryRepository.GetRange(accountIds, dateStart, dateEnd))
+            .GroupBy(e => e.AccountId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+        var nextOlder = await bondEntryRepository.GetNextOlderPerInstrument(accountIds, dateStart);
+        var nextYounger = await bondEntryRepository.GetNextYoungerPerInstrument(accountIds, dateEnd);
+
+        List<BondAccount> result = [];
+        foreach (var account in accounts)
+        {
+            List<BondAccountEntry> entries = entriesByAccount.TryGetValue(account.AccountId, out var e) ? e : [];
+            var older = nextOlder.TryGetValue(account.AccountId, out var o) ? o : [];
+            var younger = nextYounger.TryGetValue(account.AccountId, out var y) ? y : [];
+
+            if (entries.Count == 0 && older.Count > 0)
+                entries = older.Values.ToList();
+
+            result.Add(new BondAccount(account.UserId, account.AccountId, account.Name, entries, AccountLabel.Bond, older, younger));
+        }
+
+        return result;
     }
 
     public async Task<int?> AddAccount<T>(T account) where T : BasicAccountInformation
