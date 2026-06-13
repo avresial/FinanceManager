@@ -6,8 +6,8 @@ namespace FinanceManager.Application.Identity.Seeders;
 
 public class AdminAccountSeeder(IUserRepository userRepository) : ISeeder
 {
-    private const string _defaultAdminUserName = "admin";
-    private const string _defaultAdminPassword = "admin";
+    private const string _defaultAdminUserName = "admin@localhost";
+    private const string _defaultAdminPassword = "Admin1234";
 
     public async Task Seed(CancellationToken cancellationToken = default)
     {

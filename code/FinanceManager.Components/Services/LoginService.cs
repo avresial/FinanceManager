@@ -88,6 +88,7 @@ public class LoginService : ILoginService
         {
             response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/Login",
                 JsonHelper.GenerateStringContent(JsonHelper.SerializeObj(loginRequestModel)));
+            if (!response.IsSuccessStatusCode) return false;
             result = await response.Content.ReadFromJsonAsync<LoginResponseModel>();
         }
         catch (Exception ex)

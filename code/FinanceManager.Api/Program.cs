@@ -43,14 +43,18 @@ if (string.IsNullOrWhiteSpace(jwtSigningKey))
     jwtSigningKey = "development-only-insecure-jwt-signing-key-do-not-use-in-production";
     builder.Configuration["JwtConfig:Key"] = jwtSigningKey;
 }
-else if (Encoding.UTF8.GetByteCount(jwtSigningKey) < 32)
+else if (Encoding.UTF8.GetByteCount(jwtSigningKey) < 64)
 {
-    // HMAC-SHA256 needs a 256-bit (32-byte) key; reject anything weaker so a short
-    // env var can't silently produce forgeable tokens for both issuing and validation.
+    // HMAC-SHA512 (used by JwtTokenGenerator) needs a 512-bit (64-byte) key; reject anything
+    // weaker so a short env var can't silently produce forgeable tokens or crash at sign time.
     throw new InvalidOperationException(
-        "JwtConfig:Key must be at least 32 bytes (256 bits) for HMAC-SHA256 signing.");
+        "JwtConfig:Key must be at least 64 bytes (512 bits) for HMAC-SHA512 signing.");
 }
 
+var tokenValidityMins = builder.Configuration.GetValue<int>("JwtConfig:TokenValidityMins");
+if (tokenValidityMins <= 0)
+    throw new InvalidOperationException(
+        "JwtConfig:TokenValidityMins must be greater than 0. Set it to a positive number (e.g. 15) in appsettings or User Secrets.");
 
 builder.Services
     .AddProblemDetails()
