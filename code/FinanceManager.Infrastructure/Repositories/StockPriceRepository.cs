@@ -32,6 +32,7 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         var twoYearsAgo = today.AddYears(-2);
 
         var stockPrices = await context.StockPrices
+            .AsNoTracking()
             .Where(x => x.StockDetails!.Isin == isin && x.Date >= twoYearsAgo)
             .Select(x => x.Date.Date)
             .Distinct()
@@ -57,6 +58,7 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
     public async Task<StockPrice?> Get(string isin, DateTime date)
     {
         var stockPrice = await context.StockPrices
+            .AsNoTracking()
             .Include(x => x.StockDetails)
             .ThenInclude(x => x.Currency)
             .FirstOrDefaultAsync(x => x.StockDetails!.Isin == isin && x.Date == date.Date);
@@ -68,6 +70,7 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
     public async Task<IReadOnlyList<StockPrice>> GetRange(string isin, DateTime start, DateTime end)
     {
         return await context.StockPrices
+            .AsNoTracking()
             .Include(x => x.StockDetails)
             .ThenInclude(x => x.Currency)
             .Where(x => x.StockDetails!.Isin == isin && x.Date >= start.Date && x.Date < end.Date.AddDays(1))
@@ -82,6 +85,7 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
         if (result is not null) return result;
 
         return await context.StockPrices
+            .AsNoTracking()
             .Include(x => x.StockDetails)
             .ThenInclude(x => x.Currency)
             .Where(x => x.StockDetails!.Isin == isin && x.Date < date)
@@ -93,6 +97,7 @@ public class StockPriceRepository(AppDbContext context) : IStockPriceRepository
     public async Task<Currency?> GetStockCurrency(string isin)
     {
         var stockDetails = await context.StockDetails
+            .AsNoTracking()
             .Include(x => x.Currency)
             .FirstOrDefaultAsync(x => x.Isin == isin);
 

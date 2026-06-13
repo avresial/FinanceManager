@@ -75,6 +75,7 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
         return true;
     }
     public IAsyncEnumerable<StockAccountEntry> Get(int accountId, DateTime startDate, DateTime endDate) => context.StockEntries
+            .AsNoTracking()
             .Where(e => e.AccountId == accountId && e.PostingDate >= startDate && e.PostingDate <= endDate)
             .AsAsyncEnumerable();
 
@@ -85,6 +86,7 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
         if (olderThenDate)
         {
             return await context.StockEntries
+                .AsNoTracking()
                 .Where(e => e.AccountId == accountId && e.PostingDate <= date)
                 .OrderByDescending(e => e.PostingDate)
                 .ThenByDescending(e => e.EntryId)
@@ -93,6 +95,7 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
         }
 
         var entries = await context.StockEntries
+            .AsNoTracking()
             .Where(e => e.AccountId == accountId && e.PostingDate >= date)
             .OrderBy(e => e.PostingDate)
             .ThenBy(e => e.EntryId)
@@ -106,20 +109,21 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
     }
 
     public IAsyncEnumerable<StockAccountEntry> Get(int accountId, string isin, DateTime startDate, DateTime endDate) => context.StockEntries
+            .AsNoTracking()
             .Where(e => e.AccountId == accountId && e.Isin == isin && e.PostingDate >= startDate && e.PostingDate <= endDate)
             .AsAsyncEnumerable();
 
 
     public Task<StockAccountEntry?> Get(int accountId, int entryId) =>
-        context.StockEntries.SingleOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
-    public Task<int> GetCount(int accountId) => context.StockEntries.CountAsync(e => e.AccountId == accountId);
+        context.StockEntries.AsNoTracking().SingleOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
+    public Task<int> GetCount(int accountId) => context.StockEntries.AsNoTracking().CountAsync(e => e.AccountId == accountId);
 
     public async Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default)
     {
         if (userIds.Count == 0) return new Dictionary<int, int>();
 
         return await (
-            from entry in context.StockEntries
+            from entry in context.StockEntries.AsNoTracking()
             join account in context.Accounts on entry.AccountId equals account.AccountId
             where userIds.Contains(account.UserId)
             group entry by account.UserId into grouped
@@ -129,10 +133,11 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
 
     public async Task<StockAccountEntry?> GetNextOlder(int accountId, int entryId)
     {
-        var entry = await context.StockEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
+        var entry = await context.StockEntries.AsNoTracking().FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (entry is null) return null;
 
         return await context.StockEntries
+            .AsNoTracking()
             .Where(e => e.AccountId == accountId && e.PostingDate < entry.PostingDate)
             .OrderByDescending(e => e.PostingDate)
             .FirstOrDefaultAsync();
@@ -141,6 +146,7 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
     public async Task<StockAccountEntry?> GetNextOlder(int accountId, DateTime date)
     {
         return await context.StockEntries
+            .AsNoTracking()
             .Where(e => e.AccountId == accountId && e.PostingDate < date)
             .OrderByDescending(e => e.PostingDate)
             .FirstOrDefaultAsync();
@@ -151,6 +157,7 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
         Dictionary<string, StockAccountEntry> result = [];
 
         var isins = await context.StockEntries
+                                .AsNoTracking()
                                 .Where(e => e.AccountId == accountId)
                                 .Select(m => m.Isin)
                                 .Distinct()
@@ -159,6 +166,7 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
         foreach (var isin in isins)
         {
             var nextOlder = await context.StockEntries
+                   .AsNoTracking()
                    .Where(e => e.Isin == isin && e.AccountId == accountId && e.PostingDate < date)
                    .OrderByDescending(e => e.PostingDate)
                    .FirstOrDefaultAsync();
@@ -173,15 +181,17 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
 
     public async Task<StockAccountEntry?> GetNextYounger(int accountId, int entryId)
     {
-        var entry = await context.StockEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
+        var entry = await context.StockEntries.AsNoTracking().FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (entry is null) return null;
         return await context.StockEntries
+            .AsNoTracking()
             .Where(e => e.AccountId == accountId && e.PostingDate > entry.PostingDate)
             .OrderBy(e => e.PostingDate)
             .FirstOrDefaultAsync();
     }
 
     public Task<StockAccountEntry?> GetNextYounger(int accountId, DateTime date) => context.StockEntries
+            .AsNoTracking()
             .Where(e => e.AccountId == accountId && e.PostingDate > date)
             .OrderBy(e => e.PostingDate)
             .FirstOrDefaultAsync();
@@ -190,11 +200,12 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
     async Task<Dictionary<string, StockAccountEntry>> IStockAccountEntryRepository<StockAccountEntry>.GetNextYounger(int accountId, DateTime date)
     {
         Dictionary<string, StockAccountEntry> result = [];
-        var isins = await context.StockEntries.Select(m => m.Isin).Distinct().ToListAsync();
+        var isins = await context.StockEntries.AsNoTracking().Select(m => m.Isin).Distinct().ToListAsync();
 
         foreach (var isin in isins)
         {
             var nextOlder = await context.StockEntries
+                   .AsNoTracking()
                    .Where(e => e.Isin == isin && e.AccountId == accountId && e.PostingDate > date)
                    .OrderBy(e => e.PostingDate)
                    .FirstOrDefaultAsync();
@@ -210,6 +221,7 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
     public async Task<StockAccountEntry?> GetOldest(int accountId)
     {
         return await context.StockEntries
+            .AsNoTracking()
             .Where(e => e.AccountId == accountId)
             .OrderBy(e => e.PostingDate)
             .FirstOrDefaultAsync();
@@ -217,6 +229,7 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
     public async Task<StockAccountEntry?> GetYoungest(int accountId)
     {
         return await context.StockEntries
+            .AsNoTracking()
             .Where(e => e.AccountId == accountId)
             .OrderByDescending(e => e.PostingDate)
             .FirstOrDefaultAsync();
@@ -369,6 +382,7 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
             return [];
 
         return await context.StockEntries
+            .AsNoTracking()
             .Where(e => entryIds.Contains(e.EntryId))
             .ToListAsync(cancellationToken);
     }

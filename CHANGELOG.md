@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Changed
+- All read-only data queries (entries, accounts, labels, stock prices) now skip EF Core change-tracking and use split queries where collection joins occur, reducing per-request memory overhead and eliminating Cartesian row duplication on label/classification reads. #408
 - Stock price queries (`Get`, `GetRange`, `Update`, bulk import) now use sargable date predicates so the `(StockIsin, Date)` index is used for seeks instead of full scans; the gap-search look-back is bounded to two years; and bulk import preloads all required data in two queries instead of two per price. #409
 - Adding, editing, or deleting a historical transaction on a large account is now significantly faster; the running-balance recalculation is performed as a single database statement instead of one update per row. #412
 - Deleting an account with many entries is now significantly faster; the server no longer loads every entry into memory before deleting. #413

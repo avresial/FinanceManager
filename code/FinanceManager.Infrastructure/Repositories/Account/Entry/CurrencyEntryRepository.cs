@@ -75,6 +75,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
     }
 
     public IAsyncEnumerable<CurrencyAccountEntry> Get(int accountId, DateTime startDate, DateTime endDate) => context.CurrencyEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId && x.PostingDate >= startDate && x.PostingDate <= endDate)
             .Include(x => x.Labels)
             .ThenInclude(l => l.Classifications)
@@ -89,9 +90,11 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         if (olderThenDate)
         {
             return await context.CurrencyEntries
+                .AsNoTracking()
                 .Where(e => e.AccountId == accountId && e.PostingDate <= date)
                 .Include(e => e.Labels)
                 .ThenInclude(l => l.Classifications)
+                .AsSplitQuery()
                 .OrderByDescending(e => e.PostingDate)
                 .ThenByDescending(e => e.EntryId)
                 .Take(count)
@@ -99,9 +102,11 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         }
 
         var entries = await context.CurrencyEntries
+            .AsNoTracking()
             .Where(e => e.AccountId == accountId && e.PostingDate >= date)
             .Include(e => e.Labels)
             .ThenInclude(l => l.Classifications)
+            .AsSplitQuery()
             .OrderBy(e => e.PostingDate)
             .ThenBy(e => e.EntryId)
             .Take(count)
@@ -114,16 +119,17 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
     }
 
     public async Task<CurrencyAccountEntry?> Get(int accountId, int entryId) => await context.CurrencyEntries
+            .AsNoTracking()
             .FirstOrDefaultAsync(x => x.AccountId == accountId && x.EntryId == entryId);
 
-    public async Task<int> GetCount(int accountId) => await context.CurrencyEntries.CountAsync(x => x.AccountId == accountId);
+    public async Task<int> GetCount(int accountId) => await context.CurrencyEntries.AsNoTracking().CountAsync(x => x.AccountId == accountId);
 
     public async Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default)
     {
         if (userIds.Count == 0) return new Dictionary<int, int>();
 
         return await (
-            from entry in context.CurrencyEntries
+            from entry in context.CurrencyEntries.AsNoTracking()
             join account in context.Accounts on entry.AccountId equals account.AccountId
             where userIds.Contains(account.UserId)
             group entry by account.UserId into grouped
@@ -133,42 +139,48 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
 
     public async Task<CurrencyAccountEntry?> GetNextOlder(int accountId, int entryId)
     {
-        var existingEntry = await context.CurrencyEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
+        var existingEntry = await context.CurrencyEntries.AsNoTracking().FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (existingEntry is null) return default;
 
         return await context.CurrencyEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId && x.PostingDate < existingEntry.PostingDate)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .FirstOrDefaultAsync();
     }
 
     public async Task<CurrencyAccountEntry?> GetNextOlder(int accountId, DateTime date) => await context.CurrencyEntries
+             .AsNoTracking()
              .Where(x => x.AccountId == accountId && x.PostingDate < date)
              .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
              .FirstOrDefaultAsync();
 
     public async Task<CurrencyAccountEntry?> GetNextYounger(int accountId, int entryId)
     {
-        var existingEntry = await context.CurrencyEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
+        var existingEntry = await context.CurrencyEntries.AsNoTracking().FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (existingEntry is null) return default;
 
         return await context.CurrencyEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId && x.PostingDate > existingEntry.PostingDate)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .LastOrDefaultAsync();
     }
 
     public async Task<CurrencyAccountEntry?> GetNextYounger(int accountId, DateTime date) => await context.CurrencyEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId && x.PostingDate > date)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .LastOrDefaultAsync();
 
     public async Task<CurrencyAccountEntry?> GetOldest(int accountId) => await context.CurrencyEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .LastOrDefaultAsync();
 
     public async Task<CurrencyAccountEntry?> GetYoungest(int accountId) => await context.CurrencyEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .FirstOrDefaultAsync();
@@ -339,8 +351,10 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             return [];
 
         return await context.CurrencyEntries
+            .AsNoTracking()
             .Where(e => entryIds.Contains(e.EntryId))
             .Include(e => e.Labels)
+            .AsSplitQuery()
             .ToListAsync(cancellationToken);
     }
 
@@ -349,6 +363,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         if (count <= 0) return [];
 
         return await context.CurrencyEntries
+            .AsNoTracking()
             .Where(e => !e.Labels.Any())
             .Where(e => e.Description != null && e.Description != "")
             .OrderByDescending(e => e.PostingDate)

@@ -78,6 +78,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
     }
 
     public IAsyncEnumerable<BondAccountEntry> Get(int accountId, DateTime startDate, DateTime endDate) => context.BondEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId && x.PostingDate >= startDate && x.PostingDate <= endDate)
             .Include(x => x.Labels)
             .OrderByDescending(x => x.PostingDate)
@@ -91,8 +92,10 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         if (olderThenDate)
         {
             return await context.BondEntries
+                .AsNoTracking()
                 .Where(e => e.AccountId == accountId && e.PostingDate <= date)
                 .Include(e => e.Labels)
+                .AsSplitQuery()
                 .OrderByDescending(e => e.PostingDate)
                 .ThenByDescending(e => e.EntryId)
                 .Take(count)
@@ -100,8 +103,10 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         }
 
         var entries = await context.BondEntries
+            .AsNoTracking()
             .Where(e => e.AccountId == accountId && e.PostingDate >= date)
             .Include(e => e.Labels)
+            .AsSplitQuery()
             .OrderBy(e => e.PostingDate)
             .ThenBy(e => e.EntryId)
             .Take(count)
@@ -114,16 +119,17 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
     }
 
     public async Task<BondAccountEntry?> Get(int accountId, int entryId) => await context.BondEntries
+            .AsNoTracking()
             .FirstOrDefaultAsync(x => x.AccountId == accountId && x.EntryId == entryId);
 
-    public async Task<int> GetCount(int accountId) => await context.BondEntries.CountAsync(x => x.AccountId == accountId);
+    public async Task<int> GetCount(int accountId) => await context.BondEntries.AsNoTracking().CountAsync(x => x.AccountId == accountId);
 
     public async Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default)
     {
         if (userIds.Count == 0) return new Dictionary<int, int>();
 
         return await (
-            from entry in context.BondEntries
+            from entry in context.BondEntries.AsNoTracking()
             join account in context.Accounts on entry.AccountId equals account.AccountId
             where userIds.Contains(account.UserId)
             group entry by account.UserId into grouped
@@ -133,42 +139,48 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
     public async Task<BondAccountEntry?> GetNextOlder(int accountId, int entryId)
     {
-        var existingEntry = await context.BondEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
+        var existingEntry = await context.BondEntries.AsNoTracking().FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (existingEntry is null) return default;
 
         return await context.BondEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId && x.PostingDate < existingEntry.PostingDate)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .FirstOrDefaultAsync();
     }
 
     public async Task<BondAccountEntry?> GetNextOlder(int accountId, DateTime date) => await context.BondEntries
+             .AsNoTracking()
              .Where(x => x.AccountId == accountId && x.PostingDate < date)
              .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
              .FirstOrDefaultAsync();
 
     public async Task<BondAccountEntry?> GetNextYounger(int accountId, int entryId)
     {
-        var existingEntry = await context.BondEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
+        var existingEntry = await context.BondEntries.AsNoTracking().FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (existingEntry is null) return default;
 
         return await context.BondEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId && x.PostingDate > existingEntry.PostingDate)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .LastOrDefaultAsync();
     }
 
     public async Task<BondAccountEntry?> GetNextYounger(int accountId, DateTime date) => await context.BondEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId && x.PostingDate > date)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .LastOrDefaultAsync();
 
     public async Task<BondAccountEntry?> GetOldest(int accountId) => await context.BondEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .LastOrDefaultAsync();
 
     public async Task<BondAccountEntry?> GetYoungest(int accountId) => await context.BondEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .FirstOrDefaultAsync();
@@ -369,6 +381,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             return [];
 
         return await context.BondEntries
+            .AsNoTracking()
             .Where(e => entryIds.Contains(e.EntryId))
             .ToListAsync(cancellationToken);
     }
@@ -381,6 +394,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         Dictionary<int, BondAccountEntry> result = [];
 
         var bondDetailsIds = await context.BondEntries
+                                .AsNoTracking()
                                 .Where(e => e.AccountId == accountId)
                                 .Select(m => m.BondDetailsId)
                                 .Distinct()
@@ -389,6 +403,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         foreach (var bondDetailsId in bondDetailsIds)
         {
             var nextOlder = await context.BondEntries
+                   .AsNoTracking()
                    .Where(e => e.BondDetailsId == bondDetailsId && e.AccountId == accountId && e.PostingDate < date)
                    .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId)
                    .FirstOrDefaultAsync();
@@ -406,6 +421,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         Dictionary<int, BondAccountEntry> result = [];
 
         var bondDetailsIds = await context.BondEntries
+                                .AsNoTracking()
                                 .Where(e => e.AccountId == accountId)
                                 .Select(m => m.BondDetailsId)
                                 .Distinct()
@@ -414,6 +430,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         foreach (var bondDetailsId in bondDetailsIds)
         {
             var nextYounger = await context.BondEntries
+                   .AsNoTracking()
                    .Where(e => e.BondDetailsId == bondDetailsId && e.AccountId == accountId && e.PostingDate > date)
                    .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId)
                    .LastOrDefaultAsync();
