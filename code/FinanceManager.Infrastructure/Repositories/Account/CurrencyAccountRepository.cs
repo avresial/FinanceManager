@@ -48,6 +48,17 @@ internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccoun
 
     public Task<bool> Exists(int accountId) => context.Accounts.AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
 
+    public async Task<List<CurrencyAccount>> GetAll(int userId)
+    {
+        var accounts = await context.Accounts
+            .Where(x => x.UserId == userId && x.AccountType == AccountType.Currency)
+            .ToListAsync();
+
+        return accounts
+            .Select(x => new CurrencyAccount(x.UserId, x.AccountId, x.Name, x.AccountLabel))
+            .ToList();
+    }
+
     public async Task<CurrencyAccount?> Get(int accountId)
     {
         var accountToReturn = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);

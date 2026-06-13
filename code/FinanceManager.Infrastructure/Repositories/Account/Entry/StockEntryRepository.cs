@@ -186,6 +186,70 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
             .OrderBy(e => e.PostingDate)
             .FirstOrDefaultAsync();
 
+    public async Task<List<StockAccountEntry>> GetRange(IReadOnlyCollection<int> accountIds, DateTime startDate, DateTime endDate)
+    {
+        if (accountIds.Count == 0) return [];
+
+        return await context.StockEntries
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate >= startDate && e.PostingDate <= endDate)
+            .ToListAsync();
+    }
+
+    public async Task<Dictionary<int, StockAccountEntry>> GetNextOlder(IReadOnlyCollection<int> accountIds, DateTime date)
+    {
+        if (accountIds.Count == 0) return [];
+
+        var rows = await context.StockEntries
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate < date)
+            .Where(e => !context.StockEntries.Any(o => o.AccountId == e.AccountId && o.PostingDate < date
+                && (o.PostingDate > e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId > e.EntryId))))
+            .ToListAsync();
+
+        return rows.ToDictionary(e => e.AccountId);
+    }
+
+    public async Task<Dictionary<int, StockAccountEntry>> GetNextYounger(IReadOnlyCollection<int> accountIds, DateTime date)
+    {
+        if (accountIds.Count == 0) return [];
+
+        var rows = await context.StockEntries
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate > date)
+            .Where(e => !context.StockEntries.Any(o => o.AccountId == e.AccountId && o.PostingDate > date
+                && (o.PostingDate < e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId < e.EntryId))))
+            .ToListAsync();
+
+        return rows.ToDictionary(e => e.AccountId);
+    }
+
+    public async Task<Dictionary<int, Dictionary<string, StockAccountEntry>>> GetNextOlderPerInstrument(IReadOnlyCollection<int> accountIds, DateTime date)
+    {
+        if (accountIds.Count == 0) return [];
+
+        // One row per (account, ISIN): the entry no other older-than-date entry of the same account+ISIN beats.
+        var rows = await context.StockEntries
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate < date)
+            .Where(e => !context.StockEntries.Any(o => o.AccountId == e.AccountId && o.Isin == e.Isin && o.PostingDate < date
+                && (o.PostingDate > e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId > e.EntryId))))
+            .ToListAsync();
+
+        return rows.GroupBy(e => e.AccountId)
+            .ToDictionary(g => g.Key, g => g.ToDictionary(e => e.Isin));
+    }
+
+    public async Task<Dictionary<int, Dictionary<string, StockAccountEntry>>> GetNextYoungerPerInstrument(IReadOnlyCollection<int> accountIds, DateTime date)
+    {
+        if (accountIds.Count == 0) return [];
+
+        var rows = await context.StockEntries
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate > date)
+            .Where(e => !context.StockEntries.Any(o => o.AccountId == e.AccountId && o.Isin == e.Isin && o.PostingDate > date
+                && (o.PostingDate < e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId < e.EntryId))))
+            .ToListAsync();
+
+        return rows.GroupBy(e => e.AccountId)
+            .ToDictionary(g => g.Key, g => g.ToDictionary(e => e.Isin));
+    }
+
 
     async Task<Dictionary<string, StockAccountEntry>> IStockAccountEntryRepository<StockAccountEntry>.GetNextYounger(int accountId, DateTime date)
     {

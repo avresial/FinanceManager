@@ -49,6 +49,17 @@ internal class StockAccountRepository(AppDbContext context) : IAccountRepository
 
     public Task<bool> Exists(int accountId) => context.Accounts.AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Stock);
 
+    public async Task<List<StockAccount>> GetAll(int userId)
+    {
+        var accounts = await context.Accounts
+            .Where(x => x.UserId == userId && x.AccountType == AccountType.Stock)
+            .ToListAsync();
+
+        return accounts
+            .Select(x => new StockAccount(x.UserId, x.AccountId, x.Name))
+            .ToList();
+    }
+
     public async Task<StockAccount?> Get(int accountId)
     {
         var accountToReturn = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Stock);
