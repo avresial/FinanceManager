@@ -183,6 +183,8 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
 
         return await context.StockEntries
             .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate >= startDate && e.PostingDate <= endDate)
+            .OrderByDescending(e => e.PostingDate)
+            .ThenByDescending(e => e.EntryId)
             .ToListAsync();
     }
 
