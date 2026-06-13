@@ -1,4 +1,6 @@
-﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+﻿using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 
@@ -6,16 +8,18 @@ namespace FinanceManager.Application.Identity.Users;
 
 public class UserPlanVerifier(ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,
+    IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository,
+    IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
     IUserRepository userRepository) : IUserPlanVerifier
 {
     public async Task<int> GetUsedRecordsCapacity(int userId)
     {
-        int totalEntries = 0;
+        // Used capacity is every record the user owns, across all account types — currency, stock and bond.
+        int currencyEntries = await currencyAccountEntryRepository.GetCountForUser(userId);
+        int stockEntries = await stockAccountEntryRepository.GetCountForUser(userId);
+        int bondEntries = await bondAccountEntryRepository.GetCountForUser(userId);
 
-        foreach (var account in await currencyAccountRepository.GetAvailableAccounts(userId).ToListAsync())
-            totalEntries += await currencyAccountEntryRepository.GetCount(account.AccountId);
-
-        return await Task.FromResult(totalEntries);
+        return currencyEntries + stockEntries + bondEntries;
     }
 
     public async Task<bool> CanAddMoreEntries(int userId, int entriesCount = 1)

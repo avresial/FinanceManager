@@ -25,6 +25,7 @@ rules agents must follow when updating this file.
 - Account history toolbar buttons (Income/Expense toggle, Category filter, Add entry) now render in a muted gray that matches the search input's outlined border, reducing visual noise in the control bar. #355
 
 ### Fixed
+- Plan record-capacity now counts entries across all account types — currency, stock and bond — instead of currency entries only; this fixes the admin user list usage column and the entry plan-limit checks under-counting usage and letting users exceed their record limit. #424
 - Account history toolbar no longer overflows on narrow mobile screens: the Income/Expense toggle items show only their arrow icons on mobile (text hidden), and the label filter button shows only its icon, keeping all controls within a 360 px viewport. #350
 - Transaction row Edit/Duplicate/Delete action buttons now share a consistent outlined style; Edit was previously filled amber while the others were outlined. #351
 

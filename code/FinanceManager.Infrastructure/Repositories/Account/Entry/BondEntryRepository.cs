@@ -118,6 +118,12 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
     public async Task<int> GetCount(int accountId) => await context.BondEntries.CountAsync(x => x.AccountId == accountId);
 
+    public Task<int> GetCountForUser(int userId, CancellationToken cancellationToken = default) =>
+        (from entry in context.BondEntries
+         join account in context.Accounts on entry.AccountId equals account.AccountId
+         where account.UserId == userId
+         select entry).CountAsync(cancellationToken);
+
     public async Task<BondAccountEntry?> GetNextOlder(int accountId, int entryId)
     {
         var existingEntry = await context.BondEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);

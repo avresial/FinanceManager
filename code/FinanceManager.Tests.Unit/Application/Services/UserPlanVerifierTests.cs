@@ -1,5 +1,7 @@
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
@@ -14,31 +16,62 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 public class UserPlanVerifierTests
 {
     private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _currencyAccountRepositoryMock = new();
-    private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _accountEntryRepositoryMock = new();
+    private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _currencyEntryRepositoryMock = new();
+    private readonly Mock<IStockAccountEntryRepository<StockAccountEntry>> _stockEntryRepositoryMock = new();
+    private readonly Mock<IBondAccountEntryRepository<BondAccountEntry>> _bondEntryRepositoryMock = new();
     private readonly Mock<IUserRepository> _userRepositoryMock = new();
     private readonly UserPlanVerifier _userPlanVerifier;
 
-    public UserPlanVerifierTests() => _userPlanVerifier = new(_currencyAccountRepositoryMock.Object, _accountEntryRepositoryMock.Object, _userRepositoryMock.Object);
+    public UserPlanVerifierTests() => _userPlanVerifier = new(
+        _currencyAccountRepositoryMock.Object, _currencyEntryRepositoryMock.Object,
+        _stockEntryRepositoryMock.Object, _bondEntryRepositoryMock.Object, _userRepositoryMock.Object);
+
+    // Used capacity is the sum of the user's entries across every account type. Unset types default to 0.
+    private void SetupUsedEntries(int userId, int currency = 0, int stock = 0, int bond = 0)
+    {
+        _currencyEntryRepositoryMock.Setup(repo => repo.GetCountForUser(userId, It.IsAny<CancellationToken>())).ReturnsAsync(currency);
+        _stockEntryRepositoryMock.Setup(repo => repo.GetCountForUser(userId, It.IsAny<CancellationToken>())).ReturnsAsync(stock);
+        _bondEntryRepositoryMock.Setup(repo => repo.GetCountForUser(userId, It.IsAny<CancellationToken>())).ReturnsAsync(bond);
+    }
 
     [Fact]
-    public async Task GetUsedRecordsCapacity_ReturnsTotalEntriesAcrossAccounts()
+    public async Task GetUsedRecordsCapacity_SumsEntriesAcrossAllAccountTypes()
     {
         // Arrange
         var userId = 1;
-        var account1 = new AvailableAccount(1, "Account1");
-        var account2 = new AvailableAccount(2, "Account2");
-
-        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
-        .Returns(new[] { account1, account2 }.ToAsyncEnumerable());
-
-        _accountEntryRepositoryMock.Setup(repo => repo.GetCount(1)).ReturnsAsync(10);
-        _accountEntryRepositoryMock.Setup(repo => repo.GetCount(2)).ReturnsAsync(5);
+        SetupUsedEntries(userId, currency: 250, stock: 375, bond: 125);
 
         // Act
         var result = await _userPlanVerifier.GetUsedRecordsCapacity(userId);
 
         // Assert
-        Assert.Equal(15, result);
+        Assert.Equal(750, result);
+    }
+
+    [Fact]
+    public async Task GetUsedRecordsCapacity_NoEntries_ReturnsZero()
+    {
+        // Arrange - no setup: every entry type defaults to a count of 0
+
+        // Act
+        var result = await _userPlanVerifier.GetUsedRecordsCapacity(1);
+
+        // Assert
+        Assert.Equal(0, result);
+    }
+
+    [Fact]
+    public async Task GetUsedRecordsCapacity_CountsStockEntries_EvenWithoutCurrencyEntries()
+    {
+        // Arrange
+        var userId = 1;
+        SetupUsedEntries(userId, currency: 0, stock: 42, bond: 0);
+
+        // Act
+        var result = await _userPlanVerifier.GetUsedRecordsCapacity(userId);
+
+        // Assert
+        Assert.Equal(42, result);
     }
 
     [Theory]
@@ -52,17 +85,35 @@ public class UserPlanVerifierTests
         var user = new User { UserId = userId, Login = "test", CreationDate = DateTime.UtcNow, PricingLevel = pricingLevel };
 
         _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
-
-        var account = new AvailableAccount(1, "Account1");
-        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
-        .Returns(new[] { account }.ToAsyncEnumerable());
-        _accountEntryRepositoryMock.Setup(repo => repo.GetCount(1)).ReturnsAsync(5);
+        SetupUsedEntries(userId, currency: 5);
 
         // Act
         var result = await _userPlanVerifier.CanAddMoreEntries(userId, 1);
 
         // Assert
         Assert.True(result);
+    }
+
+    [Theory]
+    [InlineData(PricingLevel.Free)]
+    [InlineData(PricingLevel.Basic)]
+    [InlineData(PricingLevel.Premium)]
+    public async Task CanAddMoreEntries_CountsStockAndBondEntriesTowardLimit(PricingLevel pricingLevel)
+    {
+        // Arrange - the user is exactly at the limit purely from stock and bond entries (no currency entries)
+        var userId = 1;
+        var user = new User { UserId = userId, Login = "test", CreationDate = DateTime.UtcNow, PricingLevel = pricingLevel };
+
+        _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
+
+        var limit = PricingProvider.GetMaxAllowedEntries(user.PricingLevel);
+        SetupUsedEntries(userId, stock: limit / 2, bond: limit - limit / 2);
+
+        // Act
+        var result = await _userPlanVerifier.CanAddMoreEntries(userId, 1);
+
+        // Assert
+        Assert.False(result);
     }
 
     [Theory]
@@ -98,11 +149,7 @@ public class UserPlanVerifierTests
         var user = new User { UserId = userId, Login = "test", CreationDate = DateTime.UtcNow, PricingLevel = pricingLevel };
 
         _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
-
-        var account = new AvailableAccount(1, "Account1");
-        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
-        .Returns(new[] { account }.ToAsyncEnumerable());
-        _accountEntryRepositoryMock.Setup(repo => repo.GetCount(1)).ReturnsAsync(PricingProvider.GetMaxAllowedEntries(user.PricingLevel) + 1);
+        SetupUsedEntries(userId, currency: PricingProvider.GetMaxAllowedEntries(user.PricingLevel) + 1);
 
         // Act
         var result = await _userPlanVerifier.CanAddMoreEntries(userId, 1);
@@ -146,13 +193,7 @@ public class UserPlanVerifierTests
         var user = new User { UserId = userId, Login = "test", CreationDate = DateTime.UtcNow, PricingLevel = pricingLevel };
 
         _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
-
-        var account = new AvailableAccount(1, "Account1");
-        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
-        .Returns(new[] { account }.ToAsyncEnumerable());
-
-        var limit = PricingProvider.GetMaxAllowedEntries(user.PricingLevel);
-        _accountEntryRepositoryMock.Setup(repo => repo.GetCount(1)).ReturnsAsync(limit);
+        SetupUsedEntries(userId, currency: PricingProvider.GetMaxAllowedEntries(user.PricingLevel));
 
         // Act
         var result = await _userPlanVerifier.CanAddMoreEntries(userId, 1);
@@ -173,12 +214,8 @@ public class UserPlanVerifierTests
 
         _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
 
-        var account = new AvailableAccount(1, "Account1");
-        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
-        .Returns(new[] { account }.ToAsyncEnumerable());
-
         var limit = PricingProvider.GetMaxAllowedEntries(user.PricingLevel);
-        _accountEntryRepositoryMock.Setup(repo => repo.GetCount(1)).ReturnsAsync(limit - 5);
+        SetupUsedEntries(userId, currency: limit - 5);
 
         // Act - trying to add 10 entries when only 5 can fit
         var result = await _userPlanVerifier.CanAddMoreEntries(userId, 10);
@@ -199,12 +236,8 @@ public class UserPlanVerifierTests
 
         _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
 
-        var account = new AvailableAccount(1, "Account1");
-        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
-        .Returns(new[] { account }.ToAsyncEnumerable());
-
         var limit = PricingProvider.GetMaxAllowedEntries(user.PricingLevel);
-        _accountEntryRepositoryMock.Setup(repo => repo.GetCount(1)).ReturnsAsync(limit - 10);
+        SetupUsedEntries(userId, currency: limit - 10);
 
         // Act - adding exactly 10 to reach limit
         var result = await _userPlanVerifier.CanAddMoreEntries(userId, 10);
@@ -239,44 +272,6 @@ public class UserPlanVerifierTests
 
         // Assert
         Assert.False(result);
-    }
-
-    [Fact]
-    public async Task GetUsedRecordsCapacity_MultipleAccounts_SumsCorrectly()
-    {
-        // Arrange
-        var userId = 1;
-        var account1 = new AvailableAccount(1, "Account1");
-        var account2 = new AvailableAccount(2, "Account2");
-        var account3 = new AvailableAccount(3, "Account3");
-
-        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
-        .Returns(new[] { account1, account2, account3 }.ToAsyncEnumerable());
-
-        _accountEntryRepositoryMock.Setup(repo => repo.GetCount(1)).ReturnsAsync(250);
-        _accountEntryRepositoryMock.Setup(repo => repo.GetCount(2)).ReturnsAsync(375);
-        _accountEntryRepositoryMock.Setup(repo => repo.GetCount(3)).ReturnsAsync(125);
-
-        // Act
-        var result = await _userPlanVerifier.GetUsedRecordsCapacity(userId);
-
-        // Assert
-        Assert.Equal(750, result);
-    }
-
-    [Fact]
-    public async Task GetUsedRecordsCapacity_NoAccounts_ReturnsZero()
-    {
-        // Arrange
-        var userId = 1;
-        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
-        .Returns(Array.Empty<AvailableAccount>().ToAsyncEnumerable());
-
-        // Act
-        var result = await _userPlanVerifier.GetUsedRecordsCapacity(userId);
-
-        // Assert
-        Assert.Equal(0, result);
     }
 
     [Fact]
@@ -330,12 +325,8 @@ public class UserPlanVerifierTests
 
         _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
 
-        var account = new AvailableAccount(1, "Account1");
-        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
-        .Returns(new[] { account }.ToAsyncEnumerable());
-
         var limit = PricingProvider.GetMaxAllowedEntries(user.PricingLevel);
-        _accountEntryRepositoryMock.Setup(repo => repo.GetCount(1)).ReturnsAsync(limit);
+        SetupUsedEntries(userId, currency: limit);
 
         // Act - trying to add 0 entries when at limit
         var result = await _userPlanVerifier.CanAddMoreEntries(userId, 0);
@@ -355,11 +346,7 @@ public class UserPlanVerifierTests
         var user = new User { UserId = userId, Login = "test", CreationDate = DateTime.UtcNow, PricingLevel = pricingLevel };
 
         _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
-
-        var account = new AvailableAccount(1, "Account1");
-        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
-        .Returns(new[] { account }.ToAsyncEnumerable());
-        _accountEntryRepositoryMock.Setup(repo => repo.GetCount(1)).ReturnsAsync(0);
+        SetupUsedEntries(userId, currency: 0);
 
         // Act - trying to add exactly the limit
         var result = await _userPlanVerifier.CanAddMoreEntries(userId, expectedLimit);

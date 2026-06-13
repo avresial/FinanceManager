@@ -15,6 +15,13 @@ public interface IAccountEntryRepository<T>
     Task<T?> GetOldest(int accountId);
     Task<int> GetCount(int accountId);
 
+    /// <summary>
+    /// Counts every entry the user owns across all of their accounts of this entry type, computed with a
+    /// single query that joins the entry table to the accounts table on <c>AccountId</c> and filters by
+    /// <c>UserId</c>. Used for plan record-capacity calculations.
+    /// </summary>
+    Task<int> GetCountForUser(int userId, CancellationToken cancellationToken = default);
+
     Task RecalculateValues(int accountId, int entryId);
     Task<bool> Add(T entry, bool recalculate = true);
     Task<bool> Add(IEnumerable<T> entries, bool recalculate = true);

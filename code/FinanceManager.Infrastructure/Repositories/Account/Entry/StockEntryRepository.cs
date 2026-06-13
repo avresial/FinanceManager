@@ -114,6 +114,12 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
         context.StockEntries.SingleOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
     public Task<int> GetCount(int accountId) => context.StockEntries.CountAsync(e => e.AccountId == accountId);
 
+    public Task<int> GetCountForUser(int userId, CancellationToken cancellationToken = default) =>
+        (from entry in context.StockEntries
+         join account in context.Accounts on entry.AccountId equals account.AccountId
+         where account.UserId == userId
+         select entry).CountAsync(cancellationToken);
+
     public async Task<StockAccountEntry?> GetNextOlder(int accountId, int entryId)
     {
         var entry = await context.StockEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
