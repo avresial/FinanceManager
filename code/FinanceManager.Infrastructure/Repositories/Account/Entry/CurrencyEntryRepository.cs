@@ -199,6 +199,49 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .LastOrDefaultAsync();
 
+    public async Task<List<CurrencyAccountEntry>> GetRange(IReadOnlyCollection<int> accountIds, DateTime startDate, DateTime endDate)
+    {
+        if (accountIds.Count == 0) return [];
+
+        return await context.CurrencyEntries
+            .AsNoTracking()
+            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate >= startDate && x.PostingDate <= endDate)
+            .Include(x => x.Labels)
+            .ThenInclude(l => l.Classifications)
+            .AsSplitQuery()
+            .OrderByDescending(x => x.PostingDate)
+            .ThenByDescending(x => x.EntryId)
+            .ToListAsync();
+    }
+
+    public async Task<Dictionary<int, CurrencyAccountEntry>> GetNextOlder(IReadOnlyCollection<int> accountIds, DateTime date)
+    {
+        if (accountIds.Count == 0) return [];
+
+        // One row per account: the entry that no other older-than-date entry of the same account beats on
+        // (PostingDate, EntryId). EntryId is unique, so exactly one row per account survives the filter.
+        var rows = await context.CurrencyEntries
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate < date)
+            .Where(e => !context.CurrencyEntries.Any(o => o.AccountId == e.AccountId && o.PostingDate < date
+                && (o.PostingDate > e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId > e.EntryId))))
+            .ToListAsync();
+
+        return rows.ToDictionary(e => e.AccountId);
+    }
+
+    public async Task<Dictionary<int, CurrencyAccountEntry>> GetNextYounger(IReadOnlyCollection<int> accountIds, DateTime date)
+    {
+        if (accountIds.Count == 0) return [];
+
+        var rows = await context.CurrencyEntries
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate > date)
+            .Where(e => !context.CurrencyEntries.Any(o => o.AccountId == e.AccountId && o.PostingDate > date
+                && (o.PostingDate < e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId < e.EntryId))))
+            .ToListAsync();
+
+        return rows.ToDictionary(e => e.AccountId);
+    }
+
     public async Task<CurrencyAccountEntry?> GetOldest(int accountId) => await context.CurrencyEntries
             .AsNoTracking()
             .Where(x => x.AccountId == accountId)

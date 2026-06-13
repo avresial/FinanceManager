@@ -43,6 +43,18 @@ internal class BondAccountRepository(AppDbContext context) : IAccountRepository<
 
     public Task<bool> Exists(int accountId) => context.Accounts.AsNoTracking().AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bond);
 
+    public async Task<List<BondAccount>> GetAll(int userId)
+    {
+        var accounts = await context.Accounts
+            .AsNoTracking()
+            .Where(x => x.UserId == userId && x.AccountType == AccountType.Bond)
+            .ToListAsync();
+
+        return accounts
+            .Select(x => new BondAccount(x.UserId, x.AccountId, x.Name))
+            .ToList();
+    }
+
     public async Task<BondAccount?> Get(int accountId)
     {
         var accountToReturn = await context.Accounts.AsNoTracking().FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bond);
