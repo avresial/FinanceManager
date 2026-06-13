@@ -33,7 +33,11 @@ public class CurrencyAccountImportServiceTests
         _mockUserRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
 
         // create a real UserPlanVerifier so its CanAddMoreEntries method can be used in test
-        _userPlanVerifier = new UserPlanVerifier(_mockAccountRepository.Object, _mockAccountEntryRepository.Object, _mockUserRepository.Object);
+        _userPlanVerifier = new UserPlanVerifier(_mockAccountRepository.Object, _mockUserRepository.Object);
+
+        // Default: users have no recorded entries, so plan checks pass unless a test overrides this.
+        _mockAccountRepository.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int>());
 
         var mockLogger = new Mock<ILogger<CurrencyAccountImportService>>();
         var importAccountValidator = new ImportAccountValidator(_userPlanVerifier);
@@ -114,11 +118,10 @@ public class CurrencyAccountImportServiceTests
 
         var account = new CurrencyAccount(userId, accountId, "Test");
         _mockAccountRepository.Setup(x => x.Get(accountId)).ReturnsAsync(account);
-        _mockAccountRepository.Setup(x => x.GetAvailableAccounts(userId))
-            .Returns(new[] { new AvailableAccount(accountId, "Test") }.ToAsyncEnumerable());
 
-        // Already at limit
-        _mockAccountEntryRepository.Setup(x => x.GetCount(accountId)).ReturnsAsync(1000);
+        // Already at the Free plan limit
+        _mockAccountRepository.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int> { [userId] = 1000 });
 
         var entries = new[] { new CurrencyEntryImport(DateTime.UtcNow, 100m, "Test") };
 

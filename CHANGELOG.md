@@ -13,6 +13,7 @@ rules agents must follow when updating this file.
 - Stock price queries (`Get`, `GetRange`, `Update`, bulk import) now use sargable date predicates so the `(StockIsin, Date)` index is used for seeks instead of full scans; the gap-search look-back is bounded to two years; and bulk import preloads all required data in two queries instead of two per price. #409
 - Adding, editing, or deleting a historical transaction on a large account is now significantly faster; the running-balance recalculation is performed as a single database statement instead of one update per row. #412
 - Deleting an account with many entries is now significantly faster; the server no longer loads every entry into memory before deleting. #413
+- The admin user list now loads its used-record-capacity column with a single grouped count query for the whole page instead of one count query per account per user, and fetches the page of users in one query; the previous code also blocked a thread on a synchronous `.Result` call per row. #414
 
 ### Added
 - Admin page (`/Admin/ServiceKeys`) for managing external service API credentials (Alpha Vantage, OpenFIGI); keys are persisted in the database and take effect immediately without redeployment. #358

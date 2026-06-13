@@ -82,6 +82,7 @@ public class UserRepository(AppDbContext context) : IUserRepository
         return userDto.ToUser();
     }
     public IAsyncEnumerable<User> GetUsers(int recordIndex, int recordsCount) => context.Users
+        .OrderBy(x => x.Id)
         .Skip(recordIndex)
         .Take(recordsCount)
         .Select(x => x.ToUser())
