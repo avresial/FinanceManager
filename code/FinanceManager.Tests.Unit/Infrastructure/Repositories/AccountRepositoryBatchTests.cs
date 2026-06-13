@@ -72,20 +72,21 @@ public class AccountRepositoryBatchTests
         var ct = TestContext.Current.CancellationToken;
         await using var ctx = CreateContext();
         AddAccount(ctx, 1, AccountType.Currency);
-        // No entry falls inside [_start, _end]; the boundaries (computed relative to _start) must surface the
-        // entry just before and just after, and the empty in-range result falls back to the next-older entry.
+        // Next-older is taken before _start and next-younger after _end, so the in-range row (100) must NOT be
+        // mistaken for the younger boundary — that boundary is the first entry after the window (110).
         ctx.CurrencyEntries.Add(new CurrencyAccountEntry(1, 90, new DateTime(2025, 1, 5, 0, 0, 0, DateTimeKind.Utc), 10, 10));    // older than _start
-        ctx.CurrencyEntries.Add(new CurrencyAccountEntry(1, 110, new DateTime(2025, 1, 25, 0, 0, 0, DateTimeKind.Utc), 30, 20));  // younger than _start
+        ctx.CurrencyEntries.Add(new CurrencyAccountEntry(1, 100, new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc), 25, 15));  // inside [_start, _end]
+        ctx.CurrencyEntries.Add(new CurrencyAccountEntry(1, 110, new DateTime(2025, 1, 25, 0, 0, 0, DateTimeKind.Utc), 45, 20));  // younger than _end
         await ctx.SaveChangesAsync(ct);
 
         var repo = CreateRepository(ctx);
         var account = (await repo.GetAccounts<CurrencyAccount>(_userId, _start, _end).ToListAsync(ct)).Single();
 
+        Assert.Equal(100, account.Entries!.Single().EntryId);
         Assert.NotNull(account.NextOlderEntry);
         Assert.Equal(90, account.NextOlderEntry!.EntryId);
         Assert.NotNull(account.NextYoungerEntry);
         Assert.Equal(110, account.NextYoungerEntry!.EntryId);
-        Assert.Equal(90, account.Entries!.Single().EntryId);
     }
 
     [Fact]

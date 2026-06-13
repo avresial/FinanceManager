@@ -76,7 +76,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
                 var entries = await currencyEntryRepository.Get(resultAccount.AccountId, dateStart, dateEnd).ToListAsync();
 
                 var nextOlderEntry = await currencyEntryRepository.GetNextOlder(resultAccount.AccountId, dateStart);
-                var nextYoungerEntry = await currencyEntryRepository.GetNextYounger(resultAccount.AccountId, dateStart);
+                var nextYoungerEntry = await currencyEntryRepository.GetNextYounger(resultAccount.AccountId, dateEnd);
 
                 if (entries.Count == 0 && nextOlderEntry is not null)
                     entries = [nextOlderEntry];
@@ -96,7 +96,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
                 var stockAccount = await stockAccountRepository.Get(accountId) ?? throw new ArgumentNullException();
                 var stockEntries = await stockEntryRepository.Get(stockAccount.AccountId, dateStart, dateEnd).ToListAsync();
                 var stockNextOlderEntry = await stockEntryRepository.GetNextOlder(stockAccount.AccountId, dateStart);
-                var stockNextYoungerEntry = await stockEntryRepository.GetNextYounger(stockAccount.AccountId, dateStart);
+                var stockNextYoungerEntry = await stockEntryRepository.GetNextYounger(stockAccount.AccountId, dateEnd);
 
                 if (stockEntries.Count == 0 && stockNextOlderEntry is not null)
                     stockEntries = stockNextOlderEntry.Values.ToList();
@@ -114,7 +114,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
                 var bondAccount = await bondAccountRepository.Get(accountId) ?? throw new ArgumentNullException();
                 var bondEntries = await bondEntryRepository.Get(bondAccount.AccountId, dateStart, dateEnd).ToListAsync();
                 var bondNextOlderEntry = await bondEntryRepository.GetNextOlder(bondAccount.AccountId, dateStart);
-                var bondNextYoungerEntry = await bondEntryRepository.GetNextYounger(bondAccount.AccountId, dateStart);
+                var bondNextYoungerEntry = await bondEntryRepository.GetNextYounger(bondAccount.AccountId, dateEnd);
 
                 if (bondEntries.Count == 0 && bondNextOlderEntry is not null)
                     bondEntries = bondNextOlderEntry.Values.ToList();
@@ -164,7 +164,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
             .GroupBy(e => e.AccountId)
             .ToDictionary(g => g.Key, g => g.ToList());
         var nextOlder = await currencyEntryRepository.GetNextOlder(accountIds, dateStart);
-        var nextYounger = await currencyEntryRepository.GetNextYounger(accountIds, dateStart);
+        var nextYounger = await currencyEntryRepository.GetNextYounger(accountIds, dateEnd);
 
         List<CurrencyAccount> result = [];
         foreach (var account in accounts)
@@ -192,7 +192,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
             .GroupBy(e => e.AccountId)
             .ToDictionary(g => g.Key, g => g.ToList());
         var nextOlder = await stockEntryRepository.GetNextOlderPerInstrument(accountIds, dateStart);
-        var nextYounger = await stockEntryRepository.GetNextYoungerPerInstrument(accountIds, dateStart);
+        var nextYounger = await stockEntryRepository.GetNextYoungerPerInstrument(accountIds, dateEnd);
 
         List<StockAccount> result = [];
         foreach (var account in accounts)
@@ -220,7 +220,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
             .GroupBy(e => e.AccountId)
             .ToDictionary(g => g.Key, g => g.ToList());
         var nextOlder = await bondEntryRepository.GetNextOlderPerInstrument(accountIds, dateStart);
-        var nextYounger = await bondEntryRepository.GetNextYoungerPerInstrument(accountIds, dateStart);
+        var nextYounger = await bondEntryRepository.GetNextYoungerPerInstrument(accountIds, dateEnd);
 
         List<BondAccount> result = [];
         foreach (var account in accounts)

@@ -9,6 +9,9 @@ rules agents must follow when updating this file.
 
 ## [Unreleased]
 
+### Fixed
+- The next-younger boundary entry attached to a loaded account (used to extend balance series past the selected window) is now resolved from the end of the date range instead of the start, so it correctly points at the first entry *after* the window rather than the earliest in-range entry. Affects both single-account and whole-portfolio loads. #411
+
 ### Changed
 - Loading a whole user's accounts (`GetAccounts`) now batches its database access: instead of ~5 queries per account — plus an extra query per stock ISIN and per bond — each account type loads in a constant number of queries (accounts, in-range entries, and the next-older/next-younger boundaries), cutting the query volume behind the dashboard and other multi-account reads. #411
 - Stock price queries (`Get`, `GetRange`, `Update`, bulk import) now use sargable date predicates so the `(StockIsin, Date)` index is used for seeks instead of full scans; the gap-search look-back is bounded to two years; and bulk import preloads all required data in two queries instead of two per price. #409
