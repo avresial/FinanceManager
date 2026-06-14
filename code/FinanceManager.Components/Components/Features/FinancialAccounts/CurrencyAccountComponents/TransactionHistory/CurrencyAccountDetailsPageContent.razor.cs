@@ -43,6 +43,8 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private Currency _currency = DefaultCurrency.PLN;
     private string _accountTypeLabel = "Cash account";
     private UserSession? _user;
+    private bool _isChartLoading;
+    private int _chartRefreshVersion;
 
     public bool IsLoading = false;
     public CurrencyAccount? Account { get; set; }
@@ -105,9 +107,11 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         return Task.CompletedTask;
     }
 
-    public async Task UpdateInfo()
+    public Task UpdateInfo(bool refreshChart = true)
     {
-        if (Account is null || Account.Entries is null) return;
+        if (Account is null || Account.Entries is null) return Task.CompletedTask;
+
+        _currency = SettingsService.GetCurrency();
 
         if (Account.Entries.Count == 0)
         {
@@ -116,7 +120,10 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
             _balanceChangePercent = null;
             _top5 = [];
             _bottom5 = [];
-            return;
+            if (refreshChart)
+                QueueChartDataRefresh();
+
+            return Task.CompletedTask;
         }
 
         var filteredEntries = GetFilteredEntries();
@@ -154,7 +161,10 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
             _ => "Account"
         };
 
-        await UpdateChartData();
+        if (refreshChart)
+            QueueChartDataRefresh();
+
+        return Task.CompletedTask;
     }
 
     protected override async Task OnInitializedAsync()
@@ -235,13 +245,41 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         }
     }
 
-    private async Task UpdateChartData()
+    private void QueueChartDataRefresh()
     {
+        var refreshVersion = ++_chartRefreshVersion;
+        _isChartLoading = true;
         ChartData.Clear();
+
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                await UpdateChartData(refreshVersion);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error while loading currency account chart data for account ID {AccountId}", AccountId);
+            }
+            finally
+            {
+                if (refreshVersion == _chartRefreshVersion)
+                    _isChartLoading = false;
+
+                StateHasChanged();
+            }
+        });
+    }
+
+    private async Task UpdateChartData(int refreshVersion)
+    {
         if (Account is null || _user is null) return;
 
         _currency = SettingsService.GetCurrency();
         var chartData = await MoneyFlowHttpClient.GetClosingBalance(_user.UserId, _currency, _dateStart, _dateEnd, [AccountId]);
+        if (refreshVersion != _chartRefreshVersion) return;
+
+        ChartData.Clear();
         ChartData.AddRange(chartData.SkipWhile(x => x.Value == 0));
     }
 
@@ -299,21 +337,21 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private async Task OnSearchChanged(string? value)
     {
         _searchText = value;
-        await UpdateInfo();
+        await UpdateInfo(refreshChart: false);
         StateHasChanged();
     }
 
     private async Task OnTxFilterChanged(AccountHistoryToolbar.TxFilter? value)
     {
         _activeFilter = value;
-        await UpdateInfo();
+        await UpdateInfo(refreshChart: false);
         StateHasChanged();
     }
 
     private async Task OnLabelsChanged(HashSet<string> value)
     {
         _selectedLabels = new HashSet<string>(value, StringComparer.OrdinalIgnoreCase);
-        await UpdateInfo();
+        await UpdateInfo(refreshChart: false);
         StateHasChanged();
     }
 

@@ -11,7 +11,7 @@ else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
 {
                         <AccountDetailsHero AccountName="@Account.Name" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
                         Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
-                        SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged" IsChartLoading="@IsLoading"
+                        SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged" IsChartLoading="@_isChartLoading"
                         CustomDateRange="@_customDateRange" CustomDateRangeChanged="OnCustomDateRangeChanged"
                         ChartData="@ChartData" IsMobile="@_isMobile" />
 

@@ -43,6 +43,8 @@ public partial class StockAccountDetailsPageContent : ComponentBase, IAsyncDispo
     private readonly string _accountTypeLabel = "Stock account";
     private List<string> _availableStocks = [];
     private UserSession? _user;
+    private bool _isChartLoading;
+    private int _chartRefreshVersion;
 
     public bool IsLoading = false;
     public StockAccount? Account { get; set; }
@@ -106,9 +108,11 @@ public partial class StockAccountDetailsPageContent : ComponentBase, IAsyncDispo
         return Task.CompletedTask;
     }
 
-    public async Task UpdateInfo(bool refreshChart = true)
+    public Task UpdateInfo(bool refreshChart = true)
     {
-        if (Account is null || Account.Entries is null) return;
+        if (Account is null || Account.Entries is null) return Task.CompletedTask;
+
+        _currency = SettingsService.GetCurrency();
 
         if (Account.Entries.Count == 0)
         {
@@ -117,7 +121,10 @@ public partial class StockAccountDetailsPageContent : ComponentBase, IAsyncDispo
             _balanceChangePercent = null;
             _top5 = [];
             _bottom5 = [];
-            return;
+            if (refreshChart)
+                QueueChartDataRefresh();
+
+            return Task.CompletedTask;
         }
 
         var filteredEntries = GetFilteredEntries();
@@ -129,20 +136,8 @@ public partial class StockAccountDetailsPageContent : ComponentBase, IAsyncDispo
                                  .Take(5)
                                  .ToList();
 
-        // Text filters (search/income-expense/category) narrow the list and movers only;
-        // the chart and hero balance track the selected date range, so skip the network
-        // refetch when only a filter changed.
         if (refreshChart)
-            await UpdateChartData();
-
-        // Stock entry Value/ValueChange are unit-denominated, so the hero balance and
-        // change come from the currency-denominated closing-balance series (the same data
-        // the chart plots) rather than from the entries.
-        _currentBalance = ChartData.LastOrDefault()?.Value ?? 0;
-        _balanceChange = ChartData.Count >= 2 ? ChartData.Last().Value - ChartData.First().Value : 0;
-
-        var startBalance = _currentBalance - _balanceChange;
-        _balanceChangePercent = startBalance == 0 ? null : _balanceChange / startBalance * 100m;
+            QueueChartDataRefresh();
 
         _availableCategories = Account.Entries
             .SelectMany(e => e.Labels ?? [])
@@ -151,6 +146,8 @@ public partial class StockAccountDetailsPageContent : ComponentBase, IAsyncDispo
             .Distinct()
             .OrderBy(n => n)
             .ToList();
+
+        return Task.CompletedTask;
     }
 
     protected override async Task OnInitializedAsync()
@@ -234,14 +231,52 @@ public partial class StockAccountDetailsPageContent : ComponentBase, IAsyncDispo
         }
     }
 
-    private async Task UpdateChartData()
+    private void QueueChartDataRefresh()
     {
+        var refreshVersion = ++_chartRefreshVersion;
+        _isChartLoading = true;
         ChartData.Clear();
+
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                await UpdateChartData(refreshVersion);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error while loading stock account chart data for account ID {AccountId}", AccountId);
+            }
+            finally
+            {
+                if (refreshVersion == _chartRefreshVersion)
+                    _isChartLoading = false;
+
+                StateHasChanged();
+            }
+        });
+    }
+
+    private async Task UpdateChartData(int refreshVersion)
+    {
         if (Account is null || _user is null) return;
 
         _currency = SettingsService.GetCurrency();
         var chartData = await MoneyFlowHttpClient.GetClosingBalance(_user.UserId, _currency, _dateStart, _dateEnd, [AccountId]);
+        if (refreshVersion != _chartRefreshVersion) return;
+
+        ChartData.Clear();
         ChartData.AddRange(chartData.SkipWhile(x => x.Value == 0));
+        UpdateBalanceFromChartData();
+    }
+
+    private void UpdateBalanceFromChartData()
+    {
+        _currentBalance = ChartData.LastOrDefault()?.Value ?? 0;
+        _balanceChange = ChartData.Count >= 2 ? ChartData.Last().Value - ChartData.First().Value : 0;
+
+        var startBalance = _currentBalance - _balanceChange;
+        _balanceChangePercent = startBalance == 0 ? null : _balanceChange / startBalance * 100m;
     }
 
     private void AccountDataSynchronizationService_AccountsChanged()
