@@ -39,6 +39,7 @@ public partial class Dashboard : ComponentBase
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required DashboardHttpClient DashboardHttpClient { get; set; }
+    [Inject] public required DashboardOverviewCacheService DashboardOverviewCacheService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<Dashboard> Logger { get; set; }
@@ -78,40 +79,54 @@ public partial class Dashboard : ComponentBase
         var startDate = StartDate;
         var endDate = EndDate;
 
-        _isLoading = true;
         _hasError = false;
-        StateHasChanged();
 
+        var user = await LoginService.GetLoggedUser();
+        if (user is null)
+        {
+            if (requestVersion == _loadOverviewVersion)
+                _overview = null;
+            return;
+        }
+
+        var currency = SettingsService.GetCurrency();
+
+        // Render cached data immediately so the page feels instant on re-navigation.
+        // The API call below always runs and updates the view when fresh data arrives.
+        var cached = await DashboardOverviewCacheService.GetCachedAsync(user.UserId, currency.Id, startDate, endDate);
+        if (cached is not null && requestVersion == _loadOverviewVersion)
+        {
+            _overview = cached.ToDto();
+            _overviewStart = startDate;
+            _overviewEnd = endDate;
+            _isLoading = false;
+            StateHasChanged();
+        }
+        else if (requestVersion == _loadOverviewVersion)
+        {
+            _isLoading = true;
+            StateHasChanged();
+        }
+
+        DashboardOverviewDto? freshOverview = null;
         try
         {
-            var user = await LoginService.GetLoggedUser();
-            if (user is null)
-            {
-                if (requestVersion == _loadOverviewVersion)
-                {
-                    _overview = null;
-                }
-                return;
-            }
+            freshOverview = await DashboardHttpClient.GetOverview(user.UserId, currency.Id, startDate, endDate);
 
-            var currency = SettingsService.GetCurrency();
-
-            var overview = await DashboardHttpClient.GetOverview(user.UserId, currency.Id, startDate, endDate);
-
-            // Swap the held overview only after the call succeeds, and only if this is
-            // still the latest reload, so cards keep rendering the previous data (and
-            // never self-load) during a reload. The matching range is committed in the
-            // same step so the displayed dates and amounts always move together.
             if (requestVersion == _loadOverviewVersion)
             {
-                _overview = overview;
+                _overview = freshOverview;
                 _overviewStart = startDate;
                 _overviewEnd = endDate;
             }
+
+            if (freshOverview is not null)
+                await DashboardOverviewCacheService.SaveAsync(freshOverview);
         }
         catch (Exception ex)
         {
-            if (requestVersion == _loadOverviewVersion)
+            // If we already rendered cached data, keep it visible rather than blanking the screen.
+            if (requestVersion == _loadOverviewVersion && cached is null)
             {
                 _overview = null;
                 _hasError = true;

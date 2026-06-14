@@ -9,6 +9,9 @@ rules agents must follow when updating this file.
 
 ## [Unreleased]
 
+### Added
+- Dashboard data is now cached in the browser's local storage: navigating back to the dashboard after visiting another page renders the previous result instantly, then silently refreshes in the background when the server responds. #444
+
 ### Fixed
 - The custom date-range icon in the account-details range selector now works: clicking the calendar icon opens a date-range picker (previously it was embedded in a menu and never appeared), letting users pick an arbitrary start/end range for the account history and chart. #436
 - The next-younger boundary entry attached to a loaded account (used to extend balance series past the selected window) is now resolved from the end of the date range instead of the start, so it correctly points at the first entry *after* the window rather than the earliest in-range entry. Affects both single-account and whole-portfolio loads. #411
