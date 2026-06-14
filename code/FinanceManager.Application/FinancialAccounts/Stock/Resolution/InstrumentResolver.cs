@@ -10,6 +10,7 @@ public sealed class InstrumentResolver(
     IOpenFigiClient openFigiClient,
     IAlphaVantageClient avClient,
     IStockDetailsRepository stockDetailsRepository,
+    IQuoteFactorResolver quoteFactorResolver,
     IMemoryCache cache,
     ILogger<InstrumentResolver> logger) : IInstrumentResolver
 {
@@ -64,7 +65,7 @@ public sealed class InstrumentResolver(
         var ofListings = ofTask.Result;
 
         // Reconcile: pair AV symbol/currency/region against OpenFIGI ISIN/venue
-        var candidates = Reconcile(baseTicker, brokerSymbol.ExchangeHint, avMatches, ofListings);
+        var candidates = await Reconcile(baseTicker, brokerSymbol.ExchangeHint, avMatches, ofListings, ct);
 
         if (candidates.Count == 0)
         {
@@ -98,11 +99,12 @@ public sealed class InstrumentResolver(
         return ambiguousResult;
     }
 
-    private List<InstrumentListing> Reconcile(
+    private async Task<List<InstrumentListing>> Reconcile(
         string baseTicker,
         string? exchangeHint,
         IReadOnlyList<TickerSearchMatch> avMatches,
-        IReadOnlyList<OpenFigiListing> ofListings)
+        IReadOnlyList<OpenFigiListing> ofListings,
+        CancellationToken ct)
     {
         var candidates = new List<InstrumentListing>();
         var seen = new HashSet<string>();
@@ -149,17 +151,10 @@ public sealed class InstrumentResolver(
             var isin = matchingOf?.Isin;
             var avSymbol = avMatch.Symbol;
 
-            // Handle GBX vs GBP currency reconciliation
-            var currency = avMatch.Currency ?? matchingOf?.Currency ?? "USD";
-            var quoteFactor = 1m;
-            if (string.Equals(currency, "GBX", StringComparison.OrdinalIgnoreCase))
-            {
-                if (string.Equals(matchingOf?.Currency, "GBP", StringComparison.OrdinalIgnoreCase))
-                {
-                    quoteFactor = 100m;
-                    currency = "GBP";
-                }
-            }
+            var avCurrency = avMatch.Currency ?? "USD";
+            var ofCurrency = matchingOf?.Currency ?? "USD";
+            var quoteFactor = await quoteFactorResolver.ResolveAsync(avCurrency, ofCurrency, ct);
+            var currency = ofCurrency;  // Use OF currency as the canonical one after conversion
 
             var candidateKey = $"{isin}_{avSymbol}_{currency}";
             if (seen.Add(candidateKey))

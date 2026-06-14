@@ -41,11 +41,16 @@ public static class ServiceCollectionExtension
         services.AddHttpClient<OpenFigiClient>();
         services.AddScoped<IOpenFigiClient>(sp => sp.GetRequiredService<OpenFigiClient>());
         services.AddScoped<IIsinResolver, CachingIsinResolver>();
+        services.AddScoped<IQuoteFactorResolver>(sp =>
+            new QuoteFactorResolver(
+                sp.GetRequiredService<ICurrencyExchangeRateProvider>(),
+                sp.GetRequiredService<ILogger<QuoteFactorResolver>>()));
         services.AddScoped<IInstrumentResolver>(sp =>
             new InstrumentResolver(
                 sp.GetRequiredService<IOpenFigiClient>(),
                 sp.GetRequiredService<IAlphaVantageClient>(),
                 sp.GetRequiredService<IStockDetailsRepository>(),
+                sp.GetRequiredService<IQuoteFactorResolver>(),
                 sp.GetRequiredService<IMemoryCache>(),
                 sp.GetRequiredService<ILogger<InstrumentResolver>>()));
         services.AddHttpClient<ICurrencyExchangeRateProvider, FawazAhmedCurrencyApiClient>();

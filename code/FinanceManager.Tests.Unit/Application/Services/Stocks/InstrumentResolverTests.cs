@@ -17,11 +17,24 @@ public class InstrumentResolverTests
     private readonly Mock<IOpenFigiClient> _openFigiClientMock = new();
     private readonly Mock<IAlphaVantageClient> _avClientMock = new();
     private readonly Mock<IStockDetailsRepository> _stockDetailsRepositoryMock = new();
+    private readonly Mock<IQuoteFactorResolver> _quoteFactorResolverMock = new();
     private readonly IMemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
     private readonly ILogger<InstrumentResolver> _logger = LoggerFactory.Create(_ => { }).CreateLogger<InstrumentResolver>();
 
-    private InstrumentResolver CreateResolver() =>
-        new(_openFigiClientMock.Object, _avClientMock.Object, _stockDetailsRepositoryMock.Object, _cache, _logger);
+    private InstrumentResolver CreateResolver()
+    {
+        _quoteFactorResolverMock
+            .Setup(x => x.ResolveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1m);  // Default: no conversion
+
+        return new(
+            _openFigiClientMock.Object,
+            _avClientMock.Object,
+            _stockDetailsRepositoryMock.Object,
+            _quoteFactorResolverMock.Object,
+            _cache,
+            _logger);
+    }
 
     [Fact]
     public async Task ResolveAsync_WithNullOrWhitespaceTicker_ReturnsNoMatch()
@@ -259,6 +272,10 @@ public class InstrumentResolverTests
                     Currency: "GBP")
             });
 
+        _quoteFactorResolverMock
+            .Setup(x => x.ResolveAsync("GBX", "GBP", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(100m);  // GBX → GBP conversion factor
+
         _stockDetailsRepositoryMock
             .Setup(x => x.GetByTicker("VANGUARD", It.IsAny<CancellationToken>()))
             .ReturnsAsync((StockDetails?)null);
@@ -269,6 +286,9 @@ public class InstrumentResolverTests
         Assert.NotNull(result.Match);
         Assert.Equal("GBP", result.Match.Currency);
         Assert.Equal(100m, result.Match.QuoteFactor);
+        _quoteFactorResolverMock.Verify(
+            x => x.ResolveAsync("GBX", "GBP", It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
