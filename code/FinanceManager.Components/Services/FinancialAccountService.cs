@@ -159,37 +159,43 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     public async Task<Dictionary<int, Type>> GetAvailableAccounts()
     {
         Dictionary<int, Type> result = [];
-        try
-        {
-            foreach (var account in await currencyAccountHttpClient.GetAvailableAccountsAsync())
-                result.Add(account.AccountId, typeof(CurrencyAccount));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError("Error while fetching currency accounts: {Message}", ex.Message);
-        }
+        var currencyAccountsTask = GetAvailableAccountsAsync(
+            () => currencyAccountHttpClient.GetAvailableAccountsAsync(),
+            "currency");
+        var stockAccountsTask = GetAvailableAccountsAsync(
+            async () => await stockAccountHttpClient.GetAvailableAccountsAsync(),
+            "stock");
+        var bondAccountsTask = GetAvailableAccountsAsync(
+            () => bondAccountHttpClient.GetAvailableAccountsAsync(),
+            "bond");
 
-        try
-        {
-            foreach (var account in await stockAccountHttpClient.GetAvailableAccountsAsync())
-                result.Add(account.AccountId, typeof(StockAccount));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError("Error while fetching stock accounts: {Message}", ex.Message);
-        }
+        await Task.WhenAll(currencyAccountsTask, stockAccountsTask, bondAccountsTask);
 
-        try
-        {
-            foreach (var account in await bondAccountHttpClient.GetAvailableAccountsAsync())
-                result.Add(account.AccountId, typeof(BondAccount));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError("Error while fetching stock accounts: {Message}", ex.Message);
-        }
+        foreach (var account in await currencyAccountsTask)
+            result.Add(account.AccountId, typeof(CurrencyAccount));
+
+        foreach (var account in await stockAccountsTask)
+            result.Add(account.AccountId, typeof(StockAccount));
+
+        foreach (var account in await bondAccountsTask)
+            result.Add(account.AccountId, typeof(BondAccount));
 
         return result;
+    }
+
+    private async Task<IEnumerable<AvailableAccount>> GetAvailableAccountsAsync(
+        Func<Task<IEnumerable<AvailableAccount>>> getAccounts,
+        string accountType)
+    {
+        try
+        {
+            return await getAccounts();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError("Error while fetching {AccountType} accounts: {Message}", accountType, ex.Message);
+            return [];
+        }
     }
     public async Task<DateTime?> GetEndDate(int accountId)
     {
