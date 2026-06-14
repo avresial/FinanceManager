@@ -184,7 +184,8 @@ public class StockPriceProvider(
             if (details is null)
                 return [];
 
-            var apiPrices = await apiClient.GetDailySeries(ticker, isin, start, end, details.Currency, ct);
+            var apiSymbol = !string.IsNullOrWhiteSpace(details.AlphaVantageSymbol) ? details.AlphaVantageSymbol : ticker;
+            var apiPrices = await apiClient.GetDailySeries(apiSymbol, isin, start, end, details.Currency, ct);
             if (apiPrices is not null && apiPrices.Count > 0)
                 await stockRepository.Add(apiPrices);
 

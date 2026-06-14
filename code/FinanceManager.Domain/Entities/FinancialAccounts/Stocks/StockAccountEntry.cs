@@ -5,7 +5,9 @@ namespace FinanceManager.Domain.Entities.Stocks;
 
 public class StockAccountEntry : FinancialEntryBase
 {
+    /// <summary>ISIN is the authoritative key for this entry — all lookups must use Isin, not Ticker.</summary>
     public string Isin { get; set; }
+    /// <summary>Display-only broker ticker alias (e.g. "CSPX.UK"). Not used as a lookup or join key.</summary>
     public string Ticker { get; set; }
     public InvestmentType InvestmentType { get; set; }
 
