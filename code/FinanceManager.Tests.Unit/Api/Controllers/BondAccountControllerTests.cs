@@ -29,7 +29,6 @@ public class BondAccountControllerTests
         _controller = new BondAccountController(
             _mockBondAccountRepository.Object,
             _mockBondAccountEntryRepository.Object,
-            new BondEntryProvider(_mockBondAccountEntryRepository.Object),
             _userPlanVerifier.Object,
             _bondAccountCsvExportService.Object);
 
@@ -112,19 +111,6 @@ public class BondAccountControllerTests
         Assert.Equal([2, 1], returnValue.Entries.Select(x => x.EntryId));
     }
 
-    [Fact]
-    public async Task GetInitialTransactionHistory_BackfillsOlderEntriesUntilMinimumIsReached()
-    {
-        var (accountId, startDate, endDate) = SetupBackfillScenario();
-
-        var result = await _controller.GetInitialTransactionHistory(accountId, startDate, endDate, minimumEntryCount: 2);
-
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<BondAccountDto>(okResult.Value);
-        Assert.Equal(2, returnValue.Entries.Count());
-        Assert.Equal([2, 1], returnValue.Entries.Select(x => x.EntryId));
-    }
-
     private (int AccountId, DateTime StartDate, DateTime EndDate) SetupBackfillScenario()
     {
         var userId = 1;
@@ -133,10 +119,6 @@ public class BondAccountControllerTests
         var endDate = new DateTime(2026, 4, 30);
         var expandedStartDate = new DateTime(2026, 3, 15);
         BondAccount account = new(userId, accountId, "Bond Account", AccountLabel.Other);
-        List<BondAccountEntry> initialEntries =
-        [
-            new(accountId, 2, new DateTime(2026, 4, 20), 10500m, 500m, 101),
-        ];
         List<BondAccountEntry> expandedEntries =
         [
             new(accountId, 2, new DateTime(2026, 4, 20), 10500m, 500m, 101),
@@ -144,11 +126,12 @@ public class BondAccountControllerTests
         ];
 
         _mockBondAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
-        _mockBondAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns(initialEntries.ToAsyncEnumerable());
+        _mockBondAccountEntryRepository
+            .Setup(repo => repo.GetEntriesWithMinimumCount(accountId, startDate, endDate, 2))
+            .ReturnsAsync((expandedEntries, expandedStartDate));
         _mockBondAccountEntryRepository
             .Setup(repo => repo.GetNextOlder(accountId, new DateTime(2026, 4, 20)))
             .ReturnsAsync(new Dictionary<int, BondAccountEntry> { [101] = new(accountId, 1, expandedStartDate, 10000m, 10000m, 101) });
-        _mockBondAccountEntryRepository.Setup(repo => repo.Get(accountId, expandedStartDate, endDate)).Returns(expandedEntries.ToAsyncEnumerable());
         _mockBondAccountEntryRepository
             .Setup(repo => repo.GetNextOlder(accountId, expandedStartDate))
             .ReturnsAsync(new Dictionary<int, BondAccountEntry>());
@@ -160,13 +143,13 @@ public class BondAccountControllerTests
     }
 
     [Fact]
-    public async Task GetInitialTransactionHistory_ReturnsBadRequest_WhenDateRangeIsInvalid()
+    public async Task Get_WithMinimumEntryCount_ReturnsBadRequest_WhenDateRangeIsInvalid()
     {
         var accountId = 1;
         BondAccount account = new(1, accountId, "Bond Account", AccountLabel.Other);
         _mockBondAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
 
-        var result = await _controller.GetInitialTransactionHistory(accountId, new DateTime(2026, 5, 1), new DateTime(2026, 4, 1));
+        var result = await _controller.Get(accountId, new DateTime(2026, 5, 1), new DateTime(2026, 4, 1));
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
