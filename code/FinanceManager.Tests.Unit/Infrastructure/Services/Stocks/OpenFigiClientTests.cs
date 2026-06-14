@@ -184,6 +184,87 @@ public class OpenFigiClientTests
         Assert.Equal("US0378331005", result);
     }
 
+    [Fact]
+    public async Task MapByTickerAsync_WithValidTickerAndExchange_ReturnsListings()
+    {
+        // Arrange
+        var httpHandler = new MockHttpMessageHandler(response: """
+            [
+              {
+                "figi": "BBG000B9XRY4",
+                "ticker": "AAPL",
+                "isin": "US0378331005",
+                "compositeFigi": "BBG000HKWL63",
+                "name": "Apple Inc",
+                "exchCode": "US",
+                "currency": "USD"
+              }
+            ]
+            """);
+
+        var client = CreateClient(httpHandler);
+
+        // Act
+        var result = await client.MapByTickerAsync("AAPL", "US", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("US0378331005", result[0].Isin);
+        Assert.Equal("AAPL", result[0].Ticker);
+        Assert.Equal("Apple Inc", result[0].Name);
+        Assert.Equal("US", result[0].ExchCode);
+        Assert.Equal("USD", result[0].Currency);
+    }
+
+    [Fact]
+    public async Task MapByIsinAsync_WithValidIsin_ReturnsAllVenues()
+    {
+        // Arrange
+        var httpHandler = new MockHttpMessageHandler(response: """
+            [
+              {
+                "isin": "IE00B5BMR087",
+                "ticker": "CSPX",
+                "name": "iShares Core S&P 500 ETF",
+                "exchCode": "LN",
+                "currency": "GBP"
+              },
+              {
+                "isin": "IE00B5BMR087",
+                "ticker": "CSPX",
+                "name": "iShares Core S&P 500 ETF",
+                "exchCode": "SX",
+                "currency": "EUR"
+              }
+            ]
+            """);
+
+        var client = CreateClient(httpHandler);
+
+        // Act
+        var result = await client.MapByIsinAsync("IE00B5BMR087", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.All(result, x => Assert.Equal("IE00B5BMR087", x.Isin));
+        Assert.Contains(result, x => x.ExchCode == "LN");
+        Assert.Contains(result, x => x.ExchCode == "SX");
+    }
+
+    [Fact]
+    public async Task MapByTickerAsync_WithEmptyTicker_ReturnsEmpty()
+    {
+        // Arrange
+        var httpHandler = new MockHttpMessageHandler(response: "[]");
+        var client = CreateClient(httpHandler);
+
+        // Act
+        var result = await client.MapByTickerAsync(string.Empty, ct: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
     private sealed class StubExternalServiceConfigService(ExternalServiceConfiguration config) : IExternalServiceConfigService
     {
         public ValueTask<ExternalServiceConfiguration> GetServiceAsync(string serviceName, CancellationToken ct = default) =>
