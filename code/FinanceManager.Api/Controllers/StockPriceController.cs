@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Application.FinancialAccounts.Stock.Import;
 using FinanceManager.Application.FinancialAccounts.Stock.Market;
+using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Domain.Commands.Stocks;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Stocks;
@@ -16,8 +17,25 @@ namespace FinanceManager.Api.Controllers;
 [Tags("Stock Prices")]
 public partial class StockPriceController(IStockPriceRepository stockPriceRepository, ICurrencyExchangeService currencyExchangeService,
 ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, IStockPriceProvider stockPriceProvider, IStockDetailsRepository stockDetailsRepository,
-IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinResolver) : ControllerBase
+IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinResolver, IInstrumentResolver instrumentResolver) : ControllerBase
 {
+
+    [HttpGet("search-instrument")]
+    [EnableRateLimiting(RateLimitingServiceCollectionExtension.ExternalProviderPolicy)]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(InstrumentResolution))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SearchInstrument([FromQuery] string ticker, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(ticker))
+            return BadRequest("Invalid input parameters.");
+
+        var resolution = await instrumentResolver.ResolveAsync(ticker.Trim(), cancellationToken);
+        if (resolution.Kind == ResolutionKind.NoMatch)
+            return NotFound("No instrument found for the given search term.");
+
+        return Ok(resolution);
+    }
 
     [Authorize]
     [HttpPost("add-stock-price")]
@@ -25,16 +43,13 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockPrice))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> AddStockPrice([FromQuery] string ticker, [FromQuery] decimal pricePerUnit, [FromQuery] int currencyId, [FromQuery] DateTime date, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> AddStockPrice([FromQuery] string isin, [FromQuery] decimal pricePerUnit, [FromQuery] int currencyId, [FromQuery] DateTime date, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(ticker) || pricePerUnit <= 0 || date == default)
+        if (string.IsNullOrWhiteSpace(isin) || pricePerUnit <= 0 || date == default)
             return BadRequest("Invalid input parameters.");
 
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return NotFound("Currency not found.");
-
-        var isin = await isinResolver.ResolveAsync(ticker.ToUpper(), ct: cancellationToken);
-        if (isin is null) return BadRequest("Could not resolve ticker to ISIN");
 
         var stockPrice = await stockPriceRepository.Add(isin, pricePerUnit, currency, date);
         return Ok(stockPrice);
@@ -46,16 +61,13 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockPrice))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateStockPrice([FromQuery] string ticker, [FromQuery] decimal pricePerUnit, [FromQuery] int currencyId, [FromQuery] DateTime date, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> UpdateStockPrice([FromQuery] string isin, [FromQuery] decimal pricePerUnit, [FromQuery] int currencyId, [FromQuery] DateTime date, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(ticker) || pricePerUnit <= 0 || date == default)
+        if (string.IsNullOrWhiteSpace(isin) || pricePerUnit <= 0 || date == default)
             return BadRequest("Invalid input parameters.");
 
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return NotFound("Currency not found.");
-
-        var isin = await isinResolver.ResolveAsync(ticker.ToUpper(), ct: cancellationToken);
-        if (isin is null) return BadRequest("Could not resolve ticker to ISIN");
 
         var stockPrice = await stockPriceRepository.Update(isin, pricePerUnit, currency, date);
         return Ok(stockPrice);
@@ -66,22 +78,24 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StockPrice))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetStockPrice([FromQuery] string ticker, [FromQuery] int currencyId, [FromQuery] DateTime date, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetStockPrice([FromQuery] string isin, [FromQuery] int currencyId, [FromQuery] DateTime date, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(ticker) || date == default)
+        if (string.IsNullOrWhiteSpace(isin) || date == default)
             return BadRequest("Invalid input parameters.");
 
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null)
             return NotFound("Currency not found.");
 
-        var isin = await isinResolver.ResolveAsync(ticker.Trim().ToUpperInvariant(), ct: cancellationToken);
-        if (isin is null) return BadRequest("Could not resolve ticker to ISIN");
-
         var stockPrice = await stockPriceRepository.GetThisOrNextOlder(isin, date);
         if (stockPrice is null)
         {
-            var fetchedPrice = await stockPriceProvider.GetPricePerUnitAsync(ticker, currency, date);
+            var details = await stockDetailsRepository.Get(isin, cancellationToken);
+            var avSymbol = details?.AlphaVantageSymbol ?? details?.Ticker;
+            if (avSymbol is null)
+                return NotFound("Stock price not found.");
+
+            var fetchedPrice = await stockPriceProvider.GetPricePerUnitAsync(avSymbol, currency, date);
             if (fetchedPrice <= 0)
                 return NotFound("Stock price not found.");
 
@@ -110,16 +124,21 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<StockPrice>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetStockPrices([FromQuery] string ticker, [FromQuery] int currencyId, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long step = default, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetStockPrices([FromQuery] string isin, [FromQuery] int currencyId, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long step = default, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(ticker) || start == default || end == default)
+        if (string.IsNullOrWhiteSpace(isin) || start == default || end == default)
             return BadRequest("Invalid input parameters.");
 
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null)
             return NotFound("Currency not found.");
 
-        var stockPrices = await stockMarketService.GetStockPrices(ticker, start, end, cancellationToken);
+        var details = await stockDetailsRepository.Get(isin, cancellationToken);
+        var avSymbol = details?.AlphaVantageSymbol ?? details?.Ticker;
+        if (avSymbol is null)
+            return NotFound("Stock details not found for the given ISIN.");
+
+        var stockPrices = await stockMarketService.GetStockPrices(avSymbol, start, end, cancellationToken);
 
         if (stockPrices.Count == 0)
             return NotFound("Stock prices not found.");

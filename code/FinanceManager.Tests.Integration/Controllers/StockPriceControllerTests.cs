@@ -1,3 +1,4 @@
+using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
@@ -20,12 +21,12 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
     private TestDatabase? _testDatabase;
     Mock<ICurrencyExchangeService> _currencyExchangeMock = new();
     Mock<IIsinResolver> _isinResolverMock = new();
+    Mock<IInstrumentResolver> _instrumentResolverMock = new();
 
     protected override void ConfigureServices(IServiceCollection services)
     {
         _testDatabase = new TestDatabase();
 
-        // remove any registration for AppDbContext
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
         if (descriptor != null)
             services.Remove(descriptor);
@@ -45,6 +46,20 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         if (isinResolverDescriptor != null)
             services.Remove(isinResolverDescriptor);
         services.AddSingleton(_isinResolverMock.Object);
+
+        _instrumentResolverMock.Setup(x => x.ResolveAsync("AAPL", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new InstrumentResolution
+            {
+                Kind = ResolutionKind.AutoResolved,
+                Match = new InstrumentListing(_aaplIsin, "AAPL", "Apple Inc.", "XNAS", "USD", "Equity")
+            });
+        _instrumentResolverMock.Setup(x => x.ResolveAsync("UNKNOWN", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new InstrumentResolution { Kind = ResolutionKind.NoMatch });
+
+        var instrumentResolverDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IInstrumentResolver));
+        if (instrumentResolverDescriptor != null)
+            services.Remove(instrumentResolverDescriptor);
+        services.AddSingleton(_instrumentResolverMock.Object);
     }
 
     private async Task SeedWithTestStockPrice(string ticker = "AAPL", decimal price = 100, Currency? currency = null, DateTime date = default)
@@ -90,10 +105,9 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
     {
         Authorize("TestUser", 1, UserRole.User);
 
-        await new StockPriceHttpClient(Client, null!).AddStockPrice("AAPL", 150, 1, DateTime.UtcNow);
+        await new StockPriceHttpClient(Client, null!).AddStockPrice(_aaplIsin, 150, 1, DateTime.UtcNow);
 
-        // Verify by getting it
-        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice("AAPL", 1, DateTime.UtcNow);
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 1, DateTime.UtcNow);
         Assert.NotNull(result);
         Assert.Equal(150, result.PricePerUnit);
     }
@@ -107,9 +121,9 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         await SeedWithTestStockPrice("AAPL", 100);
         Authorize("TestUser", 1, UserRole.User);
 
-        await new StockPriceHttpClient(Client, null!).UpdateStockPrice("AAPL", 200, 0, DateTime.UtcNow);
+        await new StockPriceHttpClient(Client, null!).UpdateStockPrice(_aaplIsin, 200, 0, DateTime.UtcNow);
 
-        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice("AAPL", 0, DateTime.UtcNow);
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 0, DateTime.UtcNow);
         Assert.NotNull(result);
         Assert.Equal(200, result.PricePerUnit);
     }
@@ -121,12 +135,11 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
          .ReturnsAsync(1);
 
         await SeedWithTestStockPrice();
-        // No auth needed
 
-        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice("AAPL", 0, DateTime.UtcNow);
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 0, DateTime.UtcNow);
 
         Assert.NotNull(result);
-        Assert.Equal("US0378331005", result.Isin);
+        Assert.Equal(_aaplIsin, result.Isin);
         Assert.Equal(100, result.PricePerUnit);
     }
 
@@ -134,9 +147,8 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
     public async Task GetStockPrice_WithExchange_ReturnsConvertedPrice()
     {
         await SeedWithTestStockPrice();
-        // Mock returns 1.1, so 100 * 1.1 = 110
 
-        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice("AAPL", 1, DateTime.UtcNow);
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 1, DateTime.UtcNow);
 
         Assert.NotNull(result);
         Assert.Equal(110, result.PricePerUnit);
@@ -153,7 +165,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
 
         await SeedWithTestStockPrice("AAPL", 100, DefaultCurrency.PLN, storedDate);
 
-        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice("AAPL", 0, requestedDate);
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 0, requestedDate);
 
         Assert.NotNull(result);
         Assert.Equal(storedDate.Date, result.Date.Date);
@@ -164,12 +176,45 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
     public async Task GetStockPrices_ReturnsList()
     {
         await SeedWithTestStockPrice();
-        // No auth
 
-        var result = await new StockPriceHttpClient(Client, null!).GetStockPrices("AAPL", DefaultCurrency.PLN.Id, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1), TimeSpan.FromDays(1));
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrices(_aaplIsin, DefaultCurrency.PLN.Id, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1), TimeSpan.FromDays(1));
 
         Assert.NotNull(result);
         Assert.NotEmpty(result);
+    }
+
+    [Fact]
+    public async Task SearchInstrument_ReturnsAutoResolvedMatch()
+    {
+        var result = await new StockPriceHttpClient(Client, null!).SearchInstrument("AAPL", TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal(ResolutionKind.AutoResolved, result.Kind);
+        Assert.NotNull(result.Match);
+        Assert.Equal(_aaplIsin, result.Match.Isin);
+    }
+
+    [Fact]
+    public async Task SearchInstrument_ReturnsNull_WhenNoMatch()
+    {
+        var result = await new StockPriceHttpClient(Client, null!).SearchInstrument("UNKNOWN", TestContext.Current.CancellationToken);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetStockPrice_ByIsin_ReturnsPrice()
+    {
+        _currencyExchangeMock.Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
+            .ReturnsAsync(1);
+
+        await SeedWithTestStockPrice("AAPL", 250);
+
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 0, DateTime.UtcNow);
+
+        Assert.NotNull(result);
+        Assert.Equal(_aaplIsin, result.Isin);
+        Assert.Equal(250, result.PricePerUnit);
     }
 
     [Fact]
