@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Application.FinancialAccounts.Stock.Market;
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
+using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Application.Insights.Generation;
 using FinanceManager.Application.Labels.Setter;
 using FinanceManager.Application.Labels.Suggestions;
@@ -24,6 +25,7 @@ using FinanceManager.Infrastructure.Services.ExternalServices;
 using FinanceManager.Infrastructure.Services.Stocks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -37,7 +39,21 @@ public static class ServiceCollectionExtension
         services.AddSingleton<IExternalServiceConfigService, ExternalServiceConfigService>();
         services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
         services.AddHttpClient<OpenFigiClient>();
+        services.AddScoped<IOpenFigiClient>(sp => sp.GetRequiredService<OpenFigiClient>());
         services.AddScoped<IIsinResolver, CachingIsinResolver>();
+        services.AddScoped<IQuoteFactorResolver>(sp =>
+            new QuoteFactorResolver(
+                sp.GetRequiredService<ICurrencyExchangeRateProvider>(),
+                sp.GetRequiredService<ILogger<QuoteFactorResolver>>()));
+        services.AddScoped<IInstrumentResolver>(sp =>
+            new InstrumentResolver(
+                sp.GetRequiredService<IOpenFigiClient>(),
+                sp.GetRequiredService<IAlphaVantageClient>(),
+                sp.GetRequiredService<IStockDetailsRepository>(),
+                sp.GetRequiredService<ICurrencyRepository>(),
+                sp.GetRequiredService<IQuoteFactorResolver>(),
+                sp.GetRequiredService<IMemoryCache>(),
+                sp.GetRequiredService<ILogger<InstrumentResolver>>()));
         services.AddHttpClient<ICurrencyExchangeRateProvider, FawazAhmedCurrencyApiClient>();
 
         services.AddAI();
