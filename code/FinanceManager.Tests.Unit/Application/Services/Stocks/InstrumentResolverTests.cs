@@ -17,6 +17,7 @@ public class InstrumentResolverTests
     private readonly Mock<IOpenFigiClient> _openFigiClientMock = new();
     private readonly Mock<IAlphaVantageClient> _avClientMock = new();
     private readonly Mock<IStockDetailsRepository> _stockDetailsRepositoryMock = new();
+    private readonly Mock<ICurrencyRepository> _currencyRepositoryMock = new();
     private readonly Mock<IQuoteFactorResolver> _quoteFactorResolverMock = new();
     private readonly IMemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
     private readonly ILogger<InstrumentResolver> _logger = LoggerFactory.Create(_ => { }).CreateLogger<InstrumentResolver>();
@@ -27,21 +28,34 @@ public class InstrumentResolverTests
             .Setup(x => x.ResolveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(1m);  // Default: no conversion
 
+        _currencyRepositoryMock
+            .Setup(x => x.GetOrAdd(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string shortName, string? symbol, CancellationToken _) =>
+                new Currency { ShortName = shortName, Symbol = symbol ?? shortName });
+
+        _stockDetailsRepositoryMock
+            .Setup(x => x.Add(It.IsAny<StockDetails>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((StockDetails d, CancellationToken _) => d);
+
         return new(
             _openFigiClientMock.Object,
             _avClientMock.Object,
             _stockDetailsRepositoryMock.Object,
+            _currencyRepositoryMock.Object,
             _quoteFactorResolverMock.Object,
             _cache,
             _logger);
     }
 
-    [Fact]
-    public async Task ResolveAsync_WithNullOrWhitespaceTicker_ReturnsNoMatch()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task ResolveAsync_WithNullOrWhitespaceTicker_ReturnsNoMatch(string? input)
     {
         var resolver = CreateResolver();
 
-        var result = await resolver.ResolveAsync(null!, TestContext.Current.CancellationToken);
+        var result = await resolver.ResolveAsync(input!, TestContext.Current.CancellationToken);
 
         Assert.Equal(ResolutionKind.NoMatch, result.Kind);
     }
@@ -87,6 +101,13 @@ public class InstrumentResolverTests
         Assert.NotNull(result.Match);
         Assert.Equal("IE00B5BMR087", result.Match.Isin);
         Assert.Equal("CSPX.LON", result.Match.AlphaVantageSymbol);
+
+        // Auto-resolved pair must be persisted so future lookups skip the providers.
+        _stockDetailsRepositoryMock.Verify(
+            x => x.Add(
+                It.Is<StockDetails>(d => d.Isin == "IE00B5BMR087" && d.AlphaVantageSymbol == "CSPX.LON"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

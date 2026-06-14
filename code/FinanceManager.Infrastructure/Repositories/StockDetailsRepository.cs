@@ -57,6 +57,8 @@ internal class StockDetailsRepository(AppDbContext context) : IStockDetailsRepos
             existing.Region = details.Region;
             existing.Currency = details.Currency;
             existing.Ticker = normalized;
+            if (!string.IsNullOrWhiteSpace(details.AlphaVantageSymbol))
+                existing.AlphaVantageSymbol = details.AlphaVantageSymbol;
         }
 
         await context.SaveChangesAsync(ct);

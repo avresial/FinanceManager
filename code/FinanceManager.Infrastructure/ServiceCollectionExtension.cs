@@ -50,6 +50,7 @@ public static class ServiceCollectionExtension
                 sp.GetRequiredService<IOpenFigiClient>(),
                 sp.GetRequiredService<IAlphaVantageClient>(),
                 sp.GetRequiredService<IStockDetailsRepository>(),
+                sp.GetRequiredService<ICurrencyRepository>(),
                 sp.GetRequiredService<IQuoteFactorResolver>(),
                 sp.GetRequiredService<IMemoryCache>(),
                 sp.GetRequiredService<ILogger<InstrumentResolver>>()));

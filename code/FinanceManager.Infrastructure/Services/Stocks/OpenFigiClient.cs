@@ -75,6 +75,10 @@ internal sealed class OpenFigiClient(
             logger.LogDebug("Resolved ticker {Ticker} to ISIN {Isin}", Sanitize(ticker), Sanitize(first.Isin));
             return first.Isin;
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             // Legacy IIsinResolver contract returns null on failure; the decorating
@@ -90,12 +94,12 @@ internal sealed class OpenFigiClient(
         var url = $"{serviceConfig.BaseUrl.TrimEnd('/')}/mapping";
 
         var content = JsonSerializer.Serialize(requests);
-        var httpContent = new StringContent(content, System.Text.Encoding.UTF8, "application/json");
+        using var httpContent = new StringContent(content, System.Text.Encoding.UTF8, "application/json");
 
         if (!string.IsNullOrWhiteSpace(serviceConfig.ApiKey))
             httpContent.Headers.Add("X-OPENFIGI-APIKEY", serviceConfig.ApiKey);
 
-        var response = await httpClient.PostAsync(url, httpContent, ct);
+        using var response = await httpClient.PostAsync(url, httpContent, ct);
         if (!response.IsSuccessStatusCode)
         {
             // Surface transport-level failures (rate limits, outages) so callers can back off /

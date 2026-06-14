@@ -22,34 +22,40 @@ public sealed class QuoteFactorResolver(
         if (string.IsNullOrWhiteSpace(fromCurrency) || string.IsNullOrWhiteSpace(toCurrency))
             return 1m;
 
-        if (string.Equals(fromCurrency, toCurrency, StringComparison.OrdinalIgnoreCase))
+        var from = fromCurrency.Trim().ToUpperInvariant();
+        var to = toCurrency.Trim().ToUpperInvariant();
+
+        if (from == to)
             return 1m;
 
-        var key = (fromCurrency, toCurrency);
-        if (_knownFactors.TryGetValue(key, out var knownFactor))
+        if (_knownFactors.TryGetValue((from, to), out var knownFactor))
         {
-            logger.LogDebug("Using known quote factor {From}→{To}: {Factor}", fromCurrency, toCurrency, knownFactor);
+            logger.LogDebug("Using known quote factor {From}→{To}: {Factor}", from, to, knownFactor);
             return knownFactor;
         }
 
         try
         {
-            var fromCurr = new Currency { ShortName = fromCurrency, Symbol = fromCurrency };
-            var toCurr = new Currency { ShortName = toCurrency, Symbol = toCurrency };
+            var fromCurr = new Currency { ShortName = from, Symbol = from };
+            var toCurr = new Currency { ShortName = to, Symbol = to };
             var rate = await exchangeRateProvider.GetExchangeRateAsync(fromCurr, toCurr, DateTime.UtcNow);
 
             if (rate.HasValue && rate.Value > 0)
             {
-                logger.LogDebug("Resolved exchange rate {From}→{To}: {Rate}", fromCurrency, toCurrency, rate.Value);
+                logger.LogDebug("Resolved exchange rate {From}→{To}: {Rate}", from, to, rate.Value);
                 return rate.Value;
             }
 
-            logger.LogWarning("Exchange rate service returned null/invalid for {From}→{To}; using 1.0", fromCurrency, toCurrency);
+            logger.LogWarning("Exchange rate service returned null/invalid for {From}→{To}; using 1.0", from, to);
             return 1m;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to resolve exchange rate {From}→{To}; using 1.0", fromCurrency, toCurrency);
+            logger.LogWarning(ex, "Failed to resolve exchange rate {From}→{To}; using 1.0", from, to);
             return 1m;
         }
     }

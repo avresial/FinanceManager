@@ -1,5 +1,6 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -10,6 +11,7 @@ public sealed class InstrumentResolver(
     IOpenFigiClient openFigiClient,
     IAlphaVantageClient avClient,
     IStockDetailsRepository stockDetailsRepository,
+    ICurrencyRepository currencyRepository,
     IQuoteFactorResolver quoteFactorResolver,
     IMemoryCache cache,
     ILogger<InstrumentResolver> logger) : IInstrumentResolver
@@ -36,8 +38,11 @@ public sealed class InstrumentResolver(
         if (string.IsNullOrWhiteSpace(baseTicker))
             return NoMatch();
 
-        // Short-circuit: check if already resolved in StockDetails
-        var existing = await stockDetailsRepository.GetByTicker(baseTicker, ct);
+        // Short-circuit: check if already resolved in StockDetails. The stored ticker is the
+        // broker-facing alias (e.g. "CSPX.UK"), so try the full input first, then the base ticker.
+        var existing = await stockDetailsRepository.GetByTicker(input, ct);
+        if (existing is null && !string.Equals(input, baseTicker, StringComparison.OrdinalIgnoreCase))
+            existing = await stockDetailsRepository.GetByTicker(baseTicker, ct);
         if (existing?.Isin is not null && existing.AlphaVantageSymbol is not null)
         {
             logger.LogDebug("Found cached StockDetails for {BaseTicker}: ISIN={Isin}, AvSymbol={AvSymbol}", baseTicker, existing.Isin, existing.AlphaVantageSymbol);
@@ -83,6 +88,7 @@ public sealed class InstrumentResolver(
             if (single.Isin is not null && single.AlphaVantageSymbol is not null)
             {
                 logger.LogDebug("Auto-resolving single match: ISIN={Isin}, AvSymbol={AvSymbol}", single.Isin, single.AlphaVantageSymbol);
+                await PersistStockDetails(single, input, ct);
                 var autoResult = new InstrumentResolution
                 {
                     Kind = ResolutionKind.AutoResolved,
@@ -122,10 +128,9 @@ public sealed class InstrumentResolver(
                 continue;
 
             // Filter by exchange hint if provided
-            if (exchangeHint is not null && lookupMapping.HasValue)
+            if (exchangeHint is not null && lookupMapping is not null)
             {
-                var (_, expectedAvRegion) = lookupMapping.Value;
-                if (!string.Equals(avMatch.Region, expectedAvRegion, StringComparison.OrdinalIgnoreCase))
+                if (!lookupMapping.MatchesRegion(avMatch.Region))
                     continue;
             }
 
@@ -134,11 +139,10 @@ public sealed class InstrumentResolver(
                 .Where(x => string.Equals(x.Ticker, baseTicker, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            if (exchangeHint is not null && lookupMapping.HasValue)
+            if (exchangeHint is not null && lookupMapping is not null)
             {
-                var (ofExchCode, _) = lookupMapping.Value;
                 var narrowed = ofMatches
-                    .Where(x => string.Equals(x.ExchCode, ofExchCode, StringComparison.OrdinalIgnoreCase))
+                    .Where(x => string.Equals(x.ExchCode, lookupMapping.OpenFigiExchCode, StringComparison.OrdinalIgnoreCase))
                     .ToList();
                 if (narrowed.Count > 0)
                     ofMatches = narrowed;
@@ -228,6 +232,32 @@ public sealed class InstrumentResolver(
         }
     }
 
+    // Persist the auto-resolved (ISIN, AlphaVantageSymbol) pair so future lookups hit the DB
+    // layer instead of fanning out to external providers again. Best-effort: a persistence
+    // failure must not fail the resolution itself.
+    private async Task PersistStockDetails(InstrumentListing match, string brokerTicker, CancellationToken ct)
+    {
+        try
+        {
+            var currency = await currencyRepository.GetOrAdd(match.Currency, match.Currency, ct);
+            var details = new StockDetails
+            {
+                Isin = match.Isin!,
+                Ticker = brokerTicker,
+                AlphaVantageSymbol = match.AlphaVantageSymbol,
+                Name = match.Name,
+                Type = match.Type,
+                Region = match.Exchange,
+                Currency = currency
+            };
+            await stockDetailsRepository.Add(details, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Failed to persist auto-resolved StockDetails for ISIN {Isin}", match.Isin);
+        }
+    }
+
     private async Task<IReadOnlyList<OpenFigiListing>> OpenFigiCallWithFallback(string baseTicker, string? exchCode, CancellationToken ct)
     {
         if (IsInOpenFigiCooldown())
@@ -240,6 +270,10 @@ public sealed class InstrumentResolver(
         {
             var results = await openFigiClient.MapByTickerAsync(baseTicker, exchCode, ct);
             return results;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
