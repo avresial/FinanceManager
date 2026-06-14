@@ -162,29 +162,29 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         try
         {
             _user = await LoginService.GetLoggedUser();
-            if (_user is null)
-            {
-                IsLoading = false;
-                return;
-            }
+            if (_user is null) return;
 
             SetDateRangeForSelection();
 
             var loadTask = UpdateEntries(initialLoad: true);
-            var delayTask = Task.Delay(2000);
+            var delayTask = Task.Delay(1000);
             var completedTask = await Task.WhenAny(loadTask, delayTask);
             if (completedTask == delayTask)
             {
                 IsLoading = true;
                 StateHasChanged();
                 await loadTask;
-                IsLoading = false;
             }
             AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error during initialization of CurrencyAccountDetailsPageContent for account ID {AccountId}", AccountId);
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
         }
     }
 

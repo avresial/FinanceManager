@@ -113,27 +113,24 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             .AsNoTracking()
             .Where(x => x.AccountId == accountId)
             .Select(x => x.PostingDate)
+            .OrderByDescending(date => date)
             .ToListAsync();
 
     public async Task<(List<CurrencyAccountEntry> Entries, DateTime EffectiveStartDate)> GetEntriesWithMinimumCount(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount = 0)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(minimumEntryCount);
 
-        var rangeEntries = await Get(accountId, startDate, endDate).ToListAsync();
-
-        if (minimumEntryCount == 0 || rangeEntries.Count >= minimumEntryCount)
-            return (rangeEntries, startDate);
+        if (minimumEntryCount == 0)
+            return (await Get(accountId, startDate, endDate).ToListAsync(), startDate);
 
         var candidateDates = (await GetPostingDates(accountId))
             .Where(date => date <= endDate)
-            .OrderByDescending(date => date)
             .ToList();
 
         if (candidateDates.Count <= minimumEntryCount)
         {
             var oldestDate = candidateDates.Count != 0 && candidateDates[^1] < startDate ? candidateDates[^1] : startDate;
-            var expandedEntries = oldestDate == startDate ? rangeEntries : await Get(accountId, oldestDate, endDate).ToListAsync();
-            return (expandedEntries, oldestDate);
+            return (await Get(accountId, oldestDate, endDate).ToListAsync(), oldestDate);
         }
 
         var nthNewestDate = candidateDates[minimumEntryCount - 1];
@@ -160,7 +157,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
                 .ToListAsync();
         }
 
-        var entries = await context.CurrencyEntries
+        return await context.CurrencyEntries
             .AsNoTracking()
             .Where(e => e.AccountId == accountId && e.PostingDate >= date)
             .Include(e => e.Labels)
@@ -170,11 +167,6 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             .ThenBy(e => e.EntryId)
             .Take(count)
             .ToListAsync();
-
-        return entries
-            .OrderByDescending(e => e.PostingDate)
-            .ThenByDescending(e => e.EntryId)
-            .ToList();
     }
 
     public async Task<CurrencyAccountEntry?> Get(int accountId, int entryId) => await context.CurrencyEntries

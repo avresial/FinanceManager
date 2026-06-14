@@ -53,11 +53,6 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate, [FromQuery] int minimumEntryCount = 0)
     {
-        return await GetAccountWithEntries(accountId, startDate, endDate, minimumEntryCount);
-    }
-
-    private async Task<IActionResult> GetAccountWithEntries(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount)
-    {
         var account = await accountRepository.Get(accountId);
 
         if (account is null) return NotFound();

@@ -25,10 +25,10 @@ public class StockPriceDtoConfiguration : IEntityTypeConfiguration<StockPriceDto
         builder.Property(e => e.PricePerUnit)
             .HasPrecision(18, 8);
 
-        // Ensure PostingDate is always returned as UTC
+        // Stock prices are date-only values; preserve the calendar day instead of timezone-shifting midnight.
         var dateTimeConverter = new ValueConverter<DateTime, DateTime>(
-            v => v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime(),
-            v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
+            v => DateTime.SpecifyKind(v.Date, DateTimeKind.Utc),
+            v => DateTime.SpecifyKind(v.Date, DateTimeKind.Utc)
         );
         builder.Property(e => e.Date).HasConversion(dateTimeConverter);
     }

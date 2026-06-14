@@ -91,6 +91,8 @@ public class CurrencyBalanceServiceTests
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccount<CurrencyAccount>(userId, account.AccountId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                                       .ReturnsAsync(account);
 
         var result = await _balanceService.GetClosingBalance(userId, DefaultCurrency.PLN, _startDate, laterDate);
 
@@ -121,6 +123,8 @@ public class CurrencyBalanceServiceTests
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccount<CurrencyAccount>(userId, account.AccountId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                                       .ReturnsAsync(account);
 
         var result = await _balanceService.GetClosingBalance(userId, DefaultCurrency.PLN, startDate, endDate);
 

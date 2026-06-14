@@ -83,13 +83,18 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
 
+        if (accountIds.Count == 0)
+        {
+            var accounts = await financialAccountRepository.GetAccounts<CurrencyAccount>(userId, end, end).ToListAsync();
+            accountIds = accounts.Select(x => x.AccountId).ToList();
+        }
         Dictionary<DateTime, decimal> result = [];
         var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
 
-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
+        foreach (var accountId in accountIdFilter)
         {
+            var account = await financialAccountRepository.GetAccount<CurrencyAccount>(userId, accountId, start, end);
             if (account is null) continue;
-            if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
 
             for (var date = end.Date; date >= start.Date; date = date.Add(-_oneDay))
             {
