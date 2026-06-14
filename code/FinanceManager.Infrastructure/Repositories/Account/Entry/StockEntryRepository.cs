@@ -102,7 +102,8 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
         if (candidateDates.Count <= minimumEntryCount)
         {
             var oldestDate = candidateDates.Count != 0 && candidateDates[^1] < startDate ? candidateDates[^1] : startDate;
-            return (rangeEntries, oldestDate);
+            var expandedEntries = oldestDate == startDate ? rangeEntries : await Get(accountId, oldestDate, endDate).ToListAsync();
+            return (expandedEntries, oldestDate);
         }
 
         var nthNewestDate = candidateDates[minimumEntryCount - 1];
