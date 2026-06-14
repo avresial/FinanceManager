@@ -39,7 +39,6 @@ public class CurrencyAccountControllerTests
         _controller = new(
             _mockAccountRepository.Object,
             _mockAccountEntryRepository.Object,
-            new CurrencyEntryProvider(_mockAccountEntryRepository.Object),
             _userPlanVerifier.Object,
             _currencyAccountCsvExportService.Object);
 
@@ -102,10 +101,12 @@ public class CurrencyAccountControllerTests
         var userId = 1;
         var accountId = 1;
         CurrencyAccount account = new(userId, accountId, "Test Account");
-        CurrencyAccountEntry accountEntry = new(accountId, 1, olderThanLoadedDate, 1, 0);
+        List<CurrencyAccountEntry> emptyEntries = [];
 
         _mockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
-        _mockAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns(new List<CurrencyAccountEntry>().ToAsyncEnumerable());
+        _mockAccountEntryRepository
+            .Setup(repo => repo.GetEntriesWithMinimumCount(accountId, startDate, endDate, 0))
+            .ReturnsAsync((emptyEntries, startDate));
         _mockAccountEntryRepository.Setup(repo => repo.GetNextOlder(accountId, startDate))
             .ReturnsAsync(new CurrencyAccountEntry(accountId, 1, olderThanLoadedDate, 1, 0));
 
@@ -258,10 +259,6 @@ public class CurrencyAccountControllerTests
         var endDate = new DateTime(2026, 4, 30);
         var expandedStartDate = new DateTime(2026, 3, 15);
         CurrencyAccount account = new(userId, accountId, "Test Account");
-        List<CurrencyAccountEntry> initialEntries =
-        [
-            new(accountId, 2, new DateTime(2026, 4, 20), 900m, -100m),
-        ];
         List<CurrencyAccountEntry> expandedEntries =
         [
             new(accountId, 2, new DateTime(2026, 4, 20), 900m, -100m),
@@ -270,13 +267,11 @@ public class CurrencyAccountControllerTests
 
         _mockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
         _mockAccountEntryRepository
-            .Setup(repo => repo.GetPostingDates(accountId))
-            .ReturnsAsync([new DateTime(2026, 4, 20), expandedStartDate]);
-        _mockAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns(initialEntries.ToAsyncEnumerable());
+            .Setup(repo => repo.GetEntriesWithMinimumCount(accountId, startDate, endDate, 2))
+            .ReturnsAsync((expandedEntries, expandedStartDate));
         _mockAccountEntryRepository
             .Setup(repo => repo.GetNextOlder(accountId, new DateTime(2026, 4, 20)))
             .ReturnsAsync(new CurrencyAccountEntry(accountId, 1, expandedStartDate, 1000m, 1000m));
-        _mockAccountEntryRepository.Setup(repo => repo.Get(accountId, expandedStartDate, endDate)).Returns(expandedEntries.ToAsyncEnumerable());
         _mockAccountEntryRepository
             .Setup(repo => repo.GetNextOlder(accountId, expandedStartDate))
             .ReturnsAsync((CurrencyAccountEntry?)null);

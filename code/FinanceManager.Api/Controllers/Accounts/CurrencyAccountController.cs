@@ -18,7 +18,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Tags("Currency Accounts")]
 public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccount> accountRepository,
-    IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository, ICurrencyEntryProvider currencyEntryProvider,
+    IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
     IUserPlanVerifier userPlanVerifier,
     IAccountCsvExportService<CurrencyAccountExportDto> currencyAccountCsvExportService) : ControllerBase
 {
@@ -65,9 +65,9 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         if (startDate > endDate) return BadRequest("Start date cannot be after end date.");
         if (minimumEntryCount < 0) return BadRequest("Minimum entry count cannot be negative.");
 
-        var loadResult = await currencyEntryProvider.GetEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
+        var (entries, effectiveStartDate) = await accountEntryRepository.GetEntriesWithMinimumCount(accountId, startDate, endDate, minimumEntryCount);
 
-        return Ok(await CreateDtoAsync(account, loadResult.Entries, loadResult.EffectiveStartDate, endDate));
+        return Ok(await CreateDtoAsync(account, entries, effectiveStartDate, endDate));
     }
 
     [HttpGet("{accountId:int}/entries")]

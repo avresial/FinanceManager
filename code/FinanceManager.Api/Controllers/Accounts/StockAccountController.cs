@@ -19,7 +19,6 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Tags("Stock Accounts")]
 public class StockAccountController(IAccountRepository<StockAccount> stockAccountRepository,
     IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository,
-    IStockEntryProvider stockEntryProvider,
     IAccountCsvExportService<StockAccountExportDto> stockAccountCsvExportService) : ControllerBase
 {
 
@@ -68,9 +67,9 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
         if (startDate > endDate) return BadRequest("Start date cannot be after end date.");
         if (minimumEntryCount < 0) return BadRequest("Minimum entry count cannot be negative.");
 
-        var loadResult = await stockEntryProvider.GetEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
+        var (entries, effectiveStartDate) = await stockAccountEntryRepository.GetEntriesWithMinimumCount(accountId, startDate, endDate, minimumEntryCount);
 
-        return Ok(await CreateDtoAsync(account, loadResult.Entries, loadResult.EffectiveStartDate, endDate));
+        return Ok(await CreateDtoAsync(account, entries, effectiveStartDate, endDate));
     }
 
     [HttpGet("{accountId:int}/entries")]

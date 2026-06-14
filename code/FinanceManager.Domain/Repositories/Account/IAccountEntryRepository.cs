@@ -11,6 +11,13 @@ public interface IAccountEntryRepository<T>
     /// caller size a transaction-history window cheaply before fetching the entries themselves.
     /// </summary>
     Task<List<DateTime>> GetPostingDates(int accountId);
+
+    /// <summary>
+    /// Gets entries within a date range, expanding backward to include at least <paramref name="minimumEntryCount"/>
+    /// entries if the range contains fewer. Returns the entries and the effective start date used. Uses at most
+    /// two queries: one to project dates, one to fetch the range.
+    /// </summary>
+    Task<(List<T> Entries, DateTime EffectiveStartDate)> GetEntriesWithMinimumCount(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount = 0);
     Task<T?> Get(int accountId, int entryId);
     Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default);

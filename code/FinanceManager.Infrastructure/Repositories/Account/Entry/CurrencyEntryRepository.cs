@@ -115,6 +115,32 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             .Select(x => x.PostingDate)
             .ToListAsync();
 
+    public async Task<(List<CurrencyAccountEntry> Entries, DateTime EffectiveStartDate)> GetEntriesWithMinimumCount(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount = 0)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(minimumEntryCount);
+
+        var rangeEntries = await Get(accountId, startDate, endDate).ToListAsync();
+
+        if (minimumEntryCount == 0 || rangeEntries.Count >= minimumEntryCount)
+            return (rangeEntries, startDate);
+
+        var candidateDates = (await GetPostingDates(accountId))
+            .Where(date => date <= endDate)
+            .OrderByDescending(date => date)
+            .ToList();
+
+        if (candidateDates.Count <= minimumEntryCount)
+        {
+            var oldestDate = candidateDates.Count != 0 && candidateDates[^1] < startDate ? candidateDates[^1] : startDate;
+            return (rangeEntries, oldestDate);
+        }
+
+        var nthNewestDate = candidateDates[minimumEntryCount - 1];
+        var effectiveStartDate = nthNewestDate < startDate ? nthNewestDate : startDate;
+        var entries = await Get(accountId, effectiveStartDate, endDate).ToListAsync();
+        return (entries, effectiveStartDate);
+    }
+
     public async Task<List<CurrencyAccountEntry>> Get(int accountId, DateTime date, int count, bool olderThenDate = true)
     {
         if (count <= 0) return [];
