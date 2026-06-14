@@ -85,7 +85,11 @@ public partial class Dashboard : ComponentBase
         if (user is null)
         {
             if (requestVersion == _loadOverviewVersion)
+            {
                 _overview = null;
+                _isLoading = false;
+                StateHasChanged();
+            }
             return;
         }
 
@@ -119,9 +123,6 @@ public partial class Dashboard : ComponentBase
                 _overviewStart = startDate;
                 _overviewEnd = endDate;
             }
-
-            if (freshOverview is not null)
-                await DashboardOverviewCacheService.SaveAsync(freshOverview);
         }
         catch (Exception ex)
         {
@@ -139,6 +140,18 @@ public partial class Dashboard : ComponentBase
             {
                 _isLoading = false;
                 StateHasChanged();
+            }
+        }
+
+        if (freshOverview is not null)
+        {
+            try
+            {
+                await DashboardOverviewCacheService.SaveAsync(freshOverview);
+            }
+            catch (Exception cacheEx)
+            {
+                Logger.LogWarning(cacheEx, "Dashboard overview loaded but caching failed.");
             }
         }
     }

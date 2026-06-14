@@ -20,8 +20,12 @@ public class DashboardOverviewCacheService(
     {
         var key = BuildKey(userId, currencyId, start, end);
 
-        if (_memoryCache.TryGetValue(BuildMemoryKey(key), out DashboardOverviewCacheSnapshot? snapshot) && IsUsable(snapshot))
-            return snapshot;
+        if (_memoryCache.TryGetValue(BuildMemoryKey(key), out DashboardOverviewCacheSnapshot? snapshot))
+        {
+            if (IsUsable(snapshot))
+                return snapshot;
+            _memoryCache.Remove(BuildMemoryKey(key));
+        }
 
         try
         {
@@ -35,7 +39,11 @@ public class DashboardOverviewCacheService(
         }
 
         if (!IsUsable(snapshot))
+        {
+            _memoryCache.Remove(BuildMemoryKey(key));
+            await _localStorageService.RemoveItemAsync(BuildStorageKey(key));
             return null;
+        }
 
         _memoryCache.Set(BuildMemoryKey(key), snapshot, MemorySlidingExpiration);
         return snapshot;
@@ -55,7 +63,7 @@ public class DashboardOverviewCacheService(
            && DateTime.UtcNow - snapshot.FetchedAtUtc <= MaxStale;
 
     private static string BuildKey(int userId, int currencyId, DateTime start, DateTime end)
-        => $"{userId}:{currencyId}:{start.Date:O}:{end:O}";
+        => $"{userId}:{currencyId}:{start.Date:yyyy-MM-dd}:{end.Date:yyyy-MM-dd}";
 
     private static string BuildMemoryKey(string key) => $"{CacheKeyPrefix}:memory:{key}";
 
