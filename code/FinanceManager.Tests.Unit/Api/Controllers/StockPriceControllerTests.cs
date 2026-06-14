@@ -1,6 +1,7 @@
 using FinanceManager.Api.Controllers;
 using FinanceManager.Application.FinancialAccounts.Stock.Import;
 using FinanceManager.Application.FinancialAccounts.Stock.Market;
+using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Domain.Commands.Stocks;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Currencies;
@@ -24,12 +25,12 @@ public class StockPriceControllerTests
     private readonly Mock<IStockPriceProvider> _stockPriceProvider = new();
     private readonly Mock<IStockDetailsRepository> _stockDetailsRepository = new();
     private readonly Mock<IStockPriceBulkImportService> _stockPriceBulkImportService = new();
+    private readonly Mock<IInstrumentResolver> _instrumentResolverMock = new();
     private readonly StockPriceController _controller;
 
     public StockPriceControllerTests()
     {
         var isinResolverMock = new Mock<IIsinResolver>();
-        // Setup mock to return realistic ISINs for common tickers
         isinResolverMock
             .Setup(resolver => resolver.ResolveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string ticker, string region, CancellationToken ct) =>
@@ -40,7 +41,7 @@ public class StockPriceControllerTests
                     "AAPL" => "US0378331005",
                     "MSFT" => "US5949181045",
                     "GOOGL" => "US02079K3059",
-                    _ => ticker.Length == 12 ? ticker : "IE00B4L5Y983" // Return ISIN if already looks like one
+                    _ => ticker.Length == 12 ? ticker : "IE00B4L5Y983"
                 };
             });
         _controller = new StockPriceController(
@@ -48,10 +49,11 @@ public class StockPriceControllerTests
             _currencyExchangeService.Object,
             _currencyRepository.Object,
             _stockMarketService.Object,
-                _stockPriceProvider.Object,
-                _stockDetailsRepository.Object,
-                _stockPriceBulkImportService.Object,
-                isinResolverMock.Object);
+            _stockPriceProvider.Object,
+            _stockDetailsRepository.Object,
+            _stockPriceBulkImportService.Object,
+            isinResolverMock.Object,
+            _instrumentResolverMock.Object);
     }
 
     [Fact]
@@ -60,9 +62,10 @@ public class StockPriceControllerTests
         // Arrange
         var requestedDate = new DateTime(2024, 12, 20, 9, 0, 45, DateTimeKind.Utc);
         var storedDate = requestedDate.AddDays(-1).Date;
+        const string isin = "IE00B4L5Y983";
         var storedPrice = new StockPrice
         {
-            Isin = "IE00B4L5Y983", // Use the ISIN that "CSPX.LON" resolves to
+            Isin = isin,
             PricePerUnit = 747.18m,
             Currency = DefaultCurrency.PLN,
             Date = storedDate
@@ -70,11 +73,11 @@ public class StockPriceControllerTests
 
         _currencyRepository.Setup(repo => repo.GetCurrency(DefaultCurrency.PLN.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(DefaultCurrency.PLN);
-        _stockPriceRepository.Setup(repo => repo.GetThisOrNextOlder("IE00B4L5Y983", requestedDate))
+        _stockPriceRepository.Setup(repo => repo.GetThisOrNextOlder(isin, requestedDate))
             .ReturnsAsync(storedPrice);
 
         // Act
-        var result = await _controller.GetStockPrice("CSPX.LON", DefaultCurrency.PLN.Id, requestedDate, TestContext.Current.CancellationToken);
+        var result = await _controller.GetStockPrice(isin, DefaultCurrency.PLN.Id, requestedDate, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -82,6 +85,58 @@ public class StockPriceControllerTests
         Assert.Equal(storedDate, value.Date);
         Assert.Equal(747.18m, value.PricePerUnit);
         Assert.Equal(DefaultCurrency.PLN.Symbol, value.Currency.Symbol);
+    }
+
+    [Fact]
+    public async Task SearchInstrument_ReturnsBadRequest_WhenTickerEmpty()
+    {
+        var result = await _controller.SearchInstrument("", TestContext.Current.CancellationToken);
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task SearchInstrument_ReturnsNotFound_WhenNoMatch()
+    {
+        _instrumentResolverMock.Setup(r => r.ResolveAsync("UNKNOWN", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new InstrumentResolution { Kind = ResolutionKind.NoMatch });
+
+        var result = await _controller.SearchInstrument("UNKNOWN", TestContext.Current.CancellationToken);
+
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task SearchInstrument_ReturnsOk_WithAutoResolvedMatch()
+    {
+        var match = new InstrumentListing("US0378331005", "AAPL", "Apple Inc.", "XNAS", "USD", "Equity");
+        _instrumentResolverMock.Setup(r => r.ResolveAsync("AAPL", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new InstrumentResolution { Kind = ResolutionKind.AutoResolved, Match = match });
+
+        var result = await _controller.SearchInstrument("AAPL", TestContext.Current.CancellationToken);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var resolution = Assert.IsType<InstrumentResolution>(ok.Value);
+        Assert.Equal(ResolutionKind.AutoResolved, resolution.Kind);
+        Assert.Equal("US0378331005", resolution.Match!.Isin);
+    }
+
+    [Fact]
+    public async Task SearchInstrument_ReturnsOk_WithAmbiguousCandidates()
+    {
+        var candidates = new List<InstrumentListing>
+        {
+            new("IE00B4L5Y983", "CSPX.LON", "iShares S&P 500", "LN", "USD", "ETF"),
+            new("IE00B4L5Y984", "CSPX.GY", "iShares S&P 500", "GY", "EUR", "ETF"),
+        };
+        _instrumentResolverMock.Setup(r => r.ResolveAsync("CSPX", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new InstrumentResolution { Kind = ResolutionKind.Ambiguous, Candidates = candidates });
+
+        var result = await _controller.SearchInstrument("CSPX", TestContext.Current.CancellationToken);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var resolution = Assert.IsType<InstrumentResolution>(ok.Value);
+        Assert.Equal(ResolutionKind.Ambiguous, resolution.Kind);
+        Assert.Equal(2, resolution.Candidates.Count);
     }
 
     [Fact]
@@ -282,18 +337,20 @@ public class StockPriceControllerTests
     {
         // Arrange
         var day = new DateTime(2026, 2, 3, 0, 0, 0, DateTimeKind.Utc);
+        const string isin = "US0378331005";
+        const string avSymbol = "AAPL";
         var prices = new List<StockPrice>
         {
             new()
             {
-                Isin = "US0378331005",
+                Isin = isin,
                 PricePerUnit = 101m,
                 Currency = DefaultCurrency.PLN,
                 Date = day.AddHours(10)
             },
             new()
             {
-                Isin = "US0378331005",
+                Isin = isin,
                 PricePerUnit = 103m,
                 Currency = DefaultCurrency.PLN,
                 Date = day.AddHours(15)
@@ -302,11 +359,13 @@ public class StockPriceControllerTests
 
         _currencyRepository.Setup(repo => repo.GetCurrency(DefaultCurrency.PLN.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(DefaultCurrency.PLN);
-        _stockMarketService.Setup(service => service.GetStockPrices("AAPL", day, day.AddHours(23), It.IsAny<CancellationToken>()))
+        _stockDetailsRepository.Setup(repo => repo.Get(isin, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StockDetails { Isin = isin, Ticker = avSymbol, AlphaVantageSymbol = avSymbol, Currency = DefaultCurrency.PLN });
+        _stockMarketService.Setup(service => service.GetStockPrices(avSymbol, day, day.AddHours(23), It.IsAny<CancellationToken>()))
             .ReturnsAsync(prices);
 
         // Act
-        var result = await _controller.GetStockPrices("AAPL", DefaultCurrency.PLN.Id, day, day.AddHours(23), TimeSpan.FromDays(1).Ticks,
+        var result = await _controller.GetStockPrices(isin, DefaultCurrency.PLN.Id, day, day.AddHours(23), TimeSpan.FromDays(1).Ticks,
             TestContext.Current.CancellationToken);
 
         // Assert
