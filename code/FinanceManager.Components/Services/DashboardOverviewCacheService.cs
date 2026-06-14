@@ -12,9 +12,9 @@ public class DashboardOverviewCacheService(
     IMemoryCache _memoryCache,
     ILogger<DashboardOverviewCacheService> _logger)
 {
-    private const string CacheKeyPrefix = "dashboard-overview-cache-v1";
-    private static readonly TimeSpan MaxStale = TimeSpan.FromHours(24);
-    private static readonly TimeSpan MemorySlidingExpiration = TimeSpan.FromMinutes(30);
+    private const string _cacheKeyPrefix = "dashboard-overview-cache-v1";
+    private static readonly TimeSpan _maxStale = TimeSpan.FromHours(24);
+    private static readonly TimeSpan _memorySlidingExpiration = TimeSpan.FromMinutes(30);
 
     public async Task<DashboardOverviewCacheSnapshot?> GetCachedAsync(int userId, int currencyId, DateTime start, DateTime end)
     {
@@ -45,7 +45,7 @@ public class DashboardOverviewCacheService(
             return null;
         }
 
-        _memoryCache.Set(BuildMemoryKey(key), snapshot, MemorySlidingExpiration);
+        _memoryCache.Set(BuildMemoryKey(key), snapshot, _memorySlidingExpiration);
         return snapshot;
     }
 
@@ -53,19 +53,19 @@ public class DashboardOverviewCacheService(
     {
         var key = BuildKey(overview.UserId, overview.CurrencyId, overview.StartDate, overview.EndDate);
         var snapshot = DashboardOverviewCacheSnapshot.FromDto(overview);
-        _memoryCache.Set(BuildMemoryKey(key), snapshot, MemorySlidingExpiration);
+        _memoryCache.Set(BuildMemoryKey(key), snapshot, _memorySlidingExpiration);
         await _localStorageService.SetItemAsync(BuildStorageKey(key), snapshot);
     }
 
     private static bool IsUsable(DashboardOverviewCacheSnapshot? snapshot)
         => snapshot is not null
            && snapshot.SchemaVersion == DashboardOverviewCacheSnapshot.CurrentSchemaVersion
-           && DateTime.UtcNow - snapshot.FetchedAtUtc <= MaxStale;
+           && DateTime.UtcNow - snapshot.FetchedAtUtc <= _maxStale;
 
     private static string BuildKey(int userId, int currencyId, DateTime start, DateTime end)
         => $"{userId}:{currencyId}:{start.Date:yyyy-MM-dd}:{end.Date:yyyy-MM-dd}";
 
-    private static string BuildMemoryKey(string key) => $"{CacheKeyPrefix}:memory:{key}";
+    private static string BuildMemoryKey(string key) => $"{_cacheKeyPrefix}:memory:{key}";
 
-    private static string BuildStorageKey(string key) => $"{CacheKeyPrefix}:{key}";
+    private static string BuildStorageKey(string key) => $"{_cacheKeyPrefix}:{key}";
 }
