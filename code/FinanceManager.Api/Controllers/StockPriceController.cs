@@ -45,13 +45,14 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddStockPrice([FromQuery] string isin, [FromQuery] decimal pricePerUnit, [FromQuery] int currencyId, [FromQuery] DateTime date, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(isin) || pricePerUnit <= 0 || date == default)
+        var normalizedIsin = isin?.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedIsin) || pricePerUnit <= 0 || date == default)
             return BadRequest("Invalid input parameters.");
 
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return NotFound("Currency not found.");
 
-        var stockPrice = await stockPriceRepository.Add(isin, pricePerUnit, currency, date);
+        var stockPrice = await stockPriceRepository.Add(normalizedIsin, pricePerUnit, currency, date);
         return Ok(stockPrice);
     }
 
@@ -63,13 +64,14 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateStockPrice([FromQuery] string isin, [FromQuery] decimal pricePerUnit, [FromQuery] int currencyId, [FromQuery] DateTime date, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(isin) || pricePerUnit <= 0 || date == default)
+        var normalizedIsin = isin?.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedIsin) || pricePerUnit <= 0 || date == default)
             return BadRequest("Invalid input parameters.");
 
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return NotFound("Currency not found.");
 
-        var stockPrice = await stockPriceRepository.Update(isin, pricePerUnit, currency, date);
+        var stockPrice = await stockPriceRepository.Update(normalizedIsin, pricePerUnit, currency, date);
         return Ok(stockPrice);
     }
 
@@ -80,17 +82,18 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetStockPrice([FromQuery] string isin, [FromQuery] int currencyId, [FromQuery] DateTime date, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(isin) || date == default)
+        var normalizedIsin = isin?.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedIsin) || date == default)
             return BadRequest("Invalid input parameters.");
 
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null)
             return NotFound("Currency not found.");
 
-        var stockPrice = await stockPriceRepository.GetThisOrNextOlder(isin, date);
+        var stockPrice = await stockPriceRepository.GetThisOrNextOlder(normalizedIsin, date);
         if (stockPrice is null)
         {
-            var details = await stockDetailsRepository.Get(isin, cancellationToken);
+            var details = await stockDetailsRepository.Get(normalizedIsin, cancellationToken);
             var avSymbol = details?.AlphaVantageSymbol ?? details?.Ticker;
             if (avSymbol is null)
                 return NotFound("Stock price not found.");
@@ -99,7 +102,7 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
             if (fetchedPrice <= 0)
                 return NotFound("Stock price not found.");
 
-            stockPrice = await stockPriceRepository.GetThisOrNextOlder(isin, date);
+            stockPrice = await stockPriceRepository.GetThisOrNextOlder(normalizedIsin, date);
             if (stockPrice is null)
             {
                 return NotFound("Stock price not found in database.");
@@ -126,14 +129,15 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetStockPrices([FromQuery] string isin, [FromQuery] int currencyId, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long step = default, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(isin) || start == default || end == default)
+        var normalizedIsin = isin?.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedIsin) || start == default || end == default)
             return BadRequest("Invalid input parameters.");
 
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null)
             return NotFound("Currency not found.");
 
-        var details = await stockDetailsRepository.Get(isin, cancellationToken);
+        var details = await stockDetailsRepository.Get(normalizedIsin, cancellationToken);
         var avSymbol = details?.AlphaVantageSymbol ?? details?.Ticker;
         if (avSymbol is null)
             return NotFound("Stock details not found for the given ISIN.");

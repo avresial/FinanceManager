@@ -105,9 +105,9 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
     {
         Authorize("TestUser", 1, UserRole.User);
 
-        await new StockPriceHttpClient(Client, null!).AddStockPrice(_aaplIsin, 150, 1, DateTime.UtcNow);
+        await new StockPriceHttpClient(Client, null!).AddStockPrice(_aaplIsin, 150, 1, DateTime.UtcNow, TestContext.Current.CancellationToken);
 
-        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 1, DateTime.UtcNow);
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 1, DateTime.UtcNow, TestContext.Current.CancellationToken);
         Assert.NotNull(result);
         Assert.Equal(150, result.PricePerUnit);
     }
@@ -121,9 +121,9 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
         await SeedWithTestStockPrice("AAPL", 100);
         Authorize("TestUser", 1, UserRole.User);
 
-        await new StockPriceHttpClient(Client, null!).UpdateStockPrice(_aaplIsin, 200, 0, DateTime.UtcNow);
+        await new StockPriceHttpClient(Client, null!).UpdateStockPrice(_aaplIsin, 200, 0, DateTime.UtcNow, TestContext.Current.CancellationToken);
 
-        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 0, DateTime.UtcNow);
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 0, DateTime.UtcNow, TestContext.Current.CancellationToken);
         Assert.NotNull(result);
         Assert.Equal(200, result.PricePerUnit);
     }
@@ -136,7 +136,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
 
         await SeedWithTestStockPrice();
 
-        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 0, DateTime.UtcNow);
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 0, DateTime.UtcNow, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal(_aaplIsin, result.Isin);
@@ -148,7 +148,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
     {
         await SeedWithTestStockPrice();
 
-        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 1, DateTime.UtcNow);
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 1, DateTime.UtcNow, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal(110, result.PricePerUnit);
@@ -165,7 +165,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
 
         await SeedWithTestStockPrice("AAPL", 100, DefaultCurrency.PLN, storedDate);
 
-        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 0, requestedDate);
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 0, requestedDate, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal(storedDate.Date, result.Date.Date);
@@ -177,7 +177,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
     {
         await SeedWithTestStockPrice();
 
-        var result = await new StockPriceHttpClient(Client, null!).GetStockPrices(_aaplIsin, DefaultCurrency.PLN.Id, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1), TimeSpan.FromDays(1));
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrices(_aaplIsin, DefaultCurrency.PLN.Id, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1), TimeSpan.FromDays(1), TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result);
@@ -210,7 +210,7 @@ public class StockPriceControllerTests(OptionsProvider optionsProvider) : Contro
 
         await SeedWithTestStockPrice("AAPL", 250);
 
-        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 0, DateTime.UtcNow);
+        var result = await new StockPriceHttpClient(Client, null!).GetStockPrice(_aaplIsin, 0, DateTime.UtcNow, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal(_aaplIsin, result.Isin);

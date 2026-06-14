@@ -25,22 +25,22 @@ public class StockPriceHttpClient(HttpClient httpClient, ILogger<StockPriceHttpC
         }
     }
 
-    public async Task AddStockPrice(string isin, decimal pricePerUnit, int currencyId, DateTime date)
+    public async Task AddStockPrice(string isin, decimal pricePerUnit, int currencyId, DateTime date, CancellationToken cancellationToken = default)
     {
-        var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/StockPrice/add-stock-price?isin={Uri.EscapeDataString(isin)}&pricePerUnit={pricePerUnit}&currencyId={currencyId}&date={date.ToRfc3339()}", null);
+        var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/StockPrice/add-stock-price?isin={Uri.EscapeDataString(isin)}&pricePerUnit={pricePerUnit}&currencyId={currencyId}&date={date.ToRfc3339()}", null, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
-    public async Task UpdateStockPrice(string isin, decimal pricePerUnit, int currencyId, DateTime date)
+    public async Task UpdateStockPrice(string isin, decimal pricePerUnit, int currencyId, DateTime date, CancellationToken cancellationToken = default)
     {
-        var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/StockPrice/update-stock-price?isin={Uri.EscapeDataString(isin)}&pricePerUnit={pricePerUnit}&currencyId={currencyId}&date={date.ToRfc3339()}", null);
+        var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/StockPrice/update-stock-price?isin={Uri.EscapeDataString(isin)}&pricePerUnit={pricePerUnit}&currencyId={currencyId}&date={date.ToRfc3339()}", null, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
-    public async Task<StockPrice?> GetStockPrice(string isin, int currencyId, DateTime date)
+    public async Task<StockPrice?> GetStockPrice(string isin, int currencyId, DateTime date, CancellationToken cancellationToken = default)
     {
         if (httpClient is null) return default;
         try
         {
-            var result = await httpClient.GetFromJsonAsync<StockPrice?>($"{httpClient.BaseAddress}api/StockPrice/get-stock-price?isin={Uri.EscapeDataString(isin)}&currencyId={currencyId}&date={date.ToRfc3339()}");
+            var result = await httpClient.GetFromJsonAsync<StockPrice?>($"{httpClient.BaseAddress}api/StockPrice/get-stock-price?isin={Uri.EscapeDataString(isin)}&currencyId={currencyId}&date={date.ToRfc3339()}", cancellationToken);
 
             if (result is not null) return result;
         }
@@ -51,13 +51,13 @@ public class StockPriceHttpClient(HttpClient httpClient, ILogger<StockPriceHttpC
         return default;
 
     }
-    public async Task<IEnumerable<StockPrice>> GetStockPrices(string isin, int currencyId, DateTime start, DateTime end, TimeSpan step)
+    public async Task<IEnumerable<StockPrice>> GetStockPrices(string isin, int currencyId, DateTime start, DateTime end, TimeSpan step, CancellationToken cancellationToken = default)
     {
         if (httpClient is null) return [];
 
         try
         {
-            var result = await httpClient.GetFromJsonAsync<IEnumerable<StockPrice>>($"{httpClient.BaseAddress}api/StockPrice/get-stock-prices?isin={Uri.EscapeDataString(isin)}&currencyId={currencyId}&start={start.ToRfc3339()}&end={end.ToRfc3339()}&step={step.Ticks}");
+            var result = await httpClient.GetFromJsonAsync<IEnumerable<StockPrice>>($"{httpClient.BaseAddress}api/StockPrice/get-stock-prices?isin={Uri.EscapeDataString(isin)}&currencyId={currencyId}&start={start.ToRfc3339()}&end={end.ToRfc3339()}&step={step.Ticks}", cancellationToken);
             if (result is not null) return result;
         }
         catch (Exception ex)
