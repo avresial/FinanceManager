@@ -8,9 +8,9 @@ using System.Text.Json;
 namespace FinanceManager.Components.Services;
 
 public class DashboardOverviewCacheService(
-    ILocalStorageService localStorageService,
-    IMemoryCache memoryCache,
-    ILogger<DashboardOverviewCacheService> logger)
+    ILocalStorageService _localStorageService,
+    IMemoryCache _memoryCache,
+    ILogger<DashboardOverviewCacheService> _logger)
 {
     private const string CacheKeyPrefix = "dashboard-overview-cache-v1";
     private static readonly TimeSpan MaxStale = TimeSpan.FromHours(24);
@@ -20,24 +20,24 @@ public class DashboardOverviewCacheService(
     {
         var key = BuildKey(userId, currencyId, start, end);
 
-        if (memoryCache.TryGetValue(BuildMemoryKey(key), out DashboardOverviewCacheSnapshot? snapshot) && IsUsable(snapshot))
+        if (_memoryCache.TryGetValue(BuildMemoryKey(key), out DashboardOverviewCacheSnapshot? snapshot) && IsUsable(snapshot))
             return snapshot;
 
         try
         {
-            snapshot = await localStorageService.GetItemAsync<DashboardOverviewCacheSnapshot>(BuildStorageKey(key));
+            snapshot = await _localStorageService.GetItemAsync<DashboardOverviewCacheSnapshot>(BuildStorageKey(key));
         }
         catch (JsonException ex)
         {
-            logger.LogWarning(ex, "Corrupt dashboard overview cache payload; evicting.");
-            await localStorageService.RemoveItemAsync(BuildStorageKey(key));
+            _logger.LogWarning(ex, "Corrupt dashboard overview cache payload; evicting.");
+            await _localStorageService.RemoveItemAsync(BuildStorageKey(key));
             return null;
         }
 
         if (!IsUsable(snapshot))
             return null;
 
-        memoryCache.Set(BuildMemoryKey(key), snapshot, MemorySlidingExpiration);
+        _memoryCache.Set(BuildMemoryKey(key), snapshot, MemorySlidingExpiration);
         return snapshot;
     }
 
@@ -45,8 +45,8 @@ public class DashboardOverviewCacheService(
     {
         var key = BuildKey(overview.UserId, overview.CurrencyId, overview.StartDate, overview.EndDate);
         var snapshot = DashboardOverviewCacheSnapshot.FromDto(overview);
-        memoryCache.Set(BuildMemoryKey(key), snapshot, MemorySlidingExpiration);
-        await localStorageService.SetItemAsync(BuildStorageKey(key), snapshot);
+        _memoryCache.Set(BuildMemoryKey(key), snapshot, MemorySlidingExpiration);
+        await _localStorageService.SetItemAsync(BuildStorageKey(key), snapshot);
     }
 
     private static bool IsUsable(DashboardOverviewCacheSnapshot? snapshot)
