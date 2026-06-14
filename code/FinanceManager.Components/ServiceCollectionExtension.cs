@@ -51,6 +51,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<NavMenuStateCacheService>()
                 .AddScoped<DashboardHttpClient>()
                 .AddScoped<DashboardOverviewCardsCacheService>()
+                .AddScoped<DashboardOverviewCacheService>()
                 .AddScoped<AssetsPageCardsCacheService>()
                 .AddScoped<InvestmentPaycheckEstimateCacheService>()
                 .AddScoped<IUserService, UserService>()
