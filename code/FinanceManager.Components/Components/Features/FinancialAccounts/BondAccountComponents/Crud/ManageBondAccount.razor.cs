@@ -103,7 +103,7 @@ public partial class ManageBondAccount
 
     public async Task Recalculate()
     {
-        if (_bondAccount is null) return;
+        if (_isRecalculating || _bondAccount is null) return;
 
         try
         {

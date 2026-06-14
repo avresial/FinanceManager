@@ -106,7 +106,7 @@ public partial class ManageCurrencyAccount
 
     public async Task Recalculate()
     {
-        if (_currencyAccount is null) return;
+        if (_isRecalculating || _currencyAccount is null) return;
 
         try
         {

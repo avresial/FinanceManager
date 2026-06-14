@@ -105,7 +105,7 @@ public partial class ManageStockAccount : ComponentBase
 
     public async Task Recalculate()
     {
-        if (_stockAccount is null) return;
+        if (_isRecalculating || _stockAccount is null) return;
 
         try
         {
