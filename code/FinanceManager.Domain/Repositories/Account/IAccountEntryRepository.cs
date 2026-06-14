@@ -4,6 +4,13 @@ public interface IAccountEntryRepository<T>
 {
     IAsyncEnumerable<T> Get(int accountId, DateTime startDate, DateTime endDate);
     Task<List<T>> Get(int accountId, DateTime date, int count, bool olderThenDate = true);
+
+    /// <summary>
+    /// Returns the <c>PostingDate</c> of every entry in the account (one element per entry, including
+    /// duplicate dates), projected straight from the index without materialising full entities. Lets a
+    /// caller size a transaction-history window cheaply before fetching the entries themselves.
+    /// </summary>
+    Task<List<DateTime>> GetPostingDates(int accountId);
     Task<T?> Get(int accountId, int entryId);
     Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default);

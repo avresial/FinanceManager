@@ -79,6 +79,12 @@ public class StockEntryRepository(AppDbContext context) : IStockAccountEntryRepo
             .Where(e => e.AccountId == accountId && e.PostingDate >= startDate && e.PostingDate <= endDate)
             .AsAsyncEnumerable();
 
+    public async Task<List<DateTime>> GetPostingDates(int accountId) => await context.StockEntries
+            .AsNoTracking()
+            .Where(e => e.AccountId == accountId)
+            .Select(e => e.PostingDate)
+            .ToListAsync();
+
     public async Task<List<StockAccountEntry>> Get(int accountId, DateTime date, int count, bool olderThenDate = true)
     {
         if (count <= 0) return [];

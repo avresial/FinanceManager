@@ -85,6 +85,12 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             .ThenByDescending(x => x.EntryId)
             .AsAsyncEnumerable();
 
+    public async Task<List<DateTime>> GetPostingDates(int accountId) => await context.BondEntries
+            .AsNoTracking()
+            .Where(x => x.AccountId == accountId)
+            .Select(x => x.PostingDate)
+            .ToListAsync();
+
     public async Task<List<BondAccountEntry>> Get(int accountId, DateTime date, int count, bool olderThenDate = true)
     {
         if (count <= 0) return [];

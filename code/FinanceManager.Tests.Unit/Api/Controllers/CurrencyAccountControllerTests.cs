@@ -250,19 +250,6 @@ public class CurrencyAccountControllerTests
         Assert.Equal([2, 1], returnValue.Entries.Select(x => x.EntryId));
     }
 
-    [Fact]
-    public async Task GetInitialTransactionHistory_BackfillsOlderEntriesUntilMinimumIsReached()
-    {
-        var (accountId, startDate, endDate) = SetupBackfillScenario();
-
-        var result = await _controller.GetInitialTransactionHistory(accountId, startDate, endDate, minimumEntryCount: 2);
-
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnValue = Assert.IsType<CurrencyAccountDto>(okResult.Value);
-        Assert.Equal(2, returnValue.Entries.Count());
-        Assert.Equal([2, 1], returnValue.Entries.Select(x => x.EntryId));
-    }
-
     private (int AccountId, DateTime StartDate, DateTime EndDate) SetupBackfillScenario()
     {
         var userId = 1;
@@ -282,6 +269,9 @@ public class CurrencyAccountControllerTests
         ];
 
         _mockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
+        _mockAccountEntryRepository
+            .Setup(repo => repo.GetPostingDates(accountId))
+            .ReturnsAsync([new DateTime(2026, 4, 20), expandedStartDate]);
         _mockAccountEntryRepository.Setup(repo => repo.Get(accountId, startDate, endDate)).Returns(initialEntries.ToAsyncEnumerable());
         _mockAccountEntryRepository
             .Setup(repo => repo.GetNextOlder(accountId, new DateTime(2026, 4, 20)))
@@ -298,13 +288,13 @@ public class CurrencyAccountControllerTests
     }
 
     [Fact]
-    public async Task GetInitialTransactionHistory_ReturnsBadRequest_WhenDateRangeIsInvalid()
+    public async Task Get_WithMinimumEntryCount_ReturnsBadRequest_WhenDateRangeIsInvalid()
     {
         var accountId = 1;
         CurrencyAccount account = new(1, accountId, "Test Account");
         _mockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
 
-        var result = await _controller.GetInitialTransactionHistory(accountId, new DateTime(2026, 5, 1), new DateTime(2026, 4, 1));
+        var result = await _controller.Get(accountId, new DateTime(2026, 5, 1), new DateTime(2026, 4, 1));
 
         Assert.IsType<BadRequestObjectResult>(result);
     }

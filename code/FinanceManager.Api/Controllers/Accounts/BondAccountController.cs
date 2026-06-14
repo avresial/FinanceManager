@@ -56,17 +56,6 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
         return await GetAccountWithEntries(accountId, startDate, endDate, minimumEntryCount);
     }
 
-    [HttpGet("{accountId:int}/GetInitialTransactionHistory")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BondAccountDto))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetInitialTransactionHistory(int accountId, [FromQuery] DateTime startDate,
-        [FromQuery] DateTime endDate, [FromQuery] int minimumEntryCount = 100)
-    {
-        return await GetAccountWithEntries(accountId, startDate, endDate, minimumEntryCount);
-    }
-
     private async Task<IActionResult> GetAccountWithEntries(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount)
     {
         var account = await bondAccountRepository.Get(accountId);

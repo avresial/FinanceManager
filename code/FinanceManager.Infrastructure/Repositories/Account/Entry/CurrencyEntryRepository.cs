@@ -109,6 +109,12 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             .ThenByDescending(x => x.EntryId)
             .AsAsyncEnumerable();
 
+    public async Task<List<DateTime>> GetPostingDates(int accountId) => await context.CurrencyEntries
+            .AsNoTracking()
+            .Where(x => x.AccountId == accountId)
+            .Select(x => x.PostingDate)
+            .ToListAsync();
+
     public async Task<List<CurrencyAccountEntry>> Get(int accountId, DateTime date, int count, bool olderThenDate = true)
     {
         if (count <= 0) return [];

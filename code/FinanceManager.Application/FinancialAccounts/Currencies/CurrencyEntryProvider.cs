@@ -10,20 +10,32 @@ public class CurrencyEntryProvider(IAccountEntryRepository<CurrencyAccountEntry>
     {
         ArgumentOutOfRangeException.ThrowIfNegative(minimumEntryCount);
 
-        var effectiveStartDate = startDate;
+        // Two queries, no loop: (1) cheaply project just the posting dates to decide how far back the
+        // window must reach to include at least `minimumEntryCount` entries, then (2) load the entries
+        // for that window once. This avoids repeatedly re-fetching a growing range from the database.
+        var effectiveStartDate = await ResolveEffectiveStartDateAsync(accountId, startDate, endDate, minimumEntryCount);
         var entries = await LoadEntriesAsync(accountId, effectiveStartDate, endDate);
 
-        while (minimumEntryCount > 0 && entries.Count < minimumEntryCount)
-        {
-            var nextOlderStartDate = await GetNextOlderStartDateAsync(accountId, entries, effectiveStartDate);
-            if (nextOlderStartDate is null || nextOlderStartDate.Value >= effectiveStartDate)
-                break;
-
-            effectiveStartDate = nextOlderStartDate.Value;
-            entries = await LoadEntriesAsync(accountId, effectiveStartDate, endDate);
-        }
-
         return new(entries, effectiveStartDate);
+    }
+
+    private async Task<DateTime> ResolveEffectiveStartDateAsync(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount)
+    {
+        if (minimumEntryCount == 0) return startDate;
+
+        var candidateDates = (await accountEntryRepository.GetPostingDates(accountId))
+            .Where(date => date <= endDate)
+            .OrderByDescending(date => date)
+            .ToList();
+
+        // Fewer entries exist (up to endDate) than requested: take everything available.
+        if (candidateDates.Count <= minimumEntryCount)
+            return candidateDates.Count != 0 && candidateDates[^1] < startDate ? candidateDates[^1] : startDate;
+
+        // The date of the Nth-newest entry is the furthest back we must reach to include at least
+        // `minimumEntryCount` entries. If it already falls inside the requested range, keep startDate.
+        var nthNewestDate = candidateDates[minimumEntryCount - 1];
+        return nthNewestDate < startDate ? nthNewestDate : startDate;
     }
 
     private async Task<List<CurrencyAccountEntry>> LoadEntriesAsync(int accountId, DateTime startDate, DateTime endDate)
@@ -33,11 +45,5 @@ public class CurrencyEntryProvider(IAccountEntryRepository<CurrencyAccountEntry>
             entries.Add(entry);
 
         return entries;
-    }
-
-    private async Task<DateTime?> GetNextOlderStartDateAsync(int accountId, IReadOnlyList<CurrencyAccountEntry> entries, DateTime effectiveStartDate)
-    {
-        var referenceDate = entries.Count != 0 ? entries.Min(x => x.PostingDate) : effectiveStartDate;
-        return (await accountEntryRepository.GetNextOlder(accountId, referenceDate))?.PostingDate;
     }
 }
