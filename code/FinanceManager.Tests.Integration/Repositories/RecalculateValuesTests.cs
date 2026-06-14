@@ -65,6 +65,33 @@ public sealed class RecalculateValuesTests : IDisposable
     }
 
     [Fact]
+    public async Task Currency_RecalculateWholeAccount_RebuildsDriftedBalances()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var repo = new CurrencyEntryRepository(_context);
+        var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
+        var jan15 = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc);
+        var jan20 = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc);
+
+        // Simulate legacy import drift: each entry's Value equals its ValueChange and no recalc ran.
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan10, 1000m, 1000m), recalculate: false);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan15, 200m, 200m), recalculate: false);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan20, 500m, 500m), recalculate: false);
+
+        await repo.RecalculateValues(_accountId);
+
+        var entries = await _context.CurrencyEntries
+            .Where(e => e.AccountId == _accountId)
+            .OrderBy(e => e.PostingDate)
+            .ToListAsync(ct);
+
+        Assert.Equal(3, entries.Count);
+        Assert.Equal(1000m, entries[0].Value); // jan10
+        Assert.Equal(1200m, entries[1].Value); // jan15: 1000 + 200
+        Assert.Equal(1700m, entries[2].Value); // jan20: 1200 + 500
+    }
+
+    [Fact]
     public async Task Currency_Update_RecalculatesFromUpdatedEntry()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -146,6 +173,36 @@ public sealed class RecalculateValuesTests : IDisposable
         Assert.Equal(200m, msftEntries[0].Value);   // unaffected
     }
 
+    [Fact]
+    public async Task Stock_RecalculateWholeAccount_RebuildsDriftedBalancesPerIsin()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var repo = new StockEntryRepository(_context);
+        var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
+        var jan20 = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc);
+
+        // Simulate legacy import drift: Value equals ValueChange across two instruments, no recalc.
+        await repo.Add(new StockAccountEntry(_accountId, 0, jan10, 100m, 100m, "US0378331005", InvestmentType.Stock), recalculate: false);
+        await repo.Add(new StockAccountEntry(_accountId, 0, jan20, 50m, 50m, "US0378331005", InvestmentType.Stock), recalculate: false);
+        await repo.Add(new StockAccountEntry(_accountId, 0, jan10, 200m, 200m, "US5949181045", InvestmentType.Stock), recalculate: false);
+
+        await repo.RecalculateValues(_accountId);
+
+        var appleEntries = await _context.StockEntries
+            .Where(e => e.AccountId == _accountId && e.Isin == "US0378331005")
+            .OrderBy(e => e.PostingDate)
+            .ToListAsync(ct);
+
+        var msftEntries = await _context.StockEntries
+            .Where(e => e.AccountId == _accountId && e.Isin == "US5949181045")
+            .ToListAsync(ct);
+
+        Assert.Equal(100m, appleEntries[0].Value); // jan10
+        Assert.Equal(150m, appleEntries[1].Value); // jan20: 100 + 50
+        Assert.Single(msftEntries);
+        Assert.Equal(200m, msftEntries[0].Value);   // single entry → value = valueChange
+    }
+
     // ── Bond ──────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -184,5 +241,38 @@ public sealed class RecalculateValuesTests : IDisposable
 
         Assert.Single(bondBEntries);
         Assert.Equal(1000m, bondBEntries[0].Value); // unaffected
+    }
+
+    [Fact]
+    public async Task Bond_RecalculateWholeAccount_RebuildsDriftedBalancesPerBondDetailsId()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var repo = new BondEntryRepository(_context);
+        var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
+        var jan20 = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc);
+
+        const int bondA = 1;
+        const int bondB = 2;
+
+        // Simulate legacy import drift: Value equals ValueChange across two bonds, no recalc.
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 500m, 500m, bondA), recalculate: false);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan20, 300m, 300m, bondA), recalculate: false);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 1000m, 1000m, bondB), recalculate: false);
+
+        await repo.RecalculateValues(_accountId);
+
+        var bondAEntries = await _context.BondEntries
+            .Where(e => e.AccountId == _accountId && e.BondDetailsId == bondA)
+            .OrderBy(e => e.PostingDate)
+            .ToListAsync(ct);
+
+        var bondBEntries = await _context.BondEntries
+            .Where(e => e.AccountId == _accountId && e.BondDetailsId == bondB)
+            .ToListAsync(ct);
+
+        Assert.Equal(500m, bondAEntries[0].Value); // jan10
+        Assert.Equal(800m, bondAEntries[1].Value); // jan20: 500 + 300
+        Assert.Single(bondBEntries);
+        Assert.Equal(1000m, bondBEntries[0].Value); // single entry → value = valueChange
     }
 }

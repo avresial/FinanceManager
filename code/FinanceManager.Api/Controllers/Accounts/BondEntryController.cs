@@ -98,6 +98,20 @@ public class BondEntryController(
         return Ok(await bondAccountEntryRepository.Delete(accountId, entryId));
     }
 
+    [HttpPost("Recalculate/{accountId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RecalculateBalance(int accountId)
+    {
+        var account = await bondAccountRepository.Get(accountId);
+        if (account is null) return NotFound();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+
+        await bondAccountEntryRepository.RecalculateValues(accountId);
+        return Ok();
+    }
+
     [HttpPut]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BondAccountEntryDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

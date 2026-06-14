@@ -64,6 +64,12 @@ public class CurrencyEntryHttpClient(HttpClient httpClient)
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<bool> RecalculateBalanceAsync(int accountId)
+    {
+        var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/CurrencyEntry/Recalculate/{accountId}", null);
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<bool> UpdateEntryAsync(CurrencyAccountEntry entry)
     {
         var updateCommand = new UpdateCurrencyAccountEntry(

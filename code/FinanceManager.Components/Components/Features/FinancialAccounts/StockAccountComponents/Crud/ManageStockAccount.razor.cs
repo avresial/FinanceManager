@@ -1,5 +1,6 @@
 using FinanceManager.Components.Components.Shared;
 using FinanceManager.Components.Components.Shared.Dialogs;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Services;
@@ -16,6 +17,7 @@ public partial class ManageStockAccount : ComponentBase
     private string[] _errors = [];
 
     private StockAccount? _stockAccount;
+    private bool _isRecalculating;
 
     public string AccountName { get; set; } = string.Empty;
 
@@ -27,6 +29,8 @@ public partial class ManageStockAccount : ComponentBase
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILogger<ManageStockAccount> Logger { get; set; }
+    [Inject] public required StockEntryHttpClient StockEntryHttpClient { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -96,6 +100,35 @@ public partial class ManageStockAccount : ComponentBase
         {
             Logger.LogError(ex, "Error removing Stock Account with AccountId {AccountId}", AccountId);
             _errors = [ex.Message];
+        }
+    }
+
+    public async Task Recalculate()
+    {
+        if (_isRecalculating || _stockAccount is null) return;
+
+        try
+        {
+            _isRecalculating = true;
+
+            if (await StockEntryHttpClient.RecalculateBalanceAsync(AccountId))
+            {
+                Snackbar.Add("Account balance recalculated.", Severity.Success);
+                await AccountDataSynchronizationService.AccountChanged();
+            }
+            else
+            {
+                Snackbar.Add("Failed to recalculate account balance.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error recalculating balance for Stock Account with AccountId {AccountId}", AccountId);
+            Snackbar.Add("Failed to recalculate account balance.", Severity.Error);
+        }
+        finally
+        {
+            _isRecalculating = false;
         }
     }
 }

@@ -33,6 +33,12 @@ public class StockEntryHttpClient(HttpClient httpClient)
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<bool> RecalculateBalanceAsync(int accountId)
+    {
+        var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/StockEntry/Recalculate/{accountId}", null);
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<bool> UpdateEntryAsync(UpdateStockAccountEntry entry)
     {
         var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/StockEntry/Update", entry);

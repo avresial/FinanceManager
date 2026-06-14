@@ -290,6 +290,23 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         await RecalculateValues(accountId, date);
     }
 
+    public async Task RecalculateValues(int accountId)
+    {
+        // Recalculate from the oldest entry: every bond's anchor before it is empty, so each instrument
+        // is rebuilt from a zero running balance.
+        var startDate = await context.BondEntries
+            .AsNoTracking()
+            .Where(e => e.AccountId == accountId)
+            .OrderBy(e => e.PostingDate)
+            .ThenBy(e => e.EntryId)
+            .Select(e => (DateTime?)e.PostingDate)
+            .FirstOrDefaultAsync();
+
+        if (startDate is not DateTime date) return;
+
+        await RecalculateValues(accountId, date);
+    }
+
     private async Task RecalculateValues(int accountId, DateTime startDate)
     {
         if (!context.Database.IsRelational())
