@@ -33,7 +33,7 @@ internal sealed class OpenFigiClient(
             ExchCode = exchCode ?? string.Empty
         };
 
-        return await ExecuteMapping([request], $"ticker {baseTicker} / exchCode {exchCode ?? "(any)"}", ct);
+        return await ExecuteMapping([request], $"ticker {Sanitize(baseTicker)} / exchCode {Sanitize(exchCode) ?? "(any)"}", ct);
     }
 
     public async Task<IReadOnlyList<OpenFigiListing>> MapByIsinAsync(string isin, CancellationToken ct = default)
@@ -48,7 +48,7 @@ internal sealed class OpenFigiClient(
             ExchCode = string.Empty
         };
 
-        return await ExecuteMapping([request], $"ISIN {isin}", ct);
+        return await ExecuteMapping([request], $"ISIN {Sanitize(isin)}", ct);
     }
 
     public async Task<string?> ResolveAsync(string ticker, string? region = null, CancellationToken ct = default)
@@ -56,22 +56,32 @@ internal sealed class OpenFigiClient(
         if (string.IsNullOrWhiteSpace(ticker))
             return null;
 
-        var results = await MapByTickerAsync(ticker, region, ct);
-        var first = results.FirstOrDefault();
-        if (first is null)
+        try
         {
-            logger.LogDebug("OpenFIGI returned no results for ticker {Ticker}", ticker);
+            var results = await MapByTickerAsync(ticker, region, ct);
+            var first = results.FirstOrDefault();
+            if (first is null)
+            {
+                logger.LogDebug("OpenFIGI returned no results for ticker {Ticker}", Sanitize(ticker));
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(first.Isin))
+            {
+                logger.LogDebug("OpenFIGI returned no ISIN for ticker {Ticker}", Sanitize(ticker));
+                return null;
+            }
+
+            logger.LogDebug("Resolved ticker {Ticker} to ISIN {Isin}", Sanitize(ticker), Sanitize(first.Isin));
+            return first.Isin;
+        }
+        catch (Exception ex)
+        {
+            // Legacy IIsinResolver contract returns null on failure; the decorating
+            // CachingIsinResolver handles its own cooldown when null is returned.
+            logger.LogWarning(ex, "OpenFIGI resolve failed for ticker {Ticker}", Sanitize(ticker));
             return null;
         }
-
-        if (string.IsNullOrWhiteSpace(first.Isin))
-        {
-            logger.LogDebug("OpenFIGI returned no ISIN for ticker {Ticker}", ticker);
-            return null;
-        }
-
-        logger.LogDebug("Resolved ticker {Ticker} to ISIN {Isin}", ticker, first.Isin);
-        return first.Isin;
     }
 
     private async Task<IReadOnlyList<OpenFigiListing>> ExecuteMapping(List<OpenFigiMappingRequest> requests, string debugLabel, CancellationToken ct)
@@ -79,49 +89,67 @@ internal sealed class OpenFigiClient(
         var serviceConfig = await configService.GetServiceAsync("OpenFigi", ct);
         var url = $"{serviceConfig.BaseUrl.TrimEnd('/')}/mapping";
 
+        var content = JsonSerializer.Serialize(requests);
+        var httpContent = new StringContent(content, System.Text.Encoding.UTF8, "application/json");
+
+        if (!string.IsNullOrWhiteSpace(serviceConfig.ApiKey))
+            httpContent.Headers.Add("X-OPENFIGI-APIKEY", serviceConfig.ApiKey);
+
+        var response = await httpClient.PostAsync(url, httpContent, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            // Surface transport-level failures (rate limits, outages) so callers can back off /
+            // enter cooldown. Distinct from a successful response that simply contains no listings.
+            logger.LogWarning("OpenFIGI mapping request failed with status {StatusCode} for {DebugLabel}", response.StatusCode, debugLabel);
+            throw new HttpRequestException($"OpenFIGI mapping request failed with status {response.StatusCode}");
+        }
+
+        var responseContent = await response.Content.ReadAsStringAsync(ct);
+
+        List<OpenFigiMappingResponse>? jobs;
         try
         {
-            var content = JsonSerializer.Serialize(requests);
-            var httpContent = new StringContent(content, System.Text.Encoding.UTF8, "application/json");
-
-            if (!string.IsNullOrWhiteSpace(serviceConfig.ApiKey))
-                httpContent.Headers.Add("X-OPENFIGI-APIKEY", serviceConfig.ApiKey);
-
-            var response = await httpClient.PostAsync(url, httpContent, ct);
-            if (!response.IsSuccessStatusCode)
-            {
-                logger.LogWarning("OpenFIGI mapping request failed with status {StatusCode} for {DebugLabel}", response.StatusCode, debugLabel);
-                return [];
-            }
-
-            var responseContent = await response.Content.ReadAsStringAsync(ct);
-            var results = JsonSerializer.Deserialize<List<OpenFigiMappingResponse>>(responseContent, _jsonOptions);
-
-            if (results is null || results.Count == 0)
-            {
-                logger.LogDebug("OpenFIGI returned no results for {DebugLabel}", debugLabel);
-                return [];
-            }
-
-            var listings = new List<OpenFigiListing>(results.Count);
-            foreach (var result in results)
-            {
-                listings.Add(new OpenFigiListing(
-                    Isin: result.Isin,
-                    Ticker: result.Ticker ?? string.Empty,
-                    Name: result.Name ?? string.Empty,
-                    ExchCode: result.ExchCode ?? string.Empty,
-                    Currency: result.Currency));
-            }
-
-            return listings;
+            jobs = JsonSerializer.Deserialize<List<OpenFigiMappingResponse>>(responseContent, _jsonOptions);
         }
-        catch (Exception ex)
+        catch (JsonException ex)
         {
-            logger.LogError(ex, "OpenFIGI mapping request failed for {DebugLabel}", debugLabel);
+            logger.LogWarning(ex, "OpenFIGI returned unparseable content for {DebugLabel}", debugLabel);
             return [];
         }
+
+        if (jobs is null || jobs.Count == 0)
+        {
+            logger.LogDebug("OpenFIGI returned no results for {DebugLabel}", debugLabel);
+            return [];
+        }
+
+        // OpenFIGI v3 wraps each job's matches inside a "data" array; flatten across all jobs.
+        var listings = new List<OpenFigiListing>();
+        foreach (var job in jobs)
+        {
+            if (job.Data is null)
+                continue;
+
+            foreach (var match in job.Data)
+            {
+                listings.Add(new OpenFigiListing(
+                    Isin: match.Isin,
+                    Ticker: match.Ticker ?? string.Empty,
+                    Name: match.Name ?? string.Empty,
+                    ExchCode: match.ExchCode ?? string.Empty,
+                    Currency: match.Currency));
+            }
+        }
+
+        if (listings.Count == 0)
+            logger.LogDebug("OpenFIGI returned no listings for {DebugLabel}", debugLabel);
+
+        return listings;
     }
+
+    // Strip CR/LF so attacker-influenced ticker/ISIN values cannot forge log entries (log injection).
+    private static string? Sanitize(string? value)
+        => value?.Replace("\r", string.Empty).Replace("\n", string.Empty);
 
     private sealed class OpenFigiMappingRequest
     {
@@ -136,6 +164,15 @@ internal sealed class OpenFigiClient(
     }
 
     private sealed class OpenFigiMappingResponse
+    {
+        [JsonPropertyName("data")]
+        public List<OpenFigiMatch>? Data { get; set; }
+
+        [JsonPropertyName("error")]
+        public string? Error { get; set; }
+    }
+
+    private sealed class OpenFigiMatch
     {
         [JsonPropertyName("figi")]
         public string? Figi { get; set; }

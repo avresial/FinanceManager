@@ -188,6 +188,66 @@ public class InstrumentResolverTests
     }
 
     [Fact]
+    public async Task ResolveAsync_SingleAvMatchButMultipleDistinctIsins_StaysAmbiguous()
+    {
+        // No exchange hint, one AV match, but OpenFIGI returns two DIFFERENT instruments
+        // sharing the ticker — the resolver must not auto-resolve an arbitrary one.
+        var resolver = CreateResolver();
+        _avClientMock
+            .Setup(x => x.SearchTicker("ABC", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TickerSearchMatch>
+            {
+                new() { Symbol = "ABC", Name = "Ambiguous Co", Type = "Equity", Region = "US", Currency = "USD", MatchScore = 1m }
+            });
+
+        _openFigiClientMock
+            .Setup(x => x.MapByTickerAsync("ABC", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<OpenFigiListing>
+            {
+                new(Isin: "US1111111111", Ticker: "ABC", Name: "Ambiguous Co A", ExchCode: "US", Currency: "USD"),
+                new(Isin: "US2222222222", Ticker: "ABC", Name: "Ambiguous Co B", ExchCode: "UN", Currency: "USD")
+            });
+
+        _stockDetailsRepositoryMock
+            .Setup(x => x.GetByTicker("ABC", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((StockDetails?)null);
+
+        var result = await resolver.ResolveAsync("ABC", TestContext.Current.CancellationToken);
+
+        Assert.Equal(ResolutionKind.Ambiguous, result.Kind);
+        Assert.Equal(2, result.Candidates.Count);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_OpenFigiDown_KeepsAlphaVantageCurrency()
+    {
+        // During an OpenFIGI outage the AV-only candidate must retain the AV currency,
+        // not be forced to USD.
+        var resolver = CreateResolver();
+        _avClientMock
+            .Setup(x => x.SearchTicker("CSPX", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TickerSearchMatch>
+            {
+                new() { Symbol = "CSPX.LON", Name = "iShares Core S&P 500 ETF", Type = "ETF", Region = "GB", Currency = "GBP", MatchScore = 1m }
+            });
+
+        _openFigiClientMock
+            .Setup(x => x.MapByTickerAsync("CSPX", null, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("OpenFIGI unavailable"));
+
+        _stockDetailsRepositoryMock
+            .Setup(x => x.GetByTicker("CSPX", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((StockDetails?)null);
+
+        var result = await resolver.ResolveAsync("CSPX", TestContext.Current.CancellationToken);
+
+        var candidate = result.Match ?? Assert.Single(result.Candidates);
+        Assert.Equal("GBP", candidate.Currency);
+        Assert.Equal(1m, candidate.QuoteFactor);
+        Assert.Null(candidate.Isin);
+    }
+
+    [Fact]
     public async Task ResolveAsync_WithNoMatch_ReturnsNoMatch()
     {
         var resolver = CreateResolver();
@@ -272,9 +332,10 @@ public class InstrumentResolverTests
                     Currency: "GBP")
             });
 
+        // 1 GBX = 0.01 GBP (contract: multiply from-amount by factor to get to-amount)
         _quoteFactorResolverMock
             .Setup(x => x.ResolveAsync("GBX", "GBP", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(100m);  // GBX → GBP conversion factor
+            .ReturnsAsync(0.01m);
 
         _stockDetailsRepositoryMock
             .Setup(x => x.GetByTicker("VANGUARD", It.IsAny<CancellationToken>()))
@@ -285,7 +346,7 @@ public class InstrumentResolverTests
         Assert.Equal(ResolutionKind.AutoResolved, result.Kind);
         Assert.NotNull(result.Match);
         Assert.Equal("GBP", result.Match.Currency);
-        Assert.Equal(100m, result.Match.QuoteFactor);
+        Assert.Equal(0.01m, result.Match.QuoteFactor);
         _quoteFactorResolverMock.Verify(
             x => x.ResolveAsync("GBX", "GBP", It.IsAny<CancellationToken>()),
             Times.Once);

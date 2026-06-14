@@ -8,10 +8,13 @@ public sealed class QuoteFactorResolver(
     ICurrencyExchangeRateProvider exchangeRateProvider,
     ILogger<QuoteFactorResolver> logger) : IQuoteFactorResolver
 {
-    private static readonly Dictionary<(string, string), decimal> KnownFactors = new()
+    // Conversion factors for currency pairs that share a base unit but differ in scale (not FX rates).
+    // Contract: multiply a from-amount by the factor to get the to-amount.
+    // 1 GBX (penny) = 0.01 GBP; 1 GBP = 100 GBX.
+    private static readonly Dictionary<(string, string), decimal> _knownFactors = new()
     {
-        { ("GBX", "GBP"), 100m },
-        { ("GBP", "GBX"), 0.01m },
+        { ("GBX", "GBP"), 0.01m },
+        { ("GBP", "GBX"), 100m },
     };
 
     public async Task<decimal> ResolveAsync(string fromCurrency, string toCurrency, CancellationToken ct = default)
@@ -23,7 +26,7 @@ public sealed class QuoteFactorResolver(
             return 1m;
 
         var key = (fromCurrency, toCurrency);
-        if (KnownFactors.TryGetValue(key, out var knownFactor))
+        if (_knownFactors.TryGetValue(key, out var knownFactor))
         {
             logger.LogDebug("Using known quote factor {From}→{To}: {Factor}", fromCurrency, toCurrency, knownFactor);
             return knownFactor;

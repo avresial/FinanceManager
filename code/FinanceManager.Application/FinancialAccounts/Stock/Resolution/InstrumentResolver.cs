@@ -56,9 +56,12 @@ public sealed class InstrumentResolver(
             return cached2;
         }
 
-        // Fan out: AV search + OpenFIGI ticker mapping
+        // Fan out: AV search + OpenFIGI ticker mapping.
+        // Translate the broker suffix to the OpenFIGI exchange code (e.g. "UK" → "LN")
+        // before querying OpenFIGI, which keys on its own exchange codes, not broker suffixes.
+        var openFigiExchCode = brokerSymbol.TryLookupExchange()?.OpenFigiExchCode;
         var avTask = avClient.SearchTicker(baseTicker, ct);
-        var ofTask = OpenFigiCallWithFallback(baseTicker, brokerSymbol.ExchangeHint, ct);
+        var ofTask = OpenFigiCallWithFallback(baseTicker, openFigiExchCode, ct);
         await Task.WhenAll(avTask, ofTask);
 
         var avMatches = avTask.Result;
@@ -126,47 +129,40 @@ public sealed class InstrumentResolver(
                     continue;
             }
 
-            // Extract base ticker from AV symbol (e.g., "CSPX.LON" → "CSPX")
-            var avBaseTicker = avMatch.Symbol.Split('.')[0];
-
-            // Find matching OpenFIGI listing: match by base ticker or by exchange hint
-            OpenFigiListing? matchingOf = null;
+            // Gather all OpenFIGI listings for this base ticker; narrow to the hinted exchange when possible.
+            var ofMatches = ofListings
+                .Where(x => string.Equals(x.Ticker, baseTicker, StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
             if (exchangeHint is not null && lookupMapping.HasValue)
             {
-                // If we have an exchange hint, find OF listing with matching exchange
                 var (ofExchCode, _) = lookupMapping.Value;
-                matchingOf = ofListings.FirstOrDefault(x =>
-                    string.Equals(x.Ticker, baseTicker, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(x.ExchCode, ofExchCode, StringComparison.OrdinalIgnoreCase));
+                var narrowed = ofMatches
+                    .Where(x => string.Equals(x.ExchCode, ofExchCode, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                if (narrowed.Count > 0)
+                    ofMatches = narrowed;
             }
 
-            if (matchingOf is null)
+            var distinctIsins = ofMatches
+                .Where(x => !string.IsNullOrWhiteSpace(x.Isin))
+                .Select(x => x.Isin!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (distinctIsins.Count > 1)
             {
-                // Fall back to matching by base ticker (any exchange)
-                matchingOf = ofListings.FirstOrDefault(x =>
-                    string.Equals(x.Ticker, baseTicker, StringComparison.OrdinalIgnoreCase));
+                // Ambiguous: the same ticker maps to several distinct instruments and we cannot
+                // confidently pick one — emit a candidate per ISIN so the caller disambiguates.
+                foreach (var dIsin in distinctIsins)
+                {
+                    var of = ofMatches.First(x => string.Equals(x.Isin, dIsin, StringComparison.OrdinalIgnoreCase));
+                    await AddCandidate(candidates, seen, avMatch, of, ct);
+                }
             }
-
-            var isin = matchingOf?.Isin;
-            var avSymbol = avMatch.Symbol;
-
-            var avCurrency = avMatch.Currency ?? "USD";
-            var ofCurrency = matchingOf?.Currency ?? "USD";
-            var quoteFactor = await quoteFactorResolver.ResolveAsync(avCurrency, ofCurrency, ct);
-            var currency = ofCurrency;  // Use OF currency as the canonical one after conversion
-
-            var candidateKey = $"{isin}_{avSymbol}_{currency}";
-            if (seen.Add(candidateKey))
+            else
             {
-                candidates.Add(new InstrumentListing(
-                    Isin: isin,
-                    AlphaVantageSymbol: avSymbol,
-                    Name: avMatch.Name ?? matchingOf?.Name ?? string.Empty,
-                    Exchange: matchingOf?.ExchCode ?? avMatch.Region ?? string.Empty,
-                    Currency: currency,
-                    Type: avMatch.Type ?? matchingOf?.Name ?? "Unknown",
-                    QuoteFactor: quoteFactor));
+                await AddCandidate(candidates, seen, avMatch, ofMatches.FirstOrDefault(), ct);
             }
         }
 
@@ -190,6 +186,46 @@ public sealed class InstrumentResolver(
         }
 
         return candidates;
+    }
+
+    private async Task AddCandidate(
+        List<InstrumentListing> candidates,
+        HashSet<string> seen,
+        TickerSearchMatch avMatch,
+        OpenFigiListing? matchingOf,
+        CancellationToken ct)
+    {
+        var avSymbol = avMatch.Symbol;
+        var avCurrency = string.IsNullOrWhiteSpace(avMatch.Currency) ? "USD" : avMatch.Currency;
+
+        // When OpenFIGI matched, treat its currency as canonical and convert the AV quote into it.
+        // When there is no OpenFIGI match (cooldown/outage/no listing), keep the AV currency as-is.
+        string currency;
+        decimal quoteFactor;
+        if (!string.IsNullOrWhiteSpace(matchingOf?.Currency))
+        {
+            currency = matchingOf.Currency;
+            quoteFactor = await quoteFactorResolver.ResolveAsync(avCurrency, currency, ct);
+        }
+        else
+        {
+            currency = avCurrency;
+            quoteFactor = 1m;
+        }
+
+        var isin = matchingOf?.Isin;
+        var candidateKey = $"{isin}_{avSymbol}_{currency}";
+        if (seen.Add(candidateKey))
+        {
+            candidates.Add(new InstrumentListing(
+                Isin: isin,
+                AlphaVantageSymbol: avSymbol,
+                Name: string.IsNullOrWhiteSpace(avMatch.Name) ? matchingOf?.Name ?? string.Empty : avMatch.Name,
+                Exchange: matchingOf?.ExchCode ?? avMatch.Region ?? string.Empty,
+                Currency: currency,
+                Type: string.IsNullOrWhiteSpace(avMatch.Type) ? "Unknown" : avMatch.Type,
+                QuoteFactor: quoteFactor));
+        }
     }
 
     private async Task<IReadOnlyList<OpenFigiListing>> OpenFigiCallWithFallback(string baseTicker, string? exchCode, CancellationToken ct)

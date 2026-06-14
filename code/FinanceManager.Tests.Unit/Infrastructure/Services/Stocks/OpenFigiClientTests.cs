@@ -36,10 +36,14 @@ public class OpenFigiClientTests
         var httpHandler = new MockHttpMessageHandler(response: """
             [
               {
-                "figi": "BBG000B9XRY4",
-                "ticker": "AAPL",
-                "isin": "US0378331005",
-                "compositeFigi": "BBG000HKWL63"
+                "data": [
+                  {
+                    "figi": "BBG000B9XRY4",
+                    "ticker": "AAPL",
+                    "isin": "US0378331005",
+                    "compositeFigi": "BBG000HKWL63"
+                  }
+                ]
               }
             ]
             """);
@@ -102,9 +106,13 @@ public class OpenFigiClientTests
         var httpHandler = new MockHttpMessageHandler(response: """
             [
               {
-                "figi": "BBG000B9XRY4",
-                "ticker": "AAPL",
-                "compositeFigi": "BBG000HKWL63"
+                "data": [
+                  {
+                    "figi": "BBG000B9XRY4",
+                    "ticker": "AAPL",
+                    "compositeFigi": "BBG000HKWL63"
+                  }
+                ]
               }
             ]
             """);
@@ -142,10 +150,14 @@ public class OpenFigiClientTests
         var httpHandler = new MockHttpMessageHandler(response: """
             [
               {
-                "figi": "BBG000B9XRY4",
-                "ticker": "AAPL",
-                "isin": "US0378331005",
-                "compositeFigi": "BBG000HKWL63"
+                "data": [
+                  {
+                    "figi": "BBG000B9XRY4",
+                    "ticker": "AAPL",
+                    "isin": "US0378331005",
+                    "compositeFigi": "BBG000HKWL63"
+                  }
+                ]
               }
             ]
             """);
@@ -167,10 +179,14 @@ public class OpenFigiClientTests
         var httpHandler = new MockHttpMessageHandler(response: """
             [
               {
-                "figi": "BBG000B9XRY4",
-                "ticker": "AAPL",
-                "isin": "US0378331005",
-                "compositeFigi": "BBG000HKWL63"
+                "data": [
+                  {
+                    "figi": "BBG000B9XRY4",
+                    "ticker": "AAPL",
+                    "isin": "US0378331005",
+                    "compositeFigi": "BBG000HKWL63"
+                  }
+                ]
               }
             ]
             """);
@@ -187,17 +203,21 @@ public class OpenFigiClientTests
     [Fact]
     public async Task MapByTickerAsync_WithValidTickerAndExchange_ReturnsListings()
     {
-        // Arrange
+        // Arrange — OpenFIGI v3 wraps matches inside each job's "data" array.
         var httpHandler = new MockHttpMessageHandler(response: """
             [
               {
-                "figi": "BBG000B9XRY4",
-                "ticker": "AAPL",
-                "isin": "US0378331005",
-                "compositeFigi": "BBG000HKWL63",
-                "name": "Apple Inc",
-                "exchCode": "US",
-                "currency": "USD"
+                "data": [
+                  {
+                    "figi": "BBG000B9XRY4",
+                    "ticker": "AAPL",
+                    "isin": "US0378331005",
+                    "compositeFigi": "BBG000HKWL63",
+                    "name": "Apple Inc",
+                    "exchCode": "US",
+                    "currency": "USD"
+                  }
+                ]
               }
             ]
             """);
@@ -219,22 +239,26 @@ public class OpenFigiClientTests
     [Fact]
     public async Task MapByIsinAsync_WithValidIsin_ReturnsAllVenues()
     {
-        // Arrange
+        // Arrange — a single job whose "data" array lists every venue for the ISIN.
         var httpHandler = new MockHttpMessageHandler(response: """
             [
               {
-                "isin": "IE00B5BMR087",
-                "ticker": "CSPX",
-                "name": "iShares Core S&P 500 ETF",
-                "exchCode": "LN",
-                "currency": "GBP"
-              },
-              {
-                "isin": "IE00B5BMR087",
-                "ticker": "CSPX",
-                "name": "iShares Core S&P 500 ETF",
-                "exchCode": "SX",
-                "currency": "EUR"
+                "data": [
+                  {
+                    "isin": "IE00B5BMR087",
+                    "ticker": "CSPX",
+                    "name": "iShares Core S&P 500 ETF",
+                    "exchCode": "LN",
+                    "currency": "GBP"
+                  },
+                  {
+                    "isin": "IE00B5BMR087",
+                    "ticker": "CSPX",
+                    "name": "iShares Core S&P 500 ETF",
+                    "exchCode": "SX",
+                    "currency": "EUR"
+                  }
+                ]
               }
             ]
             """);
@@ -263,6 +287,21 @@ public class OpenFigiClientTests
 
         // Assert
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task MapByTickerAsync_WhenApiReturnsFailure_Throws()
+    {
+        // Arrange — transport failures must surface so callers can enter cooldown.
+        var httpHandler = new MockHttpMessageHandler(
+            statusCode: HttpStatusCode.TooManyRequests,
+            response: "Rate limited");
+
+        var client = CreateClient(httpHandler);
+
+        // Act / Assert
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.MapByTickerAsync("AAPL", "US", TestContext.Current.CancellationToken));
     }
 
     private sealed class StubExternalServiceConfigService(ExternalServiceConfiguration config) : IExternalServiceConfigService
