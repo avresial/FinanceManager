@@ -1,22 +1,15 @@
-﻿@using FinanceManager.Domain.Entities
-@using System.ComponentModel.DataAnnotations
-@using FinanceManager.Domain.Enums
-@using FinanceManager.Domain.Repositories
+@using FinanceManager.Application.FinancialAccounts.Stock.Resolution
 @using FinanceManager.Components.CustomValidationAttributes
-@using FinanceManager.Domain.Repositories.Account
-@using Microsoft.AspNetCore.Components.Forms
-@using MudBlazor.Utilities
-@using static MudBlazor.CategoryTypes
 
-<MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors" FieldChanged=OnFieldChanged>
-    <MudContainer MaxWidth="MaxWidth.Medium" onchange="">
+<MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
+    <MudContainer MaxWidth="MaxWidth.Medium">
 
         <MudGrid Justify="Justify.Center">
-            <MudItem xs="12" sm="12" md="12">
+            <MudItem xs="12">
                 <MudText Typo="Typo.h4">Add new entry</MudText>
-
                 <MudText Typo="Typo.subtitle1">@StockAccount.Name</MudText>
             </MudItem>
+
             <MudItem xs="12" sm="6">
                 <MudDatePicker Label="Posting date" @bind-Date="_postingDate"
                                Validation="@(new NotInFutureAttribute())" />
@@ -25,26 +18,88 @@
                 <MudTimePicker Label="Time" @bind-Time="_time"
                                Validation="@(new NotInFutureAttributeTime(_postingDate))" />
             </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudAutocomplete T="string" Label="Ticker" @bind-Value="Ticker" SearchFunc="@SearchTicker"
-                                 ResetValueOnEmptyText=false CoerceText=false CoerceValue=false SelectValueOnTab=false />
+
+            <MudItem xs="12" sm="8">
+                <MudAutocomplete T="string" Label="Search instrument (ticker or name)" @bind-Value="_searchTerm"
+                                 SearchFunc="@SearchTicker" ResetValueOnEmptyText="false" CoerceText="false"
+                                 CoerceValue="true" SelectValueOnTab="false"
+                                 Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search"
+                                 OnAdornmentClick="ResolveInstrument" />
             </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField ReadOnly HideSpinButtons="true" @bind-Value="PricePerUnit" Label="Price per unit"
-                                 Variant="Variant.Text" AdornmentText="@_currency.ShortName" Adornment="Adornment.End" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange"
-                                 Label="Balance change" Variant="Variant.Text" Immediate />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudAutocomplete @bind-Value="InvestmentTypeName" Label="Investment type" Variant="Variant.Text"
-                                 SearchFunc="Search" />
+            <MudItem xs="12" sm="4" Class="d-flex align-center">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false"
+                           OnClick="ResolveInstrument" Disabled="@_resolving" FullWidth="true">
+                    @if (_resolving)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Search
+                </MudButton>
             </MudItem>
 
+            <MudItem xs="12" sm="6">
+                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="BalanceChange"
+                                 Label="Units (balance change)" Variant="Variant.Text" Immediate="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="decimal?" ReadOnly="true" HideSpinButtons="true" Value="PricePerUnit"
+                                 Label="Price per unit" Variant="Variant.Text"
+                                 AdornmentText="@_currency.ShortName" Adornment="Adornment.End" />
+            </MudItem>
+
+            @if (_resolveMessage is not null)
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Warning" Dense="true">@_resolveMessage</MudAlert>
+                </MudItem>
+            }
+
+            @if (_resolution?.Kind == ResolutionKind.Ambiguous && _resolution.Candidates.Count > 0)
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Multiple matches found — pick one:</MudText>
+                    <MudRadioGroup T="InstrumentListing" Value="_selectedListing" ValueChanged="SelectListing">
+                        @foreach (var candidate in _resolution.Candidates)
+                        {
+                            <MudRadio T="InstrumentListing" Value="candidate" Color="Color.Primary" Class="d-flex">
+                                <MudText Typo="Typo.body2">
+                                    <b>@candidate.Name</b> · @candidate.Exchange · @candidate.Currency
+                                    @if (!string.IsNullOrWhiteSpace(candidate.Isin))
+                                    {
+                                        <text> · @candidate.Isin</text>
+                                    }
+                                </MudText>
+                            </MudRadio>
+                        }
+                    </MudRadioGroup>
+                </MudItem>
+            }
+
+            @if (_selectedListing is not null)
+            {
+                <MudItem xs="12">
+                    <MudPaper Class="pa-3" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.subtitle2">@_selectedListing.Name</MudText>
+                        <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="mt-1">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">@InvestmentTypeName</MudChip>
+                            @if (!string.IsNullOrWhiteSpace(_selectedListing.Isin))
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">@_selectedListing.Isin</MudChip>
+                            }
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">@_selectedListing.Currency</MudChip>
+                            @if (_pricePending)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled"
+                                         Icon="@Icons.Material.Filled.HourglassEmpty">Price pending</MudChip>
+                            }
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+            }
+
             <MudItem xs="12">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add>Add</MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick="Add">Add</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick="Cancel"
                            Class="mx-2">Cancel</MudButton>
                 @if (CustomButton is not null)
                 {
