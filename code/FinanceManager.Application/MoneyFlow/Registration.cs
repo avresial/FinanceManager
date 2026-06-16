@@ -12,8 +12,7 @@ internal static class Registration
 {
     public static IServiceCollection AddMoneyFlowApplication(this IServiceCollection services)
     {
-        services.AddScoped<IMoneyFlowService, MoneyFlowService>()
-                .AddScoped<INetWorthService, NetWorthService>()
+        services.AddScoped<INetWorthService, NetWorthService>()
                 .AddScoped<ILabelsValueService, LabelsValueService>()
                 .AddScoped<IInvestmentRateService, InvestmentRateService>()
                 .AddScoped<ILiabilitiesService, LiabilitiesService>()

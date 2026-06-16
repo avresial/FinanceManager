@@ -15,7 +15,8 @@ public class DashboardQueryServiceTests
     private readonly DateTime _start = new(2024, 1, 1);
     private readonly DateTime _end = new(2024, 2, 1);
 
-    private readonly Mock<IMoneyFlowService> _moneyFlowService = new();
+    private readonly Mock<INetWorthService> _netWorthService = new();
+    private readonly Mock<ILabelsValueService> _labelsValueService = new();
     private readonly Mock<IBalanceService> _balanceService = new();
     private readonly Mock<IAssetsService> _assetsService = new();
     private readonly Mock<ILiabilitiesService> _liabilitiesService = new();
@@ -26,7 +27,8 @@ public class DashboardQueryServiceTests
     public DashboardQueryServiceTests()
     {
         _service = new DashboardQueryService(
-            _moneyFlowService.Object,
+            _netWorthService.Object,
+            _labelsValueService.Object,
             _balanceService.Object,
             _assetsService.Object,
             _liabilitiesService.Object,
@@ -46,12 +48,12 @@ public class DashboardQueryServiceTests
             { _end, 200 },
             { _start, 100 },
         };
-        _moneyFlowService.Setup(s => s.GetNetWorth(_userId, currency, _start, _end)).ReturnsAsync(netWorth);
+        _netWorthService.Setup(s => s.GetNetWorth(_userId, currency, _start, _end)).ReturnsAsync(netWorth);
         _balanceService.Setup(s => s.GetNetCashFlow(_userId, currency, _start, _end)).ReturnsAsync([new(_start, 50)]);
         _balanceService.Setup(s => s.GetClosingBalance(_userId, currency, _start, _end)).ReturnsAsync([new(_start, 75)]);
         _liabilitiesService.Setup(s => s.GetEndLiabilitiesPerType(_userId, _start, _end)).Returns(new[] { new NameValueResult("Mortgage", -1000) }.ToAsyncEnumerable());
         _liabilitiesService.Setup(s => s.GetEndLiabilitiesPerAccount(_userId, _start, _end)).Returns(new[] { new NameValueResult("Bank A", -1000) }.ToAsyncEnumerable());
-        _moneyFlowService.Setup(s => s.GetLabelsValue(_userId, _start, _end)).ReturnsAsync([new("Salary", 5000)]);
+        _labelsValueService.Setup(s => s.GetLabelsValue(_userId, _start, _end)).ReturnsAsync([new("Salary", 5000)]);
         _assetsService.Setup(s => s.GetEndAssetsPerType(_userId, currency, _end)).Returns(new[] { new NameValueResult("Cash", 3000) }.ToAsyncEnumerable());
         _assetsService.Setup(s => s.GetEndAssetsPerAccount(_userId, currency, _end)).Returns(new[] { new NameValueResult("Bank A", 3000) }.ToAsyncEnumerable());
         _expenseDistributionService.Setup(s => s.GetExpenseDistribution(_userId, currency, _start, _end)).ReturnsAsync([new("Food", 400)]);
@@ -93,6 +95,6 @@ public class DashboardQueryServiceTests
 
         // Assert
         Assert.Null(result);
-        _moneyFlowService.Verify(s => s.GetNetWorth(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Never);
+        _netWorthService.Verify(s => s.GetNetWorth(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Never);
     }
 }
