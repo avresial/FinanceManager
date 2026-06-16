@@ -12,7 +12,8 @@ namespace FinanceManager.Application.Dashboard;
 /// thread-safe, so the queries are awaited sequentially rather than in parallel.
 /// </summary>
 public class DashboardQueryService(
-    IMoneyFlowService moneyFlowService,
+    INetWorthService netWorthService,
+    ILabelsValueService labelsValueService,
     IBalanceService balanceService,
     IAssetsService assetsService,
     ILiabilitiesService liabilitiesService,
@@ -24,12 +25,12 @@ public class DashboardQueryService(
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return null;
 
-        var netWorth = await moneyFlowService.GetNetWorth(userId, currency, start, end);
+        var netWorth = await netWorthService.GetNetWorth(userId, currency, start, end);
         var netCashFlow = await balanceService.GetNetCashFlow(userId, currency, start, end);
         var closingBalance = await balanceService.GetClosingBalance(userId, currency, start, end);
         var liabilitiesPerType = await liabilitiesService.GetEndLiabilitiesPerType(userId, start, end).ToListAsync(cancellationToken);
         var liabilitiesPerAccount = await liabilitiesService.GetEndLiabilitiesPerAccount(userId, start, end).ToListAsync(cancellationToken);
-        var labelsValue = await moneyFlowService.GetLabelsValue(userId, start, end);
+        var labelsValue = await labelsValueService.GetLabelsValue(userId, start, end);
         var assetsPerType = await assetsService.GetEndAssetsPerType(userId, currency, end).ToListAsync(cancellationToken);
         var assetsPerAccount = await assetsService.GetEndAssetsPerAccount(userId, currency, end).ToListAsync(cancellationToken);
         var expenseDistribution = await expenseDistributionService.GetExpenseDistribution(userId, currency, start, end);
