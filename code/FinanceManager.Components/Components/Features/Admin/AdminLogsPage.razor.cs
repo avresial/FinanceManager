@@ -1,9 +1,9 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Administration.Logging;
-using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 using MudBlazor;

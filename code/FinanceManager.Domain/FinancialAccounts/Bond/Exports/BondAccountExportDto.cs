@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.Exports;
+using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 namespace FinanceManager.Domain.FinancialAccounts.Bond.Exports;
 
 public record BondAccountExportDto(

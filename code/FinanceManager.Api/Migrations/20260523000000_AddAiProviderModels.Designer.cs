@@ -284,7 +284,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("CurrencyEntries");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Imports.CsvHeaderMapping", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Shared.Imports.CsvHeaderMapping", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -320,7 +320,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("CsvHeaderMappings");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabel", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -348,7 +348,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("FinancialLabels");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabelClassification", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabelClassification", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -610,7 +610,7 @@ namespace FinanceManager.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabel", null)
+                    b.HasOne("FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel", null)
                         .WithMany()
                         .HasForeignKey("LabelsId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -639,7 +639,7 @@ namespace FinanceManager.Api.Migrations
                     b.Navigation("Currency");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabel", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel", b =>
                 {
                     b.HasOne("FinanceManager.Domain.FinancialAccounts.Bond.Entities.BondAccountEntry", null)
                         .WithMany("Labels")
@@ -650,9 +650,9 @@ namespace FinanceManager.Api.Migrations
                         .HasForeignKey("StockAccountEntryEntryId");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabelClassification", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabelClassification", b =>
                 {
-                    b.HasOne("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabel", null)
+                    b.HasOne("FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel", null)
                         .WithMany("Classifications")
                         .HasForeignKey("LabelId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -691,7 +691,7 @@ namespace FinanceManager.Api.Migrations
                     b.Navigation("CalculationMethods");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabel", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel", b =>
                 {
                     b.Navigation("Classifications");
                 });

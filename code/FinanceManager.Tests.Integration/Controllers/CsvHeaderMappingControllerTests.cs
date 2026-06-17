@@ -1,6 +1,6 @@
 using FinanceManager.Application.FinancialAccounts.Shared.Csv;
-using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using System.Net.Http.Json;

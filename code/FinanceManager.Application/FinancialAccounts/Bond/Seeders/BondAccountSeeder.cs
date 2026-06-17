@@ -2,9 +2,9 @@ using FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
 using FinanceManager.Application.Identity.Seeders;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.FinancialAccounts.Bond.Seeders;

@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Identity.Users;
 

@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 namespace FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 
 public interface IBondAccountEntryRepository<T> : IAccountEntryRepository<T>

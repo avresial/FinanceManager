@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.Labels.Dtos;
 using System.Net.Http.Json;
 

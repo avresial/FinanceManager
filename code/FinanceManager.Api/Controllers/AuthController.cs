@@ -1,10 +1,10 @@
 using FinanceManager.Api.Services;
 using FinanceManager.Application.Commands.Login;
 using FinanceManager.Application.Shared.Options;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

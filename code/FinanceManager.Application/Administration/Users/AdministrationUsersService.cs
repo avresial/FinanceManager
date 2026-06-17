@@ -2,12 +2,12 @@
 using FinanceManager.Domain.Administration.Monitoring;
 using FinanceManager.Domain.Administration.Users;
 using FinanceManager.Domain.Entities.Shared;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Administration.Users;
 

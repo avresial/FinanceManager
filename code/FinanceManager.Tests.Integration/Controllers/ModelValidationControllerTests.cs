@@ -1,13 +1,14 @@
 using FinanceManager.Api.Controllers.Admin;
 using FinanceManager.Application.Commands.Bonds;
 using FinanceManager.Application.Commands.Login;
-using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
 using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Commands;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Stock.Commands;
 using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;

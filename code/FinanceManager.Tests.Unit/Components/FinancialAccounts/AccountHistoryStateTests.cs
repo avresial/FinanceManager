@@ -2,6 +2,7 @@ using FinanceManager.Components.Components.Features.FinancialAccounts.Shared;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using System.Globalization;
 

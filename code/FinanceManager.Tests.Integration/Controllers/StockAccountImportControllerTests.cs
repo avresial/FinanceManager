@@ -1,7 +1,8 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Import;
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Stock.Imports;
 using FinanceManager.Infrastructure.Contexts;

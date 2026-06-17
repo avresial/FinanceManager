@@ -1,6 +1,6 @@
 using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Domain.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FinanceManager.Application.Dashboard;

@@ -1,12 +1,12 @@
 using FinanceManager.Api;
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.FinancialAccounts.Bond.Import;
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Imports;
-using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

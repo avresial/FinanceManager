@@ -1,8 +1,8 @@
-﻿using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Shared.Accounts;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+﻿using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Extensions;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
 namespace FinanceManager.Infrastructure.Extensions;
 

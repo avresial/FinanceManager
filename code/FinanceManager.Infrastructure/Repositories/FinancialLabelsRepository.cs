@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.Shared.Accounts;
+﻿using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.Repositories;

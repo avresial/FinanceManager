@@ -1,10 +1,10 @@
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Services;
-using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.Labels.RecurringTransactions;
 

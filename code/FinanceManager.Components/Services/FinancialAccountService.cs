@@ -1,12 +1,12 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.FinancialAccounts.Stock.Commands;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
-using FinanceManager.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Services;
@@ -276,10 +276,10 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
             return currencyAccountHttpClient.UpdateAccountAsync(new(currencyAccount.AccountId, currencyAccount.Name, currencyAccount.AccountType));
 
         if (account is StockAccount)
-            return stockAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.Enums.AccountLabel.Stock));
+            return stockAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.FinancialAccounts.Shared.Entities.AccountLabel.Stock));
 
         if (account is BondAccount)
-            return bondAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.Enums.AccountLabel.Bond));
+            return bondAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.FinancialAccounts.Shared.Entities.AccountLabel.Bond));
 
         throw new NotSupportedException($"Account {account.GetType()} type not supported for getting start date.");
     }

@@ -1,5 +1,5 @@
-using FinanceManager.Domain.Extensions;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Extensions;
 
 namespace FinanceManager.Domain.FinancialAccounts.Currencies.Extensions;
 

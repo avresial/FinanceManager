@@ -1,13 +1,14 @@
 ﻿using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Extensions;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Extensions;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Extensions;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.FinancialAccounts.Stock.Extensions;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.FinancialAccounts.Currencies.Assets;
 

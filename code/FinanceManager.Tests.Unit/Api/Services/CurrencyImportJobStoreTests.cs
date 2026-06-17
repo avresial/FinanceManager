@@ -1,9 +1,9 @@
 using FinanceManager.Api.Services;
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Imports;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 
 namespace FinanceManager.Tests.Unit.Api.Services;
 

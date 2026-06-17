@@ -1,8 +1,8 @@
 using Blazored.LocalStorage;
 using FinanceManager.Components.Models;
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;

@@ -1,6 +1,6 @@
 using CsvHelper;
 using CsvHelper.Configuration;
-using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;

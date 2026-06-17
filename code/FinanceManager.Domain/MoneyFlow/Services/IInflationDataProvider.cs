@@ -1,5 +1,5 @@
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.MoneyFlow.Entities;
-using FinanceManager.Domain.ValueObjects;
 
 namespace FinanceManager.Domain.MoneyFlow.Services;
 

@@ -1,8 +1,8 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 

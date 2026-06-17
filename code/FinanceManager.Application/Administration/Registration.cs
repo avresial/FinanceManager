@@ -1,7 +1,7 @@
 using FinanceManager.Application.Administration.Users;
 using FinanceManager.Domain.Administration.Users;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Domain.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FinanceManager.Application.Administration;

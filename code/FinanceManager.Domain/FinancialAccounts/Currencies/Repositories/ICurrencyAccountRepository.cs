@@ -1,5 +1,6 @@
 using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 
 namespace FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 

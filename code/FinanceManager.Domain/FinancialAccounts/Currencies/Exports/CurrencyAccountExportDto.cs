@@ -1,5 +1,5 @@
-using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 
 namespace FinanceManager.Domain.FinancialAccounts.Currencies.Exports;
 

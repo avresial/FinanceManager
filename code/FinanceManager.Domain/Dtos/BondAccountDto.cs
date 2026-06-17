@@ -1,3 +1,4 @@
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 namespace FinanceManager.Infrastructure.Dtos;
 
 public class BondAccountDto : FinancialAccountBaseDto

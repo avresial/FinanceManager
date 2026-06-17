@@ -1,8 +1,8 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Dtos;
-using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 

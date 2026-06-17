@@ -1,5 +1,5 @@
 using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Extensions;
+using FinanceManager.Domain.FinancialAccounts.Shared.Extensions;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.FinancialAccounts.Stock.Extensions;
 

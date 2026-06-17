@@ -1,10 +1,10 @@
 using FinanceManager.Components.Components.Features.FinancialAccounts.Shared.Import;
 using FinanceManager.Components.DtoMapping;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using FinanceManager.Infrastructure.Readers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;

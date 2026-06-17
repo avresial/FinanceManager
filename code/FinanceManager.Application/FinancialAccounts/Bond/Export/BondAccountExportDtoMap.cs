@@ -1,6 +1,6 @@
 using CsvHelper.Configuration;
-using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.FinancialAccounts.Bond.Exports;
+using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 
 namespace FinanceManager.Application.FinancialAccounts.Bond.Export;
 

@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.Entities.Shared.Accounts;
+﻿using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 

@@ -1,5 +1,5 @@
-using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.FinancialAccounts.Bond.Exports;
+using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 using AccountId = int;
 using UserId = int;
 

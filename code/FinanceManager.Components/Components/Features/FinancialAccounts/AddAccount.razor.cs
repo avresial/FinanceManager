@@ -1,7 +1,7 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
@@ -48,15 +48,15 @@ public partial class AddAccount : ComponentBase
             switch (_selectedAccountType)
             {
                 case "Currency account":
-                    _addedAccountId = await CurrencyAccountHttpClient.AddAccountAsync(new Domain.Commands.Account.AddAccount(_accountName));
+                    _addedAccountId = await CurrencyAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName));
                     break;
 
                 case "Stock account":
-                    _addedAccountId = await StockAccountHttpClient.AddAccountAsync(new Domain.Commands.Account.AddAccount(_accountName));
+                    _addedAccountId = await StockAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName));
                     break;
 
                 case "Bond account":
-                    _addedAccountId = await BondAccountHttpClient.AddAccountAsync(new Domain.Commands.Account.AddAccount(_accountName));
+                    _addedAccountId = await BondAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName));
                     break;
             }
         }

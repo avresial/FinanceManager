@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Commands.Account;
+using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Stock.Commands;
 using System.Net.Http.Json;
 

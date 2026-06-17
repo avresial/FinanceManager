@@ -1,5 +1,5 @@
-using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Stock.Exports;
