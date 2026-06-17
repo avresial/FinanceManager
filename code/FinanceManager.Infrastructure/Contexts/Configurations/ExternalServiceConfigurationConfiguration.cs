@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.ExternalServices;
+using FinanceManager.Domain.Shared.ExternalServices.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

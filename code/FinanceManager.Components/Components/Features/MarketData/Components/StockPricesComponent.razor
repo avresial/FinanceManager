@@ -1,5 +1,5 @@
 @using ApexCharts
-@using FinanceManager.Domain.Entities.Stocks
+@using FinanceManager.Domain.FinancialAccounts.Stock.Entities
 @using FinanceManager.Components.Components.Features.Dashboard
 
 @if (_stockPrices.Any())
@@ -19,7 +19,7 @@
 <MudContainer Class="mt-3">
     <MudGrid>
         <MudItem xs="12" md="6">
-            <MudAutocomplete T="FinanceManager.Domain.Entities.Stocks.StockDetails" Value="_selectedStock"
+            <MudAutocomplete T="FinanceManager.Domain.FinancialAccounts.Stock.Entities.StockDetails" Value="_selectedStock"
                              Label="Search Stock" Placeholder="Search by ISIN or name" SearchFunc="SearchStocks"
                              ToStringFunc="@(stock => stock?.Isin ?? string.Empty)" Variant="Variant.Outlined" Immediate="true"
                              ResetValueOnEmptyText="true" CoerceText="false" Clearable="true" ValueChanged="OnStockSelected">

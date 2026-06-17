@@ -1,7 +1,7 @@
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Components.Components.Features.FinancialAccounts.CurrencyAccountComponents.Crud;

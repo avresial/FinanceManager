@@ -1,5 +1,5 @@
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Domain.Entities.Shared.Accounts;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
 namespace FinanceManager.Application.FinancialAccounts.Shared.Imports;
 

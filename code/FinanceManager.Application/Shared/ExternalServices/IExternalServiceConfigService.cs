@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.ExternalServices;
+using FinanceManager.Domain.Shared.ExternalServices.Entities;
 
 namespace FinanceManager.Application.Shared.ExternalServices;
 

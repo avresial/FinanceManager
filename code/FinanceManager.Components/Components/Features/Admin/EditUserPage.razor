@@ -2,8 +2,8 @@
 @attribute [Authorize(Roles = "Admin")]
 @layout AdminLayout
 
-@using FinanceManager.Domain.Enums
-@using FinanceManager.Domain.Services
+@using FinanceManager.Domain.Identity.Entities
+@using FinanceManager.Domain.FinancialAccounts.Shared.Services
 @using FinanceManager.Components.Components.Features.User
 @using Microsoft.AspNetCore.Authorization
 @using System.Text.RegularExpressions

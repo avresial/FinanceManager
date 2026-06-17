@@ -2,7 +2,9 @@ using FinanceManager.Application.Insights.Diversification;
 using FinanceManager.Application.Insights.Generation;
 using FinanceManager.Application.Insights.Seeders;
 using FinanceManager.Application.Shared.Seeders;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Insights.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FinanceManager.Application.Insights;

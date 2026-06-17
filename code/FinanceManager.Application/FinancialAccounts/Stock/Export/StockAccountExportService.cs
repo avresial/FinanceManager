@@ -1,8 +1,12 @@
-using FinanceManager.Domain.Entities.Exports;
-using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Exports;
+using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Stock.Services;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
 using System.Runtime.CompilerServices;
 using AccountId = int;
 using UserId = int;

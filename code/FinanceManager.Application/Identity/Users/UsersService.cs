@@ -1,5 +1,5 @@
-using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Identity.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Identity.Users;

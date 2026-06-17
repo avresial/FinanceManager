@@ -1,7 +1,8 @@
 using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Application.Shared.Options;
-using FinanceManager.Domain.Entities.ExternalServices;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Shared.ExternalServices.Entities;
+using FinanceManager.Domain.Shared.ExternalServices.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 

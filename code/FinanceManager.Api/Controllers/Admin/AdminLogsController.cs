@@ -1,7 +1,7 @@
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Logging;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Administration.Logging;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

@@ -1,7 +1,6 @@
 ﻿using CsvHelper.Configuration;
-using FinanceManager.Infrastructure.Dtos;
 
-namespace FinanceManager.Infrastructure.DtoMapping;
+namespace FinanceManager.Components.DtoMapping;
 
 public sealed class ImportStockModelMap : ClassMap<ImportStockModel>
 {

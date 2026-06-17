@@ -1,5 +1,6 @@
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
 namespace FinanceManager.Application.FinancialAccounts.Stock.Market;
 

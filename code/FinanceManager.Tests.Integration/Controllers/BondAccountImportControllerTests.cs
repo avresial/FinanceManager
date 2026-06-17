@@ -1,9 +1,11 @@
 using FinanceManager.Application.FinancialAccounts.Bond.Import;
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Imports;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Bond.Imports;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;

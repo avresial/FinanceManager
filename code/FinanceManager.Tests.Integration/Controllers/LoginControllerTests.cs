@@ -1,8 +1,8 @@
 using FinanceManager.Application.Commands.Login;
 using FinanceManager.Application.Identity;
-using FinanceManager.Domain.Entities.Users;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Administration.Monitoring;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

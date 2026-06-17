@@ -1,6 +1,7 @@
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Imports;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Identity.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.FinancialAccounts.Shared.Csv;

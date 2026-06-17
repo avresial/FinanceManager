@@ -1,7 +1,9 @@
 using FinanceManager.Application.FinancialAccounts.Shared.Imports;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.Imports;
-using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Bond.Imports;
+using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.FinancialAccounts.Bond.Import;

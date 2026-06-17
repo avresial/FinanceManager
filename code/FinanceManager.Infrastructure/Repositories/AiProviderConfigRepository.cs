@@ -1,5 +1,6 @@
-using FinanceManager.Domain.Entities.Ai;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Shared.Ai.Entities;
+using FinanceManager.Domain.Shared.Ai.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 

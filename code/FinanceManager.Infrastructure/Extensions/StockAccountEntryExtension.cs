@@ -1,5 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Infrastructure.Dtos;
+﻿using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
 namespace FinanceManager.Infrastructure.Extensions;
 

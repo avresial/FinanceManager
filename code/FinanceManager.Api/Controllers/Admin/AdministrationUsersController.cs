@@ -1,6 +1,8 @@
-﻿using FinanceManager.Domain.Entities.Shared;
-using FinanceManager.Domain.Services;
-using FinanceManager.Infrastructure.Dtos;
+﻿using FinanceManager.Domain.Administration.Users;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Dtos;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Shared.Charting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

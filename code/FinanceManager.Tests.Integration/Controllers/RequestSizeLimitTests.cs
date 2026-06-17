@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Entities;
 using System.Net;
 using System.Net.Http.Headers;
 using Xunit;

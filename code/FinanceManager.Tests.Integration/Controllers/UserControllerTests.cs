@@ -1,10 +1,10 @@
 using FinanceManager.Application.Identity;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Commands.User;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Commands;
+using FinanceManager.Domain.Identity.Dtos;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;

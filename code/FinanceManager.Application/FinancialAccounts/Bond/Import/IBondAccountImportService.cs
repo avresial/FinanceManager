@@ -1,4 +1,5 @@
-using FinanceManager.Domain.Entities.Imports;
+using FinanceManager.Domain.FinancialAccounts.Bond.Imports;
+using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 
 namespace FinanceManager.Application.FinancialAccounts.Bond.Import;
 

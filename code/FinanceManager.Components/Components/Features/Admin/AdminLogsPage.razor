@@ -1,9 +1,10 @@
+@using FinanceManager.Domain.Administration.Logging
 @page "/Admin/Logs"
 @attribute [Authorize(Roles = "Admin")]
 @layout AdminLayout
 
-@using FinanceManager.Domain.Dtos
-@using FinanceManager.Domain.Enums
+@using FinanceManager.Domain.FinancialAccounts.Shared.Dtos
+@using FinanceManager.Domain.Identity.Entities
 @using Microsoft.AspNetCore.Authorization
 @implements IAsyncDisposable
 

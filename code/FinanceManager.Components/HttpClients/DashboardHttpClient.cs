@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Dtos.Dashboard;
+using FinanceManager.Domain.Dashboard.Dtos;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;

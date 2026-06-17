@@ -1,8 +1,8 @@
 using FinanceManager.Api.Controllers.Admin;
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Logging;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Administration.Logging;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 

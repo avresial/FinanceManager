@@ -1,5 +1,6 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Imports;
+using FinanceManager.Domain.FinancialAccounts.Bond.Imports;
+using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 

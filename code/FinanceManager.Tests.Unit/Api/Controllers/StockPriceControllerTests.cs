@@ -2,15 +2,21 @@ using FinanceManager.Api.Controllers;
 using FinanceManager.Application.FinancialAccounts.Stock.Import;
 using FinanceManager.Application.FinancialAccounts.Stock.Market;
 using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
-using FinanceManager.Domain.Commands.Stocks;
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.FinancialAccounts.Stock.Commands;
+using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Stock.Services;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
-using IIsinResolver = FinanceManager.Domain.Services.IIsinResolver;
+using IIsinResolver = FinanceManager.Domain.FinancialAccounts.Stock.Services.IIsinResolver;
 
 namespace FinanceManager.Tests.Unit.Api.Controllers;
 

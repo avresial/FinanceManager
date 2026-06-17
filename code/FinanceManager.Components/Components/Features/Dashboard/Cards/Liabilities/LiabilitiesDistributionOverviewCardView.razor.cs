@@ -1,7 +1,7 @@
 using ApexCharts;
 using FinanceManager.Components.Helpers;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Providers;
+using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.Shared.Charting;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Components.Components.Features.Dashboard.Cards.Liabilities;

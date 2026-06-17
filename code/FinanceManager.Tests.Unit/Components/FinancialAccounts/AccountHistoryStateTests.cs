@@ -1,8 +1,9 @@
 using FinanceManager.Components.Components.Features.FinancialAccounts.Shared;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.Identity.Entities;
 using System.Globalization;
 
 namespace FinanceManager.Tests.Unit.Components.FinancialAccounts;

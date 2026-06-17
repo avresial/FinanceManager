@@ -1,11 +1,12 @@
 using FinanceManager.Application.FinancialAccounts.Bond.Seeders;
 using FinanceManager.Application.Identity.Seeders;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Domain.ValueObjects;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Repositories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 

@@ -1,4 +1,5 @@
-using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.Shared;
 
 namespace FinanceManager.Tests.Unit.Domain.Entities.Bonds;
 
@@ -52,7 +53,7 @@ public class BondAccountEntryTests
         var calculationMethod = new BondCalculationMethod
         {
             Id = 1,
-            DateOperator = FinanceManager.Domain.Enums.DateOperator.UntilDate,
+            DateOperator = FinanceManager.Domain.Shared.DateOperator.UntilDate,
             DateValue = "2024-01-01",
             Rate = 0.0365m // 3.65%
         };
@@ -87,7 +88,7 @@ public class BondAccountEntryTests
         var calculationMethod = new BondCalculationMethod
         {
             Id = 1,
-            DateOperator = FinanceManager.Domain.Enums.DateOperator.UntilDate,
+            DateOperator = FinanceManager.Domain.Shared.DateOperator.UntilDate,
             DateValue = "2024-01-01",
             Rate = 0m
         };
@@ -116,7 +117,7 @@ public class BondAccountEntryTests
         var calculationMethod = new BondCalculationMethod
         {
             Id = 1,
-            DateOperator = FinanceManager.Domain.Enums.DateOperator.UntilDate,
+            DateOperator = FinanceManager.Domain.Shared.DateOperator.UntilDate,
             DateValue = "2026-01-01",
             Rate = 0.0365m // 3.65%
         };
@@ -156,7 +157,7 @@ public class BondAccountEntryTests
         var calculationMethod1 = new BondCalculationMethod
         {
             Id = 1,
-            DateOperator = FinanceManager.Domain.Enums.DateOperator.UntilDate,
+            DateOperator = FinanceManager.Domain.Shared.DateOperator.UntilDate,
             DateValue = "2023-07-01",
             Rate = 0.0365m // 3.65%
         };
@@ -165,7 +166,7 @@ public class BondAccountEntryTests
         var calculationMethod2 = new BondCalculationMethod
         {
             Id = 2,
-            DateOperator = FinanceManager.Domain.Enums.DateOperator.UntilDate,
+            DateOperator = FinanceManager.Domain.Shared.DateOperator.UntilDate,
             DateValue = "2024-01-01",
             Rate = 0.0500m // 5%
         };
@@ -203,7 +204,7 @@ public class BondAccountEntryTests
         var calculationMethod = new BondCalculationMethod
         {
             Id = 1,
-            DateOperator = FinanceManager.Domain.Enums.DateOperator.UntilDate,
+            DateOperator = FinanceManager.Domain.Shared.DateOperator.UntilDate,
             DateValue = "2026-01-01",
             Rate = 0.05m // 5%
         };
@@ -247,7 +248,7 @@ public class BondAccountEntryTests
         var calculationMethod = new BondCalculationMethod
         {
             Id = 1,
-            DateOperator = FinanceManager.Domain.Enums.DateOperator.UntilDate,
+            DateOperator = FinanceManager.Domain.Shared.DateOperator.UntilDate,
             DateValue = "2024-01-01",
             Rate = 0.0365m
         };
@@ -284,7 +285,7 @@ public class BondAccountEntryTests
         var calculationMethod = new BondCalculationMethod
         {
             Id = 1,
-            DateOperator = FinanceManager.Domain.Enums.DateOperator.UntilDate,
+            DateOperator = FinanceManager.Domain.Shared.DateOperator.UntilDate,
             DateValue = "2024-01-01",
             Rate = 0.0365m
         };
@@ -318,7 +319,7 @@ public class BondAccountEntryTests
         var calculationMethod = new BondCalculationMethod
         {
             Id = 1,
-            DateOperator = FinanceManager.Domain.Enums.DateOperator.UntilDate,
+            DateOperator = FinanceManager.Domain.Shared.DateOperator.UntilDate,
             DateValue = "2024-01-01",
             Rate = 0.04m // 4%
         };
@@ -352,7 +353,7 @@ public class BondAccountEntryTests
         var calculationMethod = new BondCalculationMethod
         {
             Id = 1,
-            DateOperator = FinanceManager.Domain.Enums.DateOperator.UntilDate,
+            DateOperator = FinanceManager.Domain.Shared.DateOperator.UntilDate,
             DateValue = "2023-01-05", // Expires after 5 days
             Rate = 0.0365m
         };

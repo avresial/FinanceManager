@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using System.Globalization;
 using System.Text;
 

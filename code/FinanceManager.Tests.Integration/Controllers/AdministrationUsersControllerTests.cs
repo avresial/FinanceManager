@@ -1,9 +1,10 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities;
-using FinanceManager.Domain.Entities.Users;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Administration.Monitoring;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Identity.Dtos;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;

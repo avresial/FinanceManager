@@ -1,5 +1,5 @@
-using FinanceManager.Domain.Entities.Logging;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Administration.Logging;
+using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Api.Logging;
 

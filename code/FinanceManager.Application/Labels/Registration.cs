@@ -3,7 +3,9 @@ using FinanceManager.Application.Labels.Seeders;
 using FinanceManager.Application.Labels.Setter;
 using FinanceManager.Application.Labels.Suggestions;
 using FinanceManager.Application.Shared.Seeders;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Labels.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FinanceManager.Application.Labels;

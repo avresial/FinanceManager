@@ -1,7 +1,7 @@
-using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Domain.ValueObjects;
-using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
+using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;

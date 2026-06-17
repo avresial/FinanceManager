@@ -1,6 +1,6 @@
 using FinanceManager.Api.Logging;
-using FinanceManager.Domain.Entities.Logging;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Administration.Logging;
+using FinanceManager.Domain.Identity.Entities;
 using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
 

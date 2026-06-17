@@ -1,7 +1,7 @@
 using FinanceManager.Components.Components.Shared;
 using FinanceManager.Components.Components.Shared.Dialogs;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 

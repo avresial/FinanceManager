@@ -1,8 +1,10 @@
 using CsvHelper;
 using CsvHelper.Configuration;
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
+using FinanceManager.Domain.Identity.Repositories;
 using System.Globalization;
 
 namespace FinanceManager.Application.FinancialAccounts.Stock.Import;

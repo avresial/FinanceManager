@@ -1,5 +1,8 @@
-using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Stock.Services;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace FinanceManager.Infrastructure.Services.Stocks;

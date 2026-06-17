@@ -2,8 +2,10 @@ using FinanceManager.Components.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Dtos.Dashboard;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.Dashboard.Dtos;
+using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 

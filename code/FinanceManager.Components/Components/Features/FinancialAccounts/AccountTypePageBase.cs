@@ -1,4 +1,5 @@
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Components.Components.Features.FinancialAccounts;

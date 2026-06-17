@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using System.Globalization;
 
 namespace FinanceManager.Components.Components.Features.FinancialAccounts.BondAccountComponents.Import;

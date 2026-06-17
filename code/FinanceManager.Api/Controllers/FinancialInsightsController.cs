@@ -1,7 +1,9 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Insights.Generation;
-using FinanceManager.Domain.Entities.Users;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Insights.Entities;
+using FinanceManager.Domain.Insights.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

@@ -1,4 +1,4 @@
-@using FinanceManager.Domain.Entities.FinancialAccounts.Currencies
+@using FinanceManager.Domain.FinancialAccounts.Currencies.Entities
 
 <MudCard Outlined="true" Class="mb-3" Style="background-color: transparent;">
     <MudCardHeader Class="py-1 px-4">
@@ -31,7 +31,7 @@
 
 @code {
     [Parameter] public DateTime Day { get; set; }
-    [Parameter] public required FinanceManager.Domain.Entities.FinancialAccounts.Currencies.CurrencyAccount Account { get; set; }
+    [Parameter] public required FinanceManager.Domain.FinancialAccounts.Currencies.Entities.CurrencyAccount Account { get; set; }
     [Parameter] public required IEnumerable<CurrencyAccountEntry> Entries { get; set; }
     [Parameter] public required string Currency { get; set; }
     [Parameter] public bool IsMobile { get; set; }

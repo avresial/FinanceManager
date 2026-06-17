@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.Users;
+using FinanceManager.Domain.Identity.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

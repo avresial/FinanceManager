@@ -1,7 +1,6 @@
 ﻿using CsvHelper;
 using CsvHelper.Configuration;
-using FinanceManager.Infrastructure.DtoMapping;
-using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Components.DtoMapping;
 using Microsoft.AspNetCore.Components.Forms;
 using System.Globalization;
 

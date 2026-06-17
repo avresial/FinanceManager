@@ -1,5 +1,6 @@
-﻿using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Domain.Repositories.Account;
+﻿using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 
