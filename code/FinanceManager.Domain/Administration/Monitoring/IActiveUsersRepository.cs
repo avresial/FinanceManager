@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Domain.Entities.Users;
 
-namespace FinanceManager.Domain.Repositories;
+namespace FinanceManager.Domain.Administration.Monitoring;
 
 public interface IActiveUsersRepository
 {

@@ -1,6 +1,6 @@
 using FinanceManager.Domain.Enums;
 
-namespace FinanceManager.Domain.Entities.Logging;
+namespace FinanceManager.Domain.Administration.Logging;
 
 public class LogEntry
 {

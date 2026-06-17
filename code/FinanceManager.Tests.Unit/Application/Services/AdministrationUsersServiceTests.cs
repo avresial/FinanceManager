@@ -1,5 +1,6 @@
 using FinanceManager.Application.Administration.Users;
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Domain.Administration.Monitoring;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;

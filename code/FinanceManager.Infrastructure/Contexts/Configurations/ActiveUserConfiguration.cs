@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Users;
+﻿using FinanceManager.Domain.Administration.Monitoring;
+using FinanceManager.Domain.Entities.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

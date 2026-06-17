@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.Enums;
+namespace FinanceManager.Domain.Administration.Logging;
 
 // Numeric values mirror Microsoft.Extensions.Logging.LogLevel so callers in the
 // API/Components layers can cast directly without a lookup table.

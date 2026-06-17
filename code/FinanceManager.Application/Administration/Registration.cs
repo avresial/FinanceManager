@@ -1,4 +1,5 @@
 using FinanceManager.Application.Administration.Users;
+using FinanceManager.Domain.Administration.Users;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.DependencyInjection;
 

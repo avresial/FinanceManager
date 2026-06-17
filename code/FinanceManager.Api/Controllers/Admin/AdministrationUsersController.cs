@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Shared;
+﻿using FinanceManager.Domain.Administration.Users;
+using FinanceManager.Domain.Entities.Shared;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.AspNetCore.Authorization;

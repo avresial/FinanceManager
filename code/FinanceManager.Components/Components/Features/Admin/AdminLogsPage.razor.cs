@@ -1,4 +1,5 @@
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Administration.Logging;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;

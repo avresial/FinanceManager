@@ -5,6 +5,8 @@ using FinanceManager.Application.Insights.Generation;
 using FinanceManager.Application.Labels.Setter;
 using FinanceManager.Application.Labels.Suggestions;
 using FinanceManager.Application.Shared.ExternalServices;
+using FinanceManager.Domain.Administration.Logging;
+using FinanceManager.Domain.Administration.Monitoring;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;

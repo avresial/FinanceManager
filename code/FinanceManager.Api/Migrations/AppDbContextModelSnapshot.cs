@@ -347,7 +347,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("CsvHeaderMappings");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Logging.LogEntry", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Administration.Logging.LogEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -533,7 +533,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("StockDetails");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Users.ActiveUser", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Administration.Monitoring.ActiveUser", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -591,7 +591,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("FinancialInsights");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Users.NewVisits", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Administration.Monitoring.NewVisits", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()

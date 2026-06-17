@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.Logging;
+using FinanceManager.Domain.Administration.Logging;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Contexts;

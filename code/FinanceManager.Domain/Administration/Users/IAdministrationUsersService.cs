@@ -1,7 +1,7 @@
 ﻿using FinanceManager.Domain.Entities.Shared;
 using FinanceManager.Domain.Entities.Users;
 
-namespace FinanceManager.Domain.Services;
+namespace FinanceManager.Domain.Administration.Users;
 
 public interface IAdministrationUsersService
 {

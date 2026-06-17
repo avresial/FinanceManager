@@ -1,7 +1,6 @@
-using FinanceManager.Domain.Entities.Logging;
 using FinanceManager.Domain.Enums;
 
-namespace FinanceManager.Domain.Repositories;
+namespace FinanceManager.Domain.Administration.Logging;
 
 public interface ILogEntryRepository
 {

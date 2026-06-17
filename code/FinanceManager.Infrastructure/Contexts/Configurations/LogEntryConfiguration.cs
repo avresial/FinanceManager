@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.Logging;
+using FinanceManager.Domain.Administration.Logging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

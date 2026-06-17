@@ -1,6 +1,6 @@
 using FinanceManager.Domain.Enums;
 
-namespace FinanceManager.Domain.Dtos;
+namespace FinanceManager.Domain.Administration.Logging;
 
 public record LogEntryDto(
     int Id,

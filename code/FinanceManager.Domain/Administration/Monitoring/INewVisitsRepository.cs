@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.Repositories;
+namespace FinanceManager.Domain.Administration.Monitoring;
 
 public interface INewVisitsRepository
 {

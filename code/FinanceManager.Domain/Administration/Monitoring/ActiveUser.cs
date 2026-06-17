@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Domain.Entities.Users;
+﻿namespace FinanceManager.Domain.Administration.Monitoring;
 
 public class ActiveUser
 {

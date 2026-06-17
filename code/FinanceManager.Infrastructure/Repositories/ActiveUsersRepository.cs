@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Users;
+﻿using FinanceManager.Domain.Administration.Monitoring;
+using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;

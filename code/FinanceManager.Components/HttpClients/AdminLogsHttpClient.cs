@@ -1,3 +1,4 @@
+using FinanceManager.Domain.Administration.Logging;
 using FinanceManager.Domain.Dtos;
 using System.Net.Http.Json;
 
