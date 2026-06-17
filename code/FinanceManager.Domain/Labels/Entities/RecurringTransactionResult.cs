@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.Entities.MoneyFlowModels;
+namespace FinanceManager.Domain.Labels.Entities;
 
 public record RecurringTransactionEntryReference(int AccountId, int EntryId);
 

@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.Labels.Entities;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;

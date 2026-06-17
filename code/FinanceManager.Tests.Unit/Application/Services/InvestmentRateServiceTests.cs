@@ -5,6 +5,7 @@ using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;

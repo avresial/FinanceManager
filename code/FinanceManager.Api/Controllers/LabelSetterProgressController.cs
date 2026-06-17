@@ -1,5 +1,6 @@
 using FinanceManager.Api.Services;
 using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.Labels.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

@@ -1,5 +1,7 @@
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
+using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.AI;

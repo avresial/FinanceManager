@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Domain.Entities.Shared.Accounts;
 
-namespace FinanceManager.Domain.Repositories;
+namespace FinanceManager.Domain.Labels.Repositories;
 
 public interface IFinancialLabelsRepository
 {

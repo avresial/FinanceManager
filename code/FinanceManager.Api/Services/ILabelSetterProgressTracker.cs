@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.Labels.Dtos;
 
 namespace FinanceManager.Api.Services;
 

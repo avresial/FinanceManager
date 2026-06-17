@@ -1,6 +1,7 @@
 using FinanceManager.Application.MoneyFlow.Spending;
 using FinanceManager.Application.Shared.Seeders;
 using FinanceManager.Domain.Entities.Shared.Accounts;
+using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 

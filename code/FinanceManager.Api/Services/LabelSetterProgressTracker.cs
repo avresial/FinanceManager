@@ -1,5 +1,6 @@
 using FinanceManager.Api.Hubs;
 using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.Labels.Dtos;
 using Microsoft.AspNetCore.SignalR;
 
 namespace FinanceManager.Api.Services;

@@ -1,5 +1,6 @@
 using FinanceManager.Application.Labels.Setter;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.EntityFrameworkCore;
