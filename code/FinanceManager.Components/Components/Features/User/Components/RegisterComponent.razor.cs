@@ -1,6 +1,7 @@
 using Blazored.LocalStorage;
 using FinanceManager.Components.Models;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;

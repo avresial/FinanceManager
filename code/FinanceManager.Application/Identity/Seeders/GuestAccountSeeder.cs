@@ -5,6 +5,7 @@ using FinanceManager.Application.Identity.Users;
 using FinanceManager.Application.Insights.Seeders;
 using FinanceManager.Application.Labels.Seeders;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 

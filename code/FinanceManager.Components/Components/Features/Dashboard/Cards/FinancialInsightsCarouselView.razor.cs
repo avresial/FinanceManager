@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.Users;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Insights.Entities;
 using Microsoft.AspNetCore.Components;
 

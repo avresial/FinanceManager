@@ -610,7 +610,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("NewVisits");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Users.PasswordResetToken", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Identity.Entities.PasswordResetToken", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -645,7 +645,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("PasswordResetTokens");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Users.RefreshToken", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Identity.Entities.RefreshToken", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()

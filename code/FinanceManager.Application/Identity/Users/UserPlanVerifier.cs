@@ -1,6 +1,7 @@
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 

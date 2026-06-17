@@ -10,6 +10,8 @@ using FinanceManager.Domain.Administration.Monitoring;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Insights.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.MoneyFlow.Services;

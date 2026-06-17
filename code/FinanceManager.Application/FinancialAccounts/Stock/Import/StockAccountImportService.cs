@@ -2,6 +2,8 @@ using FinanceManager.Application.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;

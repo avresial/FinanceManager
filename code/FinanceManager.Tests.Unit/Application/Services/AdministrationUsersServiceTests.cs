@@ -1,8 +1,9 @@
 using FinanceManager.Application.Administration.Users;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Domain.Administration.Monitoring;
-using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using Moq;

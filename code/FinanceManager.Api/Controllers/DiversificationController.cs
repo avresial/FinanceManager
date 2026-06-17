@@ -1,5 +1,6 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Insights.Services;
 using FinanceManager.Domain.Services;

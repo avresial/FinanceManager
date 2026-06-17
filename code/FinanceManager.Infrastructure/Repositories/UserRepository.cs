@@ -1,6 +1,7 @@
-﻿using FinanceManager.Domain.Entities.Users;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Exceptions;
+﻿using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Exceptions;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;

@@ -1,5 +1,5 @@
 ﻿using FinanceManager.Domain.Entities.Shared;
-using FinanceManager.Domain.Entities.Users;
+using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Domain.Administration.Users;
 

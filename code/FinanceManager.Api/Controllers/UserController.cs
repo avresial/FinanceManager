@@ -1,10 +1,11 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Identity;
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Domain.Commands.User;
-using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Exceptions;
+using FinanceManager.Domain.Identity.Commands;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Exceptions;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.AspNetCore.Authorization;

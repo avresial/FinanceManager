@@ -1,6 +1,7 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Market;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Application.Shared.Seeders;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

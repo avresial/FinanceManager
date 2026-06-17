@@ -2,6 +2,7 @@ using FinanceManager.Application.Identity.Seeders;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.Logging;

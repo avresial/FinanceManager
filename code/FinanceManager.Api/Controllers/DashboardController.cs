@@ -1,6 +1,7 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

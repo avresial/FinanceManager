@@ -3,6 +3,7 @@ using FinanceManager.Application.FinancialAccounts.Stock.Seeders;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

@@ -2,6 +2,8 @@ using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 

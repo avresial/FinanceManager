@@ -1,5 +1,6 @@
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Exports;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using System.Runtime.CompilerServices;

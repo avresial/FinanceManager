@@ -6,6 +6,7 @@ using FinanceManager.Api.Services.Guest;
 using FinanceManager.Application;
 using FinanceManager.Application.Shared.Diagnostics;
 using FinanceManager.Application.Shared.Options;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;

@@ -6,6 +6,8 @@ using FinanceManager.Application.Identity.Seeders;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Administration.Monitoring;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;

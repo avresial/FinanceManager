@@ -1,5 +1,6 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;

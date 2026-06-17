@@ -2,6 +2,7 @@ using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Components.Features.Dashboard.Models;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;

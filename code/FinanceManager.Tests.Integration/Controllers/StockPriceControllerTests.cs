@@ -3,6 +3,7 @@ using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;

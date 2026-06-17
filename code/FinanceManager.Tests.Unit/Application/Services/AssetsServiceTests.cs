@@ -2,6 +2,7 @@ using FinanceManager.Application.FinancialAccounts;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Services;
 using Moq;
 

@@ -1,3 +1,4 @@
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.DependencyInjection;
 

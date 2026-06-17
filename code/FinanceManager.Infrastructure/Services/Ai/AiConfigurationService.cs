@@ -1,6 +1,7 @@
 using FinanceManager.Application.Shared.Ai;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Entities.Ai;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

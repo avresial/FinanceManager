@@ -8,7 +8,7 @@ using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Domain.Entities.Users;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Infrastructure.Contexts.Configurations;
 using FinanceManager.Infrastructure.Dtos;

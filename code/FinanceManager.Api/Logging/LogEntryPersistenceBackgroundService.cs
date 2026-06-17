@@ -1,6 +1,7 @@
 using FinanceManager.Api.Hubs;
 using FinanceManager.Domain.Administration.Logging;
 using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.SignalR;
 

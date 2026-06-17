@@ -2,6 +2,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Repositories;
 using System.Globalization;
 

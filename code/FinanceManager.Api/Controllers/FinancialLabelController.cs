@@ -1,6 +1,7 @@
 using FinanceManager.Application.Labels.Suggestions;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Shared.Accounts;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.Repositories;

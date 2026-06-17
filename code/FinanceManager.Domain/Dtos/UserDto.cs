@@ -1,5 +1,5 @@
-﻿using FinanceManager.Domain.Entities.Users;
-using FinanceManager.Domain.Enums;
+﻿using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Infrastructure.Dtos;
 

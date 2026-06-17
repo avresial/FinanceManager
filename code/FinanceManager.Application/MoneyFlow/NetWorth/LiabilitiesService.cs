@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Application.Shared;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;

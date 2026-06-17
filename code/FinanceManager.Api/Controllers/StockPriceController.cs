@@ -4,6 +4,8 @@ using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Domain.Commands.Stocks;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;

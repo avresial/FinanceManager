@@ -1,6 +1,7 @@
 using FinanceManager.Application.Identity.Seeders;
 using FinanceManager.Application.Shared.Seeders;
-using FinanceManager.Domain.Entities.Users;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Insights.Repositories;
 using FinanceManager.Domain.Repositories;

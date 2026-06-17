@@ -1,7 +1,8 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Commands.User;
-using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Commands;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.Logging;
 

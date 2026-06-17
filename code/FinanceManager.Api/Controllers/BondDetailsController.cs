@@ -1,5 +1,7 @@
 using FinanceManager.Application.Commands.Bonds;
 using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Authorization;

@@ -1,4 +1,5 @@
-using FinanceManager.Domain.Entities.Users;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Insights.Repositories;
 using FinanceManager.Domain.Repositories;

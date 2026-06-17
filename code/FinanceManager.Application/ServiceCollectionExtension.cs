@@ -6,6 +6,7 @@ using FinanceManager.Application.Identity.Users;
 using FinanceManager.Application.Insights;
 using FinanceManager.Application.Labels;
 using FinanceManager.Application.MoneyFlow;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,6 +1,7 @@
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -17,7 +18,7 @@ public partial class UserSettingsPage : ComponentBase
     private readonly List<string> _info = [];
 
     private UserSession? _loggedUser;
-    private Domain.Entities.Users.User? _userData;
+    private Domain.Identity.Entities.User? _userData;
     private RecordCapacity? _recordCapacity;
 
     private bool _isLoadingPage;

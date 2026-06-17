@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Domain.Administration.Monitoring;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
