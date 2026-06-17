@@ -2,7 +2,6 @@
 using FinanceManager.Domain.Identity.Dtos;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
-using FinanceManager.Infrastructure.Dtos;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Infrastructure.Repositories;

@@ -9,7 +9,6 @@ using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.FinancialAccounts.Stock.Exports;
 using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
-using FinanceManager.Infrastructure.Dtos;
 using FinanceManager.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
