@@ -3,7 +3,6 @@ using FinanceManager.Domain.Administration.Logging;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.Identity.Repositories;
-using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 

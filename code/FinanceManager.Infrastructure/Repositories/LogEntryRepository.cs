@@ -1,7 +1,6 @@
 using FinanceManager.Domain.Administration.Logging;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Identity.Repositories;
-using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 

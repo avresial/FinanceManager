@@ -1,6 +1,6 @@
-using FinanceManager.Domain.Entities.ExternalServices;
 using FinanceManager.Domain.Identity.Repositories;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Shared.ExternalServices.Entities;
+using FinanceManager.Domain.Shared.ExternalServices.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 

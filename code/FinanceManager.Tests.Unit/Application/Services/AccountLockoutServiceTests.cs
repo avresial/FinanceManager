@@ -2,7 +2,6 @@ using FinanceManager.Application.Identity.Lockout;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
-using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Options;
 using Moq;
 

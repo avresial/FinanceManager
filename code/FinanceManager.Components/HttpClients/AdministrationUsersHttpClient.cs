@@ -1,5 +1,5 @@
-using FinanceManager.Domain.Entities.Shared;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Shared.Charting;
 using System.Diagnostics;
 using System.Net.Http.Json;
 

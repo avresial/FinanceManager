@@ -1,6 +1,6 @@
-using FinanceManager.Domain.Entities.ExternalServices;
+using FinanceManager.Domain.Shared.ExternalServices.Entities;
 
-namespace FinanceManager.Domain.Repositories;
+namespace FinanceManager.Domain.Shared.ExternalServices.Repositories;
 
 public interface IExternalServiceConfigRepository
 {

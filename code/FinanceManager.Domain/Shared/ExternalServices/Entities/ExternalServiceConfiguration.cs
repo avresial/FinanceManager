@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.Entities.ExternalServices;
+namespace FinanceManager.Domain.Shared.ExternalServices.Entities;
 
 public class ExternalServiceConfiguration
 {

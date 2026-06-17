@@ -5,7 +5,6 @@ using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
-using FinanceManager.Domain.Repositories;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;

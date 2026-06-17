@@ -6,7 +6,6 @@ using FinanceManager.Domain.Identity.Commands;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Exceptions;
 using FinanceManager.Domain.Identity.Repositories;
-using FinanceManager.Domain.Repositories;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

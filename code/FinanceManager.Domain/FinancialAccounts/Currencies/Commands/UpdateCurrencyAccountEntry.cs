@@ -1,5 +1,5 @@
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
-using FinanceManager.Domain.Validation;
+using FinanceManager.Domain.Shared;
 using System.ComponentModel.DataAnnotations;
 
 namespace FinanceManager.Domain.FinancialAccounts.Currencies.Commands;

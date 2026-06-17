@@ -4,7 +4,6 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
-using FinanceManager.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Api.Services;

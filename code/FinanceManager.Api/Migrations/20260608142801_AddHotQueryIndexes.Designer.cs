@@ -40,7 +40,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("CurrencyAccountEntryFinancialLabel", (string)null);
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Ai.AiFallbackEntry", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Shared.Ai.Entities.AiFallbackEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -68,7 +68,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("AiFallbackEntries");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Ai.AiProviderConfiguration", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Shared.Ai.Entities.AiProviderConfiguration", b =>
                 {
                     b.Property<string>("ProviderName")
                         .HasMaxLength(100)
@@ -95,7 +95,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("AiProviderConfigurations");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Ai.AiProviderModel", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Shared.Ai.Entities.AiProviderModel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -253,7 +253,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("Currencies");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.ExternalServices.ExternalServiceConfiguration", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Shared.ExternalServices.Entities.ExternalServiceConfiguration", b =>
                 {
                     b.Property<string>("ServiceName")
                         .HasMaxLength(100)

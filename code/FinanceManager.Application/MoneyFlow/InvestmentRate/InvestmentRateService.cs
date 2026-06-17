@@ -8,7 +8,6 @@ using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
-using FinanceManager.Domain.Repositories;
 
 namespace FinanceManager.Application.MoneyFlow.InvestmentRate;
 

@@ -1,7 +1,7 @@
 using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
-using FinanceManager.Domain.Providers;
+using FinanceManager.Domain.Shared.Charting;
 
 namespace FinanceManager.Infrastructure.Providers;
 

@@ -1,7 +1,7 @@
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
-using FinanceManager.Domain.Validation;
+using FinanceManager.Domain.Shared;
 using System.ComponentModel.DataAnnotations;
 
 namespace FinanceManager.Domain.FinancialAccounts.Stock.Commands;

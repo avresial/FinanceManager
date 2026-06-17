@@ -3,7 +3,6 @@ using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Stock.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace FinanceManager.Infrastructure.Services.Stocks;

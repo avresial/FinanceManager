@@ -3,7 +3,6 @@ using FinanceManager.Application.Shared.Seeders;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
-using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Labels.Seeders;

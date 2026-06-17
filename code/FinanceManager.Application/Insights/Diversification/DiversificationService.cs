@@ -11,7 +11,6 @@ using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Insights.Services;
-using FinanceManager.Domain.Repositories;
 
 namespace FinanceManager.Application.Insights.Diversification;
 

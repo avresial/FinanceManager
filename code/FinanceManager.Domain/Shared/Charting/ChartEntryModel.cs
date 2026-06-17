@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Domain.Entities.Shared;
+﻿namespace FinanceManager.Domain.Shared.Charting;
 
 public class ChartEntryModel
 {

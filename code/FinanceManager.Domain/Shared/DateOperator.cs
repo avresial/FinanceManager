@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.Enums;
+namespace FinanceManager.Domain.Shared;
 
 public enum DateOperator
 {

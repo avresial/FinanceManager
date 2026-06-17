@@ -1,6 +1,6 @@
-using FinanceManager.Domain.Entities.Ai;
+using FinanceManager.Domain.Shared.Ai.Entities;
 
-namespace FinanceManager.Domain.Repositories;
+namespace FinanceManager.Domain.Shared.Ai.Repositories;
 
 public interface IAiProviderConfigRepository
 {

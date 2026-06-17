@@ -2,6 +2,7 @@ using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Shared;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 

@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.Entities.Ai;
+namespace FinanceManager.Domain.Shared.Ai.Entities;
 
 public class AiProviderConfiguration
 {

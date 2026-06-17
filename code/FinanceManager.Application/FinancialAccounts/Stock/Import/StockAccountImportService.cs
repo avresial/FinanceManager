@@ -8,7 +8,6 @@ using FinanceManager.Domain.FinancialAccounts.Stock.Imports;
 using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.FinancialAccounts.Stock.Import;

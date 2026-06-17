@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Domain.Providers;
+﻿namespace FinanceManager.Domain.Shared.Charting;
 
 public static class ColorsProvider
 {

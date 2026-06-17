@@ -14,7 +14,6 @@ using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Stock.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Domain.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using IIsinResolver = FinanceManager.Domain.FinancialAccounts.Stock.Services.IIsinResolver;

@@ -14,7 +14,6 @@ using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.MoneyFlow.Entities;
-using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;
 

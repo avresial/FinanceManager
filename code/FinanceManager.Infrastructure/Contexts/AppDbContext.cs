@@ -1,7 +1,5 @@
 ﻿using FinanceManager.Domain.Administration.Logging;
 using FinanceManager.Domain.Administration.Monitoring;
-using FinanceManager.Domain.Entities.Ai;
-using FinanceManager.Domain.Entities.ExternalServices;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
@@ -10,6 +8,8 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Insights.Entities;
+using FinanceManager.Domain.Shared.Ai.Entities;
+using FinanceManager.Domain.Shared.ExternalServices.Entities;
 using FinanceManager.Infrastructure.Contexts.Configurations;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;

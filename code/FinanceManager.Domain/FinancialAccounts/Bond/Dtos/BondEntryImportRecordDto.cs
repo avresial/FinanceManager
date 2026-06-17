@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Validation;
+using FinanceManager.Domain.Shared;
 using System.ComponentModel.DataAnnotations;
 
 namespace FinanceManager.Domain.FinancialAccounts.Bond.Dtos;

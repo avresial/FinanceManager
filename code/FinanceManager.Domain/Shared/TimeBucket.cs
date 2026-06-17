@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Application.Services;
+﻿namespace FinanceManager.Domain.Shared;
 
 public enum TimeBucket
 {

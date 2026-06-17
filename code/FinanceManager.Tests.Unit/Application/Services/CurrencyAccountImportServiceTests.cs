@@ -14,7 +14,6 @@ using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
-using FinanceManager.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 using Moq;
 

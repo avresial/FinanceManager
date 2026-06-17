@@ -8,7 +8,6 @@ using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.FinancialAccounts.Stock.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Domain.Repositories;
 
 namespace FinanceManager.Application.FinancialAccounts.Stock.Market;
 

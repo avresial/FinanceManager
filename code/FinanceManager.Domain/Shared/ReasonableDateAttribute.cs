@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Domain.Validation;
+namespace FinanceManager.Domain.Shared;
 
 /// <summary>
 /// Validates that a date used by a request model is within the supported financial data range.
