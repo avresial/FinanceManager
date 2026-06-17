@@ -20,7 +20,7 @@ public class TestUserAccountSeeder(IUserRepository userRepository, IConfiguratio
         // appsettings.Development.json or an environment variable — not in source code.
         // When unset (such as in production) the test account is simply not created.
         var password = configuration["Seeding:TestUserPassword"];
-        if (string.IsNullOrEmpty(password))
+        if (string.IsNullOrWhiteSpace(password))
         {
             logger.LogWarning("Skipping test user account seeding: 'Seeding:TestUserPassword' is not configured.");
             return;

@@ -14,6 +14,7 @@ using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Stock.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -33,6 +34,7 @@ public class StockPriceControllerTests
     private readonly Mock<IStockDetailsRepository> _stockDetailsRepository = new();
     private readonly Mock<IStockPriceBulkImportService> _stockPriceBulkImportService = new();
     private readonly Mock<IInstrumentResolver> _instrumentResolverMock = new();
+    private readonly Mock<ILogger<StockPriceController>> _logger = new();
     private readonly StockPriceController _controller;
 
     public StockPriceControllerTests()
@@ -61,7 +63,36 @@ public class StockPriceControllerTests
             _stockPriceBulkImportService.Object,
             isinResolverMock.Object,
             _instrumentResolverMock.Object,
-            new Mock<ILogger<StockPriceController>>().Object);
+            _logger.Object);
+    }
+
+    [Fact]
+    public async Task BulkImportClosePrices_ReturnsGenericBadRequest_WhenImportFails()
+    {
+        var file = new Mock<IFormFile>();
+        file.SetupGet(f => f.Length).Returns(1);
+        file.SetupGet(f => f.FileName).Returns("prices.csv");
+        file.Setup(f => f.OpenReadStream()).Returns(new MemoryStream([]));
+
+        _stockPriceBulkImportService
+            .Setup(service => service.ImportClosePrices(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive parser details"));
+
+        var result = await _controller.BulkImportClosePrices(file.Object, TestContext.Current.CancellationToken);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        var message = Assert.IsType<string>(badRequest.Value);
+        Assert.Equal("An error occurred while processing the request.", message);
+        Assert.DoesNotContain("sensitive parser details", message);
+
+        _logger.Verify(
+            logger => logger.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((_, _) => true),
+                It.IsAny<InvalidOperationException>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     [Fact]

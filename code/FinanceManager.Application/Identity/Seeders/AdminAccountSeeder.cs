@@ -21,7 +21,7 @@ public class AdminAccountSeeder(IUserRepository userRepository, IConfiguration c
         // so no credential is hard-coded. When it is not configured, skip seeding rather
         // than create an account with a predictable password.
         var password = configuration["Seeding:AdminPassword"];
-        if (string.IsNullOrEmpty(password))
+        if (string.IsNullOrWhiteSpace(password))
         {
             logger.LogWarning("Skipping admin account seeding: 'Seeding:AdminPassword' is not configured.");
             return;
