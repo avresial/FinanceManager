@@ -1,5 +1,6 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Users;
+using FinanceManager.Domain.Insights.Entities;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 

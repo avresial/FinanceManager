@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Entities.Users;
+using FinanceManager.Domain.Insights.Entities;
 
 namespace FinanceManager.Application.Insights.Generation;
 

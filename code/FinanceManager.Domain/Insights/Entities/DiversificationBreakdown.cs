@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.Entities.MoneyFlowModels;
+namespace FinanceManager.Domain.Insights.Entities;
 
 public record AssetClassHoldings(string AssetClass, IReadOnlyList<string> Holdings);
 

@@ -1,6 +1,6 @@
-using FinanceManager.Domain.Entities.Users;
+using FinanceManager.Domain.Insights.Entities;
 
-namespace FinanceManager.Domain.Repositories;
+namespace FinanceManager.Domain.Insights.Repositories;
 
 public interface IFinancialInsightsRepository
 {

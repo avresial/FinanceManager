@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.Entities.Users;
+namespace FinanceManager.Domain.Insights.Entities;
 
 public class FinancialInsight
 {

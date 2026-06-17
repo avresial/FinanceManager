@@ -1,5 +1,6 @@
 using FinanceManager.Components.Components.Features.Dashboard.Cards;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.Insights.Entities;
 
 namespace FinanceManager.Tests.Unit.Components.Dashboard.Cards;
 

@@ -1,6 +1,6 @@
-using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.Insights.Entities;
 
-namespace FinanceManager.Domain.Services;
+namespace FinanceManager.Domain.Insights.Services;
 
 public interface IDiversificationService
 {

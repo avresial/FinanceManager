@@ -8,6 +8,7 @@ using FinanceManager.Domain.Entities.Logging;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Entities.Users;
+using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Infrastructure.Contexts.Configurations;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;

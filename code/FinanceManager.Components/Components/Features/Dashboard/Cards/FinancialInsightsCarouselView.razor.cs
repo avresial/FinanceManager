@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Entities.Users;
+using FinanceManager.Domain.Insights.Entities;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Components.Components.Features.Dashboard.Cards;

@@ -552,7 +552,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("ActiveUsers");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Users.FinancialInsight", b =>
+            modelBuilder.Entity("FinanceManager.Domain.Insights.Entities.FinancialInsight", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()

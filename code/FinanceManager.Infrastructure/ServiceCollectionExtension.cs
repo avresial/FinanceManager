@@ -8,6 +8,7 @@ using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.Insights.Repositories;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;

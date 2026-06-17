@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Entities.Users;
+using FinanceManager.Domain.Insights.Entities;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;

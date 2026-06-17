@@ -2,6 +2,7 @@ using FinanceManager.Application.Insights.Generation;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Entities.Users;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
