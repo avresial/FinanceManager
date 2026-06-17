@@ -15,6 +15,7 @@ using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Api.Controllers;
 
@@ -23,7 +24,8 @@ namespace FinanceManager.Api.Controllers;
 [Tags("Stock Prices")]
 public partial class StockPriceController(IStockPriceRepository stockPriceRepository, ICurrencyExchangeService currencyExchangeService,
 ICurrencyRepository currencyRepository, IStockMarketService stockMarketService, IStockPriceProvider stockPriceProvider, IStockDetailsRepository stockDetailsRepository,
-IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinResolver, IInstrumentResolver instrumentResolver) : ControllerBase
+IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinResolver, IInstrumentResolver instrumentResolver,
+ILogger<StockPriceController> logger) : ControllerBase
 {
 
     [HttpGet("search-instrument")]
@@ -387,7 +389,8 @@ IStockPriceBulkImportService stockPriceBulkImportService, IIsinResolver isinReso
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            logger.LogError(ex, "Failed to process stock price bulk import request");
+            return BadRequest("An error occurred while processing the request.");
         }
 
         return Ok(result);

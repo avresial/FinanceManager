@@ -15,6 +15,7 @@ using FinanceManager.Domain.FinancialAccounts.Stock.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Moq;
 using IIsinResolver = FinanceManager.Domain.FinancialAccounts.Stock.Services.IIsinResolver;
 
@@ -59,7 +60,8 @@ public class StockPriceControllerTests
             _stockDetailsRepository.Object,
             _stockPriceBulkImportService.Object,
             isinResolverMock.Object,
-            _instrumentResolverMock.Object);
+            _instrumentResolverMock.Object,
+            new Mock<ILogger<StockPriceController>>().Object);
     }
 
     [Fact]
