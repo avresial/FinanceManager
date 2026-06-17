@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Stock.Services;

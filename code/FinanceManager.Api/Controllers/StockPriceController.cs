@@ -2,6 +2,8 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Market;
 using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Stock.Commands;
 using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;

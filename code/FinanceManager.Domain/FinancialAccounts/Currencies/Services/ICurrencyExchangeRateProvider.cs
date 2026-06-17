@@ -1,6 +1,6 @@
-using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 
-namespace FinanceManager.Domain.Services;
+namespace FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 
 public interface ICurrencyExchangeRateProvider
 {

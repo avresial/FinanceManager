@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 
 namespace FinanceManager.Api.Services;
 

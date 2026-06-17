@@ -1,6 +1,6 @@
 using FinanceManager.Domain.Entities.Imports;
 
-namespace FinanceManager.Domain.Dtos;
+namespace FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 
 public record CurrencyImportJobStatusDto(
     Guid JobId,

@@ -3,7 +3,7 @@ using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using Microsoft.Extensions.Logging;

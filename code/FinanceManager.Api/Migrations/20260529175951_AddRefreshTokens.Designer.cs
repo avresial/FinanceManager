@@ -226,7 +226,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("Bonds");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Currencies.Currency", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency", b =>
                 {
                     b.Property<int>("Id")
                         .HasColumnType("integer");
@@ -249,7 +249,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("Currencies");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.FinancialAccounts.Currencies.CurrencyAccountEntry", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Currencies.Entities.CurrencyAccountEntry", b =>
                 {
                     b.Property<int>("EntryId")
                         .ValueGeneratedOnAdd()
@@ -705,7 +705,7 @@ namespace FinanceManager.Api.Migrations
 
             modelBuilder.Entity("CurrencyAccountEntryFinancialLabel", b =>
                 {
-                    b.HasOne("FinanceManager.Domain.Entities.FinancialAccounts.Currencies.CurrencyAccountEntry", null)
+                    b.HasOne("FinanceManager.Domain.FinancialAccounts.Currencies.Entities.CurrencyAccountEntry", null)
                         .WithMany()
                         .HasForeignKey("CurrencyAccountEntryEntryId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -731,7 +731,7 @@ namespace FinanceManager.Api.Migrations
 
             modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Bond.Entities.BondDetails", b =>
                 {
-                    b.HasOne("FinanceManager.Domain.Entities.Currencies.Currency", "Currency")
+                    b.HasOne("FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency", "Currency")
                         .WithMany()
                         .HasForeignKey("CurrencyId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -762,7 +762,7 @@ namespace FinanceManager.Api.Migrations
 
             modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Stock.Entities.StockDetails", b =>
                 {
-                    b.HasOne("FinanceManager.Domain.Entities.Currencies.Currency", "Currency")
+                    b.HasOne("FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency", "Currency")
                         .WithMany()
                         .HasForeignKey("CurrencyId")
                         .OnDelete(DeleteBehavior.Cascade)

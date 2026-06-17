@@ -1,5 +1,5 @@
-using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 

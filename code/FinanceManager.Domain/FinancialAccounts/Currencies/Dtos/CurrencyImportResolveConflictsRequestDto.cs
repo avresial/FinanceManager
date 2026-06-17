@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Domain.Dtos;
+namespace FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 
 public class CurrencyImportResolveConflictsRequestDto
 {

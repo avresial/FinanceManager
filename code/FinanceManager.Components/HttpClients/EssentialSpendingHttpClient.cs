@@ -1,5 +1,5 @@
-using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;

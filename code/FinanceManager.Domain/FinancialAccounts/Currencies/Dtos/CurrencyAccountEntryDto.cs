@@ -1,7 +1,7 @@
-﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+﻿using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Infrastructure.Dtos;
 
-namespace FinanceManager.Domain.Dtos;
+namespace FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 
 public class CurrencyAccountEntryDto : FinancialEntryBaseDto
 {

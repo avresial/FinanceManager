@@ -1,7 +1,7 @@
 using FinanceManager.Domain.Validation;
 using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Domain.Dtos;
+namespace FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 
 public record CurrencyEntryImportRecordDto(
     [ReasonableDate] DateTime PostingDate,

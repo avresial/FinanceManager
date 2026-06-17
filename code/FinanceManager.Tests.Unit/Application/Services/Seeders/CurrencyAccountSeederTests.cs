@@ -1,8 +1,9 @@
 using FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
 using FinanceManager.Application.Identity.Seeders;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.Repositories;

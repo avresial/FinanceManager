@@ -1,6 +1,7 @@
-﻿using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Repositories.Account;
 
-namespace FinanceManager.Domain.Repositories.Account;
+namespace FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 
 public interface ICurrencyAccountRepository<T> : IAccountRepository<T>
 {

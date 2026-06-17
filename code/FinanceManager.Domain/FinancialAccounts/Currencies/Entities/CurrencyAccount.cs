@@ -5,7 +5,7 @@ using FinanceManager.Domain.FinancialAccounts.Stock.Extensions;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
 
-namespace FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+namespace FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 
 public class CurrencyAccount : FinancialAccountBase<CurrencyAccountEntry>
 {

@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Domain.Entities.Currencies;
+﻿namespace FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 
 public static class DefaultCurrency
 {

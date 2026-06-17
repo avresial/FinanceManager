@@ -1,7 +1,8 @@
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Validation;
 using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Domain.Commands.Account;
+namespace FinanceManager.Domain.FinancialAccounts.Currencies.Commands;
 
 public record AddCurrencyAccountEntry(
     [Range(1, int.MaxValue)] int AccountId,

@@ -1,5 +1,6 @@
 using FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
-using FinanceManager.Domain.Entities.Currencies;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Services;

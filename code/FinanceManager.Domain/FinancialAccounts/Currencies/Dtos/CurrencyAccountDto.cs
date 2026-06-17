@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Infrastructure.Dtos;
 
-namespace FinanceManager.Domain.Dtos;
+namespace FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 
 public class CurrencyAccountDto : FinancialAccountBaseDto
 {

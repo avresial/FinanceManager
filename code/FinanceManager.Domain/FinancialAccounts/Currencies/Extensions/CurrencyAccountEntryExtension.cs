@@ -1,6 +1,7 @@
-﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.Extensions;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 
-namespace FinanceManager.Domain.Extensions;
+namespace FinanceManager.Domain.FinancialAccounts.Currencies.Extensions;
 
 public static class CurrencyAccountEntryExtension
 {

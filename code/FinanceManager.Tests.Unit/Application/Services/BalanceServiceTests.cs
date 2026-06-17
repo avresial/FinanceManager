@@ -1,7 +1,6 @@
 using FinanceManager.Application.FinancialAccounts.Currencies.Balance;
-using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Repositories.Account;
 using Moq;
 

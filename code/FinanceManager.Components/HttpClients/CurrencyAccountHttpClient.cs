@@ -1,7 +1,8 @@
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.ValueObjects;
 using System.Net.Http.Json;
 
