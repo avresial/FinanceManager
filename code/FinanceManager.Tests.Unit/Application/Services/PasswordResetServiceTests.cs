@@ -1,7 +1,6 @@
 using FinanceManager.Application.Identity;
 using FinanceManager.Application.Identity.PasswordReset;
 using FinanceManager.Application.Shared.Options;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;

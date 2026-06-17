@@ -1,6 +1,6 @@
-using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Components.Components.Features.Dashboard.Cards;

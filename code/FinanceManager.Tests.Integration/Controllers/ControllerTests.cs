@@ -1,6 +1,6 @@
 using FinanceManager.Api.Services;
 using FinanceManager.Application.Commands.Login;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;

@@ -1,11 +1,11 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Assets;
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.FinancialAccounts.Stock.Services;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Moq;
 

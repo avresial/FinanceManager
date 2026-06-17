@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Application.Commands.Login;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;

@@ -1,11 +1,11 @@
 using FinanceManager.Application.FinancialAccounts.Bond.Seeders;
 using FinanceManager.Application.FinancialAccounts.Stock.Seeders;
 using FinanceManager.Application.Identity.Seeders;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using Microsoft.Extensions.Logging;

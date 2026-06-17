@@ -1,5 +1,5 @@
 using FinanceManager.Application.Shared.Seeders;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 
 namespace FinanceManager.Application.Identity.Seeders;

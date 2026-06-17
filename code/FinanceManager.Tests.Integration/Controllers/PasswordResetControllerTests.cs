@@ -1,4 +1,3 @@
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Commands;
 using FinanceManager.Domain.Identity.Entities;

@@ -1,5 +1,4 @@
 using FinanceManager.Api.Helpers;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Repositories;

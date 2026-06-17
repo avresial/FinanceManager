@@ -1,5 +1,5 @@
 using FinanceManager.Domain.Administration.Logging;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;

@@ -1,5 +1,5 @@
 using ApexCharts;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.Shared.Charting;
 using Microsoft.AspNetCore.Components;
 using System.Globalization;

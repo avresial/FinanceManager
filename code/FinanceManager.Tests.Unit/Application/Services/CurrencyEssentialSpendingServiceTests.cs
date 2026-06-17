@@ -1,8 +1,8 @@
 using FinanceManager.Application.MoneyFlow.Spending;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Identity.Entities;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;

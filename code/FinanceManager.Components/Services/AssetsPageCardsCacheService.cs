@@ -1,7 +1,6 @@
 using Blazored.LocalStorage;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Models;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.Extensions.Caching.Memory;

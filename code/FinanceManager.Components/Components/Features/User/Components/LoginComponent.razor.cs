@@ -87,10 +87,10 @@ public partial class LoginComponent
 
                 switch (loggedUser.UserRole)
                 {
-                    case Domain.Enums.UserRole.User:
+                    case Domain.Identity.Entities.UserRole.User:
                         Navigation.NavigateTo("");
                         break;
-                    case Domain.Enums.UserRole.Admin:
+                    case Domain.Identity.Entities.UserRole.Admin:
                         Navigation.NavigateTo("Admin/Dashboard");
                         break;
                     default:

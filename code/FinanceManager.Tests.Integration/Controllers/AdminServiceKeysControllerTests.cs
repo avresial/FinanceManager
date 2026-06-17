@@ -1,5 +1,5 @@
 using FinanceManager.Application.Shared.ExternalServices;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Shared.ExternalServices.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;

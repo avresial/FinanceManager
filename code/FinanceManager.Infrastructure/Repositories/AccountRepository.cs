@@ -1,5 +1,4 @@
-﻿using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+﻿using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Commands;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
@@ -9,6 +8,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Stock.Commands;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
+using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Infrastructure.Repositories;
 

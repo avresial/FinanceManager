@@ -1,5 +1,5 @@
-﻿using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+﻿using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 

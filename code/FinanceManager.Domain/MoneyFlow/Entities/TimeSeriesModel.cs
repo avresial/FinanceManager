@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Domain.Entities.MoneyFlowModels;
+﻿namespace FinanceManager.Domain.MoneyFlow.Entities;
 
 public class TimeSeriesModel
 {

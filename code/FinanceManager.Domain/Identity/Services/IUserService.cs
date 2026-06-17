@@ -1,5 +1,4 @@
-﻿using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Identity.Entities;
+﻿using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Domain.Identity.Services;
 

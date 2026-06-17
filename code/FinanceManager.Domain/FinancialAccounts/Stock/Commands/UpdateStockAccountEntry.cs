@@ -1,6 +1,6 @@
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Shared;
 using System.ComponentModel.DataAnnotations;
 

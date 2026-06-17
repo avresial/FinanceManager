@@ -1,6 +1,6 @@
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Shared;
 
 namespace FinanceManager.Tests.Unit.Domain.Entities.Bonds;

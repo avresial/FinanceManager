@@ -1,4 +1,3 @@
-using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.MoneyFlow.Entities;
 
 namespace FinanceManager.Components.Models;

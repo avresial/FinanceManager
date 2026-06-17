@@ -4,7 +4,7 @@ using FinanceManager.Application.FinancialAccounts.Stock.Seeders;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Application.Insights.Seeders;
 using FinanceManager.Application.Labels.Seeders;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using Microsoft.Extensions.Logging;
 

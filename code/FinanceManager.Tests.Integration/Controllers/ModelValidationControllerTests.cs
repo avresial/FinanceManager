@@ -1,7 +1,6 @@
 using FinanceManager.Api.Controllers.Admin;
 using FinanceManager.Application.Commands.Bonds;
 using FinanceManager.Application.Commands.Login;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
 using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Commands;
@@ -13,6 +12,7 @@ using FinanceManager.Domain.FinancialAccounts.Stock.Commands;
 using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.Identity.Commands;
+using FinanceManager.Domain.Identity.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;

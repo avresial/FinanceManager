@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Domain.Enums;
+﻿namespace FinanceManager.Domain.Identity.Entities;
 
 public enum PricingLevel
 {

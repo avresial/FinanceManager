@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Domain.Administration.Logging;
 

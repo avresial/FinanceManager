@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Shared;
 using System.Text.Json.Serialization;
 

@@ -1,7 +1,6 @@
 using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.FinancialAccounts.Stock;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
@@ -9,6 +8,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.FinancialAccounts.Stock.Exports;
 using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

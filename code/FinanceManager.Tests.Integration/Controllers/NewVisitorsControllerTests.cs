@@ -28,7 +28,7 @@ public class NewVisitorsControllerTests(OptionsProvider optionsProvider) : Contr
     [Fact]
     public async Task AddNewVisitor_AddsVisit()
     {
-        Authorize("Test user", 1, Domain.Enums.UserRole.User);
+        Authorize("Test user", 1, Domain.Identity.Entities.UserRole.User);
         // No auth needed for AddNewVisitor
         await new NewVisitorsHttpClient(Client, NullLogger<NewVisitorsHttpClient>.Instance).AddVisit();
 

@@ -2,7 +2,6 @@ using FinanceManager.Api.Controllers;
 using FinanceManager.Api.Services;
 using FinanceManager.Application.Commands.Login;
 using FinanceManager.Application.Shared.Options;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;

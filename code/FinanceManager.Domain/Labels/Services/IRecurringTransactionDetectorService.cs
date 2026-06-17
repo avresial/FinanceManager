@@ -1,5 +1,5 @@
-using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.MoneyFlow.Entities;
 
 namespace FinanceManager.Domain.Labels.Services;
 

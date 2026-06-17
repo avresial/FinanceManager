@@ -1,6 +1,6 @@
 using FinanceManager.Components.Components.Features.FinancialAccounts.StockAccountComponents.Crud;
-using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Tests.Unit.Components.FinancialAccounts;
 
