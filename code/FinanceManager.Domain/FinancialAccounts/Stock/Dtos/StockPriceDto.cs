@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
-namespace FinanceManager.Infrastructure.Dtos;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 
 public class StockPriceDto
 {

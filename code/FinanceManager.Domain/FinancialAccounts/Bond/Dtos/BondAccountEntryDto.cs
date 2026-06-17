@@ -1,7 +1,7 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 
-namespace FinanceManager.Infrastructure.Dtos;
+namespace FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 
 public class BondAccountEntryDto : FinancialEntryBaseDto
 {

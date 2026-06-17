@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Application.Commands.Bonds;
+namespace FinanceManager.Domain.FinancialAccounts.Bond.Commands;
 
 public record UpdateBondDetails(
     [Range(1, int.MaxValue)] int Id,

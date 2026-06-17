@@ -1,5 +1,5 @@
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-namespace FinanceManager.Infrastructure.Dtos;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 
 public class StockAccountDto : FinancialAccountBaseDto
 {

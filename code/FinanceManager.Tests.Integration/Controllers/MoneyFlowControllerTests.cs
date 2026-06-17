@@ -6,6 +6,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;

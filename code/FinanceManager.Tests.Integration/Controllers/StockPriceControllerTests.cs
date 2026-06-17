@@ -3,6 +3,7 @@ using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.FinancialAccounts.Stock.Services;
 using FinanceManager.Domain.Identity.Entities;

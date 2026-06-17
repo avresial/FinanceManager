@@ -5,13 +5,14 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
+using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.Identity.Dtos;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Shared.Ai.Entities;
 using FinanceManager.Domain.Shared.ExternalServices.Entities;
 using FinanceManager.Infrastructure.Contexts.Configurations;
-using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Contexts;

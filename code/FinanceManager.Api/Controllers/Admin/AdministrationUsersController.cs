@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Domain.Administration.Users;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Dtos;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Shared.Charting;
 using FinanceManager.Infrastructure.Dtos;

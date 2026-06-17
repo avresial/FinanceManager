@@ -1,4 +1,4 @@
-using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;

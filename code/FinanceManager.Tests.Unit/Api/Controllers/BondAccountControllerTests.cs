@@ -2,6 +2,7 @@ using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.FinancialAccounts.Bond;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Exports;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;

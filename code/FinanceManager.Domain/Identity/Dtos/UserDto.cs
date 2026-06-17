@@ -1,6 +1,6 @@
 ﻿using FinanceManager.Domain.Identity.Entities;
 
-namespace FinanceManager.Infrastructure.Dtos;
+namespace FinanceManager.Domain.Identity.Dtos;
 
 public class UserDto
 {

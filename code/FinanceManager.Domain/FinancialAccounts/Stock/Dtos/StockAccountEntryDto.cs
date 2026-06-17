@@ -2,7 +2,7 @@
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.Identity.Entities;
 
-namespace FinanceManager.Infrastructure.Dtos;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 
 public class StockAccountEntryDto : FinancialEntryBaseDto
 {

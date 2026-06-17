@@ -718,7 +718,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("Accounts");
                 });
 
-            modelBuilder.Entity("FinanceManager.Infrastructure.Dtos.StockPriceDto", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Stock.Dtos.StockPriceDto", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -858,7 +858,7 @@ namespace FinanceManager.Api.Migrations
                     b.Navigation("Currency");
                 });
 
-            modelBuilder.Entity("FinanceManager.Infrastructure.Dtos.StockPriceDto", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Stock.Dtos.StockPriceDto", b =>
                 {
                     b.HasOne("FinanceManager.Domain.FinancialAccounts.Stock.Entities.StockDetails", "StockDetails")
                         .WithMany()

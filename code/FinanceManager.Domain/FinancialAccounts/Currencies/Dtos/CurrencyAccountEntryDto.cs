@@ -1,6 +1,5 @@
 ﻿using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Infrastructure.Dtos;
 
 namespace FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 

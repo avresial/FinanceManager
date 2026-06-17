@@ -5,7 +5,6 @@ using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories.Account;
