@@ -3,6 +3,8 @@ using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Extensions;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;

@@ -1,7 +1,8 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Balance;
 using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;

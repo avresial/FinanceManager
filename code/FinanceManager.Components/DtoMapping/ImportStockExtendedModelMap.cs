@@ -1,4 +1,5 @@
 ﻿using CsvHelper.Configuration;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Infrastructure.Dtos;
 
 namespace FinanceManager.Infrastructure.DtoMapping;

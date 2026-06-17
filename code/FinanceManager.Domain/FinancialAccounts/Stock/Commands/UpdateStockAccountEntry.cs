@@ -1,8 +1,10 @@
+using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.Validation;
 using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Domain.Commands.Account;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Commands;
 
 public record UpdateStockAccountEntry(
     [Range(1, int.MaxValue)] int AccountId,

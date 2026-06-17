@@ -1,8 +1,9 @@
 ﻿using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
+using FinanceManager.Domain.FinancialAccounts.Stock.Extensions;
 
-namespace FinanceManager.Domain.Entities.Stocks;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
 public class StockAccount : FinancialAccountBase<StockAccountEntry>
 {

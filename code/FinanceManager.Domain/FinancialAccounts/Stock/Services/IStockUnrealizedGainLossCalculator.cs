@@ -1,8 +1,8 @@
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
-namespace FinanceManager.Domain.Services;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Services;
 
 public interface IStockUnrealizedGainLossCalculator
 {

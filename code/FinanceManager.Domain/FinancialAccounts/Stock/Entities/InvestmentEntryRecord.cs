@@ -1,3 +1,3 @@
-﻿namespace FinanceManager.Domain.Entities.Stocks;
+﻿namespace FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
 public record AddFinancialEntryBaseDto(DateTime PostingDate, decimal ValueChange);

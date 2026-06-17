@@ -1,5 +1,6 @@
 using CsvHelper.Configuration;
 using FinanceManager.Domain.Entities.Exports;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
 namespace FinanceManager.Application.FinancialAccounts.Stock.Export;
 

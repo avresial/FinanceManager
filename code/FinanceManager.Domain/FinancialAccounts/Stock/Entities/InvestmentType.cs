@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Domain.Enums;
+﻿namespace FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
 public enum InvestmentType
 {

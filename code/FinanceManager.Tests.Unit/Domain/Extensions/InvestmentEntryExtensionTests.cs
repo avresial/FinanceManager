@@ -1,6 +1,7 @@
-using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Extensions;
 
 namespace FinanceManager.Tests.Unit.Domain.Extensions;
 

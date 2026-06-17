@@ -2,9 +2,10 @@ using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Shared.Accounts;
-using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Commands;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 

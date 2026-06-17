@@ -1,6 +1,8 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.FinancialAccounts.Stock.Commands;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.AspNetCore.Authorization;

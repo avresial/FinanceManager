@@ -1,8 +1,10 @@
+using FinanceManager.Domain.Commands.Account;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Domain.Commands.Stocks;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Commands;
 
-public sealed record AddStockRequest(
+public sealed record UpdateStockRequest(
     [Required, StringLength(32)] string Ticker,
     [Required, StringLength(256)] string Name,
     [Required, StringLength(64)] string Type,

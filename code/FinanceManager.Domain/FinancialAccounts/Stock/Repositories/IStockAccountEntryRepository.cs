@@ -1,4 +1,5 @@
-﻿namespace FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.Repositories.Account;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
 
 public interface IStockAccountEntryRepository<T> : IAccountEntryRepository<T>
 {

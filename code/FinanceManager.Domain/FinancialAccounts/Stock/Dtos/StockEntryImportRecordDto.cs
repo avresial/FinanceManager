@@ -1,7 +1,7 @@
 using FinanceManager.Domain.Validation;
 using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Domain.Dtos;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 
 public record StockEntryImportRecordDto(
     [ReasonableDate] DateTime PostingDate,

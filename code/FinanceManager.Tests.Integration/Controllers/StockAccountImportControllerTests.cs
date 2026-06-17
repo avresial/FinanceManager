@@ -2,6 +2,7 @@ using FinanceManager.Application.FinancialAccounts.Stock.Import;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;

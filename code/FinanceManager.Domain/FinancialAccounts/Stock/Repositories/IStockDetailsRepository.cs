@@ -1,6 +1,6 @@
-using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
-namespace FinanceManager.Domain.Repositories;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
 
 public interface IStockDetailsRepository
 {

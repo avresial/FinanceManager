@@ -2,8 +2,8 @@ using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Services;
 using Microsoft.AspNetCore.Components;
@@ -21,7 +21,7 @@ public partial class UpdateStockEntry
 
     private DateTime? _postingDate = DateTime.Today;
     private TimeSpan? _time = new(01, 00, 00);
-    private string _investmentTypeName = FinanceManager.Domain.Enums.InvestmentType.Stock.ToString();
+    private string _investmentTypeName = FinanceManager.Domain.FinancialAccounts.Stock.Entities.InvestmentType.Stock.ToString();
     private string _isin = string.Empty;
     private decimal? _balanceChange;
     private decimal? _pricePerUnit;

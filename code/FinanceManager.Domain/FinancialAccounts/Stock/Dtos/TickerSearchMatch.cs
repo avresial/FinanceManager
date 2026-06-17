@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.Dtos;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 
 public class TickerSearchMatch
 {

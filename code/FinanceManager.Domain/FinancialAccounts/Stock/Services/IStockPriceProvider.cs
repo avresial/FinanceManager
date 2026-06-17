@@ -1,7 +1,7 @@
 using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
-namespace FinanceManager.Domain.Services;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Services;
 
 /// <summary>
 /// Reads stock prices with automatic AlphaVantage fallback: tries the repository first,

@@ -2,7 +2,8 @@ using FinanceManager.Components.Components.Features.FinancialAccounts.Shared.Imp
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Imports;
-using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Infrastructure.Readers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;

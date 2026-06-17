@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
 namespace FinanceManager.Infrastructure.Dtos;
 

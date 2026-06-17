@@ -2,6 +2,7 @@ using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
 using FinanceManager.Domain.FinancialAccounts.Bond.Extensions;
+using FinanceManager.Domain.FinancialAccounts.Stock.Extensions;
 
 namespace FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 

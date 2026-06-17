@@ -1,6 +1,7 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Seeders;
 using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;

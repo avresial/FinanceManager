@@ -1,7 +1,8 @@
 ﻿using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;

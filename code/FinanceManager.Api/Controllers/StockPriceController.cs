@@ -1,9 +1,12 @@
 ﻿using FinanceManager.Application.FinancialAccounts.Stock.Import;
 using FinanceManager.Application.FinancialAccounts.Stock.Market;
 using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
-using FinanceManager.Domain.Commands.Stocks;
 using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.FinancialAccounts.Stock.Commands;
+using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Stock.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Repositories;

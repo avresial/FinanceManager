@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.Services;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Services;
 
 /// <summary>
 /// Resolves ticker symbols to ISIN (International Securities Identification Number).

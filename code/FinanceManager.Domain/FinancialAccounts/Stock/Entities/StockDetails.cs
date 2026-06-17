@@ -1,6 +1,6 @@
 using FinanceManager.Domain.Entities.Currencies;
 
-namespace FinanceManager.Domain.Entities.Stocks;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
 /// <summary>
 /// Represents a stock or equity security.
