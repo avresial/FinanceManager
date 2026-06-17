@@ -1,3 +1,5 @@
+using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Domain.Providers;
 using FinanceManager.Domain.ValueObjects;
 using Microsoft.AspNetCore.Authorization;

@@ -1,6 +1,7 @@
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 

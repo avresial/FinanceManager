@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.ValueObjects;
+namespace FinanceManager.Domain.MoneyFlow.Entities;
 
 /// <summary>
 /// Represents an inflation rate for a specific currency on a given date.

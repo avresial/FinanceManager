@@ -1,5 +1,6 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Services;
 using FinanceManager.Infrastructure.Repositories;

@@ -1,5 +1,6 @@
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Domain.Services;
 
 namespace FinanceManager.Application.MoneyFlow.Spending;

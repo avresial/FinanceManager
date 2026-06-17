@@ -1,6 +1,6 @@
 using FinanceManager.Domain.Entities.Currencies;
 
-namespace FinanceManager.Domain.Services;
+namespace FinanceManager.Domain.MoneyFlow.Services;
 
 public interface INetWorthService
 {

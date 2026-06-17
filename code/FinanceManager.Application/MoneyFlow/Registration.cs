@@ -3,6 +3,8 @@ using FinanceManager.Application.MoneyFlow.InvestmentRate;
 using FinanceManager.Application.MoneyFlow.LabelsValue;
 using FinanceManager.Application.MoneyFlow.NetWorth;
 using FinanceManager.Application.MoneyFlow.Spending;
+using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Domain.Services;
 using Microsoft.Extensions.DependencyInjection;
 

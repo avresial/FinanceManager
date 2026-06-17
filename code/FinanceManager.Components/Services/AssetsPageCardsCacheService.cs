@@ -3,6 +3,7 @@ using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Models;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 

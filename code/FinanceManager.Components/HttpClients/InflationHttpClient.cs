@@ -1,3 +1,4 @@
+using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.ValueObjects;
 using System.Net.Http.Json;
 

@@ -1,7 +1,7 @@
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 
-namespace FinanceManager.Domain.Services;
+namespace FinanceManager.Domain.MoneyFlow.Services;
 
 public interface IEssentialSpendingService
 {

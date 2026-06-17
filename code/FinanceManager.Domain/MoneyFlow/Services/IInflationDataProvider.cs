@@ -1,6 +1,7 @@
+using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.ValueObjects;
 
-namespace FinanceManager.Domain.Providers;
+namespace FinanceManager.Domain.MoneyFlow.Services;
 
 /// <summary>
 /// Provides inflation rate data for different currencies over time.

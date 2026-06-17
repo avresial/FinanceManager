@@ -1,6 +1,8 @@
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Domain.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.Services;
@@ -10,7 +12,7 @@ namespace FinanceManager.Application.MoneyFlow.InvestmentRate;
 public class InvestmentRateService(IFinancialAccountRepository financialAccountRepository, IFinancialLabelsRepository financialLabelsRepository,
 IStockPriceProvider stockPriceProvider) : IInvestmentRateService
 {
-    public async IAsyncEnumerable<Domain.Entities.MoneyFlowModels.InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end)
+    public async IAsyncEnumerable<Domain.MoneyFlow.Entities.InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end)
     {
         var labels = await financialLabelsRepository.GetLabels().ToListAsync();
         var salaryLabel = labels.Single(x => x.Name.ToLower() == "salary");

@@ -1,6 +1,7 @@
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using System.Globalization;
 using System.Net.Http.Json;
 

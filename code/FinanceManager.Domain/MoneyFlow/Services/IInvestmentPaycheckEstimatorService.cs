@@ -1,7 +1,8 @@
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.MoneyFlow.Entities;
 
-namespace FinanceManager.Domain.Services;
+namespace FinanceManager.Domain.MoneyFlow.Services;
 
 public interface IInvestmentPaycheckEstimatorService
 {
