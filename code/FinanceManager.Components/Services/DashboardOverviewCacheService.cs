@@ -1,6 +1,6 @@
 using Blazored.LocalStorage;
 using FinanceManager.Components.Models;
-using FinanceManager.Domain.Dtos.Dashboard;
+using FinanceManager.Domain.Dashboard.Dtos;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;

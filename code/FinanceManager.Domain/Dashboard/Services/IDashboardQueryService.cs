@@ -1,6 +1,6 @@
-using FinanceManager.Domain.Dtos.Dashboard;
+using FinanceManager.Domain.Dashboard.Dtos;
 
-namespace FinanceManager.Domain.Services;
+namespace FinanceManager.Domain.Dashboard.Services;
 
 public interface IDashboardQueryService
 {

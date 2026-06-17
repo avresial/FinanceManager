@@ -1,6 +1,6 @@
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 
-namespace FinanceManager.Domain.Dtos.Dashboard;
+namespace FinanceManager.Domain.Dashboard.Dtos;
 
 /// <summary>
 /// Dashboard-shaped read model composing the data loaded by the dashboard

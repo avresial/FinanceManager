@@ -1,4 +1,5 @@
-using FinanceManager.Domain.Dtos.Dashboard;
+using FinanceManager.Domain.Dashboard.Dtos;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Services;

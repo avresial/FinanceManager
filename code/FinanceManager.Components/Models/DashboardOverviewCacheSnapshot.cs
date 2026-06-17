@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Dtos.Dashboard;
+using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
 
 namespace FinanceManager.Components.Models;
