@@ -3,7 +3,7 @@ using FinanceManager.Domain.Enums;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace FinanceManager.Domain.Entities.Bonds;
+namespace FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 
 public class BondDetails
 {

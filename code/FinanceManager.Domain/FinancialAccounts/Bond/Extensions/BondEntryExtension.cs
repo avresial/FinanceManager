@@ -1,7 +1,7 @@
-using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 
-namespace FinanceManager.Domain.Extensions;
+namespace FinanceManager.Domain.FinancialAccounts.Bond.Extensions;
 
 public static class BondEntryExtension
 {

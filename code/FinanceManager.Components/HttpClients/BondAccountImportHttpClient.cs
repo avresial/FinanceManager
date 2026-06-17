@@ -1,5 +1,6 @@
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Imports;
+using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;

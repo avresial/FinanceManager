@@ -1,8 +1,8 @@
-using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Currencies;
 using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 
-namespace FinanceManager.Domain.Services;
+namespace FinanceManager.Domain.FinancialAccounts.Bond.Services;
 
 public interface IBondUnrealizedGainLossCalculator
 {

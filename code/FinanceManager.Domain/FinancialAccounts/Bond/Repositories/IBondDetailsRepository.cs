@@ -1,6 +1,6 @@
-using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 
-namespace FinanceManager.Domain.Repositories;
+namespace FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 
 public interface IBondDetailsRepository
 {

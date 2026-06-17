@@ -1,5 +1,6 @@
-using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Entities.Shared.Accounts;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;

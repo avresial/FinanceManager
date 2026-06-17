@@ -1,5 +1,5 @@
-using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;
 using FinanceManager.Infrastructure.Contexts;

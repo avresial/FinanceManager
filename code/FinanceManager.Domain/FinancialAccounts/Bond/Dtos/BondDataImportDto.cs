@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Domain.Dtos;
+namespace FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 
 public record BondDataImportDto(
     [Range(1, int.MaxValue)] int AccountId,

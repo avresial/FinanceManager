@@ -1,8 +1,9 @@
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.Extensions;
+using FinanceManager.Domain.FinancialAccounts.Bond.Extensions;
 
-namespace FinanceManager.Domain.Entities.Bonds;
+namespace FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 
 public class BondAccount : FinancialAccountBase<BondAccountEntry>
 {

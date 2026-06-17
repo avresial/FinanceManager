@@ -1,7 +1,7 @@
 using FinanceManager.Domain.Entities.Shared.Accounts;
 using FinanceManager.Domain.Enums;
 
-namespace FinanceManager.Domain.Entities.Bonds;
+namespace FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 
 public class BondAccountEntry(int accountId, int entryId, DateTime postingDate, decimal value, decimal valueChange, int bondDetailsId) : FinancialEntryBase(accountId, entryId, postingDate, value, valueChange)
 {

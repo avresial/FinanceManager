@@ -40,7 +40,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("CurrencyAccountEntryFinancialLabel", (string)null);
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondAccountEntry", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Bond.Entities.BondAccountEntry", b =>
                 {
                     b.Property<int>("EntryId")
                         .ValueGeneratedOnAdd()
@@ -70,7 +70,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("BondEntries");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondCalculationMethod", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Bond.Entities.BondCalculationMethod", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -100,7 +100,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("BondCalculationMethod");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondDetails", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Bond.Entities.BondDetails", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -453,9 +453,9 @@ namespace FinanceManager.Api.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondCalculationMethod", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Bond.Entities.BondCalculationMethod", b =>
                 {
-                    b.HasOne("FinanceManager.Domain.Entities.Bonds.BondDetails", "BondDetails")
+                    b.HasOne("FinanceManager.Domain.FinancialAccounts.Bond.Entities.BondDetails", "BondDetails")
                         .WithMany("CalculationMethods")
                         .HasForeignKey("BondDetailsId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -464,7 +464,7 @@ namespace FinanceManager.Api.Migrations
                     b.Navigation("BondDetails");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondDetails", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Bond.Entities.BondDetails", b =>
                 {
                     b.HasOne("FinanceManager.Domain.Entities.Currencies.Currency", "Currency")
                         .WithMany()
@@ -477,7 +477,7 @@ namespace FinanceManager.Api.Migrations
 
             modelBuilder.Entity("FinanceManager.Domain.Entities.Shared.Accounts.FinancialLabel", b =>
                 {
-                    b.HasOne("FinanceManager.Domain.Entities.Bonds.BondAccountEntry", null)
+                    b.HasOne("FinanceManager.Domain.FinancialAccounts.Bond.Entities.BondAccountEntry", null)
                         .WithMany("Labels")
                         .HasForeignKey("BondAccountEntryEntryId");
 
@@ -517,12 +517,12 @@ namespace FinanceManager.Api.Migrations
                     b.Navigation("StockDetails");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondAccountEntry", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Bond.Entities.BondAccountEntry", b =>
                 {
                     b.Navigation("Labels");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Entities.Bonds.BondDetails", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Bond.Entities.BondDetails", b =>
                 {
                     b.Navigation("CalculationMethods");
                 });

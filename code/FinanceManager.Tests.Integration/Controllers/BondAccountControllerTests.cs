@@ -1,8 +1,8 @@
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Entities.Bonds;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;

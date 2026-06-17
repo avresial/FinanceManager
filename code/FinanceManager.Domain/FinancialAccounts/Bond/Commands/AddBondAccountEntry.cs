@@ -1,7 +1,7 @@
 using FinanceManager.Domain.Validation;
 using System.ComponentModel.DataAnnotations;
 
-namespace FinanceManager.Domain.Commands.Account;
+namespace FinanceManager.Domain.FinancialAccounts.Bond.Commands;
 
 public record AddBondAccountEntry(
     [Range(1, int.MaxValue)] int AccountId,

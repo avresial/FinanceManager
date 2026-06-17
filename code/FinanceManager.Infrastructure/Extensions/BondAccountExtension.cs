@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Infrastructure.Dtos;
 
 namespace FinanceManager.Infrastructure.Extensions;

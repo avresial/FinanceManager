@@ -1,5 +1,5 @@
 using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.ValueObjects;
 using FinanceManager.Infrastructure.Dtos;
 using System.Net.Http.Json;

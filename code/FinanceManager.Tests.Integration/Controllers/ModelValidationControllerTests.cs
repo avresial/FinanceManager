@@ -6,6 +6,8 @@ using FinanceManager.Domain.Commands.Stocks;
 using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Stocks;
 using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
+using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 using FinanceManager.Domain.Identity.Commands;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
