@@ -5,6 +5,7 @@ using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Imports;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

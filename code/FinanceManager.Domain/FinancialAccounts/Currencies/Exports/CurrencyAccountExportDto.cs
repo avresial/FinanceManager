@@ -1,6 +1,7 @@
+using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 
-namespace FinanceManager.Domain.Entities.Exports;
+namespace FinanceManager.Domain.FinancialAccounts.Currencies.Exports;
 
 public record CurrencyAccountExportDto(
     int Id,

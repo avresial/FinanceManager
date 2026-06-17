@@ -1,8 +1,8 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
-namespace FinanceManager.Domain.Entities.Imports;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Imports;
 
-public record BondImportConflict(int AccountId, BondEntryImport? ImportEntry, BondAccountEntry? ExistingEntry, string Reason)
+public record StockImportConflict(int AccountId, StockEntryImport? ImportEntry, StockAccountEntry? ExistingEntry, string Reason)
 {
     // Posting dates are stored/compared at second precision across the app. Truncating
     // both sides keeps legacy fractional-second DB entries comparable with second-precision
@@ -11,7 +11,7 @@ public record BondImportConflict(int AccountId, BondEntryImport? ImportEntry, Bo
         ImportEntry is not null && ExistingEntry is not null &&
         TruncateToSecond(ImportEntry.PostingDate) == TruncateToSecond(ExistingEntry.PostingDate) &&
         ImportEntry.ValueChange == ExistingEntry.ValueChange &&
-        ImportEntry.BondDetailsId == ExistingEntry.BondDetailsId;
+        string.Equals(ImportEntry.Isin, ExistingEntry.Isin, StringComparison.OrdinalIgnoreCase);
 
     public DateTime DateTime => ImportEntry?.PostingDate ?? ExistingEntry!.PostingDate;
 

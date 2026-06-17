@@ -5,6 +5,7 @@ using FinanceManager.Domain.Commands.Account;
 using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Exports;
 using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using FinanceManager.Domain.ValueObjects;

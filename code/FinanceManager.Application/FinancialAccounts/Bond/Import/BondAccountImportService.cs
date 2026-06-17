@@ -1,6 +1,7 @@
 using FinanceManager.Application.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Bond.Imports;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.Repositories.Account;
 using Microsoft.Extensions.Logging;

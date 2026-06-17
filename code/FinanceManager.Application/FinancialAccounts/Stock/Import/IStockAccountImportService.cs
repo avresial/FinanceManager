@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Entities.Imports;
+using FinanceManager.Domain.FinancialAccounts.Stock.Imports;
 
 namespace FinanceManager.Application.FinancialAccounts.Stock.Import;
 

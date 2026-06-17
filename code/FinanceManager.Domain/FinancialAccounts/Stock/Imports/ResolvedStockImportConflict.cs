@@ -1,13 +1,14 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
-namespace FinanceManager.Domain.Entities.Imports;
+namespace FinanceManager.Domain.FinancialAccounts.Stock.Imports;
 
-public class ResolvedBondImportConflict
+public class ResolvedStockImportConflict
 {
     // Parameterless ctor required for model binding / deserialization
-    public ResolvedBondImportConflict() { }
+    public ResolvedStockImportConflict() { }
 
-    public ResolvedBondImportConflict(int accountId, bool importIsPicked, BondEntryImport? importData, bool existingIsPicked, int? existingId)
+    public ResolvedStockImportConflict(int accountId, bool importIsPicked, StockEntryImport? importData, bool existingIsPicked, int? existingId)
     {
         if (importData is not null && existingId is not null && importIsPicked == existingIsPicked)
             throw new Exception("Cannot pick both import entry and existing entry or neither.");
@@ -23,16 +24,16 @@ public class ResolvedBondImportConflict
 
     // Import side
     public bool AddImported { get; set; }
-    public BondEntryImport? ImportData { get; set; }
+    public StockEntryImport? ImportData { get; set; }
 
     // Existing entry side
     public bool LeaveExisting { get; set; }
     public int? ExistingId { get; set; }
 
-    public BondAccountEntry ToEntry()
+    public StockAccountEntry ToEntry()
     {
         return ImportData is null
             ? throw new ArgumentNullException($"{nameof(ImportData)} is null")
-            : new BondAccountEntry(AccountId, 0, ImportData.PostingDate, ImportData.ValueChange, ImportData.ValueChange, ImportData.BondDetailsId);
+            : new StockAccountEntry(AccountId, 0, ImportData.PostingDate, ImportData.ValueChange, ImportData.ValueChange, ImportData.Isin, InvestmentType.Stock);
     }
 }

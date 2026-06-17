@@ -1,6 +1,7 @@
 using CsvHelper;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Domain.Entities.Exports;
+using FinanceManager.Domain.FinancialAccounts.Stock.Exports;
 using System.Globalization;
 using AccountId = int;
 using UserId = int;

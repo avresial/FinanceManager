@@ -3,6 +3,7 @@ using FinanceManager.Domain.Dtos;
 using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Imports;
 
 namespace FinanceManager.Tests.Unit.Api.Services;
 

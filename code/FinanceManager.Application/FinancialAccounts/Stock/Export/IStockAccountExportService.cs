@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Entities.Exports;
+using FinanceManager.Domain.FinancialAccounts.Stock.Exports;
 using AccountId = int;
 using UserId = int;
 

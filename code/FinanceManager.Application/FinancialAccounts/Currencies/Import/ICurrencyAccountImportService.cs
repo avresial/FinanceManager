@@ -1,4 +1,5 @@
 ﻿using FinanceManager.Domain.Entities.Imports;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Imports;
 
 namespace FinanceManager.Application.FinancialAccounts.Currencies.Import;
 

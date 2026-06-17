@@ -1,5 +1,6 @@
 using FinanceManager.Domain.Entities.Exports;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Stock.Exports;
 using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Stock.Services;
 using FinanceManager.Domain.Identity.Repositories;

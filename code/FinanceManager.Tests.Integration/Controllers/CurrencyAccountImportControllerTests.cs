@@ -5,6 +5,7 @@ using FinanceManager.Domain.Entities.Imports;
 using FinanceManager.Domain.Enums;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Imports;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
