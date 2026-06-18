@@ -21,7 +21,7 @@ public class CachedAccountEntryRepository<T>(
     ICacheInvalidator cacheInvalidator,
     HybridCache cache) : IAccountEntryRepository<T> where T : FinancialEntryBase
 {
-    private static readonly HybridCacheEntryOptions CacheOptions = new() { Expiration = TimeSpan.FromMinutes(5) };
+    private static readonly HybridCacheEntryOptions _cacheOptions = new() { Expiration = TimeSpan.FromMinutes(5) };
 
     // ----- Cached point reads (per account, tagged per owning user) -----
 
@@ -33,7 +33,7 @@ public class CachedAccountEntryRepository<T>(
         return await cache.GetOrCreateAsync<T?>(
             Key(userId, accountId, "youngest"),
             _ => new ValueTask<T?>(inner.GetYoungest(accountId)),
-            CacheOptions,
+            _cacheOptions,
             tags: [Tag(userId)]);
     }
 
@@ -45,7 +45,7 @@ public class CachedAccountEntryRepository<T>(
         return await cache.GetOrCreateAsync<T?>(
             Key(userId, accountId, "oldest"),
             _ => new ValueTask<T?>(inner.GetOldest(accountId)),
-            CacheOptions,
+            _cacheOptions,
             tags: [Tag(userId)]);
     }
 
@@ -57,7 +57,7 @@ public class CachedAccountEntryRepository<T>(
         return await cache.GetOrCreateAsync(
             Key(userId, accountId, "count"),
             _ => new ValueTask<int>(inner.GetCount(accountId)),
-            CacheOptions,
+            _cacheOptions,
             tags: [Tag(userId)]);
     }
 
@@ -69,7 +69,7 @@ public class CachedAccountEntryRepository<T>(
         return await cache.GetOrCreateAsync(
             Key(userId, accountId, "dates"),
             _ => new ValueTask<List<DateTime>>(inner.GetPostingDates(accountId)),
-            CacheOptions,
+            _cacheOptions,
             tags: [Tag(userId)]);
     }
 

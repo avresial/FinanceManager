@@ -11,7 +11,7 @@ namespace FinanceManager.Infrastructure.Repositories.Account.Entry;
 /// </summary>
 public class AccountUserResolver(AppDbContext context, HybridCache cache) : IAccountUserResolver
 {
-    private static readonly HybridCacheEntryOptions CacheOptions = new() { Expiration = TimeSpan.FromMinutes(30) };
+    private static readonly HybridCacheEntryOptions _cacheOptions = new() { Expiration = TimeSpan.FromMinutes(30) };
 
     public ValueTask<int?> GetUserId(int accountId, CancellationToken cancellationToken = default) =>
         cache.GetOrCreateAsync<int?>(
@@ -20,6 +20,6 @@ public class AccountUserResolver(AppDbContext context, HybridCache cache) : IAcc
                 .Where(a => a.AccountId == accountId)
                 .Select(a => (int?)a.UserId)
                 .FirstOrDefaultAsync(ct),
-            CacheOptions,
+            _cacheOptions,
             cancellationToken: cancellationToken);
 }
