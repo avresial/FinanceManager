@@ -9,6 +9,9 @@ rules agents must follow when updating this file.
 
 ## [Unreleased]
 
+### Security
+- The default admin and test-user accounts are no longer seeded with passwords hard-coded in source. Their passwords are now read from configuration (`Seeding:AdminPassword` / `Seeding:TestUserPassword`); when unset — as in production — the accounts are not created. The stock-price bulk-import endpoint now returns a generic error message and logs the exception server-side instead of echoing the raw exception text to the caller. #450
+
 ### Added
 - Adding a stock holding now needs only a search term, units, and a date: the form resolves the instrument through the `search-instrument` endpoint and auto-fills name, type, currency, and price. Unambiguous matches resolve silently; when several listings match, an inline picker (name · exchange · currency · ISIN) lets you choose. The confirmed instrument's ISIN is stored as the entry key and the typed term is kept as the display ticker. Entries still save when a price can't be fetched, showing a subtle "price pending" indicator so a provider outage doesn't block the add. #434
 - Dashboard data is now cached in the browser's local storage: navigating back to the dashboard after visiting another page renders the previous result instantly, then silently refreshes in the background when the server responds. #444
