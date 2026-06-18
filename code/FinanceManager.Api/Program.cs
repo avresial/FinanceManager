@@ -71,6 +71,8 @@ builder.Services
     .AddInfrastructureApi()
     .AddControllers();
 
+builder.Services.AddHybridCache();
+
 builder.Services.Configure<FormOptions>(options =>
 {
     options.MultipartBodyLengthLimit = RequestBodySizeLimits.GlobalRequestBodyBytes;

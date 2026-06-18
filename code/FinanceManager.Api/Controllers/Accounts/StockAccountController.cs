@@ -1,6 +1,7 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.FinancialAccounts.Stock;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
@@ -21,7 +22,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Tags("Stock Accounts")]
 public class StockAccountController(IAccountRepository<StockAccount> stockAccountRepository,
     IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository,
-    IAccountCsvExportService<StockAccountExportDto> stockAccountCsvExportService) : ControllerBase
+    IAccountCsvExportService<StockAccountExportDto> stockAccountCsvExportService,
+    IDashboardCacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {
 
     [HttpGet]
@@ -115,8 +117,13 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
     [HttpPost("Add")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Add(AddAccount addAccount) =>
-        Ok(await stockAccountRepository.Add(ApiAuthenticationHelper.GetUserId(User), addAccount.AccountName));
+    public async Task<IActionResult> Add(AddAccount addAccount)
+    {
+        var userId = ApiAuthenticationHelper.GetUserId(User);
+        var result = await stockAccountRepository.Add(userId, addAccount.AccountName);
+        await dashboardCacheInvalidator.InvalidateUser(userId);
+        return Ok(result);
+    }
 
     [HttpPut("Update")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -128,6 +135,7 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
             return Forbid();
 
         var result = await stockAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
         return Ok(result);
     }
 
@@ -143,7 +151,9 @@ public class StockAccountController(IAccountRepository<StockAccount> stockAccoun
             return Forbid();
 
         await stockAccountEntryRepository.Delete(accountId);
-        return Ok(await stockAccountRepository.Delete(accountId));
+        var result = await stockAccountRepository.Delete(accountId);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 
     [HttpGet("export/{accountId:int}")]

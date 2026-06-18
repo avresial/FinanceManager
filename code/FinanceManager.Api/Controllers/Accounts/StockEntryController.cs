@@ -1,4 +1,5 @@
 using FinanceManager.Api.Helpers;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Stock.Commands;
@@ -16,7 +17,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Tags("Stock Entries")]
 public class StockEntryController(
     IAccountRepository<StockAccount> stockAccountRepository,
-    IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository) : ControllerBase
+    IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository,
+    IDashboardCacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {
     [HttpGet("GetYoungestEntryDate/{accountId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(DateTime))]
@@ -65,7 +67,9 @@ public class StockEntryController(
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId))
             return Forbid();
 
-        return Ok(await stockAccountEntryRepository.Add(addEntry.Entry));
+        var result = await stockAccountEntryRepository.Add(addEntry.Entry);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 
     [HttpDelete("Delete/{accountId:int}/{entryId:int}")]
@@ -77,7 +81,9 @@ public class StockEntryController(
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId))
             return Forbid();
 
-        return Ok(await stockAccountEntryRepository.Delete(accountId, entryId));
+        var result = await stockAccountEntryRepository.Delete(accountId, entryId);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 
     [HttpPost("Recalculate/{accountId:int}")]
@@ -91,6 +97,7 @@ public class StockEntryController(
         if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         await stockAccountEntryRepository.RecalculateValues(accountId);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
         return Ok();
     }
 
@@ -114,6 +121,8 @@ public class StockEntryController(
             Ticker = updateCommand.Ticker
         });
 
-        return Ok(await stockAccountEntryRepository.Update(entryToUpdate));
+        var result = await stockAccountEntryRepository.Update(entryToUpdate);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 }

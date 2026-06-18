@@ -9,7 +9,9 @@ internal static class Registration
 {
     public static IServiceCollection AddDashboardApplication(this IServiceCollection services)
     {
-        services.AddScoped<IDashboardQueryService, DashboardQueryService>();
+        services.AddScoped<DashboardQueryService>();
+        services.AddScoped<IDashboardQueryService, CachingDashboardQueryService>();
+        services.AddSingleton<IDashboardCacheInvalidator, DashboardCacheInvalidator>();
         return services;
     }
 }

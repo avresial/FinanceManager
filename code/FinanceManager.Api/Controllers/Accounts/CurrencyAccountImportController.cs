@@ -3,6 +3,7 @@ using FinanceManager.Api.Helpers;
 using FinanceManager.Api.Hubs;
 using FinanceManager.Api.Services;
 using FinanceManager.Application.FinancialAccounts.Currencies.Import;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Imports;
@@ -20,7 +21,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Currency Imports")]
-public class CurrencyAccountImportController(ICurrencyAccountImportService importService, ICurrencyAccountRepository<CurrencyAccount> accountRepository)
+public class CurrencyAccountImportController(ICurrencyAccountImportService importService, ICurrencyAccountRepository<CurrencyAccount> accountRepository,
+    IDashboardCacheInvalidator dashboardCacheInvalidator)
     : ControllerBase
 {
     [HttpPost(RequestBodySizeLimits.CurrencyStartAsyncImportPath)]
@@ -97,6 +99,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
         await hub.Clients.Group(CurrencyImportHub.GetJobGroupName(request.JobId))
             .SendAsync("ImportStatusUpdated", status);
 
+        await dashboardCacheInvalidator.InvalidateUser(userId);
         return Ok(status);
     }
 
@@ -114,6 +117,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
 
         var domainEntries = importDto.Entries.Select(e => new CurrencyEntryImport(e.PostingDate, e.ValueChange, e.ContractorDetails, e.Description));
         var domainResult = await importService.ImportEntries(userId, importDto.AccountId, domainEntries);
+        await dashboardCacheInvalidator.InvalidateUser(userId);
         return Ok(domainResult);
     }
 
@@ -134,6 +138,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
         }
 
         await importService.ApplyResolvedConflicts(resolvedConflicts);
+        await dashboardCacheInvalidator.InvalidateUser(userId);
         return Ok();
     }
 }

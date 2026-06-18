@@ -1,6 +1,7 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Api.Services;
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Commands;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
@@ -21,7 +22,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 public class CurrencyEntryController(
     ICurrencyAccountRepository<CurrencyAccount> accountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
-    IUserPlanVerifier userPlanVerifier, ILabelSetterChannel labelSetterChannel) : ControllerBase
+    IUserPlanVerifier userPlanVerifier, ILabelSetterChannel labelSetterChannel,
+    IDashboardCacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountEntryDto))]
@@ -86,6 +88,7 @@ public class CurrencyEntryController(
 
         var result = await accountEntryRepository.Add(newEntry);
         await labelSetterChannel.QueueEntries(newEntry.AccountId, [newEntry.EntryId]);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
 
         return Ok(result);
     }
@@ -98,7 +101,9 @@ public class CurrencyEntryController(
         var account = await accountRepository.Get(accountId);
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
-        return Ok(await accountEntryRepository.Delete(accountId, entryId));
+        var result = await accountEntryRepository.Delete(accountId, entryId);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 
     [HttpPost("Recalculate/{accountId:int}")]
@@ -112,6 +117,7 @@ public class CurrencyEntryController(
         if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         await accountEntryRepository.RecalculateValues(accountId);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
         return Ok();
     }
 
@@ -135,6 +141,8 @@ public class CurrencyEntryController(
         else
             newEntry.Labels = updateEntry.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id }).ToList();
 
-        return Ok(await accountEntryRepository.Update(newEntry));
+        var result = await accountEntryRepository.Update(newEntry);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 }

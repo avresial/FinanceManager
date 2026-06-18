@@ -2,6 +2,7 @@ using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.FinancialAccounts.Bond;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Exports;
@@ -33,7 +34,8 @@ public class BondAccountControllerTests
             _mockBondAccountRepository.Object,
             _mockBondAccountEntryRepository.Object,
             _userPlanVerifier.Object,
-            _bondAccountCsvExportService.Object);
+            _bondAccountCsvExportService.Object,
+            Mock.Of<IDashboardCacheInvalidator>());
 
         var userClaims = new ClaimsPrincipal(new ClaimsIdentity(
         [

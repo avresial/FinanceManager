@@ -1,5 +1,6 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
 using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
@@ -17,7 +18,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 public class BondEntryController(
     IAccountRepository<BondAccount> bondAccountRepository,
     IAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
-    IUserPlanVerifier userPlanVerifier) : ControllerBase
+    IUserPlanVerifier userPlanVerifier,
+    IDashboardCacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BondAccountEntryDto))]
@@ -77,6 +79,7 @@ public class BondEntryController(
             addEntry.PostingDate, addEntry.Value, addEntry.ValueChange, addEntry.BondDetailsId);
 
         await bondAccountEntryRepository.Add(newEntry);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
 
         // Get all entries for this account and date to find the one we just added
         var entries = await bondAccountEntryRepository.Get(addEntry.AccountId, addEntry.PostingDate, addEntry.PostingDate.AddSeconds(1))
@@ -96,7 +99,9 @@ public class BondEntryController(
         var account = await bondAccountRepository.Get(accountId);
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
-        return Ok(await bondAccountEntryRepository.Delete(accountId, entryId));
+        var result = await bondAccountEntryRepository.Delete(accountId, entryId);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 
     [HttpPost("Recalculate/{accountId:int}")]
@@ -110,6 +115,7 @@ public class BondEntryController(
         if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         await bondAccountEntryRepository.RecalculateValues(accountId);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
         return Ok();
     }
 
@@ -130,6 +136,8 @@ public class BondEntryController(
         entryToUpdate.ValueChange = updateEntry.ValueChange;
         entryToUpdate.PostingDate = updateEntry.PostingDate;
 
-        return Ok(await bondAccountEntryRepository.Update(entryToUpdate));
+        var result = await bondAccountEntryRepository.Update(entryToUpdate);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 }
