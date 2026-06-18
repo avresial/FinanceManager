@@ -76,5 +76,17 @@ internal sealed class CachedCurrencyExchangeService(
     }
 
     public async Task<decimal?> GetPricePerUnit(StockPrice stockPrice, Currency currency, DateTime date)
-        => await inner.GetPricePerUnit(stockPrice, currency, date);
+    {
+        if (stockPrice is null) return null;
+        if (stockPrice.Currency == currency) return stockPrice.PricePerUnit;
+        if (date > DateTime.UtcNow) date = DateTime.UtcNow;
+
+        // Route through the cached single-date overload instead of delegating to the
+        // inner service, whose own GetExchangeRateAsync call bypasses this cache.
+        var rate = await GetExchangeRateAsync(stockPrice.Currency, currency, date.Date);
+        if (rate is not null)
+            return stockPrice.PricePerUnit * rate.Value;
+
+        return null;
+    }
 }

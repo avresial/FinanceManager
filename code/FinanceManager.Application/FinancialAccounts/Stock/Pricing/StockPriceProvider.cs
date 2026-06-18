@@ -147,6 +147,30 @@ public class StockPriceProvider(
         var series = new Dictionary<DateTime, decimal>((endDate - startDate).Days + 1);
         StockPrice? latestKnownPrice = seedPrice;
 
+        // Prefetch FX rates once per distinct source currency over the whole range
+        // instead of issuing one (uncached) conversion per day inside the loop.
+        var ratesByCurrency = new Dictionary<string, Dictionary<DateTime, decimal>>(StringComparer.OrdinalIgnoreCase);
+        var sourceCurrencies = latestByDate.Values
+            .Select(p => p.Currency)
+            .Concat(seedPrice is not null ? [seedPrice.Currency] : [])
+            .Where(c => c != targetCurrency)
+            .GroupBy(c => c.ShortName, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToList();
+
+        foreach (var fromCurrency in sourceCurrencies)
+        {
+            var rates = await currencyExchangeService.GetExchangeRateAsync(fromCurrency, targetCurrency, startDate, endDate);
+            var rateMap = new Dictionary<DateTime, decimal>(rates.Count);
+            foreach (var (rateDate, value) in rates)
+            {
+                if (value is not null)
+                    rateMap[rateDate.Date] = value.Value;
+            }
+
+            ratesByCurrency[fromCurrency.ShortName] = rateMap;
+        }
+
         for (var date = startDate; date <= endDate; date = date.AddDays(1))
         {
             if (latestByDate.TryGetValue(date, out var todayPrice))
@@ -154,9 +178,22 @@ public class StockPriceProvider(
 
             if (latestKnownPrice is null) continue;
 
-            var convertedPrice = latestKnownPrice.Currency == targetCurrency
-                ? latestKnownPrice.PricePerUnit
-                : (await currencyExchangeService.GetPricePerUnit(latestKnownPrice, targetCurrency, date)) ?? 0m;
+            decimal convertedPrice;
+            if (latestKnownPrice.Currency == targetCurrency)
+            {
+                convertedPrice = latestKnownPrice.PricePerUnit;
+            }
+            else if (ratesByCurrency.TryGetValue(latestKnownPrice.Currency.ShortName, out var rateMap)
+                     && rateMap.TryGetValue(date, out var rate))
+            {
+                convertedPrice = latestKnownPrice.PricePerUnit * rate;
+            }
+            else
+            {
+                // Dates outside the prefetched range (e.g. clamped future days) or missing
+                // rates fall back to the per-call path so the result is unchanged.
+                convertedPrice = (await currencyExchangeService.GetPricePerUnit(latestKnownPrice, targetCurrency, date)) ?? 0m;
+            }
 
             if (convertedPrice > 0)
                 series[date] = convertedPrice;
