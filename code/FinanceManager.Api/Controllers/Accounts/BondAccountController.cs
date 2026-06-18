@@ -2,6 +2,7 @@ using FinanceManager.Api.Helpers;
 using FinanceManager.Application.FinancialAccounts.Bond;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Exports;
@@ -22,7 +23,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 public class BondAccountController(IAccountRepository<BondAccount> bondAccountRepository,
     IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
     IUserPlanVerifier userPlanVerifier,
-    IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService) : ControllerBase
+    IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService,
+    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<BondAccountDto>))]
@@ -102,7 +104,9 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
         if (!await userPlanVerifier.CanAddMoreAccounts(userId))
             return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
-        return Ok(await bondAccountRepository.Add(userId, addAccount.AccountName));
+        var result = await bondAccountRepository.Add(userId, addAccount.AccountName);
+        await dashboardCacheInvalidator.InvalidateUser(userId);
+        return Ok(result);
     }
 
     [HttpPut]
@@ -114,7 +118,9 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
 
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
 
-        return Ok(await bondAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName));
+        var result = await bondAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 
     [HttpDelete("{accountId:int}")]
@@ -126,7 +132,9 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
 
         await bondAccountEntryRepository.Delete(accountId);
-        return Ok(await bondAccountRepository.Delete(accountId));
+        var result = await bondAccountRepository.Delete(accountId);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 
     [HttpGet("export/{accountId:int}")]

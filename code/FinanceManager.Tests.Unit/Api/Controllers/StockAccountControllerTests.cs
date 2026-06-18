@@ -1,6 +1,7 @@
 using FinanceManager.Api.Controllers.Accounts;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.FinancialAccounts.Stock;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
@@ -35,7 +36,8 @@ public class StockAccountControllerTests
         _controller = new StockAccountController(
             _mockStockAccountRepository.Object,
             _mockStockAccountEntryRepository.Object,
-            _mockStockAccountCsvExportService.Object);
+            _mockStockAccountCsvExportService.Object,
+            Mock.Of<ICacheInvalidator>());
 
         // Mock user identity
         var user = new ClaimsPrincipal(new ClaimsIdentity(

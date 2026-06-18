@@ -1,6 +1,7 @@
 using FinanceManager.Api;
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.FinancialAccounts.Stock.Import;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
@@ -16,7 +17,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Stock Imports")]
-public class StockAccountImportController(IStockAccountImportService importService, IAccountRepository<StockAccount> accountRepository)
+public class StockAccountImportController(IStockAccountImportService importService, IAccountRepository<StockAccount> accountRepository,
+    ICacheInvalidator dashboardCacheInvalidator)
     : ControllerBase
 {
     [HttpPost(RequestBodySizeLimits.StockImportPath)]
@@ -33,6 +35,7 @@ public class StockAccountImportController(IStockAccountImportService importServi
 
         var domainEntries = importDto.Entries.Select(e => new StockEntryImport(e.PostingDate, e.ValueChange, e.Ticker));
         var domainResult = await importService.ImportEntries(userId, importDto.AccountId, domainEntries);
+        await dashboardCacheInvalidator.InvalidateUser(userId);
         return Ok(domainResult);
     }
 
@@ -53,6 +56,7 @@ public class StockAccountImportController(IStockAccountImportService importServi
         }
 
         await importService.ApplyResolvedConflicts(resolvedConflicts);
+        await dashboardCacheInvalidator.InvalidateUser(userId);
         return Ok();
     }
 }

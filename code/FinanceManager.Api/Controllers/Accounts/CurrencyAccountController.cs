@@ -2,6 +2,7 @@ using FinanceManager.Api.Helpers;
 using FinanceManager.Application.FinancialAccounts.Currencies;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Exports;
@@ -24,7 +25,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccount> accountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
     IUserPlanVerifier userPlanVerifier,
-    IAccountCsvExportService<CurrencyAccountExportDto> currencyAccountCsvExportService) : ControllerBase
+    IAccountCsvExportService<CurrencyAccountExportDto> currencyAccountCsvExportService,
+    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<CurrencyAccountDto>))]
@@ -99,7 +101,9 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         if (!await userPlanVerifier.CanAddMoreAccounts(userId))
             return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
-        return Ok(await accountRepository.Add(userId, addAccount.AccountName));
+        var result = await accountRepository.Add(userId, addAccount.AccountName);
+        await dashboardCacheInvalidator.InvalidateUser(userId);
+        return Ok(result);
     }
 
     [HttpPut]
@@ -110,7 +114,10 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         var account = await accountRepository.Get(updateAccount.AccountId);
 
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
-        return Ok(await accountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType));
+
+        var result = await accountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 
     [HttpDelete("{accountId:int}")]
@@ -122,7 +129,9 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
 
         await accountEntryRepository.Delete(accountId);
-        return Ok(await accountRepository.Delete(accountId));
+        var result = await accountRepository.Delete(accountId);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 
     [HttpGet("export/{accountId:int}")]
