@@ -18,7 +18,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Tags("Bond Imports")]
 public class BondAccountImportController(IBondAccountImportService importService, IAccountRepository<BondAccount> accountRepository,
-    IDashboardCacheInvalidator dashboardCacheInvalidator)
+    ICacheInvalidator dashboardCacheInvalidator)
     : ControllerBase
 {
     [HttpPost(RequestBodySizeLimits.BondImportPath)]

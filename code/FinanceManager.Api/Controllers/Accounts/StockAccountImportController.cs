@@ -18,7 +18,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Tags("Stock Imports")]
 public class StockAccountImportController(IStockAccountImportService importService, IAccountRepository<StockAccount> accountRepository,
-    IDashboardCacheInvalidator dashboardCacheInvalidator)
+    ICacheInvalidator dashboardCacheInvalidator)
     : ControllerBase
 {
     [HttpPost(RequestBodySizeLimits.StockImportPath)]

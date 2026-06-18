@@ -22,7 +22,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Tags("Currency Imports")]
 public class CurrencyAccountImportController(ICurrencyAccountImportService importService, ICurrencyAccountRepository<CurrencyAccount> accountRepository,
-    IDashboardCacheInvalidator dashboardCacheInvalidator)
+    ICacheInvalidator dashboardCacheInvalidator)
     : ControllerBase
 {
     [HttpPost(RequestBodySizeLimits.CurrencyStartAsyncImportPath)]

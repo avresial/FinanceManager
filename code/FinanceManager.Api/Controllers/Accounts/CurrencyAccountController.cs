@@ -26,7 +26,7 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
     IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
     IUserPlanVerifier userPlanVerifier,
     IAccountCsvExportService<CurrencyAccountExportDto> currencyAccountCsvExportService,
-    IDashboardCacheInvalidator dashboardCacheInvalidator) : ControllerBase
+    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<CurrencyAccountDto>))]

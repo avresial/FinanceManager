@@ -23,7 +23,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 public class StockAccountController(IAccountRepository<StockAccount> stockAccountRepository,
     IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository,
     IAccountCsvExportService<StockAccountExportDto> stockAccountCsvExportService,
-    IDashboardCacheInvalidator dashboardCacheInvalidator) : ControllerBase
+    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {
 
     [HttpGet]

@@ -23,7 +23,7 @@ public class CurrencyEntryController(
     ICurrencyAccountRepository<CurrencyAccount> accountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
     IUserPlanVerifier userPlanVerifier, ILabelSetterChannel labelSetterChannel,
-    IDashboardCacheInvalidator dashboardCacheInvalidator) : ControllerBase
+    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountEntryDto))]

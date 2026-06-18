@@ -37,7 +37,7 @@ public class StockAccountControllerTests
             _mockStockAccountRepository.Object,
             _mockStockAccountEntryRepository.Object,
             _mockStockAccountCsvExportService.Object,
-            Mock.Of<IDashboardCacheInvalidator>());
+            Mock.Of<ICacheInvalidator>());
 
         // Mock user identity
         var user = new ClaimsPrincipal(new ClaimsIdentity(

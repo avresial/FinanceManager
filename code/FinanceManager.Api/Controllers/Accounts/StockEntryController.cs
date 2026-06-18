@@ -18,7 +18,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 public class StockEntryController(
     IAccountRepository<StockAccount> stockAccountRepository,
     IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository,
-    IDashboardCacheInvalidator dashboardCacheInvalidator) : ControllerBase
+    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {
     [HttpGet("GetYoungestEntryDate/{accountId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(DateTime))]

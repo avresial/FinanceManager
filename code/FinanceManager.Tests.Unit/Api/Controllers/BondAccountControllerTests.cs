@@ -35,7 +35,7 @@ public class BondAccountControllerTests
             _mockBondAccountEntryRepository.Object,
             _userPlanVerifier.Object,
             _bondAccountCsvExportService.Object,
-            Mock.Of<IDashboardCacheInvalidator>());
+            Mock.Of<ICacheInvalidator>());
 
         var userClaims = new ClaimsPrincipal(new ClaimsIdentity(
         [

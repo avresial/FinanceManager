@@ -24,7 +24,7 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
     IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
     IUserPlanVerifier userPlanVerifier,
     IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService,
-    IDashboardCacheInvalidator dashboardCacheInvalidator) : ControllerBase
+    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<BondAccountDto>))]

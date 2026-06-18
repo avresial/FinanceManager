@@ -45,7 +45,7 @@ public class CurrencyAccountControllerTests
             _mockAccountEntryRepository.Object,
             _userPlanVerifier.Object,
             _currencyAccountCsvExportService.Object,
-            Mock.Of<IDashboardCacheInvalidator>());
+            Mock.Of<ICacheInvalidator>());
 
         // Mock user identity
         var userClaims = new ClaimsPrincipal(new ClaimsIdentity(

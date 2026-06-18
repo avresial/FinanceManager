@@ -19,7 +19,7 @@ public class BondEntryController(
     IAccountRepository<BondAccount> bondAccountRepository,
     IAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
     IUserPlanVerifier userPlanVerifier,
-    IDashboardCacheInvalidator dashboardCacheInvalidator) : ControllerBase
+    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BondAccountEntryDto))]
