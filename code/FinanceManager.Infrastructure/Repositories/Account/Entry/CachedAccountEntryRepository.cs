@@ -141,7 +141,9 @@ public class CachedAccountEntryRepository<T>(
     {
         var assignments = labelAssignments as IList<(int entryId, int labelId)> ?? labelAssignments.ToList();
         var result = await inner.AddLabels(assignments, cancellationToken);
-        await InvalidateEntries(assignments.Select(a => a.entryId), cancellationToken);
+        // Decouple the post-write cache bust from the caller's token: once the write has committed the
+        // cache must be invalidated even if the request is being cancelled, or stale entries would linger.
+        await InvalidateEntries(assignments.Select(a => a.entryId), CancellationToken.None);
         return result;
     }
 
