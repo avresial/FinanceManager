@@ -91,7 +91,10 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
         }
 
         if (resolvedConflicts.Count != 0)
+        {
             await importService.ApplyResolvedConflicts(resolvedConflicts);
+            await dashboardCacheInvalidator.InvalidateUser(userId);
+        }
 
         if (!jobStore.TryGetStatus(request.JobId, userId, out var status) || status is null)
             return NotFound("Import job not found.");
@@ -99,7 +102,6 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
         await hub.Clients.Group(CurrencyImportHub.GetJobGroupName(request.JobId))
             .SendAsync("ImportStatusUpdated", status);
 
-        await dashboardCacheInvalidator.InvalidateUser(userId);
         return Ok(status);
     }
 

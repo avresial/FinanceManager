@@ -16,6 +16,7 @@ public class CachingDashboardQueryService(
         return cache.GetOrCreateAsync<DashboardOverviewDto?>(
             key,
             ct => new ValueTask<DashboardOverviewDto?>(inner.GetOverview(userId, currencyId, start, end, ct)),
+            options: new HybridCacheEntryOptions { Expiration = TimeSpan.FromMinutes(5) },
             tags: [$"dash:u{userId}"],
             cancellationToken: cancellationToken).AsTask();
     }
