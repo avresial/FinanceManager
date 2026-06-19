@@ -102,7 +102,17 @@ public partial class Dashboard : ComponentBase
 
         // Paint the last-rendered snapshot immediately so the page feels instant on
         // re-navigation. The API call below always runs and reconciles the view.
-        var snapshot = await SnapshotService.GetAsync<DashboardOverviewSnapshot>(snapshotKey);
+        DashboardOverviewSnapshot? snapshot = null;
+        try
+        {
+            snapshot = await SnapshotService.GetAsync<DashboardOverviewSnapshot>(snapshotKey);
+        }
+        catch (Exception snapshotReadEx)
+        {
+            // A storage/interop failure on read must not abort the load — fall through to the fresh fetch.
+            Logger.LogWarning(snapshotReadEx, "Failed to read dashboard snapshot; continuing with fresh fetch.");
+        }
+
         if (snapshot is not null && requestVersion == _loadOverviewVersion)
         {
             _overview = snapshot.ToDto();
@@ -153,7 +163,9 @@ public partial class Dashboard : ComponentBase
             }
         }
 
-        if (freshOverview is not null && changed)
+        // Skip the write when a newer load has superseded this one, so a slower
+        // earlier request can't overwrite the latest request's snapshot.
+        if (requestVersion == _loadOverviewVersion && freshOverview is not null && changed)
         {
             try
             {
