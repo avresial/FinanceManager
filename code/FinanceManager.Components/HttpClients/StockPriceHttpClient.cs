@@ -84,9 +84,9 @@ public class StockPriceHttpClient(HttpClient httpClient, ILogger<StockPriceHttpC
         return result ?? [];
     }
 
-    public async Task<StockDetails?> AddStockDetails(string ticker, string name, string type, string region, string currency, CancellationToken cancellationToken = default)
+    public async Task<StockDetails?> AddStockDetails(string ticker, string name, string type, string region, string currency, string? isin = null, string? alphaVantageSymbol = null, CancellationToken cancellationToken = default)
     {
-        var request = new { Ticker = ticker, Name = name, Type = type, Region = region, Currency = currency };
+        var request = new { Ticker = ticker, Name = name, Type = type, Region = region, Currency = currency, Isin = isin, AlphaVantageSymbol = alphaVantageSymbol };
         var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/StockPrice/add-stock-details", request, cancellationToken);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<StockDetails>(cancellationToken: cancellationToken);
