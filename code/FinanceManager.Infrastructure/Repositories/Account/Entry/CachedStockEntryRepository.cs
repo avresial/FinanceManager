@@ -14,8 +14,9 @@ public class CachedStockEntryRepository(
     IStockAccountEntryRepository<StockAccountEntry> inner,
     IAccountUserResolver userResolver,
     ICacheInvalidator cacheInvalidator,
-    HybridCache cache)
-    : CachedAccountEntryRepository<StockAccountEntry>(inner, userResolver, cacheInvalidator, cache),
+    HybridCache cache,
+    EntryRangeCacheOptions rangeOptions)
+    : CachedAccountEntryRepository<StockAccountEntry>(inner, userResolver, cacheInvalidator, cache, rangeOptions),
       IStockAccountEntryRepository<StockAccountEntry>
 {
     Task<Dictionary<string, StockAccountEntry>> IStockAccountEntryRepository<StockAccountEntry>.GetNextOlder(int accountId, DateTime date) => inner.GetNextOlder(accountId, date);
