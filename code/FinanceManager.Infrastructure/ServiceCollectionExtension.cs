@@ -7,6 +7,7 @@ using FinanceManager.Application.Labels.Suggestions;
 using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Domain.Administration.Logging;
 using FinanceManager.Domain.Administration.Monitoring;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
@@ -38,6 +39,7 @@ using FinanceManager.Infrastructure.Services.ExternalServices;
 using FinanceManager.Infrastructure.Services.Stocks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -80,10 +82,6 @@ public static class ServiceCollectionExtension
                 .AddScoped<IRefreshTokenRepository, RefreshTokenRepository>()
                 .AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>()
                 .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()
-                .AddScoped<IAccountEntryRepository<CurrencyAccountEntry>, CurrencyEntryRepository>()
-                .AddScoped<IAccountEntryRepository<BondAccountEntry>, BondEntryRepository>()
-                .AddScoped<IBondAccountEntryRepository<BondAccountEntry>, BondEntryRepository>()
-                .AddScoped<IStockAccountEntryRepository<StockAccountEntry>, StockEntryRepository>()
                 .AddScoped<IAccountRepository<StockAccount>, StockAccountRepository>()
                 .AddScoped<IAccountRepository<BondAccount>, BondAccountRepository>()
                 .AddScoped<ICurrencyAccountRepository<CurrencyAccount>, CurrencyAccountRepository>()
@@ -105,7 +103,44 @@ public static class ServiceCollectionExtension
                 .AddHostedService<DatabaseInitializer>()
                 ;
 
+        AddCachedEntryRepositories(services);
+
         return services;
+    }
+
+    // Account entry repositories are registered as inner concrete services wrapped by HybridCache decorators
+    // (CachedAccountEntryRepository<T>) that cache the cheap point-reads and bust the owner's cache on every
+    // write. The owner resolver translates accountId → userId so the decorators can build the per-user tag.
+    // See issue #455.
+    private static void AddCachedEntryRepositories(IServiceCollection services)
+    {
+        services.AddScoped<IAccountUserResolver, AccountUserResolver>();
+
+        services.AddScoped<CurrencyEntryRepository>();
+        services.AddScoped<IAccountEntryRepository<CurrencyAccountEntry>>(sp =>
+            new CachedAccountEntryRepository<CurrencyAccountEntry>(
+                sp.GetRequiredService<CurrencyEntryRepository>(),
+                sp.GetRequiredService<IAccountUserResolver>(),
+                sp.GetRequiredService<ICacheInvalidator>(),
+                sp.GetRequiredService<HybridCache>()));
+
+        services.AddScoped<StockEntryRepository>();
+        services.AddScoped<IStockAccountEntryRepository<StockAccountEntry>>(sp =>
+            new CachedStockEntryRepository(
+                sp.GetRequiredService<StockEntryRepository>(),
+                sp.GetRequiredService<IAccountUserResolver>(),
+                sp.GetRequiredService<ICacheInvalidator>(),
+                sp.GetRequiredService<HybridCache>()));
+
+        services.AddScoped<BondEntryRepository>();
+        services.AddScoped<CachedBondEntryRepository>(sp =>
+            new CachedBondEntryRepository(
+                sp.GetRequiredService<BondEntryRepository>(),
+                sp.GetRequiredService<IAccountUserResolver>(),
+                sp.GetRequiredService<ICacheInvalidator>(),
+                sp.GetRequiredService<HybridCache>()));
+        services.AddScoped<IBondAccountEntryRepository<BondAccountEntry>>(sp => sp.GetRequiredService<CachedBondEntryRepository>());
+        services.AddScoped<IAccountEntryRepository<BondAccountEntry>>(sp => sp.GetRequiredService<CachedBondEntryRepository>());
     }
 
     public static IServiceCollection AddDatabase(this IServiceCollection services, IConfigurationManager configuration)
