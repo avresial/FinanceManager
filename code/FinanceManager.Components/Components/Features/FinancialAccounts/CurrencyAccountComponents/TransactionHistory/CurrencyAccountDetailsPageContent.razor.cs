@@ -2,6 +2,7 @@ using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Components.Features.FinancialAccounts.Shared;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Models;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
@@ -12,6 +13,7 @@ using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
+using System.Text.Json;
 
 namespace FinanceManager.Components.Components.Features.FinancialAccounts.CurrencyAccountComponents.TransactionHistory;
 
@@ -58,6 +60,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
+    [Inject] public required ISnapshotService SnapshotService { get; set; }
     [Inject] public required ILogger<CurrencyAccountDetailsPageContent> Logger { get; set; }
     [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
 
@@ -176,15 +179,22 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
 
             SetDateRangeForSelection();
 
+            // Paint the last-rendered entries instantly, then reconcile against a fresh fetch.
+            var previousSnapshot = await PaintSnapshotIfAvailable();
+
             var loadTask = UpdateEntries(initialLoad: true);
-            var delayTask = Task.Delay(1000);
-            var completedTask = await Task.WhenAny(loadTask, delayTask);
-            if (completedTask == delayTask)
+            if (previousSnapshot is null)
             {
-                IsLoading = true;
-                StateHasChanged();
-                await loadTask;
+                var delayTask = Task.Delay(1000);
+                if (await Task.WhenAny(loadTask, delayTask) == delayTask)
+                {
+                    IsLoading = true;
+                    StateHasChanged();
+                }
             }
+            await loadTask;
+            await SaveSnapshotIfChanged(previousSnapshot);
+
             AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
         }
         catch (Exception ex)
@@ -419,4 +429,62 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         _dateStart = oldestFetchedEntryDate.Value;
         _customDateRange = new DateRange(_dateStart, _dateEnd);
     }
+
+    // Per user + account, with no date component, so a single snapshot per account is overwritten each save.
+    private string BuildSnapshotKey(int userId) => $"account-details:{userId}:{AccountId}";
+
+    // Reads the persisted snapshot and paints its entries so the page feels instant on
+    // re-navigation. Chart data is not snapshotted; UpdateInfo queues a fresh API load.
+    private async Task<AccountDetailsSnapshot<CurrencyAccountEntry>?> PaintSnapshotIfAvailable()
+    {
+        if (_user is null) return null;
+
+        AccountDetailsSnapshot<CurrencyAccountEntry>? snapshot = null;
+        try
+        {
+            snapshot = await SnapshotService.GetAsync<AccountDetailsSnapshot<CurrencyAccountEntry>>(BuildSnapshotKey(_user.UserId));
+        }
+        catch (Exception ex)
+        {
+            // A storage/interop failure on read must not abort the load — fall through to the fresh fetch.
+            Logger.LogWarning(ex, "Failed to read account details snapshot; continuing with fresh fetch.");
+        }
+
+        if (snapshot is null || snapshot.AccountId != AccountId) return null;
+
+        Account = new CurrencyAccount(snapshot.UserId, snapshot.AccountId, snapshot.Name, snapshot.Entries, snapshot.AccountType);
+        await UpdateInfo();
+        IsLoading = false;
+        StateHasChanged();
+        return snapshot;
+    }
+
+    // Persists the freshly loaded entries, skipping the write when they match the snapshot we already painted.
+    private async Task SaveSnapshotIfChanged(AccountDetailsSnapshot<CurrencyAccountEntry>? previous)
+    {
+        if (_user is null || Account is null) return;
+
+        if (previous is not null && EntriesMatch(Account.Entries, previous.Entries))
+            return;
+
+        var snapshot = new AccountDetailsSnapshot<CurrencyAccountEntry>
+        {
+            UserId = _user.UserId,
+            AccountId = AccountId,
+            Name = Account.Name,
+            AccountType = Account.AccountType,
+            Entries = Account.Entries,
+        };
+        try
+        {
+            await SnapshotService.SetAsync(BuildSnapshotKey(_user.UserId), snapshot);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Account details loaded but snapshot save failed.");
+        }
+    }
+
+    private static bool EntriesMatch(List<CurrencyAccountEntry> fresh, List<CurrencyAccountEntry> snapshot)
+        => JsonSerializer.Serialize(fresh) == JsonSerializer.Serialize(snapshot);
 }
