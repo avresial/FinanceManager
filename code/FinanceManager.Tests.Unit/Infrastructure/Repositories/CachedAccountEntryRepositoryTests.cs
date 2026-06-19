@@ -37,7 +37,7 @@ public class CachedAccountEntryRepositoryTests
         IAccountEntryRepository<CurrencyAccountEntry> inner,
         IAccountUserResolver resolver,
         ICacheInvalidator invalidator,
-        HybridCache cache) => new(inner, resolver, invalidator, cache);
+        HybridCache cache) => new(inner, resolver, invalidator, cache, new EntryRangeCacheOptions());
 
     // -------------------------------------------------------------------------
     // Cache hits avoid the inner repository call

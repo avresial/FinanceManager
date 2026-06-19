@@ -14,8 +14,9 @@ public class CachedBondEntryRepository(
     IBondAccountEntryRepository<BondAccountEntry> inner,
     IAccountUserResolver userResolver,
     ICacheInvalidator cacheInvalidator,
-    HybridCache cache)
-    : CachedAccountEntryRepository<BondAccountEntry>(inner, userResolver, cacheInvalidator, cache),
+    HybridCache cache,
+    EntryRangeCacheOptions rangeOptions)
+    : CachedAccountEntryRepository<BondAccountEntry>(inner, userResolver, cacheInvalidator, cache, rangeOptions),
       IBondAccountEntryRepository<BondAccountEntry>
 {
     Task<Dictionary<int, BondAccountEntry>> IBondAccountEntryRepository<BondAccountEntry>.GetNextOlder(int accountId, DateTime date) => inner.GetNextOlder(accountId, date);

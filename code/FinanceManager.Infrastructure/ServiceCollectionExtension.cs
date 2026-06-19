@@ -109,11 +109,12 @@ public static class ServiceCollectionExtension
     }
 
     // Account entry repositories are registered as inner concrete services wrapped by HybridCache decorators
-    // (CachedAccountEntryRepository<T>) that cache the cheap point-reads and bust the owner's cache on every
-    // write. The owner resolver translates accountId → userId so the decorators can build the per-user tag.
-    // See issue #455.
+    // (CachedAccountEntryRepository<T>) that cache point-reads and month-bucket range reads, and bust the
+    // owner's cache on every write. The owner resolver translates accountId → userId for per-user tags.
+    // See issues #455 (point-read cache) and #456 (range/bucket cache).
     private static void AddCachedEntryRepositories(IServiceCollection services)
     {
+        services.AddSingleton(new EntryRangeCacheOptions());
         services.AddScoped<IAccountUserResolver, AccountUserResolver>();
 
         services.AddScoped<CurrencyEntryRepository>();
@@ -122,7 +123,8 @@ public static class ServiceCollectionExtension
                 sp.GetRequiredService<CurrencyEntryRepository>(),
                 sp.GetRequiredService<IAccountUserResolver>(),
                 sp.GetRequiredService<ICacheInvalidator>(),
-                sp.GetRequiredService<HybridCache>()));
+                sp.GetRequiredService<HybridCache>(),
+                sp.GetRequiredService<EntryRangeCacheOptions>()));
 
         services.AddScoped<StockEntryRepository>();
         services.AddScoped<IStockAccountEntryRepository<StockAccountEntry>>(sp =>
@@ -130,7 +132,8 @@ public static class ServiceCollectionExtension
                 sp.GetRequiredService<StockEntryRepository>(),
                 sp.GetRequiredService<IAccountUserResolver>(),
                 sp.GetRequiredService<ICacheInvalidator>(),
-                sp.GetRequiredService<HybridCache>()));
+                sp.GetRequiredService<HybridCache>(),
+                sp.GetRequiredService<EntryRangeCacheOptions>()));
 
         services.AddScoped<BondEntryRepository>();
         services.AddScoped<CachedBondEntryRepository>(sp =>
@@ -138,7 +141,8 @@ public static class ServiceCollectionExtension
                 sp.GetRequiredService<BondEntryRepository>(),
                 sp.GetRequiredService<IAccountUserResolver>(),
                 sp.GetRequiredService<ICacheInvalidator>(),
-                sp.GetRequiredService<HybridCache>()));
+                sp.GetRequiredService<HybridCache>(),
+                sp.GetRequiredService<EntryRangeCacheOptions>()));
         services.AddScoped<IBondAccountEntryRepository<BondAccountEntry>>(sp => sp.GetRequiredService<CachedBondEntryRepository>());
         services.AddScoped<IAccountEntryRepository<BondAccountEntry>>(sp => sp.GetRequiredService<CachedBondEntryRepository>());
     }
