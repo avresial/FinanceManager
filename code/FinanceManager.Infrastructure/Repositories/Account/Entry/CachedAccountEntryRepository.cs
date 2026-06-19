@@ -8,7 +8,7 @@ namespace FinanceManager.Infrastructure.Repositories.Account.Entry;
 /// <summary>
 /// Caches the cheap, high-frequency point-reads of an <see cref="IAccountEntryRepository{T}"/>
 /// (<see cref="GetYoungest"/>, <see cref="GetOldest"/>, <see cref="GetCount"/>,
-/// <see cref="GetPostingDates"/>), keyed per account and tagged per owning user (<c>acc:u{userId}</c>).
+/// <see cref="GetPostingDates"/>), keyed per account and tagged per owning user (<c>global:u{userId}</c>).
 /// Every mutating method busts the owner's cache through <see cref="ICacheInvalidator"/>, which clears both
 /// the entry tag and the derived dashboard tag (<c>dash:u{userId}</c>). Because a single write recalculates
 /// the running balance of every entry from the changed date forward, coarse per-user invalidation is
@@ -149,8 +149,8 @@ public class CachedAccountEntryRepository<T>(
 
     // ----- Helpers -----
 
-    private static string Key(int userId, int accountId, string read) => $"acc:u{userId}:a{accountId}:{read}";
-    private static string Tag(int userId) => $"acc:u{userId}";
+    private static string Key(int userId, int accountId, string read) => $"global:u{userId}:a{accountId}:{read}";
+    private static string Tag(int userId) => $"global:u{userId}";
 
     private async Task InvalidateAccounts(IEnumerable<int> accountIds, CancellationToken cancellationToken = default)
     {

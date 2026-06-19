@@ -229,7 +229,7 @@ public class CachedAccountEntryRepositoryTests
 
         var before = await sut.GetYoungest(_accountId);   // miss → 100, cached
         await sut.GetYoungest(_accountId);                // hit
-        await sut.Update(Entry(1, 175m));                // busts acc:u{_userId}
+        await sut.Update(Entry(1, 175m));                // busts global:u{_userId}
         var after = await sut.GetYoungest(_accountId);    // miss again → 175
 
         Assert.Equal(100m, before!.Value);
