@@ -116,20 +116,26 @@ public class CachedAccountEntryRepository<T>(
     {
         ArgumentOutOfRangeException.ThrowIfNegative(minimumEntryCount);
 
-        if (minimumEntryCount == 0)
-            return (await Get(accountId, startDate, endDate).ToListAsync(), startDate);
+        var rangeEntries = await Get(accountId, startDate, endDate).ToListAsync();
+        if (minimumEntryCount == 0 || rangeEntries.Count >= minimumEntryCount)
+            return (rangeEntries, startDate);
 
         // Reuses the cached GetPostingDates from the point-read cache (#455) to resolve the
         // effective window without a round-trip, then fetches entries via the range bucket cache.
+        // Sort newest-first so [^1] is the oldest and candidateDates[n-1] is the Nth newest.
         var candidateDates = (await GetPostingDates(accountId))
             .Where(date => date <= endDate)
+            .OrderByDescending(date => date)
             .ToList();
 
         if (candidateDates.Count <= minimumEntryCount)
         {
             var oldestDate = candidateDates.Count != 0 && candidateDates[^1] < startDate
                 ? candidateDates[^1] : startDate;
-            return (await Get(accountId, oldestDate, endDate).ToListAsync(), oldestDate);
+            var expandedEntries = oldestDate == startDate
+                ? rangeEntries
+                : await Get(accountId, oldestDate, endDate).ToListAsync();
+            return (expandedEntries, oldestDate);
         }
 
         var nthNewestDate = candidateDates[minimumEntryCount - 1];

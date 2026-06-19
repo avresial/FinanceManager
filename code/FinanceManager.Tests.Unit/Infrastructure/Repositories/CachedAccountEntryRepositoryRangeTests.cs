@@ -17,13 +17,13 @@ namespace FinanceManager.Tests.Unit.Infrastructure.Repositories;
 [Trait("Category", "Unit")]
 public class CachedAccountEntryRepositoryRangeTests
 {
-    private const int AccountId = 7;
-    private const int UserId = 42;
+    private const int _accountId = 7;
+    private const int _userId = 42;
 
     // Fixed months used in bucket-boundary tests; stay well inside the 12-month horizon.
-    private static readonly DateTime Jan = new(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-    private static readonly DateTime Feb = new(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc);
-    private static readonly DateTime Mar = new(2025, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime _jan = new(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime _feb = new(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime _mar = new(2025, 3, 1, 0, 0, 0, DateTimeKind.Utc);
 
     private static HybridCache BuildCache()
     {
@@ -40,18 +40,18 @@ public class CachedAccountEntryRepositoryRangeTests
     }
 
     private static CurrencyAccountEntry Entry(int entryId, DateTime date, decimal value = 100m) =>
-        new(AccountId, entryId, date, value, value);
+        new(_accountId, entryId, date, value, value);
 
     // Long TTLs prevent expiry during tests; a large horizon (120 months) keeps the fixed 2025 test
     // dates always inside the bucket-cache path regardless of when the tests are run.
-    private static readonly EntryRangeCacheOptions DefaultOptions = new()
+    private static readonly EntryRangeCacheOptions _defaultOptions = new()
     {
         HorizonMonths = 120,
         OpenMonthTtl = TimeSpan.FromHours(1),
         ElapsedMonthTtl = TimeSpan.FromHours(2)
     };
 
-    private static readonly EntryRangeCacheOptions TwelveMonthOptions = new()
+    private static readonly EntryRangeCacheOptions _twelveMonthOptions = new()
     {
         HorizonMonths = 12,
         OpenMonthTtl = TimeSpan.FromHours(1),
@@ -65,10 +65,10 @@ public class CachedAccountEntryRepositoryRangeTests
         IAccountUserResolver? resolver = null,
         ICacheInvalidator? invalidator = null) =>
         new(inner,
-            resolver ?? ResolverFor(AccountId, UserId),
+            resolver ?? ResolverFor(_accountId, _userId),
             invalidator ?? Mock.Of<ICacheInvalidator>(),
             cache,
-            options ?? DefaultOptions);
+            options ?? _defaultOptions);
 
     // ── MonthBucket math ─────────────────────────────────────────────────────────
 
@@ -84,7 +84,7 @@ public class CachedAccountEntryRepositoryRangeTests
     {
         var jan = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var result = MonthBucket.MonthEndInclusive(jan);
-        // Jan 31 23:59:59.9999999 UTC
+        // _jan 31 23:59:59.9999999 UTC
         var expected = new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc).AddTicks(-1);
         Assert.Equal(expected, result);
     }
@@ -97,14 +97,14 @@ public class CachedAccountEntryRepositoryRangeTests
             new DateTime(2025, 3, 20, 0, 0, 0, DateTimeKind.Utc)).ToList();
 
         Assert.Single(months);
-        Assert.Equal(Mar, months[0]);
+        Assert.Equal(_mar, months[0]);
     }
 
     [Fact]
     public void MonthBucket_TouchedMonths_ReturnsAllMonthsInRange()
     {
-        var months = MonthBucket.TouchedMonths(Jan, Mar).ToList();
-        Assert.Equal([Jan, Feb, Mar], months);
+        var months = MonthBucket.TouchedMonths(_jan, _mar).ToList();
+        Assert.Equal([_jan, _feb, _mar], months);
     }
 
     [Fact]
@@ -120,38 +120,38 @@ public class CachedAccountEntryRepositoryRangeTests
     [Fact]
     public async Task Get_PartialMonthRequest_InflatesInnerCallToFullMonth()
     {
-        var jan10 = Jan.AddDays(9);
-        var jan20 = Jan.AddDays(19);
-        var janEnd = MonthBucket.MonthEndInclusive(Jan);
+        var jan10 = _jan.AddDays(9);
+        var jan20 = _jan.AddDays(19);
+        var janEnd = MonthBucket.MonthEndInclusive(_jan);
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(AccountId, Jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
              .Returns(new[] { Entry(2, jan20), Entry(1, jan10) }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache());
         var ct = TestContext.Current.CancellationToken;
 
-        var result = await sut.Get(AccountId, jan10, jan20).ToListAsync(ct);
+        var result = await sut.Get(_accountId, jan10, jan20).ToListAsync(ct);
 
         // Inner was called with FULL month bounds, not the requested slice.
-        inner.Verify(r => r.Get(AccountId, Jan, janEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
         Assert.Equal(2, result.Count);
     }
 
     [Fact]
     public async Task Get_SecondPartialMonthRequest_HitsCache_InnerCalledOnce()
     {
-        // First call Jan 10–20 seeds the whole January bucket.
-        // Second call Jan 5–25 is a full cache hit — inner NOT called again.
-        var jan5 = Jan.AddDays(4);
-        var jan10 = Jan.AddDays(9);
-        var jan20 = Jan.AddDays(19);
-        var jan25 = Jan.AddDays(24);
-        var janEnd = MonthBucket.MonthEndInclusive(Jan);
+        // First call _jan 10–20 seeds the whole _january bucket.
+        // Second call _jan 5–25 is a full cache hit — inner NOT called again.
+        var jan5 = _jan.AddDays(4);
+        var jan10 = _jan.AddDays(9);
+        var jan20 = _jan.AddDays(19);
+        var jan25 = _jan.AddDays(24);
+        var janEnd = MonthBucket.MonthEndInclusive(_jan);
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(AccountId, Jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
              .Returns(new[]
              {
                  Entry(4, jan25), Entry(2, jan20), Entry(1, jan10), Entry(3, jan5)
@@ -160,10 +160,10 @@ public class CachedAccountEntryRepositoryRangeTests
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache);
 
-        var first = await sut.Get(AccountId, jan10, jan20).ToListAsync(ct);
-        var second = await sut.Get(AccountId, jan5, jan25).ToListAsync(ct);
+        var first = await sut.Get(_accountId, jan10, jan20).ToListAsync(ct);
+        var second = await sut.Get(_accountId, jan5, jan25).ToListAsync(ct);
 
-        inner.Verify(r => r.Get(AccountId, Jan, janEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
         Assert.Equal(2, first.Count);
         Assert.Equal(4, second.Count);
     }
@@ -173,23 +173,23 @@ public class CachedAccountEntryRepositoryRangeTests
     [Fact]
     public async Task Get_SpanningTwoMonths_ComposesAndSortsNewestFirst()
     {
-        var jan15 = Jan.AddDays(14);
-        var feb10 = Feb.AddDays(9);
-        var janEnd = MonthBucket.MonthEndInclusive(Jan);
-        var febEnd = MonthBucket.MonthEndInclusive(Feb);
+        var jan15 = _jan.AddDays(14);
+        var feb10 = _feb.AddDays(9);
+        var janEnd = MonthBucket.MonthEndInclusive(_jan);
+        var febEnd = MonthBucket.MonthEndInclusive(_feb);
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(AccountId, Jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
              .Returns(new[] { Entry(1, jan15) }.ToAsyncEnumerable());
-        inner.Setup(r => r.Get(AccountId, Feb, febEnd))
+        inner.Setup(r => r.Get(_accountId, _feb, febEnd))
              .Returns(new[] { Entry(2, feb10) }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache());
-        var result = await sut.Get(AccountId, jan15, feb10).ToListAsync(ct);
+        var result = await sut.Get(_accountId, jan15, feb10).ToListAsync(ct);
 
         Assert.Equal(2, result.Count);
-        // Newest-first: Feb entry (id=2) before Jan entry (id=1)
+        // Newest-first: _feb entry (id=2) before _jan entry (id=1)
         Assert.Equal(2, result[0].EntryId);
         Assert.Equal(1, result[1].EntryId);
     }
@@ -197,31 +197,31 @@ public class CachedAccountEntryRepositoryRangeTests
     [Fact]
     public async Task Get_OverlappingRequests_SecondFetchOnlyMissingMonth()
     {
-        // First request seeds Jan + Feb; second request needs Feb + Mar → only March hits DB.
-        var jan15 = Jan.AddDays(14);
-        var mar20 = Mar.AddDays(19);
-        var janEnd = MonthBucket.MonthEndInclusive(Jan);
-        var febEnd = MonthBucket.MonthEndInclusive(Feb);
-        var marEnd = MonthBucket.MonthEndInclusive(Mar);
+        // First request seeds _jan + _feb; second request needs _feb + _mar → only _march hits DB.
+        var jan15 = _jan.AddDays(14);
+        var mar20 = _mar.AddDays(19);
+        var janEnd = MonthBucket.MonthEndInclusive(_jan);
+        var febEnd = MonthBucket.MonthEndInclusive(_feb);
+        var marEnd = MonthBucket.MonthEndInclusive(_mar);
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(AccountId, Jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
              .Returns(new[] { Entry(1, jan15) }.ToAsyncEnumerable());
-        inner.Setup(r => r.Get(AccountId, Feb, febEnd))
-             .Returns(new[] { Entry(2, Feb.AddDays(10)) }.ToAsyncEnumerable());
-        inner.Setup(r => r.Get(AccountId, Mar, marEnd))
-             .Returns(new[] { Entry(3, Mar.AddDays(5)) }.ToAsyncEnumerable());
+        inner.Setup(r => r.Get(_accountId, _feb, febEnd))
+             .Returns(new[] { Entry(2, _feb.AddDays(10)) }.ToAsyncEnumerable());
+        inner.Setup(r => r.Get(_accountId, _mar, marEnd))
+             .Returns(new[] { Entry(3, _mar.AddDays(5)) }.ToAsyncEnumerable());
 
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache);
 
-        await sut.Get(AccountId, jan15, Feb.AddDays(28)).ToListAsync(ct);   // seeds Jan + Feb
-        var result = await sut.Get(AccountId, Feb, mar20).ToListAsync(ct);  // Feb=hit, Mar=miss
+        await sut.Get(_accountId, jan15, _feb.AddDays(28)).ToListAsync(ct);   // seeds _jan + _feb
+        var result = await sut.Get(_accountId, _feb, mar20).ToListAsync(ct);  // _feb=hit, _mar=miss
 
-        inner.Verify(r => r.Get(AccountId, Jan, janEnd), Times.Once);
-        inner.Verify(r => r.Get(AccountId, Feb, febEnd), Times.Once);
-        inner.Verify(r => r.Get(AccountId, Mar, marEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _feb, febEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _mar, marEnd), Times.Once);
         Assert.Equal(2, result.Count);
     }
 
@@ -230,20 +230,20 @@ public class CachedAccountEntryRepositoryRangeTests
     [Fact]
     public async Task Get_EmptyMonth_CachedAsEmpty_InnerNotCalledAgain()
     {
-        var janEnd = MonthBucket.MonthEndInclusive(Jan);
+        var janEnd = MonthBucket.MonthEndInclusive(_jan);
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(AccountId, Jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
              .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
 
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache);
 
-        var first = await sut.Get(AccountId, Jan, janEnd).ToListAsync(ct);
-        var second = await sut.Get(AccountId, Jan, janEnd).ToListAsync(ct);
+        var first = await sut.Get(_accountId, _jan, janEnd).ToListAsync(ct);
+        var second = await sut.Get(_accountId, _jan, janEnd).ToListAsync(ct);
 
-        inner.Verify(r => r.Get(AccountId, Jan, janEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
         Assert.Empty(first);
         Assert.Empty(second);
     }
@@ -253,21 +253,21 @@ public class CachedAccountEntryRepositoryRangeTests
     [Fact]
     public async Task Get_EntryOnFirstOfMonth_NotDuplicated_WhenBothMonthsQueried()
     {
-        // An entry dated Feb 1 lives in the February bucket.
-        // Requesting Jan through Feb must return it exactly once.
-        var feb1Entry = Entry(10, Feb);
-        var janEnd = MonthBucket.MonthEndInclusive(Jan);
-        var febEnd = MonthBucket.MonthEndInclusive(Feb);
+        // An entry dated _feb 1 lives in the _february bucket.
+        // Requesting _jan through _feb must return it exactly once.
+        var feb1Entry = Entry(10, _feb);
+        var janEnd = MonthBucket.MonthEndInclusive(_jan);
+        var febEnd = MonthBucket.MonthEndInclusive(_feb);
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(AccountId, Jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
              .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
-        inner.Setup(r => r.Get(AccountId, Feb, febEnd))
+        inner.Setup(r => r.Get(_accountId, _feb, febEnd))
              .Returns(new[] { feb1Entry }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache());
-        var result = await sut.Get(AccountId, Jan, Feb.AddDays(27)).ToListAsync(ct);
+        var result = await sut.Get(_accountId, _jan, _feb.AddDays(27)).ToListAsync(ct);
 
         Assert.Single(result);
         Assert.Equal(10, result[0].EntryId);
@@ -277,15 +277,15 @@ public class CachedAccountEntryRepositoryRangeTests
     public async Task Get_EntryOnLastDayOfMonth_IncludedInRequest()
     {
         var jan31 = new DateTime(2025, 1, 31, 0, 0, 0, DateTimeKind.Utc);
-        var janEnd = MonthBucket.MonthEndInclusive(Jan);
+        var janEnd = MonthBucket.MonthEndInclusive(_jan);
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(AccountId, Jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
              .Returns(new[] { Entry(5, jan31) }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache());
-        var result = await sut.Get(AccountId, Jan, janEnd).ToListAsync(ct);
+        var result = await sut.Get(_accountId, _jan, janEnd).ToListAsync(ct);
 
         Assert.Single(result);
         Assert.Equal(5, result[0].EntryId);
@@ -308,17 +308,17 @@ public class CachedAccountEntryRepositoryRangeTests
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(AccountId, oldDate, olderEnd))
+        inner.Setup(r => r.Get(_accountId, oldDate, olderEnd))
              .Returns(new[] { Entry(1, oldDate) }.ToAsyncEnumerable());
-        inner.Setup(r => r.Get(AccountId, horizon, horizonMonthEnd))
+        inner.Setup(r => r.Get(_accountId, horizon, horizonMonthEnd))
              .Returns(new[] { Entry(2, recentDate) }.ToAsyncEnumerable());
 
-        var sut = CreateSut(inner.Object, BuildCache(), options: TwelveMonthOptions);
-        var result = await sut.Get(AccountId, oldDate, recentDate).ToListAsync(ct);
+        var sut = CreateSut(inner.Object, BuildCache(), options: _twelveMonthOptions);
+        var result = await sut.Get(_accountId, oldDate, recentDate).ToListAsync(ct);
 
         // Older portion passed straight through; recent portion inflated to full month.
-        inner.Verify(r => r.Get(AccountId, oldDate, olderEnd), Times.Once);
-        inner.Verify(r => r.Get(AccountId, horizon, horizonMonthEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, oldDate, olderEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, horizon, horizonMonthEnd), Times.Once);
         Assert.Equal(2, result.Count);
         // Newest-first: recent (id=2) before old (id=1).
         Assert.Equal(2, result[0].EntryId);
@@ -335,17 +335,17 @@ public class CachedAccountEntryRepositoryRangeTests
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(AccountId, oldStart, oldEnd))
+        inner.Setup(r => r.Get(_accountId, oldStart, oldEnd))
              .Returns(new[] { Entry(1, oldStart) }.ToAsyncEnumerable());
 
         var cache = BuildCache();
-        var sut = CreateSut(inner.Object, cache, options: TwelveMonthOptions);
+        var sut = CreateSut(inner.Object, cache, options: _twelveMonthOptions);
 
-        await sut.Get(AccountId, oldStart, oldEnd).ToListAsync(ct);
-        await sut.Get(AccountId, oldStart, oldEnd).ToListAsync(ct);
+        await sut.Get(_accountId, oldStart, oldEnd).ToListAsync(ct);
+        await sut.Get(_accountId, oldStart, oldEnd).ToListAsync(ct);
 
         // Both calls pass through — no bucket caching for old data.
-        inner.Verify(r => r.Get(AccountId, oldStart, oldEnd), Times.Exactly(2));
+        inner.Verify(r => r.Get(_accountId, oldStart, oldEnd), Times.Exactly(2));
     }
 
     // ── GetEntriesWithMinimumCount routes through the cached Get ─────────────────
@@ -353,49 +353,49 @@ public class CachedAccountEntryRepositoryRangeTests
     [Fact]
     public async Task GetEntriesWithMinimumCount_ZeroMinimum_UsesRangeBucketCache()
     {
-        var janEnd = MonthBucket.MonthEndInclusive(Jan);
+        var janEnd = MonthBucket.MonthEndInclusive(_jan);
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(AccountId, Jan, janEnd))
-             .Returns(new[] { Entry(1, Jan.AddDays(10)) }.ToAsyncEnumerable());
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
+             .Returns(new[] { Entry(1, _jan.AddDays(10)) }.ToAsyncEnumerable());
 
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache);
 
-        var (entries, effectiveStart) = await sut.GetEntriesWithMinimumCount(AccountId, Jan, janEnd);
+        var (entries, effectiveStart) = await sut.GetEntriesWithMinimumCount(_accountId, _jan, janEnd);
 
         Assert.Single(entries);
-        Assert.Equal(Jan, effectiveStart);
+        Assert.Equal(_jan, effectiveStart);
 
         // Second call: full cache hit.
-        await sut.GetEntriesWithMinimumCount(AccountId, Jan, janEnd);
-        inner.Verify(r => r.Get(AccountId, Jan, janEnd), Times.Once);
+        await sut.GetEntriesWithMinimumCount(_accountId, _jan, janEnd);
+        inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
     }
 
     [Fact]
     public async Task GetEntriesWithMinimumCount_UsesCachedPostingDatesAndBucketedGet()
     {
-        var jan5 = Jan.AddDays(4);
-        var jan10 = Jan.AddDays(9);
-        var jan20 = Jan.AddDays(19);
-        var janEnd = MonthBucket.MonthEndInclusive(Jan);
+        var jan5 = _jan.AddDays(4);
+        var jan10 = _jan.AddDays(9);
+        var jan20 = _jan.AddDays(19);
+        var janEnd = MonthBucket.MonthEndInclusive(_jan);
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.GetPostingDates(AccountId))
+        inner.Setup(r => r.GetPostingDates(_accountId))
              .ReturnsAsync([jan20, jan10, jan5]);
-        inner.Setup(r => r.Get(AccountId, Jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
              .Returns(new[] { Entry(3, jan20), Entry(2, jan10), Entry(1, jan5) }.ToAsyncEnumerable());
 
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache);
 
         var (entries, effectiveStart) = await sut.GetEntriesWithMinimumCount(
-            AccountId, jan5, janEnd, minimumEntryCount: 2);
+            _accountId, jan5, janEnd, minimumEntryCount: 2);
 
         Assert.Equal(3, entries.Count);
         Assert.Equal(jan5, effectiveStart);
         // Inner Get was inflated to full month.
-        inner.Verify(r => r.Get(AccountId, Jan, janEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
         // Inner GetEntriesWithMinimumCount must NOT be called (decorator handles it).
         inner.Verify(r => r.GetEntriesWithMinimumCount(
             It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>()), Times.Never);
@@ -406,27 +406,27 @@ public class CachedAccountEntryRepositoryRangeTests
     [Fact]
     public async Task GetRange_MultiAccount_ComposesBothAccountsFromBuckets()
     {
-        const int AccountId2 = 8;
-        const int UserId2 = 43;
+        const int _accountId2 = 8;
+        const int _userId2 = 43;
 
-        var jan10 = Jan.AddDays(9);
-        var jan20 = Jan.AddDays(19);
-        var janEnd = MonthBucket.MonthEndInclusive(Jan);
+        var jan10 = _jan.AddDays(9);
+        var jan20 = _jan.AddDays(19);
+        var janEnd = MonthBucket.MonthEndInclusive(_jan);
 
         var resolver = new Mock<IAccountUserResolver>();
-        resolver.Setup(r => r.GetUserId(AccountId, It.IsAny<CancellationToken>())).ReturnsAsync(UserId);
-        resolver.Setup(r => r.GetUserId(AccountId2, It.IsAny<CancellationToken>())).ReturnsAsync(UserId2);
+        resolver.Setup(r => r.GetUserId(_accountId, It.IsAny<CancellationToken>())).ReturnsAsync(_userId);
+        resolver.Setup(r => r.GetUserId(_accountId2, It.IsAny<CancellationToken>())).ReturnsAsync(_userId2);
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(AccountId, Jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
              .Returns(new[] { Entry(1, jan20) }.ToAsyncEnumerable());
-        inner.Setup(r => r.Get(AccountId2, Jan, janEnd))
-             .Returns(new[] { new CurrencyAccountEntry(AccountId2, 2, jan10, 200m, 200m) }.ToAsyncEnumerable());
+        inner.Setup(r => r.Get(_accountId2, _jan, janEnd))
+             .Returns(new[] { new CurrencyAccountEntry(_accountId2, 2, jan10, 200m, 200m) }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache(), resolver: resolver.Object);
 
         var result = await sut.GetRange(
-            [AccountId, AccountId2], Jan, janEnd);
+            [_accountId, _accountId2], _jan, janEnd);
 
         Assert.Equal(2, result.Count);
         // Newest-first across both accounts.
@@ -437,28 +437,28 @@ public class CachedAccountEntryRepositoryRangeTests
     [Fact]
     public async Task GetRange_SecondCall_ServedFromBuckets_InnerNotCalledAgain()
     {
-        const int AccountId2 = 8;
-        const int UserId2 = 43;
-        var janEnd = MonthBucket.MonthEndInclusive(Jan);
+        const int _accountId2 = 8;
+        const int _userId2 = 43;
+        var janEnd = MonthBucket.MonthEndInclusive(_jan);
 
         var resolver = new Mock<IAccountUserResolver>();
-        resolver.Setup(r => r.GetUserId(AccountId, It.IsAny<CancellationToken>())).ReturnsAsync(UserId);
-        resolver.Setup(r => r.GetUserId(AccountId2, It.IsAny<CancellationToken>())).ReturnsAsync(UserId2);
+        resolver.Setup(r => r.GetUserId(_accountId, It.IsAny<CancellationToken>())).ReturnsAsync(_userId);
+        resolver.Setup(r => r.GetUserId(_accountId2, It.IsAny<CancellationToken>())).ReturnsAsync(_userId2);
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(AccountId, Jan, janEnd))
-             .Returns(new[] { Entry(1, Jan.AddDays(5)) }.ToAsyncEnumerable());
-        inner.Setup(r => r.Get(AccountId2, Jan, janEnd))
-             .Returns(new[] { new CurrencyAccountEntry(AccountId2, 2, Jan.AddDays(10), 50m, 50m) }.ToAsyncEnumerable());
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
+             .Returns(new[] { Entry(1, _jan.AddDays(5)) }.ToAsyncEnumerable());
+        inner.Setup(r => r.Get(_accountId2, _jan, janEnd))
+             .Returns(new[] { new CurrencyAccountEntry(_accountId2, 2, _jan.AddDays(10), 50m, 50m) }.ToAsyncEnumerable());
 
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache, resolver: resolver.Object);
 
-        await sut.GetRange([AccountId, AccountId2], Jan, janEnd);
-        await sut.GetRange([AccountId, AccountId2], Jan, janEnd);
+        await sut.GetRange([_accountId, _accountId2], _jan, janEnd);
+        await sut.GetRange([_accountId, _accountId2], _jan, janEnd);
 
-        inner.Verify(r => r.Get(AccountId, Jan, janEnd), Times.Once);
-        inner.Verify(r => r.Get(AccountId2, Jan, janEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId2, _jan, janEnd), Times.Once);
     }
 
     // ── Invalidation busts range buckets ──────────────────────────────────────────
@@ -466,13 +466,13 @@ public class CachedAccountEntryRepositoryRangeTests
     [Fact]
     public async Task Write_BustsBucketedRange_NextReadHitsInnerAgain()
     {
-        var jan5 = Jan.AddDays(4);
-        var jan15 = Jan.AddDays(14);
-        var janEnd = MonthBucket.MonthEndInclusive(Jan);
+        var jan5 = _jan.AddDays(4);
+        var jan15 = _jan.AddDays(14);
+        var janEnd = MonthBucket.MonthEndInclusive(_jan);
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.SetupSequence(r => r.Get(AccountId, Jan, janEnd))
+        inner.SetupSequence(r => r.Get(_accountId, _jan, janEnd))
              .Returns(new[] { Entry(1, jan5, 100m) }.ToAsyncEnumerable())
              .Returns(new[] { Entry(2, jan15, 200m), Entry(1, jan5, 200m) }.ToAsyncEnumerable());
         inner.Setup(r => r.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>())).ReturnsAsync(true);
@@ -480,9 +480,9 @@ public class CachedAccountEntryRepositoryRangeTests
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache, invalidator: new CacheInvalidator(cache));
 
-        var before = await sut.Get(AccountId, Jan, janEnd).ToListAsync(ct); // miss → cached
+        var before = await sut.Get(_accountId, _jan, janEnd).ToListAsync(ct); // miss → cached
         await sut.Add(Entry(2, jan15, 200m));                               // write busts global:u42
-        var after = await sut.Get(AccountId, Jan, janEnd).ToListAsync(ct);  // miss again
+        var after = await sut.Get(_accountId, _jan, janEnd).ToListAsync(ct);  // miss again
 
         Assert.Single(before);
         Assert.Equal(2, after.Count);
@@ -497,15 +497,15 @@ public class CachedAccountEntryRepositoryRangeTests
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(AccountId, Jan, Feb))
-             .Returns(new[] { Entry(1, Jan.AddDays(5)) }.ToAsyncEnumerable());
+        inner.Setup(r => r.Get(_accountId, _jan, _feb))
+             .Returns(new[] { Entry(1, _jan.AddDays(5)) }.ToAsyncEnumerable());
 
-        var sut = CreateSut(inner.Object, BuildCache(), resolver: ResolverFor(AccountId, null));
+        var sut = CreateSut(inner.Object, BuildCache(), resolver: ResolverFor(_accountId, null));
 
-        await sut.Get(AccountId, Jan, Feb).ToListAsync(ct);
-        await sut.Get(AccountId, Jan, Feb).ToListAsync(ct);
+        await sut.Get(_accountId, _jan, _feb).ToListAsync(ct);
+        await sut.Get(_accountId, _jan, _feb).ToListAsync(ct);
 
         // Both calls fall through — no caching without a resolvable userId.
-        inner.Verify(r => r.Get(AccountId, Jan, Feb), Times.Exactly(2));
+        inner.Verify(r => r.Get(_accountId, _jan, _feb), Times.Exactly(2));
     }
 }
