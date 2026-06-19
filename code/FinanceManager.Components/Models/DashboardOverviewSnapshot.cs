@@ -3,12 +3,12 @@ using FinanceManager.Domain.MoneyFlow.Entities;
 
 namespace FinanceManager.Components.Models;
 
-public sealed class DashboardOverviewCacheSnapshot
+/// <summary>
+/// Persisted snapshot of the dashboard overview so the page can paint its last-rendered
+/// state instantly on re-navigation, then reconcile against a fresh API response.
+/// </summary>
+public sealed class DashboardOverviewSnapshot : SnapshotBase
 {
-    public const int CurrentSchemaVersion = 1;
-
-    public int SchemaVersion { get; set; } = CurrentSchemaVersion;
-    public DateTime FetchedAtUtc { get; set; }
     public int UserId { get; set; }
     public int CurrencyId { get; set; }
     public DateTime StartDate { get; set; }
@@ -24,7 +24,7 @@ public sealed class DashboardOverviewCacheSnapshot
     public List<NameValueResult> AssetsPerAccount { get; set; } = [];
     public List<NameValueResult> ExpenseDistribution { get; set; } = [];
 
-    public static DashboardOverviewCacheSnapshot FromDto(DashboardOverviewDto dto) => new()
+    public static DashboardOverviewSnapshot FromDto(DashboardOverviewDto dto) => new()
     {
         FetchedAtUtc = DateTime.UtcNow,
         UserId = dto.UserId,

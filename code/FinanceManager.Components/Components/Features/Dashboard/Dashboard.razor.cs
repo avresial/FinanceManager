@@ -1,6 +1,7 @@
 using FinanceManager.Components.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Models;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
@@ -8,6 +9,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace FinanceManager.Components.Components.Features.Dashboard;
 
@@ -41,7 +43,7 @@ public partial class Dashboard : ComponentBase
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required DashboardHttpClient DashboardHttpClient { get; set; }
-    [Inject] public required DashboardOverviewCacheService DashboardOverviewCacheService { get; set; }
+    [Inject] public required ISnapshotService SnapshotService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<Dashboard> Logger { get; set; }
@@ -96,15 +98,16 @@ public partial class Dashboard : ComponentBase
         }
 
         var currency = SettingsService.GetCurrency();
+        var snapshotKey = BuildSnapshotKey(user.UserId);
 
-        // Render cached data immediately so the page feels instant on re-navigation.
-        // The API call below always runs and updates the view when fresh data arrives.
-        var cached = await DashboardOverviewCacheService.GetCachedAsync(user.UserId, currency.Id, startDate, endDate);
-        if (cached is not null && requestVersion == _loadOverviewVersion)
+        // Paint the last-rendered snapshot immediately so the page feels instant on
+        // re-navigation. The API call below always runs and reconciles the view.
+        var snapshot = await SnapshotService.GetAsync<DashboardOverviewSnapshot>(snapshotKey);
+        if (snapshot is not null && requestVersion == _loadOverviewVersion)
         {
-            _overview = cached.ToDto();
-            _overviewStart = startDate;
-            _overviewEnd = endDate;
+            _overview = snapshot.ToDto();
+            _overviewStart = snapshot.StartDate;
+            _overviewEnd = snapshot.EndDate;
             _isLoading = false;
             StateHasChanged();
         }
@@ -115,11 +118,16 @@ public partial class Dashboard : ComponentBase
         }
 
         DashboardOverviewDto? freshOverview = null;
+        var changed = false;
         try
         {
             freshOverview = await DashboardHttpClient.GetOverview(user.UserId, currency.Id, startDate, endDate);
 
-            if (requestVersion == _loadOverviewVersion)
+            // Only repaint and persist when the fresh data actually differs from the
+            // snapshot we already rendered — avoids a redundant flush on every visit.
+            changed = freshOverview is not null && !IsSameAsSnapshot(freshOverview, snapshot);
+
+            if (requestVersion == _loadOverviewVersion && changed)
             {
                 _overview = freshOverview;
                 _overviewStart = startDate;
@@ -128,8 +136,8 @@ public partial class Dashboard : ComponentBase
         }
         catch (Exception ex)
         {
-            // If we already rendered cached data, keep it visible rather than blanking the screen.
-            if (requestVersion == _loadOverviewVersion && cached is null)
+            // If we already rendered a snapshot, keep it visible rather than blanking the screen.
+            if (requestVersion == _loadOverviewVersion && snapshot is null)
             {
                 _overview = null;
                 _hasError = true;
@@ -145,16 +153,28 @@ public partial class Dashboard : ComponentBase
             }
         }
 
-        if (freshOverview is not null)
+        if (freshOverview is not null && changed)
         {
             try
             {
-                await DashboardOverviewCacheService.SaveAsync(freshOverview);
+                await SnapshotService.SetAsync(snapshotKey, DashboardOverviewSnapshot.FromDto(freshOverview));
             }
-            catch (Exception cacheEx)
+            catch (Exception snapshotEx)
             {
-                Logger.LogWarning(cacheEx, "Dashboard overview loaded but caching failed.");
+                Logger.LogWarning(snapshotEx, "Dashboard overview loaded but snapshot save failed.");
             }
         }
+    }
+
+    // Per-user key with no date component, so a single snapshot per user is overwritten each save.
+    private static string BuildSnapshotKey(int userId) => $"dashboard-overview:{userId}";
+
+    private static bool IsSameAsSnapshot(DashboardOverviewDto overview, DashboardOverviewSnapshot? snapshot)
+    {
+        if (snapshot is null)
+            return false;
+
+        // Compare rendered content only; FetchedAtUtc lives on the snapshot, not the DTO.
+        return JsonSerializer.Serialize(overview) == JsonSerializer.Serialize(snapshot.ToDto());
     }
 }
