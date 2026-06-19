@@ -281,7 +281,13 @@ ILogger<StockPriceController> logger) : ControllerBase
 
         var normalizedCurrency = request.Currency.Trim().ToUpperInvariant();
         var currency = await currencyRepository.GetOrAdd(normalizedCurrency, normalizedCurrency, cancellationToken);
-        var isin = await isinResolver.ResolveAsync(request.Ticker.Trim(), ct: cancellationToken);
+
+        // Prefer the pre-resolved ISIN from the search flow; only fall back to resolving the
+        // ticker when one wasn't supplied. This avoids the "Could not resolve ticker to ISIN"
+        // failure for instruments the resolver can't map but the admin already identified.
+        var isin = string.IsNullOrWhiteSpace(request.Isin)
+            ? await isinResolver.ResolveAsync(request.Ticker.Trim(), ct: cancellationToken)
+            : request.Isin.Trim().ToUpperInvariant();
         if (isin is null)
             return BadRequest("Could not resolve ticker to ISIN");
 
@@ -289,6 +295,7 @@ ILogger<StockPriceController> logger) : ControllerBase
         {
             Isin = isin,
             Ticker = request.Ticker.Trim().ToUpperInvariant(),
+            AlphaVantageSymbol = string.IsNullOrWhiteSpace(request.AlphaVantageSymbol) ? null : request.AlphaVantageSymbol.Trim(),
             Name = request.Name.Trim(),
             Type = request.Type.Trim(),
             Region = request.Region.Trim(),

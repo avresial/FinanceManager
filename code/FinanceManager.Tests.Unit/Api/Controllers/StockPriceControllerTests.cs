@@ -273,6 +273,32 @@ public class StockPriceControllerTests
     }
 
     [Fact]
+    public async Task AddStock_UsesSuppliedIsinAndAlphaVantageSymbol_WithoutResolvingTicker()
+    {
+        // Arrange
+        StockDetails? saved = null;
+        _currencyRepository.Setup(repo => repo.GetOrAdd("USD", "USD", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DefaultCurrency.USD);
+        _stockDetailsRepository.Setup(repo => repo.Add(It.IsAny<StockDetails>(), It.IsAny<CancellationToken>()))
+            .Callback<StockDetails, CancellationToken>((d, _) => saved = d)
+            .ReturnsAsync((StockDetails d, CancellationToken _) => d);
+
+        // The resolver would map "AAPL" → "US0378331005"; the supplied ISIN must win instead.
+        var request = new AddStockRequest("AAPL", "Apple", "Equity", "US", "USD",
+            Isin: "JP1234567890", AlphaVantageSymbol: "AAPL.MX");
+
+        // Act
+        var result = await _controller.AddStockDetails(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(saved);
+        Assert.Equal("JP1234567890", saved!.Isin);
+        Assert.Equal("AAPL.MX", saved.AlphaVantageSymbol);
+        Assert.Equal("AAPL", saved.Ticker);
+    }
+
+    [Fact]
     public async Task DeleteStock_ReturnsNoContent_WhenDeleted()
     {
         // Arrange

@@ -1,57 +1,147 @@
 @page "/Admin/AddStock"
+@using FinanceManager.Application.FinancialAccounts.Stock.Resolution
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = "Admin")]
 @layout AdminLayout
 
 <PageTitle>Add stock - Admin</PageTitle>
 
-<MudForm @ref="_form" @bind-IsValid="_isValid">
-    <MudGrid Spacing="4">
+<MudGrid Spacing="4">
+    <MudItem xs="12">
+        <MudText Typo="Typo.h4">Add stock</MudText>
+    </MudItem>
+
+    @if (_phase == Phase.Search)
+    {
         <MudItem xs="12">
-            <MudText Typo="Typo.h4">Add stock @_ticker</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Default">
+                Type a ticker or ISIN and we'll look up the rest. You can review and edit before saving.
+            </MudText>
         </MudItem>
 
-        <MudItem xs="12" sm="6">
-            <MudTextField T="string" Label="Ticker" @bind-Value="_ticker" Required="true"
-                          RequiredError="Ticker is required" />
-        </MudItem>
-
-        <MudItem xs="12" sm="6">
-            <MudTextField T="string" Label="Name" @bind-Value="_name" Required="true"
-                          RequiredError="Name is required" />
-        </MudItem>
-
-        <MudItem xs="12" sm="6">
-            <MudTextField T="string" Label="Type" @bind-Value="_type" Required="true"
-                          RequiredError="Type is required" />
-        </MudItem>
-
-        <MudItem xs="12" sm="6">
-            <MudTextField T="string" Label="Region" @bind-Value="_region" Required="true"
-                          RequiredError="Region is required" />
-        </MudItem>
-
-        <MudItem xs="12" sm="6">
-            <MudTextField T="string" Label="Currency" @bind-Value="_currency" Required="true"
-                          RequiredError="Currency is required" />
+        <MudItem xs="12" sm="8" md="6">
+            <MudTextField T="string" @bind-Value="_searchTerm" Label="Ticker or ISIN"
+                          Placeholder="e.g. AAPL or US0378331005" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" OnKeyDown="OnSearchKeyDown" Disabled="_isSearching" Clearable="true" />
         </MudItem>
 
         <MudItem xs="12">
-            <MudStack Spacing="2">
-                @foreach (var message in _errors)
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Search" Disabled="_isSearching"
+                       StartIcon="@Icons.Material.Filled.Search">
+                @if (_isSearching)
                 {
-                    <MudAlert Severity="Severity.Error">@message</MudAlert>
+                    <MudProgressCircular Color="Color.Inherit" Indeterminate="true" Size="Size.Small" Class="mr-2" />
+                    <span>Searching…</span>
                 }
-                @foreach (var message in _info)
+                else
                 {
-                    <MudAlert Severity="Severity.Info">@message</MudAlert>
+                    <span>Search</span>
                 }
-            </MudStack>
+            </MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Secondary" Class="ml-2" OnClick="Cancel" Disabled="_isSearching">Cancel</MudButton>
+        </MudItem>
+    }
+    else if (_phase == Phase.SelectCandidate)
+    {
+        <MudItem xs="12">
+            <MudAlert Severity="Severity.Info" Class="mb-2">
+                Multiple instruments matched "@_searchTerm". Pick the one you want to add.
+            </MudAlert>
+            <MudTable Items="@_candidates" Dense Hover Breakpoint="Breakpoint.Sm" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Name</MudTh>
+                    <MudTh>ISIN</MudTh>
+                    <MudTh>Symbol</MudTh>
+                    <MudTh>Exchange</MudTh>
+                    <MudTh>Currency</MudTh>
+                    <MudTh>Type</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Name">@context.Name</MudTd>
+                    <MudTd DataLabel="ISIN">@context.Isin</MudTd>
+                    <MudTd DataLabel="Symbol">@context.AlphaVantageSymbol</MudTd>
+                    <MudTd DataLabel="Exchange">@context.Exchange</MudTd>
+                    <MudTd DataLabel="Currency">@context.Currency</MudTd>
+                    <MudTd DataLabel="Type">@context.Type</MudTd>
+                    <MudTd>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                                   OnClick="@(() => SelectCandidate(context))">Select</MudButton>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
         </MudItem>
 
         <MudItem xs="12">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddStock">Add</MudButton>
-            <MudButton Variant="Variant.Text" Color="Color.Secondary" Class="ml-2" OnClick="Cancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="BackToSearch"
+                       StartIcon="@Icons.Material.Filled.ArrowBack">Back to search</MudButton>
         </MudItem>
-    </MudGrid>
-</MudForm>
+    }
+    else
+    {
+        <MudItem xs="12">
+            <MudForm @ref="_form" @bind-IsValid="_isValid">
+                <MudGrid Spacing="4">
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="ISIN" @bind-Value="_isin" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Required="true" RequiredError="ISIN is required"
+                                      HelperText="Canonical identifier used as the lookup key" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Ticker" @bind-Value="_ticker" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Required="true" RequiredError="Ticker is required" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Alpha Vantage symbol" @bind-Value="_alphaVantageSymbol"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      HelperText="Symbol used for price lookups (optional)" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Name" @bind-Value="_name" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Required="true" RequiredError="Name is required" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Type" @bind-Value="_type" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Required="true" RequiredError="Type is required" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Region" @bind-Value="_region" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Required="true" RequiredError="Region is required" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Currency" @bind-Value="_currency" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Required="true" RequiredError="Currency is required" />
+                    </MudItem>
+                </MudGrid>
+            </MudForm>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddStock" Disabled="_isSaving"
+                       StartIcon="@Icons.Material.Filled.Add">Add</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Secondary" Class="ml-2" OnClick="BackToSearch"
+                       StartIcon="@Icons.Material.Filled.ArrowBack" Disabled="_isSaving">Back to search</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Secondary" Class="ml-2" OnClick="Cancel" Disabled="_isSaving">Cancel</MudButton>
+        </MudItem>
+    }
+
+    <MudItem xs="12">
+        <MudStack Spacing="2">
+            @foreach (var message in _errors)
+            {
+                <MudAlert Severity="Severity.Error">@message</MudAlert>
+            }
+            @foreach (var message in _info)
+            {
+                <MudAlert Severity="Severity.Info">@message</MudAlert>
+            }
+        </MudStack>
+    </MudItem>
+</MudGrid>
