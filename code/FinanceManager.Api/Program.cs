@@ -104,7 +104,10 @@ builder.Services.AddOptions<StockApiOptions>()
     .ValidateOnStart();
 builder.Services.Configure<StockDetailsSeederOptions>(builder.Configuration.GetSection(StockDetailsSeederOptions.SectionName));
 builder.Services.Configure<OpenFigiOptions>(builder.Configuration.GetSection("OpenFigi"));
-builder.Services.Configure<EodhdOptions>(builder.Configuration.GetSection("Eodhd"));
+builder.Services.AddOptions<EodhdOptions>()
+    .Bind(builder.Configuration.GetSection("Eodhd"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "Eodhd:BaseUrl must be configured.")
+    .ValidateOnStart();
 builder.Services.Configure<LmStudioOptions>(builder.Configuration.GetSection("LmStudio"));
 builder.Services.AddOptions<OpenRouterOptions>()
     .Bind(builder.Configuration.GetSection("OpenRouter"))

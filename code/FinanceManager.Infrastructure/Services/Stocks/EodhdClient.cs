@@ -48,7 +48,7 @@ internal sealed class EodhdClient(
             using var response = await httpClient.GetAsync(url, ct);
             if (!response.IsSuccessStatusCode)
             {
-                logger.LogWarning("EODHD daily series failed with status {StatusCode} for {Symbol}", response.StatusCode, eodhdSymbol);
+                logger.LogWarning("EODHD daily series failed with status {StatusCode} for {Symbol}", response.StatusCode, Sanitize(eodhdSymbol));
                 return [];
             }
 
@@ -60,7 +60,7 @@ internal sealed class EodhdClient(
             }
             catch (JsonException ex)
             {
-                logger.LogWarning(ex, "EODHD returned unparseable content for {Symbol}", eodhdSymbol);
+                logger.LogWarning(ex, "EODHD returned unparseable content for {Symbol}", Sanitize(eodhdSymbol));
                 return [];
             }
 
@@ -89,10 +89,14 @@ internal sealed class EodhdClient(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "EODHD daily series failed for {Symbol}", eodhdSymbol);
+            logger.LogError(ex, "EODHD daily series failed for {Symbol}", Sanitize(eodhdSymbol));
             return [];
         }
     }
+
+    // Strip CR/LF so an attacker-influenced symbol cannot forge log entries (log injection).
+    private static string Sanitize(string value)
+        => value.Replace("\r", string.Empty).Replace("\n", string.Empty);
 
     // #470 — provider-specific symbology belongs on the Listing entity. Until then, best-effort:
     // Alpha Vantage US symbols are bare ("AAPL") while EODHD requires an exchange suffix, so default

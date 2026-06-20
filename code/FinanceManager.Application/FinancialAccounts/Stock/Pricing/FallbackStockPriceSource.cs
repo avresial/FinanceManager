@@ -26,13 +26,17 @@ public sealed class FallbackStockPriceSource(
             if (prices.Count > 0)
             {
                 if (i > 0)
-                    logger.LogInformation("Price source {Source} served {Symbol} after {Tried} earlier source(s) returned no data.", source.Name, symbol, i);
+                    logger.LogInformation("Price source {Source} served {Symbol} after {Tried} earlier source(s) returned no data.", source.Name, Sanitize(symbol), i);
                 return prices;
             }
 
-            logger.LogDebug("Price source {Source} returned no data for {Symbol}; trying next.", source.Name, symbol);
+            logger.LogDebug("Price source {Source} returned no data for {Symbol}; trying next.", source.Name, Sanitize(symbol));
         }
 
         return [];
     }
+
+    // Strip CR/LF so an attacker-influenced symbol cannot forge log entries (log injection).
+    private static string Sanitize(string value)
+        => value.Replace("\r", string.Empty).Replace("\n", string.Empty);
 }
