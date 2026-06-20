@@ -12,9 +12,9 @@ namespace FinanceManager.Tests.Unit.Components.Services;
 [Trait("Category", "Unit")]
 public class FinancialAccountServiceTests
 {
-    private const string CurrencyPath = "/api/CurrencyAccount";
-    private const string StockPath = "/api/StockAccount";
-    private const string BondPath = "/api/BondAccount";
+    private const string _currencyPath = "/api/CurrencyAccount";
+    private const string _stockPath = "/api/StockAccount";
+    private const string _bondPath = "/api/BondAccount";
 
     [Fact]
     public async Task GetAvailableAccounts_SecondCall_ServedFromCacheWithoutRefetching()
@@ -26,9 +26,9 @@ public class FinancialAccountServiceTests
         var second = await service.GetAvailableAccounts();
 
         Assert.Equal(first, second);
-        Assert.Equal(1, handler.GetCount(CurrencyPath));
-        Assert.Equal(1, handler.GetCount(StockPath));
-        Assert.Equal(1, handler.GetCount(BondPath));
+        Assert.Equal(1, handler.GetCount(_currencyPath));
+        Assert.Equal(1, handler.GetCount(_stockPath));
+        Assert.Equal(1, handler.GetCount(_bondPath));
     }
 
     [Fact]
@@ -41,9 +41,9 @@ public class FinancialAccountServiceTests
         await sync.AccountChanged();
         await service.GetAvailableAccounts();
 
-        Assert.Equal(2, handler.GetCount(CurrencyPath));
-        Assert.Equal(2, handler.GetCount(StockPath));
-        Assert.Equal(2, handler.GetCount(BondPath));
+        Assert.Equal(2, handler.GetCount(_currencyPath));
+        Assert.Equal(2, handler.GetCount(_stockPath));
+        Assert.Equal(2, handler.GetCount(_bondPath));
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class FinancialAccountServiceTests
         loginService.Raise(s => s.LogginStateChanged += null, false);
         await service.GetAvailableAccounts();
 
-        Assert.Equal(2, handler.GetCount(CurrencyPath));
+        Assert.Equal(2, handler.GetCount(_currencyPath));
     }
 
     [Fact]
@@ -67,12 +67,12 @@ public class FinancialAccountServiceTests
 
         await service.GetAvailableAccounts();
         await service.RemoveAccount(1);
-        var countAfterRemove = handler.GetCount(CurrencyPath);
+        var countAfterRemove = handler.GetCount(_currencyPath);
         await service.GetAvailableAccounts();
 
         // RemoveAccount itself probes the endpoints (via AccountExists), so the assertion is simply that
         // the post-removal GetAvailableAccounts hit the network again rather than serving a stale cache.
-        Assert.True(handler.GetCount(CurrencyPath) > countAfterRemove);
+        Assert.True(handler.GetCount(_currencyPath) > countAfterRemove);
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class FinancialAccountServiceTests
         await service.GetAvailableAccounts();
 
         // An empty map must not be pinned (covers transient failures and the guest mock-seeding flow).
-        Assert.Equal(2, handler.GetCount(CurrencyPath));
+        Assert.Equal(2, handler.GetCount(_currencyPath));
     }
 
     private static (FinancialAccountService service, AccountDataSynchronizationService sync, Mock<ILoginService> loginService)
@@ -143,9 +143,9 @@ public class FinancialAccountServiceTests
 
         private static int AccountIdFor(string path) => path switch
         {
-            CurrencyPath => 1,
-            StockPath => 2,
-            BondPath => 3,
+            _currencyPath => 1,
+            _stockPath => 2,
+            _bondPath => 3,
             _ => 0,
         };
     }
