@@ -3,12 +3,13 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Shared.Services;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 
 namespace FinanceManager.Application.Identity.RefreshTokens;
 
-public class RefreshTokenService(IRefreshTokenRepository repository, IOptions<RefreshTokenOptions> options) : IRefreshTokenService
+public class RefreshTokenService(IRefreshTokenRepository repository, IOptions<RefreshTokenOptions> options, IDateTimeProvider dateTimeProvider) : IRefreshTokenService
 {
     private const int _tokenByteLength = 32;
     private readonly RefreshTokenOptions _options = options.Value;
@@ -16,7 +17,7 @@ public class RefreshTokenService(IRefreshTokenRepository repository, IOptions<Re
     public async Task<string> Issue(int userId, CancellationToken cancellationToken = default)
     {
         var rawToken = GenerateRawToken();
-        var now = DateTime.UtcNow;
+        var now = dateTimeProvider.UtcNow;
 
         await repository.Add(new RefreshToken
         {
@@ -40,7 +41,7 @@ public class RefreshTokenService(IRefreshTokenRepository repository, IOptions<Re
         if (existing is null)
             return RefreshTokenRotationResult.Failure(RefreshTokenStatus.NotFound);
 
-        var now = DateTime.UtcNow;
+        var now = dateTimeProvider.UtcNow;
 
         // A token is only ever revoked once it has been rotated (or the family was nuked). Seeing it again means
         // someone is replaying a stolen, already-used token — revoke the whole family and force a fresh login.
@@ -80,7 +81,7 @@ public class RefreshTokenService(IRefreshTokenRepository repository, IOptions<Re
         var existing = await repository.GetByHash(Hash(rawToken));
         if (existing is null || existing.RevokedAt is not null) return;
 
-        existing.RevokedAt = DateTime.UtcNow;
+        existing.RevokedAt = dateTimeProvider.UtcNow;
         await repository.Update(existing);
     }
 

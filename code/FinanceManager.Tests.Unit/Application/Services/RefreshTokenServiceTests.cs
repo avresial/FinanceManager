@@ -5,6 +5,7 @@ using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.Options;
+using FinanceManager.Tests.Unit.Shared.Time;
 using Moq;
 using System.Security.Cryptography;
 using System.Text;
@@ -16,10 +17,11 @@ public class RefreshTokenServiceTests
 {
     private readonly Mock<IRefreshTokenRepository> _repository = new();
     private readonly RefreshTokenOptions _options = new() { SlidingValidityDays = 14, AbsoluteValidityDays = 30 };
+    private readonly FakeDateTimeProvider _dateTimeProvider = new(DateTime.UtcNow);
     private readonly RefreshTokenService _service;
 
     public RefreshTokenServiceTests() =>
-        _service = new RefreshTokenService(_repository.Object, Options.Create(_options));
+        _service = new RefreshTokenService(_repository.Object, Options.Create(_options), _dateTimeProvider);
 
     private static string Hash(string raw) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(raw)));
 

@@ -6,6 +6,7 @@ using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.Options;
+using FinanceManager.Tests.Unit.Shared.Time;
 using Moq;
 using System.Security.Cryptography;
 using System.Text;
@@ -18,10 +19,11 @@ public class PasswordResetServiceTests
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IPasswordResetTokenRepository> _tokenRepository = new();
     private readonly PasswordResetOptions _options = new() { TokenValidityMinutes = 60 };
+    private readonly FakeDateTimeProvider _dateTimeProvider = new(DateTime.UtcNow);
     private readonly PasswordResetService _service;
 
     public PasswordResetServiceTests() =>
-        _service = new PasswordResetService(_userRepository.Object, _tokenRepository.Object, Options.Create(_options));
+        _service = new PasswordResetService(_userRepository.Object, _tokenRepository.Object, Options.Create(_options), _dateTimeProvider);
 
     private static string Hash(string raw) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(raw)));
 

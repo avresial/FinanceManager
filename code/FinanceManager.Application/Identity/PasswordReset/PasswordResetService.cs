@@ -3,6 +3,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Shared.Services;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 
@@ -11,7 +12,8 @@ namespace FinanceManager.Application.Identity.PasswordReset;
 public class PasswordResetService(
     IUserRepository userRepository,
     IPasswordResetTokenRepository tokenRepository,
-    IOptions<PasswordResetOptions> options) : IPasswordResetService
+    IOptions<PasswordResetOptions> options,
+    IDateTimeProvider dateTimeProvider) : IPasswordResetService
 {
     private const int _tokenByteLength = 32;
     private readonly PasswordResetOptions _options = options.Value;
@@ -32,7 +34,7 @@ public class PasswordResetService(
         var user = await userRepository.GetUser(normalizedLogin);
         if (user is null) return rawToken;
 
-        var now = DateTime.UtcNow;
+        var now = dateTimeProvider.UtcNow;
 
         // Requesting a new link supersedes any earlier one, so only the freshest token can be redeemed.
         await tokenRepository.InvalidateActiveTokensForUser(user.UserId, now);
@@ -60,14 +62,14 @@ public class PasswordResetService(
         if (existing.UsedAt is not null)
             return PasswordResetResult.Failure(PasswordResetStatus.AlreadyUsed);
 
-        if (DateTime.UtcNow >= existing.ExpiresAt)
+        if (dateTimeProvider.UtcNow >= existing.ExpiresAt)
             return PasswordResetResult.Failure(PasswordResetStatus.Expired);
 
         // Claim the token atomically *before* changing the password. The conditional consume succeeds for only the
         // single caller that flips UsedAt from null, so two concurrent redemptions of the same link can't both clear
         // the check above and reset the password twice — the loser is rejected here rather than overwriting the
         // winner's new password. (The checks above stay as a cheap fast-path for the common, uncontended case.)
-        if (!await tokenRepository.TryConsume(existing.TokenHash, DateTime.UtcNow))
+        if (!await tokenRepository.TryConsume(existing.TokenHash, dateTimeProvider.UtcNow))
             return PasswordResetResult.Failure(PasswordResetStatus.AlreadyUsed);
 
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(newPassword);

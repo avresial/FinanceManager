@@ -6,8 +6,10 @@ using FinanceManager.Application.Identity.Users;
 using FinanceManager.Application.Insights;
 using FinanceManager.Application.Labels;
 using FinanceManager.Application.MoneyFlow;
+using FinanceManager.Application.Shared.Time;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Shared.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,7 +19,8 @@ public static class ServiceCollectionExtension
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        services.AddScoped<ISettingsService, SettingsService>()
+        services.AddSingleton<IDateTimeProvider, DateTimeProvider>()
+                .AddScoped<ISettingsService, SettingsService>()
                 .AddScoped<PricingProvider>()
                 .AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
         return services;
@@ -28,6 +31,8 @@ public static class ServiceCollectionExtension
         // Identity must come before FinancialAccounts and Labels: seeders run in
         // ISeeder registration order (admin/test users, then financial-account
         // detail seeders, then labels).
+        services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+
         services
             .AddIdentityApplication()
             .AddFinancialAccountsApplication()

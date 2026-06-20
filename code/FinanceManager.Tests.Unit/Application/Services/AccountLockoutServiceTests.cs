@@ -3,6 +3,7 @@ using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using Microsoft.Extensions.Options;
+using FinanceManager.Tests.Unit.Shared.Time;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;
@@ -19,10 +20,11 @@ public class AccountLockoutServiceTests
         MaxFailedAttempts = 3,
         LockoutDuration = TimeSpan.FromMinutes(15),
     };
+    private readonly FakeDateTimeProvider _dateTimeProvider = new(DateTime.UtcNow);
     private readonly AccountLockoutService _service;
 
     public AccountLockoutServiceTests() =>
-        _service = new AccountLockoutService(_userRepository.Object, Options.Create(_options));
+        _service = new AccountLockoutService(_userRepository.Object, Options.Create(_options), _dateTimeProvider);
 
     private void SetupState(int failedAttempts, DateTime? lockoutEndUtc) =>
         _userRepository.Setup(r => r.GetLoginThrottlingState(_login))
@@ -46,7 +48,7 @@ public class AccountLockoutServiceTests
     public async Task RegisterFailedAttempt_ReachingThreshold_LocksForConfiguredWindow()
     {
         SetupIncrementReturns(3);
-        var before = DateTime.UtcNow;
+        var before = _dateTimeProvider.UtcNow;
 
         DateTime capturedLockoutEnd = default;
         _userRepository.Setup(r => r.LockAccount(_login, It.IsAny<DateTime>()))
@@ -59,7 +61,7 @@ public class AccountLockoutServiceTests
         // Lockout end is roughly now + the configured duration.
         Assert.InRange(capturedLockoutEnd,
             before.Add(_options.LockoutDuration),
-            DateTime.UtcNow.Add(_options.LockoutDuration).AddSeconds(1));
+            _dateTimeProvider.UtcNow.Add(_options.LockoutDuration).AddSeconds(1));
     }
 
     [Fact]
