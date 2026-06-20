@@ -2,6 +2,7 @@ using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Shared.Services;
 using Microsoft.Extensions.Options;
 
 namespace FinanceManager.Application.Identity.Lockout;
@@ -12,7 +13,7 @@ namespace FinanceManager.Application.Identity.Lockout;
 /// concurrent guesses can't lose updates; locking the account also resets the counter, so a lapsed lockout requires
 /// a fresh threshold of failures to lock again, and a successful login clears the state.
 /// </summary>
-public class AccountLockoutService(IUserRepository userRepository, IOptions<AccountLockoutOptions> options) : IAccountLockoutService
+public class AccountLockoutService(IUserRepository userRepository, IOptions<AccountLockoutOptions> options, IDateTimeProvider dateTimeProvider) : IAccountLockoutService
 {
     private readonly AccountLockoutOptions _options = options.Value;
 
@@ -21,7 +22,7 @@ public class AccountLockoutService(IUserRepository userRepository, IOptions<Acco
         if (!_options.Enabled) return false;
 
         var state = await userRepository.GetLoginThrottlingState(login);
-        return state?.LockoutEndUtc is DateTime lockoutEnd && lockoutEnd > DateTime.UtcNow;
+        return state?.LockoutEndUtc is DateTime lockoutEnd && lockoutEnd > dateTimeProvider.UtcNow;
     }
 
     public async Task RegisterFailedAttempt(string login, CancellationToken cancellationToken = default)
@@ -34,7 +35,7 @@ public class AccountLockoutService(IUserRepository userRepository, IOptions<Acco
         if (attempts is null) return;
 
         if (attempts >= _options.MaxFailedAttempts)
-            await userRepository.LockAccount(login, DateTime.UtcNow.Add(_options.LockoutDuration));
+            await userRepository.LockAccount(login, dateTimeProvider.UtcNow.Add(_options.LockoutDuration));
     }
 
     public async Task Reset(string login, CancellationToken cancellationToken = default)
