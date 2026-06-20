@@ -178,8 +178,10 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     {
         EnsureInvalidationHooksInstalled();
 
+        // Always hand back a fresh copy: the cached instance is shared across all callers, so returning it
+        // directly would let any caller that mutates the result silently corrupt every other caller's view.
         if (_availableAccountsCache is not null)
-            return _availableAccountsCache;
+            return new Dictionary<int, Type>(_availableAccountsCache);
 
         var result = await FetchAvailableAccounts();
 
@@ -187,7 +189,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         // the user genuinely has no accounts yet; don't pin it so a transient failure - or the guest
         // mock-seeding flow in Home.razor - self-heals on the next lookup.
         if (result.Count > 0)
-            _availableAccountsCache = result;
+            _availableAccountsCache = new Dictionary<int, Type>(result);
 
         return result;
     }

@@ -32,6 +32,20 @@ public class FinancialAccountServiceTests
     }
 
     [Fact]
+    public async Task GetAvailableAccounts_ReturnsIndependentCopies()
+    {
+        var handler = new CountingHandler();
+        var (service, _, _) = CreateService(handler);
+
+        var first = await service.GetAvailableAccounts();
+        first.Clear();
+        var second = await service.GetAvailableAccounts();
+
+        // Mutating a returned map must not corrupt the shared cache handed to other callers.
+        Assert.NotEmpty(second);
+    }
+
+    [Fact]
     public async Task GetAvailableAccounts_AfterAccountsChanged_Refetches()
     {
         var handler = new CountingHandler();
@@ -73,6 +87,19 @@ public class FinancialAccountServiceTests
         // RemoveAccount itself probes the endpoints (via AccountExists), so the assertion is simply that
         // the post-removal GetAvailableAccounts hit the network again rather than serving a stale cache.
         Assert.True(handler.GetCount(_currencyPath) > countAfterRemove);
+    }
+
+    [Fact]
+    public async Task GetAvailableAccounts_AfterAddAccount_Refetches()
+    {
+        var handler = new CountingHandler();
+        var (service, _, _) = CreateService(handler);
+
+        await service.GetAvailableAccounts();
+        await service.AddAccount(new CurrencyAccount(1, 0, "New account"));
+        await service.GetAvailableAccounts();
+
+        Assert.Equal(2, handler.GetCount(_currencyPath));
     }
 
     [Fact]
@@ -134,10 +161,11 @@ public class FinancialAccountServiceTests
                 });
             }
 
-            // Mutations (e.g. DELETE in RemoveAccount) simply succeed.
+            // Add returns the new account id (a number); delete and update return a bool.
+            object mutationResult = request.Method == HttpMethod.Post ? 99 : true;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(true),
+                Content = JsonContent.Create(mutationResult),
             });
         }
 
