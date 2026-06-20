@@ -13,6 +13,7 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
@@ -32,6 +33,7 @@ using FinanceManager.Infrastructure.Providers;
 using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
+using FinanceManager.Infrastructure.Repositories.Investments;
 using FinanceManager.Infrastructure.Services;
 using FinanceManager.Infrastructure.Services.Ai;
 using FinanceManager.Infrastructure.Services.Currencies;
@@ -85,6 +87,11 @@ public static class ServiceCollectionExtension
 
         services
                 .AddScoped<IDataBackfillService, DataBackfillService>()
+                .AddScoped<IAssetRepository, AssetRepository>()
+                .AddScoped<IAssetListingRepository, AssetListingRepository>()
+                .AddScoped<IMarketDataSymbolRepository, MarketDataSymbolRepository>()
+                .AddScoped<IInvestmentTransactionRepository, InvestmentTransactionRepository>()
+                .AddScoped<IPriceQuoteRepository, PriceQuoteRepository>()
                 .AddScoped<IStockPriceRepository, StockPriceRepository>()
                 .AddScoped<IStockDetailsRepository, StockDetailsRepository>()
                 .AddScoped<IFinancialAccountRepository, AccountRepository>()
