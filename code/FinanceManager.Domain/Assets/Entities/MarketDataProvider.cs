@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+namespace FinanceManager.Domain.Assets.Entities;
 
 /// <summary>
 /// Identifies the external market data provider a <see cref="MarketDataSymbol"/> or

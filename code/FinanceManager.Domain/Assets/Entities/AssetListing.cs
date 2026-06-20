@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+namespace FinanceManager.Domain.Assets.Entities;
 
 /// <summary>
 /// Represents a concrete exchange listing of an <see cref="Asset"/>. A transaction points here,
@@ -51,7 +51,4 @@ public class AssetListing
 
     /// <summary>Provider-specific symbols for this listing.</summary>
     public ICollection<MarketDataSymbol> MarketDataSymbols { get; set; } = [];
-
-    /// <summary>User transactions made on this listing.</summary>
-    public ICollection<InvestmentTransaction> Transactions { get; set; } = [];
 }

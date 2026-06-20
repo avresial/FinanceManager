@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+namespace FinanceManager.Domain.Assets.Entities;
 
 /// <summary>
 /// Represents the financial instrument itself (a share class or company), independent of any

@@ -1,4 +1,4 @@
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.Assets.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -29,11 +29,5 @@ public class AssetListingConfiguration : IEntityTypeConfiguration<AssetListing>
             .WithOne(x => x.AssetListing)
             .HasForeignKey(x => x.AssetListingId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        // Keep user transactions if a listing is ever removed; require the listing to be transaction-free first.
-        builder.HasMany(x => x.Transactions)
-            .WithOne(x => x.AssetListing)
-            .HasForeignKey(x => x.AssetListingId)
-            .OnDelete(DeleteBehavior.Restrict);
     }
 }

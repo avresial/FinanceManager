@@ -1,5 +1,7 @@
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Infrastructure.Contexts;
+using FinanceManager.Infrastructure.Repositories.Assets;
 using FinanceManager.Infrastructure.Repositories.Investments;
 using Microsoft.EntityFrameworkCore;
 

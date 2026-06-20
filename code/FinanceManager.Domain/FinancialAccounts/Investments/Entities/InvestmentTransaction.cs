@@ -1,3 +1,5 @@
+using FinanceManager.Domain.Assets.Entities;
+
 namespace FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 
 /// <summary>

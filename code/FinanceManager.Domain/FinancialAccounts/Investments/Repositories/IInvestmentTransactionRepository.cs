@@ -1,3 +1,4 @@
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Investments.Repositories;

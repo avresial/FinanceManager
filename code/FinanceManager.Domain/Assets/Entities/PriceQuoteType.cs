@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+namespace FinanceManager.Domain.Assets.Entities;
 
 /// <summary>
 /// Describes the freshness/source of a <see cref="PriceQuote"/>.

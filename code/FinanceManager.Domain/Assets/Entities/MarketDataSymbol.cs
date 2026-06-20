@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+namespace FinanceManager.Domain.Assets.Entities;
 
 /// <summary>
 /// Represents the provider-specific symbol used to fetch prices for an <see cref="AssetListing"/>.

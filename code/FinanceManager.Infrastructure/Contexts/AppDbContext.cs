@@ -1,5 +1,6 @@
 ﻿using FinanceManager.Domain.Administration.Logging;
 using FinanceManager.Domain.Administration.Monitoring;
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;

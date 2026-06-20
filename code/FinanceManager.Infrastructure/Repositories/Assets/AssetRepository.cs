@@ -1,9 +1,9 @@
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Assets.Entities;
+using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 
-namespace FinanceManager.Infrastructure.Repositories.Investments;
+namespace FinanceManager.Infrastructure.Repositories.Assets;
 
 public class AssetRepository(AppDbContext context) : IAssetRepository
 {

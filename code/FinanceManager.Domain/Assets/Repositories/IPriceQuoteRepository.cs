@@ -1,6 +1,6 @@
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.Assets.Entities;
 
-namespace FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+namespace FinanceManager.Domain.Assets.Repositories;
 
 public interface IPriceQuoteRepository
 {
