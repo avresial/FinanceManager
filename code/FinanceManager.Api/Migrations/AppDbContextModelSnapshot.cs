@@ -377,9 +377,6 @@ namespace FinanceManager.Api.Migrations
                     b.HasIndex("Provider", "Symbol")
                         .IsUnique();
 
-                    b.HasIndex("AssetListingId", "Provider", "Symbol")
-                        .IsUnique();
-
                     b.ToTable("MarketDataSymbols");
                 });
 

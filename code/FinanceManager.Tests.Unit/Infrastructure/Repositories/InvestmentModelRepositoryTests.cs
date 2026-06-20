@@ -117,6 +117,28 @@ public class InvestmentModelRepositoryTests
     }
 
     [Fact]
+    public async Task AddListing_RejectsNonPositivePriceMultiplier()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var ctx = CreateContext();
+        var assetRepo = new AssetRepository(ctx);
+        var listingRepo = new AssetListingRepository(ctx);
+
+        var asset = await assetRepo.Add(MakeISharesAsset(), ct);
+        var invalid = new AssetListing
+        {
+            AssetId = asset.Id,
+            Ticker = "CSPX",
+            ExchangeMic = "XLON",
+            ExchangeName = "London Stock Exchange",
+            TradingCurrency = "USD",
+            PriceMultiplier = 0m
+        };
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => listingRepo.Add(invalid, ct));
+    }
+
+    [Fact]
     public async Task Listing_CanHaveProviderSymbols()
     {
         var ct = TestContext.Current.CancellationToken;

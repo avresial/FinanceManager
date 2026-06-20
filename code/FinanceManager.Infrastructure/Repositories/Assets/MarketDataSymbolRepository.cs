@@ -54,10 +54,10 @@ public class MarketDataSymbolRepository(AppDbContext context) : IMarketDataSymbo
         return await Add(symbol, cancellationToken);
     }
 
-    public async Task RecordFetchResult(long id, DateTimeOffset? lastSuccessfulPriceFetchAt, string? lastError, CancellationToken cancellationToken = default)
+    public async Task<bool> RecordFetchResult(long id, DateTimeOffset? lastSuccessfulPriceFetchAt, string? lastError, CancellationToken cancellationToken = default)
     {
         var symbol = await context.MarketDataSymbols.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (symbol is null) return;
+        if (symbol is null) return false;
 
         if (lastSuccessfulPriceFetchAt is DateTimeOffset success)
         {
@@ -67,6 +67,7 @@ public class MarketDataSymbolRepository(AppDbContext context) : IMarketDataSymbo
         symbol.LastError = lastError;
         symbol.UpdatedAt = DateTimeOffset.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<bool> Delete(long id, CancellationToken cancellationToken = default)

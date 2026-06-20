@@ -17,8 +17,9 @@ public class MarketDataSymbolConfiguration : IEntityTypeConfiguration<MarketData
         builder.Property(x => x.Currency).HasMaxLength(3);
         builder.Property(x => x.LastError).HasMaxLength(512);
 
+        // (Provider, Symbol) is globally unique, which already guarantees uniqueness per listing too,
+        // so no separate (AssetListingId, Provider, Symbol) unique index is needed.
         builder.HasIndex(x => new { x.Provider, x.Symbol }).IsUnique();
-        builder.HasIndex(x => new { x.AssetListingId, x.Provider, x.Symbol }).IsUnique();
         builder.HasIndex(x => x.AssetListingId);
         builder.HasIndex(x => x.Provider);
         builder.HasIndex(x => x.IsEnabled);

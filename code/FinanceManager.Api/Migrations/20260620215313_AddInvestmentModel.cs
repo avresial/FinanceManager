@@ -284,12 +284,6 @@ namespace FinanceManager.Api.Migrations
                 column: "AssetListingId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MarketDataSymbols_AssetListingId_Provider_Symbol",
-                table: "MarketDataSymbols",
-                columns: new[] { "AssetListingId", "Provider", "Symbol" },
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "IX_MarketDataSymbols_IsEnabled",
                 table: "MarketDataSymbols",
                 column: "IsEnabled");

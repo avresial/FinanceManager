@@ -5,11 +5,22 @@ namespace FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 
 public interface IInvestmentTransactionRepository
 {
+    /// <summary>Get a transaction by its database id, or <c>null</c> if none exists.</summary>
     Task<InvestmentTransaction?> Get(long id, CancellationToken cancellationToken = default);
+
+    /// <summary>Get all transactions belonging to the given account.</summary>
     Task<IReadOnlyList<InvestmentTransaction>> GetByAccount(int accountId, CancellationToken cancellationToken = default);
+
+    /// <summary>Get a user's transactions whose <see cref="InvestmentTransaction.TradeDate"/> falls within [startDate, endDate].</summary>
     Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
+
+    /// <summary>Insert a new transaction and return the persisted entity (with its generated id).</summary>
     Task<InvestmentTransaction> Add(InvestmentTransaction transaction, CancellationToken cancellationToken = default);
+
+    /// <summary>Update an existing transaction. Returns <c>false</c> when no transaction with that id exists.</summary>
     Task<bool> Update(InvestmentTransaction transaction, CancellationToken cancellationToken = default);
+
+    /// <summary>Delete the transaction with the given id. Returns <c>false</c> when no such transaction exists.</summary>
     Task<bool> Delete(long id, CancellationToken cancellationToken = default);
 
     /// <summary>

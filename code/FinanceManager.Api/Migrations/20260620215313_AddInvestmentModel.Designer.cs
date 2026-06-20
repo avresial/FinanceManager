@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FinanceManager.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260620180118_AddInvestmentModel")]
+    [Migration("20260620215313_AddInvestmentModel")]
     partial class AddInvestmentModel
     {
         /// <inheritdoc />
@@ -378,9 +378,6 @@ namespace FinanceManager.Api.Migrations
                     b.HasIndex("Provider");
 
                     b.HasIndex("Provider", "Symbol")
-                        .IsUnique();
-
-                    b.HasIndex("AssetListingId", "Provider", "Symbol")
                         .IsUnique();
 
                     b.ToTable("MarketDataSymbols");

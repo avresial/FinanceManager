@@ -27,6 +27,7 @@ public class AssetListingRepository(AppDbContext context) : IAssetListingReposit
 
     public async Task<AssetListing> Add(AssetListing listing, CancellationToken cancellationToken = default)
     {
+        EnsureValidPriceMultiplier(listing);
         var now = DateTimeOffset.UtcNow;
         if (listing.CreatedAt == default) listing.CreatedAt = now;
         listing.UpdatedAt = now;
@@ -38,6 +39,7 @@ public class AssetListingRepository(AppDbContext context) : IAssetListingReposit
 
     public async Task<AssetListing> Upsert(AssetListing listing, CancellationToken cancellationToken = default)
     {
+        EnsureValidPriceMultiplier(listing);
         var existing = await context.AssetListings.FirstOrDefaultAsync(
             x => x.Ticker == listing.Ticker && x.ExchangeMic == listing.ExchangeMic && x.TradingCurrency == listing.TradingCurrency,
             cancellationToken);
@@ -67,5 +69,12 @@ public class AssetListingRepository(AppDbContext context) : IAssetListingReposit
         context.AssetListings.Remove(entity);
         await context.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    // A non-positive multiplier would yield zero/negative normalized prices in valuation flows.
+    private static void EnsureValidPriceMultiplier(AssetListing listing)
+    {
+        if (listing.PriceMultiplier <= 0m)
+            throw new ArgumentOutOfRangeException(nameof(listing), listing.PriceMultiplier, "AssetListing.PriceMultiplier must be greater than zero.");
     }
 }
