@@ -56,6 +56,7 @@ public class InvestmentPaycheckEstimatorServiceTests
         var stockPriceProvider = new StockPriceProvider(
             _stockRepositoryMock.Object,
             new Mock<IAlphaVantageClient>().Object,
+            new Mock<IStockPriceSource>().Object,
             stockDetailsRepoMock.Object,
             new Mock<ICurrencyRepository>().Object,
             _currencyExchangeServiceMock.Object,

@@ -53,6 +53,16 @@ public static class ServiceCollectionExtension
     {
         services.AddSingleton<IExternalServiceConfigService, ExternalServiceConfigService>();
         services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
+        services.AddHttpClient<EodhdClient>();
+        // Daily-price fetches go through a fallback chain: Alpha Vantage first, then EODHD when the
+        // primary is rate-limited, unentitled, or has no data. AlphaVantageClient also implements
+        // IStockPriceSource, so reuse the same singleton-per-scope instance the typed client resolves.
+        services.AddScoped<IStockPriceSource>(sp => new FallbackStockPriceSource(
+            [
+                (IStockPriceSource)sp.GetRequiredService<IAlphaVantageClient>(),
+                sp.GetRequiredService<EodhdClient>()
+            ],
+            sp.GetRequiredService<ILogger<FallbackStockPriceSource>>()));
         services.AddHttpClient<OpenFigiClient>();
         services.AddScoped<IOpenFigiClient>(sp => sp.GetRequiredService<OpenFigiClient>());
         services.AddScoped<IIsinResolver, CachingIsinResolver>();
