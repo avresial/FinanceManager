@@ -18,12 +18,14 @@ internal sealed class AlphaVantageClient(
     HttpClient httpClient,
     ILogger<AlphaVantageClient> logger,
     IOptions<StockApiOptions> options,
-    IExternalServiceConfigService configService) : IAlphaVantageClient
+    IExternalServiceConfigService configService) : IAlphaVantageClient, IStockPriceSource
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
+
+    public string Name => "AlphaVantage";
 
     public async Task<IReadOnlyList<TickerSearchMatch>> SearchTicker(string keywords, CancellationToken ct = default)
     {
@@ -96,7 +98,11 @@ internal sealed class AlphaVantageClient(
         }
 
         var outputSize = string.IsNullOrWhiteSpace(options.Value.OutputSize) ? "compact" : options.Value.OutputSize;
-        var url = BuildUrl($"function=TIME_SERIES_DAILY&symbol={Uri.EscapeDataString(ticker)}&outputsize={outputSize}&apikey={apiKey}", config.BaseUrl);
+        // Use the split/dividend-adjusted series so historical returns stay correct across corporate
+        // actions. Note: TIME_SERIES_DAILY_ADJUSTED is premium-gated on Alpha Vantage; when the key
+        // lacks entitlement the response carries no series and we return empty, letting the fallback
+        // price source (EODHD, whose adjusted_close is on the free tier) take over.
+        var url = BuildUrl($"function=TIME_SERIES_DAILY_ADJUSTED&symbol={Uri.EscapeDataString(ticker)}&outputsize={outputSize}&apikey={apiKey}", config.BaseUrl);
 
         try
         {
@@ -117,7 +123,9 @@ internal sealed class AlphaVantageClient(
                 if (!TryParseDate(entry.Key, out var date)) continue;
                 if (date < start.Date || date > end.Date) continue;
 
-                var close = ParseDecimal(entry.Value?.Close);
+                // Prefer the adjusted close; fall back to the raw close if the adjusted field is absent.
+                var close = ParseDecimal(entry.Value?.AdjustedClose);
+                if (close <= 0) close = ParseDecimal(entry.Value?.Close);
                 if (close <= 0) continue;
 
                 prices.Add(new StockPrice
@@ -276,5 +284,8 @@ internal sealed class AlphaVantageClient(
     {
         [JsonPropertyName("4. close")]
         public string? Close { get; set; }
+
+        [JsonPropertyName("5. adjusted close")]
+        public string? AdjustedClose { get; set; }
     }
 }

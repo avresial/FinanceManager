@@ -15,6 +15,7 @@ namespace FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 public class StockPriceProvider(
     IStockPriceRepository stockRepository,
     IAlphaVantageClient apiClient,
+    IStockPriceSource priceSource,
     IStockDetailsRepository stockDetailsRepository,
     ICurrencyRepository currencyRepository,
     ICurrencyExchangeService currencyExchangeService,
@@ -227,7 +228,7 @@ public class StockPriceProvider(
                 return [];
 
             var apiSymbol = !string.IsNullOrWhiteSpace(details.AlphaVantageSymbol) ? details.AlphaVantageSymbol : ticker;
-            var apiPrices = await apiClient.GetDailySeries(apiSymbol, isin, start, end, details.Currency, ct);
+            var apiPrices = await priceSource.GetDailySeries(apiSymbol, isin, start, end, details.Currency, ct);
             if (apiPrices is not null && apiPrices.Count > 0)
                 await stockRepository.Add(apiPrices);
 

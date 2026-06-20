@@ -85,6 +85,7 @@ public class NetWorthServiceTests
         var stockPriceProvider = new StockPriceProvider(
             _stockRepository.Object,
             new Mock<IAlphaVantageClient>().Object,
+            new Mock<IStockPriceSource>().Object,
             stockDetailsRepoMock.Object,
             new Mock<ICurrencyRepository>().Object,
             _currencyExchangeService.Object,
