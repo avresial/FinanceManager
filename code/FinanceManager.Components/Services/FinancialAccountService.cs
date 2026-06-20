@@ -7,6 +7,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.FinancialAccounts.Stock.Commands;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Services;
@@ -14,8 +15,19 @@ namespace FinanceManager.Components.Services;
 public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHttpClient, CurrencyEntryHttpClient currencyEntryHttpClient,
     StockAccountHttpClient stockAccountHttpClient, StockEntryHttpClient stockEntryHttpClient,
     BondAccountHttpClient bondAccountHttpClient, BondEntryHttpClient bondEntryHttpClient,
+    AccountDataSynchronizationService accountDataSynchronizationService, ILoginService loginService,
     ILogger<FinancialAccountService> logger) : IFinancialAccountService
 {
+    // The account-id → type map only changes when accounts are added/removed, yet today it is fetched
+    // (three account-endpoint round-trips) on every navigation to an account page, purely to decide
+    // which details component to render. Cache it so re-navigation is instant. The cache is invalidated
+    // on the service's own account mutations, on the app-wide AccountsChanged signal (covers accounts
+    // added straight through the HttpClients, e.g. AddAccount.razor.cs), and on login-state changes so
+    // it never leaks across users (logout does not reload the app, so this scoped instance is reused).
+    private Dictionary<int, Type>? _availableAccountsCache;
+    private bool _invalidationHooksInstalled;
+
+
     public async Task<bool> AccountExists(int id)
     {
         if ((await currencyAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id)) return true;
@@ -48,6 +60,8 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
             default: throw new NotSupportedException($"Account type {typeof(T)} not supported for adding account.");
         }
+
+        InvalidateAvailableAccountsCache();
     }
     public async Task AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
         where AccountType : BasicAccountInformation
@@ -85,6 +99,8 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         {
             throw new NotSupportedException($"Account type {typeof(AccountType)} not supported for adding account with entries.");
         }
+
+        InvalidateAvailableAccountsCache();
     }
     public async Task AddEntry<T>(T accountEntry) where T : FinancialEntryBase
     {
@@ -160,6 +176,26 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     }
     public async Task<Dictionary<int, Type>> GetAvailableAccounts()
     {
+        EnsureInvalidationHooksInstalled();
+
+        // Always hand back a fresh copy: the cached instance is shared across all callers, so returning it
+        // directly would let any caller that mutates the result silently corrupt every other caller's view.
+        if (_availableAccountsCache is not null)
+            return new Dictionary<int, Type>(_availableAccountsCache);
+
+        var result = await FetchAvailableAccounts();
+
+        // An empty map most likely means the endpoints failed (per-type errors are swallowed below) or
+        // the user genuinely has no accounts yet; don't pin it so a transient failure - or the guest
+        // mock-seeding flow in Home.razor - self-heals on the next lookup.
+        if (result.Count > 0)
+            _availableAccountsCache = new Dictionary<int, Type>(result);
+
+        return result;
+    }
+
+    private async Task<Dictionary<int, Type>> FetchAvailableAccounts()
+    {
         Dictionary<int, Type> result = [];
         var currencyAccountsTask = GetAvailableAccountsAsync(
             () => currencyAccountHttpClient.GetAvailableAccountsAsync(),
@@ -184,6 +220,19 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
         return result;
     }
+
+    // Subscribed lazily (rather than in a constructor body) so the primary constructor can be kept.
+    // Both source services are scoped and share this service's lifetime, so unsubscribing is unnecessary.
+    private void EnsureInvalidationHooksInstalled()
+    {
+        if (_invalidationHooksInstalled) return;
+        _invalidationHooksInstalled = true;
+
+        accountDataSynchronizationService.AccountsChanged += InvalidateAvailableAccountsCache;
+        loginService.LogginStateChanged += _ => InvalidateAvailableAccountsCache();
+    }
+
+    private void InvalidateAvailableAccountsCache() => _availableAccountsCache = null;
 
     private async Task<IEnumerable<AvailableAccount>> GetAvailableAccountsAsync(
         Func<Task<IEnumerable<AvailableAccount>>> getAccounts,
@@ -242,18 +291,21 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         if (await AccountExists<CurrencyAccount>(id))
         {
             await currencyAccountHttpClient.DeleteAccountAsync(id);
+            InvalidateAvailableAccountsCache();
             return;
         }
 
         if (await AccountExists<StockAccount>(id))
         {
             await stockAccountHttpClient.DeleteAccountAsync(id);
+            InvalidateAvailableAccountsCache();
             return;
         }
 
         if (await AccountExists<BondAccount>(id))
         {
             await bondAccountHttpClient.DeleteAccountAsync(id);
+            InvalidateAvailableAccountsCache();
             return;
         }
 
