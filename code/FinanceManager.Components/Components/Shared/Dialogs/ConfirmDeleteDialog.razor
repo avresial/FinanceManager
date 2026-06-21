@@ -1,0 +1,26 @@
+<MudDialog>
+    <TitleContent>
+        @Title
+    </TitleContent>
+    <DialogContent>
+        @Message
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="Submit">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    /// <summary>Heading shown in the dialog title bar.</summary>
+    [Parameter] public string Title { get; set; } = "Delete";
+
+    /// <summary>Confirmation prompt shown in the dialog body.</summary>
+    [Parameter] public string Message { get; set; } = "Do you really want to delete this item? This cannot be undone.";
+
+    private void Submit() => MudDialog?.Close(DialogResult.Ok(true));
+
+    private void Cancel() => MudDialog?.Cancel();
+}

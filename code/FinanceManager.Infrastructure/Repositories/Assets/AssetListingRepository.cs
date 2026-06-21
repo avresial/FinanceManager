@@ -61,6 +61,27 @@ public class AssetListingRepository(AppDbContext context) : IAssetListingReposit
         return await Add(listing, cancellationToken);
     }
 
+    public async Task<bool> Update(AssetListing listing, CancellationToken cancellationToken = default)
+    {
+        EnsureValidPriceMultiplier(listing);
+
+        var existing = await context.AssetListings.FirstOrDefaultAsync(x => x.Id == listing.Id, cancellationToken);
+        if (existing is null) return false;
+
+        existing.Ticker = listing.Ticker;
+        existing.ExchangeMic = listing.ExchangeMic;
+        existing.ExchangeName = listing.ExchangeName;
+        existing.TradingCurrency = listing.TradingCurrency;
+        existing.ListingFigi = listing.ListingFigi;
+        existing.ExchangeInstrumentId = listing.ExchangeInstrumentId;
+        existing.IsPrimaryListing = listing.IsPrimaryListing;
+        existing.PriceMultiplier = listing.PriceMultiplier;
+        existing.IsActive = listing.IsActive;
+        existing.UpdatedAt = DateTimeOffset.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     public async Task<bool> Delete(long id, CancellationToken cancellationToken = default)
     {
         var entity = await context.AssetListings.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
