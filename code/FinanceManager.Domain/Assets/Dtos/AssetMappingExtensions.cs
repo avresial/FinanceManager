@@ -60,19 +60,22 @@ public static class AssetMappingExtensions
         IsEnabled = symbol.IsEnabled
     };
 
+    /// <summary>Trim a value, collapsing null/whitespace to null so blank inputs aren't stored as empty strings.</summary>
+    private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
     /// <summary>Copy the editable fields of <paramref name="dto"/> onto <paramref name="asset"/> (timestamps excluded).</summary>
     public static void ApplyTo(this AssetDto dto, Asset asset)
     {
-        asset.Name = dto.Name;
+        asset.Name = dto.Name.Trim();
         asset.Type = dto.Type;
-        asset.Isin = string.IsNullOrWhiteSpace(dto.Isin) ? null : dto.Isin.Trim();
-        asset.ShareClassFigi = dto.ShareClassFigi;
-        asset.CompositeFigi = dto.CompositeFigi;
-        asset.Issuer = dto.Issuer;
-        asset.Domicile = dto.Domicile;
-        asset.BaseCurrency = dto.BaseCurrency;
+        asset.Isin = Normalize(dto.Isin);
+        asset.ShareClassFigi = Normalize(dto.ShareClassFigi);
+        asset.CompositeFigi = Normalize(dto.CompositeFigi);
+        asset.Issuer = Normalize(dto.Issuer);
+        asset.Domicile = Normalize(dto.Domicile);
+        asset.BaseCurrency = Normalize(dto.BaseCurrency);
         asset.DistributionPolicy = dto.DistributionPolicy;
-        asset.BenchmarkIndex = dto.BenchmarkIndex;
+        asset.BenchmarkIndex = Normalize(dto.BenchmarkIndex);
         asset.ReplicationMethod = dto.ReplicationMethod;
         asset.TotalExpenseRatio = dto.TotalExpenseRatio;
         asset.IsUcits = dto.IsUcits;
@@ -91,10 +94,10 @@ public static class AssetMappingExtensions
     {
         listing.Ticker = dto.Ticker.Trim();
         listing.ExchangeMic = dto.ExchangeMic.Trim();
-        listing.ExchangeName = dto.ExchangeName;
+        listing.ExchangeName = dto.ExchangeName.Trim();
         listing.TradingCurrency = dto.TradingCurrency.Trim();
-        listing.ListingFigi = dto.ListingFigi;
-        listing.ExchangeInstrumentId = dto.ExchangeInstrumentId;
+        listing.ListingFigi = Normalize(dto.ListingFigi);
+        listing.ExchangeInstrumentId = Normalize(dto.ExchangeInstrumentId);
         listing.IsPrimaryListing = dto.IsPrimaryListing;
         listing.PriceMultiplier = dto.PriceMultiplier;
         listing.IsActive = dto.IsActive;
@@ -112,9 +115,9 @@ public static class AssetMappingExtensions
     {
         symbol.Provider = dto.Provider;
         symbol.Symbol = dto.Symbol.Trim();
-        symbol.ProviderExchangeCode = dto.ProviderExchangeCode;
-        symbol.ProviderInstrumentId = dto.ProviderInstrumentId;
-        symbol.Currency = dto.Currency;
+        symbol.ProviderExchangeCode = Normalize(dto.ProviderExchangeCode);
+        symbol.ProviderInstrumentId = Normalize(dto.ProviderInstrumentId);
+        symbol.Currency = Normalize(dto.Currency);
         symbol.IsPrimary = dto.IsPrimary;
         symbol.IsEnabled = dto.IsEnabled;
     }

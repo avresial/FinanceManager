@@ -175,6 +175,10 @@ public partial class AdminEditAsset : ComponentBase
             else
                 _errors.Add("Failed to delete listing.");
         }
+        catch (Exception ex)
+        {
+            _errors.Add($"Failed to delete listing: {ex.Message}");
+        }
         finally
         {
             _isSaving = false;
@@ -239,6 +243,10 @@ public partial class AdminEditAsset : ComponentBase
                 await ReloadAsset();
             else
                 _errors.Add("Failed to delete symbol.");
+        }
+        catch (Exception ex)
+        {
+            _errors.Add($"Failed to delete symbol: {ex.Message}");
         }
         finally
         {
