@@ -2,8 +2,8 @@ using FinanceManager.Application.Identity.Lockout;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
-using Microsoft.Extensions.Options;
 using FinanceManager.Tests.Unit.Shared.Time;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;

@@ -1,7 +1,9 @@
 ﻿using FinanceManager.Domain.Administration.Logging;
 using FinanceManager.Domain.Administration.Monitoring;
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
@@ -30,6 +32,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<StockAccountEntry> StockEntries { get; set; } = default!;
     public DbSet<BondAccountEntry> BondEntries { get; set; } = default!;
     public DbSet<StockPriceDto> StockPrices { get; set; } = default!;
+    public DbSet<Asset> Assets { get; set; } = default!;
+    public DbSet<AssetListing> AssetListings { get; set; } = default!;
+    public DbSet<MarketDataSymbol> MarketDataSymbols { get; set; } = default!;
+    public DbSet<AssetIdentifier> AssetIdentifiers { get; set; } = default!;
+    public DbSet<InvestmentTransaction> InvestmentTransactions { get; set; } = default!;
+    public DbSet<PriceQuote> PriceQuotes { get; set; } = default!;
     public DbSet<NewVisits> NewVisits { get; set; } = default!;
     public DbSet<FinancialInsight> FinancialInsights { get; set; } = default!;
     public DbSet<FinancialLabel> FinancialLabels { get; set; } = default!;
@@ -54,6 +62,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new StockAccountEntryConfiguration());
         modelBuilder.ApplyConfiguration(new StockDetailsConfiguration());
         modelBuilder.ApplyConfiguration(new StockPriceDtoConfiguration());
+        modelBuilder.ApplyConfiguration(new AssetConfiguration());
+        modelBuilder.ApplyConfiguration(new AssetListingConfiguration());
+        modelBuilder.ApplyConfiguration(new MarketDataSymbolConfiguration());
+        modelBuilder.ApplyConfiguration(new AssetIdentifierConfiguration());
+        modelBuilder.ApplyConfiguration(new InvestmentTransactionConfiguration());
+        modelBuilder.ApplyConfiguration(new PriceQuoteConfiguration());
         modelBuilder.ApplyConfiguration(new UserDtoConfiguration());
         modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
         modelBuilder.ApplyConfiguration(new PasswordResetTokenConfiguration());
