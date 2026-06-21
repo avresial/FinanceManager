@@ -46,11 +46,12 @@ public class InvestmentPriceProvider(
     {
         if (assetListingId <= 0) return 0m;
 
-        var listing = await listingRepository.Get(assetListingId, ct);
-        if (listing is null) return 0m;
-
+        // Cache-first: a hit must not depend on any repository I/O.
         var cacheKey = $"INVEST_PRICE_{targetCurrency.ShortName}_{asOf:yyyyMMdd}_{assetListingId}";
         if (cache.TryGetValue(cacheKey, out decimal cached)) return cached;
+
+        var listing = await listingRepository.Get(assetListingId, ct);
+        if (listing is null) return 0m;
 
         var quote = await priceQuoteRepository.GetLatestOnOrBefore(assetListingId, DayEnd(asOf), cancellationToken: ct);
         if (quote is null)
@@ -63,7 +64,7 @@ public class InvestmentPriceProvider(
 
         var price = await ConvertAsync(quote.Price, quote.Currency, targetCurrency, asOf, ct);
         if (price > 0)
-            cache.Set(cacheKey, price, new MemoryCacheEntryOptions { SlidingExpiration = _cacheTtl });
+            cache.Set(cacheKey, price, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = _cacheTtl });
 
         return price;
     }
@@ -180,7 +181,10 @@ public class InvestmentPriceProvider(
             return;
         }
 
-        var fetchKey = $"INVEST_FETCH_{listing.Id}_{symbol.Id}_{start.Date:yyyyMMdd}_{end.Date:yyyyMMdd}";
+        // Key the lock by listing+symbol only: _fetchLocks is static and never evicts, so per-range
+        // keys would leak a SemaphoreSlim per requested window. Sharing one lock per symbol also
+        // serialises overlapping range fetches, which is what we want.
+        var fetchKey = $"INVEST_FETCH_{listing.Id}_{symbol.Id}";
         var fetchLock = _fetchLocks.GetOrAdd(fetchKey, _ => new SemaphoreSlim(1, 1));
         await fetchLock.WaitAsync(ct);
         try
@@ -211,7 +215,7 @@ public class InvestmentPriceProvider(
                 return;
             }
 
-            var normalizedCurrencyName = NormalizedCurrencyName(listing);
+            var normalizedCurrencyName = NormalizedCurrencyName(rawCurrencyName, listing.PriceMultiplier);
             foreach (var price in prices)
             {
                 if (price.PricePerUnit <= 0) continue;
@@ -239,14 +243,16 @@ public class InvestmentPriceProvider(
         }
     }
 
-    private static string NormalizedCurrencyName(AssetListing listing)
+    // Normalise from the currency the prices were actually fetched in (symbol currency, falling
+    // back to the listing's trading currency), so PriceQuote.Currency matches RawCurrency.
+    private static string NormalizedCurrencyName(string rawCurrencyName, decimal priceMultiplier)
     {
-        if (listing.PriceMultiplier == 1m)
-            return listing.TradingCurrency;
+        if (priceMultiplier == 1m)
+            return rawCurrencyName;
 
-        return _minorToMajorCurrency.TryGetValue(listing.TradingCurrency, out var major)
+        return _minorToMajorCurrency.TryGetValue(rawCurrencyName, out var major)
             ? major
-            : listing.TradingCurrency;
+            : rawCurrencyName;
     }
 
     private static bool NeedsFetch(IReadOnlyList<PriceQuote> existing, DateTime start, DateTime end)
