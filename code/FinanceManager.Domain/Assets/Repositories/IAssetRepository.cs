@@ -19,6 +19,9 @@ public interface IAssetRepository
     /// <summary>Insert the asset, or update the existing one matched by ISIN, returning the persisted entity.</summary>
     Task<Asset> Upsert(Asset asset, CancellationToken cancellationToken = default);
 
+    /// <summary>Update an existing asset's editable fields by id (CreatedAt and listings untouched). Returns <c>false</c> when none exists.</summary>
+    Task<bool> Update(Asset asset, CancellationToken cancellationToken = default);
+
     /// <summary>Delete the asset with the given id. Returns <c>false</c> when no such asset exists.</summary>
     Task<bool> Delete(long id, CancellationToken cancellationToken = default);
 }

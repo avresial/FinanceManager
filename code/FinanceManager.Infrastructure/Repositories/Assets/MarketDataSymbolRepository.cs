@@ -70,6 +70,23 @@ public class MarketDataSymbolRepository(AppDbContext context) : IMarketDataSymbo
         return true;
     }
 
+    public async Task<bool> Update(MarketDataSymbol symbol, CancellationToken cancellationToken = default)
+    {
+        var existing = await context.MarketDataSymbols.FirstOrDefaultAsync(x => x.Id == symbol.Id, cancellationToken);
+        if (existing is null) return false;
+
+        existing.Provider = symbol.Provider;
+        existing.Symbol = symbol.Symbol;
+        existing.ProviderExchangeCode = symbol.ProviderExchangeCode;
+        existing.ProviderInstrumentId = symbol.ProviderInstrumentId;
+        existing.Currency = symbol.Currency;
+        existing.IsPrimary = symbol.IsPrimary;
+        existing.IsEnabled = symbol.IsEnabled;
+        existing.UpdatedAt = DateTimeOffset.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     public async Task<bool> Delete(long id, CancellationToken cancellationToken = default)
     {
         var entity = await context.MarketDataSymbols.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
