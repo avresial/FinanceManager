@@ -17,7 +17,9 @@ public sealed class BrokerSymbol
         { "UK", new("LN", "XLON", "London Stock Exchange", ["United Kingdom", "GB", "UK", "London"]) },
         { "DE", new("GY", "XETR", "Xetra", ["Germany", "XETRA", "Frankfurt", "DE"]) },
         { "PL", new("WA", "XWAR", "Warsaw Stock Exchange", ["Poland", "Warsaw", "PL"]) },
-        { "US", new("US", "XNAS", "United States", ["United States", "US", "USA"]) },
+        // OpenFIGI "US" is a True Composite covering all US venues (Nasdaq, NYSE, ARCA, ...), so no
+        // single ISO 10383 MIC applies — leave the MIC unset rather than mis-attributing to one.
+        { "US", new("US", null, "United States", ["United States", "US", "USA"]) },
         { "CA", new("CT", "XTSE", "Toronto Stock Exchange", ["Canada", "Toronto", "CA"]) },
         { "AU", new("AU", "XASX", "Australian Securities Exchange", ["Australia", "AU"]) },
         { "JP", new("TT", "XTKS", "Tokyo Stock Exchange", ["Japan", "Tokyo", "JP"]) },
@@ -61,23 +63,31 @@ public sealed class BrokerSymbol
     }
 
     /// <summary>
-    /// Resolve a venue by its OpenFIGI exchange code (e.g. "LN" → London Stock Exchange), so a
-    /// reconciled listing without a broker suffix can still be mapped to an ISO 10383 MIC.
+    /// Resolve a venue by any known token — a broker suffix ("UK"), an OpenFIGI exchange code
+    /// ("LN"), or an Alpha Vantage region label ("GB"/"United Kingdom") — so a reconciled listing
+    /// (including cached legacy <c>StockDetails.Region</c> values) can be mapped to an ISO 10383 MIC.
     /// </summary>
-    public static ExchangeMapping? TryLookupByOpenFigiExchCode(string? openFigiExchCode)
+    public static ExchangeMapping? TryLookupByVenueToken(string? venueToken)
     {
-        if (string.IsNullOrWhiteSpace(openFigiExchCode))
+        if (string.IsNullOrWhiteSpace(venueToken))
             return null;
 
+        var token = venueToken.Trim();
+
+        if (_suffixMap.TryGetValue(token, out var suffixMapping))
+            return suffixMapping;
+
         return _suffixMap.Values.FirstOrDefault(m =>
-            string.Equals(m.OpenFigiExchCode, openFigiExchCode, StringComparison.OrdinalIgnoreCase));
+            string.Equals(m.OpenFigiExchCode, token, StringComparison.OrdinalIgnoreCase) ||
+            m.AlphaVantageRegions.Any(alias => string.Equals(alias, token, StringComparison.OrdinalIgnoreCase)));
     }
 
     /// <summary>
-    /// Maps a broker suffix to the OpenFIGI exchange code, ISO 10383 MIC, exchange name, and the
-    /// Alpha Vantage region labels that identify the same venue.
+    /// Maps a broker suffix to the OpenFIGI exchange code, ISO 10383 MIC (null for composite venues
+    /// with no single MIC), exchange name, and the Alpha Vantage region labels that identify the
+    /// same venue.
     /// </summary>
-    public sealed record ExchangeMapping(string OpenFigiExchCode, string Mic, string ExchangeName, string[] AlphaVantageRegions)
+    public sealed record ExchangeMapping(string OpenFigiExchCode, string? Mic, string ExchangeName, string[] AlphaVantageRegions)
     {
         public bool MatchesRegion(string? avRegion)
         {

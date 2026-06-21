@@ -422,15 +422,25 @@ public class InstrumentResolverTests
         Assert.NotNull(result.Match);
         Assert.Equal("IE00B5BMR087", result.Match.Isin);
         Assert.Equal("CSPX.LON", result.Match.AlphaVantageSymbol);
+        Assert.Equal(42, result.Match.AssetListingId);
 
         _avClientMock.Verify(x => x.SearchTicker(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _openFigiClientMock.Verify(x => x.MapByTickerAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        // The legacy region token "GB" must resolve to the LSE MIC, not be persisted raw.
+        _assetListingRepositoryMock.Verify(
+            x => x.Upsert(
+                It.Is<AssetListing>(l => l.Ticker == "CSPX" && l.ExchangeMic == "XLON"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
     public async Task ResolveAsync_AutoResolved_PersistsAssetModelAndExposesListingId()
     {
         var resolver = CreateResolver();
+        // AlphaVantage quotes in GBX (pence); OpenFIGI's canonical currency is GBP. The persisted
+        // listing/symbol must keep the GBX quote currency + 0.01 multiplier, not the canonical GBP.
         _avClientMock
             .Setup(x => x.SearchTicker("CSPX", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<TickerSearchMatch>
@@ -441,8 +451,11 @@ public class InstrumentResolverTests
             .Setup(x => x.MapByTickerAsync("CSPX", null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OpenFigiListing>
             {
-                new(Isin: "IE00B5BMR087", Ticker: "CSPX", Name: "iShares Core S&P 500 ETF", ExchCode: "LN", Currency: "GBX")
+                new(Isin: "IE00B5BMR087", Ticker: "CSPX", Name: "iShares Core S&P 500 ETF", ExchCode: "LN", Currency: "GBP")
             });
+        _quoteFactorResolverMock
+            .Setup(x => x.ResolveAsync("GBX", "GBP", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0.01m);
         _stockDetailsRepositoryMock
             .Setup(x => x.GetByTicker("CSPX", It.IsAny<CancellationToken>()))
             .ReturnsAsync((StockDetails?)null);
@@ -462,7 +475,8 @@ public class InstrumentResolverTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
-        // GBX listing carries the LSE MIC, the pence→pound multiplier, and the base ticker.
+        // GBX listing carries the LSE MIC, the provider quote currency, the pence→pound multiplier,
+        // and the base ticker — even though OpenFIGI's canonical currency was GBP.
         _assetListingRepositoryMock.Verify(
             x => x.Upsert(
                 It.Is<AssetListing>(l => l.Ticker == "CSPX"
@@ -473,13 +487,45 @@ public class InstrumentResolverTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
-        // The AlphaVantage symbol is mapped to the persisted listing.
+        // The AlphaVantage symbol is mapped to the persisted listing in its quote currency (GBX).
         _marketDataSymbolRepositoryMock.Verify(
             x => x.Upsert(
                 It.Is<MarketDataSymbol>(s => s.AssetListingId == 42
                     && s.Provider == MarketDataProvider.AlphaVantage
                     && s.Symbol == "CSPX.LON"
+                    && s.Currency == "GBX"
                     && s.IsPrimary && s.IsEnabled),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_UsCompositeVenue_DoesNotClaimSpecificMic()
+    {
+        // OpenFIGI "US" is a composite covering all US venues, so it must not be persisted as XNAS.
+        var resolver = CreateResolver();
+        _avClientMock
+            .Setup(x => x.SearchTicker("MSFT", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TickerSearchMatch>
+            {
+                new() { Symbol = "MSFT", Name = "Microsoft Corp", Type = "Equity", Region = "US", Currency = "USD", MatchScore = 1m }
+            });
+        _openFigiClientMock
+            .Setup(x => x.MapByTickerAsync("MSFT", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<OpenFigiListing>
+            {
+                new(Isin: "US5949181045", Ticker: "MSFT", Name: "Microsoft Corp", ExchCode: "US", Currency: "USD")
+            });
+        _stockDetailsRepositoryMock
+            .Setup(x => x.GetByTicker("MSFT", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((StockDetails?)null);
+
+        var result = await resolver.ResolveAsync("MSFT", TestContext.Current.CancellationToken);
+
+        Assert.Equal(ResolutionKind.AutoResolved, result.Kind);
+        _assetListingRepositoryMock.Verify(
+            x => x.Upsert(
+                It.Is<AssetListing>(l => l.ExchangeMic != "XNAS" && l.TradingCurrency == "USD" && l.PriceMultiplier == 1m),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

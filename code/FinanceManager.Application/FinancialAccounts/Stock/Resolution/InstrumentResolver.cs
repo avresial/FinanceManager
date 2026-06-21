@@ -201,7 +201,8 @@ public sealed class InstrumentResolver(
                         Name: ofListing.Name,
                         Exchange: ofListing.ExchCode,
                         Currency: ofListing.Currency ?? "USD",
-                        Type: "Unknown"));
+                        Type: "Unknown",
+                        QuoteCurrency: ofListing.Currency));
                 }
             }
         }
@@ -245,7 +246,8 @@ public sealed class InstrumentResolver(
                 Exchange: matchingOf?.ExchCode ?? avMatch.Region ?? string.Empty,
                 Currency: currency,
                 Type: string.IsNullOrWhiteSpace(avMatch.Type) ? "Unknown" : avMatch.Type,
-                QuoteFactor: quoteFactor));
+                QuoteFactor: quoteFactor,
+                QuoteCurrency: avCurrency));
         }
     }
 
@@ -288,6 +290,12 @@ public sealed class InstrumentResolver(
         {
             var (mic, exchangeName) = ResolveVenue(match.Exchange);
 
+            // The provider may quote in a minor unit (e.g. GBX pence) that differs from the
+            // canonical currency (GBP). Persist the *quote* currency on the listing/symbol and let
+            // PriceMultiplier normalise it, rather than storing the canonical currency with a 1x
+            // multiplier (which would over-value pence-quoted listings 100x).
+            var quoteCurrency = string.IsNullOrWhiteSpace(match.QuoteCurrency) ? match.Currency : match.QuoteCurrency;
+
             var asset = await assetRepository.Upsert(new Asset
             {
                 Name = match.Name,
@@ -312,9 +320,9 @@ public sealed class InstrumentResolver(
                 Ticker = baseTicker,
                 ExchangeMic = mic,
                 ExchangeName = exchangeName,
-                TradingCurrency = match.Currency,
+                TradingCurrency = quoteCurrency,
                 IsPrimaryListing = true,
-                PriceMultiplier = PriceMultiplierFor(match.Currency),
+                PriceMultiplier = PriceMultiplierFor(quoteCurrency),
                 IsActive = true
             }, ct);
 
@@ -323,7 +331,7 @@ public sealed class InstrumentResolver(
                 AssetListingId = listing.Id,
                 Provider = MarketDataProvider.AlphaVantage,
                 Symbol = match.AlphaVantageSymbol,
-                Currency = match.Currency,
+                Currency = quoteCurrency,
                 IsPrimary = true,
                 IsEnabled = true
             }, ct);
@@ -337,15 +345,18 @@ public sealed class InstrumentResolver(
         }
     }
 
-    // Map a reconciled venue (broker suffix or OpenFIGI exchange code such as "LN") to an ISO 10383
-    // MIC and human-readable name. Falls back to the raw token when the venue is unknown.
+    // Map a reconciled venue token (broker suffix, OpenFIGI exchange code like "LN", or an Alpha
+    // Vantage region label like "GB"/"United Kingdom") to an ISO 10383 MIC and human-readable name.
+    // Composite venues with no single MIC (e.g. OpenFIGI "US") and unknown tokens fall back to the
+    // raw token rather than claiming a specific exchange.
     private static (string Mic, string ExchangeName) ResolveVenue(string? exchange)
     {
-        var mapping = BrokerSymbol.TryLookupByOpenFigiExchCode(exchange);
-        if (mapping is not null)
-            return (mapping.Mic, mapping.ExchangeName);
-
         var token = string.IsNullOrWhiteSpace(exchange) ? "UNKNOWN" : exchange.Trim().ToUpperInvariant();
+
+        var mapping = BrokerSymbol.TryLookupByVenueToken(exchange);
+        if (mapping is not null)
+            return (mapping.Mic ?? token, mapping.ExchangeName);
+
         return (token, token);
     }
 
