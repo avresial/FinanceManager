@@ -22,6 +22,9 @@ public interface IAssetListingRepository
     /// <summary>Insert the listing, or update the existing one matched by (Ticker, ExchangeMic, TradingCurrency).</summary>
     Task<AssetListing> Upsert(AssetListing listing, CancellationToken cancellationToken = default);
 
+    /// <summary>Update an existing listing's editable fields by id (AssetId and CreatedAt untouched). Returns <c>false</c> when none exists.</summary>
+    Task<bool> Update(AssetListing listing, CancellationToken cancellationToken = default);
+
     /// <summary>Delete the listing with the given id. Returns <c>false</c> when no such listing exists.</summary>
     Task<bool> Delete(long id, CancellationToken cancellationToken = default);
 }

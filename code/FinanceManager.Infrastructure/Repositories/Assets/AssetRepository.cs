@@ -9,7 +9,7 @@ public class AssetRepository(AppDbContext context) : IAssetRepository
 {
     public Task<Asset?> Get(long id, CancellationToken cancellationToken = default) =>
         context.Assets
-            .Include(x => x.Listings)
+            .Include(x => x.Listings).ThenInclude(l => l.MarketDataSymbols)
             .Include(x => x.Identifiers)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
@@ -60,6 +60,31 @@ public class AssetRepository(AppDbContext context) : IAssetRepository
         }
 
         return await Add(asset, cancellationToken);
+    }
+
+    public async Task<bool> Update(Asset asset, CancellationToken cancellationToken = default)
+    {
+        // Copy scalars onto the tracked row so CreatedAt and the listings graph are left untouched.
+        var existing = await context.Assets.FirstOrDefaultAsync(x => x.Id == asset.Id, cancellationToken);
+        if (existing is null) return false;
+
+        existing.Name = asset.Name;
+        existing.Type = asset.Type;
+        existing.Isin = asset.Isin;
+        existing.ShareClassFigi = asset.ShareClassFigi;
+        existing.CompositeFigi = asset.CompositeFigi;
+        existing.Issuer = asset.Issuer;
+        existing.Domicile = asset.Domicile;
+        existing.BaseCurrency = asset.BaseCurrency;
+        existing.DistributionPolicy = asset.DistributionPolicy;
+        existing.BenchmarkIndex = asset.BenchmarkIndex;
+        existing.ReplicationMethod = asset.ReplicationMethod;
+        existing.TotalExpenseRatio = asset.TotalExpenseRatio;
+        existing.IsUcits = asset.IsUcits;
+        existing.InceptionDate = asset.InceptionDate;
+        existing.UpdatedAt = DateTimeOffset.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<bool> Delete(long id, CancellationToken cancellationToken = default)

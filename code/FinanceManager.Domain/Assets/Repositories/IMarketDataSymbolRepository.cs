@@ -19,6 +19,9 @@ public interface IMarketDataSymbolRepository
     /// <summary>Insert the symbol, or update the existing one matched by (Provider, Symbol).</summary>
     Task<MarketDataSymbol> Upsert(MarketDataSymbol symbol, CancellationToken cancellationToken = default);
 
+    /// <summary>Update an existing symbol's editable fields by id (AssetListingId and CreatedAt untouched). Returns <c>false</c> when none exists.</summary>
+    Task<bool> Update(MarketDataSymbol symbol, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Record the outcome of a price fetch (success timestamp and/or last error) for diagnostics.
     /// Returns <c>false</c> when no symbol with the given id exists.
