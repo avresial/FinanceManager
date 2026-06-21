@@ -13,6 +13,7 @@ using FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
 using FinanceManager.Application.FinancialAccounts.Currencies.Export;
 using FinanceManager.Application.FinancialAccounts.Currencies.Import;
 using FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
+using FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 using FinanceManager.Application.FinancialAccounts.Shared.Csv;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.FinancialAccounts.Shared.Imports;
@@ -30,6 +31,7 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Exports;
 using FinanceManager.Domain.FinancialAccounts.Bond.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Exports;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Stock.Exports;
@@ -77,6 +79,7 @@ internal static class Registration
                 .AddScoped<IAccountCsvExportService<BondAccountExportDto>, BondAccountCsvExportService>()
                 .AddScoped<IStockPriceProvider, StockPriceProvider>()
                 .AddScoped<IInvestmentPriceProvider, InvestmentPriceProvider>()
+                .AddScoped<IInvestmentValuationService, InvestmentValuationService>()
                 .AddScoped<IStockPriceBulkImportService, StockPriceBulkImportService>()
                 .AddScoped<IStockUnrealizedGainLossCalculator, StockUnrealizedGainLossCalculator>()
                 .AddScoped<IBondUnrealizedGainLossCalculator, BondUnrealizedGainLossCalculator>()
