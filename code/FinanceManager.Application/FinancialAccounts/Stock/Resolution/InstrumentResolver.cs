@@ -1,4 +1,6 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
+using FinanceManager.Domain.Assets.Entities;
+using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
@@ -14,11 +16,20 @@ public sealed class InstrumentResolver(
     IOpenFigiClient openFigiClient,
     IAlphaVantageClient avClient,
     IStockDetailsRepository stockDetailsRepository,
+    IAssetRepository assetRepository,
+    IAssetListingRepository assetListingRepository,
+    IMarketDataSymbolRepository marketDataSymbolRepository,
     ICurrencyRepository currencyRepository,
     IQuoteFactorResolver quoteFactorResolver,
     IMemoryCache cache,
     ILogger<InstrumentResolver> logger) : IInstrumentResolver
 {
+    // Pence-style minor currency units that normalise to a major unit via PriceMultiplier 0.01.
+    private static readonly HashSet<string> _minorCurrencyUnits = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "GBX", "GBP.", "ZAC", "ILA",
+    };
+
     private static readonly TimeSpan _positiveTtl = TimeSpan.FromHours(24);
     private static readonly TimeSpan _negativeTtl = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan _openFigiFailureCooldown = TimeSpan.FromMinutes(10);
@@ -49,16 +60,18 @@ public sealed class InstrumentResolver(
         if (existing?.Isin is not null && existing.AlphaVantageSymbol is not null)
         {
             logger.LogDebug("Found cached StockDetails for {BaseTicker}: ISIN={Isin}, AvSymbol={AvSymbol}", baseTicker, existing.Isin, existing.AlphaVantageSymbol);
+            var match = new InstrumentListing(
+                existing.Isin,
+                existing.AlphaVantageSymbol,
+                existing.Name,
+                existing.Region,
+                existing.Currency.ShortName,
+                existing.Type);
+            var listingId = await PersistInvestmentModel(match, baseTicker, ct);
             var cached2 = new InstrumentResolution
             {
                 Kind = ResolutionKind.AutoResolved,
-                Match = new InstrumentListing(
-                    existing.Isin,
-                    existing.AlphaVantageSymbol,
-                    existing.Name,
-                    existing.Region,
-                    existing.Currency.ShortName,
-                    existing.Type)
+                Match = listingId is long id ? match with { AssetListingId = id } : match
             };
             cache.Set(cacheKey, cached2, _positiveTtl);
             return cached2;
@@ -92,10 +105,11 @@ public sealed class InstrumentResolver(
             {
                 logger.LogDebug("Auto-resolving single match: ISIN={Isin}, AvSymbol={AvSymbol}", single.Isin, single.AlphaVantageSymbol);
                 await PersistStockDetails(single, input, ct);
+                var listingId = await PersistInvestmentModel(single, baseTicker, ct);
                 var autoResult = new InstrumentResolution
                 {
                     Kind = ResolutionKind.AutoResolved,
-                    Match = single
+                    Match = listingId is long id ? single with { AssetListingId = id } : single
                 };
                 cache.Set(cacheKey, autoResult, _positiveTtl);
                 return autoResult;
@@ -187,7 +201,8 @@ public sealed class InstrumentResolver(
                         Name: ofListing.Name,
                         Exchange: ofListing.ExchCode,
                         Currency: ofListing.Currency ?? "USD",
-                        Type: "Unknown"));
+                        Type: "Unknown",
+                        QuoteCurrency: ofListing.Currency));
                 }
             }
         }
@@ -231,7 +246,8 @@ public sealed class InstrumentResolver(
                 Exchange: matchingOf?.ExchCode ?? avMatch.Region ?? string.Empty,
                 Currency: currency,
                 Type: string.IsNullOrWhiteSpace(avMatch.Type) ? "Unknown" : avMatch.Type,
-                QuoteFactor: quoteFactor));
+                QuoteFactor: quoteFactor,
+                QuoteCurrency: avCurrency));
         }
     }
 
@@ -260,6 +276,102 @@ public sealed class InstrumentResolver(
             logger.LogWarning(ex, "Failed to persist auto-resolved StockDetails for ISIN {Isin}", match.Isin);
         }
     }
+
+    // Mirror the auto-resolved instrument into the new asset model: upsert Asset (by ISIN) + an ISIN
+    // identifier, the concrete AssetListing (Ticker/ExchangeMic/TradingCurrency), and the AlphaVantage
+    // MarketDataSymbol. Returns the persisted listing id so callers can attach a transaction to it.
+    // Best-effort: a persistence failure must not fail the resolution itself.
+    private async Task<long?> PersistInvestmentModel(InstrumentListing match, string baseTicker, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(match.Isin) || string.IsNullOrWhiteSpace(match.AlphaVantageSymbol))
+            return null;
+
+        try
+        {
+            var (mic, exchangeName) = ResolveVenue(match.Exchange);
+
+            // The provider may quote in a minor unit (e.g. GBX pence) that differs from the
+            // canonical currency (GBP). Persist the *quote* currency on the listing/symbol and let
+            // PriceMultiplier normalise it, rather than storing the canonical currency with a 1x
+            // multiplier (which would over-value pence-quoted listings 100x).
+            var quoteCurrency = string.IsNullOrWhiteSpace(match.QuoteCurrency) ? match.Currency : match.QuoteCurrency;
+
+            var asset = await assetRepository.Upsert(new Asset
+            {
+                Name = match.Name,
+                Type = MapAssetType(match.Type),
+                Isin = match.Isin,
+                Identifiers =
+                [
+                    new AssetIdentifier
+                    {
+                        Type = AssetIdentifierType.ISIN,
+                        Value = match.Isin,
+                        Scope = IdentifierScope.Asset,
+                        Source = nameof(InstrumentResolver),
+                        IsPrimary = true
+                    }
+                ]
+            }, ct);
+
+            var listing = await assetListingRepository.Upsert(new AssetListing
+            {
+                AssetId = asset.Id,
+                Ticker = baseTicker,
+                ExchangeMic = mic,
+                ExchangeName = exchangeName,
+                TradingCurrency = quoteCurrency,
+                IsPrimaryListing = true,
+                PriceMultiplier = PriceMultiplierFor(quoteCurrency),
+                IsActive = true
+            }, ct);
+
+            await marketDataSymbolRepository.Upsert(new MarketDataSymbol
+            {
+                AssetListingId = listing.Id,
+                Provider = MarketDataProvider.AlphaVantage,
+                Symbol = match.AlphaVantageSymbol,
+                Currency = quoteCurrency,
+                IsPrimary = true,
+                IsEnabled = true
+            }, ct);
+
+            return listing.Id;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Failed to persist auto-resolved asset model for ISIN {Isin}", match.Isin);
+            return null;
+        }
+    }
+
+    // Map a reconciled venue token (broker suffix, OpenFIGI exchange code like "LN", or an Alpha
+    // Vantage region label like "GB"/"United Kingdom") to an ISO 10383 MIC and human-readable name.
+    // Composite venues with no single MIC (e.g. OpenFIGI "US") and unknown tokens fall back to the
+    // raw token rather than claiming a specific exchange.
+    private static (string Mic, string ExchangeName) ResolveVenue(string? exchange)
+    {
+        var token = string.IsNullOrWhiteSpace(exchange) ? "UNKNOWN" : exchange.Trim().ToUpperInvariant();
+
+        var mapping = BrokerSymbol.TryLookupByVenueToken(exchange);
+        if (mapping is not null)
+            return (mapping.Mic ?? token, mapping.ExchangeName);
+
+        return (token, token);
+    }
+
+    private static decimal PriceMultiplierFor(string currency) =>
+        _minorCurrencyUnits.Contains(currency) ? 0.01m : 1m;
+
+    private static AssetType MapAssetType(string? type) => type?.Trim().ToUpperInvariant() switch
+    {
+        "ETF" => AssetType.ETF,
+        "MUTUAL FUND" or "MUTUALFUND" or "FUND" => AssetType.MutualFund,
+        "BOND" => AssetType.Bond,
+        "CRYPTO" or "CRYPTOCURRENCY" or "DIGITAL CURRENCY" => AssetType.Crypto,
+        "EQUITY" or "STOCK" or "COMMON STOCK" => AssetType.Stock,
+        _ => AssetType.Other
+    };
 
     private async Task<IReadOnlyList<OpenFigiListing>> OpenFigiCallWithFallback(string baseTicker, string? exchCode, CancellationToken ct)
     {
