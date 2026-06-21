@@ -126,11 +126,12 @@ public class AssetController(
     {
         if (string.IsNullOrWhiteSpace(dto.Symbol))
             return BadRequest("Symbol is required.");
-        if (await listingRepository.Get(listingId, cancellationToken) is null)
+        var listing = await listingRepository.Get(listingId, cancellationToken);
+        if (listing is null)
             return NotFound("Listing not found.");
 
         var created = await symbolRepository.Add(dto.ToNewEntity(listingId), cancellationToken);
-        return CreatedAtAction(nameof(GetAsset), new { id = 0L }, created.ToDto());
+        return CreatedAtAction(nameof(GetAsset), new { id = listing.AssetId }, created.ToDto());
     }
 
     [HttpPut("symbols/{id:long}")]

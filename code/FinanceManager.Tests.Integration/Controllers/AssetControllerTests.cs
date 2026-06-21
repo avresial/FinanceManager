@@ -91,6 +91,7 @@ public class AssetControllerTests(OptionsProvider optionsProvider) : ControllerT
             new MarketDataSymbolDto { Provider = MarketDataProvider.AlphaVantage, Symbol = "SXR8.DE", IsPrimary = true },
             TestContext.Current.CancellationToken);
         symbolResponse.EnsureSuccessStatusCode();
+        Assert.Equal($"http://localhost/api/admin/assets/{asset.Id}", symbolResponse.Headers.Location?.ToString());
 
         var fetched = await Client.GetFromJsonAsync<AssetDto>($"api/admin/assets/{asset.Id}", TestContext.Current.CancellationToken);
         Assert.NotNull(fetched);
