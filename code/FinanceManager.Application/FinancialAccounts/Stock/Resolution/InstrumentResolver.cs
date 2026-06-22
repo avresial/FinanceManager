@@ -77,6 +77,12 @@ public sealed class InstrumentResolver(
             return cached2;
         }
 
+        // Deterministic-first: a valid ISIN identifies the instrument directly, so resolve it via
+        // OpenFIGI's ISIN mapping instead of the fuzzy AV-search ⇄ OpenFIGI-ticker reconciliation
+        // that free-text/ticker input still uses below.
+        if (InstrumentIdentifier.IsIsin(input))
+            return await ResolveByIsinAsync(input, cacheKey, ct);
+
         // Fan out: AV search + OpenFIGI ticker mapping.
         // Translate the broker suffix to the OpenFIGI exchange code (e.g. "UK" → "LN")
         // before querying OpenFIGI, which keys on its own exchange codes, not broker suffixes.
@@ -91,6 +97,45 @@ public sealed class InstrumentResolver(
         // Reconcile: pair AV symbol/currency/region against OpenFIGI ISIN/venue
         var candidates = await Reconcile(baseTicker, brokerSymbol.ExchangeHint, avMatches, ofListings, ct);
 
+        return await BuildResolutionFromCandidates(candidates, input, baseTicker, cacheKey, ct);
+    }
+
+    // Deterministic ISIN path: OpenFIGI's ID_ISIN mapping fixes the instrument identity (every
+    // returned venue carries the input ISIN). The base ticker from that response is then used to
+    // fetch the Alpha Vantage pricing handle, after which the shared reconcile/auto-resolve path
+    // runs — without requiring the two providers to agree on identity by fuzzy region matching, and
+    // without the OpenFIGI-ticker fan-out the free-text path performs.
+    private async Task<InstrumentResolution> ResolveByIsinAsync(string isin, string cacheKey, CancellationToken ct)
+    {
+        var ofListings = await OpenFigiIsinCallWithFallback(isin, ct);
+        if (ofListings.Count == 0)
+        {
+            var noMatch = NoMatch();
+            cache.Set(cacheKey, noMatch, _negativeTtl);
+            return noMatch;
+        }
+
+        var baseTicker = ofListings
+            .Select(l => l.Ticker)
+            .FirstOrDefault(t => !string.IsNullOrWhiteSpace(t));
+
+        var avMatches = string.IsNullOrWhiteSpace(baseTicker)
+            ? (IReadOnlyList<TickerSearchMatch>)[]
+            : await avClient.SearchTicker(baseTicker, ct);
+
+        var resolvedTicker = string.IsNullOrWhiteSpace(baseTicker) ? isin : baseTicker;
+        var candidates = await Reconcile(resolvedTicker, exchangeHint: null, avMatches, ofListings, ct);
+
+        return await BuildResolutionFromCandidates(candidates, resolvedTicker, resolvedTicker, cacheKey, ct);
+    }
+
+    private async Task<InstrumentResolution> BuildResolutionFromCandidates(
+        List<InstrumentListing> candidates,
+        string brokerTickerForPersist,
+        string baseTicker,
+        string cacheKey,
+        CancellationToken ct)
+    {
         if (candidates.Count == 0)
         {
             var result = NoMatch();
@@ -104,7 +149,7 @@ public sealed class InstrumentResolver(
             if (single.Isin is not null && single.AlphaVantageSymbol is not null)
             {
                 logger.LogDebug("Auto-resolving single match: ISIN={Isin}, AvSymbol={AvSymbol}", single.Isin, single.AlphaVantageSymbol);
-                await PersistStockDetails(single, input, ct);
+                await PersistStockDetails(single, brokerTickerForPersist, ct);
                 var listingId = await PersistInvestmentModel(single, baseTicker, ct);
                 var autoResult = new InstrumentResolution
                 {
@@ -393,6 +438,31 @@ public sealed class InstrumentResolver(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "OpenFIGI call failed for {BaseTicker}; entering cooldown", baseTicker);
+            _openFigiCooldownUntilUtc = DateTime.UtcNow.Add(_openFigiFailureCooldown);
+            return [];
+        }
+    }
+
+    private async Task<IReadOnlyList<OpenFigiListing>> OpenFigiIsinCallWithFallback(string isin, CancellationToken ct)
+    {
+        if (IsInOpenFigiCooldown())
+        {
+            logger.LogDebug("OpenFIGI in failure cooldown; skipping ISIN call");
+            return [];
+        }
+
+        try
+        {
+            // ISIN is validated to be 12 alphanumeric chars (no CR/LF), so it is safe to log directly.
+            return await openFigiClient.MapByIsinAsync(isin, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "OpenFIGI ISIN call failed for {Isin}; entering cooldown", isin);
             _openFigiCooldownUntilUtc = DateTime.UtcNow.Add(_openFigiFailureCooldown);
             return [];
         }

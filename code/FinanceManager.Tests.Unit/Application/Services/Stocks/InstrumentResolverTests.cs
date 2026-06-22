@@ -500,6 +500,83 @@ public class InstrumentResolverTests
     }
 
     [Fact]
+    public async Task ResolveAsync_WithIsinInput_ShortCircuitsTickerFanOut()
+    {
+        // Deterministic-first: a valid ISIN must resolve via OpenFIGI's ID_ISIN mapping, NOT the
+        // fuzzy ticker fan-out. MapByIsinAsync is called; MapByTickerAsync is never called.
+        var resolver = CreateResolver();
+        _openFigiClientMock
+            .Setup(x => x.MapByIsinAsync("IE00B5BMR087", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<OpenFigiListing>
+            {
+                new(Isin: "IE00B5BMR087", Ticker: "CSPX", Name: "iShares Core S&P 500 ETF", ExchCode: "LN", Currency: "GBP")
+            });
+        _avClientMock
+            .Setup(x => x.SearchTicker("CSPX", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TickerSearchMatch>
+            {
+                new() { Symbol = "CSPX.LON", Name = "iShares Core S&P 500 ETF", Type = "ETF", Region = "GB", Currency = "GBP", MatchScore = 1m }
+            });
+        _stockDetailsRepositoryMock
+            .Setup(x => x.GetByTicker(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((StockDetails?)null);
+
+        var result = await resolver.ResolveAsync("IE00B5BMR087", TestContext.Current.CancellationToken);
+
+        Assert.Equal(ResolutionKind.AutoResolved, result.Kind);
+        Assert.NotNull(result.Match);
+        Assert.Equal("IE00B5BMR087", result.Match.Isin);
+        Assert.Equal("CSPX.LON", result.Match.AlphaVantageSymbol);
+
+        _openFigiClientMock.Verify(x => x.MapByIsinAsync("IE00B5BMR087", It.IsAny<CancellationToken>()), Times.Once);
+        _openFigiClientMock.Verify(
+            x => x.MapByTickerAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_WithIsinInput_NoOpenFigiVenues_ReturnsNoMatch()
+    {
+        var resolver = CreateResolver();
+        _openFigiClientMock
+            .Setup(x => x.MapByIsinAsync("IE00B5BMR087", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<OpenFigiListing>());
+        _stockDetailsRepositoryMock
+            .Setup(x => x.GetByTicker(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((StockDetails?)null);
+
+        var result = await resolver.ResolveAsync("IE00B5BMR087", TestContext.Current.CancellationToken);
+
+        Assert.Equal(ResolutionKind.NoMatch, result.Kind);
+        // Identity was sought via ISIN, never the ticker fan-out.
+        _avClientMock.Verify(x => x.SearchTicker(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_WithInvalidChecksumTwelveCharInput_UsesTickerPath()
+    {
+        // A 12-char string that fails the ISIN checksum must NOT be treated as an ISIN; it flows
+        // through the normal ticker reconcile fan-out instead.
+        const string notAnIsin = "IE00B5BMR088"; // last digit tampered → bad checksum
+        var resolver = CreateResolver();
+        _avClientMock
+            .Setup(x => x.SearchTicker(notAnIsin, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TickerSearchMatch>());
+        _openFigiClientMock
+            .Setup(x => x.MapByTickerAsync(notAnIsin, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<OpenFigiListing>());
+        _stockDetailsRepositoryMock
+            .Setup(x => x.GetByTicker(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((StockDetails?)null);
+
+        var result = await resolver.ResolveAsync(notAnIsin, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ResolutionKind.NoMatch, result.Kind);
+        _openFigiClientMock.Verify(x => x.MapByIsinAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _openFigiClientMock.Verify(x => x.MapByTickerAsync(notAnIsin, null, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task ResolveAsync_UsCompositeVenue_DoesNotClaimSpecificMic()
     {
         // OpenFIGI "US" is a composite covering all US venues, so it must not be persisted as XNAS.
