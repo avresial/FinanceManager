@@ -8,10 +8,13 @@ namespace FinanceManager.Infrastructure.Repositories.Investments;
 public class InvestmentTransactionRepository(AppDbContext context) : IInvestmentTransactionRepository
 {
     public Task<InvestmentTransaction?> Get(long id, CancellationToken cancellationToken = default) =>
-        context.InvestmentTransactions.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        context.InvestmentTransactions
+            .Include(x => x.AssetListing)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
     public async Task<IReadOnlyList<InvestmentTransaction>> GetByAccount(int accountId, CancellationToken cancellationToken = default) =>
         await context.InvestmentTransactions.AsNoTracking()
+            .Include(x => x.AssetListing)
             .Where(x => x.AccountId == accountId)
             .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);

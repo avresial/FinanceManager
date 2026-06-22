@@ -1,5 +1,6 @@
 using FinanceManager.Application.FinancialAccounts.Bond.Seeders;
 using FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
+using FinanceManager.Application.FinancialAccounts.Investments.Seeders;
 using FinanceManager.Application.FinancialAccounts.Stock.Seeders;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Application.Insights.Seeders;
@@ -16,6 +17,7 @@ public class GuestAccountSeeder(
     BondDetailsSeeder bondDetailsSeeder,
     CurrencyAccountSeeder currencyAccountSeeder,
     StockAccountSeeder stockAccountSeeder,
+    InvestmentAccountSeeder investmentAccountSeeder,
     BondAccountSeeder bondAccountSeeder,
     FinancialInsightsSeeder financialInsightsSeeder,
     ILogger<GuestAccountSeeder> logger)
@@ -34,6 +36,7 @@ public class GuestAccountSeeder(
         logger.LogTrace("Seeding guest demo data for user {UserId}.", guestUserId);
         await currencyAccountSeeder.Seed(guestUserId, start, end, cancellationToken);
         await stockAccountSeeder.Seed(guestUserId, start, end, cancellationToken);
+        await investmentAccountSeeder.Seed(guestUserId, start, end, cancellationToken);
         await bondAccountSeeder.Seed(guestUserId, start, end, cancellationToken);
         await financialInsightsSeeder.SeedForGuest(guestUserId, cancellationToken);
         logger.LogTrace("Seeding finished.");

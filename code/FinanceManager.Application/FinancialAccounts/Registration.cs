@@ -13,6 +13,7 @@ using FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
 using FinanceManager.Application.FinancialAccounts.Currencies.Export;
 using FinanceManager.Application.FinancialAccounts.Currencies.Import;
 using FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
+using FinanceManager.Application.FinancialAccounts.Investments.Seeders;
 using FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 using FinanceManager.Application.FinancialAccounts.Shared.Csv;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
@@ -57,6 +58,7 @@ internal static class Registration
 
                 .AddScoped<CurrencyAccountSeeder>()
                 .AddScoped<StockAccountSeeder>()
+                .AddScoped<InvestmentAccountSeeder>()
                 .AddScoped<BondAccountSeeder>()
                 .AddScoped<BondDetailsSeeder>()
                 .AddScoped<ISeeder, BondDetailsSeeder>(sp => sp.GetRequiredService<BondDetailsSeeder>())

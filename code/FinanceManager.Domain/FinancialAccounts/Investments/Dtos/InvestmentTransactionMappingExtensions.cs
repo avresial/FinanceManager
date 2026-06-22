@@ -15,7 +15,9 @@ public static class InvestmentTransactionMappingExtensions
         transaction.Currency,
         transaction.TradeDate,
         transaction.Fee,
-        transaction.Notes);
+        transaction.Notes,
+        transaction.AssetListing?.Ticker ?? string.Empty,
+        transaction.AssetListing?.ExchangeName ?? string.Empty);
 
     /// <summary>Build a new entity from an add request, stamping the owning user resolved from the account.</summary>
     public static InvestmentTransaction ToEntity(this AddInvestmentTransactionRequest request, long userId) => new()
