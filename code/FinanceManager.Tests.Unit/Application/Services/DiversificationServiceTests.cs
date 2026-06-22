@@ -1,7 +1,10 @@
 using FinanceManager.Application.Insights.Diversification;
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
@@ -20,6 +23,7 @@ public class DiversificationServiceTests
     private readonly Mock<IFinancialAccountRepository> _repositoryMock = new();
     private readonly Mock<IStockDetailsRepository> _stockDetailsMock = new();
     private readonly Mock<IBondDetailsRepository> _bondDetailsMock = new();
+    private readonly Mock<IInvestmentTransactionRepository> _investmentTransactionMock = new();
     private readonly DiversificationService _service;
     private readonly DateTime _asOfDate = new(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -27,7 +31,77 @@ public class DiversificationServiceTests
     {
         _stockDetailsMock.Setup(x => x.GetAll(It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
-        _service = new(_repositoryMock.Object, _stockDetailsMock.Object, _bondDetailsMock.Object);
+        _investmentTransactionMock.Setup(x => x.GetByUser(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<InvestmentTransaction>)[]);
+        _service = new(_repositoryMock.Object, _stockDetailsMock.Object, _bondDetailsMock.Object, _investmentTransactionMock.Object);
+    }
+
+    private void SetupInvestmentTransactions(params InvestmentTransaction[] transactions) =>
+        _investmentTransactionMock.Setup(x => x.GetByUser(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(transactions);
+
+    private static InvestmentTransaction InvestmentBuy(long listingId, string ticker, decimal quantity) =>
+        new()
+        {
+            AssetListingId = listingId,
+            AssetListing = new AssetListing { Id = listingId, Ticker = ticker, ExchangeMic = "XLON", ExchangeName = "London Stock Exchange", TradingCurrency = "USD" },
+            Type = InvestmentTransactionType.Buy,
+            Quantity = quantity,
+            UnitPrice = 100m,
+            Currency = "USD",
+            TradeDate = new DateOnly(2024, 12, 1)
+        };
+
+    [Fact]
+    public async Task GetDiversificationBreakdown_IncludesInvestmentHoldingsUnderStocks()
+    {
+        SetupStockAccounts();
+        SetupBondAccounts();
+        SetupCurrencyAccounts();
+        SetupInvestmentTransactions(InvestmentBuy(7, "CSPX", 3m));
+
+        var breakdown = await _service.GetDiversificationBreakdown(1, _asOfDate, TestContext.Current.CancellationToken);
+
+        var stocks = Assert.Single(breakdown.AssetClasses, g => g.AssetClass == "Stocks");
+        Assert.Contains("CSPX", stocks.Holdings);
+    }
+
+    [Fact]
+    public async Task GetDiversificationScore_CountsInvestmentHoldingsAsStockClass()
+    {
+        SetupStockAccounts();
+        SetupBondAccounts();
+        SetupCurrencyAccounts();
+        SetupInvestmentTransactions(InvestmentBuy(7, "CSPX", 3m));
+
+        var score = await _service.GetDiversificationScore(1, _asOfDate);
+
+        Assert.True(score.HoldingsScore > 0);
+        Assert.True(score.Score > 0);
+    }
+
+    [Fact]
+    public async Task GetDiversificationBreakdown_OmitsFullySoldInvestmentHoldings()
+    {
+        SetupStockAccounts();
+        SetupBondAccounts();
+        SetupCurrencyAccounts();
+        SetupInvestmentTransactions(
+            InvestmentBuy(7, "CSPX", 3m),
+            new InvestmentTransaction
+            {
+                AssetListingId = 7,
+                AssetListing = new AssetListing { Id = 7, Ticker = "CSPX", ExchangeMic = "XLON", ExchangeName = "London Stock Exchange", TradingCurrency = "USD" },
+                Type = InvestmentTransactionType.Sell,
+                Quantity = 3m,
+                UnitPrice = 110m,
+                Currency = "USD",
+                TradeDate = new DateOnly(2024, 12, 2)
+            });
+
+        var breakdown = await _service.GetDiversificationBreakdown(1, _asOfDate, TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain(breakdown.AssetClasses, g => g.AssetClass == "Stocks");
     }
 
     private void SetupStockAccounts(params StockAccount[] accounts) =>

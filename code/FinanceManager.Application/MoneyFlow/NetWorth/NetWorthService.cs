@@ -1,6 +1,7 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
@@ -13,7 +14,7 @@ using FinanceManager.Domain.MoneyFlow.Services;
 namespace FinanceManager.Application.MoneyFlow.NetWorth;
 
 public class NetWorthService(IFinancialAccountRepository financialAccountRepository, IStockPriceProvider stockPriceProvider,
-IBondDetailsRepository bondDetailsRepository) : INetWorthService
+IBondDetailsRepository bondDetailsRepository, IInvestmentValuationService investmentValuationService) : INetWorthService
 {
     public async Task<decimal?> GetNetWorth(int userId, Currency currency, DateTime date)
     {
@@ -44,6 +45,10 @@ IBondDetailsRepository bondDetailsRepository) : INetWorthService
 
         await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, date.Date, date))
         {
+            // Legacy stock accounts hold StockEntries and are valued per ticker below; investment
+            // accounts (new asset model) hold no StockEntries, so the ticker loop is a no-op and the
+            // value comes from the investment valuation service. The two are mutually exclusive per
+            // account, so there is no double counting.
             foreach (var ticker in account.GetStoredTickers())
             {
                 var newestEntry = account.GetThisOrNextOlder(date, ticker);
@@ -52,6 +57,8 @@ IBondDetailsRepository bondDetailsRepository) : INetWorthService
                 decimal pricePerUnit = await stockPriceProvider.GetPricePerUnitAsync(ticker, currency, date);
                 result += newestEntry.Value * pricePerUnit;
             }
+
+            result += await investmentValuationService.GetAccountValueAsync(account.AccountId, currency, date);
         }
 
         return Math.Round(result, 2);
@@ -95,6 +102,14 @@ IBondDetailsRepository bondDetailsRepository) : INetWorthService
                 pricesByTicker[preloadTask.Key] = await preloadTask.Value;
         }
 
+        // Investment accounts (new asset model) value per account/day through the valuation service.
+        // Legacy stock accounts return an empty series here (no investment transactions), so each
+        // Stock-type account contributes through exactly one path.
+        Dictionary<int, IReadOnlyDictionary<DateTime, decimal>> investmentValuesByAccount = [];
+        foreach (var account in stockAccounts)
+            investmentValuesByAccount[account.AccountId] =
+                await investmentValuationService.GetAccountValueSeriesAsync(account.AccountId, currency, start.Date, end.Date);
+
         for (DateTime date = end; date >= start; date = date.AddDays(-1))
         {
             decimal dailyTotal = 0;
@@ -129,6 +144,12 @@ IBondDetailsRepository bondDetailsRepository) : INetWorthService
                     if (!tickerPrices.TryGetValue(date.Date, out var pricePerUnit)) continue;
 
                     dailyTotal += entry.Value * pricePerUnit;
+                }
+
+                if (investmentValuesByAccount.TryGetValue(account.AccountId, out var investmentSeries)
+                    && investmentSeries.TryGetValue(date.Date, out var investmentValue))
+                {
+                    dailyTotal += investmentValue;
                 }
             }
 
