@@ -7,7 +7,7 @@ public class InvestmentValuationHttpClient(HttpClient httpClient)
 {
     public async Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsync(int accountId, DateTime date)
     {
-        var response = await httpClient.GetAsync(
+        using var response = await httpClient.GetAsync(
             $"{httpClient.BaseAddress}api/InvestmentValuation/Holdings/{accountId}/{Iso(date)}");
         if (!response.IsSuccessStatusCode) return new Dictionary<long, decimal>();
         return await response.Content.ReadFromJsonAsync<Dictionary<long, decimal>>() ?? [];
@@ -15,7 +15,7 @@ public class InvestmentValuationHttpClient(HttpClient httpClient)
 
     public async Task<decimal> GetValueAsync(int accountId, int currencyId, DateTime date)
     {
-        var response = await httpClient.GetAsync(
+        using var response = await httpClient.GetAsync(
             $"{httpClient.BaseAddress}api/InvestmentValuation/Value/{accountId}/{currencyId}/{Iso(date)}");
         if (!response.IsSuccessStatusCode) return 0m;
         return await response.Content.ReadFromJsonAsync<decimal>();
@@ -23,7 +23,7 @@ public class InvestmentValuationHttpClient(HttpClient httpClient)
 
     public async Task<IReadOnlyDictionary<DateTime, decimal>> GetValueSeriesAsync(int accountId, int currencyId, DateTime start, DateTime end)
     {
-        var response = await httpClient.GetAsync(
+        using var response = await httpClient.GetAsync(
             $"{httpClient.BaseAddress}api/InvestmentValuation/ValueSeries/{accountId}/{currencyId}/{Iso(start)}/{Iso(end)}");
         if (!response.IsSuccessStatusCode) return new Dictionary<DateTime, decimal>();
         return await response.Content.ReadFromJsonAsync<Dictionary<DateTime, decimal>>() ?? [];

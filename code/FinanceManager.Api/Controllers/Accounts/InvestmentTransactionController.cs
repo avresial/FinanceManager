@@ -40,6 +40,7 @@ public class InvestmentTransactionController(
     {
         var transaction = await transactionRepository.Get(id, cancellationToken);
         if (transaction is null) return NotFound();
+        if (transaction.UserId is < int.MinValue or > int.MaxValue) return Forbid();
         if (!ApiAuthenticationHelper.IsAccountOwner(User, (int)transaction.UserId)) return Forbid();
 
         return Ok(transaction.ToDto());
@@ -48,6 +49,7 @@ public class InvestmentTransactionController(
     [HttpPost("Add")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(InvestmentTransactionDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Add(AddInvestmentTransactionRequest request, CancellationToken cancellationToken = default)
     {
@@ -55,7 +57,8 @@ public class InvestmentTransactionController(
             return BadRequest("Invalid input parameters.");
 
         var account = await accountRepository.Get(request.AccountId);
-        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+        if (account is null) return NotFound();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         var result = await transactionRepository.Add(request.ToEntity(account.UserId), cancellationToken);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
@@ -73,7 +76,8 @@ public class InvestmentTransactionController(
             return BadRequest("Invalid input parameters.");
 
         var account = await accountRepository.Get(request.AccountId);
-        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+        if (account is null) return NotFound();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         var existing = await transactionRepository.Get(request.Id, cancellationToken);
         if (existing is null || existing.AccountId != request.AccountId) return NotFound();
@@ -90,7 +94,8 @@ public class InvestmentTransactionController(
     public async Task<IActionResult> Delete(int accountId, long id, CancellationToken cancellationToken = default)
     {
         var account = await accountRepository.Get(accountId);
-        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+        if (account is null) return NotFound();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         var existing = await transactionRepository.Get(id, cancellationToken);
         if (existing is null || existing.AccountId != accountId) return NotFound();

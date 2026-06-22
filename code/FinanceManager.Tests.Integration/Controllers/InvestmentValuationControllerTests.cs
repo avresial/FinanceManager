@@ -116,6 +116,32 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
     }
 
     [Fact]
+    public async Task GetValueSeries_ReturnsDailyValues()
+    {
+        await SeedHoldingsWithPrice();
+        Authorize("testuser", _testUserId, UserRole.User);
+        var client = new InvestmentValuationHttpClient(Client);
+
+        var series = await client.GetValueSeriesAsync(_testAccountId, _usdCurrencyId, _asOf.AddDays(-3), _asOf);
+
+        Assert.NotEmpty(series);
+        Assert.Equal(300m, series[_asOf]); // 3 units * 100 USD on the priced day
+    }
+
+    [Fact]
+    public async Task GetValueSeries_WithInvalidDateRange_ReturnsBadRequest()
+    {
+        await SeedHoldingsWithPrice();
+        Authorize("testuser", _testUserId, UserRole.User);
+
+        var response = await Client.GetAsync(
+            $"api/InvestmentValuation/ValueSeries/{_testAccountId}/{_usdCurrencyId}/{_asOf:yyyy-MM-dd}/{_asOf.AddDays(-1):yyyy-MM-dd}",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetValue_ForOtherUsersAccount_ReturnsForbidden()
     {
         await SeedHoldingsWithPrice();

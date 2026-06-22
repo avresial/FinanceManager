@@ -133,6 +133,46 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
+    public async Task Get_ReturnsTransaction()
+    {
+        var id = await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
+        Authorize("testuser", _testUserId, UserRole.User);
+        var client = new InvestmentTransactionHttpClient(Client);
+
+        var result = await client.GetAsync(id);
+
+        Assert.NotNull(result);
+        Assert.Equal(id, result!.Id);
+        Assert.Equal(_testAccountId, result.AccountId);
+    }
+
+    [Fact]
+    public async Task Update_ForUnknownTransaction_ReturnsFalse()
+    {
+        await SeedAccount();
+        Authorize("testuser", _testUserId, UserRole.User);
+        var client = new InvestmentTransactionHttpClient(Client);
+        var update = new UpdateInvestmentTransactionRequest(
+            long.MaxValue, _testAccountId, _listingId, InvestmentTransactionType.Buy, 8m, 130m, "USD", new DateOnly(2024, 1, 10));
+
+        var result = await client.UpdateAsync(update);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task Delete_ForUnknownTransaction_ReturnsFalse()
+    {
+        await SeedAccount();
+        Authorize("testuser", _testUserId, UserRole.User);
+        var client = new InvestmentTransactionHttpClient(Client);
+
+        var result = await client.DeleteAsync(_testAccountId, long.MaxValue);
+
+        Assert.False(result);
+    }
+
+    [Fact]
     public async Task Update_ModifiesTransaction()
     {
         var id = await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
