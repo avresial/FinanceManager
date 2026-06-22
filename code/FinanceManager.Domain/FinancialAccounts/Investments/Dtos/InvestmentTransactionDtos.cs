@@ -14,7 +14,9 @@ public record InvestmentTransactionDto(
     string Currency,
     DateOnly TradeDate,
     decimal? Fee,
-    string? Notes);
+    string? Notes,
+    string Ticker = "",
+    string ExchangeName = "");
 
 /// <summary>Request to add a new investment transaction. The owning user is derived from the account, not this payload.</summary>
 public record AddInvestmentTransactionRequest(

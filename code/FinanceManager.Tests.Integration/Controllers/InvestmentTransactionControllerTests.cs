@@ -1,5 +1,6 @@
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
@@ -54,9 +55,30 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
+    // A transaction always references a real listing; seed one so the read path's Include(AssetListing)
+    // (a required relationship) returns the rows rather than filtering them out.
+    private async Task SeedListing()
+    {
+        if (_testDatabase is null) return;
+        if (await _testDatabase.Context.AssetListings.AnyAsync(l => l.Id == _listingId, TestContext.Current.CancellationToken)) return;
+        _testDatabase.Context.AssetListings.Add(new AssetListing
+        {
+            Id = _listingId,
+            AssetId = 1,
+            Ticker = "CSPX",
+            ExchangeMic = "XLON",
+            ExchangeName = "London Stock Exchange",
+            TradingCurrency = "USD",
+            PriceMultiplier = 1m,
+            IsActive = true
+        });
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
     private async Task<long> SeedTransaction(InvestmentTransactionType type, decimal quantity, DateOnly tradeDate)
     {
         await SeedAccount();
+        await SeedListing();
         var transaction = new InvestmentTransaction
         {
             UserId = _testUserId,
