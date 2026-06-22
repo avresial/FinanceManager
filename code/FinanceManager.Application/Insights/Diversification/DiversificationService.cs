@@ -1,6 +1,7 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
@@ -17,7 +18,8 @@ namespace FinanceManager.Application.Insights.Diversification;
 public class DiversificationService(
     IFinancialAccountRepository financialAccountRepository,
     IStockDetailsRepository stockDetailsRepository,
-    IBondDetailsRepository bondDetailsRepository) : IDiversificationService
+    IBondDetailsRepository bondDetailsRepository,
+    IInvestmentTransactionRepository investmentTransactionRepository) : IDiversificationService
 {
     private const int _totalSupportedClasses = 6;
     private const int _holdingsBenchmark = 30;
@@ -61,16 +63,34 @@ public class DiversificationService(
                 if (seen.Add(isin))
                     isins.Add(isin);
 
-        if (isins.Count == 0) return [];
-
         var tickerByIsin = (await stockDetailsRepository.GetAll(cancellationToken))
             .Where(details => !string.IsNullOrWhiteSpace(details.Isin))
             .GroupBy(details => details.Isin, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First().Ticker, StringComparer.OrdinalIgnoreCase);
 
-        return [.. isins
-            .Select(isin => tickerByIsin.TryGetValue(isin, out var ticker) && !string.IsNullOrWhiteSpace(ticker) ? ticker : isin)
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)];
+        var names = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var isin in isins)
+            names.Add(tickerByIsin.TryGetValue(isin, out var ticker) && !string.IsNullOrWhiteSpace(ticker) ? ticker : isin);
+
+        // New asset-model holdings (investment accounts) are reported under the same "Stocks" group.
+        foreach (var ticker in await GetHeldInvestmentTickers(userId, asOfDate, cancellationToken))
+            names.Add(ticker);
+
+        return [.. names];
+    }
+
+    // Tickers of investment-account listings (new asset model) with a positive net holding as of the date.
+    private async Task<List<string>> GetHeldInvestmentTickers(int userId, DateTime asOfDate, CancellationToken cancellationToken)
+    {
+        var transactions = await investmentTransactionRepository.GetByUser(userId, DateOnly.MinValue, DateOnly.FromDateTime(asOfDate), cancellationToken);
+
+        return [.. transactions
+            .GroupBy(t => t.AssetListingId)
+            .Where(g => g.Sum(t => t.SignedQuantity) > 0)
+            .Select(g => g.OrderByDescending(t => t.TradeDate).ThenByDescending(t => t.Id).First().AssetListing?.Ticker)
+            .Where(ticker => !string.IsNullOrWhiteSpace(ticker))
+            .Select(ticker => ticker!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
     }
 
     private async Task<List<string>> GetBondHoldingNames(int userId, DateTime asOfDate, CancellationToken cancellationToken)
@@ -110,13 +130,13 @@ public class DiversificationService(
         var heldClasses = new HashSet<InvestmentType>();
         var uniqueHoldings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, DateTime.MinValue, asOfDate))
+        // Legacy stock holdings (resolved to display tickers) and new investment-account holdings are
+        // merged and deduplicated by GetStockHoldingNames, so an instrument held under both models is
+        // counted once toward the Stocks class.
+        foreach (var ticker in await GetStockHoldingNames(userId, asOfDate, CancellationToken.None))
         {
-            foreach (var ticker in GetCurrentlyHeldTickers(account, asOfDate))
-            {
-                uniqueHoldings.Add($"stock_{ticker}");
-                heldClasses.Add(InvestmentType.Stock);
-            }
+            uniqueHoldings.Add($"stock_{ticker}");
+            heldClasses.Add(InvestmentType.Stock);
         }
 
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, DateTime.MinValue, asOfDate))

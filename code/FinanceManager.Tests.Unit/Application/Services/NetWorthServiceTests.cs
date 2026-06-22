@@ -5,6 +5,7 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
@@ -32,6 +33,8 @@ public class NetWorthServiceTests
     private readonly Mock<IStockPriceRepository> _stockRepository = new();
     private readonly Mock<ICurrencyExchangeService> _currencyExchangeService = new();
     private readonly Mock<IBondDetailsRepository> _bondDetailsRepositoryMock = new();
+    private readonly Mock<IInvestmentValuationService> _investmentValuationServiceMock = new();
+    private readonly StockPriceProvider _stockPriceProvider;
     private readonly List<StockAccount> _investmentAccountAccounts;
 
     public NetWorthServiceTests()
@@ -82,7 +85,7 @@ public class NetWorthServiceTests
             .ReturnsAsync("US5949181045");
         isinResolverMock.Setup(x => x.ResolveAsync("UNKNOWN", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
-        var stockPriceProvider = new StockPriceProvider(
+        _stockPriceProvider = new StockPriceProvider(
             _stockRepository.Object,
             new Mock<IAlphaVantageClient>().Object,
             new Mock<IStockPriceSource>().Object,
@@ -94,7 +97,15 @@ public class NetWorthServiceTests
 
         _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>())).Returns(AsyncEnumerable.Empty<BondDetails>());
 
-        _netWorthService = new NetWorthService(_financialAccountRepositoryMock.Object, stockPriceProvider, _bondDetailsRepositoryMock.Object);
+        // Default: investment accounts contribute nothing, so the existing legacy-stock tests are unaffected.
+        _investmentValuationServiceMock
+            .Setup(x => x.GetAccountValueAsync(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0m);
+        _investmentValuationServiceMock
+            .Setup(x => x.GetAccountValueSeriesAsync(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, decimal>());
+
+        _netWorthService = new NetWorthService(_financialAccountRepositoryMock.Object, _stockPriceProvider, _bondDetailsRepositoryMock.Object, _investmentValuationServiceMock.Object);
     }
 
     private static BondDetails CreateBondDetails(int id, DateTime date, decimal unitValue = 1m) =>
@@ -470,5 +481,53 @@ public class NetWorthServiceTests
 
         // All values should be 1000 since no changes
         Assert.All(result.Values, value => Assert.Equal(1000m, value));
+    }
+
+    [Fact]
+    public async Task GetNetWorth_AddsInvestmentAccountValue()
+    {
+        const int userId = 1;
+        var date = _endDate;
+        // Investment account: a Stock-type account with no StockEntries (holds InvestmentTransactions).
+        var investmentAccount = new StockAccount(userId, 42, "Investments");
+
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { investmentAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<BondAccount>());
+        _investmentValuationServiceMock
+            .Setup(x => x.GetAccountValueAsync(42, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1500m);
+
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, date);
+
+        Assert.Equal(1500m, result);
+    }
+
+    [Fact]
+    public async Task GetNetWorth_OverRange_AddsInvestmentAccountSeries()
+    {
+        const int userId = 1;
+        var start = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var end = new DateTime(2024, 1, 3, 0, 0, 0, DateTimeKind.Utc);
+        var investmentAccount = new StockAccount(userId, 42, "Investments");
+
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { investmentAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<BondAccount>());
+        _investmentValuationServiceMock
+            .Setup(x => x.GetAccountValueSeriesAsync(42, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, decimal> { [start] = 100m, [start.AddDays(1)] = 110m, [end] = 120m });
+
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, start, end);
+
+        Assert.Equal(100m, result[start]);
+        Assert.Equal(110m, result[start.AddDays(1)]);
+        Assert.Equal(120m, result[end]);
     }
 }

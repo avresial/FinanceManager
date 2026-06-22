@@ -21,6 +21,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
     public async Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default) =>
         await context.InvestmentTransactions.AsNoTracking()
+            .Include(x => x.AssetListing)
             .Where(x => x.UserId == userId && x.TradeDate >= startDate && x.TradeDate <= endDate)
             .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
