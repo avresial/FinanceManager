@@ -104,11 +104,16 @@ IBondDetailsRepository bondDetailsRepository, IInvestmentValuationService invest
 
         // Investment accounts (new asset model) value per account/day through the valuation service.
         // Legacy stock accounts return an empty series here (no investment transactions), so each
-        // Stock-type account contributes through exactly one path.
+        // Stock-type account contributes through exactly one path. Fan the per-account series fetches
+        // out concurrently so latency does not grow linearly with the account count.
+        var investmentSeriesTasks = stockAccounts.ToDictionary(
+            account => account.AccountId,
+            account => investmentValuationService.GetAccountValueSeriesAsync(account.AccountId, currency, start.Date, end.Date));
+        await Task.WhenAll(investmentSeriesTasks.Values);
+
         Dictionary<int, IReadOnlyDictionary<DateTime, decimal>> investmentValuesByAccount = [];
-        foreach (var account in stockAccounts)
-            investmentValuesByAccount[account.AccountId] =
-                await investmentValuationService.GetAccountValueSeriesAsync(account.AccountId, currency, start.Date, end.Date);
+        foreach (var (accountId, task) in investmentSeriesTasks)
+            investmentValuesByAccount[accountId] = await task;
 
         for (DateTime date = end; date >= start; date = date.AddDays(-1))
         {

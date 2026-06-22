@@ -130,17 +130,10 @@ public class DiversificationService(
         var heldClasses = new HashSet<InvestmentType>();
         var uniqueHoldings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, DateTime.MinValue, asOfDate))
-        {
-            foreach (var ticker in GetCurrentlyHeldTickers(account, asOfDate))
-            {
-                uniqueHoldings.Add($"stock_{ticker}");
-                heldClasses.Add(InvestmentType.Stock);
-            }
-        }
-
-        // Investment-account holdings (new asset model) count toward the Stocks class.
-        foreach (var ticker in await GetHeldInvestmentTickers(userId, asOfDate, CancellationToken.None))
+        // Legacy stock holdings (resolved to display tickers) and new investment-account holdings are
+        // merged and deduplicated by GetStockHoldingNames, so an instrument held under both models is
+        // counted once toward the Stocks class.
+        foreach (var ticker in await GetStockHoldingNames(userId, asOfDate, CancellationToken.None))
         {
             uniqueHoldings.Add($"stock_{ticker}");
             heldClasses.Add(InvestmentType.Stock);

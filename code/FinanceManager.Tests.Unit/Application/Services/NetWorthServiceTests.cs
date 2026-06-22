@@ -505,4 +505,29 @@ public class NetWorthServiceTests
 
         Assert.Equal(1500m, result);
     }
+
+    [Fact]
+    public async Task GetNetWorth_OverRange_AddsInvestmentAccountSeries()
+    {
+        const int userId = 1;
+        var start = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var end = new DateTime(2024, 1, 3, 0, 0, 0, DateTimeKind.Utc);
+        var investmentAccount = new StockAccount(userId, 42, "Investments");
+
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { investmentAccount }.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<BondAccount>());
+        _investmentValuationServiceMock
+            .Setup(x => x.GetAccountValueSeriesAsync(42, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, decimal> { [start] = 100m, [start.AddDays(1)] = 110m, [end] = 120m });
+
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, start, end);
+
+        Assert.Equal(100m, result[start]);
+        Assert.Equal(110m, result[start.AddDays(1)]);
+        Assert.Equal(120m, result[end]);
+    }
 }
