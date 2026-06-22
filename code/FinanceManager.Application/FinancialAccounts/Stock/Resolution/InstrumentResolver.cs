@@ -108,8 +108,15 @@ public sealed class InstrumentResolver(
     private async Task<InstrumentResolution> ResolveByIsinAsync(string isin, string cacheKey, CancellationToken ct)
     {
         var ofListings = await OpenFigiIsinCallWithFallback(isin, ct);
+
+        // null = OpenFIGI unavailable (cooldown/outage): return NoMatch without negative-caching so a
+        // later call retries, rather than poisoning the cache with a false "not found".
+        if (ofListings is null)
+            return NoMatch();
+
         if (ofListings.Count == 0)
         {
+            // Definitive empty response: OpenFIGI knows of no listing for this ISIN. Cache it briefly.
             var noMatch = NoMatch();
             cache.Set(cacheKey, noMatch, _negativeTtl);
             return noMatch;
@@ -443,17 +450,19 @@ public sealed class InstrumentResolver(
         }
     }
 
-    private async Task<IReadOnlyList<OpenFigiListing>> OpenFigiIsinCallWithFallback(string isin, CancellationToken ct)
+    // Returns the OpenFIGI listings for an ISIN, or null when OpenFIGI is unavailable (in cooldown or
+    // the call failed). Null is distinct from an empty list: empty means OpenFIGI definitively has no
+    // listing, whereas null means we could not get an answer and must not be cached as "not found".
+    private async Task<IReadOnlyList<OpenFigiListing>?> OpenFigiIsinCallWithFallback(string isin, CancellationToken ct)
     {
         if (IsInOpenFigiCooldown())
         {
             logger.LogDebug("OpenFIGI in failure cooldown; skipping ISIN call");
-            return [];
+            return null;
         }
 
         try
         {
-            // ISIN is validated to be 12 alphanumeric chars (no CR/LF), so it is safe to log directly.
             return await openFigiClient.MapByIsinAsync(isin, ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -462,11 +471,16 @@ public sealed class InstrumentResolver(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "OpenFIGI ISIN call failed for {Isin}; entering cooldown", isin);
+            // Strip CR/LF from the user-derived ISIN before logging so it cannot forge log entries.
+            logger.LogWarning(ex, "OpenFIGI ISIN call failed for {Isin}; entering cooldown", SanitizeForLog(isin));
             _openFigiCooldownUntilUtc = DateTime.UtcNow.Add(_openFigiFailureCooldown);
-            return [];
+            return null;
         }
     }
+
+    // Strip CR/LF so attacker-influenced input values cannot forge log entries (log injection).
+    private static string SanitizeForLog(string value)
+        => value.Replace("\r", string.Empty).Replace("\n", string.Empty);
 
     private bool IsInOpenFigiCooldown()
     {

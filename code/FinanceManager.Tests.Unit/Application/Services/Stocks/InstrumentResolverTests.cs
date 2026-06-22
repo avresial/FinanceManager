@@ -535,7 +535,7 @@ public class InstrumentResolverTests
     }
 
     [Fact]
-    public async Task ResolveAsync_WithIsinInput_NoOpenFigiVenues_ReturnsNoMatch()
+    public async Task ResolveAsync_WithIsinInput_NoOpenFigiVenues_CachesNoMatch()
     {
         var resolver = CreateResolver();
         _openFigiClientMock
@@ -550,6 +550,28 @@ public class InstrumentResolverTests
         Assert.Equal(ResolutionKind.NoMatch, result.Kind);
         // Identity was sought via ISIN, never the ticker fan-out.
         _avClientMock.Verify(x => x.SearchTicker(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        // A definitive empty response is a real "not found" and is negative-cached.
+        Assert.True(_cache.TryGetValue("INSTRUMENT_RESOLUTION_IE00B5BMR087", out _));
+    }
+
+    [Fact]
+    public async Task ResolveAsync_WithIsinInput_OpenFigiOutage_DoesNotNegativeCache()
+    {
+        // An OpenFIGI outage (thrown) on the ISIN path returns NoMatch but must NOT be negative-cached,
+        // otherwise a transient outage becomes a sticky false "not found". A definitive empty response
+        // is cached (see ResolveAsync_WithIsinInput_NoOpenFigiVenues_CachesNoMatch); an outage is not.
+        var resolver = CreateResolver();
+        _openFigiClientMock
+            .Setup(x => x.MapByIsinAsync("IE00B5BMR087", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("OpenFIGI unavailable"));
+        _stockDetailsRepositoryMock
+            .Setup(x => x.GetByTicker(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((StockDetails?)null);
+
+        var result = await resolver.ResolveAsync("IE00B5BMR087", TestContext.Current.CancellationToken);
+
+        Assert.Equal(ResolutionKind.NoMatch, result.Kind);
+        Assert.False(_cache.TryGetValue("INSTRUMENT_RESOLUTION_IE00B5BMR087", out _));
     }
 
     [Fact]
