@@ -43,6 +43,12 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase
     private async Task LoadAsync()
     {
         _isLoading = true;
+        // Clear prior state so a failed reload (or an account switch) never shows stale data.
+        _transactions = [];
+        _holdings = [];
+        _listingOptions = [];
+        _totalValue = 0m;
+        _currency = "USD";
         try
         {
             _accountName = (await StockAccountHttpClient.GetAccountAsync(AccountId))?.Name ?? "Investments";
@@ -147,6 +153,11 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase
                 Snackbar.Add("Could not save the transaction.", Severity.Error);
             }
         }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to save investment transaction for account {AccountId}", AccountId);
+            Snackbar.Add("Could not save the transaction.", Severity.Error);
+        }
         finally
         {
             _saving = false;
@@ -155,13 +166,21 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase
 
     private async Task DeleteAsync(InvestmentTransactionDto tx)
     {
-        if (await TransactionHttpClient.DeleteAsync(AccountId, tx.Id))
+        try
         {
-            Snackbar.Add("Transaction removed.", Severity.Success);
-            await LoadAsync();
+            if (await TransactionHttpClient.DeleteAsync(AccountId, tx.Id))
+            {
+                Snackbar.Add("Transaction removed.", Severity.Success);
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add("Could not remove the transaction.", Severity.Error);
+            }
         }
-        else
+        catch (Exception ex)
         {
+            Logger.LogError(ex, "Failed to delete investment transaction {TransactionId} for account {AccountId}", tx.Id, AccountId);
             Snackbar.Add("Could not remove the transaction.", Severity.Error);
         }
     }

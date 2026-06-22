@@ -27,8 +27,19 @@ else
     protected override async Task OnParametersSetAsync()
     {
         _isLoading = true;
-        var transactions = await TransactionHttpClient.GetByAccountAsync(AccountId);
-        _hasInvestmentTransactions = transactions.Count > 0;
-        _isLoading = false;
+        try
+        {
+            var transactions = await TransactionHttpClient.GetByAccountAsync(AccountId);
+            _hasInvestmentTransactions = transactions.Count > 0;
+        }
+        catch
+        {
+            // On a transient lookup failure, fall back to the legacy view rather than getting stuck loading.
+            _hasInvestmentTransactions = false;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
     }
 }
