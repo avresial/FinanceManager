@@ -13,6 +13,7 @@ using FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
 using FinanceManager.Application.FinancialAccounts.Currencies.Export;
 using FinanceManager.Application.FinancialAccounts.Currencies.Import;
 using FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
+using FinanceManager.Application.FinancialAccounts.Investments.Balance;
 using FinanceManager.Application.FinancialAccounts.Investments.Seeders;
 using FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 using FinanceManager.Application.FinancialAccounts.Shared.Csv;
@@ -49,6 +50,7 @@ internal static class Registration
         services.AddScoped<IBalanceServiceTyped, CurrencyBalanceService>()
                 .AddScoped<IBalanceServiceTyped, BondBalanceService>()
                 .AddScoped<IBalanceServiceTyped, StockBalanceService>()
+                .AddScoped<IBalanceServiceTyped, InvestmentBalanceService>()
                 .AddScoped<IBalanceService, BalanceService>()
 
                 .AddScoped<IAssetsServiceTyped, AssetsServiceCurrency>()
