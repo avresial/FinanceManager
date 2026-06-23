@@ -12,7 +12,9 @@
         }
         else if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
         {
-            <ImportStockEntriesComponent AccountId="@AccountId" />
+            <div class="alert alert-info" role="alert">
+                CSV import isn't available for investment accounts. Add transactions from the account details page.
+            </div>
         }
         else if (AccountDescriptor?.Kind == FinancialAccountKind.Bond)
         {
