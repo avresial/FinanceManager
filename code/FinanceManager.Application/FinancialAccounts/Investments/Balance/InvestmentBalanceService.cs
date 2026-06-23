@@ -71,22 +71,20 @@ internal class InvestmentBalanceService(
 
         if (investmentAccountIds.Count == 0) return [];
 
-        // One series fetch per account, fanned out concurrently. Legacy stock accounts return an empty
-        // series here (no investment transactions) and so contribute nothing.
-        var seriesTasks = investmentAccountIds.ToDictionary(
-            accountId => accountId,
-            accountId => investmentValuationService.GetAccountValueSeriesAsync(accountId, currency, start.Date, end.Date));
-        await Task.WhenAll(seriesTasks.Values);
-
         // Carry every day in the window so the bucketing picks the right closing point even on days the
         // valuation service omitted (a day that values to zero is left out of its per-account series).
         Dictionary<DateTime, decimal> values = [];
         for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
             values[date] = 0;
 
-        foreach (var task in seriesTasks.Values)
+        // Fetch one account at a time: the valuation service reads through a scoped
+        // IInvestmentTransactionRepository backed by a single AppDbContext, which EF Core does not
+        // allow to service concurrent operations. Legacy stock accounts return an empty series here
+        // (no investment transactions) and so contribute nothing.
+        foreach (var accountId in investmentAccountIds)
         {
-            foreach (var (date, value) in await task)
+            var series = await investmentValuationService.GetAccountValueSeriesAsync(accountId, currency, start.Date, end.Date);
+            foreach (var (date, value) in series)
             {
                 if (values.ContainsKey(date.Date))
                     values[date.Date] += value;
