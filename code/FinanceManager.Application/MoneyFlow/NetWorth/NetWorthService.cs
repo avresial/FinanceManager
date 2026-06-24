@@ -69,16 +69,12 @@ IBondDetailsRepository bondDetailsRepository, IInvestmentValuationService invest
             investmentAccounts.Add(account);
 
         // Investment accounts (new asset model) value per account/day through the valuation service.
-        // Fan the per-account series fetches out concurrently so latency does not grow linearly with
-        // the account count.
-        var investmentSeriesTasks = investmentAccounts.ToDictionary(
-            account => account.AccountId,
-            account => investmentValuationService.GetAccountValueSeriesAsync(account.AccountId, currency, start.Date, end.Date));
-        await Task.WhenAll(investmentSeriesTasks.Values);
-
+        // Fetch one account at a time: the valuation service reads through a scoped
+        // IInvestmentTransactionRepository backed by a single AppDbContext, which EF Core does not
+        // allow to service concurrent operations.
         Dictionary<int, IReadOnlyDictionary<DateTime, decimal>> investmentValuesByAccount = [];
-        foreach (var (accountId, task) in investmentSeriesTasks)
-            investmentValuesByAccount[accountId] = await task;
+        foreach (var account in investmentAccounts)
+            investmentValuesByAccount[account.AccountId] = await investmentValuationService.GetAccountValueSeriesAsync(account.AccountId, currency, start.Date, end.Date);
 
         for (DateTime date = end; date >= start; date = date.AddDays(-1))
         {

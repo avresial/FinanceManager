@@ -106,4 +106,50 @@ public class NetWorthServiceTests
         Assert.Equal(10m, result[start]);
         Assert.Equal(30m, result[end]);
     }
+
+    [Fact]
+    public async Task GetNetWorth_OverRange_FetchesAccountValueSeriesSequentially()
+    {
+        // The valuation service reads through a scoped IInvestmentTransactionRepository backed by a
+        // single AppDbContext, which EF Core does not allow to service concurrent operations. Guard
+        // against re-introducing a Task.WhenAll fan-out by failing if a second series fetch starts
+        // before the previous one completes.
+        const int userId = 1;
+        var start = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var end = new DateTime(2024, 1, 3, 0, 0, 0, DateTimeKind.Utc);
+        List<InvestmentAccount> investmentAccounts =
+        [
+            new(userId, 1, "Investments A"),
+            new(userId, 2, "Investments B"),
+            new(userId, 3, "Investments C")
+        ];
+
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<InvestmentAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(investmentAccounts.ToAsyncEnumerable());
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<BondAccount>());
+
+        var inFlight = 0;
+        var sawConcurrency = false;
+        _investmentValuationServiceMock
+            .Setup(x => x.GetAccountValueSeriesAsync(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .Returns(async () =>
+            {
+                if (Interlocked.Increment(ref inFlight) > 1) sawConcurrency = true;
+                await Task.Yield();
+                Interlocked.Decrement(ref inFlight);
+                return (IReadOnlyDictionary<DateTime, decimal>)new Dictionary<DateTime, decimal>();
+            });
+
+        await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, start, end);
+
+        Assert.False(sawConcurrency, "Per-account value series must be fetched sequentially to avoid shared-DbContext concurrency.");
+        // Self-validate the guard: it only proves anything if the sequential path was actually exercised
+        // (one fetch per account). Without this, dropping the call entirely would pass vacuously.
+        _investmentValuationServiceMock.Verify(
+            x => x.GetAccountValueSeriesAsync(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(investmentAccounts.Count));
+    }
 }
