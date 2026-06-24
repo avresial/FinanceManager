@@ -36,7 +36,7 @@ public partial class AddAccount : ComponentBase
     [Inject] public required ILogger<AddAccount> Logger { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required CurrencyAccountHttpClient CurrencyAccountHttpClient { get; set; }
-    [Inject] public required StockAccountHttpClient StockAccountHttpClient { get; set; }
+    [Inject] public required InvestmentAccountHttpClient InvestmentAccountHttpClient { get; set; }
     [Inject] public required BondAccountHttpClient BondAccountHttpClient { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -52,7 +52,7 @@ public partial class AddAccount : ComponentBase
                     break;
 
                 case "Stock account":
-                    _addedAccountId = await StockAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName));
+                    _addedAccountId = await InvestmentAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName));
                     break;
 
                 case "Bond account":

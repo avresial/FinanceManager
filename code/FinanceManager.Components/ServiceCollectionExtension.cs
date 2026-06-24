@@ -18,10 +18,7 @@ public static class ServiceCollectionExtension
         services.AddScoped<IAntiforgeryTokenService, AntiforgeryTokenService>()
                 .AddScoped<ILoginService, LoginService>()
 
-                .AddScoped<StockPriceHttpClient>()
-                .AddScoped<StockAccountHttpClient>()
-                .AddScoped<StockEntryHttpClient>()
-                .AddScoped<StockAccountImportHttpClient>()
+                .AddScoped<InvestmentAccountHttpClient>()
                 .AddScoped<AssetHttpClient>()
 
                 .AddScoped<InvestmentTransactionHttpClient>()

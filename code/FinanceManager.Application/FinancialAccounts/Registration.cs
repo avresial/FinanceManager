@@ -13,20 +13,13 @@ using FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
 using FinanceManager.Application.FinancialAccounts.Currencies.Export;
 using FinanceManager.Application.FinancialAccounts.Currencies.Import;
 using FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
+using FinanceManager.Application.FinancialAccounts.Investments.Assets;
 using FinanceManager.Application.FinancialAccounts.Investments.Balance;
 using FinanceManager.Application.FinancialAccounts.Investments.Seeders;
 using FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 using FinanceManager.Application.FinancialAccounts.Shared.Csv;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.FinancialAccounts.Shared.Imports;
-using FinanceManager.Application.FinancialAccounts.Stock;
-using FinanceManager.Application.FinancialAccounts.Stock.Assets;
-using FinanceManager.Application.FinancialAccounts.Stock.Balance;
-using FinanceManager.Application.FinancialAccounts.Stock.Export;
-using FinanceManager.Application.FinancialAccounts.Stock.Import;
-using FinanceManager.Application.FinancialAccounts.Stock.Market;
-using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
-using FinanceManager.Application.FinancialAccounts.Stock.Seeders;
 using FinanceManager.Application.Shared.Seeders;
 using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Bond.Exports;
@@ -36,8 +29,6 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Stock.Exports;
-using FinanceManager.Domain.FinancialAccounts.Stock.Services;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -49,22 +40,19 @@ internal static class Registration
     {
         services.AddScoped<IBalanceServiceTyped, CurrencyBalanceService>()
                 .AddScoped<IBalanceServiceTyped, BondBalanceService>()
-                .AddScoped<IBalanceServiceTyped, StockBalanceService>()
                 .AddScoped<IBalanceServiceTyped, InvestmentBalanceService>()
                 .AddScoped<IBalanceService, BalanceService>()
 
                 .AddScoped<IAssetsServiceTyped, AssetsServiceCurrency>()
                 .AddScoped<IAssetsServiceTyped, AssetsServiceBond>()
-                .AddScoped<IAssetsServiceTyped, AssetsServiceStock>()
+                .AddScoped<IAssetsServiceTyped, AssetsServiceInvestment>()
                 .AddScoped<IAssetsService, AssetsService>()
 
                 .AddScoped<CurrencyAccountSeeder>()
-                .AddScoped<StockAccountSeeder>()
                 .AddScoped<InvestmentAccountSeeder>()
                 .AddScoped<BondAccountSeeder>()
                 .AddScoped<BondDetailsSeeder>()
                 .AddScoped<ISeeder, BondDetailsSeeder>(sp => sp.GetRequiredService<BondDetailsSeeder>())
-                .AddScoped<ISeeder, StockDetailsSeeder>()
 
                 .AddScoped<ICurrencyExchangeRateProvider, CsvCurrencyExchangeProvider>()
                 .AddScoped<ICurrencyExchangeService, CurrencyExchangeService>()
@@ -75,20 +63,13 @@ internal static class Registration
                 .AddScoped<ICurrencyAccountImportService, CurrencyAccountImportService>()
                 .AddScoped<ICurrencyAccountExportService, CurrencyAccountExportService>()
                 .AddScoped<IAccountCsvExportService<CurrencyAccountExportDto>, CurrencyAccountCsvExportService>()
-                .AddScoped<IStockAccountImportService, StockAccountImportService>()
-                .AddScoped<IStockAccountExportService, StockAccountExportService>()
-                .AddScoped<IAccountCsvExportService<StockAccountExportDto>, StockAccountCsvExportService>()
                 .AddScoped<IBondAccountImportService, BondAccountImportService>()
                 .AddScoped<IBondAccountExportService, BondAccountExportService>()
                 .AddScoped<IAccountCsvExportService<BondAccountExportDto>, BondAccountCsvExportService>()
-                .AddScoped<IStockPriceProvider, StockPriceProvider>()
                 .AddScoped<IInvestmentPriceProvider, InvestmentPriceProvider>()
                 .AddScoped<IInvestmentValuationService, InvestmentValuationService>()
-                .AddScoped<IStockPriceBulkImportService, StockPriceBulkImportService>()
-                .AddScoped<IStockUnrealizedGainLossCalculator, StockUnrealizedGainLossCalculator>()
                 .AddScoped<IBondUnrealizedGainLossCalculator, BondUnrealizedGainLossCalculator>()
-                .AddScoped<IBondService, BondService>()
-                .AddScoped<IStockMarketService, StockMarketService>();
+                .AddScoped<IBondService, BondService>();
 
         return services;
     }

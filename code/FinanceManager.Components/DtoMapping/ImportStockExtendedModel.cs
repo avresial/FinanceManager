@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+﻿using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Components.DtoMapping;

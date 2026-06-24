@@ -1,5 +1,5 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Bond.Extensions;
 

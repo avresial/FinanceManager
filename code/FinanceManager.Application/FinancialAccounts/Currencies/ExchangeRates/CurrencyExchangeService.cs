@@ -1,7 +1,7 @@
 ﻿using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.Identity.Services;
 
 namespace FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
@@ -65,18 +65,6 @@ internal class CurrencyExchangeService(
             var rate = await provider.GetExchangeRateAsync(fromCurrency, toCurrency, date);
             if (rate is not null) return rate;
         }
-
-        return null;
-    }
-
-    public async Task<decimal?> GetPricePerUnit(StockPrice stockPrice, Currency currency, DateTime date)
-    {
-        if (stockPrice is null) return null;
-        if (stockPrice.Currency == currency) return stockPrice.PricePerUnit;
-        if (date > DateTime.UtcNow) date = DateTime.UtcNow;
-        var priceInRightCurrency = await GetExchangeRateAsync(stockPrice.Currency, currency, date.Date);
-        if (priceInRightCurrency is not null)
-            return stockPrice.PricePerUnit * priceInRightCurrency.Value;
 
         return null;
     }

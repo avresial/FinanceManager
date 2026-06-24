@@ -1,9 +1,9 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,7 +14,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Tags("Investment Transactions")]
 public class InvestmentTransactionController(
-    IAccountRepository<StockAccount> accountRepository,
+    IAccountRepository<InvestmentAccount> accountRepository,
     IInvestmentTransactionRepository transactionRepository,
     ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {

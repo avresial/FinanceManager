@@ -7,18 +7,14 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Exports;
 using System.Text;
 
 namespace FinanceManager.Application.Insights.Generation;
 
 internal sealed class InsightsContextBuilder(
     ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
-    IAccountRepository<StockAccount> stockAccountRepository,
     IAccountRepository<BondAccount> bondAccountRepository,
     IAccountCsvExportService<CurrencyAccountExportDto> currencyAccountCsvExportService,
-    IAccountCsvExportService<StockAccountExportDto> stockAccountCsvExportService,
     IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService)
 {
     private const int _maxEntriesPerAccount = 200;
@@ -37,10 +33,6 @@ internal sealed class InsightsContextBuilder(
 
         addedAccounts = await AppendAccountsSection(sb, currencyAccountRepository.GetAvailableAccounts(userId), "Currency",
             exportAccountId => currencyAccountCsvExportService.GetExportResults(userId, exportAccountId, start, end, cancellationToken),
-            accountId, addedAccounts, cancellationToken);
-
-        addedAccounts = await AppendAccountsSection(sb, stockAccountRepository.GetAvailableAccounts(userId), "Stock",
-            exportAccountId => stockAccountCsvExportService.GetExportResults(userId, exportAccountId, start, end, cancellationToken),
             accountId, addedAccounts, cancellationToken);
 
         addedAccounts = await AppendAccountsSection(sb, bondAccountRepository.GetAvailableAccounts(userId), "Bond",

@@ -1,7 +1,7 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 
 namespace FinanceManager.Components.Components.Features.FinancialAccounts;
 
@@ -18,8 +18,8 @@ public sealed record FinancialAccountTypeDescriptor(
         if (accountType == typeof(CurrencyAccount))
             return new(accountType, FinancialAccountKind.Currency, "Currency", "CurrencyAccount");
 
-        if (accountType == typeof(StockAccount))
-            return new(accountType, FinancialAccountKind.Stock, "Stock", "StockAccount");
+        if (accountType == typeof(InvestmentAccount))
+            return new(accountType, FinancialAccountKind.Stock, "Stock", "InvestmentAccount");
 
         if (accountType == typeof(BondAccount))
             return new(accountType, FinancialAccountKind.Bond, "Bond", "BondAccount");

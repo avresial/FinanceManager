@@ -13,7 +13,7 @@ namespace FinanceManager.Tests.Unit.Components.Services;
 public class FinancialAccountServiceTests
 {
     private const string _currencyPath = "/api/CurrencyAccount";
-    private const string _stockPath = "/api/StockAccount";
+    private const string _stockPath = "/api/InvestmentAccount";
     private const string _bondPath = "/api/BondAccount";
 
     [Fact]
@@ -126,8 +126,7 @@ public class FinancialAccountServiceTests
         var service = new FinancialAccountService(
             new CurrencyAccountHttpClient(httpClient),
             new CurrencyEntryHttpClient(httpClient),
-            new StockAccountHttpClient(httpClient),
-            new StockEntryHttpClient(httpClient),
+            new InvestmentAccountHttpClient(httpClient),
             new BondAccountHttpClient(httpClient),
             new BondEntryHttpClient(httpClient),
             sync,

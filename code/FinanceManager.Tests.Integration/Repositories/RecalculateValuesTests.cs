@@ -1,6 +1,6 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
@@ -134,73 +134,6 @@ public sealed class RecalculateValuesTests : IDisposable
 
         Assert.Single(remaining);
         Assert.Equal(500m, remaining[0].Value); // no prior entry → value = valueChange
-    }
-
-    // ── Stock ─────────────────────────────────────────────────────────────────
-
-    [Fact]
-    public async Task Stock_OutOfOrderInsert_RecalculatesPerIsin()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        var repo = new StockEntryRepository(_context);
-        var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
-        var jan15 = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc);
-        var jan20 = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc);
-
-        await repo.Add(new StockAccountEntry(_accountId, 0, jan10, 0, 100m, "US0378331005", InvestmentType.Stock));
-        await repo.Add(new StockAccountEntry(_accountId, 0, jan20, 0, 50m, "US0378331005", InvestmentType.Stock));
-        // Different ISIN — must remain independent.
-        await repo.Add(new StockAccountEntry(_accountId, 0, jan10, 0, 200m, "US5949181045", InvestmentType.Stock));
-
-        // Out-of-order insert for the first ISIN.
-        await repo.Add(new StockAccountEntry(_accountId, 0, jan15, 0, 30m, "US0378331005", InvestmentType.Stock));
-
-        var appleEntries = await _context.StockEntries
-            .Where(e => e.AccountId == _accountId && e.Isin == "US0378331005")
-            .OrderBy(e => e.PostingDate)
-            .ToListAsync(ct);
-
-        var msftEntries = await _context.StockEntries
-            .Where(e => e.AccountId == _accountId && e.Isin == "US5949181045")
-            .ToListAsync(ct);
-
-        Assert.Equal(3, appleEntries.Count);
-        Assert.Equal(100m, appleEntries[0].Value);  // jan10
-        Assert.Equal(130m, appleEntries[1].Value);  // jan15: 100 + 30
-        Assert.Equal(180m, appleEntries[2].Value);  // jan20: 130 + 50
-
-        Assert.Single(msftEntries);
-        Assert.Equal(200m, msftEntries[0].Value);   // unaffected
-    }
-
-    [Fact]
-    public async Task Stock_RecalculateWholeAccount_RebuildsDriftedBalancesPerIsin()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        var repo = new StockEntryRepository(_context);
-        var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
-        var jan20 = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc);
-
-        // Simulate legacy import drift: Value equals ValueChange across two instruments, no recalc.
-        await repo.Add(new StockAccountEntry(_accountId, 0, jan10, 100m, 100m, "US0378331005", InvestmentType.Stock), recalculate: false);
-        await repo.Add(new StockAccountEntry(_accountId, 0, jan20, 50m, 50m, "US0378331005", InvestmentType.Stock), recalculate: false);
-        await repo.Add(new StockAccountEntry(_accountId, 0, jan10, 200m, 200m, "US5949181045", InvestmentType.Stock), recalculate: false);
-
-        await repo.RecalculateValues(_accountId);
-
-        var appleEntries = await _context.StockEntries
-            .Where(e => e.AccountId == _accountId && e.Isin == "US0378331005")
-            .OrderBy(e => e.PostingDate)
-            .ToListAsync(ct);
-
-        var msftEntries = await _context.StockEntries
-            .Where(e => e.AccountId == _accountId && e.Isin == "US5949181045")
-            .ToListAsync(ct);
-
-        Assert.Equal(100m, appleEntries[0].Value); // jan10
-        Assert.Equal(150m, appleEntries[1].Value); // jan20: 100 + 50
-        Assert.Single(msftEntries);
-        Assert.Equal(200m, msftEntries[0].Value);   // single entry → value = valueChange
     }
 
     // ── Bond ──────────────────────────────────────────────────────────────────
