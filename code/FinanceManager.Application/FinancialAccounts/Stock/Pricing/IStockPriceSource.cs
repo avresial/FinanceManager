@@ -1,5 +1,5 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 
 namespace FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 

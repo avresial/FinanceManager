@@ -1,11 +1,10 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
@@ -17,7 +16,6 @@ namespace FinanceManager.Application.Insights.Diversification;
 
 public class DiversificationService(
     IFinancialAccountRepository financialAccountRepository,
-    IStockDetailsRepository stockDetailsRepository,
     IBondDetailsRepository bondDetailsRepository,
     IInvestmentTransactionRepository investmentTransactionRepository) : IDiversificationService
 {
@@ -55,24 +53,9 @@ public class DiversificationService(
 
     private async Task<List<string>> GetStockHoldingNames(int userId, DateTime asOfDate, CancellationToken cancellationToken)
     {
-        var isins = new List<string>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, DateTime.MinValue, asOfDate))
-            foreach (var isin in GetCurrentlyHeldTickers(account, asOfDate))
-                if (seen.Add(isin))
-                    isins.Add(isin);
-
-        var tickerByIsin = (await stockDetailsRepository.GetAll(cancellationToken))
-            .Where(details => !string.IsNullOrWhiteSpace(details.Isin))
-            .GroupBy(details => details.Isin, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First().Ticker, StringComparer.OrdinalIgnoreCase);
-
         var names = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var isin in isins)
-            names.Add(tickerByIsin.TryGetValue(isin, out var ticker) && !string.IsNullOrWhiteSpace(ticker) ? ticker : isin);
 
-        // New asset-model holdings (investment accounts) are reported under the same "Stocks" group.
+        // Investment-account holdings (the asset model) are reported under the "Stocks" group.
         foreach (var ticker in await GetHeldInvestmentTickers(userId, asOfDate, cancellationToken))
             names.Add(ticker);
 
@@ -158,16 +141,6 @@ public class DiversificationService(
         }
 
         return (heldClasses, uniqueHoldings);
-    }
-
-    private static IEnumerable<string> GetCurrentlyHeldTickers(StockAccount account, DateTime asOfDate)
-    {
-        foreach (var ticker in account.GetStoredTickers())
-        {
-            var entry = account.GetThisOrNextOlder(asOfDate, ticker);
-            if (entry is { InvestmentType: InvestmentType.Stock } && entry.Value > 0)
-                yield return ticker;
-        }
     }
 
     private static IEnumerable<int> GetCurrentlyHeldBondIds(BondAccount account, DateTime asOfDate)

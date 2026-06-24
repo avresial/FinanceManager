@@ -17,7 +17,7 @@ namespace FinanceManager.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.8")
+                .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -713,14 +713,9 @@ namespace FinanceManager.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int?>("StockAccountEntryEntryId")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id");
 
                     b.HasIndex("BondAccountEntryEntryId");
-
-                    b.HasIndex("StockAccountEntryEntryId");
 
                     b.ToTable("FinancialLabels");
                 });
@@ -788,119 +783,6 @@ namespace FinanceManager.Api.Migrations
                         .HasDatabaseName("IX_CsvHeaderMapping_Header_Field");
 
                     b.ToTable("CsvHeaderMappings");
-                });
-
-            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Stock.Dtos.StockPriceDto", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal>("PricePerUnit")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("numeric(18,8)");
-
-                    b.Property<string>("StockIsin")
-                        .IsRequired()
-                        .HasMaxLength(12)
-                        .HasColumnType("character varying(12)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StockIsin", "Date");
-
-                    b.ToTable("StockPrices");
-                });
-
-            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Stock.Entities.StockAccountEntry", b =>
-                {
-                    b.Property<int>("EntryId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("EntryId"));
-
-                    b.Property<int>("AccountId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("InvestmentType")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Isin")
-                        .IsRequired()
-                        .HasMaxLength(12)
-                        .HasColumnType("character varying(12)");
-
-                    b.Property<DateTime>("PostingDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Ticker")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<decimal>("Value")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("numeric(18,8)");
-
-                    b.Property<decimal>("ValueChange")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("numeric(18,8)");
-
-                    b.HasKey("EntryId");
-
-                    b.HasIndex("AccountId", "PostingDate", "EntryId");
-
-                    b.HasIndex("AccountId", "Isin", "PostingDate", "EntryId");
-
-                    b.ToTable("StockEntries");
-                });
-
-            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Stock.Entities.StockDetails", b =>
-                {
-                    b.Property<string>("Isin")
-                        .HasMaxLength(12)
-                        .HasColumnType("character varying(12)");
-
-                    b.Property<string>("AlphaVantageSymbol")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<int>("CurrencyId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("Region")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<string>("Ticker")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.HasKey("Isin");
-
-                    b.HasIndex("CurrencyId");
-
-                    b.HasIndex("Ticker");
-
-                    b.ToTable("StockDetails");
                 });
 
             modelBuilder.Entity("FinanceManager.Domain.Identity.Dtos.UserDto", b =>
@@ -1278,10 +1160,6 @@ namespace FinanceManager.Api.Migrations
                     b.HasOne("FinanceManager.Domain.FinancialAccounts.Bond.Entities.BondAccountEntry", null)
                         .WithMany("Labels")
                         .HasForeignKey("BondAccountEntryEntryId");
-
-                    b.HasOne("FinanceManager.Domain.FinancialAccounts.Stock.Entities.StockAccountEntry", null)
-                        .WithMany("Labels")
-                        .HasForeignKey("StockAccountEntryEntryId");
                 });
 
             modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabelClassification", b =>
@@ -1291,28 +1169,6 @@ namespace FinanceManager.Api.Migrations
                         .HasForeignKey("LabelId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Stock.Dtos.StockPriceDto", b =>
-                {
-                    b.HasOne("FinanceManager.Domain.FinancialAccounts.Stock.Entities.StockDetails", "StockDetails")
-                        .WithMany()
-                        .HasForeignKey("StockIsin")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("StockDetails");
-                });
-
-            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Stock.Entities.StockDetails", b =>
-                {
-                    b.HasOne("FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency", "Currency")
-                        .WithMany()
-                        .HasForeignKey("CurrencyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Currency");
                 });
 
             modelBuilder.Entity("FinanceManager.Domain.Assets.Entities.Asset", b =>
@@ -1340,11 +1196,6 @@ namespace FinanceManager.Api.Migrations
             modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel", b =>
                 {
                     b.Navigation("Classifications");
-                });
-
-            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Stock.Entities.StockAccountEntry", b =>
-                {
-                    b.Navigation("Labels");
                 });
 #pragma warning restore 612, 618
         }

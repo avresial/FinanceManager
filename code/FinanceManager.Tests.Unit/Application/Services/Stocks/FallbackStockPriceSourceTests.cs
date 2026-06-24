@@ -1,6 +1,6 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Tests.Unit.Application.Services.Stocks;

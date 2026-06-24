@@ -4,7 +4,6 @@ using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.FinancialAccounts.Investments.Seeders;
@@ -15,7 +14,7 @@ namespace FinanceManager.Application.FinancialAccounts.Investments.Seeders;
 /// and monthly Buy transactions (plus one Sell) so the new investment UI renders a life-like portfolio.
 /// </summary>
 public class InvestmentAccountSeeder(
-    IAccountRepository<StockAccount> accountRepository,
+    IAccountRepository<InvestmentAccount> accountRepository,
     IAssetRepository assetRepository,
     IAssetListingRepository assetListingRepository,
     IMarketDataSymbolRepository marketDataSymbolRepository,

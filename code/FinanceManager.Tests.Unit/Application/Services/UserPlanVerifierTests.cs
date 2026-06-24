@@ -3,10 +3,10 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using Moq;
@@ -19,22 +19,26 @@ public class UserPlanVerifierTests
 {
     private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _currencyAccountRepositoryMock = new();
     private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _currencyEntryRepositoryMock = new();
-    private readonly Mock<IStockAccountEntryRepository<StockAccountEntry>> _stockEntryRepositoryMock = new();
+    private readonly Mock<IInvestmentTransactionRepository> _investmentTransactionRepositoryMock = new();
     private readonly Mock<IBondAccountEntryRepository<BondAccountEntry>> _bondEntryRepositoryMock = new();
     private readonly Mock<IUserRepository> _userRepositoryMock = new();
     private readonly UserPlanVerifier _userPlanVerifier;
 
     public UserPlanVerifierTests() => _userPlanVerifier = new(
         _currencyAccountRepositoryMock.Object, _currencyEntryRepositoryMock.Object,
-        _stockEntryRepositoryMock.Object, _bondEntryRepositoryMock.Object, _userRepositoryMock.Object);
+        _investmentTransactionRepositoryMock.Object, _bondEntryRepositoryMock.Object, _userRepositoryMock.Object);
+
+    private static IReadOnlyList<InvestmentTransaction> Transactions(int count) =>
+        Enumerable.Range(0, count).Select(_ => new InvestmentTransaction()).ToList();
 
     // Used capacity is the sum of the user's entries across every account type, so a test fixes a count per type.
+    // Investment capacity counts the user's investment transactions.
     private void SetupUsedEntries(int userId, int currency = 0, int stock = 0, int bond = 0)
     {
         _currencyEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, int> { [userId] = currency });
-        _stockEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<int, int> { [userId] = stock });
+        _investmentTransactionRepositoryMock.Setup(repo => repo.GetByUser(userId, It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Transactions(stock));
         _bondEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, int> { [userId] = bond });
     }
@@ -88,8 +92,8 @@ public class UserPlanVerifierTests
         var userIds = new[] { 1, 2, 3 };
         _currencyEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, int> { [1] = 100 });
-        _stockEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<int, int> { [1] = 25, [2] = 50 });
+        _investmentTransactionRepositoryMock.Setup(repo => repo.GetByUser(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((long uid, DateOnly _, DateOnly _, CancellationToken _) => Transactions(uid == 1 ? 25 : uid == 2 ? 50 : 0));
         _bondEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, int> { [1] = 5 });
 
@@ -113,8 +117,8 @@ public class UserPlanVerifierTests
         Assert.Empty(result);
         _currencyEntryRepositoryMock.Verify(repo => repo.GetEntriesCountPerUser(
             It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()), Times.Never);
-        _stockEntryRepositoryMock.Verify(repo => repo.GetEntriesCountPerUser(
-            It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()), Times.Never);
+        _investmentTransactionRepositoryMock.Verify(repo => repo.GetByUser(
+            It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()), Times.Never);
         _bondEntryRepositoryMock.Verify(repo => repo.GetEntriesCountPerUser(
             It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()), Times.Never);
     }

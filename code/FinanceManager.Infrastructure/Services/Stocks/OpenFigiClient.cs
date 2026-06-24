@@ -1,7 +1,6 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Stock.Services;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -16,7 +15,7 @@ namespace FinanceManager.Infrastructure.Services.Stocks;
 internal sealed class OpenFigiClient(
     HttpClient httpClient,
     ILogger<OpenFigiClient> logger,
-    IExternalServiceConfigService configService) : IOpenFigiClient, IIsinResolver
+    IExternalServiceConfigService configService) : IOpenFigiClient
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -51,43 +50,6 @@ internal sealed class OpenFigiClient(
         };
 
         return await ExecuteMapping([request], $"ISIN {Sanitize(isin)}", ct);
-    }
-
-    public async Task<string?> ResolveAsync(string ticker, string? region = null, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(ticker))
-            return null;
-
-        try
-        {
-            var results = await MapByTickerAsync(ticker, region, ct);
-            var first = results.FirstOrDefault();
-            if (first is null)
-            {
-                logger.LogDebug("OpenFIGI returned no results for ticker {Ticker}", Sanitize(ticker));
-                return null;
-            }
-
-            if (string.IsNullOrWhiteSpace(first.Isin))
-            {
-                logger.LogDebug("OpenFIGI returned no ISIN for ticker {Ticker}", Sanitize(ticker));
-                return null;
-            }
-
-            logger.LogDebug("Resolved ticker {Ticker} to ISIN {Isin}", Sanitize(ticker), Sanitize(first.Isin));
-            return first.Isin;
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            // Legacy IIsinResolver contract returns null on failure; the decorating
-            // CachingIsinResolver handles its own cooldown when null is returned.
-            logger.LogWarning(ex, "OpenFIGI resolve failed for ticker {Ticker}", Sanitize(ticker));
-            return null;
-        }
     }
 
     private async Task<IReadOnlyList<OpenFigiListing>> ExecuteMapping(List<OpenFigiMappingRequest> requests, string debugLabel, CancellationToken ct)

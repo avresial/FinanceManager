@@ -1,5 +1,4 @@
-﻿using FinanceManager.Application.FinancialAccounts.Stock.Market;
-using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
+﻿using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Application.Insights.Generation;
 using FinanceManager.Application.Labels.Setter;
@@ -14,12 +13,10 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Stock.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Insights.Repositories;
@@ -69,7 +66,6 @@ public static class ServiceCollectionExtension
             sp.GetRequiredService<ILogger<FallbackStockPriceSource>>()));
         services.AddHttpClient<OpenFigiClient>();
         services.AddScoped<IOpenFigiClient>(sp => sp.GetRequiredService<OpenFigiClient>());
-        services.AddScoped<IIsinResolver, CachingIsinResolver>();
         services.AddScoped<IQuoteFactorResolver>(sp =>
             new QuoteFactorResolver(
                 sp.GetRequiredService<ICurrencyExchangeRateProvider>(),
@@ -78,11 +74,9 @@ public static class ServiceCollectionExtension
             new InstrumentResolver(
                 sp.GetRequiredService<IOpenFigiClient>(),
                 sp.GetRequiredService<IAlphaVantageClient>(),
-                sp.GetRequiredService<IStockDetailsRepository>(),
                 sp.GetRequiredService<IAssetRepository>(),
                 sp.GetRequiredService<IAssetListingRepository>(),
                 sp.GetRequiredService<IMarketDataSymbolRepository>(),
-                sp.GetRequiredService<ICurrencyRepository>(),
                 sp.GetRequiredService<IQuoteFactorResolver>(),
                 sp.GetRequiredService<IMemoryCache>(),
                 sp.GetRequiredService<ILogger<InstrumentResolver>>()));
@@ -91,20 +85,17 @@ public static class ServiceCollectionExtension
         services.AddAI();
 
         services
-                .AddScoped<IDataBackfillService, DataBackfillService>()
                 .AddScoped<IAssetRepository, AssetRepository>()
                 .AddScoped<IAssetListingRepository, AssetListingRepository>()
                 .AddScoped<IMarketDataSymbolRepository, MarketDataSymbolRepository>()
                 .AddScoped<IInvestmentTransactionRepository, InvestmentTransactionRepository>()
                 .AddScoped<IPriceQuoteRepository, PriceQuoteRepository>()
-                .AddScoped<IStockPriceRepository, StockPriceRepository>()
-                .AddScoped<IStockDetailsRepository, StockDetailsRepository>()
                 .AddScoped<IFinancialAccountRepository, AccountRepository>()
                 .AddScoped<IUserRepository, UserRepository>()
                 .AddScoped<IRefreshTokenRepository, RefreshTokenRepository>()
                 .AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>()
                 .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()
-                .AddScoped<IAccountRepository<StockAccount>, StockAccountRepository>()
+                .AddScoped<IAccountRepository<InvestmentAccount>, InvestmentAccountRepository>()
                 .AddScoped<IAccountRepository<BondAccount>, BondAccountRepository>()
                 .AddScoped<ICurrencyAccountRepository<CurrencyAccount>, CurrencyAccountRepository>()
                 .AddScoped<INewVisitsRepository, NewVisitsRepository>()
@@ -143,15 +134,6 @@ public static class ServiceCollectionExtension
         services.AddScoped<IAccountEntryRepository<CurrencyAccountEntry>>(sp =>
             new CachedAccountEntryRepository<CurrencyAccountEntry>(
                 sp.GetRequiredService<CurrencyEntryRepository>(),
-                sp.GetRequiredService<IAccountUserResolver>(),
-                sp.GetRequiredService<ICacheInvalidator>(),
-                sp.GetRequiredService<HybridCache>(),
-                sp.GetRequiredService<EntryRangeCacheOptions>()));
-
-        services.AddScoped<StockEntryRepository>();
-        services.AddScoped<IStockAccountEntryRepository<StockAccountEntry>>(sp =>
-            new CachedStockEntryRepository(
-                sp.GetRequiredService<StockEntryRepository>(),
                 sp.GetRequiredService<IAccountUserResolver>(),
                 sp.GetRequiredService<ICacheInvalidator>(),
                 sp.GetRequiredService<HybridCache>(),

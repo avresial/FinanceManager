@@ -2,16 +2,15 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
 using FinanceManager.Domain.Identity.Repositories;
 
 namespace FinanceManager.Application.Identity.Users;
 
 public class UserPlanVerifier(ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,
-    IStockAccountEntryRepository<StockAccountEntry> stockAccountEntryRepository,
+    IInvestmentTransactionRepository investmentTransactionRepository,
     IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
     IUserRepository userRepository) : IUserPlanVerifier
 {
@@ -25,14 +24,21 @@ public class UserPlanVerifier(ICurrencyAccountRepository<CurrencyAccount> curren
     {
         if (userIds.Count == 0) return new Dictionary<int, int>();
 
-        // Used capacity is every record the user owns, summed across all account types — currency, stock and bond.
+        // Used capacity is every record the user owns, summed across all account types — currency,
+        // investment (transactions) and bond.
         var currencyCounts = await currencyAccountEntryRepository.GetEntriesCountPerUser(userIds);
-        var stockCounts = await stockAccountEntryRepository.GetEntriesCountPerUser(userIds);
         var bondCounts = await bondAccountEntryRepository.GetEntriesCountPerUser(userIds);
+
+        var investmentCounts = new Dictionary<int, int>();
+        foreach (var userId in userIds.Distinct())
+        {
+            var transactions = await investmentTransactionRepository.GetByUser(userId, DateOnly.MinValue, DateOnly.MaxValue);
+            investmentCounts[userId] = transactions.Count;
+        }
 
         return userIds.Distinct().ToDictionary(
             id => id,
-            id => CountFor(currencyCounts, id) + CountFor(stockCounts, id) + CountFor(bondCounts, id));
+            id => CountFor(currencyCounts, id) + CountFor(investmentCounts, id) + CountFor(bondCounts, id));
 
         static int CountFor(IReadOnlyDictionary<int, int> counts, int id) => counts.TryGetValue(id, out var count) ? count : 0;
     }

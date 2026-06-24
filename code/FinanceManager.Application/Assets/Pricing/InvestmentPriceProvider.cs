@@ -197,7 +197,7 @@ public class InvestmentPriceProvider(
             var rawCurrencyName = string.IsNullOrWhiteSpace(symbol.Currency) ? listing.TradingCurrency : symbol.Currency;
             var rawCurrency = await currencyRepository.GetOrAdd(rawCurrencyName, rawCurrencyName, ct);
 
-            IReadOnlyList<Domain.FinancialAccounts.Stock.Entities.StockPrice> prices;
+            IReadOnlyList<Domain.FinancialAccounts.Investments.Entities.StockPrice> prices;
             try
             {
                 prices = await priceSource.GetDailySeries(symbol.Symbol, string.Empty, start, end, rawCurrency, ct);

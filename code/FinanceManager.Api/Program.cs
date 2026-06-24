@@ -102,7 +102,6 @@ builder.Services.AddOptions<StockApiOptions>()
     .Bind(builder.Configuration.GetSection("StockApi"))
     .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "StockApi:BaseUrl must be configured.")
     .ValidateOnStart();
-builder.Services.Configure<StockDetailsSeederOptions>(builder.Configuration.GetSection(StockDetailsSeederOptions.SectionName));
 builder.Services.Configure<OpenFigiOptions>(builder.Configuration.GetSection("OpenFigi"));
 builder.Services.AddOptions<EodhdOptions>()
     .Bind(builder.Configuration.GetSection("Eodhd"))

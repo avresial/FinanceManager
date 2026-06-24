@@ -1,0 +1,173 @@
+using FinanceManager.Domain.Assets.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.MoneyFlow.Entities;
+
+namespace FinanceManager.Application.FinancialAccounts.Investments.Assets;
+
+/// <summary>
+/// Surfaces investment accounts (the new asset model) to the dashboard asset aggregates. Replaces the
+/// legacy <c>AssetsServiceStock</c>: holdings come from <see cref="InvestmentTransaction"/> rows and are
+/// priced through <see cref="IInvestmentValuationService"/> / <see cref="IInvestmentPriceProvider"/>
+/// rather than per-ticker <c>StockAccountEntry</c> values.
+/// </summary>
+internal class AssetsServiceInvestment(
+    IFinancialAccountRepository financialAccountRepository,
+    IInvestmentValuationService valuationService,
+    IInvestmentTransactionRepository transactionRepository,
+    IInvestmentPriceProvider priceProvider) : IAssetsServiceTyped
+{
+    public bool IsOfType<T>() => typeof(T) == typeof(InvestmentAccount);
+
+    public async Task<bool> IsAnyAccountWithAssets(int userId)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var now = DateTime.UtcNow;
+        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, now.AddDays(-1), now))
+        {
+            var holdings = await valuationService.GetHoldingsAsOfAsync(account.AccountId, today);
+            if (holdings.Count > 0)
+                return true;
+        }
+
+        return false;
+    }
+
+    public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end)
+    {
+        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
+        if (start == default) return [];
+
+        Dictionary<DateTime, decimal> values = [];
+        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, start, end))
+        {
+            var series = await valuationService.GetAccountValueSeriesAsync(account.AccountId, currency, start, end);
+            foreach (var (date, value) in series)
+            {
+                if (!values.TryAdd(date, value))
+                    values[date] += value;
+            }
+        }
+
+        return values.Select(x => new TimeSeriesModel(x.Key, x.Value)).ToList();
+    }
+
+    // Investment accounts hold equities/ETFs, classified under the Stock investment type. Other types
+    // contribute nothing here so the per-type breakdown does not double count against bonds/cash.
+    public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end, InvestmentType investmentType)
+    {
+        if (investmentType != InvestmentType.Stock) return [];
+        return await GetAssetsTimeSeries(userId, currency, start, end);
+    }
+
+    public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
+    {
+        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, asOfDate.AddMinutes(-1), asOfDate))
+        {
+            var value = await valuationService.GetAccountValueAsync(account.AccountId, currency, asOfDate);
+            if (value > 0)
+                yield return new NameValueResult(account.Name, value);
+        }
+    }
+
+    public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
+    {
+        decimal total = 0;
+        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, asOfDate.AddMinutes(-1), asOfDate))
+            total += await valuationService.GetAccountValueAsync(account.AccountId, currency, asOfDate);
+
+        if (total > 0)
+            yield return new NameValueResult(InvestmentType.Stock.ToString(), total);
+    }
+
+    public async Task<List<UnrealizedGainLossInstrumentResult>> GetUnrealizedGainLossPerInstrument(int userId, Currency currency, DateTime asOfDate)
+    {
+        List<UnrealizedGainLossInstrumentResult> results = [];
+
+        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, DateTime.MinValue, asOfDate))
+        {
+            var transactions = (await transactionRepository.GetByAccount(account.AccountId))
+                .Where(t => t.TradeDate <= DateOnly.FromDateTime(asOfDate))
+                .ToList();
+
+            foreach (var group in transactions.GroupBy(t => t.AssetListingId))
+            {
+                var holding = group.Sum(t => t.SignedQuantity);
+                if (holding <= 0) continue;
+
+                var listing = group.First().AssetListing;
+                var instrumentName = listing?.Ticker ?? group.Key.ToString();
+
+                // Average-cost basis from buy legs (including fees). Cost basis is recorded in each
+                // transaction's currency; when that differs from the requested display currency we
+                // cannot convert historical FX here, so flag the instrument and exclude it from totals.
+                var buys = group.Where(t => t.Type == InvestmentTransactionType.Buy).ToList();
+                var boughtQty = buys.Sum(t => t.Quantity);
+                var boughtCost = buys.Sum(t => t.Quantity * t.UnitPrice + (t.Fee ?? 0));
+                var avgCost = boughtQty > 0 ? boughtCost / boughtQty : 0;
+                var costBasis = avgCost * holding;
+
+                var price = await priceProvider.GetPricePerUnitAsync(group.Key, currency, asOfDate);
+                var currentValue = holding * price;
+
+                var crossCurrency = group.Any(t => !string.Equals(t.Currency, currency.ShortName, StringComparison.OrdinalIgnoreCase));
+                var excluded = price <= 0 || crossCurrency;
+                string? warning = price <= 0
+                    ? "No price available for this instrument."
+                    : crossCurrency ? "Cost basis is in a different currency; excluded from totals." : null;
+
+                var unrealized = currentValue - costBasis;
+                var unrealizedPercent = costBasis == 0 ? 0 : unrealized / costBasis * 100;
+
+                results.Add(new UnrealizedGainLossInstrumentResult(
+                    account.AccountId,
+                    account.Name,
+                    instrumentName,
+                    instrumentName,
+                    holding,
+                    costBasis,
+                    currentValue,
+                    unrealized,
+                    unrealizedPercent,
+                    asOfDate,
+                    excluded,
+                    warning));
+            }
+        }
+
+        return results;
+    }
+
+    public async Task<List<UnrealizedGainLossAccountResult>> GetUnrealizedGainLossPerAccount(int userId, Currency currency, DateTime asOfDate)
+    {
+        var instrumentResults = await GetUnrealizedGainLossPerInstrument(userId, currency, asOfDate);
+
+        List<UnrealizedGainLossAccountResult> results = [];
+        foreach (var accountGroup in instrumentResults.GroupBy(x => new { x.AccountId, x.AccountName }))
+        {
+            var included = accountGroup.Where(x => !x.IsExcludedFromTotals).ToList();
+            var excludedCount = accountGroup.Count(x => x.IsExcludedFromTotals);
+
+            var costBasis = included.Sum(x => x.CostBasis);
+            var currentValue = included.Sum(x => x.CurrentValue);
+            var unrealized = currentValue - costBasis;
+            var unrealizedPercent = costBasis == 0 ? 0 : unrealized / costBasis * 100;
+
+            results.Add(new UnrealizedGainLossAccountResult(
+                accountGroup.Key.AccountId,
+                accountGroup.Key.AccountName,
+                costBasis,
+                currentValue,
+                unrealized,
+                unrealizedPercent,
+                asOfDate,
+                excludedCount));
+        }
+
+        return results;
+    }
+}

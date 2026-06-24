@@ -1,6 +1,5 @@
 ﻿using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Extensions;
-using FinanceManager.Domain.FinancialAccounts.Stock.Extensions;
 using FinanceManager.Domain.Identity.Entities;
 using System.Diagnostics;
 using System.Text.Json.Serialization;

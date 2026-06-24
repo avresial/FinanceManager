@@ -1,10 +1,9 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Repositories;
@@ -16,7 +15,7 @@ namespace FinanceManager.Application.MoneyFlow.InvestmentPaycheck;
 public class InvestmentPaycheckEstimatorService(
     IFinancialAccountRepository financialAccountRepository,
     IFinancialLabelsRepository financialLabelsRepository,
-    IStockPriceProvider stockPriceProvider,
+    IInvestmentValuationService investmentValuationService,
     IBondDetailsRepository bondDetailsRepository) : IInvestmentPaycheckEstimatorService
 {
     public async Task<InvestmentPaycheckEstimate> GetEstimate(int userId, Currency currency, DateTime asOfDate, decimal annualWithdrawalRate = 0.05m, int salaryMonths = 3)
@@ -70,18 +69,8 @@ public class InvestmentPaycheckEstimatorService(
             }
         }
 
-        await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, asOfDate.Date, asOfDate))
-        {
-            foreach (var ticker in account.GetStoredTickers())
-            {
-                var newestEntry = account.GetThisOrNextOlder(asOfDate, ticker);
-                if (newestEntry is null)
-                    continue;
-
-                decimal pricePerUnit = await stockPriceProvider.GetPricePerUnitAsync(ticker, currency, asOfDate);
-                result += newestEntry.Value * pricePerUnit;
-            }
-        }
+        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, asOfDate.Date, asOfDate))
+            result += await investmentValuationService.GetAccountValueAsync(account.AccountId, currency, asOfDate);
 
         return result;
     }

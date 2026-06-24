@@ -1,11 +1,10 @@
-using FinanceManager.Application.FinancialAccounts.Stock.Market;
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Globalization;
@@ -146,37 +145,6 @@ internal sealed class AlphaVantageClient(
         }
     }
 
-    public async Task<IReadOnlyList<StockListing>> GetListings(CancellationToken ct = default)
-    {
-        var config = await configService.GetServiceAsync("AlphaVantage", ct);
-        var apiKey = config.ApiKey;
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            logger.LogWarning("Stock API key is missing.");
-            return [];
-        }
-
-        var url = BuildUrl($"function=LISTING_STATUS&apikey={apiKey}", config.BaseUrl);
-
-        try
-        {
-            var response = await httpClient.GetAsync(url, ct);
-            if (!response.IsSuccessStatusCode)
-            {
-                logger.LogWarning("Stock API listing status failed with status {StatusCode}", response.StatusCode);
-                return [];
-            }
-
-            var content = await response.Content.ReadAsStringAsync(ct);
-            return ParseListingStatusCsv(content);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Stock API listing status failed");
-            return [];
-        }
-    }
-
     private static string BuildUrl(string query, string baseUrl)
     {
         if (string.IsNullOrWhiteSpace(baseUrl)) return query;
@@ -185,44 +153,6 @@ internal sealed class AlphaVantageClient(
             return $"{baseUrl}&{query}";
 
         return $"{baseUrl}?{query}";
-    }
-
-    private static List<StockListing> ParseListingStatusCsv(string csv)
-    {
-        var listings = new List<StockListing>();
-        var lines = csv.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-
-        if (lines.Length == 0) return listings;
-
-        for (int i = 1; i < lines.Length; i++)
-        {
-            var line = lines[i].Trim();
-            if (string.IsNullOrWhiteSpace(line)) continue;
-
-            var parts = line.Split(',');
-            if (parts.Length < 7) continue;
-
-            listings.Add(new StockListing(
-                parts[0],
-                parts[1],
-                parts[2],
-                parts[3],
-                ParseNullableDate(parts[4]),
-                ParseNullableDate(parts[5]),
-                parts[6]));
-        }
-
-        return listings;
-    }
-
-    private static DateTime? ParseNullableDate(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value) || value.Equals("null", StringComparison.OrdinalIgnoreCase))
-            return null;
-
-        return DateTime.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date)
-            ? DateTime.SpecifyKind(date.Date, DateTimeKind.Utc)
-            : null;
     }
 
     private static bool TryParseDate(string value, out DateTime date)

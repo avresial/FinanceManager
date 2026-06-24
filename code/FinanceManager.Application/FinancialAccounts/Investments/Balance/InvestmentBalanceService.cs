@@ -1,9 +1,9 @@
 using FinanceManager.Application.Shared;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
 
 namespace FinanceManager.Application.FinancialAccounts.Investments.Balance;
@@ -28,7 +28,7 @@ internal class InvestmentBalanceService(
     IFinancialAccountRepository financialAccountRepository,
     IInvestmentValuationService investmentValuationService) : IBalanceServiceTyped
 {
-    public bool IsOfType<T>() => typeof(T) == typeof(StockAccount);
+    public bool IsOfType<T>() => typeof(T) == typeof(InvestmentAccount);
 
     // Cash flow is intentionally empty for investment accounts to avoid double counting against the
     // cash account that books the investment outflow. See the class remarks.
@@ -61,7 +61,7 @@ internal class InvestmentBalanceService(
         var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
         List<int> investmentAccountIds = [];
 
-        await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, start, end))
+        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, start, end))
         {
             if (account is null) continue;
             if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
