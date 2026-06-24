@@ -51,19 +51,13 @@ internal class StockBalanceService(IFinancialAccountRepository financialAccountR
             accounts.Add(account);
         }
 
+        // Fetch one ticker series at a time: the price provider reads through scoped
+        // IStockPriceRepository/IStockDetailsRepository backed by a single AppDbContext, which EF Core
+        // does not allow to service concurrent operations.
         Dictionary<string, IReadOnlyDictionary<DateTime, decimal>> pricesByTicker = new(StringComparer.OrdinalIgnoreCase);
         var tickers = accounts.SelectMany(x => x.GetStoredTickers()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        if (tickers.Count > 0)
-        {
-            var preloadTasks = tickers.ToDictionary(
-                ticker => ticker,
-                ticker => stockPriceProvider.GetPricePerUnitSeriesAsync(ticker, currency, start.Date, end.Date),
-                StringComparer.OrdinalIgnoreCase);
-
-            await Task.WhenAll(preloadTasks.Values);
-            foreach (var preloadTask in preloadTasks)
-                pricesByTicker[preloadTask.Key] = await preloadTask.Value;
-        }
+        foreach (var ticker in tickers)
+            pricesByTicker[ticker] = await stockPriceProvider.GetPricePerUnitSeriesAsync(ticker, currency, start.Date, end.Date);
 
         foreach (var account in accounts)
         {
@@ -107,19 +101,13 @@ internal class StockBalanceService(IFinancialAccountRepository financialAccountR
             accounts.Add(account);
         }
 
+        // Fetch one ticker series at a time: the price provider reads through scoped
+        // IStockPriceRepository/IStockDetailsRepository backed by a single AppDbContext, which EF Core
+        // does not allow to service concurrent operations.
         Dictionary<string, IReadOnlyDictionary<DateTime, decimal>> pricesByTicker = new(StringComparer.OrdinalIgnoreCase);
         var tickers = accounts.SelectMany(x => x.GetStoredTickers()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        if (tickers.Count > 0)
-        {
-            var preloadTasks = tickers.ToDictionary(
-                ticker => ticker,
-                ticker => stockPriceProvider.GetPricePerUnitSeriesAsync(ticker, currency, start.Date, end.Date),
-                StringComparer.OrdinalIgnoreCase);
-
-            await Task.WhenAll(preloadTasks.Values);
-            foreach (var preloadTask in preloadTasks)
-                pricesByTicker[preloadTask.Key] = await preloadTask.Value;
-        }
+        foreach (var ticker in tickers)
+            pricesByTicker[ticker] = await stockPriceProvider.GetPricePerUnitSeriesAsync(ticker, currency, start.Date, end.Date);
 
         foreach (var account in accounts)
         {

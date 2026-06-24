@@ -88,32 +88,22 @@ IBondDetailsRepository bondDetailsRepository, IInvestmentValuationService invest
             x => x.AccountId,
             x => x.GetStoredTickers().Concat(x.NextOlderEntries.Keys).Distinct(StringComparer.OrdinalIgnoreCase).ToList());
 
+        // Fetch one ticker series at a time: the price provider reads through scoped
+        // IStockPriceRepository/IStockDetailsRepository backed by a single AppDbContext, which EF Core
+        // does not allow to service concurrent operations.
         Dictionary<string, IReadOnlyDictionary<DateTime, decimal>> pricesByTicker = new(StringComparer.OrdinalIgnoreCase);
         var tickers = tickersByAccount.Values.SelectMany(x => x).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        if (tickers.Count > 0)
-        {
-            var preloadTasks = tickers.ToDictionary(
-                ticker => ticker,
-                ticker => stockPriceProvider.GetPricePerUnitSeriesAsync(ticker, currency, start.Date, end.Date),
-                StringComparer.OrdinalIgnoreCase);
-
-            await Task.WhenAll(preloadTasks.Values);
-            foreach (var preloadTask in preloadTasks)
-                pricesByTicker[preloadTask.Key] = await preloadTask.Value;
-        }
+        foreach (var ticker in tickers)
+            pricesByTicker[ticker] = await stockPriceProvider.GetPricePerUnitSeriesAsync(ticker, currency, start.Date, end.Date);
 
         // Investment accounts (new asset model) value per account/day through the valuation service.
         // Legacy stock accounts return an empty series here (no investment transactions), so each
-        // Stock-type account contributes through exactly one path. Fan the per-account series fetches
-        // out concurrently so latency does not grow linearly with the account count.
-        var investmentSeriesTasks = stockAccounts.ToDictionary(
-            account => account.AccountId,
-            account => investmentValuationService.GetAccountValueSeriesAsync(account.AccountId, currency, start.Date, end.Date));
-        await Task.WhenAll(investmentSeriesTasks.Values);
-
+        // Stock-type account contributes through exactly one path. Fetch one account at a time: the
+        // valuation service reads through a scoped IInvestmentTransactionRepository backed by the same
+        // single AppDbContext, which EF Core does not allow to service concurrent operations.
         Dictionary<int, IReadOnlyDictionary<DateTime, decimal>> investmentValuesByAccount = [];
-        foreach (var (accountId, task) in investmentSeriesTasks)
-            investmentValuesByAccount[accountId] = await task;
+        foreach (var account in stockAccounts)
+            investmentValuesByAccount[account.AccountId] = await investmentValuationService.GetAccountValueSeriesAsync(account.AccountId, currency, start.Date, end.Date);
 
         for (DateTime date = end; date >= start; date = date.AddDays(-1))
         {
