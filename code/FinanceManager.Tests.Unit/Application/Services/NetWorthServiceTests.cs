@@ -570,5 +570,10 @@ public class NetWorthServiceTests
         await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, start, end);
 
         Assert.False(sawConcurrency, "Per-account value series must be fetched sequentially to avoid shared-DbContext concurrency.");
+        // Self-validate the guard: it only proves anything if the sequential path was actually exercised
+        // (one fetch per account). Without this, dropping the call entirely would pass vacuously.
+        _investmentValuationServiceMock.Verify(
+            x => x.GetAccountValueSeriesAsync(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(investmentAccounts.Count));
     }
 }
