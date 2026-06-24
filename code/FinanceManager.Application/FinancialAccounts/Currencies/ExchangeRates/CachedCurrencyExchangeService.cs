@@ -1,7 +1,7 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -73,20 +73,5 @@ internal sealed class CachedCurrencyExchangeService(
         }
 
         return rates;
-    }
-
-    public async Task<decimal?> GetPricePerUnit(StockPrice stockPrice, Currency currency, DateTime date)
-    {
-        if (stockPrice is null) return null;
-        if (stockPrice.Currency == currency) return stockPrice.PricePerUnit;
-        if (date > DateTime.UtcNow) date = DateTime.UtcNow;
-
-        // Route through the cached single-date overload instead of delegating to the
-        // inner service, whose own GetExchangeRateAsync call bypasses this cache.
-        var rate = await GetExchangeRateAsync(stockPrice.Currency, currency, date.Date);
-        if (rate is not null)
-            return stockPrice.PricePerUnit * rate.Value;
-
-        return null;
     }
 }

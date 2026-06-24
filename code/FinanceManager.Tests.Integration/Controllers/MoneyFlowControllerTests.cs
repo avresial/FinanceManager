@@ -1,15 +1,13 @@
-using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Shared;
@@ -256,45 +254,6 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
             new CurrencyAccountEntry(2, 100, _nowUtc.AddDays(-5), 5000m, 5000m) { Labels = [] });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        // Add a stock account
-        var stockAccount = new FinancialAccountBaseDto
-        {
-            UserId = 1,
-            AccountId = 3,
-            Name = "Investment Portfolio",
-            AccountLabel = AccountLabel.Other,
-            AccountType = AccountType.Stock
-        };
-        _testDatabase.Context.Accounts.Add(stockAccount);
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        // Seed stock details and stock price so StockPriceProvider can resolve the price
-        var usdCurrency = new Currency(1, "USD", "$");
-        _testDatabase.Context.Currencies.Add(usdCurrency);
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        var stockDetails = new StockDetails
-        {
-            Isin = "US0378331005",
-            Ticker = "AAPL",
-            Name = "Apple Inc.",
-            Type = "Stock",
-            Region = "US",
-            Currency = usdCurrency
-        };
-        _testDatabase.Context.StockDetails.Add(stockDetails);
-        _testDatabase.Context.StockPrices.Add(new StockPriceDto
-        {
-            PricePerUnit = 150m,
-            StockDetails = stockDetails,
-            Date = _nowUtc.AddDays(-3)
-        });
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        _testDatabase.Context.StockEntries.Add(
-            new StockAccountEntry(3, 200, _nowUtc.AddDays(-3), 100m, 100m, "AAPL", InvestmentType.Stock));
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
         // Add a bond account
         var bondAccount = new FinancialAccountBaseDto
         {
@@ -504,42 +463,6 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
 
         _testDatabase.Context.BondEntries.Add(new BondAccountEntry(30, 1, _nowUtc.AddDays(-9), 1000m, 1000m, 30));
         _testDatabase.Context.BondEntries.Add(new BondAccountEntry(30, 2, _nowUtc.AddDays(-4), 1500m, 500m, 30));
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        var stockAccount = new FinancialAccountBaseDto
-        {
-            UserId = 1,
-            AccountId = 31,
-            Name = "Range Match Stocks",
-            AccountLabel = AccountLabel.Other,
-            AccountType = AccountType.Stock
-        };
-        _testDatabase.Context.Accounts.Add(stockAccount);
-
-        var usdCurrency = await _testDatabase.Context.Currencies.FindAsync([1], TestContext.Current.CancellationToken)
-            ?? _testDatabase.Context.Currencies.Add(new Currency(1, "USD", "$")).Entity;
-
-        var stockDetails = new StockDetails
-        {
-            Isin = "US7372711613",
-            Ticker = "RNGM",
-            Name = "Range Match Inc.",
-            Type = "Stock",
-            Region = "US",
-            Currency = usdCurrency
-        };
-        _testDatabase.Context.StockDetails.Add(stockDetails);
-        for (int i = 0; i <= 10; i++)
-            _testDatabase.Context.StockPrices.Add(new StockPriceDto
-            {
-                PricePerUnit = 50m + i,
-                StockDetails = stockDetails,
-                Date = _nowUtc.AddDays(-i)
-            });
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        _testDatabase.Context.StockEntries.Add(new StockAccountEntry(31, 1, _nowUtc.AddDays(-8), 5m, 5m, "RNGM", InvestmentType.Stock));
-        _testDatabase.Context.StockEntries.Add(new StockAccountEntry(31, 2, _nowUtc.AddDays(-3), 10m, 5m, "RNGM", InvestmentType.Stock));
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         Authorize("TestUser", 1, UserRole.User);

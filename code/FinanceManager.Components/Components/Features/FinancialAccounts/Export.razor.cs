@@ -14,7 +14,7 @@ public partial class Export : ComponentBase
     [Inject] public required HttpClient HttpClient { get; set; }
     [Inject] public required IJSRuntime JSRuntime { get; set; }
     [Inject] public required CurrencyAccountHttpClient CurrencyAccountHttpClient { get; set; }
-    [Inject] public required StockAccountHttpClient StockAccountHttpClient { get; set; }
+    [Inject] public required InvestmentAccountHttpClient InvestmentAccountHttpClient { get; set; }
     [Inject] public required BondAccountHttpClient BondAccountHttpClient { get; set; }
 
     public FinancialAccountTypeDescriptor? AccountDescriptor { get; private set; }
@@ -89,7 +89,7 @@ public partial class Export : ComponentBase
 
         if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
         {
-            var account = await StockAccountHttpClient.GetAccountAsync(AccountId);
+            var account = await InvestmentAccountHttpClient.GetAccountAsync(AccountId);
             AccountName = account?.Name ?? string.Empty;
             return;
         }

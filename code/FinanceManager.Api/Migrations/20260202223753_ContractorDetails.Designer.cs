@@ -220,7 +220,7 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("FinancialLabels");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Stock.Entities.StockAccountEntry", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Investments.Entities.StockAccountEntry", b =>
                 {
                     b.Property<int>("EntryId")
                         .ValueGeneratedOnAdd()
@@ -423,7 +423,7 @@ namespace FinanceManager.Api.Migrations
                         .WithMany("Labels")
                         .HasForeignKey("BondAccountEntryEntryId");
 
-                    b.HasOne("FinanceManager.Domain.FinancialAccounts.Stock.Entities.StockAccountEntry", null)
+                    b.HasOne("FinanceManager.Domain.FinancialAccounts.Investments.Entities.StockAccountEntry", null)
                         .WithMany("Labels")
                         .HasForeignKey("StockAccountEntryEntryId");
                 });
@@ -447,7 +447,7 @@ namespace FinanceManager.Api.Migrations
                     b.Navigation("CalculationMethods");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Stock.Entities.StockAccountEntry", b =>
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Investments.Entities.StockAccountEntry", b =>
                 {
                     b.Navigation("Labels");
                 });

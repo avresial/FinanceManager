@@ -1,8 +1,8 @@
 using FinanceManager.Application.FinancialAccounts.Investments.Balance;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services.Investments;
@@ -24,7 +24,7 @@ public class InvestmentBalanceServiceTests
     [Fact]
     public void IsOfType_StockAccount_IsTrue()
     {
-        Assert.True(_service.IsOfType<StockAccount>());
+        Assert.True(_service.IsOfType<InvestmentAccount>());
         Assert.False(_service.IsOfType<CurrencyAccount>());
     }
 
@@ -34,10 +34,10 @@ public class InvestmentBalanceServiceTests
         DateTime start = new(2024, 1, 1);
         DateTime end = new(2024, 1, 3);
 
-        var account1 = new StockAccount(_userId, 10, "Investments A");
-        var account2 = new StockAccount(_userId, 20, "Investments B");
+        var account1 = new InvestmentAccount(_userId, 10, "Investments A");
+        var account2 = new InvestmentAccount(_userId, 20, "Investments B");
 
-        _financialAccountRepository.Setup(repo => repo.GetAccounts<StockAccount>(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepository.Setup(repo => repo.GetAccounts<InvestmentAccount>(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                    .Returns(new[] { account1, account2 }.ToAsyncEnumerable());
 
         _valuationService.Setup(x => x.GetAccountValueSeriesAsync(10, DefaultCurrency.PLN, start.Date, end.Date, It.IsAny<CancellationToken>()))
@@ -69,10 +69,10 @@ public class InvestmentBalanceServiceTests
         DateTime start = new(2024, 1, 1);
         DateTime end = new(2024, 1, 1);
 
-        var account1 = new StockAccount(_userId, 10, "Investments A");
-        var account2 = new StockAccount(_userId, 20, "Investments B");
+        var account1 = new InvestmentAccount(_userId, 10, "Investments A");
+        var account2 = new InvestmentAccount(_userId, 20, "Investments B");
 
-        _financialAccountRepository.Setup(repo => repo.GetAccounts<StockAccount>(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepository.Setup(repo => repo.GetAccounts<InvestmentAccount>(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                    .Returns(new[] { account1, account2 }.ToAsyncEnumerable());
 
         _valuationService.Setup(x => x.GetAccountValueSeriesAsync(10, DefaultCurrency.PLN, start.Date, end.Date, It.IsAny<CancellationToken>()))
@@ -91,9 +91,9 @@ public class InvestmentBalanceServiceTests
         DateTime start = new(2024, 1, 1);
         DateTime end = new(2024, 1, 2);
 
-        var legacyStockAccount = new StockAccount(_userId, 30, "Legacy stocks");
+        var legacyStockAccount = new InvestmentAccount(_userId, 30, "Legacy stocks");
 
-        _financialAccountRepository.Setup(repo => repo.GetAccounts<StockAccount>(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepository.Setup(repo => repo.GetAccounts<InvestmentAccount>(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                    .Returns(new[] { legacyStockAccount }.ToAsyncEnumerable());
 
         // Legacy stock accounts hold no investment transactions, so the valuation service returns empty.
@@ -119,7 +119,7 @@ public class InvestmentBalanceServiceTests
         Assert.Empty(await _service.GetNetCashFlow(_userId, DefaultCurrency.PLN, start, end, new[] { 10 }));
 
         // No account enumeration or valuation should happen for cash-flow paths.
-        _financialAccountRepository.Verify(repo => repo.GetAccounts<StockAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Never);
+        _financialAccountRepository.Verify(repo => repo.GetAccounts<InvestmentAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Never);
         _valuationService.VerifyNoOtherCalls();
     }
 }

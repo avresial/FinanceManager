@@ -1,8 +1,8 @@
 using FinanceManager.Components.Components.Features.FinancialAccounts.Shared;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using System.Globalization;
 
@@ -16,16 +16,6 @@ public class AccountHistoryStateTests
     public void HasTransactionHistory_ReturnsFalse_WhenCurrencyAccountHasNoEntriesOrRangeMetadata()
     {
         var account = new CurrencyAccount(1, 1, "Empty cash", AccountLabel.Cash);
-
-        var hasHistory = AccountHistoryState.HasTransactionHistory(account);
-
-        Assert.False(hasHistory);
-    }
-
-    [Fact]
-    public void HasTransactionHistory_ReturnsFalse_WhenStockAccountHasNoEntriesOrRangeMetadata()
-    {
-        var account = new StockAccount(1, 1, "Empty stocks");
 
         var hasHistory = AccountHistoryState.HasTransactionHistory(account);
 
@@ -52,24 +42,6 @@ public class AccountHistoryStateTests
             [],
             AccountLabel.Cash,
             new CurrencyAccountEntry(1, 1, new DateTime(2026, 3, 1), 100m, 100m));
-
-        var hasHistory = AccountHistoryState.HasTransactionHistory(account);
-
-        Assert.True(hasHistory);
-    }
-
-    [Fact]
-    public void HasTransactionHistory_ReturnsTrue_WhenStockAccountHasOnlyOlderRangeMetadata()
-    {
-        var account = new StockAccount(
-            1,
-            1,
-            "Stocks",
-            [],
-            new Dictionary<string, StockAccountEntry>
-            {
-                ["AAPL"] = new(1, 1, new DateTime(2026, 3, 1), 10m, 10m, "AAPL", InvestmentType.Stock)
-            });
 
         var hasHistory = AccountHistoryState.HasTransactionHistory(account);
 

@@ -1,8 +1,8 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,7 +13,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Tags("Investment Valuation")]
 public class InvestmentValuationController(
-    IAccountRepository<StockAccount> accountRepository,
+    IAccountRepository<InvestmentAccount> accountRepository,
     IInvestmentValuationService valuationService,
     ICurrencyRepository currencyRepository) : ControllerBase
 {

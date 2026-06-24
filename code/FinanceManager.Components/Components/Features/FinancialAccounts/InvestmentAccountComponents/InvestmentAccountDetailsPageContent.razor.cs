@@ -13,7 +13,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase
 
     [Inject] public required InvestmentTransactionHttpClient TransactionHttpClient { get; set; }
     [Inject] public required InvestmentValuationHttpClient ValuationHttpClient { get; set; }
-    [Inject] public required StockAccountHttpClient StockAccountHttpClient { get; set; }
+    [Inject] public required InvestmentAccountHttpClient InvestmentAccountHttpClient { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required ILogger<InvestmentAccountDetailsPageContent> Logger { get; set; }
 
@@ -51,7 +51,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase
         _currency = "USD";
         try
         {
-            _accountName = (await StockAccountHttpClient.GetAccountAsync(AccountId))?.Name ?? "Investments";
+            _accountName = (await InvestmentAccountHttpClient.GetAccountAsync(AccountId))?.Name ?? "Investments";
             _transactions = await TransactionHttpClient.GetByAccountAsync(AccountId);
             var holdings = await ValuationHttpClient.GetHoldingsAsync(AccountId, DateTime.Today);
 

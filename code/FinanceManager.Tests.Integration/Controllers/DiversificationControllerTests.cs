@@ -1,9 +1,10 @@
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -62,14 +63,19 @@ public class DiversificationControllerTests(OptionsProvider optionsProvider) : C
 
         var usd = new Currency(1, "USD", "$");
         _testDatabase.Context.Currencies.Add(usd);
-        _testDatabase.Context.StockDetails.Add(new StockDetails
+
+        // Investment holding: an AAPL listing held via a Buy transaction on the stock-type account.
+        const long listingId = 100;
+        _testDatabase.Context.AssetListings.Add(new AssetListing
         {
-            Isin = "US0378331005",
+            Id = listingId,
+            AssetId = 1,
             Ticker = "AAPL",
-            Name = "Apple Inc.",
-            Type = "Stock",
-            Region = "US",
-            Currency = usd
+            ExchangeMic = "XNAS",
+            ExchangeName = "United States",
+            TradingCurrency = "USD",
+            PriceMultiplier = 1m,
+            IsActive = true
         });
 
         var bond = new BondDetails("Treasury 2030", "Test Issuer",
@@ -78,8 +84,17 @@ public class DiversificationControllerTests(OptionsProvider optionsProvider) : C
         _testDatabase.Context.Bonds.Add(bond);
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        _testDatabase.Context.StockEntries.Add(
-            new StockAccountEntry(1, 1, _nowUtc.AddDays(-3), 100m, 100m, "US0378331005", InvestmentType.Stock));
+        _testDatabase.Context.InvestmentTransactions.Add(new InvestmentTransaction
+        {
+            UserId = 1,
+            AccountId = 1,
+            AssetListingId = listingId,
+            Type = InvestmentTransactionType.Buy,
+            Quantity = 10m,
+            UnitPrice = 100m,
+            Currency = "USD",
+            TradeDate = DateOnly.FromDateTime(_nowUtc.AddDays(-3))
+        });
         _testDatabase.Context.BondEntries.Add(
             new BondAccountEntry(2, 1, _nowUtc.AddDays(-3), 1000m, 1000m, 5));
         _testDatabase.Context.CurrencyEntries.Add(

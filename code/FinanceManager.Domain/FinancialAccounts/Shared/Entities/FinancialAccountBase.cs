@@ -1,5 +1,4 @@
 ﻿using FinanceManager.Domain.FinancialAccounts.Shared.Extensions;
-using FinanceManager.Domain.FinancialAccounts.Stock.Extensions;
 
 namespace FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 

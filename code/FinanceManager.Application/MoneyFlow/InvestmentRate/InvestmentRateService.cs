@@ -1,8 +1,7 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Repositories;
@@ -12,7 +11,7 @@ using FinanceManager.Domain.MoneyFlow.Services;
 namespace FinanceManager.Application.MoneyFlow.InvestmentRate;
 
 public class InvestmentRateService(IFinancialAccountRepository financialAccountRepository, IFinancialLabelsRepository financialLabelsRepository,
-IStockPriceProvider stockPriceProvider) : IInvestmentRateService
+IInvestmentValuationService investmentValuationService) : IInvestmentRateService
 {
     public async IAsyncEnumerable<Domain.MoneyFlow.Entities.InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end)
     {
@@ -28,9 +27,12 @@ IStockPriceProvider stockPriceProvider) : IInvestmentRateService
         if (salary == 0) yield break;
 
         decimal investmentsChange = 0;
-        await foreach (var account in financialAccountRepository.GetAccounts<StockAccount>(userId, start, end))
-            foreach (var entry in account.Entries)
-                investmentsChange += entry.ValueChange * await stockPriceProvider.GetPricePerUnitAsync(entry.Isin, currency, entry.PostingDate);
+        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, start, end))
+        {
+            var startValue = await investmentValuationService.GetAccountValueAsync(account.AccountId, currency, start);
+            var endValue = await investmentValuationService.GetAccountValueAsync(account.AccountId, currency, end);
+            investmentsChange += endValue - startValue;
+        }
 
         yield return new()
         {

@@ -1,19 +1,15 @@
-﻿using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Commands;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Stock.Commands;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
-using FinanceManager.Domain.FinancialAccounts.Stock.Repositories;
-using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Infrastructure.Repositories;
 
-public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository, IAccountRepository<StockAccount> stockAccountRepository, IAccountRepository<BondAccount> bondAccountRepository,
-    IStockAccountEntryRepository<StockAccountEntry> stockEntryRepository,
+public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository, IAccountRepository<InvestmentAccount> investmentAccountRepository, IAccountRepository<BondAccount> bondAccountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> currencyEntryRepository, IBondAccountEntryRepository<BondAccountEntry> bondEntryRepository
      ) : IFinancialAccountRepository
 {
@@ -24,8 +20,8 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
         await foreach (var currencyAccount in currencyAccountRepository.GetAvailableAccounts(userId))
             result.Add(currencyAccount.AccountId, typeof(CurrencyAccount));
 
-        await foreach (var stockAccount in stockAccountRepository.GetAvailableAccounts(userId))
-            result.Add(stockAccount.AccountId, typeof(StockAccount));
+        await foreach (var investmentAccount in investmentAccountRepository.GetAvailableAccounts(userId))
+            result.Add(investmentAccount.AccountId, typeof(InvestmentAccount));
 
         await foreach (var bondAccount in bondAccountRepository.GetAvailableAccounts(userId))
             result.Add(bondAccount.AccountId, typeof(BondAccount));
@@ -36,10 +32,10 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     public async Task<int> GetAccountsCount()
     {
         int currencyAccountsCount = await currencyAccountRepository.GetAccountsCount();
-        int stockAccountsCount = await stockAccountRepository.GetAccountsCount();
+        int investmentAccountsCount = await investmentAccountRepository.GetAccountsCount();
         int bondAccountsCount = await bondAccountRepository.GetAccountsCount();
 
-        return currencyAccountsCount + stockAccountsCount + bondAccountsCount;
+        return currencyAccountsCount + investmentAccountsCount + bondAccountsCount;
     }
     public async Task<DateTime?> GetStartDate(int id)
     {
@@ -49,7 +45,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
         return account switch
         {
             CurrencyAccount currencyAccount => currencyAccount.Start,
-            StockAccount investmentAccount => investmentAccount.Start,
+            InvestmentAccount investmentAccount => investmentAccount.Start,
             BondAccount bondAccount => bondAccount.Start,
             _ => throw new NotSupportedException($"Account type {account.GetType()} is not supported."),
         };
@@ -62,7 +58,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
         return account switch
         {
             CurrencyAccount currencyAccount => currencyAccount.End,
-            StockAccount investmentAccount => investmentAccount.End,
+            InvestmentAccount investmentAccount => investmentAccount.End,
             BondAccount bondAccount => bondAccount.End,
             _ => throw new NotSupportedException($"Account type {account.GetType()} is not supported."),
         };
@@ -93,22 +89,14 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
 
                 break;
 
-            case Type t when t == typeof(StockAccount):
+            case Type t when t == typeof(InvestmentAccount):
 
-                if (!await stockAccountRepository.GetAvailableAccounts(userId).AnyAsync(x => x.AccountId == accountId))
+                if (!await investmentAccountRepository.GetAvailableAccounts(userId).AnyAsync(x => x.AccountId == accountId))
                     throw new Exception($"User {userId} does not have account {accountId}");
 
-                var stockAccount = await stockAccountRepository.Get(accountId) ?? throw new ArgumentNullException();
-                var stockEntries = await stockEntryRepository.Get(stockAccount.AccountId, dateStart, dateEnd).ToListAsync();
-                var stockNextOlderEntry = await stockEntryRepository.GetNextOlder(stockAccount.AccountId, dateStart);
-                var stockNextYoungerEntry = await stockEntryRepository.GetNextYounger(stockAccount.AccountId, dateEnd);
+                var investmentAccount = await investmentAccountRepository.Get(accountId) ?? throw new ArgumentNullException();
 
-                if (stockEntries.Count == 0 && stockNextOlderEntry is not null)
-                    stockEntries = stockNextOlderEntry.Values.ToList();
-
-                StockAccount newStockResultAccount = new(stockAccount.UserId, stockAccount.AccountId, stockAccount.Name, stockEntries, stockNextOlderEntry, stockNextYoungerEntry);
-
-                if (newStockResultAccount is T newStockResult) return newStockResult;
+                if (investmentAccount is T investmentResult) return investmentResult;
                 break;
 
             case Type t when t == typeof(BondAccount):
@@ -142,8 +130,8 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
                     yield return (T)(BasicAccountInformation)account;
                 yield break;
 
-            case Type t when t == typeof(StockAccount):
-                foreach (var account in await GetStockAccounts(userId, dateStart, dateEnd))
+            case Type t when t == typeof(InvestmentAccount):
+                foreach (var account in await investmentAccountRepository.GetAll(userId))
                     yield return (T)(BasicAccountInformation)account;
                 yield break;
 
@@ -182,34 +170,6 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
                 entries = [older];
 
             result.Add(new CurrencyAccount(account.UserId, account.AccountId, account.Name, entries, account.AccountType, older, younger));
-        }
-
-        return result;
-    }
-
-    private async Task<List<StockAccount>> GetStockAccounts(int userId, DateTime dateStart, DateTime dateEnd)
-    {
-        var accounts = await stockAccountRepository.GetAll(userId);
-        if (accounts.Count == 0) return [];
-
-        var accountIds = accounts.Select(a => a.AccountId).ToList();
-        var entriesByAccount = (await stockEntryRepository.GetRange(accountIds, dateStart, dateEnd))
-            .GroupBy(e => e.AccountId)
-            .ToDictionary(g => g.Key, g => g.ToList());
-        var nextOlder = await stockEntryRepository.GetNextOlderPerInstrument(accountIds, dateStart);
-        var nextYounger = await stockEntryRepository.GetNextYoungerPerInstrument(accountIds, dateEnd);
-
-        List<StockAccount> result = [];
-        foreach (var account in accounts)
-        {
-            List<StockAccountEntry> entries = entriesByAccount.TryGetValue(account.AccountId, out var e) ? e : [];
-            var older = nextOlder.TryGetValue(account.AccountId, out var o) ? o : [];
-            var younger = nextYounger.TryGetValue(account.AccountId, out var y) ? y : [];
-
-            if (entries.Count == 0 && older.Count > 0)
-                entries = older.Values.ToList();
-
-            result.Add(new StockAccount(account.UserId, account.AccountId, account.Name, entries, older, younger));
         }
 
         return result;
@@ -259,18 +219,8 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
 
                 return currencyAccountId;
 
-            case StockAccount stockAccount:
-
-                var stockAccountId = await stockAccountRepository.Add(account.UserId, account.Name);
-
-                if (stockAccount is not null && stockAccount.Entries is not null)
-                    await stockEntryRepository.Add(stockAccount.Entries.Select(x =>
-                    {
-                        x.AccountId = stockAccountId ?? 0;
-                        return x;
-                    }));
-
-                return stockAccountId;
+            case InvestmentAccount investmentAccount:
+                return await investmentAccountRepository.Add(investmentAccount.UserId, investmentAccount.Name);
 
             case BondAccount bondAccount:
 
@@ -295,7 +245,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     public Task UpdateAccount<T>(T account) where T : BasicAccountInformation
     {
         if (account is CurrencyAccount currencyAccount) return currencyAccountRepository.Update(currencyAccount.AccountId, currencyAccount.Name, currencyAccount.AccountType);
-        if (account is StockAccount stockAccount) return stockAccountRepository.Update(stockAccount.AccountId, stockAccount.Name);
+        if (account is InvestmentAccount investmentAccount) return investmentAccountRepository.Update(investmentAccount.AccountId, investmentAccount.Name);
         if (account is BondAccount bondAccount) return bondAccountRepository.Update(bondAccount.AccountId, bondAccount.Name);
 
         throw new NotSupportedException($"Account type {account.GetType()} is not supported.");
@@ -312,12 +262,9 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
                 }
                 break;
 
-            case Type t when t == typeof(StockAccount):
-                if (await stockAccountRepository.Exists(id))
-                {
-                    await stockEntryRepository.Delete(id);
-                    await stockAccountRepository.Delete(id);
-                }
+            case Type t when t == typeof(InvestmentAccount):
+                if (await investmentAccountRepository.Exists(id))
+                    await investmentAccountRepository.Delete(id);
                 break;
 
             case Type t when t == typeof(BondAccount):
@@ -337,10 +284,8 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     {
         if (accountEntry is CurrencyAccountEntry currencyEntry)
             await AddCurrencyAccountEntry(id, currencyEntry.ValueChange, currencyEntry.Description, currencyEntry.ContractorDetails, currencyEntry.PostingDate);
-        if (accountEntry is StockAccountEntry investmentEntry)
-            await AddStockAccountEntry(id, investmentEntry.Ticker, investmentEntry.InvestmentType, investmentEntry.ValueChange, investmentEntry.PostingDate);
-
-        throw new NotSupportedException($"Entry type {accountEntry.GetType()} is not supported.");
+        else
+            throw new NotSupportedException($"Entry type {accountEntry.GetType()} is not supported.");
     }
     public Task<bool> AddLabel<T>(T accountEntry, int labelId) where T : FinancialEntryBase
     {
@@ -353,8 +298,6 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     {
         if (accountEntry is CurrencyAccountEntry currencyEntry)
             await UpdateCurrencyAccountEntry(id, currencyEntry);
-        else if (accountEntry is StockAccountEntry investmentEntry)
-            await UpdateStockAccountEntry(id, investmentEntry);
         else
             throw new NotSupportedException($"Entry type {accountEntry.GetType()} is not supported.");
     }
@@ -368,25 +311,9 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
             case CurrencyAccount currencyAccount:
                 currencyAccount.Remove(accountEntryId);
                 break;
-            case StockAccount investmentAccount:
-                investmentAccount.Remove(accountEntryId);
-                break;
         }
     }
     private Task<object?> FindAccount(int id) => throw new NotImplementedException();
-    private Task<T?> FindAccount<T>(int id) where T : BasicAccountInformation => throw new NotImplementedException();
-
-
-    private async Task AddStockAccountEntry(int id, string ticker, InvestmentType investmentType, decimal balanceChange, DateTime? postingDate = null)
-    {
-        var account = await FindAccount<StockAccount>(id);
-        if (account is null) return;
-
-        var finalPostingDate = postingDate ?? DateTime.UtcNow;
-
-        account.Add(new(finalPostingDate, balanceChange, ticker, investmentType));
-    }
-
 
     private async Task AddCurrencyAccountEntry(int id, decimal balanceChange, string description, string? contractorDetails, DateTime? postingDate = null)
     {
@@ -407,14 +334,5 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
 
         entryToUpdate.Update(currencyAccountEntry);
     }
-    private async Task UpdateStockAccountEntry(int id, StockAccountEntry investmentEntry)
-    {
-        var investmentAccount = await FindAccount<StockAccount>(id);
-        if (investmentAccount is null || investmentAccount.Entries is null) return;
-
-        var entryToUpdate = investmentAccount.Entries.FirstOrDefault(x => x.EntryId == investmentEntry.EntryId);
-        if (entryToUpdate is null) return;
-
-        entryToUpdate.Update(investmentEntry);
-    }
+    private Task<T?> FindAccount<T>(int id) where T : BasicAccountInformation => throw new NotImplementedException();
 }

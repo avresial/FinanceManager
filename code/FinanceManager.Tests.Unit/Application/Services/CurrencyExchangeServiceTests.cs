@@ -1,8 +1,8 @@
 using FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Stock.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Infrastructure.Services.Currencies;
 using Microsoft.Extensions.Configuration;
@@ -153,88 +153,6 @@ public class CurrencyExchangeServiceTests : IDisposable
             ItExpr.IsAny<CancellationToken>());
     }
 
-    [Theory]
-    [InlineData("USD", "EUR", 100.50, 0.92, 92.46)]
-    [InlineData("EUR", "USD", 50.25, 1.087, 54.62)]
-    [InlineData("GBP", "JPY", 1000, 180.5, 180500)]
-    public async Task GetPricePerUnit_WithExchangeRate_ReturnsConvertedPrice(
-        string fromCurrencyCode, string toCurrencyCode, decimal pricePerUnit, decimal exchangeRate, decimal expected)
-    {
-        // Arrange
-        var fromCurrency = new Currency(1, fromCurrencyCode, "$");
-        var toCurrency = new Currency(2, toCurrencyCode, "€");
-        var date = new DateTime(2024, 1, 15);
-
-        var stockPrice = new StockPrice { Isin = "US0000000001", PricePerUnit = pricePerUnit, Currency = fromCurrency };
-        var jsonResponse = $@"{{""{fromCurrencyCode.ToLower()}"": {{""{toCurrencyCode.ToLower()}"": {exchangeRate}}}}}";
-        SetupHttpResponse(HttpStatusCode.OK, jsonResponse);
-
-        var service = CreateService();
-
-        // Act
-        var result = await service.GetPricePerUnit(stockPrice, toCurrency, date);
-
-        // Assert
-        Assert.Equal(expected, result!.Value, 2);
-    }
-
-    [Fact]
-    public async Task GetPricePerUnit_SameCurrency_ReturnsPriceUnchanged()
-    {
-        // Arrange
-        var currency = new Currency(1, "USD", "$");
-        var stockPrice = new StockPrice { Isin = "US0378331005", PricePerUnit = 150.75m, Currency = currency };
-        var date = new DateTime(2024, 1, 15);
-
-        var service = CreateService();
-
-        // Act
-        var result = await service.GetPricePerUnit(stockPrice, currency, date);
-
-        // Assert
-        Assert.Equal(150.75m, result);
-    }
-
-    [Fact]
-    public async Task GetPricePerUnit_NullStockPrice_ReturnsNull()
-    {
-        // Arrange
-        var currency = new Currency(1, "USD", "$");
-        var date = new DateTime(2024, 1, 15);
-
-        var service = CreateService();
-
-        // Act
-        var result = await service.GetPricePerUnit(null!, currency, date);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task GetPricePerUnit_ExchangeRateFails_ReturnsNull()
-    {
-        // Arrange
-        var fromCurrency = new Currency(1, "USD", "$");
-        var toCurrency = new Currency(2, "EUR", "€");
-        var stockPrice = new StockPrice { Isin = "US5949181045", PricePerUnit = 100m, Currency = fromCurrency };
-        var date = new DateTime(2024, 1, 15);
-
-        _httpMessageHandlerMock.Protected()
-            .Setup<Task<HttpResponseMessage>>("SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("Network error"));
-
-        var service = CreateService();
-
-        // Act
-        var result = await service.GetPricePerUnit(stockPrice, toCurrency, date);
-
-        // Assert
-        Assert.Null(result);
-    }
-
     [Fact]
     public async Task GetExchangeRateAsync_WeekendDate_HandlesCorrectly()
     {
@@ -273,27 +191,6 @@ public class CurrencyExchangeServiceTests : IDisposable
 
         // Assert
         Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task GetPricePerUnit_ZeroExchangeRate_HandlesCorrectly()
-    {
-        // Arrange
-        var fromCurrency = new Currency(1, "USD", "$");
-        var toCurrency = new Currency(2, "EUR", "€");
-        var stockPrice = new StockPrice { Isin = "US02079K3059", PricePerUnit = 100m, Currency = fromCurrency };
-        var date = new DateTime(2024, 1, 15);
-
-        var jsonResponse = @"{""usd"": {""eur"": 0}}";
-        SetupHttpResponse(HttpStatusCode.OK, jsonResponse);
-
-        var service = CreateService();
-
-        // Act
-        var result = await service.GetPricePerUnit(stockPrice, toCurrency, date);
-
-        // Assert
-        Assert.Equal(0m, result);
     }
 
     [Fact]
