@@ -28,10 +28,14 @@ public class AssetListingRepository(AppDbContext context) : IAssetListingReposit
     public async Task<IReadOnlyList<AssetListing>> SearchAsync(string query, int maxResults, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query)) return [];
-        var lower = query.Trim().ToLowerInvariant();
+        var trimmed = query.Trim();
+        // Tickers are stored uppercase; comparing directly against the uppercased input lets the index on Ticker be used.
+        // Exchange names are mixed-case so we use a LIKE pattern (case-sensitive on PG, insensitive on SQL Server by default).
+        var upperTicker = trimmed.ToUpperInvariant();
+        var likePattern = $"%{trimmed}%";
         return await context.AssetListings
             .AsNoTracking()
-            .Where(x => x.IsActive && (x.Ticker.ToLower().StartsWith(lower) || x.ExchangeName.ToLower().Contains(lower)))
+            .Where(x => x.IsActive && (x.Ticker.StartsWith(upperTicker) || EF.Functions.Like(x.ExchangeName, likePattern)))
             .OrderByDescending(x => x.IsPrimaryListing)
             .ThenBy(x => x.Ticker)
             .Take(maxResults)

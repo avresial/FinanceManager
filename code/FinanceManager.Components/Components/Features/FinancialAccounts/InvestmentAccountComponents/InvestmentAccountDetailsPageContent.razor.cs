@@ -41,6 +41,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private decimal? _formFee;
     private string? _formNotes;
     private bool _saving;
+    private bool _noPriceAvailable;
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 
@@ -121,6 +122,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         _formTradeDate = DateTime.Today;
         _formFee = null;
         _formNotes = null;
+        _noPriceAvailable = false;
         _formVisible = true;
     }
 
@@ -141,11 +143,12 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
 
     private void CloseForm() => _formVisible = false;
 
-    private bool CanSave => _formListingId > 0 && _formQuantity > 0 && _formUnitPrice >= 0 && _formTradeDate is not null && !string.IsNullOrWhiteSpace(_formCurrency);
+    private bool CanSave => _formListingId > 0 && _formQuantity > 0 && _formUnitPrice >= 0 && _formTradeDate is not null && !string.IsNullOrWhiteSpace(_formCurrency) && !_noPriceAvailable;
 
     private async Task OnInstrumentSelectedAsync(InstrumentSearchResultDto? dto)
     {
         _selectedInstrument = dto;
+        _noPriceAvailable = false;
         if (dto is null)
         {
             _formListingId = 0;
@@ -162,12 +165,21 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             try
             {
                 var priceInfo = await TransactionHttpClient.GetListingPriceAsync(dto.ListingId);
-                _formUnitPrice = priceInfo?.LatestPrice ?? 0m;
+                if (priceInfo?.LatestPrice is decimal price)
+                {
+                    _formUnitPrice = price;
+                }
+                else
+                {
+                    _formUnitPrice = 0m;
+                    _noPriceAvailable = true;
+                }
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Failed to fetch price for listing {ListingId}", dto.ListingId);
                 _formUnitPrice = 0m;
+                _noPriceAvailable = true;
             }
         }
     }

@@ -106,6 +106,10 @@ else
                 </MudSelect>
                 <MudNumericField T="decimal" Label="Units" @bind-Value="_formQuantity" Min="0" Step="0.0001M" />
                 <MudTextField T="string" Label="Unit price" Value="@(_selectedInstrument is null ? string.Empty : _formUnitPrice.ToString("N2"))" ReadOnly="true" Disabled="true" />
+                @if (_noPriceAvailable && _selectedInstrument is not null)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">No price data found for this instrument. Add a price quote before recording a transaction.</MudAlert>
+                }
                 <MudTextField T="string" Label="Currency" Value="@_formCurrency" ReadOnly="true" Disabled="true" />
                 <MudDatePicker Label="Trade date" @bind-Date="_formTradeDate" />
                 <MudNumericField T="decimal?" Label="Fee (optional)" @bind-Value="_formFee" Min="0" Step="0.01M" />

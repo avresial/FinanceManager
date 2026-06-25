@@ -114,6 +114,7 @@ public class InvestmentTransactionController(
     public async Task<IActionResult> SearchListings([FromQuery] string? q, [FromQuery] int maxResults = 20, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(q)) return Ok(Array.Empty<InstrumentSearchResultDto>());
+        maxResults = Math.Clamp(maxResults, 1, 20);
         var listings = await assetListingRepository.SearchAsync(q, maxResults, cancellationToken);
         return Ok(listings.Select(x => new InstrumentSearchResultDto(x.Id, x.Ticker, x.ExchangeName, x.TradingCurrency)).ToList());
     }
