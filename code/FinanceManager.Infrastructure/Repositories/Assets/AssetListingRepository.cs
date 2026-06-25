@@ -25,6 +25,19 @@ public class AssetListingRepository(AppDbContext context) : IAssetListingReposit
     public async Task<IReadOnlyList<AssetListing>> GetByAsset(long assetId, CancellationToken cancellationToken = default) =>
         await context.AssetListings.AsNoTracking().Where(x => x.AssetId == assetId).ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<AssetListing>> SearchAsync(string query, int maxResults, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return [];
+        var lower = query.Trim().ToLowerInvariant();
+        return await context.AssetListings
+            .AsNoTracking()
+            .Where(x => x.IsActive && (x.Ticker.ToLower().StartsWith(lower) || x.ExchangeName.ToLower().Contains(lower)))
+            .OrderByDescending(x => x.IsPrimaryListing)
+            .ThenBy(x => x.Ticker)
+            .Take(maxResults)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<AssetListing> Add(AssetListing listing, CancellationToken cancellationToken = default)
     {
         EnsureValidPriceMultiplier(listing);

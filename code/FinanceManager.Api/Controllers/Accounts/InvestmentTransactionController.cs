@@ -1,4 +1,6 @@
 using FinanceManager.Api.Helpers;
+using FinanceManager.Domain.Assets.Dtos;
+using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
@@ -16,7 +18,9 @@ namespace FinanceManager.Api.Controllers.Accounts;
 public class InvestmentTransactionController(
     IAccountRepository<InvestmentAccount> accountRepository,
     IInvestmentTransactionRepository transactionRepository,
-    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
+    ICacheInvalidator dashboardCacheInvalidator,
+    IAssetListingRepository assetListingRepository,
+    IPriceQuoteRepository priceQuoteRepository) : ControllerBase
 {
     [HttpGet("GetByAccount/{accountId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InvestmentTransactionDto>))]
@@ -103,6 +107,26 @@ public class InvestmentTransactionController(
         var result = await transactionRepository.Delete(id, cancellationToken);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
         return Ok(result);
+    }
+
+    [HttpGet("SearchListings")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InstrumentSearchResultDto>))]
+    public async Task<IActionResult> SearchListings([FromQuery] string? q, [FromQuery] int maxResults = 20, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(q)) return Ok(Array.Empty<InstrumentSearchResultDto>());
+        var listings = await assetListingRepository.SearchAsync(q, maxResults, cancellationToken);
+        return Ok(listings.Select(x => new InstrumentSearchResultDto(x.Id, x.Ticker, x.ExchangeName, x.TradingCurrency)).ToList());
+    }
+
+    [HttpGet("ListingPrice/{listingId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ListingPriceDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ListingPrice(long listingId, CancellationToken cancellationToken = default)
+    {
+        var listing = await assetListingRepository.Get(listingId, cancellationToken);
+        if (listing is null) return NotFound();
+        var quote = await priceQuoteRepository.GetLatestOnOrBefore(listingId, DateTimeOffset.UtcNow, cancellationToken: cancellationToken);
+        return Ok(new ListingPriceDto(quote?.Price, listing.TradingCurrency));
     }
 
     private static bool IsValid(long assetListingId, decimal quantity, decimal unitPrice, string? currency, DateOnly tradeDate) =>

@@ -16,6 +16,9 @@ public interface IAssetListingRepository
     /// <summary>Get all listings belonging to the given asset.</summary>
     Task<IReadOnlyList<AssetListing>> GetByAsset(long assetId, CancellationToken cancellationToken = default);
 
+    /// <summary>Search active listings whose ticker starts with <paramref name="query"/> or whose exchange name contains it. Returns at most <paramref name="maxResults"/> results ordered by primary listing first, then ticker.</summary>
+    Task<IReadOnlyList<AssetListing>> SearchAsync(string query, int maxResults, CancellationToken cancellationToken = default);
+
     /// <summary>Insert a new listing and return the persisted entity (with its generated id).</summary>
     Task<AssetListing> Add(AssetListing listing, CancellationToken cancellationToken = default);
 
