@@ -56,7 +56,7 @@ public sealed class InstrumentResolver(
         var avMatches = avTask.Result;
         var ofListings = ofTask.Result;
 
-        // Reconcile: pair AV symbol/currency/region against OpenFIGI ISIN/venue
+        // Reconcile: pair AV symbol/currency/region against OpenFIGI FIGI/venue
         var candidates = await Reconcile(baseTicker, brokerSymbol.ExchangeHint, avMatches, ofListings, ct);
 
         if (candidates.Count == 0)
@@ -69,9 +69,11 @@ public sealed class InstrumentResolver(
         if (candidates.Count == 1)
         {
             var single = candidates[0];
-            if (single.Isin is not null && single.AlphaVantageSymbol is not null)
+            // FIGI is identity: auto-resolve on shareClassFigi (from OpenFIGI) + an Alpha Vantage
+            // pricing symbol. ISIN is an optional cross-reference and is no longer required.
+            if (single.ShareClassFigi is not null && single.AlphaVantageSymbol is not null)
             {
-                logger.LogDebug("Auto-resolving single match: ISIN={Isin}, AvSymbol={AvSymbol}", single.Isin, single.AlphaVantageSymbol);
+                logger.LogDebug("Auto-resolving single match: ShareClassFigi={ShareClassFigi}, AvSymbol={AvSymbol}", single.ShareClassFigi, single.AlphaVantageSymbol);
                 var listingId = await PersistInvestmentModel(single, baseTicker, ct);
                 var autoResult = new InstrumentResolution
                 {
@@ -132,19 +134,19 @@ public sealed class InstrumentResolver(
                     ofMatches = narrowed;
             }
 
-            var distinctIsins = ofMatches
-                .Where(x => !string.IsNullOrWhiteSpace(x.Isin))
-                .Select(x => x.Isin!)
+            var distinctFigis = ofMatches
+                .Where(x => !string.IsNullOrWhiteSpace(x.ShareClassFigi))
+                .Select(x => x.ShareClassFigi!)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            if (distinctIsins.Count > 1)
+            if (distinctFigis.Count > 1)
             {
-                // Ambiguous: the same ticker maps to several distinct instruments and we cannot
-                // confidently pick one — emit a candidate per ISIN so the caller disambiguates.
-                foreach (var dIsin in distinctIsins)
+                // Ambiguous: the same ticker maps to several distinct share classes and we cannot
+                // confidently pick one — emit a candidate per FIGI so the caller disambiguates.
+                foreach (var dFigi in distinctFigis)
                 {
-                    var of = ofMatches.First(x => string.Equals(x.Isin, dIsin, StringComparison.OrdinalIgnoreCase));
+                    var of = ofMatches.First(x => string.Equals(x.ShareClassFigi, dFigi, StringComparison.OrdinalIgnoreCase));
                     await AddCandidate(candidates, seen, avMatch, of, ct);
                 }
             }
@@ -157,9 +159,9 @@ public sealed class InstrumentResolver(
         // If no AV matches, include AV-less OpenFIGI listings (for confirmation-only, won't auto-persist)
         if (candidates.Count == 0)
         {
-            foreach (var ofListing in ofListings.Where(x => x.Isin is not null).DistinctBy(x => x.Isin))
+            foreach (var ofListing in ofListings.Where(x => x.ShareClassFigi is not null).DistinctBy(x => x.ShareClassFigi))
             {
-                var candidateKey = $"{ofListing.Isin}___{ofListing.Currency ?? "USD"}";
+                var candidateKey = $"{ofListing.ShareClassFigi}___{ofListing.Currency ?? "USD"}";
                 if (seen.Add(candidateKey))
                 {
                     candidates.Add(new InstrumentListing(
@@ -169,6 +171,8 @@ public sealed class InstrumentResolver(
                         Exchange: ofListing.ExchCode,
                         Currency: ofListing.Currency ?? "USD",
                         Type: "Unknown",
+                        ShareClassFigi: ofListing.ShareClassFigi,
+                        CompositeFigi: ofListing.CompositeFigi,
                         QuoteCurrency: ofListing.Currency));
                 }
             }
@@ -203,7 +207,9 @@ public sealed class InstrumentResolver(
         }
 
         var isin = matchingOf?.Isin;
-        var candidateKey = $"{isin}_{avSymbol}_{currency}";
+        var shareClassFigi = matchingOf?.ShareClassFigi;
+        // Key on the canonical FIGI; fall back to ISIN/symbol for AV-only candidates without a FIGI.
+        var candidateKey = $"{shareClassFigi ?? isin}_{avSymbol}_{currency}";
         if (seen.Add(candidateKey))
         {
             candidates.Add(new InstrumentListing(
@@ -213,18 +219,21 @@ public sealed class InstrumentResolver(
                 Exchange: matchingOf?.ExchCode ?? avMatch.Region ?? string.Empty,
                 Currency: currency,
                 Type: string.IsNullOrWhiteSpace(avMatch.Type) ? "Unknown" : avMatch.Type,
+                ShareClassFigi: shareClassFigi,
+                CompositeFigi: matchingOf?.CompositeFigi,
                 QuoteFactor: quoteFactor,
                 QuoteCurrency: avCurrency));
         }
     }
 
-    // Mirror the auto-resolved instrument into the new asset model: upsert Asset (by ISIN) + an ISIN
-    // identifier, the concrete AssetListing (Ticker/ExchangeMic/TradingCurrency), and the AlphaVantage
-    // MarketDataSymbol. Returns the persisted listing id so callers can attach a transaction to it.
+    // Mirror the auto-resolved instrument into the new asset model: upsert Asset (keyed on FIGI) with
+    // its FIGI identity (plus an ISIN cross-reference when one is known), the concrete AssetListing
+    // (Ticker/ExchangeMic/TradingCurrency), and the AlphaVantage MarketDataSymbol. Returns the
+    // persisted listing id so callers can attach a transaction to it.
     // Best-effort: a persistence failure must not fail the resolution itself.
     private async Task<long?> PersistInvestmentModel(InstrumentListing match, string baseTicker, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(match.Isin) || string.IsNullOrWhiteSpace(match.AlphaVantageSymbol))
+        if (string.IsNullOrWhiteSpace(match.ShareClassFigi) || string.IsNullOrWhiteSpace(match.AlphaVantageSymbol))
             return null;
 
         try
@@ -241,18 +250,10 @@ public sealed class InstrumentResolver(
             {
                 Name = match.Name,
                 Type = MapAssetType(match.Type),
-                Isin = match.Isin,
-                Identifiers =
-                [
-                    new AssetIdentifier
-                    {
-                        Type = AssetIdentifierType.ISIN,
-                        Value = match.Isin,
-                        Scope = IdentifierScope.Asset,
-                        Source = nameof(InstrumentResolver),
-                        IsPrimary = true
-                    }
-                ]
+                Isin = string.IsNullOrWhiteSpace(match.Isin) ? null : match.Isin,
+                ShareClassFigi = match.ShareClassFigi,
+                CompositeFigi = string.IsNullOrWhiteSpace(match.CompositeFigi) ? null : match.CompositeFigi,
+                Identifiers = BuildIdentifiers(match)
             }, ct);
 
             var listing = await assetListingRepository.Upsert(new AssetListing
@@ -281,7 +282,7 @@ public sealed class InstrumentResolver(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogWarning(ex, "Failed to persist auto-resolved asset model for ISIN {Isin}", match.Isin);
+            logger.LogWarning(ex, "Failed to persist auto-resolved asset model for ShareClassFigi {ShareClassFigi}", match.ShareClassFigi);
             return null;
         }
     }
@@ -299,6 +300,49 @@ public sealed class InstrumentResolver(
             return (mapping.Mic ?? token, mapping.ExchangeName);
 
         return (token, token);
+    }
+
+    // Build the asset/share-class identifier set: the share-class FIGI is the primary identity, with
+    // the composite FIGI and (when known) the ISIN attached as additional cross-references.
+    private static List<AssetIdentifier> BuildIdentifiers(InstrumentListing match)
+    {
+        var identifiers = new List<AssetIdentifier>
+        {
+            new()
+            {
+                Type = AssetIdentifierType.ShareClassFIGI,
+                Value = match.ShareClassFigi!,
+                Scope = IdentifierScope.ShareClass,
+                Source = nameof(InstrumentResolver),
+                IsPrimary = true
+            }
+        };
+
+        if (!string.IsNullOrWhiteSpace(match.CompositeFigi))
+        {
+            identifiers.Add(new AssetIdentifier
+            {
+                Type = AssetIdentifierType.CompositeFIGI,
+                Value = match.CompositeFigi,
+                Scope = IdentifierScope.Asset,
+                Source = nameof(InstrumentResolver),
+                IsPrimary = true
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(match.Isin))
+        {
+            identifiers.Add(new AssetIdentifier
+            {
+                Type = AssetIdentifierType.ISIN,
+                Value = match.Isin,
+                Scope = IdentifierScope.Asset,
+                Source = nameof(InstrumentResolver),
+                IsPrimary = true
+            });
+        }
+
+        return identifiers;
     }
 
     private static decimal PriceMultiplierFor(string currency) =>

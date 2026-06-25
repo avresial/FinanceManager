@@ -9,7 +9,8 @@ using System.Text.Json.Serialization;
 namespace FinanceManager.Infrastructure.Services.Stocks;
 
 /// <summary>
-/// OpenFIGI API client for resolving ticker symbols to ISINs and listing metadata.
+/// OpenFIGI API client for resolving ticker symbols to FIGI identifiers and listing metadata.
+/// OpenFIGI returns figi/compositeFigi/shareClassFigi (never ISIN) for a ticker mapping.
 /// See: https://www.openfigi.com/api
 /// </summary>
 internal sealed class OpenFigiClient(
@@ -34,7 +35,7 @@ internal sealed class OpenFigiClient(
             ExchCode = exchCode ?? string.Empty
         };
 
-        return await ExecuteMapping([request], $"ticker {Sanitize(baseTicker)} / exchCode {Sanitize(exchCode) ?? "(any)"}", ct);
+        return await ExecuteMapping([request], $"ticker {Sanitize(baseTicker)} / exchCode {Sanitize(exchCode) ?? "(any)"}", knownIsin: null, ct);
     }
 
     public async Task<IReadOnlyList<OpenFigiListing>> MapByIsinAsync(string isin, CancellationToken ct = default)
@@ -49,10 +50,12 @@ internal sealed class OpenFigiClient(
             ExchCode = string.Empty
         };
 
-        return await ExecuteMapping([request], $"ISIN {Sanitize(isin)}", ct);
+        // OpenFIGI never echoes ISIN in its response, so stamp the queried ISIN back onto the
+        // results to preserve it as a cross-reference on the ID_ISIN input path.
+        return await ExecuteMapping([request], $"ISIN {Sanitize(isin)}", knownIsin: isin, ct);
     }
 
-    private async Task<IReadOnlyList<OpenFigiListing>> ExecuteMapping(List<OpenFigiMappingRequest> requests, string debugLabel, CancellationToken ct)
+    private async Task<IReadOnlyList<OpenFigiListing>> ExecuteMapping(List<OpenFigiMappingRequest> requests, string debugLabel, string? knownIsin, CancellationToken ct)
     {
         var serviceConfig = await configService.GetServiceAsync("OpenFigi", ct);
         var url = $"{serviceConfig.BaseUrl.TrimEnd('/')}/mapping";
@@ -100,12 +103,18 @@ internal sealed class OpenFigiClient(
 
             foreach (var match in job.Data)
             {
+                // OpenFIGI is a FIGI service: its mapping response carries figi/compositeFigi/
+                // shareClassFigi but never an "isin" field. ShareClassFigi is the canonical identity.
+                // ISIN only exists here when we supplied it as input (knownIsin).
                 listings.Add(new OpenFigiListing(
-                    Isin: match.Isin,
+                    Isin: knownIsin,
                     Ticker: match.Ticker ?? string.Empty,
                     Name: match.Name ?? string.Empty,
                     ExchCode: match.ExchCode ?? string.Empty,
-                    Currency: match.Currency));
+                    Currency: match.Currency,
+                    Figi: match.Figi,
+                    CompositeFigi: match.CompositeFigi,
+                    ShareClassFigi: match.ShareClassFigi));
             }
         }
 
@@ -148,11 +157,11 @@ internal sealed class OpenFigiClient(
         [JsonPropertyName("ticker")]
         public string? Ticker { get; set; }
 
-        [JsonPropertyName("isin")]
-        public string? Isin { get; set; }
-
         [JsonPropertyName("compositeFigi")]
         public string? CompositeFigi { get; set; }
+
+        [JsonPropertyName("shareClassFigi")]
+        public string? ShareClassFigi { get; set; }
 
         [JsonPropertyName("name")]
         public string? Name { get; set; }

@@ -72,6 +72,41 @@ public class InvestmentModelRepositoryTests
     }
 
     [Fact]
+    public async Task Upsert_MatchesExistingAsset_ByShareClassFigi_WhenNoIsin()
+    {
+        // FIGI-centric identity: an asset with no ISIN is matched and updated by its share-class FIGI,
+        // not duplicated. A later ISIN is backfilled onto the same row.
+        var ct = TestContext.Current.CancellationToken;
+        await using var ctx = CreateContext();
+        var repo = new AssetRepository(ctx);
+
+        var first = await repo.Add(new Asset
+        {
+            Name = "Microsoft Corp",
+            Type = AssetType.Stock,
+            ShareClassFigi = "BBG001S5TD05"
+        }, ct);
+
+        var update = new Asset
+        {
+            Name = "Microsoft Corporation",
+            Type = AssetType.Stock,
+            ShareClassFigi = "BBG001S5TD05",
+            Isin = "US5949181045"
+        };
+        var upserted = await repo.Upsert(update, ct);
+
+        Assert.Equal(first.Id, upserted.Id);
+        Assert.Equal("Microsoft Corporation", upserted.Name);
+        Assert.Equal("US5949181045", upserted.Isin);
+        Assert.Single(await repo.GetAll(ct));
+
+        var byFigi = await repo.GetByShareClassFigi("BBG001S5TD05", ct);
+        Assert.NotNull(byFigi);
+        Assert.Equal(first.Id, byFigi.Id);
+    }
+
+    [Fact]
     public async Task Asset_CanHaveMultipleListings_IncludingGbxMultiplier()
     {
         var ct = TestContext.Current.CancellationToken;

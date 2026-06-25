@@ -19,6 +19,12 @@ public class AssetRepository(AppDbContext context) : IAssetRepository
             .Include(x => x.Identifiers)
             .FirstOrDefaultAsync(x => x.Isin == isin, cancellationToken);
 
+    public Task<Asset?> GetByShareClassFigi(string shareClassFigi, CancellationToken cancellationToken = default) =>
+        context.Assets
+            .Include(x => x.Listings)
+            .Include(x => x.Identifiers)
+            .FirstOrDefaultAsync(x => x.ShareClassFigi == shareClassFigi, cancellationToken);
+
     public async Task<IReadOnlyList<Asset>> GetAll(CancellationToken cancellationToken = default) =>
         await context.Assets.AsNoTracking().OrderBy(x => x.Name).ToListAsync(cancellationToken);
 
@@ -35,28 +41,36 @@ public class AssetRepository(AppDbContext context) : IAssetRepository
 
     public async Task<Asset> Upsert(Asset asset, CancellationToken cancellationToken = default)
     {
+        // Identity is FIGI-centric: prefer matching an existing asset by ISIN when one is supplied,
+        // otherwise fall back to the canonical share-class FIGI. Either key locates the same security.
+        Asset? existing = null;
         if (!string.IsNullOrWhiteSpace(asset.Isin))
+            existing = await context.Assets.FirstOrDefaultAsync(x => x.Isin == asset.Isin, cancellationToken);
+
+        if (existing is null && !string.IsNullOrWhiteSpace(asset.ShareClassFigi))
+            existing = await context.Assets.FirstOrDefaultAsync(x => x.ShareClassFigi == asset.ShareClassFigi, cancellationToken);
+
+        if (existing is not null)
         {
-            var existing = await context.Assets.FirstOrDefaultAsync(x => x.Isin == asset.Isin, cancellationToken);
-            if (existing is not null)
-            {
-                existing.Name = asset.Name;
-                existing.Type = asset.Type;
-                existing.ShareClassFigi = asset.ShareClassFigi;
-                existing.CompositeFigi = asset.CompositeFigi;
-                existing.Issuer = asset.Issuer;
-                existing.Domicile = asset.Domicile;
-                existing.BaseCurrency = asset.BaseCurrency;
-                existing.DistributionPolicy = asset.DistributionPolicy;
-                existing.BenchmarkIndex = asset.BenchmarkIndex;
-                existing.ReplicationMethod = asset.ReplicationMethod;
-                existing.TotalExpenseRatio = asset.TotalExpenseRatio;
-                existing.IsUcits = asset.IsUcits;
-                existing.InceptionDate = asset.InceptionDate;
-                existing.UpdatedAt = DateTimeOffset.UtcNow;
-                await context.SaveChangesAsync(cancellationToken);
-                return existing;
-            }
+            existing.Name = asset.Name;
+            existing.Type = asset.Type;
+            // Backfill the ISIN cross-reference when it was previously unknown; never clear a known one.
+            if (!string.IsNullOrWhiteSpace(asset.Isin))
+                existing.Isin = asset.Isin;
+            existing.ShareClassFigi = asset.ShareClassFigi;
+            existing.CompositeFigi = asset.CompositeFigi;
+            existing.Issuer = asset.Issuer;
+            existing.Domicile = asset.Domicile;
+            existing.BaseCurrency = asset.BaseCurrency;
+            existing.DistributionPolicy = asset.DistributionPolicy;
+            existing.BenchmarkIndex = asset.BenchmarkIndex;
+            existing.ReplicationMethod = asset.ReplicationMethod;
+            existing.TotalExpenseRatio = asset.TotalExpenseRatio;
+            existing.IsUcits = asset.IsUcits;
+            existing.InceptionDate = asset.InceptionDate;
+            existing.UpdatedAt = DateTimeOffset.UtcNow;
+            await context.SaveChangesAsync(cancellationToken);
+            return existing;
         }
 
         return await Add(asset, cancellationToken);

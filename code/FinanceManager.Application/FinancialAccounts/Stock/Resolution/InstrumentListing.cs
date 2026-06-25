@@ -4,6 +4,11 @@ namespace FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 /// Reconciled candidate instrument listing after cross-referencing Alpha Vantage and OpenFIGI data.
 /// Represents a single venue or entry for an instrument.
 /// </summary>
+/// <param name="ShareClassFigi">
+/// Share-class FIGI from OpenFIGI — the canonical identity key. Auto-resolution requires this (plus
+/// an Alpha Vantage symbol); ISIN is only an optional cross-reference.
+/// </param>
+/// <param name="CompositeFigi">Composite/country-level FIGI, stored alongside the share-class FIGI.</param>
 /// <param name="QuoteFactor">
 /// Multiplier that converts a quote in <see cref="Currency"/>'s provider quoting unit into
 /// <see cref="Currency"/> (e.g. 0.01 for GBX → GBP). Defaults to <c>1</c>.
@@ -26,6 +31,8 @@ public sealed record InstrumentListing(
     string Exchange,
     string Currency,
     string Type,
+    string? ShareClassFigi = null,
+    string? CompositeFigi = null,
     decimal QuoteFactor = 1m,
     long? AssetListingId = null,
     string? QuoteCurrency = null);
