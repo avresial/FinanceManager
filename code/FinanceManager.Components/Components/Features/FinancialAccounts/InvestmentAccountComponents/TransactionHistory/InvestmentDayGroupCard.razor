@@ -12,10 +12,17 @@
                 </MudStack>
                 <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Baseline">
                     <MudText Typo="Typo.caption" Color="Color.Default">@TransactionList.Count @(TransactionList.Count == 1 ? "trade" : "trades")</MudText>
-                    <MudText Typo="Typo.caption" Class="fm-tabular"
-                             Color="@(DailyNet >= 0 ? Color.Success : Color.Error)">
-                        @(DailyNet >= 0 ? "+" : "")@DailyNet.ToString("N2") @Currency
-                    </MudText>
+                    @if (IsSingleCurrency)
+                    {
+                        <MudText Typo="Typo.caption" Class="fm-tabular"
+                                 Color="@(DailyNet >= 0 ? Color.Success : Color.Error)">
+                            @(DailyNet >= 0 ? "+" : "")@DailyNet.ToString("N2") @DayCurrency
+                        </MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Default">Mixed currencies</MudText>
+                    }
                 </MudStack>
             </MudStack>
         </CardHeaderContent>
@@ -24,7 +31,7 @@
         <MudStack Spacing="0">
             @foreach (var transaction in TransactionList)
             {
-                <InvestmentTransactionRow Transaction="transaction" IsMobile="@IsMobile" OnEdit="OnEdit" OnDelete="OnDelete" />
+                <InvestmentTransactionRow @key="transaction.Id" Transaction="transaction" IsMobile="@IsMobile" OnEdit="OnEdit" OnDelete="OnDelete" />
                 <MudDivider />
             }
         </MudStack>
@@ -42,6 +49,12 @@
     private List<InvestmentTransactionDto> TransactionList => Transactions as List<InvestmentTransactionDto> ?? Transactions.ToList();
 
     private DateTime DayDateTime => Day.ToDateTime(TimeOnly.MinValue);
+
+    // A day-level net only makes sense when every trade settles in the same currency; otherwise the sum
+    // would mix units. When mixed, the header suppresses the aggregate instead of showing a wrong total.
+    private bool IsSingleCurrency => TransactionList.Select(t => t.Currency).Distinct().Count() <= 1;
+
+    private string DayCurrency => TransactionList.FirstOrDefault()?.Currency ?? Currency;
 
     // Daily net cash impact: sells add cash (gross minus fee), buys remove cash (gross plus fee).
     private decimal DailyNet => TransactionList.Sum(CashImpact);
