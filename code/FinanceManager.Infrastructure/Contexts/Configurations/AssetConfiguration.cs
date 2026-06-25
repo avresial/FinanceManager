@@ -24,6 +24,9 @@ public class AssetConfiguration : IEntityTypeConfiguration<Asset>
         // Unique on ISIN. The column is nullable; EF emits a NULL-excluding filtered index on SQL Server
         // and PostgreSQL treats NULLs as distinct, so multiple assets without an ISIN are still allowed.
         builder.HasIndex(x => x.Isin).IsUnique();
+        // Share-class FIGI is the canonical identity key; unique with the same NULL-tolerant behaviour
+        // so assets without a FIGI (e.g. seeded/manual) are still allowed.
+        builder.HasIndex(x => x.ShareClassFigi).IsUnique();
         builder.HasIndex(x => x.Name);
         builder.HasIndex(x => x.Type);
 

@@ -96,7 +96,8 @@ public class InstrumentResolverTests
                     Ticker: "CSPX",
                     Name: "iShares Core S&P 500 ETF",
                     ExchCode: "LN",
-                    Currency: "GBP")
+                    Currency: "GBP",
+                    ShareClassFigi: "BBG001S5W9D1")
             });
 
 
@@ -104,6 +105,7 @@ public class InstrumentResolverTests
 
         Assert.Equal(ResolutionKind.AutoResolved, result.Kind);
         Assert.NotNull(result.Match);
+        Assert.Equal("BBG001S5W9D1", result.Match.ShareClassFigi);
         Assert.Equal("IE00B5BMR087", result.Match.Isin);
         Assert.Equal("CSPX.LON", result.Match.AlphaVantageSymbol);
 
@@ -150,13 +152,15 @@ public class InstrumentResolverTests
                     Ticker: "AAPL",
                     Name: "Apple Inc",
                     ExchCode: "US",
-                    Currency: "USD"),
+                    Currency: "USD",
+                    ShareClassFigi: "BBG001S5N8V8"),
                 new(
                     Isin: "US0378331005",
                     Ticker: "AAPL",
                     Name: "Apple Inc",
                     ExchCode: "LN",
-                    Currency: "GBP")
+                    Currency: "GBP",
+                    ShareClassFigi: "BBG001S5N8V8")
             });
 
 
@@ -194,7 +198,8 @@ public class InstrumentResolverTests
                     Ticker: "MSFT",
                     Name: "Microsoft Corp",
                     ExchCode: "US",
-                    Currency: "USD")
+                    Currency: "USD",
+                    ShareClassFigi: "BBG001S5TD05")
             });
 
 
@@ -202,13 +207,14 @@ public class InstrumentResolverTests
 
         Assert.Equal(ResolutionKind.AutoResolved, result.Kind);
         Assert.NotNull(result.Match);
+        Assert.Equal("BBG001S5TD05", result.Match.ShareClassFigi);
         Assert.Equal("US5949181045", result.Match.Isin);
     }
 
     [Fact]
-    public async Task ResolveAsync_SingleAvMatchButMultipleDistinctIsins_StaysAmbiguous()
+    public async Task ResolveAsync_SingleAvMatchButMultipleDistinctFigis_StaysAmbiguous()
     {
-        // No exchange hint, one AV match, but OpenFIGI returns two DIFFERENT instruments
+        // No exchange hint, one AV match, but OpenFIGI returns two DIFFERENT share classes
         // sharing the ticker — the resolver must not auto-resolve an arbitrary one.
         var resolver = CreateResolver();
         _avClientMock
@@ -222,8 +228,8 @@ public class InstrumentResolverTests
             .Setup(x => x.MapByTickerAsync("ABC", null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OpenFigiListing>
             {
-                new(Isin: "US1111111111", Ticker: "ABC", Name: "Ambiguous Co A", ExchCode: "US", Currency: "USD"),
-                new(Isin: "US2222222222", Ticker: "ABC", Name: "Ambiguous Co B", ExchCode: "UN", Currency: "USD")
+                new(Isin: null, Ticker: "ABC", Name: "Ambiguous Co A", ExchCode: "US", Currency: "USD", ShareClassFigi: "BBG000000AAA"),
+                new(Isin: null, Ticker: "ABC", Name: "Ambiguous Co B", ExchCode: "UN", Currency: "USD", ShareClassFigi: "BBG000000BBB")
             });
 
 
@@ -335,7 +341,8 @@ public class InstrumentResolverTests
                     Ticker: "VANGUARD",
                     Name: "Vanguard FTSE All-Share ETF",
                     ExchCode: "LN",
-                    Currency: "GBP")
+                    Currency: "GBP",
+                    ShareClassFigi: "BBG001S5W9D2")
             });
 
         // 1 GBX = 0.01 GBP (contract: multiply from-amount by factor to get to-amount)
@@ -371,7 +378,8 @@ public class InstrumentResolverTests
             .Setup(x => x.MapByTickerAsync("CSPX", null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OpenFigiListing>
             {
-                new(Isin: "IE00B5BMR087", Ticker: "CSPX", Name: "iShares Core S&P 500 ETF", ExchCode: "LN", Currency: "GBP")
+                new(Isin: "IE00B5BMR087", Ticker: "CSPX", Name: "iShares Core S&P 500 ETF", ExchCode: "LN", Currency: "GBP",
+                    CompositeFigi: "BBG001S5W9C0", ShareClassFigi: "BBG001S5W9D1")
             });
         _quoteFactorResolverMock
             .Setup(x => x.ResolveAsync("GBX", "GBP", It.IsAny<CancellationToken>()))
@@ -383,11 +391,15 @@ public class InstrumentResolverTests
         Assert.NotNull(result.Match);
         Assert.Equal(42, result.Match.AssetListingId);
 
-        // Asset is upserted by ISIN with an ISIN identifier.
+        // Asset is upserted keyed on the share-class FIGI, with FIGI identifiers and the optional
+        // ISIN cross-reference attached.
         _assetRepositoryMock.Verify(
             x => x.Upsert(
-                It.Is<Asset>(a => a.Isin == "IE00B5BMR087"
+                It.Is<Asset>(a => a.ShareClassFigi == "BBG001S5W9D1"
+                    && a.CompositeFigi == "BBG001S5W9C0"
+                    && a.Isin == "IE00B5BMR087"
                     && a.Type == AssetType.ETF
+                    && a.Identifiers.Any(i => i.Type == AssetIdentifierType.ShareClassFIGI && i.Value == "BBG001S5W9D1" && i.IsPrimary)
                     && a.Identifiers.Any(i => i.Type == AssetIdentifierType.ISIN && i.Value == "IE00B5BMR087")),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -431,7 +443,7 @@ public class InstrumentResolverTests
             .Setup(x => x.MapByTickerAsync("MSFT", null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OpenFigiListing>
             {
-                new(Isin: "US5949181045", Ticker: "MSFT", Name: "Microsoft Corp", ExchCode: "US", Currency: "USD")
+                new(Isin: "US5949181045", Ticker: "MSFT", Name: "Microsoft Corp", ExchCode: "US", Currency: "USD", ShareClassFigi: "BBG001S5TD05")
             });
 
         var result = await resolver.ResolveAsync("MSFT", TestContext.Current.CancellationToken);
@@ -440,6 +452,45 @@ public class InstrumentResolverTests
         _assetListingRepositoryMock.Verify(
             x => x.Upsert(
                 It.Is<AssetListing>(l => l.ExchangeMic != "XNAS" && l.TradingCurrency == "USD" && l.PriceMultiplier == 1m),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_TickerWithoutIsin_AutoResolvesAndPersistsOnFigi()
+    {
+        // Realistic ticker path: OpenFIGI returns FIGIs but no ISIN. Identity is FIGI-centric, so the
+        // pair still auto-resolves and persists — with no ISIN and no ISIN identifier.
+        var resolver = CreateResolver();
+        _avClientMock
+            .Setup(x => x.SearchTicker("MSFT", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TickerSearchMatch>
+            {
+                new() { Symbol = "MSFT", Name = "Microsoft Corp", Type = "Equity", Region = "US", Currency = "USD", MatchScore = 1m }
+            });
+        _openFigiClientMock
+            .Setup(x => x.MapByTickerAsync("MSFT", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<OpenFigiListing>
+            {
+                new(Isin: null, Ticker: "MSFT", Name: "Microsoft Corp", ExchCode: "US", Currency: "USD",
+                    CompositeFigi: "BBG000BPH459", ShareClassFigi: "BBG001S5TD05")
+            });
+
+        var result = await resolver.ResolveAsync("MSFT", TestContext.Current.CancellationToken);
+
+        Assert.Equal(ResolutionKind.AutoResolved, result.Kind);
+        Assert.NotNull(result.Match);
+        Assert.Equal("BBG001S5TD05", result.Match.ShareClassFigi);
+        Assert.Null(result.Match.Isin);
+        Assert.Equal("MSFT", result.Match.AlphaVantageSymbol);
+
+        // Persisted with the FIGI identity and no ISIN / no ISIN identifier.
+        _assetRepositoryMock.Verify(
+            x => x.Upsert(
+                It.Is<Asset>(a => a.ShareClassFigi == "BBG001S5TD05"
+                    && a.Isin == null
+                    && a.Identifiers.Any(i => i.Type == AssetIdentifierType.ShareClassFIGI && i.Value == "BBG001S5TD05")
+                    && a.Identifiers.All(i => i.Type != AssetIdentifierType.ISIN)),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

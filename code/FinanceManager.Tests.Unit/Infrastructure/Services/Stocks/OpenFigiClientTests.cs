@@ -32,7 +32,8 @@ public class OpenFigiClientTests
     [Fact]
     public async Task MapByTickerAsync_WithValidTickerAndExchange_ReturnsListings()
     {
-        // Arrange — OpenFIGI v3 wraps matches inside each job's "data" array.
+        // Arrange — OpenFIGI v3 wraps matches inside each job's "data" array. A ticker mapping returns
+        // FIGI identifiers (figi/compositeFigi/shareClassFigi) but never an "isin" field.
         var httpHandler = new MockHttpMessageHandler(response: """
             [
               {
@@ -40,8 +41,8 @@ public class OpenFigiClientTests
                   {
                     "figi": "BBG000B9XRY4",
                     "ticker": "AAPL",
-                    "isin": "US0378331005",
                     "compositeFigi": "BBG000HKWL63",
+                    "shareClassFigi": "BBG001S5N8V8",
                     "name": "Apple Inc",
                     "exchCode": "US",
                     "currency": "USD"
@@ -56,9 +57,12 @@ public class OpenFigiClientTests
         // Act
         var result = await client.MapByTickerAsync("AAPL", "US", TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert — no ISIN on the ticker path; FIGIs are projected, with shareClassFigi as identity.
         Assert.Single(result);
-        Assert.Equal("US0378331005", result[0].Isin);
+        Assert.Null(result[0].Isin);
+        Assert.Equal("BBG000B9XRY4", result[0].Figi);
+        Assert.Equal("BBG000HKWL63", result[0].CompositeFigi);
+        Assert.Equal("BBG001S5N8V8", result[0].ShareClassFigi);
         Assert.Equal("AAPL", result[0].Ticker);
         Assert.Equal("Apple Inc", result[0].Name);
         Assert.Equal("US", result[0].ExchCode);
@@ -68,20 +72,23 @@ public class OpenFigiClientTests
     [Fact]
     public async Task MapByIsinAsync_WithValidIsin_ReturnsAllVenues()
     {
-        // Arrange — a single job whose "data" array lists every venue for the ISIN.
+        // Arrange — a single job whose "data" array lists every venue for the ISIN. OpenFIGI does not
+        // echo the ISIN; the client stamps the queried value back onto each result as a cross-reference.
         var httpHandler = new MockHttpMessageHandler(response: """
             [
               {
                 "data": [
                   {
-                    "isin": "IE00B5BMR087",
+                    "figi": "BBG00B3T3HD3",
+                    "shareClassFigi": "BBG001S5W9D1",
                     "ticker": "CSPX",
                     "name": "iShares Core S&P 500 ETF",
                     "exchCode": "LN",
                     "currency": "GBP"
                   },
                   {
-                    "isin": "IE00B5BMR087",
+                    "figi": "BBG00B3T3HF1",
+                    "shareClassFigi": "BBG001S5W9D1",
                     "ticker": "CSPX",
                     "name": "iShares Core S&P 500 ETF",
                     "exchCode": "SX",
@@ -97,9 +104,10 @@ public class OpenFigiClientTests
         // Act
         var result = await client.MapByIsinAsync("IE00B5BMR087", TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert — the queried ISIN is stamped onto every venue, and shareClassFigi is carried through.
         Assert.Equal(2, result.Count);
         Assert.All(result, x => Assert.Equal("IE00B5BMR087", x.Isin));
+        Assert.All(result, x => Assert.Equal("BBG001S5W9D1", x.ShareClassFigi));
         Assert.Contains(result, x => x.ExchCode == "LN");
         Assert.Contains(result, x => x.ExchCode == "SX");
     }
