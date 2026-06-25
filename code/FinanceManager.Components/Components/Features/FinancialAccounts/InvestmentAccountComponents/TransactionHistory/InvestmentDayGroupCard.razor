@@ -1,0 +1,55 @@
+@namespace FinanceManager.Components.Components.Features.FinancialAccounts.InvestmentAccountComponents.TransactionHistory
+@using FinanceManager.Domain.FinancialAccounts.Investments.Dtos
+@using FinanceManager.Domain.FinancialAccounts.Investments.Entities
+
+<MudCard Outlined="true" Class="mb-3" Style="background-color: transparent;">
+    <MudCardHeader Class="py-1 px-4">
+        <CardHeaderContent>
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Baseline">
+                    <MudText Typo="Typo.subtitle2">@DayDateTime.ToString("dd MMM")</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">@DayDateTime.ToString("dddd")</MudText>
+                </MudStack>
+                <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Baseline">
+                    <MudText Typo="Typo.caption" Color="Color.Default">@TransactionList.Count @(TransactionList.Count == 1 ? "trade" : "trades")</MudText>
+                    <MudText Typo="Typo.caption" Class="fm-tabular"
+                             Color="@(DailyNet >= 0 ? Color.Success : Color.Error)">
+                        @(DailyNet >= 0 ? "+" : "")@DailyNet.ToString("N2") @Currency
+                    </MudText>
+                </MudStack>
+            </MudStack>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent Class="pa-0">
+        <MudStack Spacing="0">
+            @foreach (var transaction in TransactionList)
+            {
+                <InvestmentTransactionRow Transaction="transaction" IsMobile="@IsMobile" OnEdit="OnEdit" OnDelete="OnDelete" />
+                <MudDivider />
+            }
+        </MudStack>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public DateOnly Day { get; set; }
+    [Parameter] public required IEnumerable<InvestmentTransactionDto> Transactions { get; set; }
+    [Parameter] public required string Currency { get; set; }
+    [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public EventCallback<InvestmentTransactionDto> OnEdit { get; set; }
+    [Parameter] public EventCallback<InvestmentTransactionDto> OnDelete { get; set; }
+
+    private List<InvestmentTransactionDto> TransactionList => Transactions as List<InvestmentTransactionDto> ?? Transactions.ToList();
+
+    private DateTime DayDateTime => Day.ToDateTime(TimeOnly.MinValue);
+
+    // Daily net cash impact: sells add cash (gross minus fee), buys remove cash (gross plus fee).
+    private decimal DailyNet => TransactionList.Sum(CashImpact);
+
+    private static decimal CashImpact(InvestmentTransactionDto t)
+    {
+        var gross = t.Quantity * t.UnitPrice;
+        var fee = t.Fee ?? 0m;
+        return t.Type == InvestmentTransactionType.Sell ? gross - fee : -(gross + fee);
+    }
+}

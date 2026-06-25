@@ -7,7 +7,7 @@ using MudBlazor;
 
 namespace FinanceManager.Components.Components.Features.FinancialAccounts.InvestmentAccountComponents;
 
-public partial class InvestmentAccountDetailsPageContent : ComponentBase
+public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsyncDisposable
 {
     [Parameter] public required int AccountId { get; set; }
 
@@ -15,8 +15,11 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase
     [Inject] public required InvestmentValuationHttpClient ValuationHttpClient { get; set; }
     [Inject] public required InvestmentAccountHttpClient InvestmentAccountHttpClient { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
+    [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
     [Inject] public required ILogger<InvestmentAccountDetailsPageContent> Logger { get; set; }
 
+    private readonly Guid _viewportSubscriptionId = Guid.NewGuid();
+    private bool _isMobile;
     private bool _isLoading = true;
     private string _accountName = "Investments";
     private string _currency = "USD";
@@ -39,6 +42,32 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase
     private bool _saving;
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        await BrowserViewportService.SubscribeAsync(_viewportSubscriptionId, async args =>
+        {
+            var isMobile = args.Breakpoint is Breakpoint.Xs or Breakpoint.Sm or Breakpoint.Md;
+            if (isMobile == _isMobile) return;
+            _isMobile = isMobile;
+            await InvokeAsync(StateHasChanged);
+        }, fireImmediately: true);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await BrowserViewportService.UnsubscribeAsync(_viewportSubscriptionId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to unsubscribe from BrowserViewportService");
+        }
+        GC.SuppressFinalize(this);
+    }
 
     private async Task LoadAsync()
     {
@@ -184,9 +213,6 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase
             Snackbar.Add("Could not remove the transaction.", Severity.Error);
         }
     }
-
-    private static string TypeLabel(InvestmentTransactionType type) => type == InvestmentTransactionType.Sell ? "Sell" : "Buy";
-    private static Color TypeColor(InvestmentTransactionType type) => type == InvestmentTransactionType.Sell ? Color.Error : Color.Success;
 
     private sealed record HoldingRow(long ListingId, string Ticker, string ExchangeName, string Currency, decimal Quantity, decimal LatestPrice, decimal Value);
     private sealed record ListingOption(long ListingId, string Ticker, string ExchangeName, string Currency);

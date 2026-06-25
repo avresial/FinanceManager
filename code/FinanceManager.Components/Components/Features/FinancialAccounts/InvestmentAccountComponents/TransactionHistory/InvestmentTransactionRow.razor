@@ -1,0 +1,130 @@
+@namespace FinanceManager.Components.Components.Features.FinancialAccounts.InvestmentAccountComponents.TransactionHistory
+@using FinanceManager.Domain.FinancialAccounts.Investments.Dtos
+@using FinanceManager.Domain.FinancialAccounts.Investments.Entities
+
+<div class="pa-2 mud-list-item-clickable"
+     style="@(_expanded ? "background: rgba(255,171,0,0.06);" : "")"
+     role="button" tabindex="0" @onclick="ToggleExpanded" @onkeydown="OnKeyDown">
+    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="w-100">
+        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"
+                 Style="@($"transition: transform 220ms; transform: rotate({(_expanded ? 180 : 0)}deg); flex-shrink: 0; color: {(_expanded ? "var(--mud-palette-primary)" : "var(--mud-palette-text-secondary)")}")"
+                 Size="Size.Small" />
+
+        <MudChip T="string" Size="Size.Small" Color="@TypeColor" Variant="Variant.Filled" Style="flex-shrink: 0;">@TypeLabel</MudChip>
+
+        <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
+            <MudText Typo="Typo.body1" Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@Transaction.Ticker</MudText>
+            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.caption" Color="Color.Default" Class="fm-tabular">@Transaction.Quantity.ToString("N4") @@ @Transaction.UnitPrice.ToString("N2") @Transaction.Currency</MudText>
+                @if (!IsMobile && !string.IsNullOrWhiteSpace(Transaction.ExchangeName))
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Default">·</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">@Transaction.ExchangeName</MudText>
+                }
+            </MudStack>
+        </MudStack>
+
+        <MudText Typo="Typo.body1" Class="fm-tabular"
+                 Color="@(CashImpact >= 0 ? Color.Success : Color.Error)"
+                 Style="flex-shrink: 0;">
+            @(CashImpact >= 0 ? "+" : "")@CashImpact.ToString("N2") @Transaction.Currency
+        </MudText>
+    </MudStack>
+</div>
+
+<MudCollapse Expanded="_expanded">
+    <div class="px-4 pb-3" style="padding-left: 60px;" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+        <MudDivider Class="mb-3" Style="border-style: dashed;" />
+        <MudGrid Spacing="3">
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.overline" Color="Color.Default">Trade date</MudText>
+                <MudText Typo="Typo.body2" Class="fm-tabular">@Transaction.TradeDate.ToString("dd-MM-yyyy")</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.overline" Color="Color.Default">Type</MudText>
+                <MudText Typo="Typo.body2">@TypeLabel</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.overline" Color="Color.Default">Ticker</MudText>
+                <MudText Typo="Typo.body2">@Transaction.Ticker</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.overline" Color="Color.Default">Exchange</MudText>
+                <MudText Typo="Typo.body2">@(string.IsNullOrWhiteSpace(Transaction.ExchangeName) ? "—" : Transaction.ExchangeName)</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.overline" Color="Color.Default">Quantity</MudText>
+                <MudText Typo="Typo.body2" Class="fm-tabular">@Transaction.Quantity.ToString("N4")</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.overline" Color="Color.Default">Unit price</MudText>
+                <MudText Typo="Typo.body2" Class="fm-tabular">@Transaction.UnitPrice.ToString("N2") @Transaction.Currency</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.overline" Color="Color.Default">Gross value</MudText>
+                <MudText Typo="Typo.body2" Class="fm-tabular">@GrossValue.ToString("N2") @Transaction.Currency</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.overline" Color="Color.Default">Fee</MudText>
+                <MudText Typo="Typo.body2" Class="fm-tabular">@((Transaction.Fee ?? 0m).ToString("N2")) @Transaction.Currency</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.overline" Color="Color.Default">Cash impact</MudText>
+                <MudText Typo="Typo.body2" Class="fm-tabular"
+                         Color="@(CashImpact >= 0 ? Color.Success : Color.Error)">
+                    @(CashImpact >= 0 ? "+" : "")@CashImpact.ToString("N2") @Transaction.Currency
+                </MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.overline" Color="Color.Default">Currency</MudText>
+                <MudText Typo="Typo.body2">@Transaction.Currency</MudText>
+            </MudItem>
+            @if (!string.IsNullOrWhiteSpace(Transaction.Notes))
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.overline" Color="Color.Default">Notes</MudText>
+                    <MudText Typo="Typo.body2">@Transaction.Notes</MudText>
+                </MudItem>
+            }
+            <MudItem xs="12">
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Edit" OnClick="OnEditClicked">Edit</MudButton>
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Delete" OnClick="OnDeleteClicked">Delete</MudButton>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </div>
+</MudCollapse>
+
+@code {
+    [Parameter] public required InvestmentTransactionDto Transaction { get; set; }
+    [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public EventCallback<InvestmentTransactionDto> OnEdit { get; set; }
+    [Parameter] public EventCallback<InvestmentTransactionDto> OnDelete { get; set; }
+
+    private bool _expanded;
+
+    private string TypeLabel => Transaction.Type == InvestmentTransactionType.Sell ? "Sell" : "Buy";
+    private Color TypeColor => Transaction.Type == InvestmentTransactionType.Sell ? Color.Error : Color.Success;
+
+    private decimal GrossValue => Transaction.Quantity * Transaction.UnitPrice;
+
+    // Buy is a cash outflow (negative), sell is a cash inflow (positive). Fees always reduce the cash impact.
+    private decimal CashImpact => Transaction.Type == InvestmentTransactionType.Sell
+        ? GrossValue - (Transaction.Fee ?? 0m)
+        : -(GrossValue + (Transaction.Fee ?? 0m));
+
+    private void ToggleExpanded() => _expanded = !_expanded;
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or " " or "Spacebar")
+            ToggleExpanded();
+    }
+
+    private Task OnEditClicked() => OnEdit.InvokeAsync(Transaction);
+
+    private Task OnDeleteClicked() => OnDelete.InvokeAsync(Transaction);
+}
