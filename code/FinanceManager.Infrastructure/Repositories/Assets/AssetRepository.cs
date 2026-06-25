@@ -57,7 +57,9 @@ public class AssetRepository(AppDbContext context) : IAssetRepository
             // Backfill the ISIN cross-reference when it was previously unknown; never clear a known one.
             if (!string.IsNullOrWhiteSpace(asset.Isin))
                 existing.Isin = asset.Isin;
-            existing.ShareClassFigi = asset.ShareClassFigi;
+            // Likewise never clear the canonical share-class FIGI when the incoming asset omits it.
+            if (!string.IsNullOrWhiteSpace(asset.ShareClassFigi))
+                existing.ShareClassFigi = asset.ShareClassFigi;
             existing.CompositeFigi = asset.CompositeFigi;
             existing.Issuer = asset.Issuer;
             existing.Domicile = asset.Domicile;

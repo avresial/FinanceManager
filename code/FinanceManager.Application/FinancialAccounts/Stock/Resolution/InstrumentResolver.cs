@@ -306,6 +306,7 @@ public sealed class InstrumentResolver(
     // the composite FIGI and (when known) the ISIN attached as additional cross-references.
     private static List<AssetIdentifier> BuildIdentifiers(InstrumentListing match)
     {
+        var now = DateTimeOffset.UtcNow;
         var identifiers = new List<AssetIdentifier>
         {
             new()
@@ -314,7 +315,8 @@ public sealed class InstrumentResolver(
                 Value = match.ShareClassFigi!,
                 Scope = IdentifierScope.ShareClass,
                 Source = nameof(InstrumentResolver),
-                IsPrimary = true
+                IsPrimary = true,
+                CreatedAt = now
             }
         };
 
@@ -326,7 +328,8 @@ public sealed class InstrumentResolver(
                 Value = match.CompositeFigi,
                 Scope = IdentifierScope.Asset,
                 Source = nameof(InstrumentResolver),
-                IsPrimary = true
+                IsPrimary = true,
+                CreatedAt = now
             });
         }
 
@@ -338,7 +341,8 @@ public sealed class InstrumentResolver(
                 Value = match.Isin,
                 Scope = IdentifierScope.Asset,
                 Source = nameof(InstrumentResolver),
-                IsPrimary = true
+                IsPrimary = true,
+                CreatedAt = now
             });
         }
 

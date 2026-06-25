@@ -107,6 +107,38 @@ public class InvestmentModelRepositoryTests
     }
 
     [Fact]
+    public async Task Upsert_MatchedByIsin_DoesNotClearExistingShareClassFigi()
+    {
+        // An ISIN-only update (no incoming FIGI) must never wipe the canonical share-class FIGI on the
+        // row it matches — the key is authoritative and uniquely indexed.
+        var ct = TestContext.Current.CancellationToken;
+        await using var ctx = CreateContext();
+        var repo = new AssetRepository(ctx);
+
+        var first = await repo.Add(new Asset
+        {
+            Name = "Microsoft Corp",
+            Type = AssetType.Stock,
+            Isin = "US5949181045",
+            ShareClassFigi = "BBG001S5TD05"
+        }, ct);
+
+        var isinOnlyUpdate = new Asset
+        {
+            Name = "Microsoft Corporation",
+            Type = AssetType.Stock,
+            Isin = "US5949181045",
+            ShareClassFigi = null
+        };
+        var upserted = await repo.Upsert(isinOnlyUpdate, ct);
+
+        Assert.Equal(first.Id, upserted.Id);
+        Assert.Equal("Microsoft Corporation", upserted.Name);
+        Assert.Equal("BBG001S5TD05", upserted.ShareClassFigi);
+        Assert.Single(await repo.GetAll(ct));
+    }
+
+    [Fact]
     public async Task Asset_CanHaveMultipleListings_IncludingGbxMultiplier()
     {
         var ct = TestContext.Current.CancellationToken;
