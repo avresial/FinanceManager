@@ -25,6 +25,23 @@ public class AssetListingRepository(AppDbContext context) : IAssetListingReposit
     public async Task<IReadOnlyList<AssetListing>> GetByAsset(long assetId, CancellationToken cancellationToken = default) =>
         await context.AssetListings.AsNoTracking().Where(x => x.AssetId == assetId).ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<AssetListing>> SearchAsync(string query, int maxResults, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return [];
+        var trimmed = query.Trim();
+        // Tickers are stored uppercase; comparing directly against the uppercased input lets the index on Ticker be used.
+        // Exchange names are mixed-case so we use a LIKE pattern (case-sensitive on PG, insensitive on SQL Server by default).
+        var upperTicker = trimmed.ToUpperInvariant();
+        var likePattern = $"%{trimmed}%";
+        return await context.AssetListings
+            .AsNoTracking()
+            .Where(x => x.IsActive && (x.Ticker.StartsWith(upperTicker) || EF.Functions.Like(x.ExchangeName, likePattern)))
+            .OrderByDescending(x => x.IsPrimaryListing)
+            .ThenBy(x => x.Ticker)
+            .Take(maxResults)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<AssetListing> Add(AssetListing listing, CancellationToken cancellationToken = default)
     {
         EnsureValidPriceMultiplier(listing);

@@ -1,4 +1,5 @@
 @namespace FinanceManager.Components.Components.Features.FinancialAccounts.InvestmentAccountComponents
+@using FinanceManager.Domain.Assets.Dtos
 @using FinanceManager.Domain.FinancialAccounts.Investments.Entities
 @using FinanceManager.Components.Components.Features.FinancialAccounts.InvestmentAccountComponents.TransactionHistory
 
@@ -17,7 +18,7 @@ else
                     <MudText Typo="Typo.caption" Color="Color.Secondary">Current holdings value</MudText>
                 </div>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-                           OnClick="ShowAdd" Disabled="@(_listingOptions.Count == 0)">
+                           OnClick="ShowAdd">
                     Add transaction
                 </MudButton>
             </MudStack>
@@ -89,19 +90,27 @@ else
         <MudPaper Class="pa-5" Style="width: min(460px, 92vw);">
             <MudText Typo="Typo.h6" Class="mb-3">@(_editingId is null ? "Add transaction" : "Edit transaction")</MudText>
             <MudStack Spacing="3">
-                <MudSelect T="long" Label="Instrument" @bind-Value="_formListingId" Dense="true">
-                    @foreach (var option in _listingOptions)
-                    {
-                        <MudSelectItem T="long" Value="@option.ListingId">@option.Ticker — @option.ExchangeName</MudSelectItem>
-                    }
-                </MudSelect>
+                <MudAutocomplete T="InstrumentSearchResultDto" Label="Instrument"
+                                 Value="_selectedInstrument"
+                                 ValueChanged="OnInstrumentSelectedAsync"
+                                 SearchFunc="SearchInstrumentsAsync"
+                                 ToStringFunc="@(dto => dto is null ? string.Empty : $"{dto.Ticker} — {dto.ExchangeName}")"
+                                 MinCharacters="1"
+                                 DebounceInterval="300"
+                                 ResetValueOnEmptyText="true"
+                                 CoerceText="false"
+                                 Dense="true" />
                 <MudSelect T="InvestmentTransactionType" Label="Type" @bind-Value="_formType" Dense="true">
                     <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Buy">Buy</MudSelectItem>
                     <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Sell">Sell</MudSelectItem>
                 </MudSelect>
                 <MudNumericField T="decimal" Label="Units" @bind-Value="_formQuantity" Min="0" Step="0.0001M" />
-                <MudNumericField T="decimal" Label="Unit price" @bind-Value="_formUnitPrice" Min="0" Step="0.01M" />
-                <MudTextField T="string" Label="Currency" @bind-Value="_formCurrency" MaxLength="10" />
+                <MudTextField T="string" Label="Unit price" Value="@(_selectedInstrument is null ? string.Empty : _formUnitPrice.ToString("N2"))" ReadOnly="true" Disabled="true" />
+                @if (_noPriceAvailable && _selectedInstrument is not null)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">No price data found for this instrument. Add a price quote before recording a transaction.</MudAlert>
+                }
+                <MudTextField T="string" Label="Currency" Value="@_formCurrency" ReadOnly="true" Disabled="true" />
                 <MudDatePicker Label="Trade date" @bind-Date="_formTradeDate" />
                 <MudNumericField T="decimal?" Label="Fee (optional)" @bind-Value="_formFee" Min="0" Step="0.01M" />
                 <MudTextField T="string" Label="Notes (optional)" @bind-Value="_formNotes" />

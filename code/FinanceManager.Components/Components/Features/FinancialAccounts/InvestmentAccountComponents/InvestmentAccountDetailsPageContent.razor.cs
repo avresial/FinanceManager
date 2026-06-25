@@ -1,4 +1,5 @@
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using Microsoft.AspNetCore.Components;
@@ -26,20 +27,21 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private decimal _totalValue;
     private IReadOnlyList<InvestmentTransactionDto> _transactions = [];
     private List<HoldingRow> _holdings = [];
-    private List<ListingOption> _listingOptions = [];
 
     // Add/edit overlay state.
     private bool _formVisible;
     private long? _editingId;
+    private InstrumentSearchResultDto? _selectedInstrument;
     private long _formListingId;
     private InvestmentTransactionType _formType = InvestmentTransactionType.Buy;
     private decimal _formQuantity = 1m;
     private decimal _formUnitPrice;
-    private string _formCurrency = "USD";
+    private string _formCurrency = string.Empty;
     private DateTime? _formTradeDate = DateTime.Today;
     private decimal? _formFee;
     private string? _formNotes;
     private bool _saving;
+    private bool _noPriceAvailable;
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 
@@ -72,10 +74,8 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private async Task LoadAsync()
     {
         _isLoading = true;
-        // Clear prior state so a failed reload (or an account switch) never shows stale data.
         _transactions = [];
         _holdings = [];
-        _listingOptions = [];
         _totalValue = 0m;
         _currency = "USD";
         try
@@ -84,17 +84,9 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             _transactions = await TransactionHttpClient.GetByAccountAsync(AccountId);
             var holdings = await ValuationHttpClient.GetHoldingsAsync(AccountId, DateTime.Today);
 
-            // Latest trade per listing supplies the display ticker/exchange/currency and a price proxy for
-            // valuation. (Server-side market valuation is available via the valuation API; this view stays
-            // offline-deterministic by using the most recent trade price.)
             var latestByListing = _transactions
                 .GroupBy(t => t.AssetListingId)
                 .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.TradeDate).ThenByDescending(t => t.Id).First());
-
-            _listingOptions = latestByListing.Values
-                .Select(t => new ListingOption(t.AssetListingId, t.Ticker, t.ExchangeName, t.Currency))
-                .OrderBy(o => o.Ticker)
-                .ToList();
 
             _holdings = [];
             foreach (var (listingId, quantity) in holdings)
@@ -105,7 +97,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             _holdings = [.. _holdings.OrderByDescending(h => h.Value)];
 
             _totalValue = _holdings.Sum(h => h.Value);
-            _currency = _holdings.FirstOrDefault()?.Currency ?? _listingOptions.FirstOrDefault()?.Currency ?? "USD";
+            _currency = _holdings.FirstOrDefault()?.Currency ?? "USD";
         }
         catch (Exception ex)
         {
@@ -121,21 +113,23 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private void ShowAdd()
     {
         _editingId = null;
-        var first = _listingOptions.FirstOrDefault();
-        _formListingId = first?.ListingId ?? 0;
+        _selectedInstrument = null;
+        _formListingId = 0;
         _formType = InvestmentTransactionType.Buy;
         _formQuantity = 1m;
-        _formUnitPrice = _holdings.FirstOrDefault()?.LatestPrice ?? 0m;
-        _formCurrency = first?.Currency ?? _currency;
+        _formUnitPrice = 0m;
+        _formCurrency = string.Empty;
         _formTradeDate = DateTime.Today;
         _formFee = null;
         _formNotes = null;
+        _noPriceAvailable = false;
         _formVisible = true;
     }
 
     private void ShowEdit(InvestmentTransactionDto tx)
     {
         _editingId = tx.Id;
+        _selectedInstrument = new InstrumentSearchResultDto(tx.AssetListingId, tx.Ticker, tx.ExchangeName, tx.Currency);
         _formListingId = tx.AssetListingId;
         _formType = tx.Type;
         _formQuantity = tx.Quantity;
@@ -149,7 +143,60 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
 
     private void CloseForm() => _formVisible = false;
 
-    private bool CanSave => _formListingId > 0 && _formQuantity > 0 && _formUnitPrice >= 0 && _formTradeDate is not null;
+    private bool CanSave => _formListingId > 0 && _formQuantity > 0 && _formUnitPrice >= 0 && _formTradeDate is not null && !string.IsNullOrWhiteSpace(_formCurrency) && !_noPriceAvailable;
+
+    private async Task OnInstrumentSelectedAsync(InstrumentSearchResultDto? dto)
+    {
+        _selectedInstrument = dto;
+        _noPriceAvailable = false;
+        if (dto is null)
+        {
+            _formListingId = 0;
+            _formCurrency = string.Empty;
+            _formUnitPrice = 0m;
+            return;
+        }
+
+        _formListingId = dto.ListingId;
+        _formCurrency = dto.Currency;
+
+        if (_editingId is null)
+        {
+            try
+            {
+                var priceInfo = await TransactionHttpClient.GetListingPriceAsync(dto.ListingId);
+                if (priceInfo?.LatestPrice is decimal price)
+                {
+                    _formUnitPrice = price;
+                }
+                else
+                {
+                    _formUnitPrice = 0m;
+                    _noPriceAvailable = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to fetch price for listing {ListingId}", dto.ListingId);
+                _formUnitPrice = 0m;
+                _noPriceAvailable = true;
+            }
+        }
+    }
+
+    private async Task<IEnumerable<InstrumentSearchResultDto>> SearchInstrumentsAsync(string value, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return [];
+        try
+        {
+            return await TransactionHttpClient.SearchListingsAsync(value);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to search instrument listings for '{Query}'", value);
+            return [];
+        }
+    }
 
     private async Task SaveAsync()
     {
@@ -215,5 +262,4 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     }
 
     private sealed record HoldingRow(long ListingId, string Ticker, string ExchangeName, string Currency, decimal Quantity, decimal LatestPrice, decimal Value);
-    private sealed record ListingOption(long ListingId, string Ticker, string ExchangeName, string Currency);
 }

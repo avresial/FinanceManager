@@ -1,3 +1,4 @@
+using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using System.Net;
 using System.Net.Http.Json;
@@ -38,5 +39,21 @@ public class InvestmentTransactionHttpClient(HttpClient httpClient)
     {
         using var response = await httpClient.DeleteAsync($"{httpClient.BaseAddress}api/InvestmentTransaction/Delete/{accountId}/{id}");
         return response.IsSuccessStatusCode;
+    }
+
+    public async Task<IReadOnlyList<InstrumentSearchResultDto>> SearchListingsAsync(string query, int maxResults = 20)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return [];
+        var url = $"{httpClient.BaseAddress}api/InvestmentTransaction/SearchListings?q={Uri.EscapeDataString(query)}&maxResults={maxResults}";
+        using var response = await httpClient.GetAsync(url);
+        if (!response.IsSuccessStatusCode) return [];
+        return await response.Content.ReadFromJsonAsync<List<InstrumentSearchResultDto>>() ?? [];
+    }
+
+    public async Task<ListingPriceDto?> GetListingPriceAsync(long listingId)
+    {
+        using var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/InvestmentTransaction/ListingPrice/{listingId}");
+        if (!response.IsSuccessStatusCode) return null;
+        return await response.Content.ReadFromJsonAsync<ListingPriceDto>();
     }
 }
