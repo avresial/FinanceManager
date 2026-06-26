@@ -152,6 +152,12 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private void QueueChartDataRefresh()
     {
         var refreshVersion = ++_chartRefreshVersion;
+        // Snapshot the request inputs so an in-flight refresh keeps using the account/range it
+        // was started with, even if a newer range/account is selected before it completes.
+        var accountId = AccountId;
+        var currency = _currency;
+        var dateStart = _dateStart;
+        var dateEnd = _dateEnd;
         _isChartLoading = true;
         ChartData.Clear();
 
@@ -159,7 +165,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         {
             try
             {
-                await UpdateChartData(refreshVersion);
+                await UpdateChartData(refreshVersion, accountId, currency, dateStart, dateEnd);
             }
             catch (Exception ex)
             {
@@ -175,33 +181,41 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         });
     }
 
-    private async Task UpdateChartData(int refreshVersion)
+    private async Task UpdateChartData(int refreshVersion, int accountId, Currency currency, DateTime dateStart, DateTime dateEnd)
     {
-        var series = await ValuationHttpClient.GetValueSeriesAsync(AccountId, _currency.Id, _dateStart, _dateEnd);
-        var holdings = await ValuationHttpClient.GetHoldingsAsync(AccountId, _dateEnd);
-        if (refreshVersion != _chartRefreshVersion) return;
+        var series = await ValuationHttpClient.GetValueSeriesAsync(accountId, currency.Id, dateStart, dateEnd);
+        var holdings = await ValuationHttpClient.GetHoldingsAsync(accountId, dateEnd);
+        if (refreshVersion != _chartRefreshVersion || accountId != AccountId) return;
 
-        ChartData.Clear();
-        ChartData.AddRange(series
+        // Keep the full ordered series for balance maths; trim only leading zeros for the chart so
+        // a range that starts before the first holding still reports the true change from zero.
+        var orderedSeries = series
             .OrderBy(kv => kv.Key)
             .Select(kv => new TimeSeriesModel(kv.Key, kv.Value))
-            .SkipWhile(x => x.Value == 0));
-        UpdateBalanceFromChartData();
-        UpdateHoldings(holdings);
+            .ToList();
+
+        ChartData.Clear();
+        ChartData.AddRange(orderedSeries.SkipWhile(x => x.Value == 0));
+        UpdateBalanceFromChartData(orderedSeries);
+        UpdateHoldings(holdings, dateEnd);
     }
 
-    private void UpdateBalanceFromChartData()
+    private void UpdateBalanceFromChartData(IReadOnlyList<TimeSeriesModel> balanceSeries)
     {
-        _currentBalance = ChartData.LastOrDefault()?.Value ?? 0;
-        _balanceChange = ChartData.Count >= 2 ? ChartData.Last().Value - ChartData.First().Value : 0;
+        _currentBalance = balanceSeries.LastOrDefault()?.Value ?? 0;
+        _balanceChange = balanceSeries.Count >= 2 ? balanceSeries[^1].Value - balanceSeries[0].Value : 0;
 
         var startBalance = _currentBalance - _balanceChange;
         _balanceChangePercent = startBalance == 0 ? null : _balanceChange / startBalance * 100m;
     }
 
-    private void UpdateHoldings(IReadOnlyDictionary<long, decimal> holdings)
+    private void UpdateHoldings(IReadOnlyDictionary<long, decimal> holdings, DateTime asOf)
     {
+        // Value each holding from its latest trade on or before the as-of date so historical
+        // ranges don't pull ticker/price metadata from trades that happen after the range end.
+        var asOfDate = DateOnly.FromDateTime(asOf);
         var latestByListing = _transactions
+            .Where(t => t.TradeDate <= asOfDate)
             .GroupBy(t => t.AssetListingId)
             .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.TradeDate).ThenByDescending(t => t.Id).First());
 
