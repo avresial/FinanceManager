@@ -2,123 +2,179 @@
 @using FinanceManager.Domain.Assets.Dtos
 @using FinanceManager.Domain.FinancialAccounts.Investments.Entities
 @using FinanceManager.Components.Components.Features.FinancialAccounts.InvestmentAccountComponents.TransactionHistory
+@using FinanceManager.Components.Components.Features.FinancialAccounts.Shared
 
-@if (_isLoading)
+@if (_isLoading && _transactions.Count == 0)
 {
     <AccountDetailsPageContentSkeleton />
 }
-else
+else if (_transactions.Count == 0)
 {
     <MudContainer MaxWidth="MaxWidth.Large" Class="px-0">
-        <MudPaper Class="pa-4 mb-4" Elevation="2">
-            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
-                <div>
-                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">@_accountName</MudText>
-                    <MudText Typo="Typo.h4">@_totalValue.ToString("N2") @_currency</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">Current holdings value</MudText>
-                </div>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-                           OnClick="ShowAdd">
-                    Add transaction
-                </MudButton>
-            </MudStack>
+        <MudPaper Class="pa-8 d-flex flex-column align-center" Elevation="0" Style="background-color: transparent;">
+            <MudText Typo="Typo.h6" Class="mb-1">@_accountName</MudText>
+            <MudAlert Severity="Severity.Info" Class="my-3">No transactions yet.</MudAlert>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="ShowAdd">Add transaction</MudButton>
         </MudPaper>
+    </MudContainer>
+}
+else
+{
+    <AccountDetailsHero AccountName="@_accountName" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
+                        Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
+                        SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged" IsChartLoading="@_isChartLoading"
+                        CustomDateRange="@_customDateRange" CustomDateRangeChanged="OnCustomDateRangeChanged"
+                        ChartData="@ChartData" IsMobile="@_isMobile" />
 
+    <MudContainer MaxWidth="MaxWidth.Large" Class="px-0">
         <MudGrid Spacing="3">
             <MudItem xs="12" lg="8">
+                <AccountHistoryToolbar AccountId="@AccountId" SearchText="@_searchText"
+                                       SearchTextChanged="OnSearchChanged" ActiveFilter="@_activeFilter"
+                                       ActiveFilterChanged="OnTxFilterChanged" OnAddEntry="ShowAdd"
+                                       ShowInsightsButton="@_isMobile" OnInsightsClick="ToggleInsightsDrawer" IsMobile="@_isMobile" />
+
                 @{
-                    var dayGroups = _transactions
-                        .OrderByDescending(t => t.TradeDate)
-                        .ThenByDescending(t => t.Id)
+                    var filteredTransactions = GetFilteredTransactions();
+                    var dayGroups = filteredTransactions
                         .GroupBy(t => t.TradeDate)
                         .OrderByDescending(g => g.Key)
                         .ToList();
                 }
-                @if (dayGroups.Count == 0)
+
+                @if (HasActiveFilter && dayGroups.Count == 0)
                 {
-                    <MudAlert Severity="Severity.Info" Class="my-3">No transactions yet.</MudAlert>
+                    <MudAlert Severity="Severity.Info" Class="my-3">No trades match the current filter.</MudAlert>
+                }
+                else if (dayGroups.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Class="my-3">No trades in the selected range.</MudAlert>
                 }
                 else
                 {
                     @foreach (var group in dayGroups)
                     {
-                        <InvestmentDayGroupCard Day="@group.Key" Transactions="@group" Currency="@_currency"
+                        <InvestmentDayGroupCard Day="@group.Key" Transactions="@group" Currency="@_currency.ShortName"
                                                 IsMobile="@_isMobile" OnEdit="ShowEdit" OnDelete="DeleteAsync" />
                     }
                 }
             </MudItem>
 
-            <MudItem xs="12" lg="4">
-                <MudCard Outlined="true" Style="background-color: transparent;">
-                    <MudCardHeader Class="py-2 px-4">
-                        <CardHeaderContent><MudText Typo="Typo.h6">Holdings</MudText></CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent Class="pa-0">
-                        @if (_holdings.Count == 0)
-                        {
-                            <MudAlert Severity="Severity.Info" Class="ma-4">No open holdings.</MudAlert>
-                        }
-                        else
-                        {
-                            <MudSimpleTable Hover="true" Dense="true" Striped="true">
-                                <thead>
-                                    <tr><th>Instrument</th><th class="text-right">Units</th><th class="text-right">Price</th><th class="text-right">Value</th></tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var h in _holdings)
-                                    {
-                                        <tr>
-                                            <td>
-                                                <MudText Typo="Typo.body2">@h.Ticker</MudText>
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@h.ExchangeName</MudText>
-                                            </td>
-                                            <td class="text-right">@h.Quantity.ToString("N4")</td>
-                                            <td class="text-right">@h.LatestPrice.ToString("N2") @h.Currency</td>
-                                            <td class="text-right">@h.Value.ToString("N2") @h.Currency</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </MudSimpleTable>
-                        }
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
+            @if (!_isMobile)
+            {
+                <MudItem lg="4">
+                    <MudStack Spacing="4">
+                        <BalanceChangeCard BalanceChange="@_balanceChange" Currency="@_currency.ShortName"
+                                           RangeLabel="@_selectedRange" FromDate="@_dateStart" ToDate="@_dateEnd" />
+
+                        @HoldingsCard
+
+                        <InvestmentAccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])" />
+                    </MudStack>
+                </MudItem>
+            }
         </MudGrid>
     </MudContainer>
 
-    <MudOverlay Visible="@_formVisible" DarkBackground="true" ZIndex="1300">
-        <MudPaper Class="pa-5" Style="width: min(460px, 92vw);">
-            <MudText Typo="Typo.h6" Class="mb-3">@(_editingId is null ? "Add transaction" : "Edit transaction")</MudText>
-            <MudStack Spacing="3">
-                <MudAutocomplete T="InstrumentSearchResultDto" Label="Instrument"
-                                 Value="_selectedInstrument"
-                                 ValueChanged="OnInstrumentSelectedAsync"
-                                 SearchFunc="SearchInstrumentsAsync"
-                                 ToStringFunc="@(dto => dto is null ? string.Empty : $"{dto.Ticker} — {dto.ExchangeName}")"
-                                 MinCharacters="1"
-                                 DebounceInterval="300"
-                                 ResetValueOnEmptyText="true"
-                                 CoerceText="false"
-                                 Dense="true" />
-                <MudSelect T="InvestmentTransactionType" Label="Type" @bind-Value="_formType" Dense="true">
-                    <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Buy">Buy</MudSelectItem>
-                    <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Sell">Sell</MudSelectItem>
-                </MudSelect>
-                <MudNumericField T="decimal" Label="Units" @bind-Value="_formQuantity" Min="0" Step="0.0001M" />
-                <MudTextField T="string" Label="Unit price" Value="@(_selectedInstrument is null ? string.Empty : _formUnitPrice.ToString("N2"))" ReadOnly="true" Disabled="true" />
-                @if (_noPriceAvailable && _selectedInstrument is not null)
-                {
-                    <MudAlert Severity="Severity.Warning" Dense="true">No price data found for this instrument. Add a price quote before recording a transaction.</MudAlert>
-                }
-                <MudTextField T="string" Label="Currency" Value="@_formCurrency" ReadOnly="true" Disabled="true" />
-                <MudDatePicker Label="Trade date" @bind-Date="_formTradeDate" />
-                <MudNumericField T="decimal?" Label="Fee (optional)" @bind-Value="_formFee" Min="0" Step="0.01M" />
-                <MudTextField T="string" Label="Notes (optional)" @bind-Value="_formNotes" />
-                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
-                    <MudButton Variant="Variant.Text" OnClick="CloseForm" Disabled="@_saving">Cancel</MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@(_saving || !CanSave)">Save</MudButton>
-                </MudStack>
+    @if (_isMobile)
+    {
+        <MudOverlay Visible="@_insightsDrawerOpen" OnClick="CloseInsightsDrawer" DarkBackground="true" ZIndex="1300" />
+        <div
+            style="@($"position: fixed; top: 0; right: 0; bottom: 0; width: min(360px, 90vw); background: var(--mud-palette-surface); box-shadow: -4px 0 16px rgba(0,0,0,0.4); overflow-y: auto; z-index: 1301; transform: translateX({(_insightsDrawerOpen ? "0" : "100%")}); transition: transform 225ms cubic-bezier(0,0,0.2,1);")">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="pa-3">
+                <MudText Typo="Typo.h6">Insights</MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="CloseInsightsDrawer" aria-label="Close insights" />
             </MudStack>
-        </MudPaper>
-    </MudOverlay>
+            <MudDivider />
+            <MudStack Spacing="4" Class="pa-4">
+                <BalanceChangeCard BalanceChange="@_balanceChange" Currency="@_currency.ShortName" RangeLabel="@_selectedRange"
+                                   FromDate="@_dateStart" ToDate="@_dateEnd" />
+
+                @HoldingsCard
+
+                <InvestmentAccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])" />
+            </MudStack>
+        </div>
+    }
+}
+
+<MudOverlay Visible="@_formVisible" DarkBackground="true" ZIndex="1300">
+    <MudPaper Class="pa-5" Style="width: min(460px, 92vw);">
+        <MudText Typo="Typo.h6" Class="mb-3">@(_editingId is null ? "Add transaction" : "Edit transaction")</MudText>
+        <MudStack Spacing="3">
+            <MudAutocomplete T="InstrumentSearchResultDto" Label="Instrument"
+                             Value="_selectedInstrument"
+                             ValueChanged="OnInstrumentSelectedAsync"
+                             SearchFunc="SearchInstrumentsAsync"
+                             ToStringFunc="@(dto => dto is null ? string.Empty : $"{dto.Ticker} — {dto.ExchangeName}")"
+                             MinCharacters="1"
+                             DebounceInterval="300"
+                             ResetValueOnEmptyText="true"
+                             CoerceText="false"
+                             Dense="true" />
+            <MudSelect T="InvestmentTransactionType" Label="Type" @bind-Value="_formType" Dense="true">
+                <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Buy">Buy</MudSelectItem>
+                <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Sell">Sell</MudSelectItem>
+            </MudSelect>
+            <MudNumericField T="decimal" Label="Units" @bind-Value="_formQuantity" Min="0" Step="0.0001M" />
+            <MudTextField T="string" Label="Unit price" Value="@(_selectedInstrument is null ? string.Empty : _formUnitPrice.ToString("N2"))" ReadOnly="true" Disabled="true" />
+            @if (_noPriceAvailable && _selectedInstrument is not null)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true">No price data found for this instrument. Add a price quote before recording a transaction.</MudAlert>
+            }
+            <MudTextField T="string" Label="Currency" Value="@_formCurrency" ReadOnly="true" Disabled="true" />
+            <MudDatePicker Label="Trade date" @bind-Date="_formTradeDate" />
+            <MudNumericField T="decimal?" Label="Fee (optional)" @bind-Value="_formFee" Min="0" Step="0.01M" />
+            <MudTextField T="string" Label="Notes (optional)" @bind-Value="_formNotes" />
+            <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+                <MudButton Variant="Variant.Text" OnClick="CloseForm" Disabled="@_saving">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@(_saving || !CanSave)">Save</MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+</MudOverlay>
+
+<MudScrollToTop TopOffset="400" ScrollBehavior="ScrollBehavior.Smooth">
+    <MudFab Color="Color.Primary" Size="Size.Medium" StartIcon="@Icons.Material.Filled.KeyboardArrowUp"
+            aria-label="Scroll to top" />
+</MudScrollToTop>
+
+@code {
+    private RenderFragment HoldingsCard => __builder =>
+    {
+        <MudCard Outlined="true" Style="background-color: transparent;">
+            <MudCardHeader Class="py-2 px-4">
+                <CardHeaderContent><MudText Typo="Typo.subtitle2">Holdings</MudText></CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent Class="pa-0">
+                @if (_holdings.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Class="ma-4">No open holdings.</MudAlert>
+                }
+                else
+                {
+                    <MudSimpleTable Hover="true" Dense="true" Striped="true">
+                        <thead>
+                            <tr><th>Instrument</th><th class="text-right">Units</th><th class="text-right">Price</th><th class="text-right">Value</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var h in _holdings)
+                            {
+                                <tr>
+                                    <td>
+                                        <MudText Typo="Typo.body2">@h.Ticker</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@h.ExchangeName</MudText>
+                                    </td>
+                                    <td class="text-right">@h.Quantity.ToString("N4")</td>
+                                    <td class="text-right">@h.LatestPrice.ToString("N2") @h.Currency</td>
+                                    <td class="text-right">@h.Value.ToString("N2") @h.Currency</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                }
+            </MudCardContent>
+        </MudCard>
+    };
 }
