@@ -15,6 +15,7 @@ using FinanceManager.Application.FinancialAccounts.Currencies.Import;
 using FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
 using FinanceManager.Application.FinancialAccounts.Investments.Assets;
 using FinanceManager.Application.FinancialAccounts.Investments.Balance;
+using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
 using FinanceManager.Application.FinancialAccounts.Investments.Seeders;
 using FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 using FinanceManager.Application.FinancialAccounts.Shared.Csv;
@@ -68,6 +69,7 @@ internal static class Registration
                 .AddScoped<IAccountCsvExportService<BondAccountExportDto>, BondAccountCsvExportService>()
                 .AddScoped<IInvestmentPriceProvider, InvestmentPriceProvider>()
                 .AddScoped<IInvestmentValuationService, InvestmentValuationService>()
+                .AddScoped<IInvestmentInstrumentDiscoveryService, InvestmentInstrumentDiscoveryService>()
                 .AddScoped<IBondUnrealizedGainLossCalculator, BondUnrealizedGainLossCalculator>()
                 .AddScoped<IBondService, BondService>();
 
