@@ -42,23 +42,12 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
         if (cache.TryGetValue(cacheKey, out IReadOnlyList<InstrumentDiscoveryResultDto>? cached) && cached is not null)
             return cached;
 
-        IReadOnlyList<InstrumentDiscoveryResultDto> results;
-        try
-        {
-            results = IsinRegex().IsMatch(normalized)
-                ? await SearchByIsinAsync(normalized.ToUpperInvariant(), ct)
-                : await SearchByTickerOrNameAsync(normalized.ToUpperInvariant(), ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            // Never surface raw provider exceptions to the caller/UI; an empty result reads as "no matches".
-            logger.LogWarning(ex, "Instrument discovery search failed");
-            return [];
-        }
+        // Provider failures are degraded to empty lists inside SafeOpenFigi/SafeAlphaVantage, so any
+        // exception escaping here is a genuine bug (merge/normalize/cache) and should surface rather
+        // than masquerade as "no matches"; cancellation propagates naturally.
+        var results = IsinRegex().IsMatch(normalized)
+            ? await SearchByIsinAsync(normalized.ToUpperInvariant(), ct)
+            : await SearchByTickerOrNameAsync(normalized.ToUpperInvariant(), ct);
 
         cache.Set(cacheKey, results, _cacheTtl);
         return results;
@@ -110,7 +99,7 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
 
         foreach (var of in relevantOf)
         {
-            var av = FindMatchingAv(of, avMatches);
+            var av = FindMatchingAv(of, avMatches, consumedAvSymbols);
             if (av is not null)
                 consumedAvSymbols.Add(av.Symbol);
 
@@ -125,7 +114,7 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
             if (string.IsNullOrWhiteSpace(av.Symbol) || consumedAvSymbols.Contains(av.Symbol))
                 continue;
 
-            var dto = BuildFromAlphaVantage(av);
+            var dto = BuildFromAlphaVantage(baseTicker, av);
             var key = DedupeKey(dto);
             if (seen.Add(key))
                 results.Add(dto);
@@ -135,14 +124,18 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
     }
 
     // Correlate an Alpha Vantage match to an OpenFIGI listing by exchange-region or currency, so the
-    // AV provider symbol is attached to the right venue rather than an arbitrary one.
-    private static TickerSearchMatch? FindMatchingAv(OpenFigiListing of, IReadOnlyList<TickerSearchMatch> avMatches)
+    // AV provider symbol is attached to the right venue rather than an arbitrary one. Symbols already
+    // attached to an earlier listing are skipped so one AV symbol never spans multiple listings.
+    private static TickerSearchMatch? FindMatchingAv(
+        OpenFigiListing of,
+        IReadOnlyList<TickerSearchMatch> avMatches,
+        HashSet<string> consumedAvSymbols)
     {
         var mapping = BrokerSymbol.TryLookupByVenueToken(of.ExchCode);
 
         foreach (var av in avMatches)
         {
-            if (string.IsNullOrWhiteSpace(av.Symbol))
+            if (string.IsNullOrWhiteSpace(av.Symbol) || consumedAvSymbols.Contains(av.Symbol))
                 continue;
 
             var regionMatch = mapping is not null && mapping.MatchesRegion(av.Region);
@@ -201,8 +194,12 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
         };
     }
 
-    private static InstrumentDiscoveryResultDto BuildFromAlphaVantage(TickerSearchMatch av)
+    private static InstrumentDiscoveryResultDto BuildFromAlphaVantage(string baseTicker, TickerSearchMatch av)
     {
+        // Normalise the AV-only result: derive canonical venue identity from the AV region (its
+        // aliases are understood by BrokerSymbol), keep the base ticker as the display ticker, and
+        // preserve the raw provider symbol (e.g. "CSPX.LON") separately for price fetching.
+        var (mic, exchangeName, exchangeCode) = ResolveVenue(av.Region);
         var warnings = new List<string>
         {
             "Identity was not confirmed by OpenFIGI; verify the ISIN/FIGI and exchange before importing.",
@@ -212,9 +209,10 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
         {
             Source = "AlphaVantage",
             DisplayName = av.Name,
-            Ticker = av.Symbol,
-            ExchangeName = string.IsNullOrWhiteSpace(av.Region) ? null : av.Region,
-            ExchangeCode = string.IsNullOrWhiteSpace(av.Region) ? null : av.Region,
+            Ticker = string.IsNullOrWhiteSpace(baseTicker) ? av.Symbol : baseTicker,
+            ExchangeMic = mic,
+            ExchangeName = exchangeName,
+            ExchangeCode = exchangeCode,
             TradingCurrency = string.IsNullOrWhiteSpace(av.Currency) ? null : av.Currency,
             SecurityType = string.IsNullOrWhiteSpace(av.Type) ? null : av.Type,
             ProviderSymbol = av.Symbol,

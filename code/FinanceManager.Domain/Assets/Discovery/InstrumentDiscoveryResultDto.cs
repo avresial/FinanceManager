@@ -55,5 +55,5 @@ public sealed class InstrumentDiscoveryResultDto
     public decimal ConfidenceScore { get; init; }
 
     /// <summary>User-facing warnings about ambiguous or incomplete data (exchange mapping, currency, missing symbol, ...).</summary>
-    public List<string> Warnings { get; init; } = [];
+    public IReadOnlyList<string> Warnings { get; init; } = [];
 }

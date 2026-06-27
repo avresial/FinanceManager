@@ -133,9 +133,44 @@ public class InvestmentInstrumentDiscoveryServiceTests
 
         var result = Assert.Single(results);
         Assert.Equal("AlphaVantage", result.Source);
+        // The raw provider symbol stays on ProviderSymbol; the display ticker is normalized to the
+        // base ticker and the venue identity is resolved from the AV region.
         Assert.Equal("CSPX.LON", result.ProviderSymbol);
+        Assert.Equal("CSPX", result.Ticker);
+        Assert.Equal("XLON", result.ExchangeMic);
         Assert.True(result.ConfidenceScore <= 0.6m);
         Assert.Contains(result.Warnings, w => w.Contains("OpenFIGI", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task SearchAsync_DoesNotAttachSameProviderSymbolToMultipleListings()
+    {
+        // Two distinct venues for the same ticker, both quoted in USD, but only one Alpha Vantage symbol.
+        _openFigiClientMock
+            .Setup(x => x.MapByTickerAsync("CSPX", It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<OpenFigiListing>
+            {
+                new(Isin: null, Ticker: "CSPX", Name: "iShares Core S&P 500 UCITS ETF", ExchCode: "LN",
+                    Currency: "USD", Figi: "BBG001", ShareClassFigi: "BBGSC"),
+                new(Isin: null, Ticker: "CSPX", Name: "iShares Core S&P 500 UCITS ETF", ExchCode: "GY",
+                    Currency: "USD", Figi: "BBG002", ShareClassFigi: "BBGSC"),
+            });
+        _avClientMock
+            .Setup(x => x.SearchTicker("CSPX", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TickerSearchMatch>
+            {
+                new() { Symbol = "CSPX.LON", Name = "iShares Core S&P 500 ETF", Type = "ETF", Region = "United Kingdom", Currency = "USD", MatchScore = 1m },
+            });
+
+        var service = CreateService();
+
+        var results = await service.SearchAsync("CSPX", TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, results.Count);
+        // The single AV symbol must be attached to exactly one listing, not both.
+        Assert.Single(results, r => r.ProviderSymbol == "CSPX.LON");
+        Assert.Single(results, r => r.Source == "Combined");
+        Assert.Single(results, r => r.Source == "OpenFIGI" && r.ProviderSymbol is null);
     }
 
     [Fact]
