@@ -20,6 +20,7 @@ public partial class AdminLogsPage : ComponentBase, IAsyncDisposable
     private bool _loading;
     private string? _loadError;
     private HubConnection? _hubConnection;
+    private readonly HashSet<int> _expanded = [];
 
     [Inject] public required AdminLogsHttpClient AdminLogsHttpClient { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
@@ -61,12 +62,14 @@ public partial class AdminLogsPage : ComponentBase, IAsyncDisposable
     {
         _levelFilter = string.IsNullOrEmpty(value) ? "all" : value;
         _skip = 0;
+        _expanded.Clear();
         await LoadPage();
     }
 
     private async Task PrevPage()
     {
         _skip = Math.Max(0, _skip - _take);
+        _expanded.Clear();
         await LoadPage();
     }
 
@@ -74,7 +77,16 @@ public partial class AdminLogsPage : ComponentBase, IAsyncDisposable
     {
         if (_skip + _take >= _totalCount) return;
         _skip += _take;
+        _expanded.Clear();
         await LoadPage();
+    }
+
+    private bool IsExpanded(int id) => _expanded.Contains(id);
+
+    private void ToggleExpand(int id)
+    {
+        if (!_expanded.Add(id))
+            _expanded.Remove(id);
     }
 
     private async Task ConnectHub()
