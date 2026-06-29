@@ -11,15 +11,30 @@
 <PageTitle>Logs - Admin</PageTitle>
 
 <MudStack Spacing="3">
-    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+    <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
         <MudIcon Icon="@Icons.Material.Filled.ReportProblem" Color="Color.Warning" />
         <MudText Typo="Typo.h5">Application logs</MudText>
         <MudSpacer />
         <MudToggleGroup T="string" SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary"
                         Outlined="true" Dense="true" Value="@_levelFilter" ValueChanged="OnLevelChanged">
-            <MudToggleItem Value="@("all")">All</MudToggleItem>
-            <MudToggleItem Value="@("warning")">Warning</MudToggleItem>
-            <MudToggleItem Value="@("error")">Error</MudToggleItem>
+            <MudToggleItem Value="@("all")">
+                <span class="d-flex align-center" title="All logs" aria-label="All logs">
+                    <MudIcon Icon="@Icons.Material.Filled.FormatListBulleted" Size="Size.Small" />
+                    <span class="d-none d-sm-inline ms-1">All</span>
+                </span>
+            </MudToggleItem>
+            <MudToggleItem Value="@("warning")">
+                <span class="d-flex align-center" title="Warnings" aria-label="Warnings">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" />
+                    <span class="d-none d-sm-inline ms-1">Warning</span>
+                </span>
+            </MudToggleItem>
+            <MudToggleItem Value="@("error")">
+                <span class="d-flex align-center" title="Errors" aria-label="Errors">
+                    <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" />
+                    <span class="d-none d-sm-inline ms-1">Error</span>
+                </span>
+            </MudToggleItem>
         </MudToggleGroup>
     </MudStack>
 
@@ -28,56 +43,75 @@
         <MudAlert Severity="Severity.Error" Dense>@_loadError</MudAlert>
     }
 
-    <MudPaper Outlined Class="pa-0">
-        <MudTable T="LogEntryDto" Items="@_page" Loading="@_loading" Hover Dense Bordered="false"
-                  Breakpoint="Breakpoint.Sm">
-            <HeaderContent>
-                <MudTh Style="width:110px">Level</MudTh>
-                <MudTh Style="width:180px">When</MudTh>
-                <MudTh>Message</MudTh>
-                <MudTh Style="width:280px">Category</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd>
-                    <MudChip T="string" Size="Size.Small" Color="@LevelColor(context.Level)" Variant="Variant.Filled">
-                        @context.Level.ToString()
-                    </MudChip>
-                </MudTd>
-                <MudTd>
-                    <MudText Typo="Typo.caption">@context.TimestampUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
-                </MudTd>
-                <MudTd>
-                    <MudStack Spacing="0">
-                        <MudText Typo="Typo.body2">@context.Message</MudText>
-                        @if (!string.IsNullOrEmpty(context.Exception))
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Error" Style="white-space:pre-wrap;max-height:160px;overflow:auto">
-                                @context.Exception
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate />
+    }
+    else if (_page.Count == 0)
+    {
+        <MudPaper Outlined Class="pa-3">
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                No log entries match the current filter.
+            </MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudStack Spacing="2">
+            @foreach (var entry in _page)
+            {
+                <MudPaper Outlined Class="pa-2" Style="overflow:hidden">
+                    <MudStack Spacing="1" Style="min-width:0">
+                        <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
+                            <MudChip T="string" Size="Size.Small" Color="@LevelColor(entry.Level)" Variant="Variant.Filled" Class="ma-0">
+                                @entry.Level.ToString()
+                            </MudChip>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @entry.TimestampUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
                             </MudText>
+                            <MudSpacer />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary"
+                                     Style="overflow-wrap:anywhere;min-width:0">
+                                @entry.Category
+                            </MudText>
+                        </MudStack>
+
+                        <MudText Typo="Typo.body2" Style="overflow-wrap:anywhere;word-break:break-word">
+                            @entry.Message
+                        </MudText>
+
+                        @if (!string.IsNullOrEmpty(entry.Exception))
+                        {
+                            <div>
+                                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                                           StartIcon="@(IsExpanded(entry.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                           OnClick="@(() => ToggleExpand(entry.Id))"
+                                           aria-label="@(IsExpanded(entry.Id) ? "Hide details" : "Show details")">
+                                    @(IsExpanded(entry.Id) ? "Hide details" : "Show details")
+                                </MudButton>
+                            </div>
+                            <MudCollapse Expanded="@IsExpanded(entry.Id)">
+                                <MudText Typo="Typo.caption" Color="Color.Error"
+                                         Style="display:block;font-family:monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-width:100%;max-height:240px;overflow:auto">
+                                    @entry.Exception
+                                </MudText>
+                            </MudCollapse>
                         }
                     </MudStack>
-                </MudTd>
-                <MudTd>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Category</MudText>
-                </MudTd>
-            </RowTemplate>
-            <NoRecordsContent>
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-3">
-                    No log entries match the current filter.
-                </MudText>
-            </NoRecordsContent>
-        </MudTable>
-
-        <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="pa-3">
-            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                Showing @FromDisplay()&ndash;@ToDisplay() of @_totalCount
-            </MudText>
-            <MudSpacer />
-            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Disabled="@(_skip <= 0 || _loading)"
-                           OnClick="PrevPage" Size="Size.Small" aria-label="Previous page" />
-            <MudText Typo="Typo.body2">Page @CurrentPage / @TotalPages</MudText>
-            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Disabled="@(_skip + _take >= _totalCount || _loading)"
-                           OnClick="NextPage" Size="Size.Small" aria-label="Next page" />
+                </MudPaper>
+            }
         </MudStack>
-    </MudPaper>
+    }
+
+    <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            Showing @FromDisplay()&ndash;@ToDisplay() of @_totalCount
+        </MudText>
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Disabled="@(_skip <= 0 || _loading)"
+                       OnClick="PrevPage" Size="Size.Small" aria-label="Previous page" />
+        <MudText Typo="Typo.body2">Page @CurrentPage / @TotalPages</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Disabled="@(_skip + _take >= _totalCount || _loading)"
+                       OnClick="NextPage" Size="Size.Small" aria-label="Next page" />
+    </MudStack>
 </MudStack>
