@@ -17,20 +17,20 @@
         <MudSpacer />
         <MudToggleGroup T="string" SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary"
                         Outlined="true" Dense="true" Value="@_levelFilter" ValueChanged="OnLevelChanged">
-            <MudToggleItem Value="@("all")">
-                <span class="d-flex align-center" title="All logs" aria-label="All logs">
+            <MudToggleItem Value="@("all")" title="All logs" aria-label="All logs">
+                <span class="d-flex align-center">
                     <MudIcon Icon="@Icons.Material.Filled.FormatListBulleted" Size="Size.Small" />
                     <span class="d-none d-sm-inline ms-1">All</span>
                 </span>
             </MudToggleItem>
-            <MudToggleItem Value="@("warning")">
-                <span class="d-flex align-center" title="Warnings" aria-label="Warnings">
+            <MudToggleItem Value="@("warning")" title="Warnings" aria-label="Warnings">
+                <span class="d-flex align-center">
                     <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" />
                     <span class="d-none d-sm-inline ms-1">Warning</span>
                 </span>
             </MudToggleItem>
-            <MudToggleItem Value="@("error")">
-                <span class="d-flex align-center" title="Errors" aria-label="Errors">
+            <MudToggleItem Value="@("error")" title="Errors" aria-label="Errors">
+                <span class="d-flex align-center">
                     <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" />
                     <span class="d-none d-sm-inline ms-1">Error</span>
                 </span>
@@ -47,7 +47,7 @@
     {
         <MudProgressLinear Color="Color.Primary" Indeterminate />
     }
-    else if (_page.Count == 0)
+    else if (_loadError is null && _page.Count == 0)
     {
         <MudPaper Outlined Class="pa-3">
             <MudText Typo="Typo.body2" Color="Color.Secondary">
@@ -103,15 +103,18 @@
         </MudStack>
     }
 
-    <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
-        <MudText Typo="Typo.caption" Color="Color.Secondary">
-            Showing @FromDisplay()&ndash;@ToDisplay() of @_totalCount
-        </MudText>
-        <MudSpacer />
-        <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Disabled="@(_skip <= 0 || _loading)"
-                       OnClick="PrevPage" Size="Size.Small" aria-label="Previous page" />
-        <MudText Typo="Typo.body2">Page @CurrentPage / @TotalPages</MudText>
-        <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Disabled="@(_skip + _take >= _totalCount || _loading)"
-                       OnClick="NextPage" Size="Size.Small" aria-label="Next page" />
-    </MudStack>
+    @if (_loadError is null)
+    {
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                Showing @FromDisplay()&ndash;@ToDisplay() of @_totalCount
+            </MudText>
+            <MudSpacer />
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Disabled="@(_skip <= 0 || _loading)"
+                           OnClick="PrevPage" Size="Size.Small" aria-label="Previous page" />
+            <MudText Typo="Typo.body2">Page @CurrentPage / @TotalPages</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Disabled="@(_skip + _take >= _totalCount || _loading)"
+                           OnClick="NextPage" Size="Size.Small" aria-label="Next page" />
+        </MudStack>
+    }
 </MudStack>
