@@ -444,11 +444,17 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
     public async Task<bool> AddLabel(int entryId, int labelId)
     {
-        var entry = await context.BondEntries.FirstOrDefaultAsync(e => e.EntryId == entryId);
+        var entry = await context.BondEntries
+            .Include(e => e.Labels)
+            .FirstOrDefaultAsync(e => e.EntryId == entryId);
         var label = await context.FinancialLabels.FirstOrDefaultAsync(l => l.Id == labelId);
 
         if (entry is null || label is null) return false;
 
+        // Idempotent: don't add a label the entry already carries.
+        if (entry.Labels.Any(l => l.Id == labelId)) return true;
+
+        entry.Labels.Add(label);
         await context.SaveChangesAsync();
 
         return true;
