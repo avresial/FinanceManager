@@ -12,6 +12,9 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+		<!-- Direct reference so the central pin (2.7.5) overrides the vulnerable 2.0.0 transitive
+		     dependency; transitive pinning is disabled centrally. See Directory.Packages.props. -->
+		<PackageReference Include="Microsoft.OpenApi" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
 		<PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
 		<PackageReference Include="Scalar.AspNetCore" />
