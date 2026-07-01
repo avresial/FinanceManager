@@ -103,6 +103,19 @@ public static class ApiConfigurationExtensions
             throw new InvalidOperationException(
                 "JwtConfig:TokenValidityMins must be greater than 0. Set it to a positive number (e.g. 15) in appsettings or User Secrets.");
 
+        // ValidateIssuer/ValidateAudience are enabled below, so an empty issuer/audience would reject
+        // every token at request time. Fail fast at startup instead — JwtTokenGenerator mints tokens
+        // with these same values, so both must be configured for auth to work at all.
+        var jwtIssuer = configuration["JwtConfig:Issuer"];
+        if (string.IsNullOrWhiteSpace(jwtIssuer))
+            throw new InvalidOperationException(
+                "JwtConfig:Issuer is not configured. Set it in appsettings or User Secrets.");
+
+        var jwtAudience = configuration["JwtConfig:Audience"];
+        if (string.IsNullOrWhiteSpace(jwtAudience))
+            throw new InvalidOperationException(
+                "JwtConfig:Audience is not configured. Set it in appsettings or User Secrets.");
+
         var allowedCorsOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
             ?.Where(origin => !string.IsNullOrWhiteSpace(origin))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -146,8 +159,8 @@ public static class ApiConfigurationExtensions
             options.SaveToken = true;
             options.TokenValidationParameters = new TokenValidationParameters
             {
-                ValidIssuer = configuration["JwtConfig:Issuer"],
-                ValidAudience = configuration["JwtConfig:Audience"],
+                ValidIssuer = jwtIssuer,
+                ValidAudience = jwtAudience,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
                 ValidateIssuer = true,
                 ValidateAudience = true,
@@ -206,19 +219,37 @@ public static class ApiConfigurationExtensions
                 "ReverseProxy:KnownProxies or ReverseProxy:KnownNetworks must be configured outside Development. " +
                 "Set these to the IP addresses or CIDR ranges of your reverse proxy (e.g. Cloudflare's published ranges).");
 
+        // Parse and validate every entry up front. A silently-dropped typo would shrink the trusted-proxy
+        // set (or empty it entirely), leaving the app unable to see the real client scheme/IP — fail fast.
+        var knownProxies = new List<System.Net.IPAddress>();
+        foreach (var proxy in reverseProxyIps)
+        {
+            if (!System.Net.IPAddress.TryParse(proxy, out var ip))
+                throw new InvalidOperationException(
+                    $"ReverseProxy:KnownProxies contains an invalid IP address: '{proxy}'.");
+            knownProxies.Add(ip);
+        }
+
+        var knownNetworks = new List<System.Net.IPNetwork>();
+        foreach (var network in reverseProxyNetworks)
+        {
+            if (!System.Net.IPNetwork.TryParse(network, out var net))
+                throw new InvalidOperationException(
+                    $"ReverseProxy:KnownNetworks contains an invalid CIDR network: '{network}'.");
+            knownNetworks.Add(net);
+        }
+
         services.Configure<ForwardedHeadersOptions>(options =>
         {
             options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
             options.KnownIPNetworks.Clear();
             options.KnownProxies.Clear();
 
-            foreach (var proxy in reverseProxyIps)
-                if (System.Net.IPAddress.TryParse(proxy, out var ip))
-                    options.KnownProxies.Add(ip);
+            foreach (var ip in knownProxies)
+                options.KnownProxies.Add(ip);
 
-            foreach (var network in reverseProxyNetworks)
-                if (System.Net.IPNetwork.TryParse(network, out var net))
-                    options.KnownIPNetworks.Add(net);
+            foreach (var net in knownNetworks)
+                options.KnownIPNetworks.Add(net);
         });
 
         return services;
