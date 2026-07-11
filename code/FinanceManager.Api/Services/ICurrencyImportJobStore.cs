@@ -1,5 +1,6 @@
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Imports;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 
 namespace FinanceManager.Api.Services;
 

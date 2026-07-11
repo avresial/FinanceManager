@@ -1,10 +1,11 @@
-using FinanceManager.Application.Services;
+using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -291,6 +292,25 @@ public class CurrencyAccountControllerTests(OptionsProvider optionsProvider) : C
             .Where(e => e.AccountId == _testAccountId)
             .ToListAsync(TestContext.Current.CancellationToken);
         Assert.Empty(entriesInDb);
+    }
+
+    [Fact]
+    public async Task GetWithDateRange_PopulatesDistinctYoungerAndOlderBoundaryEntries()
+    {
+        await SeedAccountWithEntries();
+        Authorize("testuser", _testUserId, UserRole.User);
+        var client = new CurrencyAccountHttpClient(Client);
+        var startDate = DateTime.UtcNow.Date.AddDays(-3);
+        var endDate = DateTime.UtcNow.Date;
+
+        var account = await client.GetAccountWithEntriesAsync(_testAccountId, startDate, endDate);
+
+        Assert.NotNull(account);
+        // NextOlderEntry should be entry 2 (from -5 days, before the range starting at -3)
+        Assert.NotNull(account!.NextOlderEntry);
+        Assert.Equal(2, account.NextOlderEntry!.EntryId);
+        // NextYoungerEntry should be null (no entries after the range ending at today)
+        Assert.Null(account.NextYoungerEntry);
     }
 
     [Fact]

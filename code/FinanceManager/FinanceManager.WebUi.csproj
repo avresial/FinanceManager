@@ -1,9 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
 	<PropertyGroup>
 		<ApplicationIcon>wwwroot\favicon.ico</ApplicationIcon>
 		<WasmEnableHotReload>false</WasmEnableHotReload>
-	</PropertyGroup>
+	  <UserSecretsId>dc6a3527-8cc4-4968-bc2c-e88cc40e7804</UserSecretsId>
+  </PropertyGroup>
 
 	<ItemGroup>
 		<Compile Include="..\GlobalUsings.cs" Link="GlobalUsings.cs" />

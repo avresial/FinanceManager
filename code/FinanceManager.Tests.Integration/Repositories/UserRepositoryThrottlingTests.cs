@@ -1,4 +1,5 @@
-using FinanceManager.Domain.Enums;
+using FinanceManager.Application.Identity.Lockout;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;

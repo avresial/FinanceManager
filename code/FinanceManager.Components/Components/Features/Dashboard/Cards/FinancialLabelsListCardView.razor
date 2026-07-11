@@ -1,0 +1,125 @@
+@using FinanceManager.Domain.MoneyFlow.Entities
+
+<MudCard Outlined Class="rounded-lg d-flex flex-column fm-labels-card" Style="@($"height:{Height};")">
+    <MudCardHeader Class="py-2 flex-shrink-0">
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6" Class="fm-title">Money by label</MudText>
+            <MudText Typo="Typo.caption" Class="fm-muted">@PeriodLabel</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            @if (!IsLoading && !HasError && Data.Any())
+            {
+                <div class="d-flex flex-column align-end mr-2">
+                    <MudText Typo="Typo.overline" Class="fm-muted fm-tight fm-caps">Net</MudText>
+                    <MudText Typo="Typo.subtitle1" Class="@($"fm-amount fm-tight {(_net >= 0 ? "fm-pos" : "fm-neg")}")">@Fmt(_net, true)</MudText>
+                </div>
+            }
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudDivider Class="flex-grow-0" />
+
+    <MudCardContent Class="flex-grow-1 overflow-y-auto py-0 px-2" Style="min-height:0;">
+        @if (IsLoading)
+        {
+            <MudList T="string" Dense ReadOnly DisablePadding Class="pt-2">
+                @for (var i = 0; i < 6; i++)
+                {
+                    <MudListItem Class="py-1">
+                        <div class="d-flex align-center fm-row">
+                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Width="34px" Height="34px" Class="rounded" />
+                            <div class="flex-grow-1" style="min-width:0;">
+                                <div class="d-flex justify-space-between align-center gap-2">
+                                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="40%" />
+                                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="22%" />
+                                </div>
+                                <div class="d-flex justify-space-between align-center gap-3 mt-1">
+                                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="6px" Width="65%" Class="rounded" />
+                                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="15%" />
+                                </div>
+                            </div>
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+        else if (HasError)
+        {
+            <div class="fm-state">
+                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Error" Size="Size.Large" />
+                <MudText Typo="Typo.subtitle1" Class="mt-2">Couldn't load labels</MudText>
+                <MudText Typo="Typo.body2" Class="fm-muted" Align="Align.Center">
+                    Something went wrong fetching this period's breakdown.
+                </MudText>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                           Class="mt-2" OnClick="OnRetry">Try again</MudButton>
+            </div>
+        }
+        else if (Data.Any())
+        {
+            <MudList T="NameValueResult" Dense ReadOnly DisablePadding>
+                @if (_income.Any())
+                {
+                    <MudListSubheader Class="d-flex justify-space-between align-center fm-subheader px-3">
+                        <MudText Typo="Typo.overline" Class="fm-muted fm-tight fm-caps">Income</MudText>
+                        <MudText Typo="Typo.caption" Class="fm-amount fm-muted">@Fmt(_totalIn, true)</MudText>
+                    </MudListSubheader>
+                    @foreach (var label in _income)
+                    {
+                        @LabelRow(label, _maxIn, _totalIn, true)
+                    }
+                }
+
+                @if (_spending.Any())
+                {
+                    <MudListSubheader Class="d-flex justify-space-between align-center fm-subheader px-3">
+                        <MudText Typo="Typo.overline" Class="fm-muted fm-tight fm-caps">Spending</MudText>
+                        <MudText Typo="Typo.caption" Class="fm-amount fm-muted">@Fmt(-_totalOut)</MudText>
+                    </MudListSubheader>
+                    @foreach (var label in _spending)
+                    {
+                        @LabelRow(label, _maxOut, _totalOut, false)
+                    }
+                }
+            </MudList>
+        }
+        else
+        {
+            <div class="fm-state">
+                <div class="fm-state-icon">
+                    <MudIcon Icon="@Icons.Material.Filled.Inbox" Color="Color.Default" Size="Size.Large" />
+                </div>
+                <MudText Typo="Typo.subtitle1" Class="mt-2">No data</MudText>
+                <MudText Typo="Typo.body2" Class="fm-muted" Align="Align.Center">
+                    No labelled activity in this period. Try a wider date range.
+                </MudText>
+            </div>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private RenderFragment LabelRow(NameValueResult label, decimal groupMax, decimal groupTotal, bool isIncome)
+    {
+        return @<MudListItem T="NameValueResult" Class="fm-list-item">
+            <div class="d-flex align-center fm-row">
+                <MudAvatar Rounded Size="Size.Medium" Class="@($"fm-chip {(isIncome ? "fm-tint-pos" : "fm-tint-neg")}")">
+                    <MudIcon Icon="@GetCategoryIcon(label.Name)" Size="Size.Small" />
+                </MudAvatar>
+                <div class="flex-grow-1" style="min-width:0;">
+                    <div class="d-flex justify-space-between align-baseline gap-2">
+                        <MudText Typo="Typo.body2" Class="fm-name text-truncate">@label.Name</MudText>
+                        <MudText Typo="Typo.body2" Class="@($"fm-amount {(isIncome ? "fm-pos" : "fm-neg")}")">@Fmt(label.Value, true)</MudText>
+                    </div>
+                    <div class="d-flex align-center gap-3 mt-1">
+                        <MudProgressLinear Rounded Value="@BarPercentage(label.Value, groupMax)"
+                                           Class="@($"flex-grow-1 {(isIncome ? "fm-bar-pos" : "fm-bar-neg")}")"
+                                           Style="height:6px;" />
+                        <MudText Typo="Typo.caption" Class="fm-share fm-muted">
+                            @SharePercentage(label.Value, groupTotal)% of @(isIncome ? "income" : "spending")
+                        </MudText>
+                    </div>
+                </div>
+            </div>
+        </MudListItem>;
+    }
+}

@@ -1,6 +1,7 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 var postgresServer = builder.AddPostgres("postgreSQLServer")
+                            .WithImageTag("17")
                             .WithPgAdmin()
                             .WithLifetime(ContainerLifetime.Persistent)
                             .WithDataBindMount(source: @"C:\Users\Miki\Documents\Repositories\Docker");

@@ -1,7 +1,10 @@
 using FinanceManager.Api.Helpers;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.MoneyFlow.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,17 +14,18 @@ namespace FinanceManager.Api.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Financial Analysis")]
-public class MoneyFlowController(IMoneyFlowService moneyFlowService, IBalanceService balanceService, ICurrencyRepository currencyRepository) : ControllerBase
+public class MoneyFlowController(INetWorthService netWorthService, ILabelsValueService labelsValueService,
+    IInvestmentRateService investmentRateService, IBalanceService balanceService, ICurrencyRepository currencyRepository) : ControllerBase
 {
     [HttpGet("GetNetWorth/{userId:int}/{currencyId:int}/{date:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(decimal))]
     public async Task<IActionResult> GetNetWorth(int userId, int currencyId, DateTime date, CancellationToken cancellationToken = default) =>
-        ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await moneyFlowService.GetNetWorth(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), date)) : Forbid();
+        ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await netWorthService.GetNetWorth(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), date)) : Forbid();
 
     [HttpGet("GetNetWorth/{userId:int}/{currencyId:int}/{start:DateTime}/{end:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Dictionary<DateTime, decimal>))]
     public async Task<IActionResult> GetNetWorth(int userId, int currencyId, DateTime start, DateTime end, CancellationToken cancellationToken = default) =>
-        ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await moneyFlowService.GetNetWorth(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), start, end)) : Forbid();
+        ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await netWorthService.GetNetWorth(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), start, end)) : Forbid();
 
     [HttpGet("GetInflow/{userId:int}/{currencyId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TimeSeriesModel>))]
@@ -74,11 +78,11 @@ public class MoneyFlowController(IMoneyFlowService moneyFlowService, IBalanceSer
     [HttpGet("GetLabelsValue")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(NameValueResult))]
     public async Task<IActionResult> GetLabelsValue([FromQuery] int userId, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long? step = null, CancellationToken cancellationToken = default) =>
-        ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await moneyFlowService.GetLabelsValue(userId, start, end)) : Forbid();
+        ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await labelsValueService.GetLabelsValue(userId, start, end)) : Forbid();
 
     [HttpGet("GetInvestmentRate")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InvestmentRate>))]
     public async Task<IActionResult> GetInvestmentRate([FromQuery] int userId, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long? step = null, CancellationToken cancellationToken = default) =>
-        ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await moneyFlowService.GetInvestmentRate(userId, start, end).ToListAsync(cancellationToken)) : Forbid();
+        ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await investmentRateService.GetInvestmentRate(userId, start, end).ToListAsync(cancellationToken)) : Forbid();
 
 }

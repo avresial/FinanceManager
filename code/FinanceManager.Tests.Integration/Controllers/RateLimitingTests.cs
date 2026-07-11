@@ -1,4 +1,4 @@
-using FinanceManager.Application.Options;
+using FinanceManager.Application.Shared.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Net;

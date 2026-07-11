@@ -1,4 +1,4 @@
-using FinanceManager.Application.Services.Ai;
+using FinanceManager.Application.Shared.Ai;
 using GitHub.Copilot.SDK;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;

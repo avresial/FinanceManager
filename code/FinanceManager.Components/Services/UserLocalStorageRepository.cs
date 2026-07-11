@@ -1,8 +1,7 @@
 ﻿using Blazored.LocalStorage;
-using FinanceManager.Domain.Entities.Users;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories;
-using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Domain.Identity.Dtos;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Infrastructure.Repositories;

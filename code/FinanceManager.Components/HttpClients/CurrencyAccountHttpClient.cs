@@ -1,8 +1,10 @@
-using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.ValueObjects;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
+using FinanceManager.Domain.Identity.Entities;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;
@@ -33,15 +35,9 @@ public class CurrencyAccountHttpClient(HttpClient httpClient)
         return MapAccount(result);
     }
 
-    public async Task<CurrencyAccount?> GetInitialTransactionHistoryAsync(int accountId, DateTime startDate, DateTime endDate,
-        int minimumEntryCount = 100)
-    {
-        var encodedStartDate = Uri.EscapeDataString(startDate.ToString("O"));
-        var encodedEndDate = Uri.EscapeDataString(endDate.ToString("O"));
-        var result = await httpClient.GetFromJsonAsync<CurrencyAccountDto>(
-            $"{httpClient.BaseAddress}api/CurrencyAccount/{accountId}/GetInitialTransactionHistory?startDate={encodedStartDate}&endDate={encodedEndDate}&minimumEntryCount={minimumEntryCount}");
-        return MapAccount(result);
-    }
+    public Task<CurrencyAccount?> GetInitialTransactionHistoryAsync(int accountId, DateTime startDate, DateTime endDate,
+        int minimumEntryCount = 100) =>
+        GetAccountWithEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
 
     public async Task<CurrencyAccount?> GetAccountWithEntriesAsync(int accountId, DateTime date, int count, bool olderThenDate = true)
     {

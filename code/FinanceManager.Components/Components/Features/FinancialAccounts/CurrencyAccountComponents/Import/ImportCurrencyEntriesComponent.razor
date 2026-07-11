@@ -3,7 +3,7 @@
 @using FinanceManager.Infrastructure.Readers
 @using Microsoft.AspNetCore.Components.Forms
 @using System.Globalization
-@inherits ImportEntriesComponentBase<FinanceManager.Domain.Entities.FinancialAccounts.Currencies.CurrencyAccount, ImportCurrencyEntriesComponent>
+@inherits ImportEntriesComponentBase<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.CurrencyAccount, ImportCurrencyEntriesComponent>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="pa-2">
 
@@ -24,12 +24,12 @@
                     <ImportCsvFileStep Errors="_erorrs"
                                        RawPreview="_rawPreview"
                                        Headers="_headers"
-                                       IsLoading="_isImportingData"
-                                       FileName="_fileName"
-                                       FileSize="_fileSize"
-                                       TotalRowCount="_totalRowCount"
+                                       IsLoading="@_isImportingData"
+                                       FileName="@_fileName"
+                                       FileSize="@_fileSize"
+                                       TotalRowCount="@_totalRowCount"
                                        Description="We support exports from mBank, ING, PKO, Santander and Revolut."
-                                       DragClass="_dragClass"
+                                       DragClass="@_dragClass"
                                        @bind-Delimiter="Delimiter"
                                        OnFilesChanged="UploadFiles"
                                        Clear="Clear"

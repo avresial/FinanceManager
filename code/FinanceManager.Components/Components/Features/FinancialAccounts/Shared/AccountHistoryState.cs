@@ -1,6 +1,6 @@
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using System.Globalization;
 
 namespace FinanceManager.Components.Components.Features.FinancialAccounts.Shared;
@@ -11,11 +11,6 @@ public static class AccountHistoryState
         account?.Entries.Any() == true
         || account?.NextOlderEntry is not null
         || account?.NextYoungerEntry is not null;
-
-    public static bool HasTransactionHistory(StockAccount? account) =>
-        account?.Entries.Any() == true
-        || account?.NextOlderEntries.Any() == true
-        || account?.NextYoungerEntries.Any() == true;
 
     public static bool HasTransactionHistory(BondAccount? account) =>
         account?.Entries.Any() == true

@@ -1,5 +1,6 @@
-using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;
@@ -40,6 +41,12 @@ public class BondEntryHttpClient(HttpClient httpClient)
     public async Task<bool> DeleteEntryAsync(int accountId, int entryId)
     {
         var response = await httpClient.DeleteAsync($"{httpClient.BaseAddress}api/BondEntry/{accountId}/{entryId}");
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> RecalculateBalanceAsync(int accountId)
+    {
+        var response = await httpClient.PostAsync($"{httpClient.BaseAddress}api/BondEntry/Recalculate/{accountId}", null);
         return response.IsSuccessStatusCode;
     }
 

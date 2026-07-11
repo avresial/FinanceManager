@@ -1,23 +1,36 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.Shared.Accounts;
-using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Domain.ValueObjects;
+using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Services;
 
 public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHttpClient, CurrencyEntryHttpClient currencyEntryHttpClient,
-    StockAccountHttpClient stockAccountHttpClient, StockEntryHttpClient stockEntryHttpClient,
+    InvestmentAccountHttpClient investmentAccountHttpClient,
     BondAccountHttpClient bondAccountHttpClient, BondEntryHttpClient bondEntryHttpClient,
+    AccountDataSynchronizationService accountDataSynchronizationService, ILoginService loginService,
     ILogger<FinancialAccountService> logger) : IFinancialAccountService
 {
+    // The account-id → type map only changes when accounts are added/removed, yet today it is fetched
+    // (three account-endpoint round-trips) on every navigation to an account page, purely to decide
+    // which details component to render. Cache it so re-navigation is instant. The cache is invalidated
+    // on the service's own account mutations, on the app-wide AccountsChanged signal (covers accounts
+    // added straight through the HttpClients, e.g. AddAccount.razor.cs), and on login-state changes so
+    // it never leaks across users (logout does not reload the app, so this scoped instance is reused).
+    private Dictionary<int, Type>? _availableAccountsCache;
+    private bool _invalidationHooksInstalled;
+
+
     public async Task<bool> AccountExists(int id)
     {
         if ((await currencyAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id)) return true;
-        if ((await stockAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id)) return true;
+        if ((await investmentAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id)) return true;
         if ((await bondAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id)) return true;
 
         return false;
@@ -25,7 +38,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     public async Task<bool> AccountExists<T>(int id)
     {
         if (typeof(T) == typeof(CurrencyAccount)) return (await currencyAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id);
-        if (typeof(T) == typeof(StockAccount)) return (await stockAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id);
+        if (typeof(T) == typeof(InvestmentAccount)) return (await investmentAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id);
         if (typeof(T) == typeof(BondAccount)) return (await bondAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id);
 
         return false;
@@ -37,8 +50,8 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
             case CurrencyAccount:
                 await currencyAccountHttpClient.AddAccountAsync(new AddAccount(account.Name));
                 break;
-            case StockAccount:
-                await stockAccountHttpClient.AddAccountAsync(new AddAccount(account.Name));
+            case InvestmentAccount:
+                await investmentAccountHttpClient.AddAccountAsync(new AddAccount(account.Name));
                 break;
             case BondAccount:
                 await bondAccountHttpClient.AddAccountAsync(new AddAccount(account.Name));
@@ -46,6 +59,8 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
             default: throw new NotSupportedException($"Account type {typeof(T)} not supported for adding account.");
         }
+
+        InvalidateAvailableAccountsCache();
     }
     public async Task AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
         where AccountType : BasicAccountInformation
@@ -63,13 +78,10 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
                 }
             }
         }
-        else if (typeof(AccountType) == typeof(StockAccount))
+        else if (typeof(AccountType) == typeof(InvestmentAccount))
         {
-            await stockAccountHttpClient.AddAccountAsync(new(accountName));
-
-            foreach (var item in data)
-                if (item is StockAccountEntry stockEntry)
-                    await stockEntryHttpClient.AddEntryAsync(new(stockEntry));
+            // Investment accounts hold no per-account entries; holdings are added later as transactions.
+            await investmentAccountHttpClient.AddAccountAsync(new(accountName));
         }
         else if (typeof(AccountType) == typeof(BondAccount))
         {
@@ -83,6 +95,8 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         {
             throw new NotSupportedException($"Account type {typeof(AccountType)} not supported for adding account with entries.");
         }
+
+        InvalidateAvailableAccountsCache();
     }
     public async Task AddEntry<T>(T accountEntry) where T : FinancialEntryBase
     {
@@ -91,11 +105,6 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
             case CurrencyAccountEntry currencyEntry:
                 await currencyEntryHttpClient.AddEntryAsync(new(currencyEntry.AccountId, currencyEntry.EntryId, currencyEntry.PostingDate, currencyEntry.Value,
                     currencyEntry.ValueChange, currencyEntry.Description, currencyEntry.ContractorDetails));
-                break;
-
-            case StockAccountEntry stockAccountEntry:
-                if (!await stockEntryHttpClient.AddEntryAsync(new(stockAccountEntry)))
-                    throw new Exception("Adding entry failed");
                 break;
 
             case BondAccountEntry bondEntry:
@@ -111,8 +120,8 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     {
         if (typeof(T) == typeof(CurrencyAccount))
             return await currencyAccountHttpClient.GetAccountWithEntriesAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
-        else if (typeof(T) == typeof(StockAccount))
-            return await stockAccountHttpClient.GetAccountWithEntriesAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
+        else if (typeof(T) == typeof(InvestmentAccount))
+            return await investmentAccountHttpClient.GetAccountAsync(id) as T;
         else if (typeof(T) == typeof(BondAccount))
             return await bondAccountHttpClient.GetAccountWithEntriesAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
 
@@ -125,8 +134,8 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     {
         if (typeof(T) == typeof(CurrencyAccount))
             return await currencyAccountHttpClient.GetInitialTransactionHistoryAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
-        else if (typeof(T) == typeof(StockAccount))
-            return await stockAccountHttpClient.GetInitialTransactionHistoryAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
+        else if (typeof(T) == typeof(InvestmentAccount))
+            return await investmentAccountHttpClient.GetAccountAsync(id) as T;
         else if (typeof(T) == typeof(BondAccount))
             return await bondAccountHttpClient.GetInitialTransactionHistoryAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
 
@@ -140,8 +149,8 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
         if (typeof(T) == typeof(CurrencyAccount))
             accounts = await currencyAccountHttpClient.GetAvailableAccountsAsync();
-        else if (typeof(T) == typeof(StockAccount))
-            accounts = await stockAccountHttpClient.GetAvailableAccountsAsync();
+        else if (typeof(T) == typeof(InvestmentAccount))
+            accounts = await investmentAccountHttpClient.GetAvailableAccountsAsync();
         else if (typeof(T) == typeof(BondAccount))
             accounts = await bondAccountHttpClient.GetAvailableAccountsAsync();
         else
@@ -158,46 +167,85 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     }
     public async Task<Dictionary<int, Type>> GetAvailableAccounts()
     {
-        Dictionary<int, Type> result = [];
-        try
-        {
-            foreach (var account in await currencyAccountHttpClient.GetAvailableAccountsAsync())
-                result.Add(account.AccountId, typeof(CurrencyAccount));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError("Error while fetching currency accounts: {Message}", ex.Message);
-        }
+        EnsureInvalidationHooksInstalled();
 
-        try
-        {
-            foreach (var account in await stockAccountHttpClient.GetAvailableAccountsAsync())
-                result.Add(account.AccountId, typeof(StockAccount));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError("Error while fetching stock accounts: {Message}", ex.Message);
-        }
+        // Always hand back a fresh copy: the cached instance is shared across all callers, so returning it
+        // directly would let any caller that mutates the result silently corrupt every other caller's view.
+        if (_availableAccountsCache is not null)
+            return new Dictionary<int, Type>(_availableAccountsCache);
 
-        try
-        {
-            foreach (var account in await bondAccountHttpClient.GetAvailableAccountsAsync())
-                result.Add(account.AccountId, typeof(BondAccount));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError("Error while fetching stock accounts: {Message}", ex.Message);
-        }
+        var result = await FetchAvailableAccounts();
+
+        // An empty map most likely means the endpoints failed (per-type errors are swallowed below) or
+        // the user genuinely has no accounts yet; don't pin it so a transient failure - or the guest
+        // mock-seeding flow in Home.razor - self-heals on the next lookup.
+        if (result.Count > 0)
+            _availableAccountsCache = new Dictionary<int, Type>(result);
 
         return result;
+    }
+
+    private async Task<Dictionary<int, Type>> FetchAvailableAccounts()
+    {
+        Dictionary<int, Type> result = [];
+        var currencyAccountsTask = GetAvailableAccountsAsync(
+            () => currencyAccountHttpClient.GetAvailableAccountsAsync(),
+            "currency");
+        var investmentAccountsTask = GetAvailableAccountsAsync(
+            async () => await investmentAccountHttpClient.GetAvailableAccountsAsync(),
+            "investment");
+        var bondAccountsTask = GetAvailableAccountsAsync(
+            () => bondAccountHttpClient.GetAvailableAccountsAsync(),
+            "bond");
+
+        await Task.WhenAll(currencyAccountsTask, investmentAccountsTask, bondAccountsTask);
+
+        foreach (var account in await currencyAccountsTask)
+            result.Add(account.AccountId, typeof(CurrencyAccount));
+
+        foreach (var account in await investmentAccountsTask)
+            result.Add(account.AccountId, typeof(InvestmentAccount));
+
+        foreach (var account in await bondAccountsTask)
+            result.Add(account.AccountId, typeof(BondAccount));
+
+        return result;
+    }
+
+    // Subscribed lazily (rather than in a constructor body) so the primary constructor can be kept.
+    // Both source services are scoped and share this service's lifetime, so unsubscribing is unnecessary.
+    private void EnsureInvalidationHooksInstalled()
+    {
+        if (_invalidationHooksInstalled) return;
+        _invalidationHooksInstalled = true;
+
+        accountDataSynchronizationService.AccountsChanged += InvalidateAvailableAccountsCache;
+        loginService.LogginStateChanged += _ => InvalidateAvailableAccountsCache();
+    }
+
+    private void InvalidateAvailableAccountsCache() => _availableAccountsCache = null;
+
+    private async Task<IEnumerable<AvailableAccount>> GetAvailableAccountsAsync(
+        Func<Task<IEnumerable<AvailableAccount>>> getAccounts,
+        string accountType)
+    {
+        try
+        {
+            return await getAccounts();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError("Error while fetching {AccountType} accounts: {Message}", accountType, ex.Message);
+            return [];
+        }
     }
     public async Task<DateTime?> GetEndDate(int accountId)
     {
         if ((await currencyAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
             return await currencyEntryHttpClient.GetYoungestEntryDate(accountId);
 
-        if ((await stockAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
-            return await stockEntryHttpClient.GetYoungestEntryDate(accountId);
+        if ((await investmentAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
+            return null;
 
         if ((await bondAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
             return await bondEntryHttpClient.GetYoungestEntryDate(accountId);
@@ -209,8 +257,8 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         if ((await currencyAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
             return await currencyEntryHttpClient.GetOldestEntryDate(accountId);
 
-        if ((await stockAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
-            return await stockEntryHttpClient.GetOldestEntryDate(accountId);
+        if ((await investmentAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
+            return null;
 
         if ((await bondAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == accountId))
             return await bondEntryHttpClient.GetOldestEntryDate(accountId);
@@ -220,7 +268,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     public async Task<int?> GetLastAccountId()
     {
         List<AvailableAccount> accounts = [.. (await currencyAccountHttpClient.GetAvailableAccountsAsync())];
-        accounts.AddRange([.. (await stockAccountHttpClient.GetAvailableAccountsAsync())]);
+        accounts.AddRange([.. (await investmentAccountHttpClient.GetAvailableAccountsAsync())]);
         accounts.AddRange([.. (await bondAccountHttpClient.GetAvailableAccountsAsync())]);
 
         if (accounts.Count == 0) return 0;
@@ -234,18 +282,21 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         if (await AccountExists<CurrencyAccount>(id))
         {
             await currencyAccountHttpClient.DeleteAccountAsync(id);
+            InvalidateAvailableAccountsCache();
             return;
         }
 
-        if (await AccountExists<StockAccount>(id))
+        if (await AccountExists<InvestmentAccount>(id))
         {
-            await stockAccountHttpClient.DeleteAccountAsync(id);
+            await investmentAccountHttpClient.DeleteAccountAsync(id);
+            InvalidateAvailableAccountsCache();
             return;
         }
 
         if (await AccountExists<BondAccount>(id))
         {
             await bondAccountHttpClient.DeleteAccountAsync(id);
+            InvalidateAvailableAccountsCache();
             return;
         }
 
@@ -255,8 +306,6 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     {
         if (await AccountExists<CurrencyAccount>(accountId))
             await currencyEntryHttpClient.DeleteEntryAsync(accountId, entryId);
-        else if (await AccountExists<StockAccount>(accountId))
-            await stockEntryHttpClient.DeleteEntryAsync(accountId, entryId);
         else if (await AccountExists<BondAccount>(accountId))
             await bondEntryHttpClient.DeleteEntryAsync(accountId, entryId);
 
@@ -267,11 +316,11 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         if (account is CurrencyAccount currencyAccount)
             return currencyAccountHttpClient.UpdateAccountAsync(new(currencyAccount.AccountId, currencyAccount.Name, currencyAccount.AccountType));
 
-        if (account is StockAccount)
-            return stockAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.Enums.AccountLabel.Stock));
+        if (account is InvestmentAccount)
+            return investmentAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.FinancialAccounts.Shared.Entities.AccountLabel.Stock));
 
         if (account is BondAccount)
-            return bondAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.Enums.AccountLabel.Bond));
+            return bondAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.FinancialAccounts.Shared.Entities.AccountLabel.Bond));
 
         throw new NotSupportedException($"Account {account.GetType()} type not supported for getting start date.");
     }
@@ -280,20 +329,6 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         if (accountEntry is CurrencyAccountEntry currencyAccountEntry)
         {
             await currencyEntryHttpClient.UpdateEntryAsync(currencyAccountEntry);
-            return;
-        }
-        else if (accountEntry is StockAccountEntry stockAccountEntry)
-        {
-            List<UpdateFinancialLabel> labels = [];
-
-            if (stockAccountEntry.Labels is not null && stockAccountEntry.Labels.Count != 0)
-                labels = stockAccountEntry.Labels.Select(x => new UpdateFinancialLabel(x.Id, x.Name)).ToList();
-
-            UpdateStockAccountEntry updateStockAccountEntry = new(stockAccountEntry.AccountId, stockAccountEntry.EntryId,
-                stockAccountEntry.PostingDate, stockAccountEntry.Value, stockAccountEntry.ValueChange, stockAccountEntry.Ticker,
-                stockAccountEntry.InvestmentType, labels);
-
-            await stockEntryHttpClient.UpdateEntryAsync(updateStockAccountEntry);
             return;
         }
         else if (accountEntry is BondAccountEntry bondAccountEntry)

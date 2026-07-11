@@ -1,4 +1,5 @@
-using FinanceManager.Application.Providers;
+
+using FinanceManager.Application.Identity;
 
 namespace FinanceManager.Tests.Unit.Application.Providers;
 

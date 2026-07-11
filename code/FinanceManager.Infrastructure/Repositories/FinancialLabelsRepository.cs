@@ -1,5 +1,6 @@
-﻿using FinanceManager.Domain.Entities.Shared.Accounts;
-using FinanceManager.Domain.Repositories;
+﻿using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,30 +16,31 @@ internal class FinancialLabelsRepository(AppDbContext context) : IFinancialLabel
 
     public async Task<bool> Delete(int id, CancellationToken cancellationToken = default)
     {
-        var elementToRemove = context.FinancialLabels.Single(x => x.Id == id);
+        var elementToRemove = await context.FinancialLabels.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (elementToRemove is null) return false;
         context.FinancialLabels.Remove(elementToRemove);
-        await context.SaveChangesAsync(cancellationToken);
-        return true;
+        return await context.SaveChangesAsync(cancellationToken) == 1;
     }
 
-    public Task<int> GetCount(CancellationToken cancellationToken = default) => context.FinancialLabels.CountAsync(cancellationToken);
+    public Task<int> GetCount(CancellationToken cancellationToken = default) => context.FinancialLabels.AsNoTracking().CountAsync(cancellationToken);
     public IAsyncEnumerable<FinancialLabel> GetLabels(CancellationToken cancellationToken = default) =>
-        context.FinancialLabels.Include(x => x.Classifications).AsAsyncEnumerable();
+        context.FinancialLabels.AsNoTracking().Include(x => x.Classifications).AsAsyncEnumerable();
 
     public IAsyncEnumerable<FinancialLabel> GetLabelsByAccountId(int accountId, CancellationToken cancellationToken = default) =>
-        context.CurrencyEntries.Where(x => x.AccountId == accountId)
+        context.CurrencyEntries.AsNoTracking().Where(x => x.AccountId == accountId)
             .SelectMany(x => x.Labels)
             .Include(x => x.Classifications)
             .Distinct()
             .AsAsyncEnumerable();
 
     public Task<FinancialLabel> GetLabelsById(int id, CancellationToken cancellationToken = default) =>
-        context.FinancialLabels.Include(x => x.Classifications).SingleAsync(x => x.Id == id, cancellationToken);
+        context.FinancialLabels.AsNoTracking().Include(x => x.Classifications).SingleAsync(x => x.Id == id, cancellationToken);
 
     public async Task<bool> UpdateName(int id, string name, CancellationToken cancellationToken = default)
     {
-        var elementToRemove = context.FinancialLabels.Single(x => x.Id == id);
-        elementToRemove.Name = name;
+        var element = await context.FinancialLabels.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (element is null) return false;
+        element.Name = name;
 
         return await context.SaveChangesAsync(cancellationToken) == 1;
     }

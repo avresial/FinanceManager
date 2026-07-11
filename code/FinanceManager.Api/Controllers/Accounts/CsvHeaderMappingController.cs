@@ -1,6 +1,6 @@
 using FinanceManager.Api.Helpers;
-using FinanceManager.Application.Services;
-using FinanceManager.Domain.Dtos;
+using FinanceManager.Application.FinancialAccounts.Shared.Csv;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

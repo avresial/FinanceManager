@@ -1,11 +1,11 @@
 using Blazored.LocalStorage;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Models;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.Shared.Accounts;
-using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Domain.Entities.Users;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Identity.Entities;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
@@ -67,8 +67,8 @@ public class NavMenuStateCacheService(
 
         if (accountType == typeof(CurrencyAccount))
             name = await GetAccountNameAsync<CurrencyAccount>(userId, accountId, now);
-        else if (accountType == typeof(StockAccount))
-            name = await GetAccountNameAsync<StockAccount>(userId, accountId, now);
+        else if (accountType == typeof(InvestmentAccount))
+            name = await GetAccountNameAsync<InvestmentAccount>(userId, accountId, now);
         else if (accountType == typeof(BondAccount))
             name = await GetAccountNameAsync<BondAccount>(userId, accountId, now);
         else

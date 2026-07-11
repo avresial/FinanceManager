@@ -1,8 +1,8 @@
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.Shared.Accounts;
-using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Tests.Unit.Domain.Entities.Accounts;
 
@@ -409,7 +409,6 @@ public class FinancialAccountTests
 
     [Theory]
     [InlineData("CurrencyAccount")]
-    [InlineData("StockAccount")]
     [InlineData("BondAccount")]
     public void AllAccountTypes_BasicRecalculation_ShouldWorkCorrectly(string accountType)
     {
@@ -417,7 +416,6 @@ public class FinancialAccountTests
         dynamic account = accountType switch
         {
             "CurrencyAccount" => new CurrencyAccount(1, 1, "Test", AccountLabel.Other),
-            "StockAccount" => new StockAccount(1, 1, "Test"),
             "BondAccount" => new BondAccount(1, 1, "Test", AccountLabel.Other),
             _ => throw new ArgumentException("Unknown account type")
         };
@@ -425,7 +423,6 @@ public class FinancialAccountTests
         dynamic entry1 = accountType switch
         {
             "CurrencyAccount" => new CurrencyAccountEntry(1, 1, new DateTime(2023, 1, 1), 0, 100m) { Labels = [] },
-            "StockAccount" => new StockAccountEntry(1, 1, new DateTime(2023, 1, 1), 0, 100m, "AAPL", InvestmentType.Stock),
             "BondAccount" => new BondAccountEntry(1, 1, new DateTime(2023, 1, 1), 0, 100m, 1),
             _ => throw new ArgumentException("Unknown account type")
         };
@@ -433,7 +430,6 @@ public class FinancialAccountTests
         dynamic entry2 = accountType switch
         {
             "CurrencyAccount" => new CurrencyAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, 50m) { Labels = [] },
-            "StockAccount" => new StockAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, 50m, "AAPL", InvestmentType.Stock),
             "BondAccount" => new BondAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, 50m, 1),
             _ => throw new ArgumentException("Unknown account type")
         };
@@ -451,7 +447,6 @@ public class FinancialAccountTests
 
     [Theory]
     [InlineData("CurrencyAccount")]
-    [InlineData("StockAccount")]
     [InlineData("BondAccount")]
     public void AllAccountTypes_RemoveAndRecalculate_ShouldWorkCorrectly(string accountType)
     {
@@ -459,7 +454,6 @@ public class FinancialAccountTests
         dynamic account = accountType switch
         {
             "CurrencyAccount" => new CurrencyAccount(1, 1, "Test", AccountLabel.Other),
-            "StockAccount" => new StockAccount(1, 1, "Test"),
             "BondAccount" => new BondAccount(1, 1, "Test", AccountLabel.Other),
             _ => throw new ArgumentException("Unknown account type")
         };
@@ -470,7 +464,6 @@ public class FinancialAccountTests
             dynamic entry = accountType switch
             {
                 "CurrencyAccount" => new CurrencyAccountEntry(1, i, new DateTime(2023, 1, i), 0, 100m) { Labels = [] },
-                "StockAccount" => new StockAccountEntry(1, i, new DateTime(2023, 1, i), 0, 100m, "AAPL", InvestmentType.Stock),
                 "BondAccount" => new BondAccountEntry(1, i, new DateTime(2023, 1, i), 0, 100m, 1),
                 _ => throw new ArgumentException("Unknown account type")
             };
@@ -489,7 +482,6 @@ public class FinancialAccountTests
 
     [Theory]
     [InlineData("CurrencyAccount")]
-    [InlineData("StockAccount")]
     [InlineData("BondAccount")]
     public void AllAccountTypes_UpdateAndRecalculate_ShouldWorkCorrectly(string accountType)
     {
@@ -497,7 +489,6 @@ public class FinancialAccountTests
         dynamic account = accountType switch
         {
             "CurrencyAccount" => new CurrencyAccount(1, 1, "Test", AccountLabel.Other),
-            "StockAccount" => new StockAccount(1, 1, "Test"),
             "BondAccount" => new BondAccount(1, 1, "Test", AccountLabel.Other),
             _ => throw new ArgumentException("Unknown account type")
         };
@@ -505,7 +496,6 @@ public class FinancialAccountTests
         dynamic entry1 = accountType switch
         {
             "CurrencyAccount" => new CurrencyAccountEntry(1, 1, new DateTime(2023, 1, 1), 0, 100m) { Labels = [] },
-            "StockAccount" => new StockAccountEntry(1, 1, new DateTime(2023, 1, 1), 0, 100m, "AAPL", InvestmentType.Stock),
             "BondAccount" => new BondAccountEntry(1, 1, new DateTime(2023, 1, 1), 0, 100m, 1),
             _ => throw new ArgumentException("Unknown account type")
         };
@@ -513,7 +503,6 @@ public class FinancialAccountTests
         dynamic entry2 = accountType switch
         {
             "CurrencyAccount" => new CurrencyAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, 50m) { Labels = [] },
-            "StockAccount" => new StockAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, 50m, "AAPL", InvestmentType.Stock),
             "BondAccount" => new BondAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, 50m, 1),
             _ => throw new ArgumentException("Unknown account type")
         };
@@ -525,7 +514,6 @@ public class FinancialAccountTests
         dynamic updatedEntry = accountType switch
         {
             "CurrencyAccount" => new CurrencyAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, 75m) { Labels = [] },
-            "StockAccount" => new StockAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, 75m, "AAPL", InvestmentType.Stock),
             "BondAccount" => new BondAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, 75m, 1),
             _ => throw new ArgumentException("Unknown account type")
         };

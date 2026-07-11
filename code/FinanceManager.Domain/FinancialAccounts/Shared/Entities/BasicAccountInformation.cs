@@ -1,0 +1,10 @@
+﻿namespace FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+
+public class BasicAccountInformation
+{
+    public int AccountId { get; set; }
+    public int UserId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public virtual DateTime? Start { get; protected set; }
+    public virtual DateTime? End { get; protected set; }
+}

@@ -1,9 +1,11 @@
-﻿using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Domain.ValueObjects;
+﻿using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories.Account;
@@ -11,15 +13,10 @@ namespace FinanceManager.Infrastructure.Repositories.Account;
 internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccountRepository<CurrencyAccount>
 {
 
-    public Task<int> GetAccountsCount() => context.Accounts.CountAsync();
+    public Task<int> GetAccountsCount() => context.Accounts.AsNoTracking().CountAsync();
 
-    public async Task<int?> GetLastAccountId()
-    {
-        if (await context.Accounts.AnyAsync())
-            return await context.Accounts.MaxAsync(x => x.AccountId);
-
-        return null;
-    }
+    public Task<int?> GetLastAccountId() =>
+        context.Accounts.AsNoTracking().Where(x => x.AccountType == AccountType.Currency).MaxAsync(x => (int?)x.AccountId);
     public Task<int?> Add(int userId, string accountName) => Add(userId, accountName, AccountLabel.Other);
     public async Task<int?> Add(int userId, string accountName, AccountLabel accountLabel)
     {
@@ -47,15 +44,28 @@ internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccoun
         return true;
     }
     public IAsyncEnumerable<AvailableAccount> GetAvailableAccounts(int userId) => context.Accounts
+        .AsNoTracking()
         .Where(x => x.UserId == userId && x.AccountType == AccountType.Currency)
         .Select(x => new AvailableAccount(x.AccountId, x.Name))
         .AsAsyncEnumerable();
 
-    public Task<bool> Exists(int accountId) => context.Accounts.AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
+    public Task<bool> Exists(int accountId) => context.Accounts.AsNoTracking().AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
+
+    public async Task<List<CurrencyAccount>> GetAll(int userId)
+    {
+        var accounts = await context.Accounts
+            .AsNoTracking()
+            .Where(x => x.UserId == userId && x.AccountType == AccountType.Currency)
+            .ToListAsync();
+
+        return accounts
+            .Select(x => new CurrencyAccount(x.UserId, x.AccountId, x.Name, x.AccountLabel))
+            .ToList();
+    }
 
     public async Task<CurrencyAccount?> Get(int accountId)
     {
-        var accountToReturn = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
+        var accountToReturn = await context.Accounts.AsNoTracking().FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
         if (accountToReturn is null) return null;
         return new CurrencyAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name, accountToReturn.AccountLabel);
     }

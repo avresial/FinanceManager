@@ -1,5 +1,7 @@
-using FinanceManager.Domain.Providers;
-using FinanceManager.Domain.ValueObjects;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
+using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.MoneyFlow.Services;
+using FinanceManager.Domain.Shared.Charting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

@@ -1,4 +1,5 @@
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
 namespace FinanceManager.Tests.Unit.Domain.Entities.Accounts;
 
@@ -6,7 +7,7 @@ namespace FinanceManager.Tests.Unit.Domain.Entities.Accounts;
 [Trait("Category", "Unit")]
 public class CurrencyAccountTests
 {
-    private readonly CurrencyAccount _account = new(1, 1, "Test account", FinanceManager.Domain.Enums.AccountLabel.Other);
+    private readonly CurrencyAccount _account = new(1, 1, "Test account", FinanceManager.Domain.FinancialAccounts.Shared.Entities.AccountLabel.Other);
 
     [Fact]
     public void UpdateEntry_ChangesPostingDateAndDescription()

@@ -1,4 +1,4 @@
-using FinanceManager.Application.Options;
+using FinanceManager.Application.Shared.Options;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using System.Globalization;

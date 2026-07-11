@@ -1,6 +1,7 @@
-using FinanceManager.Application.Services.Seeders;
-using FinanceManager.Domain.Entities.Shared.Accounts;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Application.Labels.Seeders;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Labels.Repositories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 

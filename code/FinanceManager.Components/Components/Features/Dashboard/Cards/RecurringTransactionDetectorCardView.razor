@@ -1,0 +1,112 @@
+@using FinanceManager.Domain.FinancialAccounts.Currencies.Entities
+
+<MudCard Outlined Class="d-flex flex-nowrap" Style="@($"height:{Height};")">
+    <MudPaper Class="flex-grow-0 px-4 pt-3 pb-1" Elevation="0">
+        @if (SelectedItem is null)
+        {
+            <MudText Typo=Typo.h5>Recurring transactions</MudText>
+            @if (IsLoading)
+            {
+                <MudText Typo=Typo.subtitle1 Class="text-muted">
+                    <StringSpinner CharactersCount="4" />
+                </MudText>
+            }
+            else if (Data.Count > 0)
+            {
+                <MudText Typo=Typo.subtitle1 Class="text-muted">@TotalMonthlySpend.ToString("0.00") @Currency/mo</MudText>
+            }
+        }
+        else
+        {
+            <div class="d-flex align-center gap-1">
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" OnClick="OnBack" aria-label="Back to recurring transactions" />
+                <MudText Typo=Typo.h5>@SelectedItem.Name</MudText>
+            </div>
+            @if (DetailEntries.Count > 0)
+            {
+                <MudText Typo=Typo.caption Class="text-muted">@DetailEntries.First().PostingDate.Year</MudText>
+            }
+        }
+    </MudPaper>
+
+    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
+        @if (SelectedItem is null)
+        {
+            @if (IsLoading)
+            {
+                <div style="height:100%">
+                    <ChartSpinner MaxHeight=@Height />
+                </div>
+            }
+            else if (Data.Count > 0)
+            {
+                <MudList T="string" Dense Class="px-2 py-0">
+                    @foreach (var item in Data)
+                    {
+                        <MudListItem Class="py-1 px-2 cursor-pointer" @onclick="() => OnItemSelected.InvokeAsync(item)">
+                            <div class="d-flex align-items-center gap-3 w-100">
+                                <MudIcon Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" />
+                                <div class="flex-grow-1">
+                                    <MudText Typo="Typo.body2" Class="font-weight-500">@item.Name</MudText>
+                                    <MudProgressLinear Value="@GetPercentage(item.Value)" Color="Color.Warning"
+                                                      Class="mt-1" Size="Size.Small" />
+                                </div>
+                                <MudText Typo="Typo.body2" Color="Color.Warning" Class="font-weight-600"
+                                         Style="min-width: 120px; text-align: right;">
+                                    @($"{item.Value:0.00} {Currency}/mo")
+                                </MudText>
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+            else
+            {
+                <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                    <MudText Typo="Typo.button" HtmlTag="h3">No recurring transactions</MudText>
+                </div>
+            }
+        }
+        else
+        {
+            @if (IsLoadingDetail)
+            {
+                <div style="height:100%">
+                    <ChartSpinner MaxHeight=@Height />
+                </div>
+            }
+            else if (DetailEntries.Count > 0)
+            {
+                <MudTable Items="DetailEntries" Dense Hover Striped Elevation="0" Class="pa-2">
+                    <HeaderContent>
+                        <MudTh>Date</MudTh>
+                        <MudTh>Description</MudTh>
+                        <MudTh Style="text-align:right">Amount</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Date">@context.PostingDate.ToString("MM-dd")</MudTd>
+                        <MudTd DataLabel="Description">
+                            @{
+                                var desc = string.IsNullOrEmpty(context.ContractorDetails) ? context.Description : context.ContractorDetails;
+                                var maxLength = 30;
+                                var displayDesc = desc.Length > maxLength ? desc.Substring(0, maxLength) + "..." : desc;
+                            }
+                            <MudTooltip Text="@desc" Arrow Placement="Placement.Bottom">
+                                <MudText>@displayDesc</MudText>
+                            </MudTooltip>
+                        </MudTd>
+                        <MudTd DataLabel="Amount" Style="text-align:right">
+                            <MudText Color="Color.Error">@($"{Math.Abs(context.ValueChange):0.00} {Currency}")</MudText>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+            else
+            {
+                <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                    <MudText Typo="Typo.button" HtmlTag="h3">No entries found</MudText>
+                </div>
+            }
+        }
+    </MudPaper>
+</MudCard>

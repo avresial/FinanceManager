@@ -1,5 +1,6 @@
-﻿using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Repositories;
+﻿using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 using System.Runtime.CompilerServices;

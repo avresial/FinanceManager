@@ -1,7 +1,9 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Infrastructure.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,10 +18,11 @@ public static class ServiceCollectionExtension
         services.AddScoped<IAntiforgeryTokenService, AntiforgeryTokenService>()
                 .AddScoped<ILoginService, LoginService>()
 
-                .AddScoped<StockPriceHttpClient>()
-                .AddScoped<StockAccountHttpClient>()
-                .AddScoped<StockEntryHttpClient>()
-                .AddScoped<StockAccountImportHttpClient>()
+                .AddScoped<InvestmentAccountHttpClient>()
+                .AddScoped<AssetHttpClient>()
+
+                .AddScoped<InvestmentTransactionHttpClient>()
+                .AddScoped<InvestmentValuationHttpClient>()
 
                 .AddScoped<CurrencyAccountHttpClient>()
                 .AddScoped<CurrencyAccountImportHttpClient>()
@@ -49,7 +52,9 @@ public static class ServiceCollectionExtension
                 .AddScoped<CsvHeaderMappingHttpClient>()
                 .AddScoped<AccountDataSynchronizationService>()
                 .AddScoped<NavMenuStateCacheService>()
+                .AddScoped<DashboardHttpClient>()
                 .AddScoped<DashboardOverviewCardsCacheService>()
+                .AddScoped<ISnapshotService, LocalStorageSnapshotService>()
                 .AddScoped<AssetsPageCardsCacheService>()
                 .AddScoped<InvestmentPaycheckEstimateCacheService>()
                 .AddScoped<IUserService, UserService>()

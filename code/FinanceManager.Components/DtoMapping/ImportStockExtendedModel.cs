@@ -1,6 +1,7 @@
-﻿using FinanceManager.Domain.Enums;
+﻿using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.Identity.Entities;
 
-namespace FinanceManager.Infrastructure.Dtos;
+namespace FinanceManager.Components.DtoMapping;
 
 public class ImportStockExtendedModel : ImportStockModel
 {

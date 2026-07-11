@@ -1,11 +1,12 @@
 using FinanceManager.Api.Controllers;
 using FinanceManager.Application.Commands.Login;
-using FinanceManager.Application.Providers;
+using FinanceManager.Application.Identity;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Users;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.Administration.Monitoring;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using System.Net;

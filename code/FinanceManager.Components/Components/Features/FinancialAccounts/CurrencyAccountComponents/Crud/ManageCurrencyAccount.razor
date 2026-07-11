@@ -1,4 +1,5 @@
-﻿@using FinanceManager.Domain.Enums
+@using FinanceManager.Domain.FinancialAccounts.Shared.Entities
+﻿@using FinanceManager.Domain.Identity.Entities
 
 @if (_currencyAccount is not null)
 {
@@ -32,6 +33,7 @@
                 <MudItem xs="12">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update</MudButton>
                     <MudButton Variant="Variant.Filled" Color="Color.Error" DropShadow="false" OnClick=Remove>Delete</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Recalculate Disabled="_isRecalculating" StartIcon="@Icons.Material.Filled.Calculate">Recalculate balance</MudButton>
                     <MudButton Variant="Variant.Outlined" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">Cancel</MudButton>
                 </MudItem>
             </MudGrid>

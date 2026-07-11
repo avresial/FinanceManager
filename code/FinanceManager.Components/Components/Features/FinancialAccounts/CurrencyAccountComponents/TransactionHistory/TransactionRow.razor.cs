@@ -1,5 +1,5 @@
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;

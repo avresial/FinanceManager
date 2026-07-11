@@ -1,4 +1,4 @@
-﻿using FinanceManager.Application.Services.Seeders;
+﻿using FinanceManager.Application.Shared.Seeders;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

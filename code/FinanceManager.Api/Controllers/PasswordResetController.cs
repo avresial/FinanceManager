@@ -1,5 +1,6 @@
-using FinanceManager.Domain.Commands.User;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Commands;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;

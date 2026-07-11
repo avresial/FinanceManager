@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.Shared.Accounts;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

@@ -1,3 +1,4 @@
+@using FinanceManager.Domain.FinancialAccounts.Shared.Entities
 @page "/AccountDetails/{AccountId:int}"
 @inherits AccountTypePageBase
 
@@ -11,7 +12,7 @@
         }
         else if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
         {
-            <StockAccountDetailsPageContent AccountId="@AccountId" />
+            <InvestmentAccountDetailsPageContent AccountId="@AccountId" />
         }
         else if (AccountDescriptor?.Kind == FinancialAccountKind.Bond)
         {

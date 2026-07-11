@@ -1,7 +1,9 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
@@ -100,12 +102,5 @@ public partial class RecurringTransactionDetectorCard
         _selectedItem = null;
         _detailEntries = [];
         _isLoadingDetail = false;
-    }
-
-    private double GetPercentage(decimal value)
-    {
-        if (_data.Count == 0) return 0;
-        var max = _data.Max(x => x.Value);
-        return max == 0 ? 0 : (double)(value / max * 100);
     }
 }

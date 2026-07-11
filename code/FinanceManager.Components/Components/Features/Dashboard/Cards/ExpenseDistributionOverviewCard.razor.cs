@@ -1,10 +1,10 @@
-using ApexCharts;
-using FinanceManager.Components.Helpers;
+using FinanceManager.Application.Identity.Users;
+using FinanceManager.Components.Components.Features.Dashboard.Models;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Providers;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
@@ -15,13 +15,15 @@ public partial class ExpenseDistributionOverviewCard
 {
     private bool _isLoading;
     private Currency _currency = DefaultCurrency.PLN;
-    private decimal _totalExpenses;
     private List<NameValueResult> _data = [];
-    private ApexChart<NameValueResult>? _chart;
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
+
+    // When the dashboard supplies a prepared model the card renders it directly;
+    // otherwise it self-loads from the API as in standalone usage.
+    [Parameter] public NameValueListCardModel? Model { get; set; }
 
     [Inject] public required ILogger<ExpenseDistributionOverviewCard> Logger { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
@@ -29,27 +31,9 @@ public partial class ExpenseDistributionOverviewCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    private readonly ApexChartOptions<NameValueResult> _chartOptions = new()
-    {
-        Chart = new Chart
-        {
-            Toolbar = new Toolbar { Show = false },
-            Background = "transparent",
-        },
-        Legend = new Legend { Show = false },
-        Colors = ColorsProvider.GetColors(),
-    };
-
     protected override void OnInitialized()
     {
         _currency = SettingsService.GetCurrency();
-        _chartOptions.Tooltip = new Tooltip
-        {
-            Y = new TooltipY
-            {
-                Formatter = ChartHelper.GetCurrencyFormatter(_currency.ShortName),
-            },
-        };
     }
 
     protected override async Task OnParametersSetAsync()
@@ -59,20 +43,21 @@ public partial class ExpenseDistributionOverviewCard
 
         try
         {
+            if (Model is not null)
+            {
+                _data = [.. Model.Items];
+                return;
+            }
+
             var user = await LoginService.GetLoggedUser();
             if (user is null)
             {
                 _data = [];
-                _totalExpenses = 0;
                 return;
             }
 
             var data = await MoneyFlowHttpClient.GetExpenseDistribution(user.UserId, _currency, StartDateTime, EndDateTime);
             _data = [.. data];
-            _totalExpenses = _data.Count == 0 ? 0 : Math.Round(_data.Sum(x => x.Value), 2);
-
-            if (_chart is not null)
-                await _chart.UpdateSeriesAsync(true);
         }
         catch (Exception ex)
         {

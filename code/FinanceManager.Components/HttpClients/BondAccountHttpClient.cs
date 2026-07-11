@@ -1,7 +1,8 @@
-using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.ValueObjects;
-using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;
@@ -31,15 +32,9 @@ public class BondAccountHttpClient(HttpClient httpClient)
         return MapAccount(result);
     }
 
-    public async Task<BondAccount?> GetInitialTransactionHistoryAsync(int accountId, DateTime startDate, DateTime endDate,
-        int minimumEntryCount = 100)
-    {
-        var encodedStartDate = Uri.EscapeDataString(startDate.ToString("O"));
-        var encodedEndDate = Uri.EscapeDataString(endDate.ToString("O"));
-        var result = await httpClient.GetFromJsonAsync<BondAccountDto>(
-            $"{httpClient.BaseAddress}api/BondAccount/{accountId}/GetInitialTransactionHistory?startDate={encodedStartDate}&endDate={encodedEndDate}&minimumEntryCount={minimumEntryCount}");
-        return MapAccount(result);
-    }
+    public Task<BondAccount?> GetInitialTransactionHistoryAsync(int accountId, DateTime startDate, DateTime endDate,
+        int minimumEntryCount = 100) =>
+        GetAccountWithEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
 
     public async Task<BondAccount?> GetAccountWithEntriesAsync(int accountId, DateTime date, int count, bool olderThenDate = true)
     {

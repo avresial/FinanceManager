@@ -1,5 +1,5 @@
-using FinanceManager.Application.Services.ExternalServices;
-using FinanceManager.Domain.Entities.ExternalServices;
+using FinanceManager.Application.Shared.ExternalServices;
+using FinanceManager.Domain.Shared.ExternalServices.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,6 +14,7 @@ public class AdminServiceKeysController(IExternalServiceConfigService configServ
     private static readonly IReadOnlyList<(string ServiceName, string DisplayName, string Description, string DocsUrl)> _knownServices =
     [
         ("AlphaVantage", "Alpha Vantage", "Stock market data — daily price series, ticker search and listing status.", "https://www.alphavantage.co/documentation/"),
+        ("Eodhd",        "EODHD",         "Fallback price source — split/dividend-adjusted end-of-day history when Alpha Vantage is rate-limited.", "https://eodhd.com/financial-apis/"),
         ("OpenFigi",     "OpenFIGI",      "Maps ticker symbols to ISINs. Optional key raises rate limit from 25 to 250 req/min.", "https://www.openfigi.com/api"),
     ];
 

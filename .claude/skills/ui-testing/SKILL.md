@@ -45,7 +45,9 @@ cd /tmp && npm init -y >/dev/null 2>&1 && npm i playwright
 ls /opt/pw-browsers/    # find the chromium-<build> dir, e.g. chromium-1194
 ```
 
-The driver below logs in as guest and screenshots a page on mobile and desktop. Save it as `/tmp/ui-shot.mjs` and adapt the navigation for the page you changed.
+The driver below signs in through the **auto test login** entry path (`/DevelopLogin/guest/{page}`, see
+`AGENTS.md`) — one `goto` boots the WASM app, logs in as guest, and lands directly on the page under test.
+Save it as `/tmp/ui-shot.mjs` and set `TARGET` to the route you changed (empty string = dashboard).
 
 ```js
 import pkg from '/tmp/node_modules/playwright/index.js';
@@ -53,6 +55,7 @@ const { chromium } = pkg;
 // Update the build number to match `ls /opt/pw-browsers/`
 const EXE = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = 'http://localhost:5113';
+const TARGET = 'AccountDetails/1';   // in-app route to screenshot; '' for the dashboard
 
 const browser = await chromium.launch({ executablePath: EXE, headless: true, args: ['--no-sandbox'] });
 
@@ -60,18 +63,8 @@ async function run(label, width, height) {
   const ctx = await browser.newContext({ viewport: { width, height }, ignoreHTTPSErrors: true });
   const page = await ctx.newPage();
   try {
-    await page.goto(BASE + '/', { waitUntil: 'networkidle', timeout: 120000 });
-    await page.waitForTimeout(4000);                       // Blazor WASM boot
-    await page.getByText(/check out demo/i).first().click(); // guest login
-    await page.waitForTimeout(9000);                       // guest seed + redirect to dashboard
-
-    // --- navigate to the page under test WITHIN the SPA (see gotchas) ---
-    if (width < 700) {                                     // mobile drawer is collapsed
-      await page.locator('header button').first().click().catch(() => {});
-      await page.waitForTimeout(1000);
-    }
-    await page.getByRole('link', { name: /cash 1/i }).first().click();
-    await page.waitForTimeout(9000);
+    await page.goto(`${BASE}/DevelopLogin/guest/${TARGET}`, { waitUntil: 'networkidle', timeout: 120000 });
+    await page.waitForTimeout(12000);                      // WASM boot + guest seed + redirect to TARGET
 
     console.log(label, 'url:', page.url());
     await page.screenshot({ path: `/tmp/ui-${label}.png` });
@@ -99,13 +92,14 @@ pkill -f "FinanceManager.Api"
 
 ## Guest login facts (for reference)
 
-- Trigger: the **"Check out demo"** link/button on the landing and login pages. Equivalent to `POST /api/Login` with `{"userName":"guest","password":"GuestPassword"}`, which seeds a sandboxed dataset and returns a JWT stored under `localStorage["userSession"]`.
-- After login you land on the dashboard (`/`). The left nav lists the seeded accounts: **Cash 1**, **Loan 1**, **Stock 1**, **Bond 1**. Other routes: `/Assets`, `/Liabilities`, account details open at `/AccountDetails/{id}`.
+- Preferred trigger: **`/DevelopLogin/guest`** (optionally `/DevelopLogin/guest/{page}` to deep-link), the develop-only auto test login documented in `AGENTS.md`. It is disabled (404) in Production/Release.
+- Manual fallback: the **"Check out demo"** link/button on the landing and login pages. Equivalent to `POST /api/Login` with `{"userName":"guest","password":"GuestPassword"}`. Either way the JWT is stored under `localStorage["userSession"]`.
+- After login you land on the dashboard (`/`) unless you deep-linked. The left nav lists the seeded accounts: **Cash 1**, **Loan 1**, **Stock 1**, **Bond 1**. Other routes: `/Assets`, `/Liabilities`, account details open at `/AccountDetails/{id}`.
 
 ## Gotchas (these will bite you)
 
-- **Navigate inside the SPA, not by hard URL.** A `page.goto()` to a deep authenticated route (e.g. `/AccountDetails/1`) reloads the WASM app and bounces to `/login` — the auth state lives in the running app. Reach pages by clicking nav links after the guest login.
-- **Mobile drawer is collapsed.** On viewports `< 700px` the nav is a temporary overlay; click the app-bar hamburger (`header button`) before clicking an account link.
+- **Deep-link through `/DevelopLogin/guest/{page}`, not by hard URL.** A `page.goto()` straight to an authenticated route (e.g. `/AccountDetails/1`) reloads the WASM app and bounces to `/login` — the auth state lives in the running app. Going to `/DevelopLogin/guest/AccountDetails/1` instead authenticates first and then navigates within the SPA. In-SPA clicks after login also work.
+- **Mobile drawer is collapsed.** On viewports `< 700px` the nav is a temporary overlay; if you need to click nav links, open the app-bar hamburger (`header button`) first.
 - **Charts render blank + a red "An unhandled error has occurred" bar appears.** Chart.js is loaded from a CDN that the sandbox blocks (`Chart is not defined`). This is a **sandbox artifact, not a regression** — ignore it. Filter these from logs: `grep -vE "ERR_CERT|Chart is not defined|WebAssemblyRenderer|Unhandled exception"`.
 - **The sandbox renders the LIGHT theme; production is dark.** Don't trust absolute colors from the screenshot. For anything theme-dependent (especially text on the app bar or colored surfaces), use palette variables like `color: var(--mud-palette-text-primary);` so it contrasts in both themes, rather than relying on an inherited color that only happens to work in one.
 - **`ignoreHTTPSErrors: true`** is required — the dev host emits a self-signed cert for some resources.

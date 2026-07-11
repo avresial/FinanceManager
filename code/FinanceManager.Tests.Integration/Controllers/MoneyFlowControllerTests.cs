@@ -1,14 +1,17 @@
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.Shared.Accounts;
-using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Assets.Entities;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Shared;
 using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -251,45 +254,6 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
             new CurrencyAccountEntry(2, 100, _nowUtc.AddDays(-5), 5000m, 5000m) { Labels = [] });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        // Add a stock account
-        var stockAccount = new FinancialAccountBaseDto
-        {
-            UserId = 1,
-            AccountId = 3,
-            Name = "Investment Portfolio",
-            AccountLabel = AccountLabel.Other,
-            AccountType = AccountType.Stock
-        };
-        _testDatabase.Context.Accounts.Add(stockAccount);
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        // Seed stock details and stock price so StockPriceProvider can resolve the price
-        var usdCurrency = new Currency(1, "USD", "$");
-        _testDatabase.Context.Currencies.Add(usdCurrency);
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        var stockDetails = new StockDetails
-        {
-            Isin = "US0378331005",
-            Ticker = "AAPL",
-            Name = "Apple Inc.",
-            Type = "Stock",
-            Region = "US",
-            Currency = usdCurrency
-        };
-        _testDatabase.Context.StockDetails.Add(stockDetails);
-        _testDatabase.Context.StockPrices.Add(new StockPriceDto
-        {
-            PricePerUnit = 150m,
-            StockDetails = stockDetails,
-            Date = _nowUtc.AddDays(-3)
-        });
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        _testDatabase.Context.StockEntries.Add(
-            new StockAccountEntry(3, 200, _nowUtc.AddDays(-3), 100m, 100m, "AAPL", InvestmentType.Stock));
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
         // Add a bond account
         var bondAccount = new FinancialAccountBaseDto
         {
@@ -501,42 +465,6 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         _testDatabase.Context.BondEntries.Add(new BondAccountEntry(30, 2, _nowUtc.AddDays(-4), 1500m, 500m, 30));
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var stockAccount = new FinancialAccountBaseDto
-        {
-            UserId = 1,
-            AccountId = 31,
-            Name = "Range Match Stocks",
-            AccountLabel = AccountLabel.Other,
-            AccountType = AccountType.Stock
-        };
-        _testDatabase.Context.Accounts.Add(stockAccount);
-
-        var usdCurrency = await _testDatabase.Context.Currencies.FindAsync([1], TestContext.Current.CancellationToken)
-            ?? _testDatabase.Context.Currencies.Add(new Currency(1, "USD", "$")).Entity;
-
-        var stockDetails = new StockDetails
-        {
-            Isin = "US7372711613",
-            Ticker = "RNGM",
-            Name = "Range Match Inc.",
-            Type = "Stock",
-            Region = "US",
-            Currency = usdCurrency
-        };
-        _testDatabase.Context.StockDetails.Add(stockDetails);
-        for (int i = 0; i <= 10; i++)
-            _testDatabase.Context.StockPrices.Add(new StockPriceDto
-            {
-                PricePerUnit = 50m + i,
-                StockDetails = stockDetails,
-                Date = _nowUtc.AddDays(-i)
-            });
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        _testDatabase.Context.StockEntries.Add(new StockAccountEntry(31, 1, _nowUtc.AddDays(-8), 5m, 5m, "RNGM", InvestmentType.Stock));
-        _testDatabase.Context.StockEntries.Add(new StockAccountEntry(31, 2, _nowUtc.AddDays(-3), 10m, 5m, "RNGM", InvestmentType.Stock));
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
         Authorize("TestUser", 1, UserRole.User);
 
         var client = new MoneyFlowHttpClient(Client);
@@ -670,6 +598,109 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         var response = await Client.GetAsync(endpointUrl(_nowUtc), TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    // Seeds a cash account that books a -500 "Investment" outflow alongside an investment account
+    // (Stock-type, new asset model) that holds the matching shares. The holdings value belongs in
+    // closing balance, the cash outflow in cash flow — and neither must leak into the other.
+    private async Task SeedCashAndInvestmentAccounts(DateTime day0)
+    {
+        var cashAccount = new FinancialAccountBaseDto
+        {
+            UserId = 1,
+            AccountId = 50,
+            Name = "Investment Parity Cash",
+            AccountLabel = AccountLabel.Cash,
+            AccountType = AccountType.Currency
+        };
+        var investmentAccount = new FinancialAccountBaseDto
+        {
+            UserId = 1,
+            AccountId = 51,
+            Name = "Investment Parity Holdings",
+            AccountLabel = AccountLabel.Stock,
+            AccountType = AccountType.Stock
+        };
+        _testDatabase!.Context.Accounts.AddRange(cashAccount, investmentAccount);
+
+        // Cash: +1000 on day0, then the −500 "Investment" outflow on day0+1.
+        _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(50, 1, day0, 1000m, 1000m) { Labels = [] });
+        _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(50, 2, day0.AddDays(1), 500m, -500m) { Labels = [] });
+
+        // Investment listing priced at 100 USD with quotes across the whole window.
+        const long listingId = 9100;
+        _testDatabase.Context.AssetListings.Add(new AssetListing
+        {
+            Id = listingId,
+            AssetId = 1,
+            Ticker = "CSPX",
+            ExchangeMic = "XNAS",
+            ExchangeName = "United States",
+            TradingCurrency = "USD",
+            PriceMultiplier = 1m,
+            IsActive = true
+        });
+        for (int i = 0; i <= 2; i++)
+            _testDatabase.Context.PriceQuotes.Add(new PriceQuote
+            {
+                AssetListingId = listingId,
+                Provider = MarketDataProvider.AlphaVantage,
+                Price = 100m,
+                Currency = "USD",
+                PriceTime = new DateTimeOffset(day0.AddDays(i), TimeSpan.Zero),
+                QuoteType = PriceQuoteType.EndOfDay,
+                FetchedAt = DateTimeOffset.UtcNow
+            });
+
+        // Buy 5 units on day0+1 (mirrors the cash outflow), so holdings value = 5 * 100 = 500 USD.
+        _testDatabase.Context.InvestmentTransactions.Add(new InvestmentTransaction
+        {
+            UserId = 1,
+            AccountId = 51,
+            AssetListingId = listingId,
+            Type = InvestmentTransactionType.Buy,
+            Quantity = 5m,
+            UnitPrice = 100m,
+            Currency = "USD",
+            TradeDate = DateOnly.FromDateTime(day0.AddDays(1))
+        });
+
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task GetClosingBalance_IncludesInvestmentAccountHoldings()
+    {
+        var day0 = new DateTime(2024, 6, 1);
+        await SeedCashAndInvestmentAccounts(day0);
+        Authorize("TestUser", 1, UserRole.User);
+
+        var result = await new MoneyFlowHttpClient(Client).GetClosingBalance(1, DefaultCurrency.USD, day0, day0.AddDays(2));
+
+        // day0: cash 1000, no holdings yet → 1000. day0+1: cash drops to 500 but holdings add 500 → 1000.
+        Assert.Equal(1000m, result.Single(x => x.DateTime == day0).Value);
+        Assert.Equal(1000m, result.Single(x => x.DateTime == day0.AddDays(1)).Value);
+        Assert.Equal(1000m, result.Single(x => x.DateTime == day0.AddDays(2)).Value);
+    }
+
+    [Fact]
+    public async Task CashFlow_DoesNotDoubleCountInvestmentHoldings()
+    {
+        var day0 = new DateTime(2024, 6, 1);
+        await SeedCashAndInvestmentAccounts(day0);
+        Authorize("TestUser", 1, UserRole.User);
+
+        var client = new MoneyFlowHttpClient(Client);
+        var netCashFlow = await client.GetNetCashFlow(1, DefaultCurrency.USD, day0, day0.AddDays(2));
+        var inflow = await client.GetInflow(1, DefaultCurrency.USD, day0, day0.AddDays(2));
+        var outflow = await client.GetOutflow(1, DefaultCurrency.USD, day0, day0.AddDays(2));
+
+        // Only the cash account contributes: +1000 in, −500 out, net +500. The 500 of investment
+        // holdings value must NOT surface as an inflow, or money-flow double counts the cash outflow.
+        Assert.Equal(500m, netCashFlow.Sum(x => x.Value));
+        Assert.Equal(1000m, inflow.Sum(x => x.Value));
+        Assert.Equal(-500m, outflow.Sum(x => x.Value));
+        Assert.Equal(-500m, netCashFlow.Single(x => x.DateTime == day0.AddDays(1)).Value);
     }
 
     public override void Dispose()

@@ -1,8 +1,11 @@
 using FinanceManager.Api.Controllers;
-using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.MoneyFlow.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -15,19 +18,24 @@ public class MoneyFlowControllerTests
 {
     private const int _testUserId = 1;
 
-    private readonly Mock<IMoneyFlowService> _mockmoneyFlowService;
+    private readonly Mock<INetWorthService> _mockNetWorthService;
+    private readonly Mock<ILabelsValueService> _mockLabelsValueService;
+    private readonly Mock<IInvestmentRateService> _mockInvestmentRateService;
     private readonly Mock<IBalanceService> _mockBalanceService;
     private readonly Mock<ICurrencyRepository> _mockCurrencyRepository;
     private readonly MoneyFlowController _controller;
 
     public MoneyFlowControllerTests()
     {
-        _mockmoneyFlowService = new Mock<IMoneyFlowService>();
+        _mockNetWorthService = new Mock<INetWorthService>();
+        _mockLabelsValueService = new Mock<ILabelsValueService>();
+        _mockInvestmentRateService = new Mock<IInvestmentRateService>();
         _mockBalanceService = new Mock<IBalanceService>();
         _mockCurrencyRepository = new Mock<ICurrencyRepository>();
         _mockCurrencyRepository.Setup(repo => repo.GetCurrencies(It.IsAny<CancellationToken>()))
             .Returns(new[] { DefaultCurrency.PLN, DefaultCurrency.USD }.ToAsyncEnumerable());
-        _controller = new MoneyFlowController(_mockmoneyFlowService.Object, _mockBalanceService.Object, _mockCurrencyRepository.Object);
+        _controller = new MoneyFlowController(_mockNetWorthService.Object, _mockLabelsValueService.Object,
+            _mockInvestmentRateService.Object, _mockBalanceService.Object, _mockCurrencyRepository.Object);
 
         // Mock user identity
         var user = new ClaimsPrincipal(new ClaimsIdentity([new(ClaimTypes.NameIdentifier, _testUserId.ToString())], "mock"));
@@ -43,7 +51,7 @@ public class MoneyFlowControllerTests
     {
         // Arrange
         DateTime date = new(2000, 1, 1);
-        _mockmoneyFlowService.Setup(repo => repo.GetNetWorth(_testUserId, DefaultCurrency.PLN, date)).ReturnsAsync(1);
+        _mockNetWorthService.Setup(repo => repo.GetNetWorth(_testUserId, DefaultCurrency.PLN, date)).ReturnsAsync(1);
 
         // Act
         var result = await _controller.GetNetWorth(_testUserId, DefaultCurrency.PLN.Id, date, TestContext.Current.CancellationToken);
@@ -63,7 +71,7 @@ public class MoneyFlowControllerTests
         {
             { startDate, 1 }
         };
-        _mockmoneyFlowService.Setup(repo => repo.GetNetWorth(_testUserId, DefaultCurrency.PLN, startDate, endDate)).ReturnsAsync(netWorth);
+        _mockNetWorthService.Setup(repo => repo.GetNetWorth(_testUserId, DefaultCurrency.PLN, startDate, endDate)).ReturnsAsync(netWorth);
 
         // Act
         var result = await _controller.GetNetWorth(_testUserId, DefaultCurrency.PLN.Id, startDate, endDate, TestContext.Current.CancellationToken);

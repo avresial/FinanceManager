@@ -1,5 +1,6 @@
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
 namespace FinanceManager.Infrastructure.Extensions;
 

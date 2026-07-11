@@ -1,6 +1,7 @@
-using FinanceManager.Application.Diagnostics;
-using FinanceManager.Application.Services.FinancialInsights;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Application.Insights.Generation;
+using FinanceManager.Application.Shared.Diagnostics;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Insights.Repositories;
 using System.Diagnostics;
 
 namespace FinanceManager.Api.Services;

@@ -1,0 +1,28 @@
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.MoneyFlow.Services;
+
+namespace FinanceManager.Application.MoneyFlow.Spending;
+
+public class ExpenseDistributionService(IEnumerable<IExpenseDistributionServiceTyped> typedServices) : IExpenseDistributionService
+{
+    public async Task<List<NameValueResult>> GetExpenseDistribution(int userId, Currency currency, DateTime start, DateTime end)
+    {
+        Dictionary<string, decimal> aggregated = [];
+
+        foreach (var service in typedServices)
+        {
+            foreach (var result in await service.GetExpenseDistribution(userId, currency, start, end))
+            {
+                aggregated[result.Name] = aggregated.GetValueOrDefault(result.Name) + result.Value;
+            }
+        }
+
+        return aggregated
+            .Select(kv => new NameValueResult(kv.Key, Math.Round(kv.Value, 2)))
+            .OrderBy(r => r.Name)
+            .ToList();
+    }
+}

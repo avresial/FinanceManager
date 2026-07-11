@@ -1,9 +1,12 @@
 using FinanceManager.Components.Components.Shared;
 using FinanceManager.Components.Components.Shared.Dialogs;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
@@ -16,6 +19,7 @@ public partial class ManageCurrencyAccount
     private bool _success;
     private string[] _errors = [];
     private CurrencyAccount? _currencyAccount = null;
+    private bool _isRecalculating;
 
     public string AccountName { get; set; } = string.Empty;
     public AccountLabel AccountType { get; set; }
@@ -28,6 +32,8 @@ public partial class ManageCurrencyAccount
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<ManageCurrencyAccount> Logger { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
+    [Inject] public required CurrencyEntryHttpClient CurrencyEntryHttpClient { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -97,6 +103,35 @@ public partial class ManageCurrencyAccount
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error removing currency account with ID {AccountId}", AccountId);
+        }
+    }
+
+    public async Task Recalculate()
+    {
+        if (_isRecalculating || _currencyAccount is null) return;
+
+        try
+        {
+            _isRecalculating = true;
+
+            if (await CurrencyEntryHttpClient.RecalculateBalanceAsync(AccountId))
+            {
+                Snackbar.Add("Account balance recalculated.", Severity.Success);
+                await AccountDataSynchronizationService.AccountChanged();
+            }
+            else
+            {
+                Snackbar.Add("Failed to recalculate account balance.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error recalculating balance for currency account with ID {AccountId}", AccountId);
+            Snackbar.Add("Failed to recalculate account balance.", Severity.Error);
+        }
+        finally
+        {
+            _isRecalculating = false;
         }
     }
 }

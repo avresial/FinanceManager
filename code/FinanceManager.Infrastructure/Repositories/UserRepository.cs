@@ -1,9 +1,8 @@
-﻿using FinanceManager.Domain.Entities.Users;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Exceptions;
-using FinanceManager.Domain.Repositories;
+﻿using FinanceManager.Domain.Identity.Dtos;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Exceptions;
+using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories;
@@ -82,6 +81,7 @@ public class UserRepository(AppDbContext context) : IUserRepository
         return userDto.ToUser();
     }
     public IAsyncEnumerable<User> GetUsers(int recordIndex, int recordsCount) => context.Users
+        .OrderBy(x => x.Id)
         .Skip(recordIndex)
         .Take(recordsCount)
         .Select(x => x.ToUser())

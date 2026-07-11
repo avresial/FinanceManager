@@ -1,4 +1,5 @@
-using FinanceManager.Application.Services;
+using FinanceManager.Application.Shared;
+using FinanceManager.Domain.Shared;
 using System.Globalization;
 
 namespace FinanceManager.Tests.Unit.Application.Services;

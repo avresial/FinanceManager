@@ -1,6 +1,6 @@
-using FinanceManager.Application.Services.Ai;
-using FinanceManager.Domain.Entities.Ai;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Application.Shared.Ai;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Shared.Ai.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;

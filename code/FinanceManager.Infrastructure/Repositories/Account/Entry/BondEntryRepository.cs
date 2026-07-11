@@ -1,6 +1,7 @@
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.Shared.Accounts;
-using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 
@@ -63,6 +64,14 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
     public async Task<bool> Delete(int accountId)
     {
+        if (context.Database.IsRelational())
+        {
+            var deleted = await context.BondEntries
+                .Where(e => e.AccountId == accountId)
+                .ExecuteDeleteAsync();
+            return deleted > 0;
+        }
+
         var entriesToRemove = await context.BondEntries.Where(e => e.AccountId == accountId).ToListAsync();
         context.BondEntries.RemoveRange(entriesToRemove);
         await context.SaveChangesAsync();
@@ -70,11 +79,45 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
     }
 
     public IAsyncEnumerable<BondAccountEntry> Get(int accountId, DateTime startDate, DateTime endDate) => context.BondEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId && x.PostingDate >= startDate && x.PostingDate <= endDate)
             .Include(x => x.Labels)
             .OrderByDescending(x => x.PostingDate)
             .ThenByDescending(x => x.EntryId)
             .AsAsyncEnumerable();
+
+    public async Task<List<DateTime>> GetPostingDates(int accountId) => await context.BondEntries
+            .AsNoTracking()
+            .Where(x => x.AccountId == accountId)
+            .Select(x => x.PostingDate)
+            .ToListAsync();
+
+    public async Task<(List<BondAccountEntry> Entries, DateTime EffectiveStartDate)> GetEntriesWithMinimumCount(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount = 0)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(minimumEntryCount);
+
+        var rangeEntries = await Get(accountId, startDate, endDate).ToListAsync();
+
+        if (minimumEntryCount == 0 || rangeEntries.Count >= minimumEntryCount)
+            return (rangeEntries, startDate);
+
+        var candidateDates = (await GetPostingDates(accountId))
+            .Where(date => date <= endDate)
+            .OrderByDescending(date => date)
+            .ToList();
+
+        if (candidateDates.Count <= minimumEntryCount)
+        {
+            var oldestDate = candidateDates.Count != 0 && candidateDates[^1] < startDate ? candidateDates[^1] : startDate;
+            var expandedEntries = oldestDate == startDate ? rangeEntries : await Get(accountId, oldestDate, endDate).ToListAsync();
+            return (expandedEntries, oldestDate);
+        }
+
+        var nthNewestDate = candidateDates[minimumEntryCount - 1];
+        var effectiveStartDate = nthNewestDate < startDate ? nthNewestDate : startDate;
+        var entries = await Get(accountId, effectiveStartDate, endDate).ToListAsync();
+        return (entries, effectiveStartDate);
+    }
 
     public async Task<List<BondAccountEntry>> Get(int accountId, DateTime date, int count, bool olderThenDate = true)
     {
@@ -83,8 +126,10 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         if (olderThenDate)
         {
             return await context.BondEntries
+                .AsNoTracking()
                 .Where(e => e.AccountId == accountId && e.PostingDate <= date)
                 .Include(e => e.Labels)
+                .AsSplitQuery()
                 .OrderByDescending(e => e.PostingDate)
                 .ThenByDescending(e => e.EntryId)
                 .Take(count)
@@ -92,8 +137,10 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         }
 
         var entries = await context.BondEntries
+            .AsNoTracking()
             .Where(e => e.AccountId == accountId && e.PostingDate >= date)
             .Include(e => e.Labels)
+            .AsSplitQuery()
             .OrderBy(e => e.PostingDate)
             .ThenBy(e => e.EntryId)
             .Take(count)
@@ -106,48 +153,138 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
     }
 
     public async Task<BondAccountEntry?> Get(int accountId, int entryId) => await context.BondEntries
+            .AsNoTracking()
             .FirstOrDefaultAsync(x => x.AccountId == accountId && x.EntryId == entryId);
 
-    public async Task<int> GetCount(int accountId) => await context.BondEntries.CountAsync(x => x.AccountId == accountId);
+    public async Task<int> GetCount(int accountId) => await context.BondEntries.AsNoTracking().CountAsync(x => x.AccountId == accountId);
+
+    public async Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default)
+    {
+        if (userIds.Count == 0) return new Dictionary<int, int>();
+
+        return await (
+            from entry in context.BondEntries.AsNoTracking()
+            join account in context.Accounts on entry.AccountId equals account.AccountId
+            where userIds.Contains(account.UserId)
+            group entry by account.UserId into grouped
+            select new { UserId = grouped.Key, Count = grouped.Count() })
+            .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken);
+    }
 
     public async Task<BondAccountEntry?> GetNextOlder(int accountId, int entryId)
     {
-        var existingEntry = await context.BondEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
+        var existingEntry = await context.BondEntries.AsNoTracking().FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (existingEntry is null) return default;
 
         return await context.BondEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId && x.PostingDate < existingEntry.PostingDate)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .FirstOrDefaultAsync();
     }
 
     public async Task<BondAccountEntry?> GetNextOlder(int accountId, DateTime date) => await context.BondEntries
+             .AsNoTracking()
              .Where(x => x.AccountId == accountId && x.PostingDate < date)
              .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
              .FirstOrDefaultAsync();
 
     public async Task<BondAccountEntry?> GetNextYounger(int accountId, int entryId)
     {
-        var existingEntry = await context.BondEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
+        var existingEntry = await context.BondEntries.AsNoTracking().FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (existingEntry is null) return default;
 
         return await context.BondEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId && x.PostingDate > existingEntry.PostingDate)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .LastOrDefaultAsync();
     }
 
     public async Task<BondAccountEntry?> GetNextYounger(int accountId, DateTime date) => await context.BondEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId && x.PostingDate > date)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .LastOrDefaultAsync();
 
+    public async Task<List<BondAccountEntry>> GetRange(IReadOnlyCollection<int> accountIds, DateTime startDate, DateTime endDate)
+    {
+        if (accountIds.Count == 0) return [];
+
+        return await context.BondEntries
+            .AsNoTracking()
+            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate >= startDate && x.PostingDate <= endDate)
+            .Include(x => x.Labels)
+            .AsSplitQuery()
+            .OrderByDescending(x => x.PostingDate)
+            .ThenByDescending(x => x.EntryId)
+            .ToListAsync();
+    }
+
+    public async Task<Dictionary<int, BondAccountEntry>> GetNextOlder(IReadOnlyCollection<int> accountIds, DateTime date)
+    {
+        if (accountIds.Count == 0) return [];
+
+        var rows = await context.BondEntries
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate < date)
+            .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.PostingDate < date
+                && (o.PostingDate > e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId > e.EntryId))))
+            .ToListAsync();
+
+        return rows.ToDictionary(e => e.AccountId);
+    }
+
+    public async Task<Dictionary<int, BondAccountEntry>> GetNextYounger(IReadOnlyCollection<int> accountIds, DateTime date)
+    {
+        if (accountIds.Count == 0) return [];
+
+        var rows = await context.BondEntries
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate > date)
+            .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.PostingDate > date
+                && (o.PostingDate < e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId < e.EntryId))))
+            .ToListAsync();
+
+        return rows.ToDictionary(e => e.AccountId);
+    }
+
+    public async Task<Dictionary<int, Dictionary<int, BondAccountEntry>>> GetNextOlderPerInstrument(IReadOnlyCollection<int> accountIds, DateTime date)
+    {
+        if (accountIds.Count == 0) return [];
+
+        // One row per (account, bond details id): the entry no other older-than-date entry of the same
+        // account+bond beats on (PostingDate, EntryId).
+        var rows = await context.BondEntries
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate < date)
+            .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.BondDetailsId == e.BondDetailsId && o.PostingDate < date
+                && (o.PostingDate > e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId > e.EntryId))))
+            .ToListAsync();
+
+        return rows.GroupBy(e => e.AccountId)
+            .ToDictionary(g => g.Key, g => g.ToDictionary(e => e.BondDetailsId));
+    }
+
+    public async Task<Dictionary<int, Dictionary<int, BondAccountEntry>>> GetNextYoungerPerInstrument(IReadOnlyCollection<int> accountIds, DateTime date)
+    {
+        if (accountIds.Count == 0) return [];
+
+        var rows = await context.BondEntries
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate > date)
+            .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.BondDetailsId == e.BondDetailsId && o.PostingDate > date
+                && (o.PostingDate < e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId < e.EntryId))))
+            .ToListAsync();
+
+        return rows.GroupBy(e => e.AccountId)
+            .ToDictionary(g => g.Key, g => g.ToDictionary(e => e.BondDetailsId));
+    }
+
     public async Task<BondAccountEntry?> GetOldest(int accountId) => await context.BondEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .LastOrDefaultAsync();
 
     public async Task<BondAccountEntry?> GetYoungest(int accountId) => await context.BondEntries
+            .AsNoTracking()
             .Where(x => x.AccountId == accountId)
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .FirstOrDefaultAsync();
@@ -176,75 +313,129 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
     public async Task RecalculateValues(int accountId, int entryId)
     {
-        var entry = await context.BondEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
-        if (entry is null) return;
+        var startDate = await context.BondEntries
+            .AsNoTracking()
+            .Where(e => e.AccountId == accountId && e.EntryId == entryId)
+            .Select(e => (DateTime?)e.PostingDate)
+            .FirstOrDefaultAsync();
 
-        // Get all entries from the posting date onwards, ordered by date and id
-        var entriesToUpdate = await Get(accountId, entry.PostingDate, DateTime.UtcNow)
-            .OrderBy(x => x.PostingDate)
-            .ThenBy(x => x.EntryId)
-            .ToListAsync();
+        if (startDate is not DateTime date) return;
 
-        // Group by BondDetailsId to calculate values independently per bond
-        var entriesByBond = entriesToUpdate.GroupBy(e => e.BondDetailsId);
-        foreach (var bondGroup in entriesByBond)
-        {
-            // Get the previous entry for this specific bond
-            var previousEntry = await context.BondEntries
-                .Where(x => x.AccountId == accountId &&
-                           x.BondDetailsId == bondGroup.Key &&
-                           x.PostingDate < entry.PostingDate
-                           && x.EntryId != entry.EntryId)
-                .OrderByDescending(x => x.PostingDate)
-                .ThenByDescending(x => x.EntryId)
-                .FirstOrDefaultAsync();
+        await RecalculateValues(accountId, date);
+    }
 
-            // Recalculate values for this bond's entries
-            foreach (var entryToUpdate in bondGroup.OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
-            {
-                if (previousEntry is not null)
-                    entryToUpdate.Value = previousEntry.Value + entryToUpdate.ValueChange;
-                else
-                    entryToUpdate.Value = entryToUpdate.ValueChange;
+    public async Task RecalculateValues(int accountId)
+    {
+        // Recalculate from the oldest entry: every bond's anchor before it is empty, so each instrument
+        // is rebuilt from a zero running balance.
+        var startDate = await context.BondEntries
+            .AsNoTracking()
+            .Where(e => e.AccountId == accountId)
+            .OrderBy(e => e.PostingDate)
+            .ThenBy(e => e.EntryId)
+            .Select(e => (DateTime?)e.PostingDate)
+            .FirstOrDefaultAsync();
 
-                previousEntry = entryToUpdate;
-            }
-        }
+        if (startDate is not DateTime date) return;
 
-        await context.SaveChangesAsync();
+        await RecalculateValues(accountId, date);
     }
 
     private async Task RecalculateValues(int accountId, DateTime startDate)
     {
-        // Get all entries from the start date onwards, ordered by date and id
-        var entriesToUpdate = await Get(accountId, startDate, DateTime.UtcNow)
-            .OrderBy(x => x.PostingDate)
-            .ThenBy(x => x.EntryId)
+        if (!context.Database.IsRelational())
+        {
+            await RecalculateValuesInMemory(accountId, startDate);
+            return;
+        }
+
+        if (context.Database.ProviderName?.StartsWith("Npgsql") == true)
+        {
+            // DISTINCT ON picks the most-recent entry per BondDetailsId before startDate as the anchor.
+            await context.Database.ExecuteSqlAsync($"""
+                WITH anchors AS (
+                    SELECT DISTINCT ON ("BondDetailsId") "BondDetailsId", "Value" AS "AnchorValue"
+                    FROM "BondEntries"
+                    WHERE "AccountId" = {accountId} AND "PostingDate" < {startDate}
+                    ORDER BY "BondDetailsId", "PostingDate" DESC, "EntryId" DESC
+                ),
+                running AS (
+                    SELECT e."EntryId",
+                           COALESCE(a."AnchorValue", 0) + SUM(e."ValueChange") OVER (
+                               PARTITION BY e."BondDetailsId"
+                               ORDER BY e."PostingDate", e."EntryId"
+                               ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                           ) AS "NewValue"
+                    FROM "BondEntries" e
+                    LEFT JOIN anchors a ON a."BondDetailsId" = e."BondDetailsId"
+                    WHERE e."AccountId" = {accountId} AND e."PostingDate" >= {startDate}
+                )
+                UPDATE "BondEntries" AS e
+                SET "Value" = r."NewValue"
+                FROM running AS r
+                WHERE e."EntryId" = r."EntryId"
+                """);
+        }
+        else
+        {
+            await context.Database.ExecuteSqlAsync($"""
+                WITH anchors_raw AS (
+                    SELECT BondDetailsId, Value AS AnchorValue,
+                           ROW_NUMBER() OVER (PARTITION BY BondDetailsId ORDER BY PostingDate DESC, EntryId DESC) AS rn
+                    FROM BondEntries
+                    WHERE AccountId = {accountId} AND PostingDate < {startDate}
+                ),
+                anchors AS (
+                    SELECT BondDetailsId, AnchorValue FROM anchors_raw WHERE rn = 1
+                ),
+                running AS (
+                    SELECT e.EntryId,
+                           COALESCE(a.AnchorValue, 0) + SUM(e.ValueChange) OVER (
+                               PARTITION BY e.BondDetailsId
+                               ORDER BY e.PostingDate, e.EntryId
+                               ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                           ) AS NewValue
+                    FROM BondEntries e
+                    LEFT JOIN anchors a ON a.BondDetailsId = e.BondDetailsId
+                    WHERE e.AccountId = {accountId} AND e.PostingDate >= {startDate}
+                )
+                UPDATE e
+                SET Value = r.NewValue
+                FROM BondEntries e
+                INNER JOIN running r ON e.EntryId = r.EntryId
+                """);
+        }
+    }
+
+    private async Task RecalculateValuesInMemory(int accountId, DateTime startDate)
+    {
+        var entries = await context.BondEntries
+            .Where(e => e.AccountId == accountId && e.PostingDate >= startDate)
+            .OrderBy(e => e.PostingDate)
+            .ThenBy(e => e.EntryId)
             .ToListAsync();
 
-        // Group by BondDetailsId to calculate values independently per bond
-        var entriesByBond = entriesToUpdate.GroupBy(e => e.BondDetailsId);
+        if (entries.Count == 0) return;
 
-        foreach (var bondGroup in entriesByBond)
+        var bondIds = entries.Select(e => e.BondDetailsId).Distinct().ToList();
+
+        // Single query for all bond anchors instead of one per BondDetailsId group.
+        var anchors = (await context.BondEntries
+                .AsNoTracking()
+                .Where(e => e.AccountId == accountId && bondIds.Contains(e.BondDetailsId) && e.PostingDate < startDate)
+                .OrderByDescending(e => e.PostingDate)
+                .ThenByDescending(e => e.EntryId)
+                .ToListAsync())
+            .GroupBy(e => e.BondDetailsId)
+            .ToDictionary(g => g.Key, g => g.First().Value);
+
+        foreach (var bondGroup in entries.GroupBy(e => e.BondDetailsId))
         {
-            // Get the previous entry for this specific bond
-            var previousEntry = await context.BondEntries
-                .Where(x => x.AccountId == accountId &&
-                           x.BondDetailsId == bondGroup.Key &&
-                           x.PostingDate < startDate)
-                .OrderByDescending(x => x.PostingDate)
-                .ThenByDescending(x => x.EntryId)
-                .FirstOrDefaultAsync();
-
-            // Recalculate values for this bond's entries
-            foreach (var entryToUpdate in bondGroup.OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId))
+            decimal running = anchors.TryGetValue(bondGroup.Key, out var anchor) ? anchor : 0m;
+            foreach (var e in bondGroup.OrderBy(e => e.PostingDate).ThenBy(e => e.EntryId))
             {
-                if (previousEntry is not null)
-                    entryToUpdate.Value = previousEntry.Value + entryToUpdate.ValueChange;
-                else
-                    entryToUpdate.Value = entryToUpdate.ValueChange;
-
-                previousEntry = entryToUpdate;
+                running += e.ValueChange;
+                e.Value = running;
             }
         }
 
@@ -253,11 +444,17 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
     public async Task<bool> AddLabel(int entryId, int labelId)
     {
-        var entry = await context.BondEntries.FirstOrDefaultAsync(e => e.EntryId == entryId);
+        var entry = await context.BondEntries
+            .Include(e => e.Labels)
+            .FirstOrDefaultAsync(e => e.EntryId == entryId);
         var label = await context.FinancialLabels.FirstOrDefaultAsync(l => l.Id == labelId);
 
         if (entry is null || label is null) return false;
 
+        // Idempotent: don't add a label the entry already carries.
+        if (entry.Labels.Any(l => l.Id == labelId)) return true;
+
+        entry.Labels.Add(label);
         await context.SaveChangesAsync();
 
         return true;
@@ -311,6 +508,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             return [];
 
         return await context.BondEntries
+            .AsNoTracking()
             .Where(e => entryIds.Contains(e.EntryId))
             .ToListAsync(cancellationToken);
     }
@@ -323,6 +521,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         Dictionary<int, BondAccountEntry> result = [];
 
         var bondDetailsIds = await context.BondEntries
+                                .AsNoTracking()
                                 .Where(e => e.AccountId == accountId)
                                 .Select(m => m.BondDetailsId)
                                 .Distinct()
@@ -331,6 +530,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         foreach (var bondDetailsId in bondDetailsIds)
         {
             var nextOlder = await context.BondEntries
+                   .AsNoTracking()
                    .Where(e => e.BondDetailsId == bondDetailsId && e.AccountId == accountId && e.PostingDate < date)
                    .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId)
                    .FirstOrDefaultAsync();
@@ -348,6 +548,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         Dictionary<int, BondAccountEntry> result = [];
 
         var bondDetailsIds = await context.BondEntries
+                                .AsNoTracking()
                                 .Where(e => e.AccountId == accountId)
                                 .Select(m => m.BondDetailsId)
                                 .Distinct()
@@ -356,6 +557,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         foreach (var bondDetailsId in bondDetailsIds)
         {
             var nextYounger = await context.BondEntries
+                   .AsNoTracking()
                    .Where(e => e.BondDetailsId == bondDetailsId && e.AccountId == accountId && e.PostingDate > date)
                    .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId)
                    .LastOrDefaultAsync();

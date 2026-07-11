@@ -1,4 +1,4 @@
-using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Domain.Identity.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

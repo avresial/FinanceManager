@@ -1,5 +1,5 @@
-using FinanceManager.Application.Commands.Bonds;
-using FinanceManager.Domain.Entities.Bonds;
+using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 

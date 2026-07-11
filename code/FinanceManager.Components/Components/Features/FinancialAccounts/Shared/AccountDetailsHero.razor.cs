@@ -1,5 +1,5 @@
 using ApexCharts;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
@@ -24,6 +24,11 @@ public partial class AccountDetailsHero
     public const string CustomRangeKey = "Range";
 
     private readonly string[] _ranges = ["Month", "1M", "3M", "6M", "YTD"];
+
+    private MudDateRangePicker? _customDateRangePicker;
+
+    private Task OpenCustomDateRangePicker() =>
+        _customDateRangePicker?.OpenAsync() ?? Task.CompletedTask;
 
     private static readonly ApexChartOptions<TimeSeriesModel> _heroChartOptions = new()
     {

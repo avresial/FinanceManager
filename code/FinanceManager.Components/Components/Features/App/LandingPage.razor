@@ -1,9 +1,9 @@
 ﻿@page "/landingpage"
 
-@using FinanceManager.Application.Providers
-@using FinanceManager.Domain.Enums
-@using FinanceManager.Domain.Services
+@using FinanceManager.Domain.Identity.Entities
+@using FinanceManager.Domain.FinancialAccounts.Shared.Services
 @layout NoNavbarLayout
+@using FinanceManager.Application.Identity.Users
 
 @inject NavigationManager Navigation
 @inject ILoginService LoginService
@@ -154,10 +154,10 @@
                                     No currency synchronization
                                 </MudListItem>
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
-                                    @PricingProvider.GetMaxAllowedEntries(Domain.Enums.PricingLevel.Free) transactions
+                                    @PricingProvider.GetMaxAllowedEntries(Domain.Identity.Entities.PricingLevel.Free) transactions
                                 </MudListItem>
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
-                                    Up to @PricingProvider.GetMaxAccountCount(Domain.Enums.PricingLevel.Free) accounts
+                                    Up to @PricingProvider.GetMaxAccountCount(Domain.Identity.Entities.PricingLevel.Free) accounts
                                 </MudListItem>
                             </MudList>
                         </MudCardContent>
@@ -183,10 +183,10 @@
                                     No currency synchronization
                                 </MudListItem>
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
-                                    @PricingProvider.GetMaxAllowedEntries(Domain.Enums.PricingLevel.Basic) transactions
+                                    @PricingProvider.GetMaxAllowedEntries(Domain.Identity.Entities.PricingLevel.Basic) transactions
                                 </MudListItem>
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
-                                    Up to @PricingProvider.GetMaxAccountCount(Domain.Enums.PricingLevel.Basic) accounts
+                                    Up to @PricingProvider.GetMaxAccountCount(Domain.Identity.Entities.PricingLevel.Basic) accounts
                                 </MudListItem>
                             </MudList>
                         </MudCardContent>
@@ -212,7 +212,7 @@
                                     Currency synchronization
                                 </MudListItem>
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
-                                    @Application.Providers.PricingProvider.GetMaxAllowedEntries(Domain.Enums.PricingLevel.Premium) transactions
+                                    @PricingProvider.GetMaxAllowedEntries(Domain.Identity.Entities.PricingLevel.Premium) transactions
                                 </MudListItem>
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
                                     Unlimited accounts

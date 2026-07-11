@@ -1,12 +1,17 @@
 using FinanceManager.Api.Helpers;
-using FinanceManager.Application.Services;
-using FinanceManager.Application.Services.Currencies;
-using FinanceManager.Application.Services.Exports;
-using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Exports;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Application.FinancialAccounts.Currencies;
+using FinanceManager.Application.FinancialAccounts.Shared.Exports;
+using FinanceManager.Application.Identity.Users;
+using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Exports;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,9 +23,10 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Tags("Currency Accounts")]
 public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccount> accountRepository,
-    IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository, ICurrencyEntryProvider currencyEntryProvider,
+    IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
     IUserPlanVerifier userPlanVerifier,
-    IAccountCsvExportService<CurrencyAccountExportDto> currencyAccountCsvExportService) : ControllerBase
+    IAccountCsvExportService<CurrencyAccountExportDto> currencyAccountCsvExportService,
+    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<CurrencyAccountDto>))]
@@ -53,22 +59,6 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get(int accountId, DateTime startDate, DateTime endDate, [FromQuery] int minimumEntryCount = 0)
     {
-        return await GetAccountWithEntries(accountId, startDate, endDate, minimumEntryCount);
-    }
-
-    [HttpGet("{accountId:int}/GetInitialTransactionHistory")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountDto))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetInitialTransactionHistory(int accountId, [FromQuery] DateTime startDate,
-        [FromQuery] DateTime endDate, [FromQuery] int minimumEntryCount = 100)
-    {
-        return await GetAccountWithEntries(accountId, startDate, endDate, minimumEntryCount);
-    }
-
-    private async Task<IActionResult> GetAccountWithEntries(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount)
-    {
         var account = await accountRepository.Get(accountId);
 
         if (account is null) return NotFound();
@@ -76,9 +66,9 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         if (startDate > endDate) return BadRequest("Start date cannot be after end date.");
         if (minimumEntryCount < 0) return BadRequest("Minimum entry count cannot be negative.");
 
-        var loadResult = await currencyEntryProvider.GetEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
+        var (entries, effectiveStartDate) = await accountEntryRepository.GetEntriesWithMinimumCount(accountId, startDate, endDate, minimumEntryCount);
 
-        return Ok(await CreateDtoAsync(account, loadResult.Entries, loadResult.EffectiveStartDate, endDate));
+        return Ok(await CreateDtoAsync(account, entries, effectiveStartDate, endDate));
     }
 
     [HttpGet("{accountId:int}/entries")]
@@ -111,7 +101,9 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         if (!await userPlanVerifier.CanAddMoreAccounts(userId))
             return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
-        return Ok(await accountRepository.Add(userId, addAccount.AccountName));
+        var result = await accountRepository.Add(userId, addAccount.AccountName);
+        await dashboardCacheInvalidator.InvalidateUser(userId);
+        return Ok(result);
     }
 
     [HttpPut]
@@ -122,7 +114,10 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         var account = await accountRepository.Get(updateAccount.AccountId);
 
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
-        return Ok(await accountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType));
+
+        var result = await accountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 
     [HttpDelete("{accountId:int}")]
@@ -134,7 +129,9 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
 
         await accountEntryRepository.Delete(accountId);
-        return Ok(await accountRepository.Delete(accountId));
+        var result = await accountRepository.Delete(accountId);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 
     [HttpGet("export/{accountId:int}")]

@@ -1,4 +1,5 @@
-using FinanceManager.Domain.ValueObjects;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;

@@ -1,8 +1,10 @@
 using FinanceManager.Application.Commands.Login;
-using FinanceManager.Application.Providers;
-using FinanceManager.Domain.Entities.Users;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Application.Identity;
+using FinanceManager.Domain.Administration.Monitoring;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Infrastructure.Contexts;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using System.IdentityModel.Tokens.Jwt;
@@ -19,9 +21,17 @@ public class LoginControllerTests(OptionsProvider optionsProvider) : ControllerT
     // Stored login is lowercased (logins are normalized at the API boundary); see the mixed-case test below.
     private static readonly string _testUserName = "testuser@example.com";
     private static readonly string _testPassword = "password";
+    private TestDatabase? _testDatabase;
 
     protected override void ConfigureServices(IServiceCollection services)
     {
+        var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+        if (descriptor != null)
+            services.Remove(descriptor);
+
+        _testDatabase = new TestDatabase();
+        services.AddSingleton(_testDatabase.Context);
+
         var userRepoMock = new Mock<IUserRepository>();
         userRepoMock.Setup(x => x.GetUser(_testUserName, PasswordEncryptionProvider.EncryptPassword(_testPassword)))
             .ReturnsAsync(new User
@@ -131,5 +141,13 @@ public class LoginControllerTests(OptionsProvider optionsProvider) : ControllerT
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Equal("https://localhost:7206", response.Headers.GetValues("Access-Control-Allow-Origin").Single());
         Assert.Contains(HttpMethod.Post.Method, response.Headers.GetValues("Access-Control-Allow-Methods").Single(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        _testDatabase?.Dispose();
+        _testDatabase = null;
+        GC.SuppressFinalize(this);
     }
 }

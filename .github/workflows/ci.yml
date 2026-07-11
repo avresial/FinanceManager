@@ -5,6 +5,10 @@ on:
     branches: [ main, develop ]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   AZURE_WEBAPP_NAME: 'FinanceManagerApi'
   AZURE_WEBAPP_NAME_DEV: 'FinanceManagerApi-dev'
@@ -13,63 +17,65 @@ env:
   SOLUTION_PATH: './code/FinanceManager.slnx'
   API_PROJECT_PATH: './code/FinanceManager.Api/FinanceManager.Api.csproj'
   PUBLISH_DIR: './code/FinanceManager.Api/publish'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
 
 permissions:
-  checks: write
-  pull-requests: write
   contents: read
-  security-events: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('code/Directory.Packages.props', 'code/**/*.csproj', 'code/global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore dependencies
-        run: dotnet restore ./code
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
 
       - name: Build the solution
-        run: dotnet build ./code --no-restore --configuration Release
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: build-output
-          path: |
-            code/**/bin/Release/**
-            code/**/obj/**
-          retention-days: 1
+        run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore --configuration Release
 
   code-quality:
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v5
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
         with:
-          name: build-output
-          path: code
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('code/Directory.Packages.props', 'code/**/*.csproj', 'code/global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
       - name: Restore dependencies
-        run: dotnet restore ./code
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
 
       # Naming-rule violations (IDE1006) are a hard failure: the .editorconfig naming rules
       # are set to error severity, but the C# compiler does not run the naming analyzer during
@@ -81,30 +87,36 @@ jobs:
         run: dotnet format ./code --verify-no-changes --verbosity diagnostic
 
       - name: Build with code analysis
-        run: dotnet build ./code --no-restore --configuration Release /p:EnforceCodeStyleInBuild=true
+        run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore --configuration Release /p:EnforceCodeStyleInBuild=true
 
   security-scan:
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v5
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
         with:
-          name: build-output
-          path: code
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('code/Directory.Packages.props', 'code/**/*.csproj', 'code/global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
       - name: Restore dependencies
-        run: dotnet restore ./code
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
 
       # `dotnet list package --vulnerable` exits 0 even when it finds vulnerabilities, so grep the
       # output and fail the step ourselves — a known CVE must block the build, not just be reported.
@@ -124,7 +136,7 @@ jobs:
           languages: csharp
 
       - name: Build for CodeQL
-        run: dotnet build ./code --no-restore --configuration Release
+        run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore --configuration Release
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
@@ -133,26 +145,35 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      checks: write
     env:
       FINANCE_MANAGER_DB_KEY: ${{ secrets.FINANCE_MANAGER_DB_KEY }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v5
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
         with:
-          name: build-output
-          path: code
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('code/Directory.Packages.props', 'code/**/*.csproj', 'code/global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
-      - name: Restore execute permissions
-        run: chmod +x -R ./code/**/bin/Release/net10.0/*
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+      - name: Build unit tests
+        run: dotnet build ./code/FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj --no-restore --configuration Release
 
       - name: Run unit tests
         run: |
@@ -160,7 +181,7 @@ jobs:
           ./code/FinanceManager.Tests.Unit/bin/Release/net10.0/FinanceManager.Tests.Unit -trx ${{ github.workspace }}/TestResults/unit-test-results.trx
 
       - name: Publish unit test results
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v3
         if: always()
         with:
           name: 'Unit Test Results'
@@ -169,35 +190,46 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
-    needs: [build, unit-tests]
+    needs: build
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      checks: write
     env:
       FINANCE_MANAGER_DB_KEY: ${{ secrets.FINANCE_MANAGER_DB_KEY }}
       UseInMemoryDatabase: true
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore dependencies
-        run: dotnet restore ./code
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('code/Directory.Packages.props', 'code/**/*.csproj', 'code/global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
-      - name: Build solution
-        run: dotnet build ./code --configuration Release
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+      - name: Build integration tests
+        run: dotnet build ./code/FinanceManager.Tests.Integration/FinanceManager.Tests.Integration.csproj --no-restore --configuration Release
 
       - name: Run integration tests
         run: |
           mkdir -p ${{ github.workspace }}/TestResults
-          chmod +x ./code/FinanceManager.Tests.Integration/bin/Release/net10.0/FinanceManager.Tests.Integration
           ./code/FinanceManager.Tests.Integration/bin/Release/net10.0/FinanceManager.Tests.Integration -trx ${{ github.workspace }}/TestResults/integration-test-results.trx
 
       - name: Publish integration test results
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v3
         if: always()
         with:
           name: 'Integration Test Results'
@@ -208,18 +240,30 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      checks: write
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('code/Directory.Packages.props', 'code/**/*.csproj', 'code/global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore dependencies
-        run: dotnet restore ./code
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
 
       # ArchUnitNET analyzes compiled IL; Release optimizations (elided casts/locals,
       # inlined typeof) can distort the dependency graph, so the maintainers recommend
@@ -230,11 +274,10 @@ jobs:
       - name: Run architecture tests
         run: |
           mkdir -p ${{ github.workspace }}/TestResults
-          chmod +x ./code/FinanceManager.Tests.Architecture/bin/Debug/net10.0/FinanceManager.Tests.Architecture
           ./code/FinanceManager.Tests.Architecture/bin/Debug/net10.0/FinanceManager.Tests.Architecture -trx ${{ github.workspace }}/TestResults/architecture-test-results.trx
 
       - name: Publish architecture test results
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v3
         if: always()
         with:
           name: 'Architecture Test Results'
@@ -254,30 +297,33 @@ jobs:
       && needs.architecture-tests.result == 'success'
       && needs.code-quality.result == 'success'
       && needs.security-scan.result == 'success'
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v5
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
         with:
-          name: build-output
-          path: code
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('code/Directory.Packages.props', 'code/**/*.csproj', 'code/global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
       - name: Restore dependencies
-        run: dotnet restore ./code
+        run: dotnet restore ${{ env.API_PROJECT_PATH }}
 
       - name: Publish API
-        run: dotnet publish ${{ env.API_PROJECT_PATH }} --configuration Release --output ${{ env.PUBLISH_DIR }} --no-build
+        run: dotnet publish ${{ env.API_PROJECT_PATH }} --no-restore --configuration Release --output ${{ env.PUBLISH_DIR }}
 
       - name: Upload publish artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: finance-manager-api
           path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
@@ -295,18 +341,27 @@ jobs:
     environment:
       name: production
       url: https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('code/Directory.Packages.props', 'code/**/*.csproj', 'code/global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore dependencies
-        run: dotnet restore ./code
+        run: dotnet restore ${{ env.API_PROJECT_PATH }}
 
       - name: Install EF Core CLI
         run: |
@@ -319,7 +374,7 @@ jobs:
           ConnectionStrings__DefaultConnection: ${{ secrets.PROD_CONNECTION_STRING }}
 
       - name: Download publish artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: finance-manager-api
           path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
@@ -343,18 +398,27 @@ jobs:
     environment:
       name: development
       url: https://${{ env.AZURE_WEBAPP_NAME_DEV }}.azurewebsites.net
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('code/Directory.Packages.props', 'code/**/*.csproj', 'code/global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore dependencies
-        run: dotnet restore ./code
+        run: dotnet restore ${{ env.API_PROJECT_PATH }}
 
       - name: Install EF Core CLI
         run: |
@@ -367,7 +431,7 @@ jobs:
           ConnectionStrings__DefaultConnection: ${{ secrets.DEV_CONNECTION_STRING }}
 
       - name: Download publish artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: finance-manager-api
           path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}

@@ -1,11 +1,11 @@
-using ApexCharts;
-using FinanceManager.Components.Helpers;
+using FinanceManager.Application.Identity.Users;
+using FinanceManager.Components.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Models;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Providers;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
@@ -13,49 +13,27 @@ namespace FinanceManager.Components.Components.Features.Dashboard.Cards.Assets;
 
 public partial class AssetsDistributionOverviewCard
 {
-    private const string _viewByType = "type";
-    private const string _viewByWallet = "wallet";
-
-    private string _view = _viewByType;
     private bool _isLoading;
     private Currency _currency = DefaultCurrency.PLN;
-    private decimal _totalAssets;
     private List<NameValueResult> _typeData = [];
     private List<NameValueResult> _walletData = [];
-    private ApexChart<NameValueResult>? _chart;
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
+
+    // When the dashboard supplies a prepared model the card renders it directly;
+    // otherwise it self-loads from the cache service as in standalone usage.
+    [Parameter] public DistributionCardModel? Model { get; set; }
 
     [Inject] public required ILogger<AssetsDistributionOverviewCard> Logger { get; set; }
     [Inject] public required AssetsPageCardsCacheService AssetsPageCardsCacheService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    private List<NameValueResult> ActiveData => _view == _viewByWallet ? _walletData : _typeData;
-
-    private readonly ApexChartOptions<NameValueResult> _chartOptions = new()
-    {
-        Chart = new Chart
-        {
-            Toolbar = new Toolbar { Show = false },
-            Background = "transparent",
-        },
-        Legend = new Legend { Show = false },
-        Colors = ColorsProvider.GetColors(),
-    };
-
     protected override void OnInitialized()
     {
         _currency = SettingsService.GetCurrency();
-        _chartOptions.Tooltip = new Tooltip
-        {
-            Y = new TooltipY
-            {
-                Formatter = ChartHelper.GetCurrencyFormatter(_currency.ShortName),
-            },
-        };
     }
 
     protected override async Task OnParametersSetAsync()
@@ -65,12 +43,18 @@ public partial class AssetsDistributionOverviewCard
 
         try
         {
+            if (Model is not null)
+            {
+                _typeData = [.. Model.TypeData];
+                _walletData = [.. Model.AccountData];
+                return;
+            }
+
             var user = await LoginService.GetLoggedUser();
             if (user is null)
             {
                 _typeData = [];
                 _walletData = [];
-                _totalAssets = 0;
                 return;
             }
 
@@ -85,10 +69,6 @@ public partial class AssetsDistributionOverviewCard
             var snapshot = await AssetsPageCardsCacheService.GetSnapshotAsync(context);
             _typeData = [.. snapshot.EndAssetsPerType];
             _walletData = [.. snapshot.EndAssetsPerAccount];
-            _totalAssets = _typeData.Count == 0 ? 0 : Math.Round(_typeData.Sum(x => x.Value), 2);
-
-            if (_chart is not null)
-                await _chart.UpdateSeriesAsync(true);
         }
         catch (Exception ex)
         {
@@ -99,13 +79,5 @@ public partial class AssetsDistributionOverviewCard
             _isLoading = false;
             StateHasChanged();
         }
-    }
-
-    private async Task OnViewChangedAsync(string view)
-    {
-        _view = view;
-        StateHasChanged();
-        if (_chart is not null)
-            await _chart.UpdateSeriesAsync(true);
     }
 }

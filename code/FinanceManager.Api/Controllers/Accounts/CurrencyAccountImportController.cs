@@ -2,11 +2,15 @@ using FinanceManager.Api;
 using FinanceManager.Api.Helpers;
 using FinanceManager.Api.Hubs;
 using FinanceManager.Api.Services;
-using FinanceManager.Application.Services.Currencies;
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.Imports;
-using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Application.FinancialAccounts.Currencies.Import;
+using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Imports;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -17,7 +21,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Currency Imports")]
-public class CurrencyAccountImportController(ICurrencyAccountImportService importService, ICurrencyAccountRepository<CurrencyAccount> accountRepository)
+public class CurrencyAccountImportController(ICurrencyAccountImportService importService, ICurrencyAccountRepository<CurrencyAccount> accountRepository,
+    ICacheInvalidator dashboardCacheInvalidator)
     : ControllerBase
 {
     [HttpPost(RequestBodySizeLimits.CurrencyStartAsyncImportPath)]
@@ -86,7 +91,10 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
         }
 
         if (resolvedConflicts.Count != 0)
+        {
             await importService.ApplyResolvedConflicts(resolvedConflicts);
+            await dashboardCacheInvalidator.InvalidateUser(userId);
+        }
 
         if (!jobStore.TryGetStatus(request.JobId, userId, out var status) || status is null)
             return NotFound("Import job not found.");
@@ -111,6 +119,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
 
         var domainEntries = importDto.Entries.Select(e => new CurrencyEntryImport(e.PostingDate, e.ValueChange, e.ContractorDetails, e.Description));
         var domainResult = await importService.ImportEntries(userId, importDto.AccountId, domainEntries);
+        await dashboardCacheInvalidator.InvalidateUser(userId);
         return Ok(domainResult);
     }
 
@@ -131,6 +140,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
         }
 
         await importService.ApplyResolvedConflicts(resolvedConflicts);
+        await dashboardCacheInvalidator.InvalidateUser(userId);
         return Ok();
     }
 }

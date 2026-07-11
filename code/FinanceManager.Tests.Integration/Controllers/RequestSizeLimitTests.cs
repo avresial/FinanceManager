@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.Identity.Entities;
 using System.Net;
 using System.Net.Http.Headers;
 using Xunit;
@@ -26,7 +26,7 @@ public class RequestSizeLimitTests(OptionsProvider optionsProvider) : Controller
         content.Headers.ContentLength = contentLength;
         content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-        var response = await Client.PostAsync("api/StockAccountImport/ImportStockEntries", content, TestContext.Current.CancellationToken);
+        var response = await Client.PostAsync("api/BondAccountImport/ImportBondEntries", content, TestContext.Current.CancellationToken);
 
         Assert.Equal((HttpStatusCode)413, response.StatusCode);
     }

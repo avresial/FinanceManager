@@ -1,6 +1,9 @@
+using FinanceManager.Application.Identity.Users;
+using FinanceManager.Components.Components.Features.Dashboard.Models;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
@@ -17,6 +20,10 @@ public partial class NetWorthTimeSeriesCard
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
     [Parameter] public string Height { get; set; } = "250px";
 
+    // When the dashboard supplies a prepared model the card renders it directly;
+    // otherwise it self-loads from the API as in standalone usage.
+    [Parameter] public TimeSeriesCardModel? Model { get; set; }
+
     [Inject] public required ILogger<NetWorthTimeSeriesCard> Logger { get; set; }
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
@@ -26,6 +33,15 @@ public partial class NetWorthTimeSeriesCard
 
     private async Task Reload()
     {
+        if (Model is not null)
+        {
+            _currency = SettingsService.GetCurrency().ShortName;
+            _series = [.. Model.Series.OrderBy(x => x.DateTime).Select(x => new TimeSeriesModel(x.DateTime, x.Value))];
+            _hasError = false;
+            _isLoading = false;
+            return;
+        }
+
         var user = await LoginService.GetLoggedUser();
         if (user is null)
         {

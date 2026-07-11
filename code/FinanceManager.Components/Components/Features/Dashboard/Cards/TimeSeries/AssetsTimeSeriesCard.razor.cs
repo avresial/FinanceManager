@@ -1,7 +1,9 @@
+using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Models;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 

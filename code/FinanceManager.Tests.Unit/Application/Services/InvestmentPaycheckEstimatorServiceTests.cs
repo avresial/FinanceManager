@@ -1,16 +1,13 @@
-using FinanceManager.Application.Providers;
-using FinanceManager.Application.Services;
-using FinanceManager.Application.Services.Stocks;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.Shared.Accounts;
-using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Domain.Services;
-using Microsoft.Extensions.Caching.Memory;
+using FinanceManager.Application.MoneyFlow.InvestmentPaycheck;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Labels.Repositories;
+using FinanceManager.Domain.Shared;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;
@@ -21,41 +18,20 @@ public class InvestmentPaycheckEstimatorServiceTests
 {
     private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
     private readonly Mock<IFinancialLabelsRepository> _financialLabelsRepositoryMock = new();
-    private readonly Mock<IStockPriceRepository> _stockRepositoryMock = new();
-    private readonly Mock<ICurrencyExchangeService> _currencyExchangeServiceMock = new();
+    private readonly Mock<IInvestmentValuationService> _investmentValuationServiceMock = new();
     private readonly Mock<IBondDetailsRepository> _bondDetailsRepositoryMock = new();
     private readonly InvestmentPaycheckEstimatorService _service;
 
     public InvestmentPaycheckEstimatorServiceTests()
     {
-        _currencyExchangeServiceMock
-            .Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
-            .ReturnsAsync(1m);
+        _financialAccountRepositoryMock
+            .Setup(x => x.GetAccounts<InvestmentAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<InvestmentAccount>());
+        _investmentValuationServiceMock
+            .Setup(x => x.GetAccountValueAsync(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0m);
 
-        IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
-        var stockDetailsRepoMock = new Mock<IStockDetailsRepository>();
-        stockDetailsRepoMock.Setup(x => x.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string ticker, CancellationToken _) => new StockDetails
-            {
-                Isin = "US0000000001",
-                Ticker = ticker,
-                Currency = DefaultCurrency.PLN,
-                Name = ticker,
-                Type = "Stock",
-                Region = "US"
-            });
-        var isinResolverMock = new Mock<IIsinResolver>();
-        isinResolverMock.Setup(x => x.ResolveAsync("MSFT", It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync("US5949181045");
-        var stockPriceProvider = new StockPriceProvider(
-            _stockRepositoryMock.Object,
-            new Mock<IAlphaVantageClient>().Object,
-            stockDetailsRepoMock.Object,
-            new Mock<ICurrencyRepository>().Object,
-            _currencyExchangeServiceMock.Object,
-            cache,
-            isinResolverMock.Object);
-        _service = new InvestmentPaycheckEstimatorService(_financialAccountRepositoryMock.Object, _financialLabelsRepositoryMock.Object, stockPriceProvider, _bondDetailsRepositoryMock.Object);
+        _service = new InvestmentPaycheckEstimatorService(_financialAccountRepositoryMock.Object, _financialLabelsRepositoryMock.Object, _investmentValuationServiceMock.Object, _bondDetailsRepositoryMock.Object);
     }
 
     [Fact]
@@ -69,8 +45,7 @@ public class InvestmentPaycheckEstimatorServiceTests
         salaryAccount.Add(new CurrencyAccountEntry(10, 1, new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc), 3000m, 3000m) { Labels = [salaryLabel] }, false);
         salaryAccount.Add(new CurrencyAccountEntry(10, 2, new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), 4500m, 4500m) { Labels = [salaryLabel] }, false);
 
-        var stockAccount = new StockAccount(userId, 20, "Stocks");
-        stockAccount.Add(new StockAccountEntry(20, 1, asOfDate.AddDays(-1), 100m, 100m, "MSFT", InvestmentType.Stock), false);
+        var investmentAccount = new InvestmentAccount(userId, 20, "Stocks");
 
         var bondAccount = new BondAccount(userId, 30, "Bonds", AccountLabel.Other);
         bondAccount.Add(new BondAccountEntry(30, 1, asOfDate.AddDays(-2), 12000m, 12000m, 1), false);
@@ -83,8 +58,11 @@ public class InvestmentPaycheckEstimatorServiceTests
             .Setup(x => x.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(new[] { salaryAccount }.ToAsyncEnumerable());
         _financialAccountRepositoryMock
-            .Setup(x => x.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
-            .Returns(new[] { stockAccount }.ToAsyncEnumerable());
+            .Setup(x => x.GetAccounts<InvestmentAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { investmentAccount }.ToAsyncEnumerable());
+        _investmentValuationServiceMock
+            .Setup(x => x.GetAccountValueAsync(20, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1000m);
         _financialAccountRepositoryMock
             .Setup(x => x.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(new[] { bondAccount }.ToAsyncEnumerable());
@@ -105,10 +83,6 @@ public class InvestmentPaycheckEstimatorServiceTests
                     Id = 1
                 }
             }.ToAsyncEnumerable());
-
-        _stockRepositoryMock
-            .Setup(x => x.GetThisOrNextOlder("US5949181045", It.IsAny<DateTime>()))
-            .ReturnsAsync(new StockPrice { Isin = "US5949181045", Currency = DefaultCurrency.PLN, PricePerUnit = 10m, Date = asOfDate });
 
         var result = await _service.GetEstimate(userId, DefaultCurrency.PLN, asOfDate, 0.05m, 3);
 
@@ -138,8 +112,8 @@ public class InvestmentPaycheckEstimatorServiceTests
             .Setup(x => x.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
         _financialAccountRepositoryMock
-            .Setup(x => x.GetAccounts<StockAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
-            .Returns(AsyncEnumerable.Empty<StockAccount>());
+            .Setup(x => x.GetAccounts<InvestmentAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(AsyncEnumerable.Empty<InvestmentAccount>());
         _financialAccountRepositoryMock
             .Setup(x => x.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(new[] { bondAccount }.ToAsyncEnumerable());

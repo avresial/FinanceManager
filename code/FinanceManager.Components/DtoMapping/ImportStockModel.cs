@@ -1,4 +1,4 @@
-﻿namespace FinanceManager.Infrastructure.Dtos;
+﻿namespace FinanceManager.Components.DtoMapping;
 
 public class ImportStockModel
 {

@@ -1,0 +1,27 @@
+﻿using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+
+namespace FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+
+public interface IFinancialAccountRepository
+{
+    public Task<Dictionary<int, Type>> GetAvailableAccounts(int userId);
+    public Task<int> GetLastAccountId();
+    public Task<int> GetAccountsCount();
+    public Task<DateTime?> GetStartDate(int id);
+    public Task<DateTime?> GetEndDate(int id);
+
+    public Task<bool> AccountExists(int id);
+    public Task<T?> GetAccount<T>(int userId, int id, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation;
+    public IAsyncEnumerable<T> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation;
+
+    public Task<int?> AddAccount<T>(T account) where T : BasicAccountInformation;
+    public Task AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data) where AccountType : BasicAccountInformation where EntryType : FinancialEntryBase;
+    public Task UpdateAccount<T>(T account) where T : BasicAccountInformation;
+    public Task RemoveAccount(Type accountType, int id);
+
+    public Task<T?> GetNextYounger<T>(int accountId, DateTime date) where T : FinancialEntryBase;
+    public Task AddEntry<T>(T accountEntry, int id) where T : FinancialEntryBase;
+    Task<bool> AddLabel<T>(T accountEntry, int labelId) where T : FinancialEntryBase;
+    public Task UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase;
+    public Task RemoveEntry(int accountEntryId, int id);
+}

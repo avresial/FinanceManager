@@ -1,6 +1,6 @@
 using ApexCharts;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Entities.Shared;
+using FinanceManager.Domain.Shared.Charting;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;

@@ -1,8 +1,10 @@
 using FinanceManager.Components.Components.Shared;
 using FinanceManager.Components.Components.Shared.Dialogs;
+using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
@@ -15,6 +17,7 @@ public partial class ManageBondAccount
     private bool _success;
     private string[] _errors = [];
     private BondAccount? _bondAccount = null;
+    private bool _isRecalculating;
 
     public string AccountName { get; set; } = string.Empty;
 
@@ -26,6 +29,8 @@ public partial class ManageBondAccount
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<ManageBondAccount> Logger { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
+    [Inject] public required BondEntryHttpClient BondEntryHttpClient { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -94,6 +99,35 @@ public partial class ManageBondAccount
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error removing bond account with ID {AccountId}", AccountId);
+        }
+    }
+
+    public async Task Recalculate()
+    {
+        if (_isRecalculating || _bondAccount is null) return;
+
+        try
+        {
+            _isRecalculating = true;
+
+            if (await BondEntryHttpClient.RecalculateBalanceAsync(AccountId))
+            {
+                Snackbar.Add("Account balance recalculated.", Severity.Success);
+                await AccountDataSynchronizationService.AccountChanged();
+            }
+            else
+            {
+                Snackbar.Add("Failed to recalculate account balance.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error recalculating balance for bond account with ID {AccountId}", AccountId);
+            Snackbar.Add("Failed to recalculate account balance.", Severity.Error);
+        }
+        finally
+        {
+            _isRecalculating = false;
         }
     }
 }

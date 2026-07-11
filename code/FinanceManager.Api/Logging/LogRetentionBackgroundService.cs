@@ -1,4 +1,5 @@
-using FinanceManager.Domain.Repositories;
+using FinanceManager.Domain.Administration.Logging;
+using FinanceManager.Domain.Identity.Repositories;
 using Microsoft.Extensions.Options;
 
 namespace FinanceManager.Api.Logging;

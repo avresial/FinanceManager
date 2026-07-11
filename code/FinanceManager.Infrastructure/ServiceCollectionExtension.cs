@@ -1,22 +1,38 @@
-﻿using FinanceManager.Application.Options;
-using FinanceManager.Application.Services;
-using FinanceManager.Application.Services.Ai;
-using FinanceManager.Application.Services.ExternalServices;
-using FinanceManager.Application.Services.FinancialInsights;
-using FinanceManager.Application.Services.Stocks;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.Stocks;
-using FinanceManager.Domain.Providers;
-using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Domain.Services;
+﻿using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
+using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
+using FinanceManager.Application.Insights.Generation;
+using FinanceManager.Application.Labels.Setter;
+using FinanceManager.Application.Labels.Suggestions;
+using FinanceManager.Application.Shared.ExternalServices;
+using FinanceManager.Domain.Administration.Logging;
+using FinanceManager.Domain.Administration.Monitoring;
+using FinanceManager.Domain.Assets.Repositories;
+using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Insights.Repositories;
+using FinanceManager.Domain.Labels.Repositories;
+using FinanceManager.Domain.MoneyFlow.Services;
+using FinanceManager.Domain.Shared.Ai.Repositories;
+using FinanceManager.Domain.Shared.Charting;
+using FinanceManager.Domain.Shared.ExternalServices.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Guest;
 using FinanceManager.Infrastructure.Providers;
 using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
+using FinanceManager.Infrastructure.Repositories.Assets;
+using FinanceManager.Infrastructure.Repositories.Investments;
 using FinanceManager.Infrastructure.Services;
 using FinanceManager.Infrastructure.Services.Ai;
 using FinanceManager.Infrastructure.Services.Currencies;
@@ -24,6 +40,8 @@ using FinanceManager.Infrastructure.Services.ExternalServices;
 using FinanceManager.Infrastructure.Services.Stocks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -36,26 +54,48 @@ public static class ServiceCollectionExtension
     {
         services.AddSingleton<IExternalServiceConfigService, ExternalServiceConfigService>();
         services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
+        services.AddHttpClient<EodhdClient>();
+        // Daily-price fetches go through a fallback chain: Alpha Vantage first, then EODHD when the
+        // primary is rate-limited, unentitled, or has no data. AlphaVantageClient also implements
+        // IStockPriceSource, so reuse the same singleton-per-scope instance the typed client resolves.
+        services.AddScoped<IStockPriceSource>(sp => new FallbackStockPriceSource(
+            [
+                (IStockPriceSource)sp.GetRequiredService<IAlphaVantageClient>(),
+                sp.GetRequiredService<EodhdClient>()
+            ],
+            sp.GetRequiredService<ILogger<FallbackStockPriceSource>>()));
         services.AddHttpClient<OpenFigiClient>();
-        services.AddScoped<IIsinResolver, CachingIsinResolver>();
+        services.AddScoped<IOpenFigiClient>(sp => sp.GetRequiredService<OpenFigiClient>());
+        services.AddScoped<IQuoteFactorResolver>(sp =>
+            new QuoteFactorResolver(
+                sp.GetRequiredService<ICurrencyExchangeRateProvider>(),
+                sp.GetRequiredService<ILogger<QuoteFactorResolver>>()));
+        services.AddScoped<IInstrumentResolver>(sp =>
+            new InstrumentResolver(
+                sp.GetRequiredService<IOpenFigiClient>(),
+                sp.GetRequiredService<IAlphaVantageClient>(),
+                sp.GetRequiredService<IAssetRepository>(),
+                sp.GetRequiredService<IAssetListingRepository>(),
+                sp.GetRequiredService<IMarketDataSymbolRepository>(),
+                sp.GetRequiredService<IQuoteFactorResolver>(),
+                sp.GetRequiredService<IMemoryCache>(),
+                sp.GetRequiredService<ILogger<InstrumentResolver>>()));
         services.AddHttpClient<ICurrencyExchangeRateProvider, FawazAhmedCurrencyApiClient>();
 
         services.AddAI();
 
         services
-                .AddScoped<IDataBackfillService, DataBackfillService>()
-                .AddScoped<IStockPriceRepository, StockPriceRepository>()
-                .AddScoped<IStockDetailsRepository, StockDetailsRepository>()
+                .AddScoped<IAssetRepository, AssetRepository>()
+                .AddScoped<IAssetListingRepository, AssetListingRepository>()
+                .AddScoped<IMarketDataSymbolRepository, MarketDataSymbolRepository>()
+                .AddScoped<IInvestmentTransactionRepository, InvestmentTransactionRepository>()
+                .AddScoped<IPriceQuoteRepository, PriceQuoteRepository>()
                 .AddScoped<IFinancialAccountRepository, AccountRepository>()
                 .AddScoped<IUserRepository, UserRepository>()
                 .AddScoped<IRefreshTokenRepository, RefreshTokenRepository>()
                 .AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>()
                 .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()
-                .AddScoped<IAccountEntryRepository<CurrencyAccountEntry>, CurrencyEntryRepository>()
-                .AddScoped<IAccountEntryRepository<BondAccountEntry>, BondEntryRepository>()
-                .AddScoped<IBondAccountEntryRepository<BondAccountEntry>, BondEntryRepository>()
-                .AddScoped<IStockAccountEntryRepository<StockAccountEntry>, StockEntryRepository>()
-                .AddScoped<IAccountRepository<StockAccount>, StockAccountRepository>()
+                .AddScoped<IAccountRepository<InvestmentAccount>, InvestmentAccountRepository>()
                 .AddScoped<IAccountRepository<BondAccount>, BondAccountRepository>()
                 .AddScoped<ICurrencyAccountRepository<CurrencyAccount>, CurrencyAccountRepository>()
                 .AddScoped<INewVisitsRepository, NewVisitsRepository>()
@@ -76,7 +116,39 @@ public static class ServiceCollectionExtension
                 .AddHostedService<DatabaseInitializer>()
                 ;
 
+        AddCachedEntryRepositories(services);
+
         return services;
+    }
+
+    // Account entry repositories are registered as inner concrete services wrapped by HybridCache decorators
+    // (CachedAccountEntryRepository<T>) that cache point-reads and month-bucket range reads, and bust the
+    // owner's cache on every write. The owner resolver translates accountId → userId for per-user tags.
+    // See issues #455 (point-read cache) and #456 (range/bucket cache).
+    private static void AddCachedEntryRepositories(IServiceCollection services)
+    {
+        services.AddSingleton(new EntryRangeCacheOptions());
+        services.AddScoped<IAccountUserResolver, AccountUserResolver>();
+
+        services.AddScoped<CurrencyEntryRepository>();
+        services.AddScoped<IAccountEntryRepository<CurrencyAccountEntry>>(sp =>
+            new CachedAccountEntryRepository<CurrencyAccountEntry>(
+                sp.GetRequiredService<CurrencyEntryRepository>(),
+                sp.GetRequiredService<IAccountUserResolver>(),
+                sp.GetRequiredService<ICacheInvalidator>(),
+                sp.GetRequiredService<HybridCache>(),
+                sp.GetRequiredService<EntryRangeCacheOptions>()));
+
+        services.AddScoped<BondEntryRepository>();
+        services.AddScoped<CachedBondEntryRepository>(sp =>
+            new CachedBondEntryRepository(
+                sp.GetRequiredService<BondEntryRepository>(),
+                sp.GetRequiredService<IAccountUserResolver>(),
+                sp.GetRequiredService<ICacheInvalidator>(),
+                sp.GetRequiredService<HybridCache>(),
+                sp.GetRequiredService<EntryRangeCacheOptions>()));
+        services.AddScoped<IBondAccountEntryRepository<BondAccountEntry>>(sp => sp.GetRequiredService<CachedBondEntryRepository>());
+        services.AddScoped<IAccountEntryRepository<BondAccountEntry>>(sp => sp.GetRequiredService<CachedBondEntryRepository>());
     }
 
     public static IServiceCollection AddDatabase(this IServiceCollection services, IConfigurationManager configuration)
@@ -107,15 +179,8 @@ public static class ServiceCollectionExtension
             var databaseProvider = InferDatabaseProvider(connectionString,
                 configuration.GetValue("DatabaseProvider", "SqlServer") ?? "SqlServer");
 
-            services.AddDbContext<AppDbContext>((sp, options) =>
+            void ConfigureRelational(DbContextOptionsBuilder options)
             {
-                var guestDbName = GuestDatabaseNaming.TryGetGuestDatabaseName(sp);
-                if (guestDbName is not null)
-                {
-                    options.UseInMemoryDatabase(databaseName: guestDbName, sp.GetRequiredService<InMemoryDatabaseRoot>());
-                    return;
-                }
-
                 if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) ||
                     databaseProvider.Equals("Supabase", StringComparison.OrdinalIgnoreCase))
                 {
@@ -125,7 +190,28 @@ public static class ServiceCollectionExtension
                 {
                     options.UseSqlServer(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
                 }
-            });
+            }
+
+            // Guest sandbox resolves a per-user in-memory database name at request time; that
+            // per-request variability is incompatible with DbContext pooling.
+            var enableGuestSessionSandbox = configuration.GetValue("EnableGuestSessionSandbox", false);
+            if (enableGuestSessionSandbox)
+            {
+                services.AddDbContext<AppDbContext>((sp, options) =>
+                {
+                    var guestDbName = GuestDatabaseNaming.TryGetGuestDatabaseName(sp);
+                    if (guestDbName is not null)
+                    {
+                        options.UseInMemoryDatabase(databaseName: guestDbName, sp.GetRequiredService<InMemoryDatabaseRoot>());
+                        return;
+                    }
+                    ConfigureRelational(options);
+                });
+            }
+            else
+            {
+                services.AddDbContextPool<AppDbContext>((_, options) => ConfigureRelational(options));
+            }
         }
 
         return services;

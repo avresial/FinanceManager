@@ -1,9 +1,11 @@
 using FinanceManager.Api.Helpers;
-using FinanceManager.Application.Services;
-using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Application.Identity.Users;
+using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
+using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,7 +18,8 @@ namespace FinanceManager.Api.Controllers.Accounts;
 public class BondEntryController(
     IAccountRepository<BondAccount> bondAccountRepository,
     IAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
-    IUserPlanVerifier userPlanVerifier) : ControllerBase
+    IUserPlanVerifier userPlanVerifier,
+    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BondAccountEntryDto))]
@@ -76,6 +79,7 @@ public class BondEntryController(
             addEntry.PostingDate, addEntry.Value, addEntry.ValueChange, addEntry.BondDetailsId);
 
         await bondAccountEntryRepository.Add(newEntry);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
 
         // Get all entries for this account and date to find the one we just added
         var entries = await bondAccountEntryRepository.Get(addEntry.AccountId, addEntry.PostingDate, addEntry.PostingDate.AddSeconds(1))
@@ -95,7 +99,24 @@ public class BondEntryController(
         var account = await bondAccountRepository.Get(accountId);
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
-        return Ok(await bondAccountEntryRepository.Delete(accountId, entryId));
+        var result = await bondAccountEntryRepository.Delete(accountId, entryId);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
+    }
+
+    [HttpPost("Recalculate/{accountId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RecalculateBalance(int accountId)
+    {
+        var account = await bondAccountRepository.Get(accountId);
+        if (account is null) return NotFound();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+
+        await bondAccountEntryRepository.RecalculateValues(accountId);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok();
     }
 
     [HttpPut]
@@ -115,6 +136,8 @@ public class BondEntryController(
         entryToUpdate.ValueChange = updateEntry.ValueChange;
         entryToUpdate.PostingDate = updateEntry.PostingDate;
 
-        return Ok(await bondAccountEntryRepository.Update(entryToUpdate));
+        var result = await bondAccountEntryRepository.Update(entryToUpdate);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 }

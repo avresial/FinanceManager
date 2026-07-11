@@ -1,5 +1,5 @@
-using FinanceManager.Application.Services.ExternalServices;
-using FinanceManager.Domain.Entities.ExternalServices;
+using FinanceManager.Application.Shared.ExternalServices;
+using FinanceManager.Domain.Shared.ExternalServices.Entities;
 using FinanceManager.Infrastructure.Services.Stocks;
 using Microsoft.Extensions.Logging;
 using System.Net;
@@ -30,16 +30,24 @@ public class OpenFigiClientTests
     }
 
     [Fact]
-    public async Task ResolveAsync_WithValidTicker_ReturnsIsin()
+    public async Task MapByTickerAsync_WithValidTickerAndExchange_ReturnsListings()
     {
-        // Arrange
+        // Arrange — OpenFIGI v3 wraps matches inside each job's "data" array. A ticker mapping returns
+        // FIGI identifiers (figi/compositeFigi/shareClassFigi) but never an "isin" field.
         var httpHandler = new MockHttpMessageHandler(response: """
             [
               {
-                "figi": "BBG000B9XRY4",
-                "ticker": "AAPL",
-                "isin": "US0378331005",
-                "compositeFigi": "BBG000HKWL63"
+                "data": [
+                  {
+                    "figi": "BBG000B9XRY4",
+                    "ticker": "AAPL",
+                    "compositeFigi": "BBG000HKWL63",
+                    "shareClassFigi": "BBG001S5N8V8",
+                    "name": "Apple Inc",
+                    "exchCode": "US",
+                    "currency": "USD"
+                  }
+                ]
               }
             ]
             """);
@@ -47,64 +55,46 @@ public class OpenFigiClientTests
         var client = CreateClient(httpHandler);
 
         // Act
-        var result = await client.ResolveAsync("AAPL", "US", TestContext.Current.CancellationToken);
+        var result = await client.MapByTickerAsync("AAPL", "US", TestContext.Current.CancellationToken);
 
-        // Assert
-        Assert.Equal("US0378331005", result);
+        // Assert — no ISIN on the ticker path; FIGIs are projected, with shareClassFigi as identity.
+        Assert.Single(result);
+        Assert.Null(result[0].Isin);
+        Assert.Equal("BBG000B9XRY4", result[0].Figi);
+        Assert.Equal("BBG000HKWL63", result[0].CompositeFigi);
+        Assert.Equal("BBG001S5N8V8", result[0].ShareClassFigi);
+        Assert.Equal("AAPL", result[0].Ticker);
+        Assert.Equal("Apple Inc", result[0].Name);
+        Assert.Equal("US", result[0].ExchCode);
+        Assert.Equal("USD", result[0].Currency);
     }
 
     [Fact]
-    public async Task ResolveAsync_WithInvalidTicker_ReturnsNull()
+    public async Task MapByIsinAsync_WithValidIsin_ReturnsAllVenues()
     {
-        // Arrange
-        var httpHandler = new MockHttpMessageHandler(response: "[]");
-        var client = CreateClient(httpHandler);
-
-        // Act
-        var result = await client.ResolveAsync("INVALID_TICKER", ct: TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task ResolveAsync_WithEmptyTicker_ReturnsNull()
-    {
-        // Arrange
-        var httpHandler = new MockHttpMessageHandler(response: "[]");
-        var client = CreateClient(httpHandler);
-
-        // Act
-        var result = await client.ResolveAsync(string.Empty, ct: TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task ResolveAsync_WithNullTicker_ReturnsNull()
-    {
-        // Arrange
-        var httpHandler = new MockHttpMessageHandler(response: "[]");
-        var client = CreateClient(httpHandler);
-
-        // Act
-        var result = await client.ResolveAsync(null!, ct: TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task ResolveAsync_WhenApiReturnsNoIsin_ReturnsNull()
-    {
-        // Arrange
+        // Arrange — a single job whose "data" array lists every venue for the ISIN. OpenFIGI does not
+        // echo the ISIN; the client stamps the queried value back onto each result as a cross-reference.
         var httpHandler = new MockHttpMessageHandler(response: """
             [
               {
-                "figi": "BBG000B9XRY4",
-                "ticker": "AAPL",
-                "compositeFigi": "BBG000HKWL63"
+                "data": [
+                  {
+                    "figi": "BBG00B3T3HD3",
+                    "shareClassFigi": "BBG001S5W9D1",
+                    "ticker": "CSPX",
+                    "name": "iShares Core S&P 500 ETF",
+                    "exchCode": "LN",
+                    "currency": "GBP"
+                  },
+                  {
+                    "figi": "BBG00B3T3HF1",
+                    "shareClassFigi": "BBG001S5W9D1",
+                    "ticker": "CSPX",
+                    "name": "iShares Core S&P 500 ETF",
+                    "exchCode": "SX",
+                    "currency": "EUR"
+                  }
+                ]
               }
             ]
             """);
@@ -112,76 +102,43 @@ public class OpenFigiClientTests
         var client = CreateClient(httpHandler);
 
         // Act
-        var result = await client.ResolveAsync("AAPL", ct: TestContext.Current.CancellationToken);
+        var result = await client.MapByIsinAsync("IE00B5BMR087", TestContext.Current.CancellationToken);
 
-        // Assert
-        Assert.Null(result);
+        // Assert — the queried ISIN is stamped onto every venue, and shareClassFigi is carried through.
+        Assert.Equal(2, result.Count);
+        Assert.All(result, x => Assert.Equal("IE00B5BMR087", x.Isin));
+        Assert.All(result, x => Assert.Equal("BBG001S5W9D1", x.ShareClassFigi));
+        Assert.Contains(result, x => x.ExchCode == "LN");
+        Assert.Contains(result, x => x.ExchCode == "SX");
     }
 
     [Fact]
-    public async Task ResolveAsync_WhenApiReturnsFailure_ReturnsNull()
+    public async Task MapByTickerAsync_WithEmptyTicker_ReturnsEmpty()
     {
         // Arrange
+        var httpHandler = new MockHttpMessageHandler(response: "[]");
+        var client = CreateClient(httpHandler);
+
+        // Act
+        var result = await client.MapByTickerAsync(string.Empty, ct: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task MapByTickerAsync_WhenApiReturnsFailure_Throws()
+    {
+        // Arrange — transport failures must surface so callers can enter cooldown.
         var httpHandler = new MockHttpMessageHandler(
-            statusCode: HttpStatusCode.BadRequest,
-            response: "Bad Request");
+            statusCode: HttpStatusCode.TooManyRequests,
+            response: "Rate limited");
 
         var client = CreateClient(httpHandler);
 
-        // Act
-        var result = await client.ResolveAsync("AAPL", ct: TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task ResolveAsync_WithApiKey_IncludesKeyInRequest()
-    {
-        // Arrange
-        var httpHandler = new MockHttpMessageHandler(response: """
-            [
-              {
-                "figi": "BBG000B9XRY4",
-                "ticker": "AAPL",
-                "isin": "US0378331005",
-                "compositeFigi": "BBG000HKWL63"
-              }
-            ]
-            """);
-
-        var client = CreateClient(httpHandler, apiKey: "test-api-key");
-
-        // Act
-        var result = await client.ResolveAsync("AAPL", ct: TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal("US0378331005", result);
-        Assert.True(httpHandler.LastRequestHadApiKey);
-    }
-
-    [Fact]
-    public async Task ResolveAsync_WithRegion_PassesRegionToApi()
-    {
-        // Arrange
-        var httpHandler = new MockHttpMessageHandler(response: """
-            [
-              {
-                "figi": "BBG000B9XRY4",
-                "ticker": "AAPL",
-                "isin": "US0378331005",
-                "compositeFigi": "BBG000HKWL63"
-              }
-            ]
-            """);
-
-        var client = CreateClient(httpHandler);
-
-        // Act
-        var result = await client.ResolveAsync("AAPL", "US", TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal("US0378331005", result);
+        // Act / Assert
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.MapByTickerAsync("AAPL", "US", TestContext.Current.CancellationToken));
     }
 
     private sealed class StubExternalServiceConfigService(ExternalServiceConfiguration config) : IExternalServiceConfigService

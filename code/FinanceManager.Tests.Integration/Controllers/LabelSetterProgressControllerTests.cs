@@ -1,6 +1,7 @@
 using FinanceManager.Api.Services;
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Enums;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Labels.Dtos;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;

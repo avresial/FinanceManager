@@ -1,7 +1,9 @@
-using FinanceManager.Application.Services.Ai;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Repositories.Account;
+using FinanceManager.Application.Labels.Setter;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Labels.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Api.Services;

@@ -1,12 +1,12 @@
 using Blazored.LocalStorage;
 using Blazored.SessionStorage;
 using FinanceManager.Application.Commands.Login;
-using FinanceManager.Application.Providers;
+using FinanceManager.Application.Identity;
 using FinanceManager.Components.Helpers;
-using FinanceManager.Domain.Entities.Users;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
@@ -88,6 +88,7 @@ public class LoginService : ILoginService
         {
             response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/Login",
                 JsonHelper.GenerateStringContent(JsonHelper.SerializeObj(loginRequestModel)));
+            if (!response.IsSuccessStatusCode) return false;
             result = await response.Content.ReadFromJsonAsync<LoginResponseModel>();
         }
         catch (Exception ex)
@@ -119,6 +120,27 @@ public class LoginService : ILoginService
         LogginStateChanged?.Invoke(loginResult);
 
         return loginResult;
+    }
+
+    public async Task<bool> DevelopLogin(string login)
+    {
+        try
+        {
+            using var response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/DevelopLogin/{Uri.EscapeDataString(login)}", null);
+            if (!response.IsSuccessStatusCode) return false;
+
+            var result = await response.Content.ReadFromJsonAsync<LoginResponseModel>();
+            if (result is null) return false;
+
+            await ApplySession(result);
+            LogginStateChanged?.Invoke(true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during develop login request.");
+            return false;
+        }
     }
 
     public async Task<bool> TryRefresh()

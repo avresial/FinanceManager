@@ -1,16 +1,17 @@
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Domain.ValueObjects;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Dtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Infrastructure.Repositories.Account;
 
 internal class BondAccountRepository(AppDbContext context) : IAccountRepository<BondAccount>
 {
-    public Task<int> GetAccountsCount() => context.Accounts.Where(x => x.AccountType == AccountType.Bond).CountAsync();
+    public Task<int> GetAccountsCount() => context.Accounts.AsNoTracking().Where(x => x.AccountType == AccountType.Bond).CountAsync();
 
     public async Task<int?> Add(int userId, string accountName)
     {
@@ -36,25 +37,34 @@ internal class BondAccountRepository(AppDbContext context) : IAccountRepository<
     }
 
     public IAsyncEnumerable<AvailableAccount> GetAvailableAccounts(int userId) => context.Accounts
+            .AsNoTracking()
             .Where(x => x.UserId == userId && x.AccountType == AccountType.Bond)
             .Select(x => new AvailableAccount(x.AccountId, x.Name))
             .AsAsyncEnumerable();
 
-    public Task<bool> Exists(int accountId) => context.Accounts.AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bond);
+    public Task<bool> Exists(int accountId) => context.Accounts.AsNoTracking().AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bond);
+
+    public async Task<List<BondAccount>> GetAll(int userId)
+    {
+        var accounts = await context.Accounts
+            .AsNoTracking()
+            .Where(x => x.UserId == userId && x.AccountType == AccountType.Bond)
+            .ToListAsync();
+
+        return accounts
+            .Select(x => new BondAccount(x.UserId, x.AccountId, x.Name))
+            .ToList();
+    }
 
     public async Task<BondAccount?> Get(int accountId)
     {
-        var accountToReturn = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bond);
+        var accountToReturn = await context.Accounts.AsNoTracking().FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bond);
         if (accountToReturn is null) return null;
         return new BondAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name);
     }
 
-    public async Task<int?> GetLastAccountId()
-    {
-        if (await context.Accounts.AnyAsync())
-            return await context.Accounts.MaxAsync(x => x.AccountId);
-        return null;
-    }
+    public Task<int?> GetLastAccountId() =>
+        context.Accounts.AsNoTracking().Where(x => x.AccountType == AccountType.Bond).MaxAsync(x => (int?)x.AccountId);
 
     public async Task<bool> Update(int accountId, string accountName)
     {

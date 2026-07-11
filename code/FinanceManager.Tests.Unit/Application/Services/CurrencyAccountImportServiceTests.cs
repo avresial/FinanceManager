@@ -1,12 +1,18 @@
-using FinanceManager.Application.Services;
-using FinanceManager.Application.Services.Currencies;
-using FinanceManager.Domain.Entities.FinancialAccounts.Currencies;
-using FinanceManager.Domain.Entities.Imports;
-using FinanceManager.Domain.Entities.Users;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Repositories;
-using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Domain.ValueObjects;
+using FinanceManager.Application.FinancialAccounts.Currencies.Import;
+using FinanceManager.Application.FinancialAccounts.Shared.Imports;
+using FinanceManager.Application.Identity.Users;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Imports;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Repositories;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -18,6 +24,8 @@ public class CurrencyAccountImportServiceTests
 {
     private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _mockAccountRepository;
     private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _mockAccountEntryRepository;
+    private readonly Mock<IInvestmentTransactionRepository> _mockInvestmentTransactionRepository;
+    private readonly Mock<IBondAccountEntryRepository<BondAccountEntry>> _mockBondEntryRepository;
     private readonly Mock<IUserRepository> _mockUserRepository;
     private readonly UserPlanVerifier _userPlanVerifier;
     private readonly CurrencyAccountImportService _service;
@@ -26,16 +34,28 @@ public class CurrencyAccountImportServiceTests
     {
         _mockAccountRepository = new Mock<ICurrencyAccountRepository<CurrencyAccount>>();
         _mockAccountEntryRepository = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        _mockInvestmentTransactionRepository = new Mock<IInvestmentTransactionRepository>();
+        _mockBondEntryRepository = new Mock<IBondAccountEntryRepository<BondAccountEntry>>();
 
         _mockUserRepository = new Mock<IUserRepository>();
         var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = PricingLevel.Premium, CreationDate = DateTime.UtcNow };
         _mockUserRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
 
         // create a real UserPlanVerifier so its CanAddMoreEntries method can be used in test
-        _userPlanVerifier = new UserPlanVerifier(_mockAccountRepository.Object, _mockAccountEntryRepository.Object, _mockUserRepository.Object);
+        _userPlanVerifier = new UserPlanVerifier(_mockAccountRepository.Object, _mockAccountEntryRepository.Object,
+            _mockInvestmentTransactionRepository.Object, _mockBondEntryRepository.Object, _mockUserRepository.Object);
+
+        // Default: users have no recorded entries of any type, so plan checks pass unless a test overrides this.
+        _mockAccountEntryRepository.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int>());
+        _mockInvestmentTransactionRepository.Setup(x => x.GetByUser(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<FinanceManager.Domain.FinancialAccounts.Investments.Entities.InvestmentTransaction>());
+        _mockBondEntryRepository.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int>());
 
         var mockLogger = new Mock<ILogger<CurrencyAccountImportService>>();
-        _service = new CurrencyAccountImportService(_mockAccountRepository.Object, _mockAccountEntryRepository.Object, _userPlanVerifier, mockLogger.Object);
+        var importAccountValidator = new ImportAccountValidator(_userPlanVerifier);
+        _service = new CurrencyAccountImportService(_mockAccountRepository.Object, _mockAccountEntryRepository.Object, importAccountValidator, mockLogger.Object);
     }
 
     [Fact]
@@ -112,11 +132,10 @@ public class CurrencyAccountImportServiceTests
 
         var account = new CurrencyAccount(userId, accountId, "Test");
         _mockAccountRepository.Setup(x => x.Get(accountId)).ReturnsAsync(account);
-        _mockAccountRepository.Setup(x => x.GetAvailableAccounts(userId))
-            .Returns(new[] { new AvailableAccount(accountId, "Test") }.ToAsyncEnumerable());
 
-        // Already at limit
-        _mockAccountEntryRepository.Setup(x => x.GetCount(accountId)).ReturnsAsync(1000);
+        // Already at the Free plan limit (1000) from currency entries alone
+        _mockAccountEntryRepository.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int> { [userId] = 1000 });
 
         var entries = new[] { new CurrencyEntryImport(DateTime.UtcNow, 100m, "Test") };
 

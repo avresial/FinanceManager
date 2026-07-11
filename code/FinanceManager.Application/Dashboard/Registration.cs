@@ -1,0 +1,17 @@
+using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Services;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace FinanceManager.Application.Dashboard;
+
+internal static class Registration
+{
+    public static IServiceCollection AddDashboardApplication(this IServiceCollection services)
+    {
+        services.AddScoped<DashboardQueryService>();
+        services.AddScoped<IDashboardQueryService, CachingDashboardQueryService>();
+        services.AddSingleton<ICacheInvalidator, CacheInvalidator>();
+        return services;
+    }
+}

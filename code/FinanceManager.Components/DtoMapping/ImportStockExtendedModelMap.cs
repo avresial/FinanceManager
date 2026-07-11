@@ -1,7 +1,7 @@
 ﻿using CsvHelper.Configuration;
-using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 
-namespace FinanceManager.Infrastructure.DtoMapping;
+namespace FinanceManager.Components.DtoMapping;
 
 public sealed class ImportStockExtendedModelMap : ClassMap<ImportStockExtendedModel>
 {

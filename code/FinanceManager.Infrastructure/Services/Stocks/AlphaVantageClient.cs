@@ -1,9 +1,10 @@
-using FinanceManager.Application.Options;
-using FinanceManager.Application.Services.ExternalServices;
-using FinanceManager.Application.Services.Stocks;
-using FinanceManager.Domain.Dtos;
-using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.Stocks;
+using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
+using FinanceManager.Application.Shared.ExternalServices;
+using FinanceManager.Application.Shared.Options;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Globalization;
@@ -16,12 +17,14 @@ internal sealed class AlphaVantageClient(
     HttpClient httpClient,
     ILogger<AlphaVantageClient> logger,
     IOptions<StockApiOptions> options,
-    IExternalServiceConfigService configService) : IAlphaVantageClient
+    IExternalServiceConfigService configService) : IAlphaVantageClient, IStockPriceSource
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
+
+    public string Name => "AlphaVantage";
 
     public async Task<IReadOnlyList<TickerSearchMatch>> SearchTicker(string keywords, CancellationToken ct = default)
     {
@@ -94,19 +97,15 @@ internal sealed class AlphaVantageClient(
         }
 
         var outputSize = string.IsNullOrWhiteSpace(options.Value.OutputSize) ? "compact" : options.Value.OutputSize;
-        var url = BuildUrl($"function=TIME_SERIES_DAILY&symbol={Uri.EscapeDataString(ticker)}&outputsize={outputSize}&apikey={apiKey}", config.BaseUrl);
-
         try
         {
-            var response = await httpClient.GetAsync(url, ct);
-            if (!response.IsSuccessStatusCode)
+            var apiResponse = await FetchDailySeries("TIME_SERIES_DAILY_ADJUSTED", ticker, outputSize, apiKey, config.BaseUrl, ct);
+            if (apiResponse?.Series is null or { Count: 0 })
             {
-                logger.LogWarning("Stock API daily series failed with status {StatusCode}", response.StatusCode);
-                return [];
+                await Task.Delay(TimeSpan.FromSeconds(1), ct);
+                apiResponse = await FetchDailySeries("TIME_SERIES_DAILY", ticker, "compact", apiKey, config.BaseUrl, ct);
             }
 
-            var content = await response.Content.ReadAsStringAsync(ct);
-            var apiResponse = JsonSerializer.Deserialize<AlphaVantageDailyResponse>(content, _jsonOptions);
             if (apiResponse?.Series is null || apiResponse.Series.Count == 0) return [];
 
             var prices = new List<StockPrice>();
@@ -115,7 +114,9 @@ internal sealed class AlphaVantageClient(
                 if (!TryParseDate(entry.Key, out var date)) continue;
                 if (date < start.Date || date > end.Date) continue;
 
-                var close = ParseDecimal(entry.Value?.Close);
+                // Prefer the adjusted close; fall back to the raw close if the adjusted field is absent.
+                var close = ParseDecimal(entry.Value?.AdjustedClose);
+                if (close <= 0) close = ParseDecimal(entry.Value?.Close);
                 if (close <= 0) continue;
 
                 prices.Add(new StockPrice
@@ -127,6 +128,10 @@ internal sealed class AlphaVantageClient(
                 });
             }
 
+            if (prices.Count == 0)
+                logger.LogWarning("Stock API returned {Count} daily prices for {Ticker}, but none between {Start} and {End}.",
+                    apiResponse.Series.Count, ticker, start.Date, end.Date);
+
             return prices;
         }
         catch (Exception ex)
@@ -136,35 +141,25 @@ internal sealed class AlphaVantageClient(
         }
     }
 
-    public async Task<IReadOnlyList<StockListing>> GetListings(CancellationToken ct = default)
+    private async Task<AlphaVantageDailyResponse?> FetchDailySeries(
+        string function, string ticker, string outputSize, string apiKey, string baseUrl, CancellationToken ct)
     {
-        var config = await configService.GetServiceAsync("AlphaVantage", ct);
-        var apiKey = config.ApiKey;
-        if (string.IsNullOrWhiteSpace(apiKey))
+        var url = BuildUrl($"function={function}&symbol={Uri.EscapeDataString(ticker)}&outputsize={outputSize}&apikey={apiKey}", baseUrl);
+        using var response = await httpClient.GetAsync(url, ct);
+        if (!response.IsSuccessStatusCode)
         {
-            logger.LogWarning("Stock API key is missing.");
-            return [];
+            logger.LogWarning("Stock API daily series failed with status {StatusCode}", response.StatusCode);
+            return null;
         }
 
-        var url = BuildUrl($"function=LISTING_STATUS&apikey={apiKey}", config.BaseUrl);
-
-        try
+        var result = JsonSerializer.Deserialize<AlphaVantageDailyResponse>(await response.Content.ReadAsStringAsync(ct), _jsonOptions);
+        if (result?.Series is null or { Count: 0 })
         {
-            var response = await httpClient.GetAsync(url, ct);
-            if (!response.IsSuccessStatusCode)
-            {
-                logger.LogWarning("Stock API listing status failed with status {StatusCode}", response.StatusCode);
-                return [];
-            }
+            var reason = (result?.Information ?? result?.Note ?? "empty response").Replace('\r', ' ').Replace('\n', ' ');
+            logger.LogWarning("Stock API function {Function} returned no daily prices for {Ticker} ({Reason}).", function, ticker, reason);
+        }
 
-            var content = await response.Content.ReadAsStringAsync(ct);
-            return ParseListingStatusCsv(content);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Stock API listing status failed");
-            return [];
-        }
+        return result;
     }
 
     private static string BuildUrl(string query, string baseUrl)
@@ -175,44 +170,6 @@ internal sealed class AlphaVantageClient(
             return $"{baseUrl}&{query}";
 
         return $"{baseUrl}?{query}";
-    }
-
-    private static List<StockListing> ParseListingStatusCsv(string csv)
-    {
-        var listings = new List<StockListing>();
-        var lines = csv.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-
-        if (lines.Length == 0) return listings;
-
-        for (int i = 1; i < lines.Length; i++)
-        {
-            var line = lines[i].Trim();
-            if (string.IsNullOrWhiteSpace(line)) continue;
-
-            var parts = line.Split(',');
-            if (parts.Length < 7) continue;
-
-            listings.Add(new StockListing(
-                parts[0],
-                parts[1],
-                parts[2],
-                parts[3],
-                ParseNullableDate(parts[4]),
-                ParseNullableDate(parts[5]),
-                parts[6]));
-        }
-
-        return listings;
-    }
-
-    private static DateTime? ParseNullableDate(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value) || value.Equals("null", StringComparison.OrdinalIgnoreCase))
-            return null;
-
-        return DateTime.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date)
-            ? DateTime.SpecifyKind(date.Date, DateTimeKind.Utc)
-            : null;
     }
 
     private static bool TryParseDate(string value, out DateTime date)
@@ -266,6 +223,9 @@ internal sealed class AlphaVantageClient(
 
     private sealed class AlphaVantageDailyResponse
     {
+        public string? Information { get; set; }
+        public string? Note { get; set; }
+
         [JsonPropertyName("Time Series (Daily)")]
         public Dictionary<string, AlphaVantageDailySeriesEntry>? Series { get; set; }
     }
@@ -274,5 +234,8 @@ internal sealed class AlphaVantageClient(
     {
         [JsonPropertyName("4. close")]
         public string? Close { get; set; }
+
+        [JsonPropertyName("5. adjusted close")]
+        public string? AdjustedClose { get; set; }
     }
 }

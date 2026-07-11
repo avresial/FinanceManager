@@ -1,12 +1,15 @@
 using FinanceManager.Api.Helpers;
-using FinanceManager.Application.Services;
-using FinanceManager.Application.Services.Bonds;
-using FinanceManager.Application.Services.Exports;
-using FinanceManager.Domain.Commands.Account;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.Exports;
-using FinanceManager.Domain.Repositories.Account;
-using FinanceManager.Infrastructure.Dtos;
+using FinanceManager.Application.FinancialAccounts.Bond;
+using FinanceManager.Application.FinancialAccounts.Shared.Exports;
+using FinanceManager.Application.Identity.Users;
+using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Bond.Exports;
+using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
+using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,9 +21,10 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Tags("Bond Accounts")]
 public class BondAccountController(IAccountRepository<BondAccount> bondAccountRepository,
-    IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository, IBondEntryProvider bondEntryProvider,
+    IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
     IUserPlanVerifier userPlanVerifier,
-    IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService) : ControllerBase
+    IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService,
+    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<BondAccountDto>))]
@@ -56,17 +60,6 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
         return await GetAccountWithEntries(accountId, startDate, endDate, minimumEntryCount);
     }
 
-    [HttpGet("{accountId:int}/GetInitialTransactionHistory")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BondAccountDto))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetInitialTransactionHistory(int accountId, [FromQuery] DateTime startDate,
-        [FromQuery] DateTime endDate, [FromQuery] int minimumEntryCount = 100)
-    {
-        return await GetAccountWithEntries(accountId, startDate, endDate, minimumEntryCount);
-    }
-
     private async Task<IActionResult> GetAccountWithEntries(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount)
     {
         var account = await bondAccountRepository.Get(accountId);
@@ -76,9 +69,9 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
         if (startDate > endDate) return BadRequest("Start date cannot be after end date.");
         if (minimumEntryCount < 0) return BadRequest("Minimum entry count cannot be negative.");
 
-        var loadResult = await bondEntryProvider.GetEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
+        var (entries, effectiveStartDate) = await bondAccountEntryRepository.GetEntriesWithMinimumCount(accountId, startDate, endDate, minimumEntryCount);
 
-        return Ok(await CreateDtoAsync(account, loadResult.Entries, loadResult.EffectiveStartDate, endDate));
+        return Ok(await CreateDtoAsync(account, entries, effectiveStartDate, endDate));
     }
 
     [HttpGet("{accountId:int}/entries")]
@@ -111,7 +104,9 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
         if (!await userPlanVerifier.CanAddMoreAccounts(userId))
             return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
-        return Ok(await bondAccountRepository.Add(userId, addAccount.AccountName));
+        var result = await bondAccountRepository.Add(userId, addAccount.AccountName);
+        await dashboardCacheInvalidator.InvalidateUser(userId);
+        return Ok(result);
     }
 
     [HttpPut]
@@ -123,7 +118,9 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
 
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
 
-        return Ok(await bondAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName));
+        var result = await bondAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 
     [HttpDelete("{accountId:int}")]
@@ -135,7 +132,9 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
 
         await bondAccountEntryRepository.Delete(accountId);
-        return Ok(await bondAccountRepository.Delete(accountId));
+        var result = await bondAccountRepository.Delete(accountId);
+        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        return Ok(result);
     }
 
     [HttpGet("export/{accountId:int}")]

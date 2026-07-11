@@ -1,15 +1,19 @@
+using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Components.Features.FinancialAccounts.Shared;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Models;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Entities.Bonds;
-using FinanceManager.Domain.Entities.Currencies;
-using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Entities.Users;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
+using System.Text.Json;
 
 namespace FinanceManager.Components.Components.Features.FinancialAccounts.BondAccountComponents.TransactionHistory;
 
@@ -42,6 +46,8 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     private readonly string _accountTypeLabel = "Bond account";
     private readonly List<BondDetails> _bondDetails = [];
     private UserSession? _user;
+    private bool _isChartLoading;
+    private int _chartRefreshVersion;
 
     public bool IsLoading = false;
     public BondAccount? Account { get; set; }
@@ -56,6 +62,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
+    [Inject] public required ISnapshotService SnapshotService { get; set; }
     [Inject] public required ILogger<BondAccountDetailsPageContent> Logger { get; set; }
     [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
 
@@ -109,6 +116,8 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     {
         if (Account is null || Account.Entries is null) return;
 
+        _currency = SettingsService.GetCurrency();
+
         if (Account.Entries.Count == 0)
         {
             _currentBalance = 0;
@@ -116,6 +125,9 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
             _balanceChangePercent = null;
             _top5 = [];
             _bottom5 = [];
+            if (refreshChart)
+                QueueChartDataRefresh();
+
             return;
         }
 
@@ -137,20 +149,8 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
                                  .Take(5)
                                  .ToList();
 
-        // Text filters (search/income-expense/category) narrow the list and movers only;
-        // the chart and hero balance track the selected date range, so skip the network
-        // refetch when only a filter changed.
         if (refreshChart)
-            await UpdateChartData();
-
-        // Bond entry Value/ValueChange are unit-denominated, so the hero balance and change
-        // come from the currency-denominated closing-balance series (the same data the chart
-        // plots) rather than from the entries.
-        _currentBalance = ChartData.LastOrDefault()?.Value ?? 0;
-        _balanceChange = ChartData.Count >= 2 ? ChartData.Last().Value - ChartData.First().Value : 0;
-
-        var startBalance = _currentBalance - _balanceChange;
-        _balanceChangePercent = startBalance == 0 ? null : _balanceChange / startBalance * 100m;
+            QueueChartDataRefresh();
 
         _availableCategories = Account.Entries
             .SelectMany(e => e.Labels ?? [])
@@ -174,16 +174,23 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
 
             SetDateRangeForSelection();
 
+            // Paint the last-rendered entries instantly, then reconcile against a fresh fetch.
+            var previousSnapshot = await PaintSnapshotIfAvailable();
+
             var loadTask = UpdateEntries(initialLoad: true);
-            var delayTask = Task.Delay(2000);
-            var completedTask = await Task.WhenAny(loadTask, delayTask);
-            if (completedTask == delayTask)
+            if (previousSnapshot is null)
             {
-                IsLoading = true;
-                StateHasChanged();
-                await loadTask;
-                IsLoading = false;
+                var delayTask = Task.Delay(2000);
+                if (await Task.WhenAny(loadTask, delayTask) == delayTask)
+                {
+                    IsLoading = true;
+                    StateHasChanged();
+                }
             }
+            await loadTask;
+            IsLoading = false;
+            await SaveSnapshotIfChanged(previousSnapshot);
+
             AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
         }
         catch (Exception ex)
@@ -239,14 +246,52 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
         }
     }
 
-    private async Task UpdateChartData()
+    private void QueueChartDataRefresh()
     {
+        var refreshVersion = ++_chartRefreshVersion;
+        _isChartLoading = true;
         ChartData.Clear();
+
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                await UpdateChartData(refreshVersion);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error while loading bond account chart data for account ID {AccountId}", AccountId);
+            }
+            finally
+            {
+                if (refreshVersion == _chartRefreshVersion)
+                    _isChartLoading = false;
+
+                StateHasChanged();
+            }
+        });
+    }
+
+    private async Task UpdateChartData(int refreshVersion)
+    {
         if (Account is null || _user is null) return;
 
         _currency = SettingsService.GetCurrency();
         var chartData = await MoneyFlowHttpClient.GetClosingBalance(_user.UserId, _currency, _dateStart, _dateEnd, [AccountId]);
+        if (refreshVersion != _chartRefreshVersion) return;
+
+        ChartData.Clear();
         ChartData.AddRange(chartData.SkipWhile(x => x.Value == 0));
+        UpdateBalanceFromChartData();
+    }
+
+    private void UpdateBalanceFromChartData()
+    {
+        _currentBalance = ChartData.LastOrDefault()?.Value ?? 0;
+        _balanceChange = ChartData.Count >= 2 ? ChartData.Last().Value - ChartData.First().Value : 0;
+
+        var startBalance = _currentBalance - _balanceChange;
+        _balanceChangePercent = startBalance == 0 ? null : _balanceChange / startBalance * 100m;
     }
 
     private void AccountDataSynchronizationService_AccountsChanged()
@@ -387,4 +432,62 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
         _dateStart = oldestFetchedEntryDate.Value;
         _customDateRange = new DateRange(_dateStart, _dateEnd);
     }
+
+    // Per user + account, with no date component, so a single snapshot per account is overwritten each save.
+    private string BuildSnapshotKey(int userId) => $"account-details:{userId}:{AccountId}";
+
+    // Reads the persisted snapshot and paints its entries so the page feels instant on
+    // re-navigation. Chart data is not snapshotted; UpdateInfo queues a fresh API load.
+    private async Task<AccountDetailsSnapshot<BondAccountEntry>?> PaintSnapshotIfAvailable()
+    {
+        if (_user is null) return null;
+
+        AccountDetailsSnapshot<BondAccountEntry>? snapshot = null;
+        try
+        {
+            snapshot = await SnapshotService.GetAsync<AccountDetailsSnapshot<BondAccountEntry>>(BuildSnapshotKey(_user.UserId));
+        }
+        catch (Exception ex)
+        {
+            // A storage/interop failure on read must not abort the load — fall through to the fresh fetch.
+            Logger.LogWarning(ex, "Failed to read account details snapshot; continuing with fresh fetch.");
+        }
+
+        if (snapshot is null || snapshot.AccountId != AccountId) return null;
+
+        Account = new BondAccount(snapshot.UserId, snapshot.AccountId, snapshot.Name, snapshot.Entries, snapshot.AccountType);
+        await UpdateInfo();
+        IsLoading = false;
+        StateHasChanged();
+        return snapshot;
+    }
+
+    // Persists the freshly loaded entries, skipping the write when they match the snapshot we already painted.
+    private async Task SaveSnapshotIfChanged(AccountDetailsSnapshot<BondAccountEntry>? previous)
+    {
+        if (_user is null || Account is null) return;
+
+        if (previous is not null && EntriesMatch(Account.Entries, previous.Entries))
+            return;
+
+        var snapshot = new AccountDetailsSnapshot<BondAccountEntry>
+        {
+            UserId = _user.UserId,
+            AccountId = AccountId,
+            Name = Account.Name,
+            AccountType = Account.AccountType,
+            Entries = Account.Entries,
+        };
+        try
+        {
+            await SnapshotService.SetAsync(BuildSnapshotKey(_user.UserId), snapshot);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Account details loaded but snapshot save failed.");
+        }
+    }
+
+    private static bool EntriesMatch(List<BondAccountEntry> fresh, List<BondAccountEntry> snapshot)
+        => JsonSerializer.Serialize(fresh) == JsonSerializer.Serialize(snapshot);
 }

@@ -1,4 +1,4 @@
-using FinanceManager.Domain.Entities.Ai;
+using FinanceManager.Domain.Shared.Ai.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

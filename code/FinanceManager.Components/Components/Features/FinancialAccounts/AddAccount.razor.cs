@@ -1,6 +1,7 @@
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Components.Services;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
@@ -35,7 +36,7 @@ public partial class AddAccount : ComponentBase
     [Inject] public required ILogger<AddAccount> Logger { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required CurrencyAccountHttpClient CurrencyAccountHttpClient { get; set; }
-    [Inject] public required StockAccountHttpClient StockAccountHttpClient { get; set; }
+    [Inject] public required InvestmentAccountHttpClient InvestmentAccountHttpClient { get; set; }
     [Inject] public required BondAccountHttpClient BondAccountHttpClient { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -47,15 +48,15 @@ public partial class AddAccount : ComponentBase
             switch (_selectedAccountType)
             {
                 case "Currency account":
-                    _addedAccountId = await CurrencyAccountHttpClient.AddAccountAsync(new Domain.Commands.Account.AddAccount(_accountName));
+                    _addedAccountId = await CurrencyAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName));
                     break;
 
                 case "Stock account":
-                    _addedAccountId = await StockAccountHttpClient.AddAccountAsync(new Domain.Commands.Account.AddAccount(_accountName));
+                    _addedAccountId = await InvestmentAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName));
                     break;
 
                 case "Bond account":
-                    _addedAccountId = await BondAccountHttpClient.AddAccountAsync(new Domain.Commands.Account.AddAccount(_accountName));
+                    _addedAccountId = await BondAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName));
                     break;
             }
         }

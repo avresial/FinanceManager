@@ -1,6 +1,9 @@
-using FinanceManager.Domain.Entities.MoneyFlowModels;
-using FinanceManager.Domain.Enums;
-using FinanceManager.Domain.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.Labels.Services;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using System.Net;
