@@ -7,6 +7,12 @@ public interface ILoginService
     event Action<bool>? LogginStateChanged;
     Task<bool> Login(string username, string password);
     Task<bool> Login(UserSession userSession);
+
+    /// <summary>
+    /// Passwordless develop-only login ("guest" or "testuser") through the develop login endpoint. Returns
+    /// <c>false</c> when the endpoint is unavailable (Production/Release) or the login is not supported.
+    /// </summary>
+    Task<bool> DevelopLogin(string login);
     Task Logout();
 
     /// <summary>

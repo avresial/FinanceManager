@@ -122,6 +122,27 @@ public class LoginService : ILoginService
         return loginResult;
     }
 
+    public async Task<bool> DevelopLogin(string login)
+    {
+        try
+        {
+            using var response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/DevelopLogin/{Uri.EscapeDataString(login)}", null);
+            if (!response.IsSuccessStatusCode) return false;
+
+            var result = await response.Content.ReadFromJsonAsync<LoginResponseModel>();
+            if (result is null) return false;
+
+            await ApplySession(result);
+            LogginStateChanged?.Invoke(true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during develop login request.");
+            return false;
+        }
+    }
+
     public async Task<bool> TryRefresh()
     {
         // Serialise concurrent refreshes (e.g. a burst of dashboard cards all hitting a 401 at once) so we only
