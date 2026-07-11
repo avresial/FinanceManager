@@ -30,7 +30,10 @@ public class DevelopLoginController(IHostEnvironment environment, IGuestLoginSer
     [AllowAnonymous]
     [HttpPost("{login}", Name = "DevelopLogin")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(LoginResponseModel))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> Login(string login, CancellationToken cancellationToken = default)
     {
         // 404 (not 403) outside development-like environments so the endpoint is indistinguishable from a
@@ -41,7 +44,13 @@ public class DevelopLoginController(IHostEnvironment environment, IGuestLoginSer
         if (string.Equals(login, GuestLoginService.GuestLogin, StringComparison.OrdinalIgnoreCase))
         {
             var token = await guestLoginService.LoginAsGuest(cancellationToken);
-            return token is null ? StatusCode(StatusCodes.Status500InternalServerError) : Ok(token);
+            if (token is null)
+            {
+                logger.LogError("Guest develop login failed: the guest sandbox could not be seeded.");
+                return StatusCode(StatusCodes.Status500InternalServerError);
+            }
+
+            return Ok(token);
         }
 
         if (string.Equals(login, TestUserLogin, StringComparison.OrdinalIgnoreCase))

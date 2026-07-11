@@ -71,8 +71,23 @@ internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<ApiEntryP
                 // requests over http://localhost, so relax host filtering here or every request 400s.
                 ["AllowedHosts"] = "*",
             };
+
             config.AddInMemoryCollection(settings);
         });
+
+        // Environment-specific overlays load by environment name, so a host booted under a non-"test" name
+        // (e.g. the develop-login blocked-environment tests) would miss the JWT/CORS/proxy settings that
+        // appsettings.test.json supplies and that the API validates while Program.cs runs. UseSetting feeds
+        // the values into the host's initial configuration, early enough for those startup reads — the
+        // ConfigureAppConfiguration callback above applies too late for them.
+        if (!string.Equals(_environmentName, "test", StringComparison.OrdinalIgnoreCase))
+        {
+            builder.UseSetting("JwtConfig:Issuer", "FinanceManager.api");
+            builder.UseSetting("JwtConfig:Audience", "FinanceManager.Frontend");
+            builder.UseSetting("JwtConfig:TokenValidityMins", "60");
+            builder.UseSetting("ReverseProxy:KnownProxies:0", "127.0.0.1");
+            builder.UseSetting("Cors:AllowedOrigins:0", "https://localhost:7206");
+        }
 
         builder.UseEnvironment(_environmentName);
     }
