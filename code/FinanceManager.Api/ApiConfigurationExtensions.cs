@@ -262,6 +262,7 @@ public static class ApiConfigurationExtensions
     public static IServiceCollection AddApiBackgroundServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<JwtTokenGenerator>();
+        services.AddScoped<IGuestLoginService, GuestLoginService>();
         services.AddSingleton<IGuestSessionStore, GuestSessionStore>();
         services.AddScoped<IGuestSessionAccessor, GuestSessionAccessor>();
         services.AddHostedService<GuestSessionCleanupService>();

@@ -1,0 +1,19 @@
+@page "/DevelopLogin/{Login}"
+@page "/DevelopLogin/{Login}/{*TargetPage}"
+@layout NoNavbarLayout
+
+<PageTitle>Develop login</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+    @if (_error is null)
+    {
+        <MudStack AlignItems="AlignItems.Center" Spacing="4">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+            <MudText Typo="Typo.body1">Signing in as @Login…</MudText>
+        </MudStack>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Error" data-testid="develop-login-error">@_error</MudAlert>
+    }
+</MudContainer>
