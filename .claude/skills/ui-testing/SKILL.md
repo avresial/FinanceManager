@@ -46,7 +46,8 @@ ls /opt/pw-browsers/    # find the chromium-<build> dir, e.g. chromium-1194
 ```
 
 The driver below signs in through the **auto test login** entry path (`/DevelopLogin/guest/{page}`, see
-`AGENTS.md`) — one `goto` boots the WASM app, logs in as guest, and lands directly on the page under test.
+[`finance-manager-usage`](../finance-manager-usage/SKILL.md)) — one `goto` boots the WASM app, logs in as
+guest, and lands directly on the page under test.
 Save it as `/tmp/ui-shot.mjs` and set `TARGET` to the route you changed (empty string = dashboard).
 
 ```js

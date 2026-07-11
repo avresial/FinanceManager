@@ -1,67 +1,11 @@
 # AGENTS.md
 
-Instructions for AI agents working on FinanceManager. Full project conventions (build, tests, architecture,
-branching, changelog) live in [`CLAUDE.md`](./CLAUDE.md) — read that too. This file documents the shortcuts
-that exist specifically to make agent workflows fast.
+Instructions for AI agents working on FinanceManager.
 
-## Auto test login — skip the landing page and login form
-
-**Never walk the landing page → login form → "Check out demo" click sequence when testing the UI.** The app
-has a develop-only auto-login entry path that signs you in with a single navigation:
-
-```
-{webAppAddress}:{port}/DevelopLogin/{login}
-{webAppAddress}:{port}/DevelopLogin/{login}/{page}
-```
-
-Opening the URL logs you in immediately and redirects to the dashboard, or to `{page}` when one is given.
-
-### `{login}` — who you sign in as
-
-| Login | Backing data | Use when |
-|---|---|---|
-| `guest` | Fresh in-memory sandbox seeded with demo accounts (Cash, Loan, Stock, Bond) — no real database touched | Cloud/sandbox testing, or any time you just need a populated UI (`UseInMemoryDatabase=true` works fine) |
-| `testuser` | The seeded `testuser` account on the real develop database | Local testing with Aspire and a real database running |
-
-`testuser` requires the account to have been seeded, which happens automatically at startup when
-`Seeding:TestUserPassword` is configured (it is, in `appsettings.Development.json`). If it isn't seeded the
-endpoint answers `503` with an explanation — fall back to `guest`.
-
-### `{page}` — optional deep link
-
-Any in-app route, including ones with segments. Omit it to land on the dashboard (`/`).
-
-```
-http://localhost:5113/DevelopLogin/guest                    → dashboard
-http://localhost:5113/DevelopLogin/guest/Assets             → assets page
-http://localhost:5113/DevelopLogin/guest/AccountDetails/1   → account details for account 1
-http://localhost:5113/DevelopLogin/testuser/UserSettings    → settings, as testuser
-```
-
-Because the login happens inside the running WASM app, this also solves the "deep links bounce to /login"
-problem — a hard `page.goto()` to a `/DevelopLogin/...` URL authenticates first and then navigates within
-the SPA, so the target page renders authenticated.
-
-### Where it works
-
-The UI page is backed by `POST api/DevelopLogin/{login}`, which answers **404 whenever
-`ASPNETCORE_ENVIRONMENT` is `Production` or `Release`** — the feature effectively does not exist outside
-development-like environments. Both logins are passwordless; no credentials appear in test scripts.
-
-### Calling the API directly (no browser)
-
-When you only need an access token, skip the UI entirely:
-
-```bash
-curl -s -X POST http://localhost:5113/api/DevelopLogin/guest
-# → {"userName":"guest","userRole":"User","userId":...,"accessToken":"...","expiresIn":...}
-```
-
-Use the returned `accessToken` as a `Authorization: Bearer` header. `testuser` additionally sets the
-refresh-token cookie, like a regular login.
-
-## UI testing workflow
-
-For rendering and screenshotting UI changes in the cloud sandbox (pre-installed Chromium, blocked CDNs,
-theme gotchas), follow [`.claude/skills/ui-testing/SKILL.md`](./.claude/skills/ui-testing/SKILL.md) — it
-uses the auto test login above as its entry point.
+- **Project conventions** (build, tests, architecture, branching, changelog): read [`CLAUDE.md`](./CLAUDE.md).
+- **Using the running app** — above all the **develop-only auto test login** (`/DevelopLogin/{login}/{page}`)
+  that signs you in as `guest` or `testuser` without the landing page or login form: read
+  [`.claude/skills/finance-manager-usage/SKILL.md`](./.claude/skills/finance-manager-usage/SKILL.md).
+  Never walk the landing page → login form → "Check out demo" sequence when testing.
+- **Rendering/screenshotting UI changes** in the cloud sandbox: read
+  [`.claude/skills/ui-testing/SKILL.md`](./.claude/skills/ui-testing/SKILL.md).
