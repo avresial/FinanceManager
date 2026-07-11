@@ -1,6 +1,7 @@
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Assets.Entities;
+using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
@@ -23,6 +24,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     private const int _testUserId = 91;
     private const int _testAccountId = 791;
     private const long _listingId = 5001;
+    private readonly Mock<IInvestmentPriceProvider> _priceProvider = new();
     private TestDatabase? _testDatabase;
 
     protected override void ConfigureServices(IServiceCollection services)
@@ -38,6 +40,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         planVerifierMock.Setup(x => x.CanAddMoreAccounts(_testUserId)).ReturnsAsync(true);
         planVerifierMock.Setup(x => x.CanAddMoreEntries(_testUserId, It.IsAny<int>())).ReturnsAsync(true);
         services.AddSingleton(planVerifierMock.Object);
+        services.AddSingleton(_priceProvider.Object);
     }
 
     private async Task SeedAccount()
@@ -97,6 +100,22 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
 
     private static AddInvestmentTransactionRequest AddRequest(int accountId) => new(
         accountId, _listingId, InvestmentTransactionType.Buy, 3m, 120m, "USD", new DateOnly(2024, 6, 1));
+
+    [Fact]
+    public async Task ListingPrice_UsesPriceProvider()
+    {
+        await SeedListing();
+        Authorize("testuser", _testUserId, UserRole.User);
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(321.45m);
+
+        var result = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(_listingId);
+
+        Assert.NotNull(result);
+        Assert.Equal(321.45m, result.LatestPrice);
+        Assert.Equal("USD", result.Currency);
+    }
 
     [Fact]
     public async Task Add_CreatesTransaction()

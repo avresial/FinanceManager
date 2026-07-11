@@ -33,15 +33,28 @@ public class AlphaVantageClientTests
     }
 
     [Fact]
-    public async Task GetDailySeries_UsesAdjustedEndpoint()
+    public async Task GetDailySeries_FallsBackToFreeDailyEndpoint_WhenAdjustedUnavailable()
     {
-        var handler = new MockHttpMessageHandler(response: _emptySeries);
+        var handler = new MockHttpMessageHandler(responses:
+        [
+            """{ "Information": "premium endpoint" }""",
+            """
+            {
+              "Time Series (Daily)": {
+                "2024-01-15": { "4. close": "190.0000" }
+              }
+            }
+            """
+        ]);
         var client = CreateClient(handler);
 
-        await client.GetDailySeries("AAPL", "US0378331005", _start, _end, _usd, TestContext.Current.CancellationToken);
+        var result = await client.GetDailySeries("AAPL", "US0378331005", _start, _end, _usd, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(handler.LastRequestUri);
-        Assert.Contains("function=TIME_SERIES_DAILY_ADJUSTED", handler.LastRequestUri!.AbsoluteUri);
+        Assert.Equal(2, handler.RequestUris.Count);
+        Assert.Contains("function=TIME_SERIES_DAILY_ADJUSTED", handler.RequestUris[0].AbsoluteUri);
+        Assert.Contains("function=TIME_SERIES_DAILY&", handler.RequestUris[1].AbsoluteUri);
+        Assert.Contains("outputsize=compact", handler.RequestUris[1].AbsoluteUri);
+        Assert.Equal(190m, Assert.Single(result).PricePerUnit);
     }
 
     [Fact]
@@ -110,17 +123,23 @@ public class AlphaVantageClientTests
             Task.CompletedTask;
     }
 
-    private sealed class MockHttpMessageHandler(HttpStatusCode statusCode = HttpStatusCode.OK, string response = "") : HttpMessageHandler
+    private sealed class MockHttpMessageHandler(
+        HttpStatusCode statusCode = HttpStatusCode.OK,
+        string response = "",
+        IReadOnlyList<string>? responses = null) : HttpMessageHandler
     {
+        private readonly Queue<string> _responses = new(responses ?? [response]);
         public Uri? LastRequestUri { get; private set; }
+        public List<Uri> RequestUris { get; } = [];
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             LastRequestUri = request.RequestUri;
+            RequestUris.Add(request.RequestUri!);
             return Task.FromResult(new HttpResponseMessage
             {
                 StatusCode = statusCode,
-                Content = new StringContent(response)
+                Content = new StringContent(_responses.Count > 1 ? _responses.Dequeue() : _responses.Peek())
             });
         }
     }

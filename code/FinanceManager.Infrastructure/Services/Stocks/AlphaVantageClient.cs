@@ -97,23 +97,15 @@ internal sealed class AlphaVantageClient(
         }
 
         var outputSize = string.IsNullOrWhiteSpace(options.Value.OutputSize) ? "compact" : options.Value.OutputSize;
-        // Use the split/dividend-adjusted series so historical returns stay correct across corporate
-        // actions. Note: TIME_SERIES_DAILY_ADJUSTED is premium-gated on Alpha Vantage; when the key
-        // lacks entitlement the response carries no series and we return empty, letting the fallback
-        // price source (EODHD, whose adjusted_close is on the free tier) take over.
-        var url = BuildUrl($"function=TIME_SERIES_DAILY_ADJUSTED&symbol={Uri.EscapeDataString(ticker)}&outputsize={outputSize}&apikey={apiKey}", config.BaseUrl);
-
         try
         {
-            var response = await httpClient.GetAsync(url, ct);
-            if (!response.IsSuccessStatusCode)
+            var apiResponse = await FetchDailySeries("TIME_SERIES_DAILY_ADJUSTED", ticker, outputSize, apiKey, config.BaseUrl, ct);
+            if (apiResponse?.Series is null or { Count: 0 })
             {
-                logger.LogWarning("Stock API daily series failed with status {StatusCode}", response.StatusCode);
-                return [];
+                await Task.Delay(TimeSpan.FromSeconds(1), ct);
+                apiResponse = await FetchDailySeries("TIME_SERIES_DAILY", ticker, "compact", apiKey, config.BaseUrl, ct);
             }
 
-            var content = await response.Content.ReadAsStringAsync(ct);
-            var apiResponse = JsonSerializer.Deserialize<AlphaVantageDailyResponse>(content, _jsonOptions);
             if (apiResponse?.Series is null || apiResponse.Series.Count == 0) return [];
 
             var prices = new List<StockPrice>();
@@ -136,6 +128,10 @@ internal sealed class AlphaVantageClient(
                 });
             }
 
+            if (prices.Count == 0)
+                logger.LogWarning("Stock API returned {Count} daily prices for {Ticker}, but none between {Start} and {End}.",
+                    apiResponse.Series.Count, ticker, start.Date, end.Date);
+
             return prices;
         }
         catch (Exception ex)
@@ -143,6 +139,27 @@ internal sealed class AlphaVantageClient(
             logger.LogError(ex, "Stock API daily series failed for ticker {Ticker}", ticker);
             return [];
         }
+    }
+
+    private async Task<AlphaVantageDailyResponse?> FetchDailySeries(
+        string function, string ticker, string outputSize, string apiKey, string baseUrl, CancellationToken ct)
+    {
+        var url = BuildUrl($"function={function}&symbol={Uri.EscapeDataString(ticker)}&outputsize={outputSize}&apikey={apiKey}", baseUrl);
+        using var response = await httpClient.GetAsync(url, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            logger.LogWarning("Stock API daily series failed with status {StatusCode}", response.StatusCode);
+            return null;
+        }
+
+        var result = JsonSerializer.Deserialize<AlphaVantageDailyResponse>(await response.Content.ReadAsStringAsync(ct), _jsonOptions);
+        if (result?.Series is null or { Count: 0 })
+        {
+            var reason = (result?.Information ?? result?.Note ?? "empty response").Replace('\r', ' ').Replace('\n', ' ');
+            logger.LogWarning("Stock API function {Function} returned no daily prices for {Ticker} ({Reason}).", function, ticker, reason);
+        }
+
+        return result;
     }
 
     private static string BuildUrl(string query, string baseUrl)
@@ -206,6 +223,9 @@ internal sealed class AlphaVantageClient(
 
     private sealed class AlphaVantageDailyResponse
     {
+        public string? Information { get; set; }
+        public string? Note { get; set; }
+
         [JsonPropertyName("Time Series (Daily)")]
         public Dictionary<string, AlphaVantageDailySeriesEntry>? Series { get; set; }
     }

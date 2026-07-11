@@ -1,7 +1,9 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.Assets.Repositories;
+using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
@@ -20,7 +22,7 @@ public class InvestmentTransactionController(
     IInvestmentTransactionRepository transactionRepository,
     ICacheInvalidator dashboardCacheInvalidator,
     IAssetListingRepository assetListingRepository,
-    IPriceQuoteRepository priceQuoteRepository) : ControllerBase
+    IInvestmentPriceProvider priceProvider) : ControllerBase
 {
     [HttpGet("GetByAccount/{accountId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InvestmentTransactionDto>))]
@@ -126,8 +128,9 @@ public class InvestmentTransactionController(
     {
         var listing = await assetListingRepository.Get(listingId, cancellationToken);
         if (listing is null) return NotFound();
-        var quote = await priceQuoteRepository.GetLatestOnOrBefore(listingId, DateTimeOffset.UtcNow, cancellationToken: cancellationToken);
-        return Ok(new ListingPriceDto(quote?.Price, listing.TradingCurrency));
+        var currency = new Currency(0, listing.TradingCurrency, listing.TradingCurrency);
+        var price = await priceProvider.GetPricePerUnitAsync(listingId, currency, DateTime.UtcNow, cancellationToken);
+        return Ok(new ListingPriceDto(price > 0 ? price : null, listing.TradingCurrency));
     }
 
     private static bool IsValid(long assetListingId, decimal quantity, decimal unitPrice, string? currency, DateOnly tradeDate) =>
