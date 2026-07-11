@@ -365,7 +365,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
 
     private void CloseForm() => _formVisible = false;
 
-    private bool CanSave => _formListingId > 0 && _formQuantity > 0 && _formUnitPrice >= 0 && _formTradeDate is not null && !string.IsNullOrWhiteSpace(_formCurrency) && !_noPriceAvailable;
+    private bool CanSave => _formListingId > 0 && _formQuantity > 0 && _formUnitPrice >= 0 && _formTradeDate is not null && !string.IsNullOrWhiteSpace(_formCurrency);
 
     private async Task OnInstrumentSelectedAsync(InstrumentSearchResultDto? dto)
     {

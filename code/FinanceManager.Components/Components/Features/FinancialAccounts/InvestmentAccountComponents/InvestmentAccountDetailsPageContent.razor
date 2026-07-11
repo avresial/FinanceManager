@@ -122,7 +122,7 @@ else
             <MudTextField T="string" Label="Unit price" Value="@(_selectedInstrument is null ? string.Empty : _formUnitPrice.ToString("N2"))" ReadOnly="true" Disabled="true" />
             @if (_noPriceAvailable && _selectedInstrument is not null)
             {
-                <MudAlert Severity="Severity.Warning" Dense="true">No price data found for this instrument. Add a price quote before recording a transaction.</MudAlert>
+                <MudAlert Severity="Severity.Info" Dense="true">No price data found for this instrument. You can still save the transaction — the unit price will be recalculated once a price quote is available.</MudAlert>
             }
             <MudTextField T="string" Label="Currency" Value="@_formCurrency" ReadOnly="true" Disabled="true" />
             <MudDatePicker Label="Trade date" @bind-Date="_formTradeDate" />
