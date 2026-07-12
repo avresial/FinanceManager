@@ -7,8 +7,7 @@ namespace FinanceManager.Api.Controllers.Accounts;
 
 /// <summary>
 /// User-facing instrument discovery over external providers (OpenFIGI + Alpha Vantage), kept
-/// separate from the admin asset CRUD API. Currently exposes search; import-preview and import
-/// arrive in a later slice.
+/// separate from the admin asset CRUD API.
 /// </summary>
 [Authorize]
 [ApiController]
@@ -25,5 +24,24 @@ public class InvestmentInstrumentDiscoveryController(IInvestmentInstrumentDiscov
 
         var results = await discoveryService.SearchAsync(query, cancellationToken);
         return Ok(results);
+    }
+
+    [HttpPost("import-preview")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(InstrumentImportPreviewDto))]
+    public async Task<IActionResult> ImportPreview([FromBody] InstrumentDiscoveryResultDto instrument, CancellationToken cancellationToken) =>
+        Ok(await discoveryService.GetImportPreviewAsync(instrument, cancellationToken));
+
+    [HttpPost("import")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ImportedInstrumentDto))]
+    public async Task<IActionResult> Import([FromBody] ImportInstrumentCommand command, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await discoveryService.ImportAsync(command, cancellationToken));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 }

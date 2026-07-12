@@ -114,6 +114,10 @@ else
                              ResetValueOnEmptyText="true"
                              CoerceText="false"
                              Dense="true" />
+            @if (_editingId is null)
+            {
+                <InstrumentImport ButtonText="Can't find it? Import instrument" Imported="OnInstrumentImportedAsync" />
+            }
             <MudSelect T="InvestmentTransactionType" Label="Type" @bind-Value="_formType" Dense="true">
                 <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Buy">Buy</MudSelectItem>
                 <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Sell">Sell</MudSelectItem>
