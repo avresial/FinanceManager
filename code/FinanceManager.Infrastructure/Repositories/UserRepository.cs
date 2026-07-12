@@ -207,8 +207,8 @@ public class UserRepository(AppDbContext context) : IUserRepository
         var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user is null) return false;
 
+        // The entity is already tracked; change tracking persists just this property.
         user.PreferredCurrencyId = currencyId;
-        context.Update(user);
         await context.SaveChangesAsync();
 
         return true;

@@ -98,7 +98,7 @@ public partial class Dashboard : ComponentBase
         }
 
         var currency = await SettingsService.GetCurrencyAsync();
-        var snapshotKey = BuildSnapshotKey(user.UserId);
+        var snapshotKey = BuildSnapshotKey(user.UserId, currency.Id);
 
         // Paint the last-rendered snapshot immediately so the page feels instant on
         // re-navigation. The API call below always runs and reconciles the view.
@@ -179,7 +179,9 @@ public partial class Dashboard : ComponentBase
     }
 
     // Per-user key with no date component, so a single snapshot per user is overwritten each save.
-    private static string BuildSnapshotKey(int userId) => $"dashboard-overview:{userId}";
+    // The key is currency-scoped so a snapshot saved before a preferred-currency change is never
+    // painted with the new currency's labels.
+    private static string BuildSnapshotKey(int userId, int currencyId) => $"dashboard-overview:{userId}:{currencyId}";
 
     private static bool IsSameAsSnapshot(DashboardOverviewDto overview, DashboardOverviewSnapshot? snapshot)
     {

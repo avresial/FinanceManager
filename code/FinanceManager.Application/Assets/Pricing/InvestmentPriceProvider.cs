@@ -56,8 +56,11 @@ public class InvestmentPriceProvider(
 
         if (quote is null) return 0m;
 
-        var price = await ConvertAsync(quote.Price, quote.Currency, targetCurrency, asOf, ct);
-        if (price > 0)
+        var (price, direct) = await ConvertAsync(quote.Price, quote.Currency, targetCurrency, asOf, ct);
+
+        // A USD-fallback value is not denominated in the target currency, so caching it under the
+        // target-currency key would serve mislabelled amounts for the whole TTL.
+        if (price > 0 && direct)
             cache.Set(cacheKey, price, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = _cacheTtl });
 
         return price;
@@ -139,7 +142,7 @@ public class InvestmentPriceProvider(
             {
                 // Dates outside the prefetched range or with a missing rate fall back to the
                 // per-call path so the result matches the point lookup.
-                converted = await ConvertAsync(latestKnown.Price, latestKnown.Currency, targetCurrency, date, ct);
+                (converted, _) = await ConvertAsync(latestKnown.Price, latestKnown.Currency, targetCurrency, date, ct);
             }
 
             if (converted > 0)
@@ -149,26 +152,28 @@ public class InvestmentPriceProvider(
         return series;
     }
 
-    private async Task<decimal> ConvertAsync(decimal price, string sourceCurrencyName, Currency targetCurrency, DateTime date, CancellationToken ct)
+    // Direct is false when the returned value is the USD fallback (i.e. not denominated in
+    // targetCurrency); such values must not be cached under the target currency.
+    private async Task<(decimal Price, bool Direct)> ConvertAsync(decimal price, string sourceCurrencyName, Currency targetCurrency, DateTime date, CancellationToken ct)
     {
-        if (price <= 0) return 0m;
+        if (price <= 0) return (0m, true);
         if (string.Equals(sourceCurrencyName, targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase))
-            return price;
+            return (price, true);
 
         if (date > DateTime.UtcNow) date = DateTime.UtcNow;
         var sourceCurrency = await currencyRepository.GetOrAdd(sourceCurrencyName, sourceCurrencyName, ct);
         var rate = await currencyExchangeService.GetExchangeRateAsync(sourceCurrency, targetCurrency, date.Date);
-        if (rate is decimal value) return price * value;
+        if (rate is decimal value) return (price * value, true);
 
         // The preferred currency could not be reached; fall back to USD so the position keeps a
         // value instead of collapsing to zero.
         logger.LogWarning("No exchange rate {From}→{To} on {Date}; falling back to USD", sourceCurrency.ShortName, targetCurrency.ShortName, date.Date);
 
         if (string.Equals(sourceCurrencyName, DefaultCurrency.USD.ShortName, StringComparison.OrdinalIgnoreCase))
-            return price;
+            return (price, false);
 
         var usdRate = await currencyExchangeService.GetExchangeRateAsync(sourceCurrency, DefaultCurrency.USD, date.Date);
-        return usdRate is decimal toUsd ? price * toUsd : 0m;
+        return usdRate is decimal toUsd ? (price * toUsd, false) : (0m, false);
     }
 
     private async Task TryFetchAndStoreAsync(AssetListing listing, DateTime start, DateTime end, CancellationToken ct)

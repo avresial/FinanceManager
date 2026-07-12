@@ -66,10 +66,13 @@ public class ExchangeRateRepository(AppDbContext context) : IExchangeRateReposit
             }
             catch (DbUpdateException)
             {
-                // A concurrent request persisted the same (from, to, date) row between the lookup
-                // above and this insert; the unique index rejected the duplicate. The rate is
-                // already stored.
+                // The unique (from, to, date) index rejected the insert. If the row now exists, a
+                // concurrent request stored the rate between the lookup above and this insert and
+                // nothing is lost; any other write failure must surface unchanged.
                 context.ChangeTracker.Clear();
+                if (!await context.ExchangeRates.AsNoTracking()
+                        .AnyAsync(x => x.FromCurrency == from && x.ToCurrency == to && x.Date == day, ct))
+                    throw;
             }
         }
         finally

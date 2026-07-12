@@ -1,4 +1,5 @@
-﻿using FinanceManager.Domain.Identity.Entities;
+﻿using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Domain.Identity.Dtos;
 
@@ -20,7 +21,7 @@ public class UserDto
     public DateTime? LockoutEndUtc { get; set; }
 
     /// <summary>Currency all asset values are presented in for this user. Defaults to PLN.</summary>
-    public int PreferredCurrencyId { get; set; }
+    public int PreferredCurrencyId { get; set; } = DefaultCurrency.PLN.Id;
 
     public User ToUser() => new()
     {
