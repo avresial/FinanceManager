@@ -2,6 +2,9 @@
 
 Instructions for AI agents working on FinanceManager.
 
+**Read CLAUDE.md first** - CLAUDE.md contains the information usualy found in agents md.
+
+
 - **Local development workflows**: use [$mikis-teamwork](C:\\Users\\Miki\\.codex\\skills\\mikis-teamwork\\SKILL.md) for each development workflow on the local machine.
 - **Project conventions** (build, tests, architecture, branching, changelog): read [`CLAUDE.md`](./CLAUDE.md).
 - **Using the running app** — above all the **develop-only auto test login** (`/DevelopLogin/{login}/{page}`)
