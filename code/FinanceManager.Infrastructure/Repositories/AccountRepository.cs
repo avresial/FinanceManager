@@ -28,7 +28,6 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
 
         return result;
     }
-    public Task<int> GetLastAccountId() => throw new NotImplementedException();
     public async Task<int> GetAccountsCount()
     {
         int currencyAccountsCount = await currencyAccountRepository.GetAccountsCount();
@@ -37,35 +36,6 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
 
         return currencyAccountsCount + investmentAccountsCount + bondAccountsCount;
     }
-    public async Task<DateTime?> GetStartDate(int id)
-    {
-        var account = await FindAccount(id);
-        if (account is null) return null;
-
-        return account switch
-        {
-            CurrencyAccount currencyAccount => currencyAccount.Start,
-            InvestmentAccount investmentAccount => investmentAccount.Start,
-            BondAccount bondAccount => bondAccount.Start,
-            _ => throw new NotSupportedException($"Account type {account.GetType()} is not supported."),
-        };
-    }
-    public async Task<DateTime?> GetEndDate(int id)
-    {
-        var account = await FindAccount(id);
-        if (account is null) return null;
-
-        return account switch
-        {
-            CurrencyAccount currencyAccount => currencyAccount.End,
-            InvestmentAccount investmentAccount => investmentAccount.End,
-            BondAccount bondAccount => bondAccount.End,
-            _ => throw new NotSupportedException($"Account type {account.GetType()} is not supported."),
-        };
-    }
-
-    public Task<bool> AccountExists(int id) => throw new NotImplementedException();
-
     public async Task<T?> GetAccount<T>(int userId, int accountId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
     {
         switch (typeof(T))
@@ -239,9 +209,6 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
 
         throw new NotSupportedException($"Account type {account.GetType()} is not supported.");
     }
-    public Task AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
-        where AccountType : BasicAccountInformation
-        where EntryType : FinancialEntryBase => throw new NotImplementedException();
     public Task UpdateAccount<T>(T account) where T : BasicAccountInformation
     {
         if (account is CurrencyAccount currencyAccount) return currencyAccountRepository.Update(currencyAccount.AccountId, currencyAccount.Name, currencyAccount.AccountType);
@@ -278,61 +245,4 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
                 throw new InvalidOperationException($"Account with id {id} not found.");
         }
     }
-
-    public async Task<T?> GetNextYounger<T>(int accountId, DateTime date) where T : FinancialEntryBase => await currencyEntryRepository.GetNextYounger(accountId, date) as T;
-    public async Task AddEntry<T>(T accountEntry, int id) where T : FinancialEntryBase
-    {
-        if (accountEntry is CurrencyAccountEntry currencyEntry)
-            await AddCurrencyAccountEntry(id, currencyEntry.ValueChange, currencyEntry.Description, currencyEntry.ContractorDetails, currencyEntry.PostingDate);
-        else
-            throw new NotSupportedException($"Entry type {accountEntry.GetType()} is not supported.");
-    }
-    public Task<bool> AddLabel<T>(T accountEntry, int labelId) where T : FinancialEntryBase
-    {
-        if (accountEntry is CurrencyAccountEntry currencyEntry)
-            return currencyEntryRepository.AddLabel(currencyEntry.EntryId, labelId);
-
-        throw new NotSupportedException($"Entry type {accountEntry.GetType()} is not supported.");
-    }
-    public async Task UpdateEntry<T>(T accountEntry, int id) where T : FinancialEntryBase
-    {
-        if (accountEntry is CurrencyAccountEntry currencyEntry)
-            await UpdateCurrencyAccountEntry(id, currencyEntry);
-        else
-            throw new NotSupportedException($"Entry type {accountEntry.GetType()} is not supported.");
-    }
-    public async Task RemoveEntry(int accountEntryId, int id)
-    {
-        var account = await FindAccount(id);
-        if (account is null) return;
-
-        switch (account)
-        {
-            case CurrencyAccount currencyAccount:
-                currencyAccount.Remove(accountEntryId);
-                break;
-        }
-    }
-    private Task<object?> FindAccount(int id) => throw new NotImplementedException();
-
-    private async Task AddCurrencyAccountEntry(int id, decimal balanceChange, string description, string? contractorDetails, DateTime? postingDate = null)
-    {
-        var account = await FindAccount<CurrencyAccount>(id);
-        if (account is null) return;
-
-        var finalPostingDate = postingDate ?? DateTime.UtcNow;
-
-        account.AddEntry(new AddCurrencyEntryDto(finalPostingDate, balanceChange, description, contractorDetails, [new() { Name = "Sallary" }]));
-    }
-    private async Task UpdateCurrencyAccountEntry(int id, CurrencyAccountEntry currencyAccountEntry)
-    {
-        var currencyAccount = await FindAccount<CurrencyAccount>(id);
-        if (currencyAccount is null || currencyAccount.Entries is null) return;
-
-        var entryToUpdate = currencyAccount.Entries.FirstOrDefault(x => x.EntryId == currencyAccountEntry.EntryId);
-        if (entryToUpdate is null) return;
-
-        entryToUpdate.Update(currencyAccountEntry);
-    }
-    private Task<T?> FindAccount<T>(int id) where T : BasicAccountInformation => throw new NotImplementedException();
 }
