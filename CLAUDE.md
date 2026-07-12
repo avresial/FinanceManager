@@ -16,6 +16,8 @@ Always include the GitHub issue number being resolved in the commit message subj
 
 **Feature branches merge into `develop`, never directly into `main`.** When opening a PR for a feature branch, the base must be `develop`. Only `develop` is promoted to `main` (e.g., for releases). If asked to open a PR against `main` from a feature branch, push back and switch the base to `develop`.
 
+**Always sync `develop` before starting new work.** Before implementing any new feature or bugfix that starts from `develop`, or before cutting a new branch off `develop`, run `git checkout develop && git pull origin develop` first. Starting from a stale local `develop` risks branching off outdated code, missing recent fixes, and creating avoidable merge conflicts later. If local `develop` has diverged from `origin/develop` (e.g., from a prior merge), resolve that before branching.
+
 ### Branch naming
 
 Branch naming is **critical for the changelog to work**. Every changelog entry ends with `#<issue>` (see [`.claude/skills/changelog/SKILL.md`](./.claude/skills/changelog/SKILL.md)), and that number is sourced from the branch → commit → PR chain. If the branch doesn't carry the issue number, the link breaks and the entry can't be written correctly.
