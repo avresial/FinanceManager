@@ -1,6 +1,7 @@
 using FinanceManager.Components.Components.Features.FinancialAccounts.Shared;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
@@ -418,6 +419,13 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             Logger.LogError(ex, "Failed to search instrument listings for '{Query}'", value);
             return [];
         }
+    }
+
+    private async Task OnInstrumentImportedAsync(ImportedInstrumentDto imported)
+    {
+        await OnInstrumentSelectedAsync(new InstrumentSearchResultDto(
+            imported.AssetListingId, imported.Ticker, imported.ExchangeName, imported.TradingCurrency));
+        Snackbar.Add(imported.Warnings.Count == 0 ? "Instrument imported." : $"Instrument imported with {imported.Warnings.Count} warning(s).", Severity.Success);
     }
 
     private async Task SaveAsync()

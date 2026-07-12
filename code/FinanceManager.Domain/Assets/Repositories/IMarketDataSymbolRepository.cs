@@ -13,6 +13,9 @@ public interface IMarketDataSymbolRepository
     /// <summary>The preferred enabled symbol for a listing and provider (IsPrimary first, then any enabled).</summary>
     Task<MarketDataSymbol?> GetPrimary(long assetListingId, MarketDataProvider provider, CancellationToken cancellationToken = default);
 
+    /// <summary>Get the globally unique provider symbol mapping, or <c>null</c>.</summary>
+    Task<MarketDataSymbol?> Get(MarketDataProvider provider, string symbol, CancellationToken cancellationToken = default);
+
     /// <summary>Insert a new provider symbol and return the persisted entity (with its generated id).</summary>
     Task<MarketDataSymbol> Add(MarketDataSymbol symbol, CancellationToken cancellationToken = default);
 

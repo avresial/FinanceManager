@@ -9,7 +9,7 @@ namespace FinanceManager.Application.Identity.Seeders;
 public class TestUserAccountSeeder(IUserRepository userRepository, IConfiguration configuration,
     ILogger<TestUserAccountSeeder> logger) : ISeeder
 {
-    private const string _defaultTestUserName = "testuser@localhost";
+    private const string _defaultTestUserName = "testuser";
 
     public async Task Seed(CancellationToken cancellationToken = default)
     {
