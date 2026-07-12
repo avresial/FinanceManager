@@ -148,31 +148,31 @@
                          Disabled="@(_step2Complete == false)">
                     <MudStack Spacing="3" Class="pa-4">
 
-                        @if (ShowImportProgress && _activeJobStatus is not null)
+                        @if (ShowImportProgress && ActiveJobStatus is not null)
                         {
                             <MudStack Spacing="2">
                                 <MudProgressLinear Color="Color.Primary" Value="@ImportProgressValue" BufferValue="100"
                                                    Style="height: 6px;" Rounded="true" />
                                 <MudStack Row="true" Spacing="4">
                                     <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                                        Processed @_activeJobStatus.ProcessedEntries / @_activeJobStatus.TotalEntries
+                                        Processed @ActiveJobStatus.ProcessedEntries / @ActiveJobStatus.TotalEntries
                                     </MudText>
-                                    @if (_activeJobStatus.ConflictCount > 0)
+                                    @if (ActiveJobStatus.ConflictCount > 0)
                                     {
                                         <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                                            @_activeJobStatus.ConflictCount conflicts
+                                            @ActiveJobStatus.ConflictCount conflicts
                                         </MudText>
                                     }
-                                    @if (_activeJobStatus.Failed > 0)
+                                    @if (ActiveJobStatus.Failed > 0)
                                     {
                                         <MudText Typo="Typo.caption" Color="Color.Error">
-                                            @_activeJobStatus.Failed failed
+                                            @ActiveJobStatus.Failed failed
                                         </MudText>
                                     }
                                 </MudStack>
                             </MudStack>
                         }
-                        else if (_isImportingData || (_activeImportJobId.HasValue && _activeJobStatus is null))
+                        else if (_isImportingData || (ActiveImportJobId.HasValue && ActiveJobStatus is null))
                         {
                             <MudSkeleton Height="40px" Animation="Animation.Wave" />
                         }
@@ -187,16 +187,16 @@
                             <MudAlert Severity="Severity.Warning" Variant="Variant.Text" Dense="true">@warningInfo</MudAlert>
                         }
 
-                        @if (!string.IsNullOrWhiteSpace(_jobError))
+                        @if (!string.IsNullOrWhiteSpace(JobError))
                         {
-                            <MudAlert Severity="Severity.Error" Variant="Variant.Text" Dense="true">@_jobError</MudAlert>
+                            <MudAlert Severity="Severity.Error" Variant="Variant.Text" Dense="true">@JobError</MudAlert>
                         }
 
-                        @if (_activeImportJobId.HasValue && _liveConflicts.Any(x => !x.IsResolved && !x.Conflict.IsExactMatch))
+                        @if (ActiveImportJobId.HasValue && LiveConflicts.Any(x => !x.IsResolved && !x.Conflict.IsExactMatch))
                         {
                             <CurrencyEntryConflictResolver @ref="_resolverRef"
-                                JobConflicts="@_liveConflicts.Where(x => !x.IsResolved && !x.Conflict.IsExactMatch).ToList()"
-                                JobId="_activeImportJobId" AccountName="@AccountName"
+                                JobConflicts="@LiveConflicts.Where(x => !x.IsResolved && !x.Conflict.IsExactMatch).ToList()"
+                                JobId="ActiveImportJobId" AccountName="@AccountName"
                                 OnConflictsResolved="OnConflictsResolved"
                                 OnResolutionChanged="StateHasChanged" />
                         }

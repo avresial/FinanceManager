@@ -1,8 +1,6 @@
 using FinanceManager.Components.Components.Features.FinancialAccounts.Shared;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
-using FinanceManager.Domain.Assets.Discovery;
-using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
@@ -57,18 +55,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
 
     // Add/edit overlay state.
     private bool _formVisible;
-    private long? _editingId;
-    private InstrumentSearchResultDto? _selectedInstrument;
-    private long _formListingId;
-    private InvestmentTransactionType _formType = InvestmentTransactionType.Buy;
-    private decimal _formQuantity = 1m;
-    private decimal _formUnitPrice;
-    private string _formCurrency = string.Empty;
-    private DateTime? _formTradeDate = DateTime.Today;
-    private decimal? _formFee;
-    private string? _formNotes;
-    private bool _saving;
-    private bool _noPriceAvailable;
+    private InvestmentTransactionDto? _editingTransaction;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -290,36 +277,18 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private void SetDateRangeForSelection()
     {
         var today = DateTime.UtcNow;
-        if (_selectedRange == AccountDetailsHero.CustomRangeKey)
-        {
-            _dateStart = _customDateRange?.Start ?? today.AddMonths(-3);
-            _dateEnd = _customDateRange?.End ?? today;
-            if (_dateEnd > today)
-                _dateEnd = today;
-            return;
-        }
-
-        _dateStart = _selectedRange switch
-        {
-            "Month" => DateRangeHelper.GetCurrentMonthRange().Start,
-            "1M" => today.AddMonths(-1),
-            "3M" => today.AddMonths(-3),
-            "6M" => today.AddMonths(-6),
-            "YTD" => new DateTime(today.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            _ => today.AddMonths(-3)
-        };
-        _dateEnd = today;
+        (_dateStart, _dateEnd) = DateRangeHelper.GetAccountDetailsRange(
+            _selectedRange, _customDateRange?.Start, _customDateRange?.End,
+            today.AddMonths(-3), today.AddMonths(-3), today);
     }
 
     // On the first load, widen the range to the oldest recorded trade when it predates the
     // default window, so navigating in doesn't hide existing history behind an empty range.
     private void ApplyAutomaticCustomRange()
     {
-        var oldestTradeDate = _transactions.MinBy(t => t.TradeDate)?.TradeDate;
-        if (oldestTradeDate is null) return;
-
-        var oldestStart = oldestTradeDate.Value.ToDateTime(TimeOnly.MinValue);
-        if (oldestStart >= _dateStart) return;
+        var oldestTradeDate = _transactions.MinBy(t => t.TradeDate)?.TradeDate.ToDateTime(TimeOnly.MinValue);
+        var expandedStart = DateRangeHelper.GetExpandedStart(_dateStart, oldestTradeDate);
+        if (expandedStart is not DateTime oldestStart) return;
 
         _selectedRange = AccountDetailsHero.CustomRangeKey;
         _dateStart = oldestStart;
@@ -335,155 +304,26 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
 
     private void ShowAdd()
     {
-        _editingId = null;
-        _selectedInstrument = null;
-        _formListingId = 0;
-        _formType = InvestmentTransactionType.Buy;
-        _formQuantity = 1m;
-        _formUnitPrice = 0m;
-        _formCurrency = string.Empty;
-        _formTradeDate = DateTime.Today;
-        _formFee = null;
-        _formNotes = null;
-        _noPriceAvailable = false;
+        _editingTransaction = null;
         _formVisible = true;
     }
 
     private void ShowEdit(InvestmentTransactionDto tx)
     {
-        _editingId = tx.Id;
-        _selectedInstrument = new InstrumentSearchResultDto(tx.AssetListingId, tx.Ticker, tx.ExchangeName, tx.Currency);
-        _formListingId = tx.AssetListingId;
-        _formType = tx.Type;
-        _formQuantity = tx.Quantity;
-        _formUnitPrice = tx.UnitPrice;
-        _formCurrency = tx.Currency;
-        _formTradeDate = tx.TradeDate.ToDateTime(TimeOnly.MinValue);
-        _formFee = tx.Fee;
-        _formNotes = tx.Notes;
+        _editingTransaction = tx;
         _formVisible = true;
     }
 
-    private void CloseForm() => _formVisible = false;
-
-    private bool CanSave => _formListingId > 0 && _formQuantity > 0 && _formUnitPrice >= 0 && _formTradeDate is not null && !string.IsNullOrWhiteSpace(_formCurrency);
-
-    private async Task OnInstrumentSelectedAsync(InstrumentSearchResultDto? dto)
+    private Task OnFormVisibleChanged(bool visible)
     {
-        _selectedInstrument = dto;
-        _noPriceAvailable = false;
-        if (dto is null)
-        {
-            _formListingId = 0;
-            _formCurrency = string.Empty;
-            _formUnitPrice = 0m;
-            return;
-        }
-
-        _formListingId = dto.ListingId;
-        _formCurrency = dto.Currency;
-
-        await RefreshFormPriceAsync();
+        _formVisible = visible;
+        return Task.CompletedTask;
     }
 
-    private async Task OnTradeDateChangedAsync(DateTime? value)
+    private async Task OnTransactionSavedAsync()
     {
-        _formTradeDate = value;
-        await RefreshFormPriceAsync();
-    }
-
-    private async Task RefreshFormPriceAsync()
-    {
-        if (_selectedInstrument is null || _formTradeDate is not DateTime tradeDate)
-        {
-            _formUnitPrice = 0m;
-            return;
-        }
-
-        try
-        {
-            var priceInfo = await TransactionHttpClient.GetListingPriceAsync(
-                _selectedInstrument.ListingId,
-                DateOnly.FromDateTime(tradeDate));
-            if (priceInfo?.LatestPrice is decimal price)
-            {
-                _formUnitPrice = price;
-            }
-            else
-            {
-                _formUnitPrice = 0m;
-                _noPriceAvailable = true;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to fetch price for listing {ListingId}", _selectedInstrument.ListingId);
-            _formUnitPrice = 0m;
-            _noPriceAvailable = true;
-        }
-    }
-
-    private async Task<IEnumerable<InstrumentSearchResultDto>> SearchInstrumentsAsync(string value, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return [];
-        try
-        {
-            return await TransactionHttpClient.SearchListingsAsync(value);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to search instrument listings for '{Query}'", value);
-            return [];
-        }
-    }
-
-    private async Task OnInstrumentImportedAsync(ImportedInstrumentDto imported)
-    {
-        await OnInstrumentSelectedAsync(new InstrumentSearchResultDto(
-            imported.AssetListingId, imported.Ticker, imported.ExchangeName, imported.TradingCurrency));
-        Snackbar.Add(imported.Warnings.Count == 0 ? "Instrument imported." : $"Instrument imported with {imported.Warnings.Count} warning(s).", Severity.Success);
-    }
-
-    private async Task SaveAsync()
-    {
-        if (!CanSave) return;
-        _saving = true;
-        try
-        {
-            var tradeDate = DateOnly.FromDateTime(_formTradeDate!.Value);
-            bool ok;
-            if (_editingId is long id)
-            {
-                ok = await TransactionHttpClient.UpdateAsync(new UpdateInvestmentTransactionRequest(
-                    id, AccountId, _formListingId, _formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes));
-            }
-            else
-            {
-                var created = await TransactionHttpClient.AddAsync(new AddInvestmentTransactionRequest(
-                    AccountId, _formListingId, _formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes));
-                ok = created is not null;
-            }
-
-            if (ok)
-            {
-                Snackbar.Add(_editingId is null ? "Transaction added." : "Transaction updated.", Severity.Success);
-                _formVisible = false;
-                await LoadAsync();
-            }
-            else
-            {
-                Snackbar.Add("Could not save the transaction.", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to save investment transaction for account {AccountId}", AccountId);
-            Snackbar.Add("Could not save the transaction.", Severity.Error);
-        }
-        finally
-        {
-            _saving = false;
-        }
+        _formVisible = false;
+        await LoadAsync();
     }
 
     private async Task DeleteAsync(InvestmentTransactionDto tx)

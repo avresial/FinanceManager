@@ -56,6 +56,8 @@ public static class ServiceCollectionExtension
                 .AddScoped<DashboardHttpClient>()
                 .AddScoped<DashboardOverviewCardsCacheService>()
                 .AddScoped<ISnapshotService, LocalStorageSnapshotService>()
+                .AddScoped<AccountDetailsSnapshotStore>()
+                .AddTransient<CurrencyImportJobTracker>()
                 .AddScoped<AssetsPageCardsCacheService>()
                 .AddScoped<InvestmentPaycheckEstimateCacheService>()
                 .AddScoped<CurrencyHttpClient>()
