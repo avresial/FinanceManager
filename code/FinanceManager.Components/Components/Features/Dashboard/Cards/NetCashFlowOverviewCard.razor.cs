@@ -52,7 +52,7 @@ public partial class NetCashFlowOverviewCard
 
     private async Task Reload()
     {
-        var currency = SettingsService.GetCurrency();
+        var currency = await SettingsService.GetCurrencyAsync();
         _currency = currency.ShortName;
         _totalNetCashFlow = null;
 

@@ -34,7 +34,7 @@ public partial class ClosingBalanceOverviewCard
 
     private async Task Reload()
     {
-        var currency = SettingsService.GetCurrency();
+        var currency = await SettingsService.GetCurrencyAsync();
         _currency = currency.ShortName;
 
         if (Model is not null)

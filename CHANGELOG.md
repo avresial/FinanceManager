@@ -9,6 +9,13 @@ rules agents must follow when updating this file.
 
 ## [Unreleased]
 
+### Added
+- Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
+
+### Changed
+- Currency fields are no longer free-text anywhere in the app: the admin asset editor (base and trading currency) and the bond-details form now offer a dropdown of predefined currencies (plus pence-style quote units like GBX for listings), and the API rejects currency codes outside that list. The predefined list now ships with the major world currencies (EUR, GBP, CHF, JPY, CZK, SEK, NOK, DKK, HUF, CAD, AUD) besides PLN and USD.
+- Exchange rates are now stored in the application database: a conversion first checks the in-memory cache and the database (including inverse pairs), and only on a miss asks the external rate provider — whose answer is persisted so the same pair and date never leave the app twice. Unknown pairs additionally fall back to a cross-rate via USD.
+
 ### Security
 - The default admin and test-user accounts are no longer seeded with passwords hard-coded in source. Their passwords are now read from configuration (`Seeding:AdminPassword` / `Seeding:TestUserPassword`); when unset — as in production — the accounts are not created. The stock-price bulk-import endpoint now returns a generic error message and logs the exception server-side instead of echoing the raw exception text to the caller. #450
 
@@ -24,6 +31,7 @@ rules agents must follow when updating this file.
 - Investment accounts now have a dedicated details view on the new asset model: opening an account that holds investment transactions shows current holdings (per exchange listing, with units, price and value), the total holdings value, and a Buy/Sell transaction history, and lets you add, edit and remove transactions inline. The guest demo includes a seeded investment account (iShares Core S&P 500) so the view is populated out of the box. Accounts on the legacy stock model are unaffected. #490
 
 ### Fixed
+- Investment transaction forms now price trades using their selected trade date instead of the latest quote. #525
 - Investment transaction prices now fetch missing quotes through the configured market-data providers, and Alpha Vantage falls back to its free daily endpoint when the adjusted endpoint requires a premium plan.
 - Adding a stock by ticker now resolves and prices reliably: instrument identity is keyed on the share-class FIGI that OpenFIGI actually returns, instead of an ISIN it never returns for a ticker lookup. Unambiguous ticker searches now auto-resolve and save (and fetch prices) even when no ISIN is available, with ISIN kept as an optional cross-reference. #473
 - The dashboard no longer blanks out if reading its saved snapshot fails: a local-storage or interop error on the snapshot read is now logged and the page falls through to a fresh server fetch instead of aborting the load. A slower, superseded reload also no longer overwrites the snapshot written by a newer one, preventing a stale first paint on the next visit. #463
@@ -31,6 +39,7 @@ rules agents must follow when updating this file.
 - The next-younger boundary entry attached to a loaded account (used to extend balance series past the selected window) is now resolved from the end of the date range instead of the start, so it correctly points at the first entry *after* the window rather than the earliest in-range entry. Affects both single-account and whole-portfolio loads. #411
 
 ### Changed
+- Investment transaction history now retries missing prices when the account is opened and marks unavailable prices with an orange warning icon. #525
 - Investment transactions can now be saved for instruments that have no stored price data yet: the "Add transaction" form no longer blocks saving when no price quote is found, records the trade with a zero unit price (still read-only), and explains that the price will be recalculated once a quote is available. #517
 - The **Admin → Logs** page is now denser and mobile-friendly: each entry is a compact card whose header (log-level chip, timestamp, category) and message stay visible at all times, instead of a table that pushed metadata off-screen on narrow viewports. Stack traces are collapsed by default behind a **Show details / Hide details** toggle and, when expanded, render in a bounded scrollable monospace block that wraps long lines so they never push the card past the screen edge. The log-level filter shows icon-only buttons (with accessible labels) on mobile and keeps text labels on desktop. #511
 - The investment account details view now shows its transaction history in the same style as currency and bond accounts: trades are grouped into per-day cards (with the day's trade count and net cash impact), and each transaction is a compact, clickable row that expands to reveal full details (trade date, type, ticker, exchange, quantity, unit price, gross value, fee, cash impact, currency, notes) along with the edit and delete actions — which are no longer always visible in the row. Holdings move to a secondary side card so the transaction history is the main content. #503

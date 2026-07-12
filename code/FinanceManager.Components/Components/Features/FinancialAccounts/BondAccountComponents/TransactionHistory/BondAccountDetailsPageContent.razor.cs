@@ -116,7 +116,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     {
         if (Account is null || Account.Entries is null) return;
 
-        _currency = SettingsService.GetCurrency();
+        _currency = await SettingsService.GetCurrencyAsync();
 
         if (Account.Entries.Count == 0)
         {
@@ -276,7 +276,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     {
         if (Account is null || _user is null) return;
 
-        _currency = SettingsService.GetCurrency();
+        _currency = await SettingsService.GetCurrencyAsync();
         var chartData = await MoneyFlowHttpClient.GetClosingBalance(_user.UserId, _currency, _dateStart, _dateEnd, [AccountId]);
         if (refreshVersion != _chartRefreshVersion) return;
 

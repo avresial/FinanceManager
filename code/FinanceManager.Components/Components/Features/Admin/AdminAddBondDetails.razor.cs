@@ -34,11 +34,12 @@ public partial class AdminAddBondDetails : ComponentBase
 
     private readonly List<BondCalculationMethod> _calculationMethods = [];
     private readonly IReadOnlyList<BondType> _bondTypes = Enum.GetValues<BondType>();
-    private readonly IReadOnlyList<Currency> _currencies = [DefaultCurrency.PLN, DefaultCurrency.USD];
+    private IReadOnlyList<Currency> _currencies = [DefaultCurrency.PLN, DefaultCurrency.USD];
     private readonly IReadOnlyList<Capitalization> _capitalizations = Enum.GetValues<Capitalization>();
     private readonly IReadOnlyList<DateOperator> _dateOperators = Enum.GetValues<DateOperator>();
 
     [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
+    [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -46,6 +47,13 @@ public partial class AdminAddBondDetails : ComponentBase
         try
         {
             _issuers = await BondDetailsHttpClient.GetIssuers();
+
+            var currencies = await CurrencyHttpClient.GetAll();
+            if (currencies.Count > 0)
+            {
+                _currencies = currencies;
+                _selectedCurrency = currencies.FirstOrDefault(x => x.ShortName == DefaultCurrency.PLN.ShortName) ?? currencies[0];
+            }
         }
         catch (Exception ex)
         {

@@ -41,7 +41,7 @@ public partial class AssetsTimeSeriesCard
         StateHasChanged();
         try
         {
-            var currency = SettingsService.GetCurrency();
+            var currency = await SettingsService.GetCurrencyAsync();
             _currency = currency.ShortName;
 
             ChartData.Clear();

@@ -22,6 +22,10 @@ public class MarketDataSymbolRepository(AppDbContext context) : IMarketDataSymbo
             .ThenBy(x => x.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
+    public Task<MarketDataSymbol?> Get(MarketDataProvider provider, string symbol, CancellationToken cancellationToken = default) =>
+        context.MarketDataSymbols.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Provider == provider && x.Symbol == symbol, cancellationToken);
+
     public async Task<MarketDataSymbol> Add(MarketDataSymbol symbol, CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;

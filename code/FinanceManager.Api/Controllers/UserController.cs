@@ -1,6 +1,7 @@
 using FinanceManager.Api.Helpers;
 using FinanceManager.Application.Identity;
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.Identity.Commands;
 using FinanceManager.Domain.Identity.Dtos;
 using FinanceManager.Domain.Identity.Entities;
@@ -14,7 +15,7 @@ namespace FinanceManager.Api.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Users")]
-public class UserController(IUserRepository userRepository, UsersService usersService, IUserPlanVerifier userPlanVerifier) : ControllerBase
+public class UserController(IUserRepository userRepository, UsersService usersService, IUserPlanVerifier userPlanVerifier, ICurrencyRepository currencyRepository) : ControllerBase
 {
 
     [AllowAnonymous]
@@ -123,6 +124,26 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
 
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(updatePassword.Password);
         var result = await userRepository.UpdatePassword(updatePassword.UserId, encryptedPassword);
+        return result ? Ok(result) : BadRequest();
+    }
+
+    [Authorize(Roles = "Admin, User")]
+    [HttpPut]
+    [Route("UpdatePreferredCurrency")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> UpdatePreferredCurrency(UpdatePreferredCurrency updatePreferredCurrency, CancellationToken cancellationToken = default)
+    {
+        // A "User"-role caller may only change their own preferred currency; Admins may change anyone's.
+        if (!ApiAuthenticationHelper.IsAdminOrAuthenticatedUser(User, updatePreferredCurrency.UserId))
+            return Forbid();
+
+        // Only currencies from the predefined list are accepted — the id must exist.
+        if (await currencyRepository.GetCurrency(updatePreferredCurrency.CurrencyId, cancellationToken) is null)
+            return BadRequest("Unknown currency.");
+
+        var result = await userRepository.UpdatePreferredCurrency(updatePreferredCurrency.UserId, updatePreferredCurrency.CurrencyId);
         return result ? Ok(result) : BadRequest();
     }
 

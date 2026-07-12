@@ -68,7 +68,7 @@ public static class ServiceCollectionExtension
         services.AddScoped<IOpenFigiClient>(sp => sp.GetRequiredService<OpenFigiClient>());
         services.AddScoped<IQuoteFactorResolver>(sp =>
             new QuoteFactorResolver(
-                sp.GetRequiredService<ICurrencyExchangeRateProvider>(),
+                sp.GetRequiredService<ICurrencyExchangeService>(),
                 sp.GetRequiredService<ILogger<QuoteFactorResolver>>()));
         services.AddScoped<IInstrumentResolver>(sp =>
             new InstrumentResolver(
@@ -102,6 +102,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IFinancialInsightsRepository, FinancialInsightsRepository>()
                 .AddScoped<IFinancialLabelsRepository, FinancialLabelsRepository>()
                 .AddScoped<ICurrencyRepository, CurrencyRepository>()
+                .AddScoped<IExchangeRateRepository, ExchangeRateRepository>()
                 .AddScoped<IBondDetailsRepository, BondDetailsRepository>()
                 .AddScoped<ICsvHeaderMappingRepository, CsvHeaderMappingRepository>()
                 .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()

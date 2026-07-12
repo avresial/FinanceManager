@@ -20,4 +20,6 @@ public interface IInvestmentInstrumentDiscoveryService
     /// Alpha Vantage for the provider price symbol.
     /// </summary>
     Task<IReadOnlyList<InstrumentDiscoveryResultDto>> SearchAsync(string query, CancellationToken ct = default);
+    Task<InstrumentImportPreviewDto> GetImportPreviewAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default);
+    Task<ImportedInstrumentDto> ImportAsync(ImportInstrumentCommand command, CancellationToken ct = default);
 }

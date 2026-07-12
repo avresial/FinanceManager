@@ -1,6 +1,7 @@
 using FinanceManager.Components.Components.Features.FinancialAccounts.Shared;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
@@ -110,7 +111,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private async Task LoadAsync(bool initialLoad = false)
     {
         _isLoading = true;
-        _currency = SettingsService.GetCurrency();
+        _currency = await SettingsService.GetCurrencyAsync();
         try
         {
             _accountName = (await InvestmentAccountHttpClient.GetAccountAsync(AccountId))?.Name ?? "Investments";
@@ -382,27 +383,43 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         _formListingId = dto.ListingId;
         _formCurrency = dto.Currency;
 
-        if (_editingId is null)
+        await RefreshFormPriceAsync();
+    }
+
+    private async Task OnTradeDateChangedAsync(DateTime? value)
+    {
+        _formTradeDate = value;
+        await RefreshFormPriceAsync();
+    }
+
+    private async Task RefreshFormPriceAsync()
+    {
+        if (_selectedInstrument is null || _formTradeDate is not DateTime tradeDate)
         {
-            try
+            _formUnitPrice = 0m;
+            return;
+        }
+
+        try
+        {
+            var priceInfo = await TransactionHttpClient.GetListingPriceAsync(
+                _selectedInstrument.ListingId,
+                DateOnly.FromDateTime(tradeDate));
+            if (priceInfo?.LatestPrice is decimal price)
             {
-                var priceInfo = await TransactionHttpClient.GetListingPriceAsync(dto.ListingId);
-                if (priceInfo?.LatestPrice is decimal price)
-                {
-                    _formUnitPrice = price;
-                }
-                else
-                {
-                    _formUnitPrice = 0m;
-                    _noPriceAvailable = true;
-                }
+                _formUnitPrice = price;
             }
-            catch (Exception ex)
+            else
             {
-                Logger.LogError(ex, "Failed to fetch price for listing {ListingId}", dto.ListingId);
                 _formUnitPrice = 0m;
                 _noPriceAvailable = true;
             }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to fetch price for listing {ListingId}", _selectedInstrument.ListingId);
+            _formUnitPrice = 0m;
+            _noPriceAvailable = true;
         }
     }
 
@@ -418,6 +435,13 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             Logger.LogError(ex, "Failed to search instrument listings for '{Query}'", value);
             return [];
         }
+    }
+
+    private async Task OnInstrumentImportedAsync(ImportedInstrumentDto imported)
+    {
+        await OnInstrumentSelectedAsync(new InstrumentSearchResultDto(
+            imported.AssetListingId, imported.Ticker, imported.ExchangeName, imported.TradingCurrency));
+        Snackbar.Add(imported.Warnings.Count == 0 ? "Instrument imported." : $"Instrument imported with {imported.Warnings.Count} warning(s).", Severity.Success);
     }
 
     private async Task SaveAsync()

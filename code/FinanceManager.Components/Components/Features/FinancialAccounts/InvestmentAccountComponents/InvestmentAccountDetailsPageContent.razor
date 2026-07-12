@@ -114,6 +114,10 @@ else
                              ResetValueOnEmptyText="true"
                              CoerceText="false"
                              Dense="true" />
+            @if (_editingId is null)
+            {
+                <InstrumentImport ButtonText="Can't find it? Import instrument" Imported="OnInstrumentImportedAsync" />
+            }
             <MudSelect T="InvestmentTransactionType" Label="Type" @bind-Value="_formType" Dense="true">
                 <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Buy">Buy</MudSelectItem>
                 <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Sell">Sell</MudSelectItem>
@@ -125,7 +129,7 @@ else
                 <MudAlert Severity="Severity.Info" Dense="true">No price data found for this instrument. You can still save the transaction — the unit price will be recalculated once a price quote is available.</MudAlert>
             }
             <MudTextField T="string" Label="Currency" Value="@_formCurrency" ReadOnly="true" Disabled="true" />
-            <MudDatePicker Label="Trade date" @bind-Date="_formTradeDate" />
+            <MudDatePicker Label="Trade date" Date="_formTradeDate" DateChanged="OnTradeDateChangedAsync" />
             <MudNumericField T="decimal?" Label="Fee (optional)" @bind-Value="_formFee" Min="0" Step="0.01M" />
             <MudTextField T="string" Label="Notes (optional)" @bind-Value="_formNotes" />
             <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">

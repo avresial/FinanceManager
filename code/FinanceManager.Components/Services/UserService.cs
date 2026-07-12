@@ -108,6 +108,26 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
         return false;
     }
 
+    public async Task<bool> UpdatePreferredCurrency(int userId, int currencyId)
+    {
+        try
+        {
+            var existingUser = await GetUser(userId);
+            if (existingUser is null) return false;
+            if (await httpClient.UpdatePreferredCurrency(new(userId, currencyId)))
+            {
+                OnUserChangeEvent?.Invoke(existingUser);
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating preferred currency for user {UserId}", userId);
+        }
+
+        return false;
+    }
+
     public async Task<bool> UpdateRole(int userId, UserRole userRole)
     {
         try

@@ -36,7 +36,7 @@ public partial class LiabilitiesTimeSeriesCard
         StateHasChanged();
         try
         {
-            _currency = SettingsService.GetCurrency().ShortName;
+            _currency = (await SettingsService.GetCurrencyAsync()).ShortName;
 
             ChartData.Clear();
             var data = await LiabilitiesHttpClient.GetLiabilitiesTimeSeries(user.UserId, StartDateTime, EndDateTime).ToListAsync();

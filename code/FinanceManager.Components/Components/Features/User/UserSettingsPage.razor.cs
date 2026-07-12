@@ -1,4 +1,7 @@
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
@@ -36,6 +39,9 @@ public partial class UserSettingsPage : ComponentBase
 
     private string _selectedPlan = $"{PricingLevel.Free}";
     private string _initialPlan = $"{PricingLevel.Free}";
+    private List<Currency> _currencies = [];
+    private int _selectedCurrencyId = DefaultCurrency.PLN.Id;
+    private int _initialCurrencyId = DefaultCurrency.PLN.Id;
     private string? _selectedSection = "profile";
     private string? _deleteConfirmation;
 
@@ -48,6 +54,8 @@ public partial class UserSettingsPage : ComponentBase
 
     [Inject] public required IUserService UserService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
+    [Inject] public required UserSettingsService UserSettingsService { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
     [Inject] public required IJSRuntime JSRuntime { get; set; }
 
@@ -76,6 +84,20 @@ public partial class UserSettingsPage : ComponentBase
 
         try
         {
+            _currencies = await CurrencyHttpClient.GetAll();
+        }
+        catch (Exception ex)
+        {
+            _errors.Insert(0, ex.Message);
+        }
+
+        _selectedCurrencyId = _currencies.Any(x => x.Id == _userData.PreferredCurrencyId)
+            ? _userData.PreferredCurrencyId
+            : DefaultCurrency.PLN.Id;
+        _initialCurrencyId = _selectedCurrencyId;
+
+        try
+        {
             _recordCapacity = await UserService.GetRecordCapacity(_loggedUser.UserId);
         }
         catch (Exception ex)
@@ -91,6 +113,7 @@ public partial class UserSettingsPage : ComponentBase
     {
         if (_displayName != _initialDisplayName) return true;
         if (_selectedPlan != _initialPlan) return true;
+        if (_selectedCurrencyId != _initialCurrencyId) return true;
         if (!string.IsNullOrEmpty(_currentPassword)) return true;
         if (!string.IsNullOrEmpty(_newPassword)) return true;
         if (!string.IsNullOrEmpty(_confirmPassword)) return true;
@@ -128,6 +151,11 @@ public partial class UserSettingsPage : ComponentBase
             await UpgradePricingPlan();
         }
 
+        if (_selectedCurrencyId != _initialCurrencyId)
+        {
+            await UpdatePreferredCurrency();
+        }
+
         _initialDisplayName = _displayName;
         _isDirty = HasChanges();
     }
@@ -136,6 +164,7 @@ public partial class UserSettingsPage : ComponentBase
     {
         _displayName = _initialDisplayName;
         _selectedPlan = _initialPlan;
+        _selectedCurrencyId = _initialCurrencyId;
         _currentPassword = null;
         _newPassword = null;
         _confirmPassword = null;
@@ -200,6 +229,26 @@ public partial class UserSettingsPage : ComponentBase
         catch (Exception ex)
         {
             _errors.Insert(0, ex.Message);
+        }
+    }
+
+    private async Task UpdatePreferredCurrency()
+    {
+        if (_loggedUser is null) return;
+
+        var result = await UserService.UpdatePreferredCurrency(_loggedUser.UserId, _selectedCurrencyId);
+        if (!result)
+        {
+            _errors.Insert(0, "Failed to change preferred currency.");
+            return;
+        }
+
+        _initialCurrencyId = _selectedCurrencyId;
+        var selectedCurrency = _currencies.FirstOrDefault(x => x.Id == _selectedCurrencyId);
+        if (selectedCurrency is not null)
+        {
+            UserSettingsService.SetCurrency(selectedCurrency);
+            _info.Insert(0, $"Preferred currency changed to {selectedCurrency.ShortName}.");
         }
     }
 

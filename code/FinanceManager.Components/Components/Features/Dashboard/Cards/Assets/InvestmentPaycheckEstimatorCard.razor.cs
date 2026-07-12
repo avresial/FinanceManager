@@ -51,10 +51,9 @@ public partial class InvestmentPaycheckEstimatorCard
         }
     }
 
-    protected override Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
-        _currency = SettingsService.GetCurrency();
-        return Task.CompletedTask;
+        _currency = await SettingsService.GetCurrencyAsync();
     }
 
     protected override async Task OnParametersSetAsync()

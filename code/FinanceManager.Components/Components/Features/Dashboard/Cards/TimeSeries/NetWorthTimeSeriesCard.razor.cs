@@ -35,7 +35,7 @@ public partial class NetWorthTimeSeriesCard
     {
         if (Model is not null)
         {
-            _currency = SettingsService.GetCurrency().ShortName;
+            _currency = (await SettingsService.GetCurrencyAsync()).ShortName;
             _series = [.. Model.Series.OrderBy(x => x.DateTime).Select(x => new TimeSeriesModel(x.DateTime, x.Value))];
             _hasError = false;
             _isLoading = false;
@@ -54,7 +54,7 @@ public partial class NetWorthTimeSeriesCard
         StateHasChanged();
         try
         {
-            var currency = SettingsService.GetCurrency();
+            var currency = await SettingsService.GetCurrencyAsync();
             _currency = currency.ShortName;
 
             var netWorth = await MoneyFlowHttpClient.GetNetWorth(user.UserId, currency, StartDateTime, EndDateTime);
