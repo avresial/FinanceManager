@@ -9,6 +9,15 @@
 		<Nullable>enable</Nullable>
 		<LangVersion>latest</LangVersion>
 		<CopilotCliDownloadTimeout>600000</CopilotCliDownloadTimeout>
+		<!-- Do not bundle the ~120 MB GitHub Copilot CLI binary into build/publish output.
+		     GitHub.Copilot.SDK downloads it at build time (runtimes/<rid>/native/copilot[.exe]),
+		     which alone is ~half the Azure publish package and blows past the free-tier disk quota.
+		     Production uses the OpenRouter provider (see appsettings.Production.json), so the
+		     Copilot provider is never invoked; install the CLI separately if a host needs it. -->
+		<CopilotSkipCliDownload>true</CopilotSkipCliDownload>
+		<!-- Ship only English satellite resource assemblies; drops ~11 MB of localized
+		     framework/library resources (ru, ja, pl, ko, ...) that the app does not use. -->
+		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 	</PropertyGroup>
 
 	<!-- CalVer (YY.MM.DD) stamped automatically at build time. See issue #183. -->
