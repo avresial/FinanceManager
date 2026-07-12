@@ -12,10 +12,10 @@ namespace FinanceManager.Tests.Unit.Application.Services.Stocks;
 [Trait("Category", "Unit")]
 public class QuoteFactorResolverTests
 {
-    private readonly Mock<ICurrencyExchangeRateProvider> _exchangeRateProviderMock = new();
+    private readonly Mock<ICurrencyExchangeService> _currencyExchangeServiceMock = new();
     private readonly ILogger<QuoteFactorResolver> _logger = LoggerFactory.Create(_ => { }).CreateLogger<QuoteFactorResolver>();
 
-    private QuoteFactorResolver CreateResolver() => new(_exchangeRateProviderMock.Object, _logger);
+    private QuoteFactorResolver CreateResolver() => new(_currencyExchangeServiceMock.Object, _logger);
 
     [Fact]
     public async Task ResolveAsync_GbxToGbp_Returns0point01()
@@ -26,7 +26,7 @@ public class QuoteFactorResolverTests
 
         // 1 GBX (penny) = 0.01 GBP; contract is multiply from-amount by factor to get to-amount.
         Assert.Equal(0.01m, factor);
-        _exchangeRateProviderMock.Verify(
+        _currencyExchangeServiceMock.Verify(
             x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()),
             Times.Never);
     }
@@ -55,7 +55,7 @@ public class QuoteFactorResolverTests
     public async Task ResolveAsync_UnknownPair_FallsBackToExchangeRateApi()
     {
         var resolver = CreateResolver();
-        _exchangeRateProviderMock
+        _currencyExchangeServiceMock
             .Setup(x => x.GetExchangeRateAsync(
                 It.Is<Currency>(c => c.ShortName == "USD"),
                 It.Is<Currency>(c => c.ShortName == "EUR"),
@@ -71,7 +71,7 @@ public class QuoteFactorResolverTests
     public async Task ResolveAsync_WhenExchangeApiFails_Returns1()
     {
         var resolver = CreateResolver();
-        _exchangeRateProviderMock
+        _currencyExchangeServiceMock
             .Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
             .ThrowsAsync(new HttpRequestException("network down"));
 

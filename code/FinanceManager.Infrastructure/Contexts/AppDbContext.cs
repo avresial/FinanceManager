@@ -24,6 +24,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<RefreshToken> RefreshTokens { get; set; } = default!;
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = default!;
     public DbSet<Currency> Currencies { get; set; } = default!;
+    public DbSet<ExchangeRate> ExchangeRates { get; set; } = default!;
     public DbSet<FinancialAccountBaseDto> Accounts { get; set; } = default!;
     public DbSet<CurrencyAccountEntry> CurrencyEntries { get; set; } = default!;
     public DbSet<BondAccountEntry> BondEntries { get; set; } = default!;
@@ -51,6 +52,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new FinancialAccountBaseDtoConfiguration());
         modelBuilder.ApplyConfiguration(new CurrencyAccountEntryConfiguration());
         modelBuilder.ApplyConfiguration(new CurrencyConfiguration());
+        modelBuilder.ApplyConfiguration(new ExchangeRateConfiguration());
         modelBuilder.ApplyConfiguration(new BondAccountEntryConfiguration());
         modelBuilder.ApplyConfiguration(new NewVisitsConfiguration());
         modelBuilder.ApplyConfiguration(new FinancialInsightConfiguration());

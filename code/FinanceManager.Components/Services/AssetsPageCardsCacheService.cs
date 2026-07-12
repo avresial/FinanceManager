@@ -34,9 +34,11 @@ public class AssetsPageCardsCacheService(
         var startDate = refreshContext.StartDateTime.Date;
         var endDate = refreshContext.EndDateTime;
 
-        var assetsTimeSeriesTask = assetsHttpClient.GetAssetsTimeSeries(refreshContext.UserId, DefaultCurrency.PLN, startDate, endDate);
-        var assetsPerTypeTask = assetsHttpClient.GetEndAssetsPerType(refreshContext.UserId, DefaultCurrency.PLN, endDate);
-        var assetsPerAccountTask = assetsHttpClient.GetEndAssetsPerAccount(refreshContext.UserId, DefaultCurrency.PLN, endDate);
+        // Only the id crosses the wire, so the requested currency can be rebuilt from the context.
+        var currency = new Currency { Id = refreshContext.CurrencyId };
+        var assetsTimeSeriesTask = assetsHttpClient.GetAssetsTimeSeries(refreshContext.UserId, currency, startDate, endDate);
+        var assetsPerTypeTask = assetsHttpClient.GetEndAssetsPerType(refreshContext.UserId, currency, endDate);
+        var assetsPerAccountTask = assetsHttpClient.GetEndAssetsPerAccount(refreshContext.UserId, currency, endDate);
         var investmentRateTask = moneyFlowHttpClient.GetInvestmentRate(refreshContext.UserId, startDate, endDate).ToListAsync().AsTask();
         var monthlyInvestmentRatesTask = GetMonthlyInvestmentRatesAsync(refreshContext.UserId, endDate);
 

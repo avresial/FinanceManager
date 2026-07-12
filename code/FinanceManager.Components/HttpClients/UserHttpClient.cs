@@ -34,6 +34,12 @@ public class UserHttpClient(HttpClient httpClient)
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<bool> UpdatePreferredCurrency(UpdatePreferredCurrency updatePreferredCurrency)
+    {
+        var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/User/UpdatePreferredCurrency/", updatePreferredCurrency);
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<bool> UpdateRole(UpdateUserRole updateUserRole)
     {
         var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/User/UpdateUserRole/", updateUserRole);

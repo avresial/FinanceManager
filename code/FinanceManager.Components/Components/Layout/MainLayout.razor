@@ -48,6 +48,7 @@
     [Inject] public ILoginService LoginService { get; set; } = default!;
     [Inject] public IUserService UserService { get; set; } = default!;
     [Inject] public IBrowserViewportService BrowserViewportService { get; set; } = default!;
+    [Inject] public ISettingsService SettingsService { get; set; } = default!;
 
     private readonly Guid _viewportSubscriptionId = Guid.NewGuid();
     private string? _greeting;
@@ -62,6 +63,10 @@
     {
         var loggedUser = await LoginService.GetLoggedUser();
         if (loggedUser is null) return;
+
+        // Warm the preferred-currency cache before pages render, so components that read the
+        // display currency synchronously already see the user's preference.
+        await SettingsService.GetCurrencyAsync();
 
         var user = await UserService.GetUser(loggedUser.UserId);
         var firstName = user?.FirstName;
