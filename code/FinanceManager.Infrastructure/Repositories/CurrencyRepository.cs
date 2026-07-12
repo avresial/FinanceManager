@@ -63,9 +63,20 @@ public class CurrencyRepository(AppDbContext context) : ICurrencyRepository
             .Where(x => !existingCodes.Contains(x.ShortName, StringComparer.OrdinalIgnoreCase))
             .ToList();
 
-        if (missingDefaults.Count == 0) return;
+        var missingCommon = DefaultCurrency.CommonCurrencies
+            .Where(x => !existingCodes.Contains(x.ShortName, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+        if (missingDefaults.Count == 0 && missingCommon.Count == 0) return;
 
         context.Currencies.AddRange(missingDefaults);
+
+        // Common currencies get ids after every already-stored currency, so they never collide
+        // with ids handed out earlier by GetOrAdd.
+        var nextId = Math.Max(await context.Currencies.MaxAsync(x => (int?)x.Id, ct) ?? 1, 1) + 1;
+        foreach (var (shortName, symbol) in missingCommon)
+            context.Currencies.Add(new Currency(nextId++, shortName, symbol));
+
         await context.SaveChangesAsync(ct);
     }
 

@@ -56,7 +56,13 @@ else
             <MudTextField T="string" @bind-Value="_asset.Domicile" Label="Domicile" Variant="Variant.Outlined" Margin="Margin.Dense" />
         </MudItem>
         <MudItem xs="12" sm="6">
-            <MudTextField T="string" @bind-Value="_asset.BaseCurrency" Label="Base currency" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            <MudSelect T="string" @bind-Value="_asset.BaseCurrency" Label="Base currency" Clearable
+                       Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (var currency in _currencyOptions)
+                {
+                    <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
+                }
+            </MudSelect>
         </MudItem>
         <MudItem xs="12" sm="6">
             <MudSelect T="DistributionPolicy?" @bind-Value="_asset.DistributionPolicy" Label="Distribution policy" Clearable
@@ -212,7 +218,13 @@ else
             <MudTextField T="string" @bind-Value="l.ExchangeName" Label="Exchange name" Variant="Variant.Outlined" Margin="Margin.Dense" />
         </MudItem>
         <MudItem xs="12" sm="4">
-            <MudTextField T="string" @bind-Value="l.TradingCurrency" Label="Trading currency" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            <MudSelect T="string" @bind-Value="l.TradingCurrency" Label="Trading currency"
+                       Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (var currency in TradingCurrencyOptions)
+                {
+                    <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
+                }
+            </MudSelect>
         </MudItem>
         <MudItem xs="12" sm="4">
             <MudNumericField T="decimal" @bind-Value="l.PriceMultiplier" Label="Price multiplier" Step="0.01m" Min="0.0000001m"

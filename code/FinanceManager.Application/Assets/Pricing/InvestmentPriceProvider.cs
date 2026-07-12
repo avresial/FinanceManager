@@ -34,13 +34,7 @@ public class InvestmentPriceProvider(
 
     // Minor "pence"-style quote units collapse to their major currency once PriceMultiplier is
     // applied (1 GBX = 0.01 GBP), so FX conversion can use a currency the rate provider knows.
-    private static readonly Dictionary<string, string> _minorToMajorCurrency = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["GBX"] = "GBP",
-        ["GBP."] = "GBP",
-        ["ZAC"] = "ZAR",
-        ["ILA"] = "ILS",
-    };
+    private static readonly IReadOnlyDictionary<string, string> _minorToMajorCurrency = DefaultCurrency.MinorQuoteUnits;
 
     public async Task<decimal> GetPricePerUnitAsync(long assetListingId, Currency targetCurrency, DateTime asOf, CancellationToken ct = default)
     {
@@ -164,7 +158,17 @@ public class InvestmentPriceProvider(
         if (date > DateTime.UtcNow) date = DateTime.UtcNow;
         var sourceCurrency = await currencyRepository.GetOrAdd(sourceCurrencyName, sourceCurrencyName, ct);
         var rate = await currencyExchangeService.GetExchangeRateAsync(sourceCurrency, targetCurrency, date.Date);
-        return rate is decimal value ? price * value : 0m;
+        if (rate is decimal value) return price * value;
+
+        // The preferred currency could not be reached; fall back to USD so the position keeps a
+        // value instead of collapsing to zero.
+        logger.LogWarning("No exchange rate {From}→{To} on {Date}; falling back to USD", sourceCurrency.ShortName, targetCurrency.ShortName, date.Date);
+
+        if (string.Equals(sourceCurrencyName, DefaultCurrency.USD.ShortName, StringComparison.OrdinalIgnoreCase))
+            return price;
+
+        var usdRate = await currencyExchangeService.GetExchangeRateAsync(sourceCurrency, DefaultCurrency.USD, date.Date);
+        return usdRate is decimal toUsd ? price * toUsd : 0m;
     }
 
     private async Task TryFetchAndStoreAsync(AssetListing listing, DateTime start, DateTime end, CancellationToken ct)

@@ -1,5 +1,6 @@
 using FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
@@ -20,6 +21,7 @@ public class CurrencyExchangeServiceTests : IDisposable
 {
     private readonly ILogger<FawazAhmedCurrencyApiClient> _loggerMock = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<FawazAhmedCurrencyApiClient>();
     private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock = new();
+    private readonly Mock<IExchangeRateRepository> _exchangeRateRepositoryMock = new();
     private readonly HttpClient _httpClient;
 
     public CurrencyExchangeServiceTests()
@@ -237,10 +239,110 @@ public class CurrencyExchangeServiceTests : IDisposable
         Assert.Equal(expectedRate, result.Value);
     }
 
+    [Fact]
+    public async Task GetExchangeRateAsync_RateStoredInDatabase_DoesNotCallExternalProvider()
+    {
+        // Arrange
+        var fromCurrency = new Currency(1, "USD", "$");
+        var toCurrency = new Currency(2, "EUR", "€");
+        var date = new DateTime(2024, 1, 15);
+
+        _exchangeRateRepositoryMock
+            .Setup(x => x.Get("USD", "EUR", date, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0.92m);
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, date);
+
+        // Assert
+        Assert.Equal(0.92m, result);
+        _httpMessageHandlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Never(),
+            ItExpr.IsAny<HttpRequestMessage>(),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetExchangeRateAsync_InverseRateStoredInDatabase_ReturnsInvertedRateWithoutExternalCall()
+    {
+        // Arrange
+        var fromCurrency = new Currency(1, "USD", "$");
+        var toCurrency = new Currency(2, "EUR", "€");
+        var date = new DateTime(2024, 1, 15);
+
+        _exchangeRateRepositoryMock
+            .Setup(x => x.Get("EUR", "USD", date, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(2m);
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, date);
+
+        // Assert
+        Assert.Equal(0.5m, result);
+        _httpMessageHandlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Never(),
+            ItExpr.IsAny<HttpRequestMessage>(),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetExchangeRateAsync_ExternalProviderHit_PersistsRateToDatabase()
+    {
+        // Arrange
+        var fromCurrency = new Currency(1, "USD", "$");
+        var toCurrency = new Currency(2, "EUR", "€");
+        var date = new DateTime(2024, 1, 15);
+
+        var jsonResponse = @"{""usd"": {""eur"": 0.92}}";
+        SetupHttpResponse(HttpStatusCode.OK, jsonResponse);
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, date);
+
+        // Assert
+        Assert.Equal(0.92m, result);
+        _exchangeRateRepositoryMock.Verify(x => x.Add("USD", "EUR", date, 0.92m, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetExchangeRateAsync_DirectPairUnavailable_FallsBackToUsdCrossRate()
+    {
+        // Arrange
+        var fromCurrency = new Currency(1, "GBP", "£");
+        var toCurrency = new Currency(2, "PLN", "zł");
+        var date = new DateTime(2024, 1, 15);
+
+        _exchangeRateRepositoryMock
+            .Setup(x => x.Get("GBP", "USD", date, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1.25m);
+        _exchangeRateRepositoryMock
+            .Setup(x => x.Get("USD", "PLN", date, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(4m);
+
+        // The direct GBP→PLN lookup misses everywhere, including the external provider.
+        SetupHttpResponse(HttpStatusCode.NotFound, "Not found");
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, date);
+
+        // Assert
+        Assert.Equal(5m, result);
+    }
+
     private CurrencyExchangeService CreateService()
     {
         ICurrencyExchangeRateProvider[] providers = [new FawazAhmedCurrencyApiClient(_httpClient, _loggerMock)];
-        return new CurrencyExchangeService(providers);
+        return new CurrencyExchangeService(_exchangeRateRepositoryMock.Object, providers);
     }
     public void Dispose() => _httpClient?.Dispose();
     private void SetupHttpResponse(HttpStatusCode statusCode, string content)

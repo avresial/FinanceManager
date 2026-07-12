@@ -19,6 +19,8 @@ public class UserDto
     /// <summary>When set and still in the future, logins for this account are refused until this UTC instant.</summary>
     public DateTime? LockoutEndUtc { get; set; }
 
+    /// <summary>Currency all asset values are presented in for this user. Defaults to PLN.</summary>
+    public int PreferredCurrencyId { get; set; }
 
     public User ToUser() => new()
     {
@@ -28,7 +30,8 @@ public class UserDto
         LastName = LastName,
         PricingLevel = PricingLevel,
         UserRole = UserRole,
-        CreationDate = CreationDate
+        CreationDate = CreationDate,
+        PreferredCurrencyId = PreferredCurrencyId
     };
 
 }

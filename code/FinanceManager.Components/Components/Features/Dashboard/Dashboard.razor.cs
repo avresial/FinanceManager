@@ -97,7 +97,7 @@ public partial class Dashboard : ComponentBase
             return;
         }
 
-        var currency = SettingsService.GetCurrency();
+        var currency = await SettingsService.GetCurrencyAsync();
         var snapshotKey = BuildSnapshotKey(user.UserId);
 
         // Paint the last-rendered snapshot immediately so the page feels instant on

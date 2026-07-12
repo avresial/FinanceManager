@@ -36,7 +36,7 @@ public partial class FinancialLabelsListCard
     {
         _isLoading = true;
         _hasError = false;
-        _currency = SettingsService.GetCurrency();
+        _currency = await SettingsService.GetCurrencyAsync();
 
         if (Model is not null)
         {

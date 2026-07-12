@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 
 public sealed class QuoteFactorResolver(
-    ICurrencyExchangeRateProvider exchangeRateProvider,
+    ICurrencyExchangeService currencyExchangeService,
     ILogger<QuoteFactorResolver> logger) : IQuoteFactorResolver
 {
     // Conversion factors for currency pairs that share a base unit but differ in scale (not FX rates).
@@ -40,7 +40,7 @@ public sealed class QuoteFactorResolver(
         {
             var fromCurr = new Currency { ShortName = from, Symbol = from };
             var toCurr = new Currency { ShortName = to, Symbol = to };
-            var rate = await exchangeRateProvider.GetExchangeRateAsync(fromCurr, toCurr, DateTime.UtcNow);
+            var rate = await currencyExchangeService.GetExchangeRateAsync(fromCurr, toCurr, DateTime.UtcNow);
 
             if (rate.HasValue && rate.Value > 0)
             {

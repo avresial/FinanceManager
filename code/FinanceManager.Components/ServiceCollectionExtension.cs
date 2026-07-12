@@ -58,8 +58,11 @@ public static class ServiceCollectionExtension
                 .AddScoped<ISnapshotService, LocalStorageSnapshotService>()
                 .AddScoped<AssetsPageCardsCacheService>()
                 .AddScoped<InvestmentPaycheckEstimateCacheService>()
+                .AddScoped<CurrencyHttpClient>()
                 .AddScoped<IUserService, UserService>()
                 .AddScoped<IFinancialAccountService, FinancialAccountService>()
+                .AddScoped<UserSettingsService>()
+                .AddScoped<ISettingsService>(sp => sp.GetRequiredService<UserSettingsService>())
                 .AddScoped<IUserRepository, UserLocalStorageRepository>();
         ;
 

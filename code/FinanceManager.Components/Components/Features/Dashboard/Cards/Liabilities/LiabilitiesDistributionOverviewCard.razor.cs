@@ -30,9 +30,9 @@ public partial class LiabilitiesDistributionOverviewCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _currency = SettingsService.GetCurrency();
+        _currency = await SettingsService.GetCurrencyAsync();
     }
 
     protected override async Task OnParametersSetAsync()

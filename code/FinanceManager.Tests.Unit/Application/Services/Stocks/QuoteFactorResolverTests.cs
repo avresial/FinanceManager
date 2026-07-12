@@ -12,7 +12,7 @@ namespace FinanceManager.Tests.Unit.Application.Services.Stocks;
 [Trait("Category", "Unit")]
 public class QuoteFactorResolverTests
 {
-    private readonly Mock<ICurrencyExchangeRateProvider> _exchangeRateProviderMock = new();
+    private readonly Mock<ICurrencyExchangeService> _exchangeRateProviderMock = new();
     private readonly ILogger<QuoteFactorResolver> _logger = LoggerFactory.Create(_ => { }).CreateLogger<QuoteFactorResolver>();
 
     private QuoteFactorResolver CreateResolver() => new(_exchangeRateProviderMock.Object, _logger);

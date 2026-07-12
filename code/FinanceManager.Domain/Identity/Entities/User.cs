@@ -11,4 +11,7 @@ public class User
     public PricingLevel PricingLevel { get; set; } = PricingLevel.Free;
     public UserRole UserRole { get; set; } = UserRole.User;
     public required DateTime CreationDate { get; set; }
+
+    /// <summary>Currency all asset values are presented in for this user. Defaults to PLN.</summary>
+    public int PreferredCurrencyId { get; set; }
 }

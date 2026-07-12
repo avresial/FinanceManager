@@ -202,6 +202,17 @@ public class UserRepository(AppDbContext context) : IUserRepository
 
         return await Task.FromResult(true);
     }
+    public async Task<bool> UpdatePreferredCurrency(int userId, int currencyId)
+    {
+        var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user is null) return false;
+
+        user.PreferredCurrencyId = currencyId;
+        context.Update(user);
+        await context.SaveChangesAsync();
+
+        return true;
+    }
     public async Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel)
     {
         var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);

@@ -1,6 +1,7 @@
 using FinanceManager.Components.Components.Shared.Dialogs;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Assets.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
@@ -11,6 +12,7 @@ public partial class AdminEditAsset : ComponentBase
     [Parameter] public long? Id { get; set; }
 
     [Inject] public required AssetHttpClient AssetHttpClient { get; set; }
+    [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
     [Inject] public required IDialogService DialogService { get; set; }
 
     private bool _isLoading = true;
@@ -21,6 +23,13 @@ public partial class AdminEditAsset : ComponentBase
     private readonly Dictionary<long, MarketDataSymbolDto> _newSymbols = [];
     private readonly List<string> _errors = [];
     private readonly List<string> _info = [];
+    private List<string> _currencyOptions = [];
+
+    // Listings can also trade in minor "pence"-style quote units (e.g. GBX) that are not
+    // standalone currencies.
+    private IEnumerable<string> TradingCurrencyOptions =>
+        _currencyOptions.Concat(DefaultCurrency.MinorQuoteUnits.Keys
+            .Where(x => !_currencyOptions.Contains(x, StringComparer.OrdinalIgnoreCase)));
 
     private DateTime? InceptionDateTime
     {
@@ -30,6 +39,8 @@ public partial class AdminEditAsset : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadCurrencyOptions();
+
         if (Id is null or 0)
         {
             _isNew = true;
@@ -39,7 +50,34 @@ public partial class AdminEditAsset : ComponentBase
         }
 
         _asset = await AssetHttpClient.GetAsset(Id.Value);
+        IncludeExistingCurrencies();
         _isLoading = false;
+    }
+
+    private async Task LoadCurrencyOptions()
+    {
+        try
+        {
+            _currencyOptions = [.. (await CurrencyHttpClient.GetAll()).Select(x => x.ShortName)];
+        }
+        catch (Exception ex)
+        {
+            _errors.Insert(0, $"Failed to load currencies: {ex.Message}");
+        }
+    }
+
+    // Older assets can carry a currency that predates the predefined list; keep it selectable so
+    // opening the editor doesn't silently blank the stored value.
+    private void IncludeExistingCurrencies()
+    {
+        if (_asset is null) return;
+
+        List<string?> existing = [_asset.BaseCurrency, .. _asset.Listings.Select(x => x.TradingCurrency)];
+        foreach (var currency in existing)
+        {
+            if (!string.IsNullOrWhiteSpace(currency) && !_currencyOptions.Contains(currency, StringComparer.OrdinalIgnoreCase))
+                _currencyOptions.Add(currency);
+        }
     }
 
     private MarketDataSymbolDto NewSymbol(long listingId)

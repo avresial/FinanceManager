@@ -111,7 +111,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private async Task LoadAsync(bool initialLoad = false)
     {
         _isLoading = true;
-        _currency = SettingsService.GetCurrency();
+        _currency = await SettingsService.GetCurrencyAsync();
         try
         {
             _accountName = (await InvestmentAccountHttpClient.GetAccountAsync(AccountId))?.Name ?? "Investments";
