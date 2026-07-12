@@ -76,4 +76,7 @@ public class AssetHttpClient(HttpClient httpClient, ILogger<AssetHttpClient> log
 
     public async Task<bool> DeleteSymbol(long id, CancellationToken cancellationToken = default) =>
         (await httpClient.DeleteAsync($"{Base}/symbols/{id}", cancellationToken)).IsSuccessStatusCode;
+
+    public async Task<bool> AddManualPrice(long listingId, ManualPriceRequest request, CancellationToken cancellationToken = default) =>
+        (await httpClient.PostAsJsonAsync($"{Base}/listings/{listingId}/prices/manual", request, cancellationToken)).IsSuccessStatusCode;
 }

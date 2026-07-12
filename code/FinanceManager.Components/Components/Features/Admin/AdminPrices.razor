@@ -1,0 +1,41 @@
+@page "/Admin/Prices"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+
+<PageTitle>Prices - Admin</PageTitle>
+
+<MudPaper Class="pa-4" MaxWidth="MaxWidth.Small">
+    <MudText Typo="Typo.h5" GutterBottom>Manual stock price</MudText>
+    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+        Add a missing daily price or replace an existing manual price for the same listing and date.
+    </MudText>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (_listings.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">Add an asset listing before entering a price.</MudAlert>
+    }
+    else
+    {
+        <MudForm @ref="_form">
+            <MudStack Spacing="3">
+                <MudSelect T="long?" Label="Asset listing" @bind-Value="_listingId" Required RequiredError="Select an asset listing">
+                    @foreach (var listing in _listings)
+                    {
+                        <MudSelectItem T="long?" Value="listing.Id">@listing.Label</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudDatePicker Label="Price date" @bind-Date="_date" MaxDate="DateTime.Today" Required RequiredError="Select a date" />
+                <MudNumericField T="decimal?" Label="Price" @bind-Value="_price" Min="0.00000001m"
+                                 Required RequiredError="Enter a price" Adornment="Adornment.End" AdornmentText="@SelectedCurrency" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_isSaving" OnClick="Save">
+                    @(_isSaving ? "Saving…" : "Save price")
+                </MudButton>
+            </MudStack>
+        </MudForm>
+    }
+</MudPaper>

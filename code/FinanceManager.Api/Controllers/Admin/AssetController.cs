@@ -1,7 +1,9 @@
 using FinanceManager.Domain.Assets.Dtos;
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+
 
 namespace FinanceManager.Api.Controllers.Admin;
 
@@ -16,7 +18,8 @@ namespace FinanceManager.Api.Controllers.Admin;
 public class AssetController(
     IAssetRepository assetRepository,
     IAssetListingRepository listingRepository,
-    IMarketDataSymbolRepository symbolRepository) : ControllerBase
+    IMarketDataSymbolRepository symbolRepository,
+    IPriceQuoteRepository priceQuoteRepository) : ControllerBase
 {
     // ----- Assets -----
 
@@ -158,6 +161,43 @@ public class AssetController(
     {
         var deleted = await symbolRepository.Delete(id, cancellationToken);
         return deleted ? NoContent() : NotFound();
+    }
+
+    // ----- Manual prices -----
+
+    [HttpPost("listings/{listingId:long}/prices/manual")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddManualPrice(
+        long listingId,
+        [FromBody] ManualPriceRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.Price <= 0m)
+            return BadRequest("Price must be greater than zero.");
+        if (request.Date > DateTimeOffset.UtcNow)
+            return BadRequest("Price date cannot be in the future.");
+
+        var listing = await listingRepository.Get(listingId, cancellationToken);
+        if (listing is null)
+            return NotFound("Listing not found.");
+
+        var priceQuote = new PriceQuote
+        {
+            AssetListingId = listingId,
+            Provider = MarketDataProvider.Manual,
+            QuoteType = PriceQuoteType.Manual,
+            Price = request.Price,
+            Currency = listing.TradingCurrency,
+            PriceTime = new DateTimeOffset(request.Date.UtcDateTime.Date, TimeSpan.Zero),
+            RawPrice = request.Price,
+            RawCurrency = listing.TradingCurrency,
+            FetchedAt = DateTimeOffset.UtcNow
+        };
+
+        await priceQuoteRepository.Upsert(priceQuote, cancellationToken);
+        return Ok();
     }
 
     private static string? ValidateListing(AssetListingDto dto)
