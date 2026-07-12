@@ -2,6 +2,7 @@
 
 Instructions for AI agents working on FinanceManager.
 
+- **Local development workflows**: use [$mikis-teamwork](C:\\Users\\Miki\\.codex\\skills\\mikis-teamwork\\SKILL.md) for each development workflow on the local machine.
 - **Project conventions** (build, tests, architecture, branching, changelog): read [`CLAUDE.md`](./CLAUDE.md).
 - **Using the running app** — above all the **develop-only auto test login** (`/DevelopLogin/{login}/{page}`)
   that signs you in as `guest` or `testuser` without the landing page or login form: read
