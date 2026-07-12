@@ -383,27 +383,43 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         _formListingId = dto.ListingId;
         _formCurrency = dto.Currency;
 
-        if (_editingId is null)
+        await RefreshFormPriceAsync();
+    }
+
+    private async Task OnTradeDateChangedAsync(DateTime? value)
+    {
+        _formTradeDate = value;
+        await RefreshFormPriceAsync();
+    }
+
+    private async Task RefreshFormPriceAsync()
+    {
+        if (_selectedInstrument is null || _formTradeDate is not DateTime tradeDate)
         {
-            try
+            _formUnitPrice = 0m;
+            return;
+        }
+
+        try
+        {
+            var priceInfo = await TransactionHttpClient.GetListingPriceAsync(
+                _selectedInstrument.ListingId,
+                DateOnly.FromDateTime(tradeDate));
+            if (priceInfo?.LatestPrice is decimal price)
             {
-                var priceInfo = await TransactionHttpClient.GetListingPriceAsync(dto.ListingId);
-                if (priceInfo?.LatestPrice is decimal price)
-                {
-                    _formUnitPrice = price;
-                }
-                else
-                {
-                    _formUnitPrice = 0m;
-                    _noPriceAvailable = true;
-                }
+                _formUnitPrice = price;
             }
-            catch (Exception ex)
+            else
             {
-                Logger.LogError(ex, "Failed to fetch price for listing {ListingId}", dto.ListingId);
                 _formUnitPrice = 0m;
                 _noPriceAvailable = true;
             }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to fetch price for listing {ListingId}", _selectedInstrument.ListingId);
+            _formUnitPrice = 0m;
+            _noPriceAvailable = true;
         }
     }
 

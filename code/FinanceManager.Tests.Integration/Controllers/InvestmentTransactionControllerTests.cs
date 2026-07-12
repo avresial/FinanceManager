@@ -118,6 +118,23 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
+    public async Task ListingPrice_UsesTradeDateWhenProvided()
+    {
+        await SeedListing();
+        Authorize("testuser", _testUserId, UserRole.User);
+        var tradeDate = new DateOnly(2024, 6, 1);
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(),
+                tradeDate.ToDateTime(TimeOnly.MinValue), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(300m);
+
+        var result = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(_listingId, tradeDate);
+
+        Assert.NotNull(result);
+        Assert.Equal(300m, result.LatestPrice);
+    }
+
+    [Fact]
     public async Task Add_CreatesTransaction()
     {
         await SeedAccount();

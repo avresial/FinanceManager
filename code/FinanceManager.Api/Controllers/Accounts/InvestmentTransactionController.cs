@@ -173,12 +173,13 @@ public class InvestmentTransactionController(
     [HttpGet("ListingPrice/{listingId:long}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ListingPriceDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> ListingPrice(long listingId, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> ListingPrice(long listingId, [FromQuery] DateOnly? asOf = null, CancellationToken cancellationToken = default)
     {
         var listing = await assetListingRepository.Get(listingId, cancellationToken);
         if (listing is null) return NotFound();
         var currency = new Currency(0, listing.TradingCurrency, listing.TradingCurrency);
-        var price = await priceProvider.GetPricePerUnitAsync(listingId, currency, DateTime.UtcNow, cancellationToken);
+        var priceDate = asOf?.ToDateTime(TimeOnly.MinValue) ?? DateTime.UtcNow;
+        var price = await priceProvider.GetPricePerUnitAsync(listingId, currency, priceDate, cancellationToken);
         return Ok(new ListingPriceDto(price > 0 ? price : null, listing.TradingCurrency));
     }
 
