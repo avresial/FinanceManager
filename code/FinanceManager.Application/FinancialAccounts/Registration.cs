@@ -70,6 +70,7 @@ internal static class Registration
                 .AddScoped<IInvestmentPriceProvider, InvestmentPriceProvider>()
                 .AddScoped<IInvestmentValuationService, InvestmentValuationService>()
                 .AddScoped<IInvestmentInstrumentDiscoveryService, InvestmentInstrumentDiscoveryService>()
+                .AddScoped<IInstrumentImportService, InstrumentImportService>()
                 .AddScoped<IBondUnrealizedGainLossCalculator, BondUnrealizedGainLossCalculator>()
                 .AddScoped<IBondService, BondService>();
 
