@@ -70,16 +70,6 @@ public static class ServiceCollectionExtension
             new QuoteFactorResolver(
                 sp.GetRequiredService<ICurrencyExchangeService>(),
                 sp.GetRequiredService<ILogger<QuoteFactorResolver>>()));
-        services.AddScoped<IInstrumentResolver>(sp =>
-            new InstrumentResolver(
-                sp.GetRequiredService<IOpenFigiClient>(),
-                sp.GetRequiredService<IAlphaVantageClient>(),
-                sp.GetRequiredService<IAssetRepository>(),
-                sp.GetRequiredService<IAssetListingRepository>(),
-                sp.GetRequiredService<IMarketDataSymbolRepository>(),
-                sp.GetRequiredService<IQuoteFactorResolver>(),
-                sp.GetRequiredService<IMemoryCache>(),
-                sp.GetRequiredService<ILogger<InstrumentResolver>>()));
         services.AddHttpClient<ICurrencyExchangeRateProvider, FawazAhmedCurrencyApiClient>();
 
         services.AddAI();
