@@ -10,6 +10,7 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Api.Controllers.Accounts;
 
@@ -22,7 +23,8 @@ public class InvestmentTransactionController(
     IInvestmentTransactionRepository transactionRepository,
     ICacheInvalidator dashboardCacheInvalidator,
     IAssetListingRepository assetListingRepository,
-    IInvestmentPriceProvider priceProvider) : ControllerBase
+    IInvestmentPriceProvider priceProvider,
+    ILogger<InvestmentTransactionController> logger) : ControllerBase
 {
     [HttpGet("GetByAccount/{accountId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InvestmentTransactionDto>))]
@@ -35,7 +37,54 @@ public class InvestmentTransactionController(
         if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         var transactions = await transactionRepository.GetByAccount(accountId, cancellationToken);
+        await RecoverMissingPricesAsync(transactions, account.UserId, cancellationToken);
         return Ok(transactions.Select(x => x.ToDto()).ToList());
+    }
+
+    private async Task RecoverMissingPricesAsync(
+        IReadOnlyList<InvestmentTransaction> transactions,
+        int userId,
+        CancellationToken cancellationToken)
+    {
+        var recoveredAny = false;
+        var missingPrices = transactions
+            .Where(x => x.UnitPrice <= 0m && !string.IsNullOrWhiteSpace(x.Currency))
+            .GroupBy(x => new { x.AssetListingId, x.Currency, x.TradeDate });
+
+        foreach (var group in missingPrices)
+        {
+            decimal price;
+            try
+            {
+                var currency = new Currency(0, group.Key.Currency, group.Key.Currency);
+                price = await priceProvider.GetPricePerUnitAsync(
+                    group.Key.AssetListingId,
+                    currency,
+                    group.Key.TradeDate.ToDateTime(TimeOnly.MinValue),
+                    cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Failed to recover price for listing {ListingId} on {TradeDate}", group.Key.AssetListingId, group.Key.TradeDate);
+                continue;
+            }
+
+            if (price <= 0m) continue;
+
+            // ponytail: one save per recovered trade; batch updates only if accounts accumulate a large backlog.
+            foreach (var transaction in group)
+            {
+                var previousPrice = transaction.UnitPrice;
+                transaction.UnitPrice = price;
+                if (await transactionRepository.Update(transaction, cancellationToken))
+                    recoveredAny = true;
+                else
+                    transaction.UnitPrice = previousPrice;
+            }
+        }
+
+        if (recoveredAny)
+            await dashboardCacheInvalidator.InvalidateUser(userId);
     }
 
     [HttpGet("Get/{id:long}")]
