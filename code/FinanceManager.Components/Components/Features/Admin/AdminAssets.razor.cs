@@ -41,6 +41,12 @@ public partial class AdminAssets : ComponentBase
         _isLoading = false;
     }
 
+    private async Task ReloadAssetsAsync()
+    {
+        _allElements = await AssetHttpClient.GetAssets();
+        ApplyFilter();
+    }
+
     private void PageChanged(int i)
     {
         SelectedPage = i;
