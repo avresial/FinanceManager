@@ -11,7 +11,7 @@
                 <MudText Typo="Typo.subtitle1">@CurrencyAccount.Name</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudDatePicker Label="Posting date" @bind-Date="_postingDate"
+                <MudDatePicker Label="Posting date" @bind-Date="_postingDate" DateFormat="dd/MM/yyyy"
                     Validation="@(new NotInFutureAttribute())" />
             </MudItem>
             <MudItem xs="12" sm="6">

@@ -13,8 +13,12 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Date pickers across the app now consistently display and accept dates in `DD/MM/YYYY` format instead of falling back to the browser locale (which showed US-style `M/D/YYYY` for some users). Affects the manual stock price, admin asset and bond forms, account entry add/edit/remove dialogs, data export, and the account/dashboard date-range pickers.
 - Currency fields are no longer free-text anywhere in the app: the admin asset editor (base and trading currency) and the bond-details form now offer a dropdown of predefined currencies (plus pence-style quote units like GBX for listings), and the API rejects currency codes outside that list. The predefined list now ships with the major world currencies (EUR, GBP, CHF, JPY, CZK, SEK, NOK, DKK, HUF, CAD, AUD) besides PLN and USD.
 - Exchange rates are now stored in the application database: a conversion first checks the in-memory cache and the database (including inverse pairs), and only on a miss asks the external rate provider — whose answer is persisted so the same pair and date never leave the app twice. Unknown pairs additionally fall back to a cross-rate via USD.
+
+### Fixed
+- The **Manual stock price** admin card no longer stretches across the full width of the screen; it is now capped to a compact width, and the price field updates as you type.
 
 ### Security
 - The default admin and test-user accounts are no longer seeded with passwords hard-coded in source. Their passwords are now read from configuration (`Seeding:AdminPassword` / `Seeding:TestUserPassword`); when unset — as in production — the accounts are not created. The stock-price bulk-import endpoint now returns a generic error message and logs the exception server-side instead of echoing the raw exception text to the caller. #450

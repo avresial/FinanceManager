@@ -28,7 +28,7 @@
                 <MudAlert Severity="Severity.Info" Dense="true">No price data found for this instrument. You can still save the transaction — the unit price will be recalculated once a price quote is available.</MudAlert>
             }
             <MudTextField T="string" Label="Currency" Value="@_formCurrency" ReadOnly="true" Disabled="true" />
-            <MudDatePicker Label="Trade date" Date="_formTradeDate" DateChanged="OnTradeDateChangedAsync" />
+            <MudDatePicker Label="Trade date" Date="_formTradeDate" DateFormat="dd/MM/yyyy" DateChanged="OnTradeDateChangedAsync" />
             <MudNumericField T="decimal?" Label="Fee (optional)" @bind-Value="_formFee" Min="0" Step="0.01M" />
             <MudTextField T="string" Label="Notes (optional)" @bind-Value="_formNotes" />
             <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">

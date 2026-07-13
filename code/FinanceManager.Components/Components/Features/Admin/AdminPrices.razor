@@ -5,7 +5,7 @@
 
 <PageTitle>Prices - Admin</PageTitle>
 
-<MudPaper Class="pa-4" MaxWidth="MaxWidth.Small">
+<MudPaper Class="pa-4" Style="max-width: 480px;">
     <MudText Typo="Typo.h5" GutterBottom>Manual stock price</MudText>
     <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
         Add a missing daily price or replace an existing manual price for the same listing and date.
@@ -29,8 +29,8 @@
                         <MudSelectItem T="long?" Value="listing.Id">@listing.Label</MudSelectItem>
                     }
                 </MudSelect>
-                <MudDatePicker Label="Price date" @bind-Date="_date" MaxDate="DateTime.Today" Required RequiredError="Select a date" />
-                <MudNumericField T="decimal?" Label="Price" @bind-Value="_price" Min="0.00000001m"
+                <MudDatePicker Label="Price date" @bind-Date="_date" DateFormat="dd/MM/yyyy" MaxDate="DateTime.Today" Required RequiredError="Select a date" />
+                <MudNumericField T="decimal?" Label="Price" @bind-Value="_price" Immediate="true" Min="0.00000001m"
                                  Required RequiredError="Enter a price" Adornment="Adornment.End" AdornmentText="@SelectedCurrency" />
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_isSaving" OnClick="Save">
                     @(_isSaving ? "Saving…" : "Save price")
