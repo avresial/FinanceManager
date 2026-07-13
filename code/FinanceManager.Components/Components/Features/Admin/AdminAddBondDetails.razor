@@ -25,10 +25,10 @@
         </MudItem>
 
         <MudItem xs="12" sm="6">
-            <MudDatePicker Label="Start emission date" @bind-Date="_startDate" />
+            <MudDatePicker Label="Start emission date" @bind-Date="_startDate" DateFormat="dd/MM/yyyy" />
         </MudItem>
         <MudItem xs="12" sm="6">
-            <MudDatePicker Label="End emission date" @bind-Date="_endDate" />
+            <MudDatePicker Label="End emission date" @bind-Date="_endDate" DateFormat="dd/MM/yyyy" />
         </MudItem>
 
         <MudItem xs="12" sm="6">
@@ -107,7 +107,7 @@
             </MudItem>
 
             <MudItem xs="12" sm="3">
-                <MudDatePicker Label="Date" @bind-Date="_methodDate" />
+                <MudDatePicker Label="Date" @bind-Date="_methodDate" DateFormat="dd/MM/yyyy" />
             </MudItem>
             <MudItem xs="12" sm="3">
                 <MudNumericField T="decimal?" Label="Rate" @bind-Value="_methodRate" Variant="Variant.Text" />

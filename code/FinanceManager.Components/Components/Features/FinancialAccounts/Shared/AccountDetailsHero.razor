@@ -111,7 +111,7 @@
     @* Hidden picker opened programmatically by the calendar icon; Dialog variant avoids
        the broken nested-popover behaviour of embedding the picker inside a MudMenu. *@
     <div class="fm-custom-range-picker">
-        <MudDateRangePicker @ref="_customDateRangePicker" DateRange="CustomDateRange"
+        <MudDateRangePicker @ref="_customDateRangePicker" DateRange="CustomDateRange" DateFormat="dd/MM/yyyy"
                             DateRangeChanged="OnCustomDateRangeChanged" PickerVariant="PickerVariant.Dialog" />
     </div>
 </MudPaper>

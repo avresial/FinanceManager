@@ -19,9 +19,9 @@
                         @_availableEndDate!.Value.ToString("dd-MM-yyyy")
                     </MudText>
 
-                    <MudDatePicker Label="Start date" @bind-Date="_startDate" MinDate="_availableStartDate"
+                    <MudDatePicker Label="Start date" @bind-Date="_startDate" DateFormat="dd/MM/yyyy" MinDate="_availableStartDate"
                                    MaxDate="_availableEndDate" />
-                    <MudDatePicker Label="End date" @bind-Date="_endDate" MinDate="_availableStartDate"
+                    <MudDatePicker Label="End date" @bind-Date="_endDate" DateFormat="dd/MM/yyyy" MinDate="_availableStartDate"
                                    MaxDate="_availableEndDate" />
                 }
                 else if (string.IsNullOrEmpty(ErrorMessage))
