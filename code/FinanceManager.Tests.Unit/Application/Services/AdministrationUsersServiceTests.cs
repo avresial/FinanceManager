@@ -18,9 +18,14 @@ public class AdministrationUsersServiceTests
     private readonly Mock<IUserPlanVerifier> _userPlanVerifierMock = new();
     private readonly AdministrationUsersService _service;
 
-    public AdministrationUsersServiceTests() => _service = new(
-        _financialAccountRepositoryMock.Object, _userRepositoryMock.Object,
-        _activeUsersRepositoryMock.Object, _userPlanVerifierMock.Object);
+    public AdministrationUsersServiceTests()
+    {
+        _activeUsersRepositoryMock.Setup(r => r.GetLastLoginTimes(It.IsAny<IReadOnlyCollection<int>>()))
+            .ReturnsAsync(new Dictionary<int, DateTime>());
+        _service = new(
+            _financialAccountRepositoryMock.Object, _userRepositoryMock.Object,
+            _activeUsersRepositoryMock.Object, _userPlanVerifierMock.Object);
+    }
 
     [Fact]
     public async Task GetUsers_FetchesPageOnce_AndBatchesUsedCapacity()
@@ -32,9 +37,13 @@ public class AdministrationUsersServiceTests
             new User { UserId = 2, Login = "bob", CreationDate = DateTime.UtcNow, PricingLevel = PricingLevel.Premium },
         };
 
+        var aliceLastLogin = new DateTime(2026, 7, 10, 0, 0, 0, DateTimeKind.Utc);
+
         _userRepositoryMock.Setup(repo => repo.GetUsers(0, 10)).Returns(users.ToAsyncEnumerable());
         _userPlanVerifierMock.Setup(v => v.GetUsedRecordsCapacity(It.IsAny<IReadOnlyCollection<int>>()))
             .ReturnsAsync(new Dictionary<int, int> { [1] = 42, [2] = 100 });
+        _activeUsersRepositoryMock.Setup(r => r.GetLastLoginTimes(It.IsAny<IReadOnlyCollection<int>>()))
+            .ReturnsAsync(new Dictionary<int, DateTime> { [1] = aliceLastLogin });
 
         // Act
         var result = await _service.GetUsers(0, 10).ToListAsync(TestContext.Current.CancellationToken);
@@ -44,6 +53,10 @@ public class AdministrationUsersServiceTests
         Assert.Equal(42, result[0].RecordCapacity.UsedCapacity);
         Assert.Equal(PricingProvider.GetMaxAllowedEntries(PricingLevel.Free), result[0].RecordCapacity.TotalCapacity);
         Assert.Equal(100, result[1].RecordCapacity.UsedCapacity);
+
+        // Last-login times are surfaced per user; a user with no login row stays null.
+        Assert.Equal(aliceLastLogin, result[0].LastLoggedAt);
+        Assert.Null(result[1].LastLoggedAt);
 
         // Capacity is resolved with a single batched call, and there is no per-user GetUser lookup.
         _userPlanVerifierMock.Verify(v => v.GetUsedRecordsCapacity(It.IsAny<IReadOnlyCollection<int>>()), Times.Once);

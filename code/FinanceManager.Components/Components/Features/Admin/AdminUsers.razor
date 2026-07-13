@@ -25,6 +25,7 @@
         <MudTh>User name</MudTh>
         <MudTh>Pricing Level</MudTh>
         <MudTh>Capacity</MudTh>
+        <MudTh>Last logged at</MudTh>
         <MudTh>Action</MudTh>
     </HeaderContent>
     <RowTemplate>
@@ -33,6 +34,9 @@
         <MudTd DataLabel="Pricing Level">@context.PricingLevel</MudTd>
         <MudTd DataLabel="Capacity">
             <MudProgressLinear Color="Color.Primary" Value="@context.RecordCapacity.GetStorageUsedPercentage()" />
+        </MudTd>
+        <MudTd DataLabel="Last logged at">
+            @(context.LastLoggedAt is DateTime lastLoggedAt ? lastLoggedAt.ToString("yyyy-MM-dd") : "Never")
         </MudTd>
         <MudTd DataLabel="Action">
             <MudMenu Label="Action" Variant="Variant.Text">
