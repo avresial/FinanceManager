@@ -18,6 +18,7 @@ rules agents must follow when updating this file.
 - Exchange rates are now stored in the application database: a conversion first checks the in-memory cache and the database (including inverse pairs), and only on a miss asks the external rate provider — whose answer is persisted so the same pair and date never leave the app twice. Unknown pairs additionally fall back to a cross-rate via USD.
 
 ### Fixed
+- Investment account charts no longer repeatedly reload full price history around market closures, reducing load time. #542
 - The **Manual stock price** admin card no longer stretches across the full width of the screen; it is now capped to a compact width, and the price field updates as you type.
 
 ### Security

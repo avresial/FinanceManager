@@ -225,11 +225,12 @@ public class InvestmentPriceProvider(
             }
 
             var normalizedCurrencyName = NormalizedCurrencyName(rawCurrencyName, listing.PriceMultiplier);
+            var quotes = new List<PriceQuote>(prices.Count);
             foreach (var price in prices)
             {
                 if (price.PricePerUnit <= 0) continue;
 
-                await priceQuoteRepository.Upsert(new PriceQuote
+                quotes.Add(new PriceQuote
                 {
                     AssetListingId = listing.Id,
                     MarketDataSymbolId = symbol.Id,
@@ -241,8 +242,11 @@ public class InvestmentPriceProvider(
                     RawPrice = price.PricePerUnit,
                     RawCurrency = rawCurrencyName,
                     FetchedAt = DateTimeOffset.UtcNow
-                }, ct);
+                });
             }
+
+            if (quotes.Count > 0)
+                await priceQuoteRepository.UpsertRange(quotes, ct);
 
             await symbolRepository.RecordFetchResult(symbol.Id, DateTimeOffset.UtcNow, null, ct);
         }
@@ -269,13 +273,17 @@ public class InvestmentPriceProvider(
         if (existing is null || existing.Count == 0) return true;
 
         var existingDates = existing.Select(x => x.PriceTime.Date).ToHashSet();
-        for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
-        {
-            if (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) continue;
-            if (!existingDates.Contains(date)) return true;
-        }
 
-        return false;
+        // Boundary-coverage check using the 7-day lookback tolerance: ensure data exists
+        // within [start, start+7d] and [end-7d, end]. This allows for market holidays and
+        // weekends without triggering a full refetch, while genuine gaps at boundaries do.
+        var startBoundary = start.AddDays(_fetchLookbackDays);
+        var hasStartCoverage = existingDates.Any(d => d >= start && d <= startBoundary);
+
+        var endBoundary = end.AddDays(-_fetchLookbackDays);
+        var hasEndCoverage = existingDates.Any(d => d >= endBoundary && d <= end);
+
+        return !hasStartCoverage || !hasEndCoverage;
     }
 
     private static DateTimeOffset DayStart(DateTime date) => new(date.Date, TimeSpan.Zero);

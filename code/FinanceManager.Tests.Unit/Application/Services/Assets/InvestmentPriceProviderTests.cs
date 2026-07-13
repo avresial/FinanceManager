@@ -173,6 +173,130 @@ public class InvestmentPriceProviderTests
         Assert.Equal(110m, series[fri]);
     }
 
+    [Fact]
+    public async Task GetPricePerUnitSeries_ReusesSparseHistory_WithoutFetchingWhenBoundariesCovered()
+    {
+        var start = new DateTime(2024, 1, 1); // Monday
+        var end = new DateTime(2024, 1, 31); // Wednesday
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing());
+
+        // Seed sparse data: one quote near start (within 7-day tolerance), one near end.
+        _priceQuoteRepository.Seed(new PriceQuote
+        {
+            AssetListingId = 10,
+            Provider = MarketDataProvider.AlphaVantage,
+            Price = 100m,
+            Currency = "USD",
+            PriceTime = new DateTimeOffset(new DateTime(2024, 1, 5), TimeSpan.Zero), // Friday, within [1st, 8th]
+            QuoteType = PriceQuoteType.EndOfDay
+        });
+        _priceQuoteRepository.Seed(new PriceQuote
+        {
+            AssetListingId = 10,
+            Provider = MarketDataProvider.AlphaVantage,
+            Price = 110m,
+            Currency = "USD",
+            PriceTime = new DateTimeOffset(new DateTime(2024, 1, 29), TimeSpan.Zero), // Monday, within [24th, 31st]
+            QuoteType = PriceQuoteType.EndOfDay
+        });
+
+        var series = await CreateSut().GetPricePerUnitSeriesAsync(10, _usd, start, end, TestContext.Current.CancellationToken);
+
+        // No fetch should occur; sparse series should be used as-is.
+        _priceSource.Verify(
+            x => x.GetDailySeries(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        Assert.NotEmpty(series);
+    }
+
+    [Fact]
+    public async Task GetPricePerUnitSeries_FetchesWhenStartBoundaryMissing()
+    {
+        var start = new DateTime(2024, 1, 1); // Monday
+        var end = new DateTime(2024, 1, 31); // Wednesday
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing());
+
+        // Seed only end boundary coverage (no data within [1st, 8th]).
+        _priceQuoteRepository.Seed(new PriceQuote
+        {
+            AssetListingId = 10,
+            Provider = MarketDataProvider.AlphaVantage,
+            Price = 110m,
+            Currency = "USD",
+            PriceTime = new DateTimeOffset(new DateTime(2024, 1, 29), TimeSpan.Zero),
+            QuoteType = PriceQuoteType.EndOfDay
+        });
+
+        _priceSource
+            .Setup(x => x.GetDailySeries("CSPX.LON", It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Price(100m, new DateTime(2024, 1, 3)), Price(110m, new DateTime(2024, 1, 29))]);
+
+        var series = await CreateSut().GetPricePerUnitSeriesAsync(10, _usd, start, end, TestContext.Current.CancellationToken);
+
+        // Fetch must occur due to missing start boundary.
+        _priceSource.Verify(
+            x => x.GetDailySeries("CSPX.LON", It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        Assert.NotEmpty(series);
+    }
+
+    [Fact]
+    public async Task GetPricePerUnitSeries_FetchesWhenEndBoundaryMissing()
+    {
+        var start = new DateTime(2024, 1, 1); // Monday
+        var end = new DateTime(2024, 1, 31); // Wednesday
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing());
+
+        // Seed only start boundary coverage (no data within [24th, 31st]).
+        _priceQuoteRepository.Seed(new PriceQuote
+        {
+            AssetListingId = 10,
+            Provider = MarketDataProvider.AlphaVantage,
+            Price = 100m,
+            Currency = "USD",
+            PriceTime = new DateTimeOffset(new DateTime(2024, 1, 5), TimeSpan.Zero),
+            QuoteType = PriceQuoteType.EndOfDay
+        });
+
+        _priceSource
+            .Setup(x => x.GetDailySeries("CSPX.LON", It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Price(100m, new DateTime(2024, 1, 5)), Price(110m, new DateTime(2024, 1, 29))]);
+
+        var series = await CreateSut().GetPricePerUnitSeriesAsync(10, _usd, start, end, TestContext.Current.CancellationToken);
+
+        // Fetch must occur due to missing end boundary.
+        _priceSource.Verify(
+            x => x.GetDailySeries("CSPX.LON", It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        Assert.NotEmpty(series);
+    }
+
+    [Fact]
+    public async Task GetPricePerUnitSeries_UsesBulkPersistence_OnFetch()
+    {
+        var start = new DateTime(2024, 1, 1); // Monday
+        var end = new DateTime(2024, 1, 5); // Friday
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing());
+
+        var priceData = new[]
+        {
+            Price(100m, new DateTime(2024, 1, 1)),
+            Price(102m, new DateTime(2024, 1, 2)),
+            Price(104m, new DateTime(2024, 1, 3))
+        };
+
+        _priceSource
+            .Setup(x => x.GetDailySeries("CSPX.LON", It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(priceData);
+
+        var series = await CreateSut().GetPricePerUnitSeriesAsync(10, _usd, start, end, TestContext.Current.CancellationToken);
+
+        // All prices should be persisted in a single UpsertRange call, verified by checking the stored count.
+        Assert.Equal(priceData.Length, _priceQuoteRepository.All.Count);
+        Assert.Equal(1, _priceQuoteRepository.BulkUpsertCalls);
+        Assert.NotEmpty(series);
+    }
+
     /// <summary>Minimal in-memory <see cref="IPriceQuoteRepository"/> so fetch→store→read flows are exercised end-to-end.</summary>
     private sealed class InMemoryPriceQuoteRepository : IPriceQuoteRepository
     {
@@ -180,6 +304,7 @@ public class InvestmentPriceProviderTests
         private long _nextId = 1;
 
         public IReadOnlyList<PriceQuote> All => _quotes;
+        public int BulkUpsertCalls { get; private set; }
 
         public void Seed(PriceQuote quote) => _quotes.Add(quote);
 
@@ -224,6 +349,40 @@ public class InvestmentPriceProviderTests
             }
 
             return Add(quote, cancellationToken);
+        }
+
+        public Task<IReadOnlyList<PriceQuote>> UpsertRange(IReadOnlyList<PriceQuote> quotes, CancellationToken cancellationToken = default)
+        {
+            if (quotes.Count == 0) return Task.FromResult<IReadOnlyList<PriceQuote>>([]);
+
+            BulkUpsertCalls++;
+            var result = new List<PriceQuote>(quotes.Count);
+            foreach (var quote in quotes)
+            {
+                var existing = _quotes.FirstOrDefault(x =>
+                    x.AssetListingId == quote.AssetListingId
+                    && x.Provider == quote.Provider
+                    && x.PriceTime == quote.PriceTime
+                    && x.QuoteType == quote.QuoteType);
+
+                if (existing is not null)
+                {
+                    existing.Price = quote.Price;
+                    existing.Currency = quote.Currency;
+                    existing.RawPrice = quote.RawPrice;
+                    existing.RawCurrency = quote.RawCurrency;
+                    existing.MarketDataSymbolId = quote.MarketDataSymbolId;
+                    result.Add(existing);
+                }
+                else
+                {
+                    quote.Id = _nextId++;
+                    _quotes.Add(quote);
+                    result.Add(quote);
+                }
+            }
+
+            return Task.FromResult<IReadOnlyList<PriceQuote>>(result);
         }
 
         public Task<bool> Delete(long id, CancellationToken cancellationToken = default)
