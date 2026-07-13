@@ -24,7 +24,8 @@ public sealed class InstrumentImportService(
             AssetAlreadyExists = asset is not null,
             ListingAlreadyExists = listing is not null,
             MarketDataSymbolAlreadyExists = symbol is not null,
-            CanImport = HasRequiredImportData(instrument),
+            CanImport = HasRequiredImportData(instrument)
+                && ParseAssetType(instrument.SecurityType) is AssetType.Stock or AssetType.ETF,
             Warnings = ImportWarnings(instrument)
         };
     }
@@ -43,7 +44,7 @@ public sealed class InstrumentImportService(
             Isin = instrument.Isin,
             ShareClassFigi = instrument.ShareClassFigi,
             CompositeFigi = instrument.CompositeFigi,
-            BaseCurrency = instrument.TradingCurrency
+            BaseCurrency = instrument.TradingCurrency!.ToUpperInvariant()
         }, ct);
 
         var createdListing = listing is null;
@@ -151,7 +152,8 @@ public sealed class InstrumentImportService(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogWarning(ex, "Alpha Vantage validation failed for {Symbol}", instrument.ProviderSymbol);
+            var sanitizedSymbol = instrument.ProviderSymbol?.Replace("\r", string.Empty).Replace("\n", string.Empty);
+            logger.LogWarning(ex, "Alpha Vantage validation failed for {Symbol}", sanitizedSymbol);
             return "Alpha Vantage validation failed; the symbol was saved disabled.";
         }
     }
