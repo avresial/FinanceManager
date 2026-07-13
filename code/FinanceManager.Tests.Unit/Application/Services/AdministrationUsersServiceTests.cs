@@ -97,5 +97,6 @@ public class AdministrationUsersServiceTests
         // Assert
         Assert.Empty(result);
         _userPlanVerifierMock.Verify(v => v.GetUsedRecordsCapacity(It.IsAny<IReadOnlyCollection<int>>()), Times.Never);
+        _activeUsersRepositoryMock.Verify(r => r.GetLastLoginTimes(It.IsAny<IReadOnlyCollection<int>>()), Times.Never);
     }
 }
