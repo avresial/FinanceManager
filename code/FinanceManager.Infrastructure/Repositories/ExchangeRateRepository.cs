@@ -81,6 +81,45 @@ public class ExchangeRateRepository(AppDbContext context) : IExchangeRateReposit
         }
     }
 
+    public async Task<IReadOnlyDictionary<(string From, string To, DateTime Date), decimal>> GetRange(string fromCurrency, string toCurrency, DateTime dateStart, DateTime dateEnd, CancellationToken ct = default)
+    {
+        var from = Normalize(fromCurrency);
+        var to = Normalize(toCurrency);
+        var startDay = NormalizeDate(dateStart);
+        var endDay = NormalizeDate(dateEnd);
+
+        if (startDay > endDay)
+            (startDay, endDay) = (endDay, startDay);
+
+        await _contextLock.WaitAsync(ct);
+        try
+        {
+            var directRates = await context.ExchangeRates
+                .AsNoTracking()
+                .Where(x => x.FromCurrency == from && x.ToCurrency == to && x.Date >= startDay && x.Date <= endDay)
+                .ToDictionaryAsync(x => (x.FromCurrency, x.ToCurrency, x.Date), x => x.Rate, ct);
+
+            var inverseRates = await context.ExchangeRates
+                .AsNoTracking()
+                .Where(x => x.FromCurrency == to && x.ToCurrency == from && x.Date >= startDay && x.Date <= endDay)
+                .ToListAsync(ct);
+
+            var result = new Dictionary<(string From, string To, DateTime Date), decimal>(directRates);
+            foreach (var inverse in inverseRates)
+            {
+                var key = (from, to, inverse.Date);
+                if (!result.ContainsKey(key) && inverse.Rate != 0)
+                    result[key] = 1m / inverse.Rate;
+            }
+
+            return result;
+        }
+        finally
+        {
+            _contextLock.Release();
+        }
+    }
+
     private static string Normalize(string currency) => currency.Trim().ToUpperInvariant();
 
     // Rates are daily; store the UTC day start so lookups are exact and PostgreSQL accepts the value.

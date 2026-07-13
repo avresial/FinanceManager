@@ -33,28 +33,48 @@ internal class CurrencyExchangeService(
             return sameCurrencyRates;
         }
 
-        const int batchSize = 50;
+        var stored = await exchangeRateRepository.GetRange(fromCurrency.ShortName, toCurrency.ShortName, start, end);
+        var normalizedFrom = Normalize(fromCurrency.ShortName);
+        var normalizedTo = Normalize(toCurrency.ShortName);
+
         List<(DateTime Date, decimal? Value)> rates = [];
+        List<DateTime> missingDates = [];
 
-        for (var offset = 0; offset < totalDays; offset += batchSize)
+        for (var i = 0; i < totalDays; i++)
         {
-            var currentBatchSize = Math.Min(batchSize, totalDays - offset);
-            List<DateTime> batchDates = [];
-            List<Task<decimal?>> batchTasks = [];
-
-            for (var i = 0; i < currentBatchSize; i++)
+            var date = start.AddDays(i);
+            var key = (normalizedFrom, normalizedTo, NormalizeDate(date));
+            if (stored.TryGetValue(key, out var rate))
             {
-                var date = start.AddDays(offset + i);
-                batchDates.Add(date);
-                batchTasks.Add(GetExchangeRateAsync(fromCurrency, toCurrency, date));
+                rates.Add((date, rate));
             }
-
-            var batchResults = await Task.WhenAll(batchTasks);
-            for (var i = 0; i < batchResults.Length; i++)
-                rates.Add((batchDates[i], batchResults[i]));
+            else
+            {
+                missingDates.Add(date);
+            }
         }
 
-        return rates;
+        if (missingDates.Count > 0)
+        {
+            const int batchSize = 50;
+            for (var offset = 0; offset < missingDates.Count; offset += batchSize)
+            {
+                var currentBatchSize = Math.Min(batchSize, missingDates.Count - offset);
+                List<Task<decimal?>> batchTasks = [];
+
+                for (var i = 0; i < currentBatchSize; i++)
+                {
+                    var date = missingDates[offset + i];
+                    batchTasks.Add(GetExchangeRateAsync(fromCurrency, toCurrency, date));
+                }
+
+                var batchResults = await Task.WhenAll(batchTasks);
+                for (var i = 0; i < batchResults.Length; i++)
+                    rates.Add((missingDates[offset + i], batchResults[i]));
+            }
+        }
+
+        return rates.OrderBy(x => x.Date).ToList();
     }
 
     public async Task<decimal?> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
@@ -107,4 +127,8 @@ internal class CurrencyExchangeService(
 
     private static bool IsUsd(Currency currency) =>
         string.Equals(currency.ShortName, DefaultCurrency.USD.ShortName, StringComparison.OrdinalIgnoreCase);
+
+    private static string Normalize(string currency) => currency.Trim().ToUpperInvariant();
+
+    private static DateTime NormalizeDate(DateTime date) => DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
 }

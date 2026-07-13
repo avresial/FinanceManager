@@ -339,6 +339,110 @@ public class CurrencyExchangeServiceTests : IDisposable
         Assert.Equal(5m, result);
     }
 
+    [Fact]
+    public async Task GetExchangeRateAsync_FullyStoredRange_UsesBulkReadAndNoProviderCalls()
+    {
+        // Arrange
+        var fromCurrency = new Currency(1, "USD", "$");
+        var toCurrency = new Currency(2, "EUR", "€");
+        var dateStart = new DateTime(2024, 1, 15);
+        var dateEnd = new DateTime(2024, 1, 17);
+
+        // Setup bulk read to return all rates
+        IReadOnlyDictionary<(string From, string To, DateTime Date), decimal> storedRates =
+            new Dictionary<(string, string, DateTime), decimal>
+            {
+                { ("USD", "EUR", new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc)), 0.92m },
+                { ("USD", "EUR", new DateTime(2024, 1, 16, 0, 0, 0, DateTimeKind.Utc)), 0.91m },
+                { ("USD", "EUR", new DateTime(2024, 1, 17, 0, 0, 0, DateTimeKind.Utc)), 0.93m }
+            };
+
+        _exchangeRateRepositoryMock
+            .Setup(x => x.GetRange("USD", "EUR", It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(storedRates);
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, dateStart, dateEnd);
+
+        // Assert
+        Assert.Equal(3, result.Count);
+        Assert.Equal(0.92m, result[0].Value);
+        Assert.Equal(0.91m, result[1].Value);
+        Assert.Equal(0.93m, result[2].Value);
+
+        // Verify bulk read was called
+        _exchangeRateRepositoryMock.Verify(
+            x => x.GetRange("USD", "EUR", It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // Verify no provider calls were made (HTTP handler not invoked)
+        _httpMessageHandlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Never(),
+            ItExpr.IsAny<HttpRequestMessage>(),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetExchangeRateAsync_PartiallyStoredRange_UsesBulkReadThenPointResolutionForMissing()
+    {
+        // Arrange
+        var fromCurrency = new Currency(1, "USD", "$");
+        var toCurrency = new Currency(2, "EUR", "€");
+        var dateStart = new DateTime(2024, 1, 15);
+        var dateEnd = new DateTime(2024, 1, 17);
+
+        // Setup bulk read to return only first and last rates
+        IReadOnlyDictionary<(string From, string To, DateTime Date), decimal> storedRates =
+            new Dictionary<(string, string, DateTime), decimal>
+            {
+                { ("USD", "EUR", new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc)), 0.92m },
+                { ("USD", "EUR", new DateTime(2024, 1, 17, 0, 0, 0, DateTimeKind.Utc)), 0.93m }
+            };
+
+        _exchangeRateRepositoryMock
+            .Setup(x => x.GetRange("USD", "EUR", It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(storedRates);
+
+        // Setup point Get to return null for direct, forcing provider call
+        _exchangeRateRepositoryMock
+            .Setup(x => x.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((decimal?)null);
+
+        var jsonResponse = @"{""usd"": {""eur"": 0.915}}";
+        SetupHttpResponse(HttpStatusCode.OK, jsonResponse);
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, dateStart, dateEnd);
+
+        // Assert
+        Assert.Equal(3, result.Count);
+        Assert.Equal(0.92m, result[0].Value);
+        Assert.Equal(0.915m, result[1].Value);
+        Assert.Equal(0.93m, result[2].Value);
+
+        // Verify bulk read was called
+        _exchangeRateRepositoryMock.Verify(
+            x => x.GetRange("USD", "EUR", It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // Verify point Get was called for missing date resolution
+        _exchangeRateRepositoryMock.Verify(
+            x => x.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+            Times.AtLeastOnce);
+
+        // Verify provider was called for missing date
+        _httpMessageHandlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.IsAny<HttpRequestMessage>(),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
     private CurrencyExchangeService CreateService()
     {
         ICurrencyExchangeRateProvider[] providers = [new FawazAhmedCurrencyApiClient(_httpClient, _loggerMock)];
