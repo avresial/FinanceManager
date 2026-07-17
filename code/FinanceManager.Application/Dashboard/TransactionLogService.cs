@@ -58,11 +58,8 @@ public class TransactionLogService(
 
         if (investmentAccounts.Count != 0)
         {
-            var transactions = await investmentTransactionRepository.GetByAccounts([.. investmentAccounts.Keys], cancellationToken);
+            var transactions = await investmentTransactionRepository.GetMostRecentByAccounts([.. investmentAccounts.Keys], count, cancellationToken);
             result.AddRange(transactions
-                .OrderByDescending(t => t.TradeDate)
-                .ThenByDescending(t => t.Id)
-                .Take(count)
                 .Select(t => new TransactionLogEntryDto(
                     t.AccountId,
                     investmentAccounts[t.AccountId],

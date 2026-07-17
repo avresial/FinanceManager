@@ -17,6 +17,14 @@ public interface IInvestmentTransactionRepository
     /// </summary>
     Task<IReadOnlyList<InvestmentTransaction>> GetByAccounts(IReadOnlyCollection<int> accountIds, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Get the <paramref name="count"/> most recent transactions across the given accounts in a single
+    /// bounded query, ordered by <see cref="InvestmentTransaction.TradeDate"/> descending then id descending.
+    /// Enforces the limit at the database level so callers composing recent-activity views (e.g. the
+    /// dashboard transaction log) never materialise a whole transaction history.
+    /// </summary>
+    Task<IReadOnlyList<InvestmentTransaction>> GetMostRecentByAccounts(IReadOnlyCollection<int> accountIds, int count, CancellationToken cancellationToken = default);
+
     /// <summary>Get a user's transactions whose <see cref="InvestmentTransaction.TradeDate"/> falls within [startDate, endDate].</summary>
     Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 

@@ -167,7 +167,7 @@ public class TransactionLogServiceTests
     {
         _investmentAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
             .Returns(ToAsyncEnumerable([new AvailableAccount(accountId, name)]));
-        _investmentTransactionRepository.Setup(r => r.GetByAccounts(It.Is<IReadOnlyCollection<int>>(ids => ids.Contains(accountId)), It.IsAny<CancellationToken>()))
+        _investmentTransactionRepository.Setup(r => r.GetMostRecentByAccounts(It.Is<IReadOnlyCollection<int>>(ids => ids.Contains(accountId)), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(transactions);
     }
 

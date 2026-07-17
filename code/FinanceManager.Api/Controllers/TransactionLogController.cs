@@ -3,6 +3,7 @@ using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace FinanceManager.Api.Controllers;
 
@@ -20,7 +21,7 @@ public class TransactionLogController(ITransactionLogService transactionLogServi
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TransactionLogEntryDto>))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Get(int userId, [FromQuery] int count = 10, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Get(int userId, [FromQuery, Range(1, 100)] int count = 10, CancellationToken cancellationToken = default)
     {
         if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId))
             return Forbid();
