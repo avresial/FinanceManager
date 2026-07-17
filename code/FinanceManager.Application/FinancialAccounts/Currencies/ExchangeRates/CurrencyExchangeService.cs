@@ -8,6 +8,12 @@ internal class CurrencyExchangeService(
     IExchangeRateRepository exchangeRateRepository,
     IEnumerable<ICurrencyExchangeRateProvider> providers) : ICurrencyExchangeService
 {
+    // A wide range (years of chart history) can miss thousands of daily rates. Each provider
+    // resolution is a chain of DB lookups plus external HTTP calls, so resolving every missing
+    // date inside a single request can exceed the browser's 100 s HTTP timeout. Resolved rates
+    // are persisted, so successive requests keep narrowing the gap until the range is covered.
+    private const int _maxProviderResolutionsPerCall = 60;
+
     public async Task<List<(DateTime Date, decimal? Value)>> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
     {
         if (dateStart == default || dateEnd == default) return [];
@@ -56,21 +62,41 @@ internal class CurrencyExchangeService(
 
         if (missingDates.Count > 0)
         {
+            var toResolve = missingDates.Count <= _maxProviderResolutionsPerCall
+                ? missingDates
+                : missingDates.Take(_maxProviderResolutionsPerCall).ToList();
+
             const int batchSize = 50;
-            for (var offset = 0; offset < missingDates.Count; offset += batchSize)
+            for (var offset = 0; offset < toResolve.Count; offset += batchSize)
             {
-                var currentBatchSize = Math.Min(batchSize, missingDates.Count - offset);
+                var currentBatchSize = Math.Min(batchSize, toResolve.Count - offset);
                 List<Task<decimal?>> batchTasks = [];
 
                 for (var i = 0; i < currentBatchSize; i++)
                 {
-                    var date = missingDates[offset + i];
+                    var date = toResolve[offset + i];
                     batchTasks.Add(GetExchangeRateAsync(fromCurrency, toCurrency, date));
                 }
 
                 var batchResults = await Task.WhenAll(batchTasks);
                 for (var i = 0; i < batchResults.Length; i++)
-                    rates.Add((missingDates[offset + i], batchResults[i]));
+                    rates.Add((toResolve[offset + i], batchResults[i]));
+            }
+
+            // Dates past the per-call resolution cap carry the nearest earlier known rate
+            // (daily FX barely moves day-to-day) instead of hitting the providers.
+            if (toResolve.Count < missingDates.Count)
+            {
+                var knownAscending = rates.Where(x => x.Value is not null).OrderBy(x => x.Date).ToList();
+                var knownIndex = 0;
+                decimal? carried = null;
+                foreach (var date in missingDates.Skip(toResolve.Count))
+                {
+                    while (knownIndex < knownAscending.Count && knownAscending[knownIndex].Date <= date)
+                        carried = knownAscending[knownIndex++].Value;
+
+                    rates.Add((date, carried));
+                }
             }
         }
 

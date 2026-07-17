@@ -297,6 +297,93 @@ public class InvestmentPriceProviderTests
         Assert.NotEmpty(series);
     }
 
+    [Fact]
+    public async Task GetPricePerUnitSeries_FillsFxRateGapsFromNearestKnownRate_WithoutPerDayLookups()
+    {
+        var mon = new DateTime(2024, 1, 1);
+        var wed = new DateTime(2024, 1, 3);
+        var thu = new DateTime(2024, 1, 4);
+        var fri = new DateTime(2024, 1, 5);
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing("GBP"));
+
+        // Quotes cover both range boundaries so no price fetch is needed.
+        _priceQuoteRepository.Seed(new PriceQuote
+        {
+            AssetListingId = 10,
+            Provider = MarketDataProvider.AlphaVantage,
+            Price = 100m,
+            Currency = "GBP",
+            PriceTime = new DateTimeOffset(mon, TimeSpan.Zero),
+            QuoteType = PriceQuoteType.EndOfDay
+        });
+        _priceQuoteRepository.Seed(new PriceQuote
+        {
+            AssetListingId = 10,
+            Provider = MarketDataProvider.AlphaVantage,
+            Price = 110m,
+            Currency = "GBP",
+            PriceTime = new DateTimeOffset(wed, TimeSpan.Zero),
+            QuoteType = PriceQuoteType.EndOfDay
+        });
+
+        // The bulk FX prefetch only knows Monday and Thursday; the gaps must reuse those rates.
+        _currencyExchangeService
+            .Setup(x => x.GetExchangeRateAsync(It.Is<Currency>(c => c.ShortName == "GBP"), _usd, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([(mon, 1.2m), (thu, 1.3m)]);
+
+        var series = await CreateSut().GetPricePerUnitSeriesAsync(10, _usd, mon, fri, TestContext.Current.CancellationToken);
+
+        Assert.Equal(120m, series[mon]);                       // 100 × 1.2
+        Assert.Equal(120m, series[new DateTime(2024, 1, 2)]);  // carries Monday's rate forward
+        Assert.Equal(132m, series[wed]);                       // 110 × 1.2
+        Assert.Equal(143m, series[thu]);                       // 110 × 1.3
+        Assert.Equal(143m, series[fri]);                       // carries Thursday's rate forward
+
+        // No per-day point conversions may happen for the gap days.
+        _currencyExchangeService.Verify(
+            x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetPricePerUnitSeries_SkipsFetch_WhenLastAttemptFailedWithinCooldown()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = new DateTime(2024, 1, 5);
+        var listing = Listing();
+        listing.MarketDataSymbols.First().LastError = "rate limited";
+        listing.MarketDataSymbols.First().UpdatedAt = DateTimeOffset.UtcNow;
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(listing);
+
+        var series = await CreateSut().GetPricePerUnitSeriesAsync(10, _usd, start, end, TestContext.Current.CancellationToken);
+
+        Assert.Empty(series);
+        _priceSource.Verify(
+            x => x.GetDailySeries(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetPricePerUnitSeries_RetriesFetch_WhenLastFailureIsOlderThanCooldown()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = new DateTime(2024, 1, 5);
+        var listing = Listing();
+        listing.MarketDataSymbols.First().LastError = "rate limited";
+        listing.MarketDataSymbols.First().UpdatedAt = DateTimeOffset.UtcNow.AddHours(-1);
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(listing);
+        _priceSource
+            .Setup(x => x.GetDailySeries("CSPX.LON", It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Price(100m, start)]);
+
+        var series = await CreateSut().GetPricePerUnitSeriesAsync(10, _usd, start, end, TestContext.Current.CancellationToken);
+
+        Assert.NotEmpty(series);
+        _priceSource.Verify(
+            x => x.GetDailySeries("CSPX.LON", It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     /// <summary>Minimal in-memory <see cref="IPriceQuoteRepository"/> so fetch→store→read flows are exercised end-to-end.</summary>
     private sealed class InMemoryPriceQuoteRepository : IPriceQuoteRepository
     {
