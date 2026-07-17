@@ -139,6 +139,13 @@
                 </MudItem>
             }
 
+            @if (IsCardVisible(DashboardCards.TransactionLog))
+            {
+                <MudItem xs="12" md="6" lg="4">
+                    <TransactionLogCard Height="@($"{_unitHeight * 3}px")" />
+                </MudItem>
+            }
+
         </MudGrid>
     }
 </MudContainer>
