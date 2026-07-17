@@ -143,6 +143,28 @@ public class InvestmentValuationServiceTests
     }
 
     [Fact]
+    public async Task GetAccountValue_DoesNotPriceFullyClosedPositions()
+    {
+        var asOf = new DateTime(2024, 6, 30);
+        _transactionRepository
+            .Setup(x => x.GetByAccounts(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<InvestmentTransaction>
+            {
+                // Listing 10 is fully closed (net 0) and must not be priced.
+                Tx(10, InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 6, 1)),
+                Tx(10, InvestmentTransactionType.Sell, 5m, new DateOnly(2024, 6, 2)),
+                // Listing 20 stays open and contributes the whole value.
+                Tx(20, InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 6, 1))
+            });
+        _priceProvider.Setup(x => x.GetPricePerUnitAsync(20, _usd, asOf, It.IsAny<CancellationToken>())).ReturnsAsync(50m);
+
+        var value = await CreateSut().GetAccountValueAsync(_accountId, _usd, asOf, TestContext.Current.CancellationToken);
+
+        Assert.Equal(100m, value); // 2 * 50, closed position excluded
+        _priceProvider.Verify(x => x.GetPricePerUnitAsync(10, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task GetAccountValueSeries_CarriesHoldingsForward_AndPricesPerDay()
     {
         var start = new DateTime(2024, 1, 1); // Monday

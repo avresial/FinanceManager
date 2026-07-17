@@ -51,14 +51,17 @@ internal class InvestmentValuationService(
 
         var asOfDate = DateOnly.FromDateTime(asOf);
 
-        // Net holding per (account, listing) as of the date, dropping zero net positions.
+        // Net holding per (account, listing) as of the date, dropping zero net positions so fully
+        // closed holdings never trigger a (wasted, potentially failing) price fetch.
         var holdingsByAccount = new Dictionary<int, Dictionary<long, decimal>>();
         foreach (var group in transactions.Where(t => t.TradeDate <= asOfDate).GroupBy(t => t.AccountId))
         {
             var perListing = group
                 .GroupBy(t => t.AssetListingId)
-                .ToDictionary(g => g.Key, g => g.Sum(t => t.SignedQuantity));
-            holdingsByAccount[group.Key] = perListing;
+                .Select(g => (ListingId: g.Key, Holding: g.Sum(t => t.SignedQuantity)))
+                .Where(x => x.Holding != 0m)
+                .ToDictionary(x => x.ListingId, x => x.Holding);
+            if (perListing.Count > 0) holdingsByAccount[group.Key] = perListing;
         }
 
         // Price each distinct listing across all accounts once, not once per owning account.
@@ -71,7 +74,6 @@ internal class InvestmentValuationService(
             decimal total = 0m;
             foreach (var (listingId, holding) in holdings)
             {
-                if (holding == 0m) continue;
                 if (prices.TryGetValue(listingId, out var price) && price > 0)
                     total += holding * price;
             }
