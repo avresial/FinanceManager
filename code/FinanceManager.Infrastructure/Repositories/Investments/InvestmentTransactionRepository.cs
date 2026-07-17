@@ -19,6 +19,17 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<InvestmentTransaction>> GetByAccounts(IReadOnlyCollection<int> accountIds, CancellationToken cancellationToken = default)
+    {
+        if (accountIds.Count == 0) return [];
+
+        return await context.InvestmentTransactions.AsNoTracking()
+            .Include(x => x.AssetListing)
+            .Where(x => accountIds.Contains(x.AccountId))
+            .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default) =>
         await context.InvestmentTransactions.AsNoTracking()
             .Include(x => x.AssetListing)

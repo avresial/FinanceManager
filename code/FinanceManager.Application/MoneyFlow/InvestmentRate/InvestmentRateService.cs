@@ -26,12 +26,19 @@ IInvestmentValuationService investmentValuationService) : IInvestmentRateService
 
         if (salary == 0) yield break;
 
-        decimal investmentsChange = 0;
+        List<int> investmentAccountIds = [];
         await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, start, end))
+            investmentAccountIds.Add(account.AccountId);
+
+        decimal investmentsChange = 0;
+        if (investmentAccountIds.Count > 0)
         {
-            var startValue = await investmentValuationService.GetAccountValueAsync(account.AccountId, currency, start);
-            var endValue = await investmentValuationService.GetAccountValueAsync(account.AccountId, currency, end);
-            investmentsChange += endValue - startValue;
+            // Batched point valuation: one transactions query per as-of date, each distinct listing
+            // priced once across all accounts. The change nets across accounts, so the per-account
+            // breakdown is not needed here — summing the batched result matches the per-account loop.
+            var startValues = await investmentValuationService.GetAccountValueAsync(investmentAccountIds, currency, start);
+            var endValues = await investmentValuationService.GetAccountValueAsync(investmentAccountIds, currency, end);
+            investmentsChange = endValues.Values.Sum() - startValues.Values.Sum();
         }
 
         yield return new()

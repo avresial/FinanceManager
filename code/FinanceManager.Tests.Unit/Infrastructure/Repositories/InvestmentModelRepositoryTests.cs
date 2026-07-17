@@ -297,6 +297,52 @@ public class InvestmentModelRepositoryTests
     }
 
     [Fact]
+    public async Task GetByAccounts_ReturnsTransactionsForRequestedAccountsOnly()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var ctx = CreateContext();
+        var assetRepo = new AssetRepository(ctx);
+        var listingRepo = new AssetListingRepository(ctx);
+        var txRepo = new InvestmentTransactionRepository(ctx);
+
+        var asset = await assetRepo.Add(MakeISharesAsset(), ct);
+        var listing = await listingRepo.Add(new AssetListing
+        {
+            AssetId = asset.Id,
+            Ticker = "CSPX",
+            ExchangeMic = "XLON",
+            ExchangeName = "London Stock Exchange",
+            TradingCurrency = "USD"
+        }, ct);
+
+        InvestmentTransaction Make(int accountId, DateOnly tradeDate) => new()
+        {
+            UserId = 1,
+            AccountId = accountId,
+            AssetListingId = listing.Id,
+            Type = InvestmentTransactionType.Buy,
+            Quantity = 1m,
+            UnitPrice = 100m,
+            Currency = "USD",
+            TradeDate = tradeDate
+        };
+
+        await txRepo.Add(Make(10, new DateOnly(2026, 1, 10)), ct);
+        await txRepo.Add(Make(20, new DateOnly(2026, 1, 11)), ct);
+        await txRepo.Add(Make(30, new DateOnly(2026, 1, 12)), ct); // not requested
+
+        var result = await txRepo.GetByAccounts([10, 20], ct);
+
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, t => t.AccountId == 10);
+        Assert.Contains(result, t => t.AccountId == 20);
+        Assert.DoesNotContain(result, t => t.AccountId == 30);
+        Assert.NotNull(result[0].AssetListing); // AssetListing eagerly included for downstream pricing
+
+        Assert.Empty(await txRepo.GetByAccounts([], ct));
+    }
+
+    [Fact]
     public async Task PriceQuote_StoreAndRead_LatestOnOrBefore()
     {
         var ct = TestContext.Current.CancellationToken;

@@ -29,8 +29,8 @@ public class InvestmentRateServiceTests
         _financialAccountRepositoryMock.Setup(r => r.GetAccounts<InvestmentAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(AsyncEnumerable.Empty<InvestmentAccount>());
         _investmentValuationServiceMock
-            .Setup(x => x.GetAccountValueAsync(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0m);
+            .Setup(x => x.GetAccountValueAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, decimal>());
 
         _investmentRateService = new InvestmentRateService(_financialAccountRepositoryMock.Object, _financialLabelsRepositoryMock.Object, _investmentValuationServiceMock.Object);
     }
@@ -55,11 +55,11 @@ public class InvestmentRateServiceTests
 
         // The investment value grew from 0 at the start of the window to 10 at the end.
         _investmentValuationServiceMock
-            .Setup(x => x.GetAccountValueAsync(2, It.IsAny<Currency>(), _startDate, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0m);
+            .Setup(x => x.GetAccountValueAsync(It.Is<IReadOnlyCollection<int>>(a => a.Contains(2)), It.IsAny<Currency>(), _startDate, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, decimal>());
         _investmentValuationServiceMock
-            .Setup(x => x.GetAccountValueAsync(2, It.IsAny<Currency>(), _endDate, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(10m);
+            .Setup(x => x.GetAccountValueAsync(It.Is<IReadOnlyCollection<int>>(a => a.Contains(2)), It.IsAny<Currency>(), _endDate, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, decimal> { [2] = 10m });
 
         // Act
         var result = await _investmentRateService.GetInvestmentRate(userId, _startDate, _endDate).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
