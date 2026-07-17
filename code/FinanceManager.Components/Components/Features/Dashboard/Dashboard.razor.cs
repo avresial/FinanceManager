@@ -46,6 +46,7 @@ public partial class Dashboard : ComponentBase
     [Inject] public required ISnapshotService SnapshotService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required DashboardCardVisibilityService CardVisibility { get; set; }
     [Inject] public required ILogger<Dashboard> Logger { get; set; }
 
     // Card-specific models mapped from the single overview response. They are null
@@ -65,7 +66,25 @@ public partial class Dashboard : ComponentBase
         StartDate = Start;
         EndDate = End;
 
+        await CardVisibility.EnsureLoadedAsync();
         await LoadOverview();
+    }
+
+    // A card renders when the user has not hidden it and it is not auto-hidden as empty.
+    // Empty auto-hiding only applies once an overview is loaded; while self-loading the
+    // dashboard has no data to judge emptiness, so those cards keep rendering.
+    private bool IsCardVisible(string cardId) =>
+        !CardVisibility.IsHidden(cardId) && !IsAutoHiddenWhenEmpty(cardId);
+
+    private bool IsAutoHiddenWhenEmpty(string cardId) =>
+        _overview is not null && DashboardCardVisibilityRules.IsAutoHiddenWhenEmpty(cardId, _overview);
+
+    private bool AnyCardVisible => DashboardCards.All.Any(card => IsCardVisible(card.Id));
+
+    private async Task ToggleCard(string cardId)
+    {
+        await CardVisibility.SetHiddenAsync(cardId, !CardVisibility.IsHidden(cardId));
+        StateHasChanged();
     }
 
     // DashboardDatePicker exposes a synchronous Action callback, so kick off the

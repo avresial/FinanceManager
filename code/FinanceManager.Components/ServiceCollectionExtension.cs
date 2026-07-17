@@ -55,6 +55,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<NavMenuStateCacheService>()
                 .AddScoped<DashboardHttpClient>()
                 .AddScoped<DashboardOverviewCardsCacheService>()
+                .AddScoped<DashboardCardVisibilityService>()
                 .AddScoped<ISnapshotService, LocalStorageSnapshotService>()
                 .AddScoped<AccountDetailsSnapshotStore>()
                 .AddTransient<CurrencyImportJobTracker>()
