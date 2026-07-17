@@ -25,5 +25,5 @@ public static class DashboardCardVisibilityRules
         _ => false,
     };
 
-    private static bool IsEmpty(IEnumerable<NameValueResult> data) => !data.Any(x => x.Value != 0);
+    private static bool IsEmpty(IEnumerable<NameValueResult> data) => data.All(x => x.Value == 0);
 }

@@ -32,8 +32,7 @@ public class DashboardCardVisibilityService(
             if (snapshot is not null)
             {
                 _hiddenCardIds.Clear();
-                foreach (var id in snapshot.HiddenCardIds)
-                    _hiddenCardIds.Add(id);
+                _hiddenCardIds.UnionWith(snapshot.HiddenCardIds);
             }
         }
         catch (Exception ex)
