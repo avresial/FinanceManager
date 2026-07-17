@@ -28,8 +28,8 @@ public class InvestmentPaycheckEstimatorServiceTests
             .Setup(x => x.GetAccounts<InvestmentAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(AsyncEnumerable.Empty<InvestmentAccount>());
         _investmentValuationServiceMock
-            .Setup(x => x.GetAccountValueAsync(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0m);
+            .Setup(x => x.GetAccountValueAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, decimal>());
 
         _service = new InvestmentPaycheckEstimatorService(_financialAccountRepositoryMock.Object, _financialLabelsRepositoryMock.Object, _investmentValuationServiceMock.Object, _bondDetailsRepositoryMock.Object);
     }
@@ -61,8 +61,8 @@ public class InvestmentPaycheckEstimatorServiceTests
             .Setup(x => x.GetAccounts<InvestmentAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(new[] { investmentAccount }.ToAsyncEnumerable());
         _investmentValuationServiceMock
-            .Setup(x => x.GetAccountValueAsync(20, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1000m);
+            .Setup(x => x.GetAccountValueAsync(It.Is<IReadOnlyCollection<int>>(a => a.Contains(20)), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, decimal> { [20] = 1000m });
         _financialAccountRepositoryMock
             .Setup(x => x.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(new[] { bondAccount }.ToAsyncEnumerable());

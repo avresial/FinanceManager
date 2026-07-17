@@ -39,4 +39,31 @@ public interface IInvestmentValuationService
         DateTime start,
         DateTime end,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Total value per account of the given accounts' holdings converted to
+    /// <paramref name="targetCurrency"/> as of <paramref name="asOf"/>. Equivalent to calling
+    /// <see cref="GetAccountValueAsync(int, Currency, DateTime, CancellationToken)"/> once per
+    /// account, but issues a single transactions query and prices each distinct listing once across
+    /// all accounts. Accounts that hold nothing are omitted from the result.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, decimal>> GetAccountValueAsync(
+        IReadOnlyCollection<int> accountIds,
+        Currency targetCurrency,
+        DateTime asOf,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Daily account value per account for the given accounts over [<paramref name="start"/>,
+    /// <paramref name="end"/>]. Equivalent to calling
+    /// <see cref="GetAccountValueSeriesAsync(int, Currency, DateTime, DateTime, CancellationToken)"/>
+    /// once per account, but issues a single transactions query and prices each distinct listing once
+    /// across all accounts. Accounts whose whole series is empty are omitted from the result.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, IReadOnlyDictionary<DateTime, decimal>>> GetAccountValueSeriesAsync(
+        IReadOnlyCollection<int> accountIds,
+        Currency targetCurrency,
+        DateTime start,
+        DateTime end,
+        CancellationToken ct = default);
 }

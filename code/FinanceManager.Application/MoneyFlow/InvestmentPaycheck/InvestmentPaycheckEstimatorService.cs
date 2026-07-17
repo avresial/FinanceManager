@@ -69,8 +69,17 @@ public class InvestmentPaycheckEstimatorService(
             }
         }
 
+        List<int> investmentAccountIds = [];
         await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, asOfDate.Date, asOfDate))
-            result += await investmentValuationService.GetAccountValueAsync(account.AccountId, currency, asOfDate);
+            investmentAccountIds.Add(account.AccountId);
+
+        if (investmentAccountIds.Count > 0)
+        {
+            // Batched point valuation: one transactions query, each distinct listing priced once
+            // across all accounts. The total sums across accounts, so no per-account breakdown needed.
+            var valuesByAccount = await investmentValuationService.GetAccountValueAsync(investmentAccountIds, currency, asOfDate);
+            result += valuesByAccount.Values.Sum();
+        }
 
         return result;
     }

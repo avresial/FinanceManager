@@ -77,13 +77,13 @@ internal class InvestmentBalanceService(
         for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
             values[date] = 0;
 
-        // Fetch one account at a time: the valuation service reads through a scoped
-        // IInvestmentTransactionRepository backed by a single AppDbContext, which EF Core does not
-        // allow to service concurrent operations. Legacy stock accounts return an empty series here
-        // (no investment transactions) and so contribute nothing.
-        foreach (var accountId in investmentAccountIds)
+        // One batched call issues a single transactions query for all accounts and prices each
+        // distinct listing once across them, rather than a per-account round-trip on the shared
+        // AppDbContext (which EF Core cannot service concurrently anyway). Legacy stock accounts hold
+        // no investment transactions, so they are simply absent from the batched result.
+        var seriesByAccount = await investmentValuationService.GetAccountValueSeriesAsync(investmentAccountIds, currency, start.Date, end.Date);
+        foreach (var series in seriesByAccount.Values)
         {
-            var series = await investmentValuationService.GetAccountValueSeriesAsync(accountId, currency, start.Date, end.Date);
             foreach (var (date, value) in series)
             {
                 if (values.ContainsKey(date.Date))

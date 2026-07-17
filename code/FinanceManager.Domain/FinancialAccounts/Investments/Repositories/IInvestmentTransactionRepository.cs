@@ -11,6 +11,12 @@ public interface IInvestmentTransactionRepository
     /// <summary>Get all transactions belonging to the given account.</summary>
     Task<IReadOnlyList<InvestmentTransaction>> GetByAccount(int accountId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Get all transactions belonging to any of the given accounts in a single query. Lets callers
+    /// value several accounts without a per-account round-trip on the shared scoped context.
+    /// </summary>
+    Task<IReadOnlyList<InvestmentTransaction>> GetByAccounts(IReadOnlyCollection<int> accountIds, CancellationToken cancellationToken = default);
+
     /// <summary>Get a user's transactions whose <see cref="InvestmentTransaction.TradeDate"/> falls within [startDate, endDate].</summary>
     Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 

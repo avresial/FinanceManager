@@ -37,6 +37,9 @@ public class NetWorthServiceTests
         _investmentValuationServiceMock
             .Setup(x => x.GetAccountValueSeriesAsync(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<DateTime, decimal>());
+        _investmentValuationServiceMock
+            .Setup(x => x.GetAccountValueSeriesAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, IReadOnlyDictionary<DateTime, decimal>>());
 
         _netWorthService = new NetWorthService(_financialAccountRepositoryMock.Object, _bondDetailsRepositoryMock.Object, _investmentValuationServiceMock.Object);
     }
@@ -98,8 +101,8 @@ public class NetWorthServiceTests
             [end] = 30m
         };
         _investmentValuationServiceMock
-            .Setup(x => x.GetAccountValueSeriesAsync(5, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(series);
+            .Setup(x => x.GetAccountValueSeriesAsync(It.Is<IReadOnlyCollection<int>>(a => a.Contains(5)), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, IReadOnlyDictionary<DateTime, decimal>> { [5] = series });
 
         var result = await _netWorthService.GetNetWorth(1, DefaultCurrency.PLN, start, end);
 
@@ -108,12 +111,11 @@ public class NetWorthServiceTests
     }
 
     [Fact]
-    public async Task GetNetWorth_OverRange_FetchesAccountValueSeriesSequentially()
+    public async Task GetNetWorth_OverRange_FetchesAllInvestmentAccountsInOneBatchedCall()
     {
-        // The valuation service reads through a scoped IInvestmentTransactionRepository backed by a
-        // single AppDbContext, which EF Core does not allow to service concurrent operations. Guard
-        // against re-introducing a Task.WhenAll fan-out by failing if a second series fetch starts
-        // before the previous one completes.
+        // The per-account fan-out is replaced by a single batched valuation call that carries every
+        // investment account id. This keeps the shared scoped AppDbContext single-threaded (one query
+        // for all accounts) instead of one round-trip per account.
         const int userId = 1;
         var start = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var end = new DateTime(2024, 1, 3, 0, 0, 0, DateTimeKind.Utc);
@@ -131,25 +133,22 @@ public class NetWorthServiceTests
         _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(AsyncEnumerable.Empty<BondAccount>());
 
-        var inFlight = 0;
-        var sawConcurrency = false;
+        List<int>? capturedIds = null;
         _investmentValuationServiceMock
-            .Setup(x => x.GetAccountValueSeriesAsync(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .Returns(async () =>
-            {
-                if (Interlocked.Increment(ref inFlight) > 1) sawConcurrency = true;
-                await Task.Yield();
-                Interlocked.Decrement(ref inFlight);
-                return (IReadOnlyDictionary<DateTime, decimal>)new Dictionary<DateTime, decimal>();
-            });
+            .Setup(x => x.GetAccountValueSeriesAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .Callback((IReadOnlyCollection<int> ids, Currency _, DateTime _, DateTime _, CancellationToken _) => capturedIds = ids.ToList())
+            .ReturnsAsync(new Dictionary<int, IReadOnlyDictionary<DateTime, decimal>>());
 
         await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, start, end);
 
-        Assert.False(sawConcurrency, "Per-account value series must be fetched sequentially to avoid shared-DbContext concurrency.");
-        // Self-validate the guard: it only proves anything if the sequential path was actually exercised
-        // (one fetch per account). Without this, dropping the call entirely would pass vacuously.
+        // Exactly one batched call, carrying all three account ids.
+        _investmentValuationServiceMock.Verify(
+            x => x.GetAccountValueSeriesAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+            Times.Once);
         _investmentValuationServiceMock.Verify(
             x => x.GetAccountValueSeriesAsync(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
-            Times.Exactly(investmentAccounts.Count));
+            Times.Never);
+        Assert.NotNull(capturedIds);
+        Assert.Equal(new[] { 1, 2, 3 }, capturedIds!.OrderBy(x => x));
     }
 }

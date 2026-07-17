@@ -42,10 +42,14 @@ internal class AssetsServiceInvestment(
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         if (start == default) return [];
 
-        Dictionary<DateTime, decimal> values = [];
+        List<int> accountIds = [];
         await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, start, end))
+            accountIds.Add(account.AccountId);
+
+        Dictionary<DateTime, decimal> values = [];
+        var seriesByAccount = await valuationService.GetAccountValueSeriesAsync(accountIds, currency, start, end);
+        foreach (var series in seriesByAccount.Values)
         {
-            var series = await valuationService.GetAccountValueSeriesAsync(account.AccountId, currency, start, end);
             foreach (var (date, value) in series)
             {
                 if (!values.TryAdd(date, value))
@@ -66,19 +70,26 @@ internal class AssetsServiceInvestment(
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
     {
+        List<InvestmentAccount> accounts = [];
         await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, asOfDate.AddMinutes(-1), asOfDate))
+            accounts.Add(account);
+
+        var valuesByAccount = await valuationService.GetAccountValueAsync(accounts.Select(a => a.AccountId).ToList(), currency, asOfDate);
+        foreach (var account in accounts)
         {
-            var value = await valuationService.GetAccountValueAsync(account.AccountId, currency, asOfDate);
-            if (value > 0)
+            if (valuesByAccount.TryGetValue(account.AccountId, out var value) && value > 0)
                 yield return new NameValueResult(account.Name, value);
         }
     }
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
     {
-        decimal total = 0;
+        List<int> accountIds = [];
         await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, asOfDate.AddMinutes(-1), asOfDate))
-            total += await valuationService.GetAccountValueAsync(account.AccountId, currency, asOfDate);
+            accountIds.Add(account.AccountId);
+
+        var valuesByAccount = await valuationService.GetAccountValueAsync(accountIds, currency, asOfDate);
+        var total = valuesByAccount.Values.Sum();
 
         if (total > 0)
             yield return new NameValueResult(InvestmentType.Stock.ToString(), total);
