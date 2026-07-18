@@ -19,6 +19,7 @@ public static class DashboardCards
     public const string Expenses = "expenses";
     public const string Insights = "insights";
     public const string RecurringTransactions = "recurring-transactions";
+    public const string TransactionLog = "transaction-log";
 
     /// <summary>All customizable cards in the order they appear on the dashboard.</summary>
     public static readonly IReadOnlyList<DashboardCardDescriptor> All =
@@ -32,5 +33,6 @@ public static class DashboardCards
         new(Expenses, "Expenses"),
         new(Insights, "Financial insights"),
         new(RecurringTransactions, "Recurring transactions"),
+        new(TransactionLog, "Transaction log"),
     ];
 }

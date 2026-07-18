@@ -1,0 +1,88 @@
+@using FinanceManager.Domain.Dashboard.Dtos
+@using FinanceManager.Domain.FinancialAccounts.Shared.Entities
+
+<MudCard Outlined Class="rounded-lg d-flex flex-column fm-txlog-card" Style="@($"height:{Height};")">
+    <MudCardHeader Class="py-2 flex-shrink-0">
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6" Class="fm-title">Transaction log</MudText>
+            <MudText Typo="Typo.caption" Class="fm-muted">Last @Count transactions across all accounts</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudDivider Class="flex-grow-0" />
+
+    <MudCardContent Class="flex-grow-1 overflow-y-auto py-0 px-2" Style="min-height:0;">
+        @if (_isLoading)
+        {
+            <MudList T="string" Dense ReadOnly DisablePadding Class="pt-2">
+                @for (var i = 0; i < 6; i++)
+                {
+                    <MudListItem Class="py-1">
+                        <div class="d-flex align-center fm-row">
+                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Width="34px" Height="34px" Class="rounded" />
+                            <div class="flex-grow-1" style="min-width:0;">
+                                <div class="d-flex justify-space-between align-center gap-2">
+                                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="45%" />
+                                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="20%" />
+                                </div>
+                                <MudSkeleton SkeletonType="SkeletonType.Text" Width="30%" />
+                            </div>
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+        else if (_hasError)
+        {
+            <div class="fm-state">
+                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Error" Size="Size.Large" />
+                <MudText Typo="Typo.subtitle1" Class="mt-2">Couldn't load transactions</MudText>
+                <MudText Typo="Typo.body2" Class="fm-muted" Align="Align.Center">
+                    Something went wrong fetching your latest transactions.
+                </MudText>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                           Class="mt-2" OnClick="LoadData">Try again</MudButton>
+            </div>
+        }
+        else if (_data.Count != 0)
+        {
+            <MudList T="TransactionLogEntryDto" Dense ReadOnly DisablePadding>
+                @foreach (var entry in _data)
+                {
+                    <MudListItem T="TransactionLogEntryDto" Class="fm-list-item">
+                        <div class="d-flex align-center fm-row">
+                            <MudAvatar Rounded Size="Size.Medium" Class="@($"fm-chip {(entry.ValueChange >= 0 ? "fm-tint-pos" : "fm-tint-neg")}")">
+                                <MudIcon Icon="@GetAccountTypeIcon(entry.AccountType)" Size="Size.Small" />
+                            </MudAvatar>
+                            <div class="flex-grow-1" style="min-width:0;">
+                                <div class="d-flex justify-space-between align-baseline gap-2">
+                                    <MudText Typo="Typo.body2" Class="fm-name text-truncate">
+                                        @(string.IsNullOrWhiteSpace(entry.Description) ? entry.AccountName : entry.Description)
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="@($"fm-amount {(entry.ValueChange >= 0 ? "fm-pos" : "fm-neg")}")">
+                                        @FormatAmount(entry.ValueChange)
+                                    </MudText>
+                                </div>
+                                <div class="d-flex justify-space-between align-center gap-2">
+                                    <MudText Typo="Typo.caption" Class="fm-muted text-truncate">@entry.AccountName</MudText>
+                                    <MudText Typo="Typo.caption" Class="fm-muted" Style="white-space:nowrap;">@entry.Date.ToString("d MMM yyyy")</MudText>
+                                </div>
+                            </div>
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+        else
+        {
+            <div class="fm-state">
+                <div class="fm-state-icon">
+                    <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Default" Size="Size.Large" />
+                </div>
+                <MudText Typo="Typo.subtitle1" Class="mt-2">No transactions yet</MudText>
+                <MudText Typo="Typo.body2" Class="fm-muted" Align="Align.Center">
+                    Once you add entries to any of your accounts, the latest ones show up here.
+                </MudText>
+            </div>
+        }
+    </MudCardContent>
+</MudCard>

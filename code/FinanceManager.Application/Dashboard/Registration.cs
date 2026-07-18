@@ -11,6 +11,7 @@ internal static class Registration
     {
         services.AddScoped<DashboardQueryService>();
         services.AddScoped<IDashboardQueryService, CachingDashboardQueryService>();
+        services.AddScoped<ITransactionLogService, TransactionLogService>();
         services.AddSingleton<ICacheInvalidator, CacheInvalidator>();
         return services;
     }
