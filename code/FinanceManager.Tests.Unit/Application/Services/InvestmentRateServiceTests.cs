@@ -69,4 +69,91 @@ public class InvestmentRateServiceTests
         Assert.Equal(1000, result.First().Salary);
         Assert.Equal(10, result.First().InvestmentsChange);
     }
+
+    [Fact]
+    public async Task GetInvestmentRate_NoSalaryInWindow_FallsBackToMostRecentEarlierSalary()
+    {
+        // A salary was paid two months ago and the investments changed this month. Querying just the
+        // current month must not come back empty — the rate should use the most recent earlier salary.
+        // Arrange
+        var userId = 1;
+        var salaryLabel = new FinancialLabel { Id = 1, Name = "Salary" };
+        _financialLabelsRepositoryMock.Setup(repo => repo.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { salaryLabel }.ToAsyncEnumerable());
+
+        var monthStart = new DateTime(_endDate.Year, _endDate.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var salaryDate = monthStart.AddMonths(-2).AddDays(9);
+
+        var accountWithOldSalary = new CurrencyAccount(userId, 1, "Currency Account 1", AccountLabel.Cash);
+        accountWithOldSalary.Add(new CurrencyAccountEntry(1, 1, salaryDate, 1000, 1000) { Labels = [salaryLabel] }, false);
+
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, monthStart, _endDate))
+            .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, monthStart.AddMonths(-12), monthStart))
+            .Returns(new[] { accountWithOldSalary }.ToAsyncEnumerable());
+
+        var investmentAccount = new InvestmentAccount(userId, 2, "Investments");
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<InvestmentAccount>(userId, monthStart, _endDate))
+            .Returns(new[] { investmentAccount }.ToAsyncEnumerable());
+
+        _investmentValuationServiceMock
+            .Setup(x => x.GetAccountValueAsync(It.Is<IReadOnlyCollection<int>>(a => a.Contains(2)), It.IsAny<Currency>(), monthStart, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, decimal> { [2] = 100m });
+        _investmentValuationServiceMock
+            .Setup(x => x.GetAccountValueAsync(It.Is<IReadOnlyCollection<int>>(a => a.Contains(2)), It.IsAny<Currency>(), _endDate, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, decimal> { [2] = 600m });
+
+        // Act
+        var result = await _investmentRateService.GetInvestmentRate(userId, monthStart, _endDate).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        var rate = Assert.Single(result);
+        Assert.Equal(1000, rate.Salary);
+        Assert.Equal(500, rate.InvestmentsChange);
+        Assert.Equal(0.5m, rate.GetPercentage());
+    }
+
+    [Fact]
+    public async Task GetInvestmentRate_NoSalaryFound_StillReportsInvestmentChange()
+    {
+        // No salary anywhere (window or lookback), but the investments did change — the change must
+        // still be reported instead of the month silently disappearing from the series.
+        // Arrange
+        var userId = 1;
+        var salaryLabel = new FinancialLabel { Id = 1, Name = "Salary" };
+        _financialLabelsRepositoryMock.Setup(repo => repo.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { salaryLabel }.ToAsyncEnumerable());
+
+        var monthStart = new DateTime(_endDate.Year, _endDate.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var investmentAccount = new InvestmentAccount(userId, 2, "Investments");
+        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<InvestmentAccount>(userId, monthStart, _endDate))
+            .Returns(new[] { investmentAccount }.ToAsyncEnumerable());
+
+        _investmentValuationServiceMock
+            .Setup(x => x.GetAccountValueAsync(It.Is<IReadOnlyCollection<int>>(a => a.Contains(2)), It.IsAny<Currency>(), _endDate, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, decimal> { [2] = 250m });
+
+        // Act
+        var result = await _investmentRateService.GetInvestmentRate(userId, monthStart, _endDate).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        var rate = Assert.Single(result);
+        Assert.Equal(0, rate.Salary);
+        Assert.Equal(250, rate.InvestmentsChange);
+        Assert.Equal(0, rate.GetPercentage());
+    }
+
+    [Fact]
+    public async Task GetInvestmentRate_NoSalaryAndNoInvestmentChange_ReturnsEmpty()
+    {
+        // Arrange
+        var userId = 1;
+        var salaryLabel = new FinancialLabel { Id = 1, Name = "Salary" };
+        _financialLabelsRepositoryMock.Setup(repo => repo.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { salaryLabel }.ToAsyncEnumerable());
+
+        // Act
+        var result = await _investmentRateService.GetInvestmentRate(userId, _startDate, _endDate).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(result);
+    }
 }

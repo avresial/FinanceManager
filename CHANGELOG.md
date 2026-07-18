@@ -22,6 +22,7 @@ rules agents must follow when updating this file.
 - Exchange rates are now stored in the application database: a conversion first checks the in-memory cache and the database (including inverse pairs), and only on a miss asks the external rate provider — whose answer is persisted so the same pair and date never leave the app twice. Unknown pairs additionally fall back to a cross-rate via USD.
 
 ### Fixed
+- The **Investment rate** card no longer shows 0.00 % and an empty monthly chart when the salary was received in a different month than the investment: months without a salary transaction now fall back to the most recent salary (up to 12 months back) as the denominator, and the month's investments change is reported even when no salary is found. #556
 - The investment account chart no longer times out on wide date ranges: missing exchange rates are filled from the nearest known rate instead of being fetched from the external provider day by day, failed rate lookups are briefly cached, and price fetches for a symbol whose last attempt just failed are paused for a cooldown. #551
 - Investment account charts no longer repeatedly reload full price history around market closures, reducing load time. #542
 - The **Manual stock price** admin card no longer stretches across the full width of the screen; it is now capped to a compact width, and the price field updates as you type.
