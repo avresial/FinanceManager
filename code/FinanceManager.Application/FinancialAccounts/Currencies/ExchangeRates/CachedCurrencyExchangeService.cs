@@ -16,6 +16,14 @@ internal sealed class CachedCurrencyExchangeService(
         SlidingExpiration = TimeSpan.FromHours(1)
     };
 
+    // Failed lookups are cached too, with a shorter TTL: a pair/date no provider knows would
+    // otherwise re-run the full provider chain (DB + external HTTP) on every call, and a chart
+    // request can ask for the same unknown rate hundreds of times.
+    private static readonly MemoryCacheEntryOptions _missCacheOptions = new()
+    {
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15)
+    };
+
     public async Task<decimal?> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
     {
         var key = $"EXCHANGE_RATE_{fromCurrency.ShortName}_{toCurrency.ShortName}_{date:yyyyMMdd}";
@@ -25,8 +33,7 @@ internal sealed class CachedCurrencyExchangeService(
 
         var rate = await inner.GetExchangeRateAsync(fromCurrency, toCurrency, date);
 
-        if (rate is not null)
-            cache.Set(key, rate, _cacheOptions);
+        cache.Set(key, rate, rate is null ? _missCacheOptions : _cacheOptions);
 
         return rate;
     }

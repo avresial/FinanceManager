@@ -30,6 +30,7 @@ public class InvestmentPriceProvider(
 {
     private const int _fetchLookbackDays = 7;
     private static readonly TimeSpan _cacheTtl = TimeSpan.FromMinutes(60);
+    private static readonly TimeSpan _failedFetchCooldown = TimeSpan.FromMinutes(15);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> _fetchLocks = new();
 
     // Minor "pence"-style quote units collapse to their major currency once PriceMultiplier is
@@ -116,6 +117,20 @@ public class InvestmentPriceProvider(
                     rateMap[rateDate.Date] = value.Value;
             }
 
+            FillRateGaps(rateMap, startDate, endDate);
+
+            // A currency with no rate anywhere in the range gets one whole-range fallback
+            // conversion (which may cross through USD), never one lookup per day.
+            if (rateMap.Count == 0)
+            {
+                var (unitRate, _) = await ConvertAsync(1m, name, targetCurrency, endDate, ct);
+                if (unitRate > 0)
+                {
+                    for (var date = startDate; date <= endDate; date = date.AddDays(1))
+                        rateMap[date] = unitRate;
+                }
+            }
+
             ratesByCurrency[name] = rateMap;
         }
 
@@ -129,27 +144,41 @@ public class InvestmentPriceProvider(
 
             if (latestKnown is null) continue;
 
-            decimal converted;
+            // Days whose rate is still unknown after prefetch + gap filling are skipped rather
+            // than resolved individually: a per-day fallback multiplies the full provider chain
+            // by the range length and is what pushed chart requests past the client timeout.
+            decimal converted = 0m;
             if (string.Equals(latestKnown.Currency, targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase))
-            {
                 converted = latestKnown.Price;
-            }
             else if (ratesByCurrency.TryGetValue(latestKnown.Currency, out var rateMap) && rateMap.TryGetValue(date, out var rate))
-            {
                 converted = latestKnown.Price * rate;
-            }
-            else
-            {
-                // Dates outside the prefetched range or with a missing rate fall back to the
-                // per-call path so the result matches the point lookup.
-                (converted, _) = await ConvertAsync(latestKnown.Price, latestKnown.Currency, targetCurrency, date, ct);
-            }
 
             if (converted > 0)
                 series[date] = converted;
         }
 
         return series;
+    }
+
+    // FX gaps (weekends, holidays, dates past the exchange service's per-call resolution cap)
+    // reuse the nearest known rate in the range: forward-fill first, then backfill the leading
+    // edge from the earliest known rate.
+    private static void FillRateGaps(Dictionary<DateTime, decimal> rateMap, DateTime startDate, DateTime endDate)
+    {
+        if (rateMap.Count == 0) return;
+
+        decimal? carried = null;
+        for (var date = startDate; date <= endDate; date = date.AddDays(1))
+        {
+            if (rateMap.TryGetValue(date, out var known))
+                carried = known;
+            else if (carried is decimal rate)
+                rateMap[date] = rate;
+        }
+
+        var earliest = rateMap[rateMap.Keys.Min()];
+        for (var date = startDate; date <= endDate && !rateMap.ContainsKey(date); date = date.AddDays(1))
+            rateMap[date] = earliest;
     }
 
     // Direct is false when the returned value is the USD fallback (i.e. not denominated in
@@ -187,6 +216,15 @@ public class InvestmentPriceProvider(
         if (symbol is null)
         {
             logger.LogDebug("Listing {ListingId} has no enabled market-data symbol; cannot fetch prices", listing.Id);
+            return;
+        }
+
+        // A symbol whose most recent attempt failed keeps failing for a while (bad symbol,
+        // rate-limited provider). Without a cooldown every chart request would re-run the whole
+        // provider fallback chain for it, adding external-call latency to each page load.
+        if (symbol.LastError is not null && DateTimeOffset.UtcNow - symbol.UpdatedAt < _failedFetchCooldown)
+        {
+            logger.LogDebug("Skipping price fetch for listing {ListingId}: last attempt failed at {UpdatedAt} and is within the cooldown", listing.Id, symbol.UpdatedAt);
             return;
         }
 

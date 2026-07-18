@@ -443,6 +443,50 @@ public class CurrencyExchangeServiceTests : IDisposable
             ItExpr.IsAny<CancellationToken>());
     }
 
+    [Fact]
+    public async Task GetExchangeRateAsync_RangeWithManyMissingDates_CapsProviderCallsAndCarriesRatesForward()
+    {
+        // Arrange: a 100-day range with only the first day stored, so 99 dates are missing —
+        // more than the per-call provider resolution cap of 60.
+        var fromCurrency = new Currency(1, "USD", "$");
+        var toCurrency = new Currency(2, "EUR", "€");
+        var dateStart = new DateTime(2024, 1, 1);
+        var dateEnd = dateStart.AddDays(99);
+
+        IReadOnlyDictionary<(string From, string To, DateTime Date), decimal> storedRates =
+            new Dictionary<(string, string, DateTime), decimal>
+            {
+                { ("USD", "EUR", new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)), 0.92m }
+            };
+
+        _exchangeRateRepositoryMock
+            .Setup(x => x.GetRange("USD", "EUR", It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(storedRates);
+        _exchangeRateRepositoryMock
+            .Setup(x => x.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((decimal?)null);
+
+        var jsonResponse = @"{""usd"": {""eur"": 0.915}}";
+        SetupHttpResponse(HttpStatusCode.OK, jsonResponse);
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, dateStart, dateEnd);
+
+        // Assert: every date has a value — the capped tail is forward-filled, not dropped.
+        Assert.Equal(100, result.Count);
+        Assert.All(result, x => Assert.NotNull(x.Value));
+        Assert.Equal(0.915m, result[^1].Value);
+
+        // Only the first 60 missing dates may reach the external provider.
+        _httpMessageHandlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Exactly(60),
+            ItExpr.IsAny<HttpRequestMessage>(),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
     private CurrencyExchangeService CreateService()
     {
         ICurrencyExchangeRateProvider[] providers = [new FawazAhmedCurrencyApiClient(_httpClient, _loggerMock)];
@@ -455,7 +499,9 @@ public class CurrencyExchangeServiceTests : IDisposable
             .Setup<Task<HttpResponseMessage>>("SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage
+            // A fresh response per request: the content stream is single-use, so a shared
+            // instance would fail every request after the first.
+            .ReturnsAsync(() => new HttpResponseMessage
             {
                 StatusCode = statusCode,
                 Content = new StringContent(content, Encoding.UTF8, "application/json")
