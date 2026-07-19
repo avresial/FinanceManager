@@ -8,6 +8,7 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 
 namespace FinanceManager.Application.Dashboard;
 
@@ -15,7 +16,9 @@ namespace FinanceManager.Application.Dashboard;
 /// Composes the dashboard transaction log by pulling the newest entries from every
 /// account of every type (currency, bond, investment) and interleaving them into a
 /// single newest-first list. The underlying repositories share a scoped EF Core
-/// DbContext, which is not thread-safe, so queries are awaited sequentially.
+/// DbContext, which allows only one active query at a time — so each account stream
+/// is fully buffered before the per-account entry queries run, and everything is
+/// awaited sequentially.
 /// </summary>
 public class TransactionLogService(
     ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
@@ -34,14 +37,14 @@ public class TransactionLogService(
 
         List<TransactionLogEntryDto> result = [];
 
-        await foreach (var account in currencyAccountRepository.GetAvailableAccounts(userId).WithCancellation(cancellationToken))
+        foreach (var account in await BufferAccounts(currencyAccountRepository.GetAvailableAccounts(userId), cancellationToken))
         {
             var entries = await currencyEntryRepository.Get(account.AccountId, DateTime.MaxValue, count);
             result.AddRange(entries.Select(e => new TransactionLogEntryDto(
                 account.AccountId, account.AccountName, AccountType.Currency, e.EntryId, e.PostingDate, e.ValueChange, GetCurrencyDescription(e))));
         }
 
-        await foreach (var account in bondAccountRepository.GetAvailableAccounts(userId).WithCancellation(cancellationToken))
+        foreach (var account in await BufferAccounts(bondAccountRepository.GetAvailableAccounts(userId), cancellationToken))
         {
             var entries = await bondEntryRepository.Get(account.AccountId, DateTime.MaxValue, count);
             foreach (var entry in entries)
@@ -74,6 +77,16 @@ public class TransactionLogService(
             .OrderByDescending(e => e.Date)
             .ThenByDescending(e => e.EntryId)
             .Take(count)];
+    }
+
+    // The account query must finish streaming before any entry query starts: relational
+    // providers reject a second command while the previous reader is still open.
+    private static async Task<List<AvailableAccount>> BufferAccounts(IAsyncEnumerable<AvailableAccount> accounts, CancellationToken cancellationToken)
+    {
+        List<AvailableAccount> result = [];
+        await foreach (var account in accounts.WithCancellation(cancellationToken))
+            result.Add(account);
+        return result;
     }
 
     private static string GetCurrencyDescription(CurrencyAccountEntry entry) =>
