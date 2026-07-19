@@ -213,9 +213,15 @@ public class TransactionLogServiceTests
     private static async IAsyncEnumerable<T> TrackedAsyncEnumerable<T>(IEnumerable<T> items, System.Runtime.CompilerServices.StrongBox<bool> isOpen)
     {
         isOpen.Value = true;
-        foreach (var item in items)
-            yield return item;
-        isOpen.Value = false;
-        await Task.CompletedTask;
+        try
+        {
+            foreach (var item in items)
+                yield return item;
+            await Task.CompletedTask;
+        }
+        finally
+        {
+            isOpen.Value = false;
+        }
     }
 }
