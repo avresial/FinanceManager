@@ -117,6 +117,7 @@
 
         .boot-logo .boot-logo-bar {
             transform-origin: center bottom;
+            transform-box: fill-box;
             animation: boot-bar-grow 1.8s ease-in-out infinite;
         }
 
@@ -150,7 +151,6 @@
                 conic-gradient(var(--app-spinner) var(--blazor-load-percentage, 0%), var(--app-ring-track) 0);
             -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 0.45rem), #000 calc(100% - 0.4rem));
             mask: radial-gradient(closest-side, transparent calc(100% - 0.45rem), #000 calc(100% - 0.4rem));
-            transition: background 200ms linear;
         }
 
         .boot-progress-text {
