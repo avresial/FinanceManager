@@ -1,3 +1,4 @@
+using FinanceManager.Components.Components.Features.FinancialAccounts.Shared;
 using FinanceManager.Components.Helpers;
 
 namespace FinanceManager.Tests.Unit.Components.Helpers;
@@ -27,10 +28,34 @@ public class DateRangeHelperTests
     public void GetAccountDetailsRange_CustomRangeClampsFutureEnd()
     {
         var start = _now.AddDays(-10);
-        var range = DateRangeHelper.GetAccountDetailsRange("Custom", start, _now.AddDays(1), _now.AddMonths(-3), _now, _now);
+        var range = DateRangeHelper.GetAccountDetailsRange(DateRangeHelper.CustomRangeKey, start, _now.AddDays(1), _now.AddMonths(-3), _now, _now);
 
         Assert.Equal(start, range.Start);
         Assert.Equal(_now, range.End);
+    }
+
+    // Pickers hand over midnight for the end day; the selected day itself must still be included.
+    [Fact]
+    public void GetAccountDetailsRange_CustomRangeIncludesWholeEndDay()
+    {
+        var start = _now.AddMonths(-4);
+        var end = _now.AddMonths(-3).Date;
+        var range = DateRangeHelper.GetAccountDetailsRange(DateRangeHelper.CustomRangeKey, start, end, _now.AddMonths(-3), _now, _now);
+
+        Assert.Equal(start, range.Start);
+        Assert.Equal(end.AddDays(1).AddTicks(-1), range.End);
+    }
+
+    // The hero's custom-range key must resolve as a custom selection in the helper —
+    // a mismatch silently falls back to the default range (regression guard).
+    [Fact]
+    public void GetAccountDetailsRange_HeroCustomRangeKeyResolvesCustomRange()
+    {
+        var start = _now.AddMonths(-4);
+        var range = DateRangeHelper.GetAccountDetailsRange(
+            AccountDetailsHero.CustomRangeKey, start, _now, _now.AddMonths(-3), _now.AddYears(-1), _now);
+
+        Assert.Equal(start, range.Start);
     }
 
     [Fact]

@@ -16,6 +16,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- The dashboard date picker has been redesigned into a compact pill: the active preset (This month / This quarter / This year) is now highlighted, and the custom range opens in a calendar dialog — consistent with the account details pages — showing the selected dates next to the presets. #559
 - The app loading screen has been redesigned: an animated logo and branded wordmark replace the plain title, and an indefinite spinner has been replaced with a progress ring showing the real download progress while the app boots. #553
 - The expanded investment transaction details now use a two-column layout on mobile instead of stacking every field in a single narrow column, so the previously empty right half of the screen is used and the details take up roughly half the vertical space.
 - Date pickers across the app now consistently display and accept dates in `DD/MM/YYYY` format instead of falling back to the browser locale (which showed US-style `M/D/YYYY` for some users). Affects the manual stock price, admin asset and bond forms, account entry add/edit/remove dialogs, data export, and the account/dashboard date-range pickers.
@@ -23,6 +24,8 @@ rules agents must follow when updating this file.
 - Exchange rates are now stored in the application database: a conversion first checks the in-memory cache and the database (including inverse pairs), and only on a miss asks the external rate provider — whose answer is persisted so the same pair and date never leave the app twice. Unknown pairs additionally fall back to a cross-rate via USD.
 
 ### Fixed
+- Dashboard charts (Net worth, Net cash flow, Closing balance) now redraw when the date range changes; previously only the numbers updated while the charts kept showing the old period. #559
+- Selecting a custom date range on the account details pages (cash, bond, investment) now actually filters to the picked dates instead of silently falling back to the current month, and the selected end day is included in full. #559
 - The **Investment rate** card no longer shows 0.00 % and an empty monthly chart when the salary was received in a different month than the investment: months without a salary transaction now fall back to the most recent salary (up to 12 months back) as the denominator, and the month's investments change is reported even when no salary is found. #556
 - The investment account chart no longer times out on wide date ranges: missing exchange rates are filled from the nearest known rate instead of being fetched from the external provider day by day, failed rate lookups are briefly cached, and price fetches for a symbol whose last attempt just failed are paused for a cooldown. #551
 - Investment account charts no longer repeatedly reload full price history around market closures, reducing load time. #542

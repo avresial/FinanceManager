@@ -22,6 +22,14 @@ public partial class TimeSeriesValueCard
     private string? _builtForAccent;
     private string? _builtForCurrency;
 
+    // ApexCharts draws via JS interop only when the ApexChart component is first
+    // rendered; feeding new Data into an already-rendered chart changes nothing on
+    // screen. Track which chart instance drew which points so OnAfterRenderAsync can
+    // ask the live chart to redraw when the series content actually changed
+    // (e.g. the dashboard reloading all cards after a date-range change).
+    private ApexChart<TimeSeriesModel>? _drawnChart;
+    private List<(DateTime DateTime, decimal Value)> _drawnPoints = [];
+
     /// <summary>Card title shown top-left (e.g. "Assets value over time").</summary>
     [Parameter] public string Title { get; set; } = string.Empty;
 
@@ -129,6 +137,26 @@ public partial class TimeSeriesValueCard
         // Drop a stale hover index if the series shrank (or emptied) between loads.
         if (_hoverIndex is int i && i >= Data.Count)
             _hoverIndex = null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (State != LoadState.Ready || _chart is null) return;
+
+        var points = Data.Select(p => (p.DateTime, p.Value)).ToList();
+        if (!ReferenceEquals(_chart, _drawnChart))
+        {
+            // A freshly created chart instance (first render, or remounted after a
+            // loading/empty/error state) has just drawn the current data itself.
+            _drawnChart = _chart;
+            _drawnPoints = points;
+            return;
+        }
+
+        if (points.SequenceEqual(_drawnPoints)) return;
+
+        _drawnPoints = points;
+        await _chart.RenderAsync();
     }
 
     // Pin the Y axis to a "nice" zero-based range so the card shows ~5 round
