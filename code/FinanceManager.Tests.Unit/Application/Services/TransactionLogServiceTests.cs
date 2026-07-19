@@ -147,6 +147,36 @@ public class TransactionLogServiceTests
         Assert.Equal("Shop", Assert.Single(result).Description);
     }
 
+    [Fact]
+    public async Task GetLastTransactions_DoesNotQueryEntries_WhileAccountStreamIsStillOpen()
+    {
+        // A scoped EF Core DbContext allows only one active query: issuing an entry
+        // query while the accounts stream is still enumerating throws on relational
+        // providers ("A second operation was started on this context instance...").
+        var currencyStreamOpen = new System.Runtime.CompilerServices.StrongBox<bool>(false);
+        var bondStreamOpen = new System.Runtime.CompilerServices.StrongBox<bool>(false);
+
+        _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
+            .Returns(TrackedAsyncEnumerable([new AvailableAccount(10, "Bank")], currencyStreamOpen));
+        _currencyEntryRepository.Setup(r => r.Get(10, It.IsAny<DateTime>(), It.IsAny<int>(), true))
+            .Callback(() => Assert.False(currencyStreamOpen.Value, "Entry query issued while the currency accounts stream was still open."))
+            .ReturnsAsync([]);
+
+        _bondAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
+            .Returns(TrackedAsyncEnumerable([new AvailableAccount(20, "Bonds")], bondStreamOpen));
+        _bondEntryRepository.Setup(r => r.Get(20, It.IsAny<DateTime>(), It.IsAny<int>(), true))
+            .Callback(() => Assert.False(bondStreamOpen.Value, "Entry query issued while the bond accounts stream was still open."))
+            .ReturnsAsync([]);
+
+        // Act
+        var result = await _service.GetLastTransactions(_userId, 10, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(result);
+        _currencyEntryRepository.Verify(r => r.Get(10, It.IsAny<DateTime>(), It.IsAny<int>(), true), Times.Once);
+        _bondEntryRepository.Verify(r => r.Get(20, It.IsAny<DateTime>(), It.IsAny<int>(), true), Times.Once);
+    }
+
     private void SetupCurrencyAccount(int accountId, string name, List<CurrencyAccountEntry> entries)
     {
         _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
@@ -175,6 +205,17 @@ public class TransactionLogServiceTests
     {
         foreach (var item in items)
             yield return item;
+        await Task.CompletedTask;
+    }
+
+    // Mirrors a deferred EF query: isOpen stays true from the first MoveNextAsync
+    // until the stream is exhausted, like an open data reader.
+    private static async IAsyncEnumerable<T> TrackedAsyncEnumerable<T>(IEnumerable<T> items, System.Runtime.CompilerServices.StrongBox<bool> isOpen)
+    {
+        isOpen.Value = true;
+        foreach (var item in items)
+            yield return item;
+        isOpen.Value = false;
         await Task.CompletedTask;
     }
 }
