@@ -24,10 +24,8 @@ public partial class InvestmentRateCard
     private bool _isLoading;
     private Currency _currency = DefaultCurrency.PLN;
 
-    public List<InvestmentRate> InvestmentRates { get; set; } = [];
     public List<InvestmentRate> MonthlyInvestmentRates { get; set; } = [];
 
-    private InvestmentRate? LatestInvestmentRate => InvestmentRates.FirstOrDefault(x => x.Salary != 0);
     private InvestmentRate? CurrentMonthRate => MonthlyInvestmentRates.LastOrDefault();
 
     private decimal _currentMonthPercentage;
@@ -55,7 +53,6 @@ public partial class InvestmentRateCard
         _isLoading = true;
         try
         {
-            InvestmentRates.Clear();
             MonthlyInvestmentRates.Clear();
 
             var user = await LoginService.GetLoggedUser();
@@ -72,7 +69,6 @@ public partial class InvestmentRateCard
                 };
 
                 var snapshot = await AssetsPageCardsCacheService.GetSnapshotAsync(context);
-                InvestmentRates = [.. snapshot.InvestmentRates];
                 MonthlyInvestmentRates = [.. snapshot.MonthlyInvestmentRates];
 
                 BuildDerivedState();
@@ -93,18 +89,12 @@ public partial class InvestmentRateCard
         _currentMonthPercentage = CurrentMonthRate?.GetPercentage() ?? 0m;
 
         var currentYear = EndDateTime.Year;
-        var ytdEntries = MonthlyInvestmentRates
-            .Where(r => r.Start.Year == currentYear && r.Salary != 0)
-            .ToList();
-
-        _ytdAveragePercentage = ytdEntries.Count == 0
-            ? 0m
-            : ytdEntries.Average(r => r.GetPercentage());
+        var ytdEntries = MonthlyInvestmentRates.Where(r => r.Start.Year == currentYear).ToList();
+        var salaryYtd = ytdEntries.Sum(r => r.Salary);
+        var investedYtd = ytdEntries.Sum(r => r.InvestmentsChange);
+        _ytdAveragePercentage = salaryYtd == 0m ? 0m : investedYtd / salaryYtd;
 
         var monthsElapsed = EndDateTime.Month;
-        var investedYtd = MonthlyInvestmentRates
-            .Where(r => r.Start.Year == currentYear)
-            .Sum(r => r.InvestmentsChange);
 
         _endOfYearProjection = monthsElapsed == 0 || investedYtd == 0
             ? null

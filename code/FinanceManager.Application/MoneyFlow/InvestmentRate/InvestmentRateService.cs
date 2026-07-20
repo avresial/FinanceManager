@@ -1,6 +1,7 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Repositories;
@@ -11,17 +12,19 @@ using FinanceManager.Domain.MoneyFlow.Services;
 
 namespace FinanceManager.Application.MoneyFlow.InvestmentRate;
 
-public class InvestmentRateService(IFinancialAccountRepository financialAccountRepository, IFinancialLabelsRepository financialLabelsRepository,
-IInvestmentValuationService investmentValuationService) : IInvestmentRateService
+public class InvestmentRateService(
+    IFinancialAccountRepository financialAccountRepository,
+    IFinancialLabelsRepository financialLabelsRepository,
+    IInvestmentTransactionRepository investmentTransactionRepository,
+    ICurrencyRepository currencyRepository,
+    ICurrencyExchangeService currencyExchangeService) : IInvestmentRateService
 {
     private const int _salaryLookbackMonths = 12;
 
-    public async IAsyncEnumerable<Domain.MoneyFlow.Entities.InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end)
+    public async IAsyncEnumerable<Domain.MoneyFlow.Entities.InvestmentRate> GetInvestmentRate(int userId, Currency currency, DateTime start, DateTime end)
     {
         var labels = await financialLabelsRepository.GetLabels().ToListAsync();
         var salaryLabel = labels.Single(x => x.Name.ToLower() == "salary");
-
-        Currency currency = DefaultCurrency.PLN; // TODO: use user currency settings
 
         decimal salary = 0;
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
@@ -32,19 +35,23 @@ IInvestmentValuationService investmentValuationService) : IInvestmentRateService
         if (salary == 0)
             salary = await GetMostRecentSalaryBefore(userId, start, salaryLabel);
 
-        List<int> investmentAccountIds = [];
-        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, start, end))
-            investmentAccountIds.Add(account.AccountId);
-
         decimal investmentsChange = 0;
-        if (investmentAccountIds.Count > 0)
+        var transactions = await investmentTransactionRepository.GetByUser(userId, DateOnly.FromDateTime(start), DateOnly.FromDateTime(end));
+        foreach (var transaction in transactions)
         {
-            // Batched point valuation: one transactions query per as-of date, each distinct listing
-            // priced once across all accounts. The change nets across accounts, so the per-account
-            // breakdown is not needed here — summing the batched result matches the per-account loop.
-            var startValues = await investmentValuationService.GetAccountValueAsync(investmentAccountIds, currency, start);
-            var endValues = await investmentValuationService.GetAccountValueAsync(investmentAccountIds, currency, end);
-            investmentsChange = endValues.Values.Sum() - startValues.Values.Sum();
+            var amount = transaction.Type == Domain.FinancialAccounts.Investments.Entities.InvestmentTransactionType.Buy
+                ? transaction.Quantity * transaction.UnitPrice + (transaction.Fee ?? 0m)
+                : -transaction.Quantity * transaction.UnitPrice + (transaction.Fee ?? 0m);
+
+            if (!string.Equals(transaction.Currency, currency.ShortName, StringComparison.OrdinalIgnoreCase))
+            {
+                var sourceCurrency = await currencyRepository.GetOrAdd(transaction.Currency, transaction.Currency);
+                var exchangeRate = await currencyExchangeService.GetExchangeRateAsync(
+                    sourceCurrency, currency, transaction.TradeDate.ToDateTime(TimeOnly.MinValue));
+                amount *= exchangeRate ?? throw new InvalidOperationException($"No exchange rate from {sourceCurrency.ShortName} to {currency.ShortName} on {transaction.TradeDate}.");
+            }
+
+            investmentsChange += amount;
         }
 
         if (salary == 0 && investmentsChange == 0) yield break;
