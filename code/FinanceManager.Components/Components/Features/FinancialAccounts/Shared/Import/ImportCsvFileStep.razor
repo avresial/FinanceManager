@@ -6,7 +6,7 @@
         <MudAlert Severity="Severity.Error" Variant="Variant.Text" Dense="true">@error</MudAlert>
     }
 
-    @if (!RawPreview.Any() && (IsLoading || !string.IsNullOrEmpty(FileName)))
+    @if (!RawPreview.Any() && !string.IsNullOrEmpty(FileName))
     {
         <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="2" Class="py-12">
             <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
