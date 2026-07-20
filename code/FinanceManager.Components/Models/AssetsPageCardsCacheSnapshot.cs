@@ -16,7 +16,6 @@ public sealed class AssetsPageCardsCacheSnapshot
     public List<TimeSeriesModel> AssetsTimeSeries { get; set; } = [];
     public List<NameValueResult> EndAssetsPerType { get; set; } = [];
     public List<NameValueResult> EndAssetsPerAccount { get; set; } = [];
-    public List<InvestmentRate> InvestmentRates { get; set; } = [];
     public List<InvestmentRate> MonthlyInvestmentRates { get; set; } = [];
 }
 

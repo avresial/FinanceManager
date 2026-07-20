@@ -24,6 +24,7 @@ rules agents must follow when updating this file.
 - Exchange rates are now stored in the application database: a conversion first checks the in-memory cache and the database (including inverse pairs), and only on a miss asks the external rate provider — whose answer is persisted so the same pair and date never leave the app twice. Unknown pairs additionally fall back to a cross-rate via USD.
 
 ### Fixed
+- The **Investment rate** card now measures net investment purchases instead of portfolio market-value movement, keeps its headline and footer on the same monthly period, and uses a salary-weighted YTD average so every displayed figure reconciles. #561
 - Dashboard charts (Net worth, Net cash flow, Closing balance) now redraw when the date range changes; previously only the numbers updated while the charts kept showing the old period. #559
 - Selecting a custom date range on the account details pages (cash, bond, investment) now actually filters to the picked dates instead of silently falling back to the current month, and the selected end day is included in full. #559
 - The **Investment rate** card no longer shows 0.00 % and an empty monthly chart when the salary was received in a different month than the investment: months without a salary transaction now fall back to the most recent salary (up to 12 months back) as the denominator, and the month's investments change is reported even when no salary is found. #556

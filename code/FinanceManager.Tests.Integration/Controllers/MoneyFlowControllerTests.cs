@@ -225,7 +225,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         Authorize("TestUser", 1, UserRole.User);
         int days = 7;
 
-        var result = await new MoneyFlowHttpClient(Client).GetInvestmentRate(1, _nowUtc.AddDays(-days), _nowUtc).ToListAsync(TestContext.Current.CancellationToken);
+        var result = await new MoneyFlowHttpClient(Client).GetInvestmentRate(1, DefaultCurrency.USD, _nowUtc.AddDays(-days), _nowUtc).ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result);
@@ -586,7 +586,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         now => $"api/MoneyFlow/GetNetCashFlow/2/{DefaultCurrency.USD.Id}/{now.AddDays(-7):O}/{now:O}",
         now => $"api/MoneyFlow/GetClosingBalance/2/{DefaultCurrency.USD.Id}/{now.AddDays(-7):O}/{now:O}",
         now => $"api/MoneyFlow/GetLabelsValue?userId=2&start={now.AddDays(-7):O}&end={now:O}",
-        now => $"api/MoneyFlow/GetInvestmentRate?userId=2&start={now.AddDays(-7):O}&end={now:O}",
+        now => $"api/MoneyFlow/GetInvestmentRate?userId=2&currencyId={DefaultCurrency.USD.Id}&start={now.AddDays(-7):O}&end={now:O}",
     };
 
     [Theory]

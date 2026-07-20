@@ -72,9 +72,9 @@ public class MoneyFlowHttpClient(HttpClient httpClient)
         return result ?? [];
     }
 
-    public async IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, DateTime start, DateTime end)
+    public async IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, Currency currency, DateTime start, DateTime end)
     {
-        var results = await httpClient.GetFromJsonAsync<List<InvestmentRate>>($"{httpClient.BaseAddress}api/MoneyFlow/GetInvestmentRate?userId={userId}&start={start:O}&end={end:O}");
+        var results = await httpClient.GetFromJsonAsync<List<InvestmentRate>>($"{httpClient.BaseAddress}api/MoneyFlow/GetInvestmentRate?userId={userId}&currencyId={currency.Id}&start={start:O}&end={end:O}");
         if (results is null) yield break;
         foreach (var r in results) yield return r;
     }
