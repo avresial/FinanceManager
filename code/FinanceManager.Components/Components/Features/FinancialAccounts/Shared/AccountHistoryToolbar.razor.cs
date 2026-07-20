@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using MudBlazor;
 
 namespace FinanceManager.Components.Components.Features.FinancialAccounts.Shared;
@@ -51,6 +52,12 @@ public partial class AccountHistoryToolbar : ComponentBase
     {
         SelectedLabels = [];
         await SelectedLabelsChanged.InvokeAsync(SelectedLabels);
+    }
+
+    private async Task ToggleLabelMenu(MouseEventArgs args)
+    {
+        if (_labelMenu is not null)
+            await _labelMenu.ToggleMenuAsync(args);
     }
 
     private async Task CloseLabelMenu()
