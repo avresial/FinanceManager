@@ -143,19 +143,21 @@ public partial class TimeSeriesValueCard
     {
         if (State != LoadState.Ready || _chart is null) return;
 
-        var points = Data.Select(p => (p.DateTime, p.Value)).ToList();
+        // Hover raises StateHasChanged, so this runs often: compare lazily and only
+        // materialize the points when they are actually stored.
+        var points = Data.Select(p => (p.DateTime, p.Value));
         if (!ReferenceEquals(_chart, _drawnChart))
         {
             // A freshly created chart instance (first render, or remounted after a
             // loading/empty/error state) has just drawn the current data itself.
             _drawnChart = _chart;
-            _drawnPoints = points;
+            _drawnPoints = points.ToList();
             return;
         }
 
         if (points.SequenceEqual(_drawnPoints)) return;
 
-        _drawnPoints = points;
+        _drawnPoints = points.ToList();
         await _chart.RenderAsync();
     }
 
