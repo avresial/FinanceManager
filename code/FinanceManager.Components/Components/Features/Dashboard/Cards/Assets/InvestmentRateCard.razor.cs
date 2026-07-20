@@ -15,6 +15,7 @@ namespace FinanceManager.Components.Components.Features.Dashboard.Cards.Assets;
 public partial class InvestmentRateCard
 {
     private const string _highlightColor = "#FF9800";
+    private const decimal _maximumChartPercentage = 300m;
     private const string _mutedBarColor = "#5F6368";
     private const string _mutedLabelColor = "var(--mud-palette-text-secondary)";
 
@@ -111,7 +112,7 @@ public partial class InvestmentRateCard
             var rate = i < MonthlyInvestmentRates.Count ? MonthlyInvestmentRates[i] : null;
             var monthIndex = rate is not null ? rate.Start.Month - 1 : i;
             var label = _singleLetterMonths[monthIndex];
-            var pct = rate is not null ? (decimal)rate.GetPercentage() * 100m : 0m;
+            var pct = rate is not null ? Math.Min(rate.GetPercentage() * 100m, _maximumChartPercentage) : 0m;
             bars.Add(new MonthBar(label, pct, IsCurrent: i == 11, Key: $"{i}-{label}"));
         }
 
