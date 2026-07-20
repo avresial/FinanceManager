@@ -16,6 +16,7 @@ public partial class InvestmentPaycheckEstimatorCard
     private const decimal _rateMin = 0.02m;
     private const decimal _rateMax = 0.08m;
     private const decimal _rateStep = 0.001m;
+    private readonly DateTime _asOfDate = DateTime.UtcNow;
 
     private readonly RatePreset[] _presets =
     [
@@ -31,7 +32,6 @@ public partial class InvestmentPaycheckEstimatorCard
     private CancellationTokenSource? _persistCts;
 
     [Parameter] public string Height { get; set; } = "300px";
-    [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
     [Parameter] public int SalaryMonths { get; set; } = 3;
 
     [Inject] public required ILogger<InvestmentPaycheckEstimatorCard> Logger { get; set; }
@@ -54,10 +54,6 @@ public partial class InvestmentPaycheckEstimatorCard
     protected override async Task OnInitializedAsync()
     {
         _currency = await SettingsService.GetCurrencyAsync();
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
         await RefreshEstimate(showLoading: true);
     }
 
@@ -86,7 +82,7 @@ public partial class InvestmentPaycheckEstimatorCard
             {
                 UserId = user.UserId,
                 CurrencyId = _currency.Id,
-                EndDateTime = EndDateTime,
+                EndDateTime = _asOfDate,
                 WithdrawalRate = withdrawalRate,
                 SalaryMonths = SalaryMonths,
             };
