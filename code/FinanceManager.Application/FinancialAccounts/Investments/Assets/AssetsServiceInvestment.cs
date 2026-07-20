@@ -1,5 +1,6 @@
 using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
@@ -19,7 +20,8 @@ internal class AssetsServiceInvestment(
     IFinancialAccountRepository financialAccountRepository,
     IInvestmentValuationService valuationService,
     IInvestmentTransactionRepository transactionRepository,
-    IInvestmentPriceProvider priceProvider) : IAssetsServiceTyped
+    IInvestmentPriceProvider priceProvider,
+    ICurrencyExchangeService currencyExchangeService) : IAssetsServiceTyped
 {
     public bool IsOfType<T>() => typeof(T) == typeof(InvestmentAccount);
 
@@ -113,23 +115,35 @@ internal class AssetsServiceInvestment(
                 var listing = group.First().AssetListing;
                 var instrumentName = listing?.Ticker ?? group.Key.ToString();
 
-                // Average-cost basis from buy legs (including fees). Cost basis is recorded in each
-                // transaction's currency; when that differs from the requested display currency we
-                // cannot convert historical FX here, so flag the instrument and exclude it from totals.
                 var buys = group.Where(t => t.Type == InvestmentTransactionType.Buy).ToList();
                 var boughtQty = buys.Sum(t => t.Quantity);
-                var boughtCost = buys.Sum(t => t.Quantity * t.UnitPrice + (t.Fee ?? 0));
+                decimal boughtCost = 0m;
+                var missingExchangeRate = false;
+                foreach (var buy in buys)
+                {
+                    var sourceCurrency = new Currency { ShortName = buy.Currency, Symbol = buy.Currency };
+                    var exchangeRate = string.Equals(buy.Currency, currency.ShortName, StringComparison.OrdinalIgnoreCase)
+                        ? 1m
+                        : await currencyExchangeService.GetExchangeRateAsync(
+                            sourceCurrency, currency, buy.TradeDate.ToDateTime(TimeOnly.MinValue));
+                    if (exchangeRate is not decimal rate || rate <= 0m)
+                    {
+                        missingExchangeRate = true;
+                        break;
+                    }
+
+                    boughtCost += (buy.Quantity * buy.UnitPrice + (buy.Fee ?? 0m)) * rate;
+                }
                 var avgCost = boughtQty > 0 ? boughtCost / boughtQty : 0;
                 var costBasis = avgCost * holding;
 
                 var price = await priceProvider.GetPricePerUnitAsync(group.Key, currency, asOfDate);
                 var currentValue = holding * price;
 
-                var crossCurrency = group.Any(t => !string.Equals(t.Currency, currency.ShortName, StringComparison.OrdinalIgnoreCase));
-                var excluded = price <= 0 || crossCurrency;
+                var excluded = price <= 0 || missingExchangeRate;
                 string? warning = price <= 0
                     ? "No price available for this instrument."
-                    : crossCurrency ? "Cost basis is in a different currency; excluded from totals." : null;
+                    : missingExchangeRate ? "No exchange rate available for the transaction date." : null;
 
                 var unrealized = currentValue - costBasis;
                 var unrealizedPercent = costBasis == 0 ? 0 : unrealized / costBasis * 100;

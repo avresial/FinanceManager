@@ -53,7 +53,7 @@
                 </MudStack>
 
                 <MudStack Spacing="1" AlignItems="AlignItems.End">
-                    <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">Change · @SelectedRange</MudText>
+                    <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">@ChangeLabel@(ShowChangeRange ? $" · {SelectedRange}" : null)</MudText>
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                         <MudIcon
                         Icon="@(BalanceChange >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
