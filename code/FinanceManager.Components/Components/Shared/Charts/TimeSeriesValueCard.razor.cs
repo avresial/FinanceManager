@@ -161,33 +161,25 @@ public partial class TimeSeriesValueCard
         await _chart.RenderAsync();
     }
 
-    // Pin the Y axis to a "nice" zero-based range so the card shows ~5 round
-    // gridline labels (2.5k / 5k / …) like the design, instead of ApexCharts
-    // collapsing forceNiceScale to one or two ticks. Always spans the zero
-    // baseline so the area fill reads correctly for positive (assets) and
-    // negative (liabilities) series alike.
+    // Keep small changes visible by padding the displayed data range instead
+    // of forcing every series through zero.
     private void ApplyYScale()
     {
         var axis = _options?.Yaxis?.FirstOrDefault();
         if (axis is null || Data.Count == 0) return;
 
-        double lo = Math.Min(0d, (double)Data.Min(p => p.Value));
-        double hi = Math.Max(0d, (double)Data.Max(p => p.Value));
-        if (hi <= lo) hi = lo + 1d;
-
-        double rawStep = (hi - lo) / 5d;
-        double mag = Math.Pow(10, Math.Floor(Math.Log10(rawStep)));
-        double norm = rawStep / mag;
-        double step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10) * mag;
-
-        double niceMin = Math.Floor(lo / step) * step;
-        double niceMax = Math.Ceiling(hi / step) * step;
-        int ticks = Math.Max(1, (int)Math.Round((niceMax - niceMin) / step));
-
-        axis.Min = niceMin;
-        axis.Max = niceMax;
-        axis.TickAmount = ticks;
+        var bounds = AddYRangePadding((double)Data.Min(p => p.Value), (double)Data.Max(p => p.Value));
+        axis.Min = bounds.Min;
+        axis.Max = bounds.Max;
+        axis.TickAmount = 5;
         axis.ForceNiceScale = false;
+    }
+
+    internal static (double Min, double Max) AddYRangePadding(double minimum, double maximum)
+    {
+        var range = maximum - minimum;
+        var padding = range == 0 ? Math.Max(Math.Abs(minimum) * 0.05, 1) : range * 0.05;
+        return (minimum - padding, maximum + padding);
     }
 
     private void OnPointEnter(HoverData<TimeSeriesModel> hoverData)
