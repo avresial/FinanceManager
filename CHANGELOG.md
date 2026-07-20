@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Investment closing prices are now backfilled automatically every Saturday for every held instrument, so charts and valuations keep a complete weekly price history even for instruments nobody opened recently. #569
 - The dashboard has a new **Transaction log** card showing your most recent transactions across all accounts — currency, bond, and investment — in one newest-first list. #549
 - The dashboard can now be personalized: a **Customize** menu lets each user show or hide individual cards, and cards with no data for the selected period (e.g. liabilities when you have none) are hidden automatically. Preferences are saved per user in the browser. #547
 - The admin **Users** page now shows a **"Last logged at"** column with each user's most recent login date (or `Never` for accounts that have never signed in). #540

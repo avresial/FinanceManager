@@ -103,4 +103,11 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
                 g => g.Key,
                 g => g.Sum(t => t.Type == InvestmentTransactionType.Sell ? -t.Quantity : t.Quantity));
     }
+
+    public async Task<IReadOnlyList<long>> GetDistinctAssetListingIds(CancellationToken cancellationToken = default) =>
+        await context.InvestmentTransactions.AsNoTracking()
+            .Select(x => x.AssetListingId)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToListAsync(cancellationToken);
 }

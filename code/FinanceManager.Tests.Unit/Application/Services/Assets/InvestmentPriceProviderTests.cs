@@ -384,6 +384,85 @@ public class InvestmentPriceProviderTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task EnsureQuotes_FetchesAndPersists_WhenRangeIsEmpty()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = new DateTime(2024, 1, 5);
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing());
+        _priceSource
+            .Setup(x => x.GetDailySeries("CSPX.LON", It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Price(100m, start), Price(105m, end)]);
+
+        var covered = await CreateSut().EnsureQuotesAsync(10, start, end, TestContext.Current.CancellationToken);
+
+        Assert.True(covered);
+        Assert.Equal(2, _priceQuoteRepository.All.Count);
+        _currencyExchangeService.Verify(
+            x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task EnsureQuotes_DoesNotFetch_WhenRangeAlreadyCovered()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = new DateTime(2024, 1, 5);
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing());
+        _priceQuoteRepository.Seed(new PriceQuote
+        {
+            AssetListingId = 10,
+            Provider = MarketDataProvider.AlphaVantage,
+            Price = 100m,
+            Currency = "USD",
+            PriceTime = new DateTimeOffset(new DateTime(2024, 1, 3), TimeSpan.Zero),
+            QuoteType = PriceQuoteType.EndOfDay
+        });
+
+        var covered = await CreateSut().EnsureQuotesAsync(10, start, end, TestContext.Current.CancellationToken);
+
+        Assert.True(covered);
+        _priceSource.Verify(
+            x => x.GetDailySeries(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task EnsureQuotes_ReturnsFalse_WhenProviderHasNoData()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = new DateTime(2024, 1, 5);
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing());
+        _priceSource
+            .Setup(x => x.GetDailySeries(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var covered = await CreateSut().EnsureQuotesAsync(10, start, end, TestContext.Current.CancellationToken);
+
+        Assert.False(covered);
+        Assert.Empty(_priceQuoteRepository.All);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task EnsureQuotes_ReturnsFalse_ForInvalidListingId(long listingId)
+    {
+        var covered = await CreateSut().EnsureQuotesAsync(listingId, new DateTime(2024, 1, 1), new DateTime(2024, 1, 5), TestContext.Current.CancellationToken);
+
+        Assert.False(covered);
+    }
+
+    [Fact]
+    public async Task EnsureQuotes_ReturnsFalse_WhenListingDoesNotExist()
+    {
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync((AssetListing?)null);
+
+        var covered = await CreateSut().EnsureQuotesAsync(10, new DateTime(2024, 1, 1), new DateTime(2024, 1, 5), TestContext.Current.CancellationToken);
+
+        Assert.False(covered);
+    }
+
     /// <summary>Minimal in-memory <see cref="IPriceQuoteRepository"/> so fetch→store→read flows are exercised end-to-end.</summary>
     private sealed class InMemoryPriceQuoteRepository : IPriceQuoteRepository
     {

@@ -160,6 +160,20 @@ public class InvestmentPriceProvider(
         return series;
     }
 
+    public async Task<bool> EnsureQuotesAsync(long assetListingId, DateTime start, DateTime end, CancellationToken ct = default)
+    {
+        if (assetListingId <= 0 || start == default || end == default || end < start)
+            return false;
+
+        var listing = await listingRepository.Get(assetListingId, ct);
+        if (listing is null) return false;
+
+        await TryFetchAndStoreAsync(listing, start.Date, end.Date, ct);
+
+        var quotes = await priceQuoteRepository.GetRange(assetListingId, DayStart(start), DayEnd(end), ct);
+        return quotes.Count > 0;
+    }
+
     // FX gaps (weekends, holidays, dates past the exchange service's per-call resolution cap)
     // reuse the nearest known rate in the range: forward-fill first, then backfill the leading
     // edge from the earliest known rate.
