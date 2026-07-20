@@ -33,6 +33,7 @@ public partial class AdminServiceKeys : ComponentBase
     }
 
     [Inject] public AdminServiceKeysHttpClient ApiClient { get; set; } = default!;
+    [Inject] public AdminMaintenanceKeyHttpClient MaintenanceKeyClient { get; set; } = default!;
     [Inject] public ISnackbar Snackbar { get; set; } = default!;
 
     private bool _isLoading = true;
@@ -40,6 +41,10 @@ public partial class AdminServiceKeys : ComponentBase
     private readonly List<ServiceModel> _services = [];
     private readonly HashSet<string> _savingServices = [];
     private readonly Dictionary<string, bool> _showApiKey = [];
+
+    private MaintenanceKeyStatusResponse? _maintenanceKeyStatus;
+    private string? _generatedMaintenanceKey;
+    private bool _maintenanceKeyBusy;
 
     protected override async Task OnInitializedAsync()
     {
@@ -62,6 +67,8 @@ public partial class AdminServiceKeys : ComponentBase
                 _services.Add(ToModel(s));
                 _showApiKey[s.ServiceName] = false;
             }
+
+            _maintenanceKeyStatus = await MaintenanceKeyClient.GetStatusAsync();
         }
         catch (Exception ex)
         {
@@ -119,5 +126,52 @@ public partial class AdminServiceKeys : ComponentBase
     private void ToggleApiKeyVisibility(string serviceName)
     {
         _showApiKey[serviceName] = !_showApiKey.GetValueOrDefault(serviceName);
+    }
+
+    private async Task GenerateMaintenanceKeyAsync()
+    {
+        _maintenanceKeyBusy = true;
+        try
+        {
+            var generated = await MaintenanceKeyClient.GenerateAsync();
+            if (generated is null)
+            {
+                _errors.Add("Failed to generate the maintenance key: empty response.");
+                return;
+            }
+
+            _generatedMaintenanceKey = generated.Key;
+            _maintenanceKeyStatus = new MaintenanceKeyStatusResponse(true, generated.CreatedAt);
+            Snackbar.Add("Maintenance key generated. Copy it now — it will not be shown again.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            _errors.Add($"Failed to generate the maintenance key: {ex.Message}");
+        }
+        finally
+        {
+            _maintenanceKeyBusy = false;
+        }
+    }
+
+    private async Task RevokeMaintenanceKeyAsync()
+    {
+        _maintenanceKeyBusy = true;
+        try
+        {
+            var revoked = await MaintenanceKeyClient.RevokeAsync();
+            _generatedMaintenanceKey = null;
+            _maintenanceKeyStatus = new MaintenanceKeyStatusResponse(false, null);
+            Snackbar.Add(revoked ? "Maintenance key revoked." : "There was no maintenance key to revoke.",
+                revoked ? Severity.Success : Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            _errors.Add($"Failed to revoke the maintenance key: {ex.Message}");
+        }
+        finally
+        {
+            _maintenanceKeyBusy = false;
+        }
     }
 }

@@ -6,6 +6,7 @@ using FinanceManager.Application.Identity.Users;
 using FinanceManager.Application.Insights;
 using FinanceManager.Application.Labels;
 using FinanceManager.Application.MoneyFlow;
+using FinanceManager.Application.Shared.Maintenance;
 using FinanceManager.Application.Shared.Time;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
@@ -32,6 +33,7 @@ public static class ServiceCollectionExtension
         // ISeeder registration order (admin/test users, then financial-account
         // detail seeders, then labels).
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+        services.AddScoped<IMaintenanceKeyService, MaintenanceKeyService>();
 
         services
             .AddIdentityApplication()

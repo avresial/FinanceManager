@@ -65,6 +65,7 @@ public static class ApiConfigurationExtensions
             .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "Ollama:BaseUrl must be configured.")
             .ValidateOnStart();
         services.Configure<AiProviderOptions>(configuration.GetSection("AiProvider"));
+        services.Configure<MaintenanceOptions>(configuration.GetSection(MaintenanceOptions.SectionName));
         services.Configure<List<AiProviderFallbackStrategyOption>>(configuration.GetSection("AIProviderFallbackStrategies"));
 
         return services;
@@ -275,6 +276,8 @@ public static class ApiConfigurationExtensions
         services.AddSingleton<ICurrencyImportJobChannel, CurrencyImportJobChannel>();
         services.AddSingleton<ICurrencyImportJobStore, CurrencyImportJobStore>();
         services.AddHostedService<CurrencyImportBackgroundService>();
+        services.AddSingleton<IPriceBackfillJobChannel, PriceBackfillJobChannel>();
+        services.AddHostedService<PriceBackfillBackgroundService>();
 
         services.Configure<LogRetentionOptions>(configuration.GetSection(LogRetentionOptions.SectionName));
         services.AddSingleton<ILogEntryQueue, LogEntryQueue>();

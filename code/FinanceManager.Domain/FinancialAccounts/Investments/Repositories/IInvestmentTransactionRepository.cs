@@ -42,4 +42,11 @@ public interface IInvestmentTransactionRepository
     /// Replaces the old per-ISIN running-balance boundary lookups with a single grouped query.
     /// </summary>
     Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsOf(IReadOnlyCollection<int> accountIds, DateOnly asOf, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The distinct <see cref="AssetListing"/> ids referenced by any investment transaction across all
+    /// users, resolved in a single grouped query. Feeds maintenance jobs (e.g. the weekly price
+    /// backfill) that must cover every instrument anyone holds without materialising transactions.
+    /// </summary>
+    Task<IReadOnlyList<long>> GetDistinctAssetListingIds(CancellationToken cancellationToken = default);
 }

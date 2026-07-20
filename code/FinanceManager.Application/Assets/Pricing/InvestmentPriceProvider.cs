@@ -160,6 +160,29 @@ public class InvestmentPriceProvider(
         return series;
     }
 
+    public async Task<bool> EnsureQuotesAsync(long assetListingId, DateTime start, DateTime end, CancellationToken ct = default)
+    {
+        if (assetListingId <= 0 || start == default || end == default || end < start)
+            return false;
+
+        var listing = await listingRepository.Get(assetListingId, ct);
+        if (listing is null) return false;
+
+        var startDate = start.Date;
+        var endDate = end.Date;
+
+        // Coverage check before the fetch path, mirroring GetPricePerUnitSeriesAsync: an
+        // already-covered listing skips the per-symbol lock and the provider chain entirely.
+        var existing = await priceQuoteRepository.GetRange(assetListingId, DayStart(startDate), DayEnd(endDate), ct);
+        if (!NeedsFetch(existing, startDate, endDate))
+            return existing.Count > 0;
+
+        await TryFetchAndStoreAsync(listing, startDate, endDate, ct);
+
+        existing = await priceQuoteRepository.GetRange(assetListingId, DayStart(startDate), DayEnd(endDate), ct);
+        return existing.Count > 0;
+    }
+
     // FX gaps (weekends, holidays, dates past the exchange service's per-call resolution cap)
     // reuse the nearest known rate in the range: forward-fill first, then backfill the leading
     // edge from the earliest known rate.
