@@ -22,6 +22,7 @@ public partial class InvestmentRateCard
     private static readonly string[] _singleLetterMonths =
         ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 
+    private readonly DateTime _asOfDate = DateTime.UtcNow;
     private bool _isLoading;
     private Currency _currency = DefaultCurrency.PLN;
 
@@ -36,20 +37,19 @@ public partial class InvestmentRateCard
     private ApexChartOptions<MonthBar>? _chartOptions;
 
     [Parameter] public string Height { get; set; } = "300px";
-    [Parameter] public DateTime StartDateTime { get; set; }
-    [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
     [Inject] public required ILogger<InvestmentRateCard> Logger { get; set; }
-    [Inject] public required AssetsPageCardsCacheService AssetsPageCardsCacheService { get; set; }
+    [Inject] public required InvestmentRateCacheService InvestmentRateCacheService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         _currency = await SettingsService.GetCurrencyAsync();
+        await LoadInvestmentRatesAsync();
     }
 
-    protected override async Task OnParametersSetAsync()
+    private async Task LoadInvestmentRatesAsync()
     {
         _isLoading = true;
         try
@@ -61,15 +61,14 @@ public partial class InvestmentRateCard
 
             try
             {
-                var context = new AssetsPageCardsRefreshContext
+                var context = new InvestmentRateRefreshContext
                 {
                     UserId = user.UserId,
                     CurrencyId = _currency.Id,
-                    StartDateTime = StartDateTime,
-                    EndDateTime = EndDateTime,
+                    EndDateTime = _asOfDate,
                 };
 
-                var snapshot = await AssetsPageCardsCacheService.GetSnapshotAsync(context);
+                var snapshot = await InvestmentRateCacheService.GetSnapshotAsync(context);
                 MonthlyInvestmentRates = [.. snapshot.MonthlyInvestmentRates];
 
                 BuildDerivedState();
@@ -89,13 +88,13 @@ public partial class InvestmentRateCard
     {
         _currentMonthPercentage = CurrentMonthRate?.GetPercentage() ?? 0m;
 
-        var currentYear = EndDateTime.Year;
+        var currentYear = _asOfDate.Year;
         var ytdEntries = MonthlyInvestmentRates.Where(r => r.Start.Year == currentYear).ToList();
         var salaryYtd = ytdEntries.Sum(r => r.Salary);
         var investedYtd = ytdEntries.Sum(r => r.InvestmentsChange);
         _ytdAveragePercentage = salaryYtd == 0m ? 0m : investedYtd / salaryYtd;
 
-        var monthsElapsed = EndDateTime.Month;
+        var monthsElapsed = _asOfDate.Month;
 
         _endOfYearProjection = monthsElapsed == 0 || investedYtd == 0
             ? null
