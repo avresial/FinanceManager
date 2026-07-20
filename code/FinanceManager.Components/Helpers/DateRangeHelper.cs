@@ -2,6 +2,13 @@
 
 public static class DateRangeHelper
 {
+    /// <summary>
+    /// Selection key for a user-picked custom date range. Every range selector and
+    /// every consumer comparing against it must use this constant — a mismatched
+    /// literal silently falls through to the default range.
+    /// </summary>
+    public const string CustomRangeKey = "Custom";
+
     public static (DateTime Start, DateTime End) GetAccountDetailsRange(
         string selection,
         DateTime? customStart,
@@ -10,8 +17,13 @@ public static class DateRangeHelper
         DateTime defaultStart,
         DateTime now)
     {
-        if (selection == "Custom")
-            return (customStart ?? customFallbackStart, customEnd is DateTime end && end < now ? end : now);
+        if (selection == CustomRangeKey)
+        {
+            // Date pickers return midnight for the end day; extend it to end-of-day so
+            // the selected day's entries are included, then clamp to now.
+            var inclusiveEnd = customEnd is DateTime end ? end.Date.AddDays(1).AddTicks(-1) : now;
+            return (customStart ?? customFallbackStart, inclusiveEnd < now ? inclusiveEnd : now);
+        }
 
         var start = selection switch
         {

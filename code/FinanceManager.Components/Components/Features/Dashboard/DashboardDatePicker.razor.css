@@ -1,0 +1,7 @@
+/* The custom date-range picker is driven entirely by the calendar icon button and
+   opened programmatically as a dialog. Hide only its own inline input field so just
+   the icon acts as the trigger. The dialog overlay is rendered separately when opened
+   and is unaffected by this rule. */
+.fm-dashboard-custom-range-picker ::deep .mud-picker > .mud-input-control {
+    display: none;
+}
