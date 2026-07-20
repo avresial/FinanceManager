@@ -12,3 +12,7 @@
 .investment-rate-card__chart ::deep .apexcharts-toolbar {
     display: none !important;
 }
+
+.investment-rate-card__chart ::deep .apexcharts-bar-area {
+    cursor: pointer;
+}

@@ -9,6 +9,7 @@ using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
+using System.Globalization;
 
 namespace FinanceManager.Components.Components.Features.Dashboard.Cards.Assets;
 
@@ -30,9 +31,18 @@ public partial class InvestmentRateCard
 
     private InvestmentRate? CurrentMonthRate => MonthlyInvestmentRates.LastOrDefault();
 
+    internal InvestmentRate? SelectedMonthRate =>
+        _selectedRateIndex >= 0 && _selectedRateIndex < MonthlyInvestmentRates.Count
+            ? MonthlyInvestmentRates[_selectedRateIndex]
+            : null;
+
+    private string SelectedMonthName =>
+        SelectedMonthRate?.Start.ToString("MMMM", CultureInfo.InvariantCulture) ?? "Month";
+
     private decimal _currentMonthPercentage;
     private decimal _ytdAveragePercentage;
     private decimal? _endOfYearProjection;
+    private int _selectedRateIndex;
     private List<MonthBar> _series = [];
     private ApexChartOptions<MonthBar>? _chartOptions;
 
@@ -86,6 +96,7 @@ public partial class InvestmentRateCard
 
     private void BuildDerivedState()
     {
+        _selectedRateIndex = MonthlyInvestmentRates.Count - 1;
         _currentMonthPercentage = CurrentMonthRate?.GetPercentage() ?? 0m;
 
         var currentYear = _asOfDate.Year;
@@ -112,13 +123,13 @@ public partial class InvestmentRateCard
             var monthIndex = rate is not null ? rate.Start.Month - 1 : i;
             var label = _singleLetterMonths[monthIndex];
             var pct = rate is not null ? Math.Min(rate.GetPercentage() * 100m, _maximumChartPercentage) : 0m;
-            bars.Add(new MonthBar(label, pct, IsCurrent: i == 11, Key: $"{i}-{label}"));
+            bars.Add(new MonthBar(label, pct, IsSelected: i == _selectedRateIndex, Key: $"{i}-{label}"));
         }
 
         _series = bars;
 
         var labelColors = bars
-            .Select(b => b.IsCurrent ? _highlightColor : _mutedLabelColor)
+            .Select(b => b.IsSelected ? _highlightColor : _mutedLabelColor)
             .ToArray();
 
         _chartOptions = new ApexChartOptions<MonthBar>
@@ -179,10 +190,35 @@ public partial class InvestmentRateCard
                         BorderColor = _mutedLabelColor,
                         StrokeDashArray = 4,
                         BorderWidth = 1,
+                        Label = new Label
+                        {
+                            Text = FormatAveragePercentage(_ytdAveragePercentage),
+                            Position = LabelPosition.Right,
+                            BorderColor = "transparent",
+                            Style = new Style
+                            {
+                                Background = "transparent",
+                                Color = _mutedLabelColor,
+                                FontSize = "11px",
+                            },
+                        },
                     },
                 ],
             };
         }
+    }
+
+    private void OnBarSelected(SelectedData<MonthBar> selection)
+    {
+        if (!SelectMonth(selection.DataPointIndex)) return;
+        BuildChart();
+    }
+
+    internal bool SelectMonth(int index)
+    {
+        if (index < 0 || index >= MonthlyInvestmentRates.Count) return false;
+        _selectedRateIndex = index;
+        return true;
     }
 
     private static string FormatRateNumber(decimal value) => $"{value * 100m:0.00}";
@@ -197,5 +233,5 @@ public partial class InvestmentRateCard
         ? "—"
         : $"{_endOfYearProjection.Value:N0} {_currency.ShortName}";
 
-    internal record MonthBar(string Label, decimal Percentage, bool IsCurrent, string Key);
+    internal record MonthBar(string Label, decimal Percentage, bool IsSelected, string Key);
 }

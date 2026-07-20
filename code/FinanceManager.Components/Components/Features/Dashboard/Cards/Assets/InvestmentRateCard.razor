@@ -36,6 +36,8 @@
                 {
                     <ApexChart TItem="MonthBar"
                                Options="@_chartOptions"
+                               OnDataPointSelection="OnBarSelected"
+                               @key="_selectedRateIndex"
                                Height="@("100%")">
                         <ApexPointSeries TItem="MonthBar"
                                          Items="@_series"
@@ -43,7 +45,7 @@
                                          SeriesType="SeriesType.Bar"
                                          XValue="@(p => (object)p.Label)"
                                          YValue="@(p => (decimal?)p.Percentage)"
-                                         PointColor="@(p => p.IsCurrent ? _highlightColor : _mutedBarColor)" />
+                                         PointColor="@(p => p.IsSelected ? _highlightColor : _mutedBarColor)" />
                     </ApexChart>
                 }
             </div>
@@ -52,14 +54,14 @@
             <MudDivider Class="my-1" Style="flex-grow:0;" />
             <MudGrid Spacing="1">
                 <MudItem xs="6">
-                    <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">This month salary</MudText>
-                    <MudText Typo="Typo.body2">@FormatAmount(CurrentMonthRate?.Salary ?? 0)</MudText>
+                    <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">@SelectedMonthName salary</MudText>
+                    <MudText Typo="Typo.body2">@FormatAmount(SelectedMonthRate?.Salary ?? 0)</MudText>
                 </MudItem>
                 <MudItem xs="6">
-                    <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">This month invested</MudText>
+                    <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">@SelectedMonthName invested</MudText>
                     <MudText Typo="Typo.body2"
-                             Color="@(CurrentMonthRate?.InvestmentsChange > 0 ? MudBlazor.Color.Success : MudBlazor.Color.Default)">
-                        @FormatChange(CurrentMonthRate?.InvestmentsChange ?? 0)
+                             Color="@(SelectedMonthRate?.InvestmentsChange > 0 ? MudBlazor.Color.Success : MudBlazor.Color.Default)">
+                        @FormatChange(SelectedMonthRate?.InvestmentsChange ?? 0)
                     </MudText>
                 </MudItem>
             </MudGrid>
