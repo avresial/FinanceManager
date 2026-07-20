@@ -30,8 +30,8 @@ public static class UploadedCsvFileReader
     private static string Decode(byte[] bytes)
     {
         ReadOnlySpan<byte> content = bytes;
-        if (content.StartsWith(_strictUtf8.Preamble))
-            content = content[_strictUtf8.Preamble.Length..];
+        if (content.StartsWith(Encoding.UTF8.Preamble))
+            content = content[Encoding.UTF8.Preamble.Length..];
 
         try
         {
