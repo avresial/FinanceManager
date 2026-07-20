@@ -49,6 +49,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<AdministrationUsersHttpClient>()
                 .AddScoped<AdminAiProvidersHttpClient>()
                 .AddScoped<AdminServiceKeysHttpClient>()
+                .AddScoped<AdminMaintenanceKeyHttpClient>()
                 .AddScoped<AdminLogsHttpClient>()
                 .AddScoped<NewVisitorsHttpClient>()
                 .AddScoped<CsvHeaderMappingHttpClient>()

@@ -25,6 +25,7 @@ using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Domain.Shared.Ai.Repositories;
 using FinanceManager.Domain.Shared.Charting;
 using FinanceManager.Domain.Shared.ExternalServices.Repositories;
+using FinanceManager.Domain.Shared.Maintenance.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Guest;
 using FinanceManager.Infrastructure.Providers;
@@ -98,6 +99,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()
                 .AddScoped<IAiProviderConfigRepository, AiProviderConfigRepository>()
                 .AddScoped<IExternalServiceConfigRepository, ExternalServiceConfigRepository>()
+                .AddScoped<IMaintenanceKeyRepository, MaintenanceKeyRepository>()
                 .AddScoped<ILogEntryRepository, LogEntryRepository>()
 
                 .AddSingleton<IInsightsPromptProvider, InsightsPromptProvider>()

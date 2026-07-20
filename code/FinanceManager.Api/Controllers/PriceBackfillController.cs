@@ -1,11 +1,8 @@
 using FinanceManager.Api.Services;
-using FinanceManager.Application.Shared.Options;
+using FinanceManager.Application.Shared.Maintenance;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.Options;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace FinanceManager.Api.Controllers;
 
@@ -20,7 +17,7 @@ namespace FinanceManager.Api.Controllers;
 [Tags("Maintenance")]
 [EnableRateLimiting(RateLimitingServiceCollectionExtension.AuthPolicy)]
 public class PriceBackfillController(
-    IOptions<MaintenanceOptions> maintenanceOptions,
+    IMaintenanceKeyService maintenanceKeyService,
     IPriceBackfillJobChannel channel,
     ILogger<PriceBackfillController> logger) : ControllerBase
 {
@@ -32,18 +29,16 @@ public class PriceBackfillController(
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult Trigger()
+    public async Task<IActionResult> Trigger(CancellationToken cancellationToken = default)
     {
-        var configuredKey = maintenanceOptions.Value.ApiKey;
-
-        // 404 (not 401) when no key is configured so deployments that never opted into maintenance
-        // endpoints are indistinguishable from ones where the route does not exist (same stance as
-        // DevelopLoginController outside development).
-        if (string.IsNullOrWhiteSpace(configuredKey))
+        // 404 (not 401) when no key exists anywhere so deployments that never opted into
+        // maintenance endpoints are indistinguishable from ones where the route does not exist
+        // (same stance as DevelopLoginController outside development).
+        if (!await maintenanceKeyService.IsConfiguredAsync(cancellationToken))
             return NotFound();
 
         if (!Request.Headers.TryGetValue(ApiKeyHeader, out var providedKey) ||
-            !FixedTimeEquals(configuredKey, providedKey.ToString()))
+            !await maintenanceKeyService.ValidateAsync(providedKey.ToString(), cancellationToken))
         {
             logger.LogWarning("Price backfill trigger rejected: missing or invalid maintenance key.");
             return Unauthorized();
@@ -61,10 +56,4 @@ public class PriceBackfillController(
 
         return Accepted(value: new { start, end, queued });
     }
-
-    // Constant-time comparison so response timing cannot be used to guess the key byte by byte.
-    private static bool FixedTimeEquals(string expected, string provided) =>
-        CryptographicOperations.FixedTimeEquals(
-            Encoding.UTF8.GetBytes(expected),
-            Encoding.UTF8.GetBytes(provided));
 }

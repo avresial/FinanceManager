@@ -1,10 +1,9 @@
 using FinanceManager.Api.Controllers;
 using FinanceManager.Api.Services;
-using FinanceManager.Application.Shared.Options;
+using FinanceManager.Application.Shared.Maintenance;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Api.Controllers;
@@ -12,18 +11,19 @@ namespace FinanceManager.Tests.Unit.Api.Controllers;
 [Trait("Category", "Unit")]
 public class PriceBackfillControllerTests
 {
-    private const string _configuredKey = "test-maintenance-key";
+    private const string _validKey = "fmk_test-maintenance-key";
 
+    private readonly Mock<IMaintenanceKeyService> _keyService = new();
     private readonly Mock<IPriceBackfillJobChannel> _channel = new();
 
-    private PriceBackfillController CreateController(string? configuredKey, string? providedKey)
+    private PriceBackfillController CreateController(string? providedKey)
     {
         var httpContext = new DefaultHttpContext();
         if (providedKey is not null)
             httpContext.Request.Headers[PriceBackfillController.ApiKeyHeader] = providedKey;
 
         return new PriceBackfillController(
-            Options.Create(new MaintenanceOptions { ApiKey = configuredKey ?? string.Empty }),
+            _keyService.Object,
             _channel.Object,
             NullLogger<PriceBackfillController>.Instance)
         {
@@ -31,13 +31,20 @@ public class PriceBackfillControllerTests
         };
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Trigger_WithoutConfiguredKey_ReturnsNotFound(string? configuredKey)
+    private void SetupConfiguredKey()
     {
-        var result = CreateController(configuredKey, _configuredKey).Trigger();
+        _keyService.Setup(x => x.IsConfiguredAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        _keyService
+            .Setup(x => x.ValidateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string key, CancellationToken _) => key == _validKey);
+    }
+
+    [Fact]
+    public async Task Trigger_WithoutAnyConfiguredKey_ReturnsNotFound()
+    {
+        _keyService.Setup(x => x.IsConfiguredAsync(It.IsAny<CancellationToken>())).ReturnsAsync(false);
+
+        var result = await CreateController(_validKey).Trigger(TestContext.Current.CancellationToken);
 
         Assert.IsType<NotFoundResult>(result);
         _channel.Verify(x => x.TryQueueJob(It.IsAny<PriceBackfillJobRequest>()), Times.Never);
@@ -47,24 +54,27 @@ public class PriceBackfillControllerTests
     [InlineData(null)]
     [InlineData("wrong-key")]
     [InlineData("")]
-    public void Trigger_WithMissingOrWrongKey_ReturnsUnauthorized(string? providedKey)
+    public async Task Trigger_WithMissingOrWrongKey_ReturnsUnauthorized(string? providedKey)
     {
-        var result = CreateController(_configuredKey, providedKey).Trigger();
+        SetupConfiguredKey();
+
+        var result = await CreateController(providedKey).Trigger(TestContext.Current.CancellationToken);
 
         Assert.IsType<UnauthorizedResult>(result);
         _channel.Verify(x => x.TryQueueJob(It.IsAny<PriceBackfillJobRequest>()), Times.Never);
     }
 
     [Fact]
-    public void Trigger_WithValidKey_QueuesPastWeekAndReturnsAccepted()
+    public async Task Trigger_WithValidKey_QueuesPastWeekAndReturnsAccepted()
     {
+        SetupConfiguredKey();
         PriceBackfillJobRequest? queued = null;
         _channel
             .Setup(x => x.TryQueueJob(It.IsAny<PriceBackfillJobRequest>()))
             .Callback((PriceBackfillJobRequest request) => queued = request)
             .Returns(true);
 
-        var result = CreateController(_configuredKey, _configuredKey).Trigger();
+        var result = await CreateController(_validKey).Trigger(TestContext.Current.CancellationToken);
 
         Assert.IsType<AcceptedResult>(result);
         Assert.NotNull(queued);
@@ -73,11 +83,12 @@ public class PriceBackfillControllerTests
     }
 
     [Fact]
-    public void Trigger_WhenRunAlreadyQueued_StillReturnsAccepted()
+    public async Task Trigger_WhenRunAlreadyQueued_StillReturnsAccepted()
     {
+        SetupConfiguredKey();
         _channel.Setup(x => x.TryQueueJob(It.IsAny<PriceBackfillJobRequest>())).Returns(false);
 
-        var result = CreateController(_configuredKey, _configuredKey).Trigger();
+        var result = await CreateController(_validKey).Trigger(TestContext.Current.CancellationToken);
 
         Assert.IsType<AcceptedResult>(result);
     }

@@ -12,6 +12,7 @@ using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Shared.Ai.Entities;
 using FinanceManager.Domain.Shared.ExternalServices.Entities;
+using FinanceManager.Domain.Shared.Maintenance.Entities;
 using FinanceManager.Infrastructure.Contexts.Configurations;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,6 +46,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AiProviderModel> AiProviderModels { get; set; } = default!;
     public DbSet<LogEntry> LogEntries { get; set; } = default!;
     public DbSet<ExternalServiceConfiguration> ExternalServiceConfigurations { get; set; } = default!;
+    public DbSet<MaintenanceApiKey> MaintenanceApiKeys { get; set; } = default!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -75,6 +77,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new AiProviderModelConfiguration());
         modelBuilder.ApplyConfiguration(new LogEntryConfiguration());
         modelBuilder.ApplyConfiguration(new ExternalServiceConfigurationConfiguration());
+        modelBuilder.ApplyConfiguration(new MaintenanceApiKeyConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }
