@@ -29,8 +29,8 @@ public class JwtTokenGeneratorTests
         var provider = new CustomAuthenticationStateProvider();
         var state = await provider.ChangeUser("user", "1", role);
 
-        Assert.Contains(nameof(UserRole.User), tokenRoles);
-        Assert.Equal(isAdmin, tokenRoles.Contains(nameof(UserRole.Admin)));
+        string[] expectedRoles = isAdmin ? [nameof(UserRole.User), nameof(UserRole.Admin)] : [nameof(UserRole.User)];
+        Assert.Equal(expectedRoles, tokenRoles);
         Assert.True(state.User.IsInRole(nameof(UserRole.User)));
         Assert.Equal(isAdmin, state.User.IsInRole(nameof(UserRole.Admin)));
     }
