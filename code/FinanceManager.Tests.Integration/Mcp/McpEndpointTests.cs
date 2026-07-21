@@ -1,7 +1,19 @@
 using FinanceManager.Api.Controllers;
 using FinanceManager.Api.Services;
+using FinanceManager.Domain.Assets.Entities;
+using FinanceManager.Domain.Assets.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.OAuth;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -39,10 +51,81 @@ public sealed class McpEndpointTests : IDisposable
         };
         var users = new Mock<IUserRepository>();
         users.Setup(repository => repository.GetUser(_userId)).ReturnsAsync(user);
+        var currencyAccounts = new Mock<ICurrencyAccountRepository<CurrencyAccount>>();
+        currencyAccounts.Setup(repository => repository.GetAll(_userId)).ReturnsAsync([
+            new CurrencyAccount(_userId, 11, "MCP cash", AccountLabel.Cash),
+            new CurrencyAccount(999, 12, "Foreign cash", AccountLabel.Cash)
+        ]);
+        var bondAccounts = new Mock<IAccountRepository<BondAccount>>();
+        bondAccounts.Setup(repository => repository.GetAll(_userId)).ReturnsAsync([]);
+        var investmentAccounts = new Mock<IAccountRepository<InvestmentAccount>>();
+        investmentAccounts.Setup(repository => repository.GetAll(_userId)).ReturnsAsync([
+            new InvestmentAccount(_userId, 21, "MCP broker"),
+            new InvestmentAccount(999, 22, "Foreign broker")
+        ]);
+        var currencyEntries = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        var currencyEntry = new CurrencyAccountEntry(11, 301, DateTime.UtcNow, 100, -20)
+        {
+            Description = "MCP lunch",
+            ContractorDetails = "internal counterparty"
+        };
+        currencyEntries.Setup(repository => repository.GetRange(
+                It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([currencyEntry]);
+        currencyEntries.Setup(repository => repository.Get(11, 301)).ReturnsAsync(currencyEntry);
+        var bondEntries = new Mock<IBondAccountEntryRepository<BondAccountEntry>>();
+        var investmentTransactions = new Mock<IInvestmentTransactionRepository>();
+        investmentTransactions.Setup(repository => repository.GetByUser(
+                _userId, It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                InvestmentTransaction(_userId, 21, 401, "MCP", 2),
+                InvestmentTransaction(999, 22, 402, "FOREIGN", 9)
+            ]);
+        var bondDetails = new Mock<IBondDetailsRepository>();
+        var valuation = new Mock<IInvestmentValuationService>();
+        valuation.Setup(service => service.GetAccountValueAsync(
+                It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, decimal> { [21] = 1234m, [22] = 9999m });
+        valuation.Setup(service => service.GetHoldingsAsOfAsync(
+                21, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<long, decimal> { [401] = 2 });
+        var assetListings = new Mock<IAssetListingRepository>();
+        assetListings.Setup(repository => repository.Get(401, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(InvestmentTransaction(_userId, 21, 401, "MCP", 2).AssetListing);
+        var currencies = new Mock<ICurrencyRepository>();
+        currencies.Setup(repository => repository.GetByCode("PLN", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DefaultCurrency.PLN);
+        currencies.Setup(repository => repository.GetCurrencies(It.IsAny<CancellationToken>()))
+            .Returns(new[] { DefaultCurrency.PLN }.ToAsyncEnumerable());
+        var labels = new Mock<IFinancialLabelsRepository>();
+        labels.Setup(repository => repository.GetLabels(It.IsAny<CancellationToken>()))
+            .Returns(new[] { new FinancialLabel { Id = 51, Name = "MCP category" } }.ToAsyncEnumerable());
         _app = new FinanceManagerApiTestApp(services =>
         {
             services.RemoveAll<IUserRepository>();
             services.AddSingleton(users.Object);
+            services.RemoveAll<ICurrencyAccountRepository<CurrencyAccount>>();
+            services.AddSingleton(currencyAccounts.Object);
+            services.RemoveAll<IAccountRepository<BondAccount>>();
+            services.AddSingleton(bondAccounts.Object);
+            services.RemoveAll<IAccountRepository<InvestmentAccount>>();
+            services.AddSingleton(investmentAccounts.Object);
+            services.RemoveAll<IAccountEntryRepository<CurrencyAccountEntry>>();
+            services.AddSingleton(currencyEntries.Object);
+            services.RemoveAll<IBondAccountEntryRepository<BondAccountEntry>>();
+            services.AddSingleton(bondEntries.Object);
+            services.RemoveAll<IInvestmentTransactionRepository>();
+            services.AddSingleton(investmentTransactions.Object);
+            services.RemoveAll<IBondDetailsRepository>();
+            services.AddSingleton(bondDetails.Object);
+            services.RemoveAll<IInvestmentValuationService>();
+            services.AddSingleton(valuation.Object);
+            services.RemoveAll<IAssetListingRepository>();
+            services.AddSingleton(assetListings.Object);
+            services.RemoveAll<ICurrencyRepository>();
+            services.AddSingleton(currencies.Object);
+            services.RemoveAll<IFinancialLabelsRepository>();
+            services.AddSingleton(labels.Object);
         });
 
         using var scope = _app.Services.CreateScope();
@@ -144,6 +227,91 @@ public sealed class McpEndpointTests : IDisposable
         Assert.Contains(_userId.ToString(), resultText, StringComparison.Ordinal);
         Assert.Contains(_userLogin, resultText, StringComparison.Ordinal);
         Assert.Contains("User", resultText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AuthenticatedClient_CallsEveryReadOnlyToolGroupWithoutCrossUserLeakage()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var client = CreateBrowser();
+        var accessToken = await GetAccessToken(client, cancellationToken);
+
+        using var listRequest = McpRequest("tools/list", 1, new { }, accessToken);
+        listRequest.Headers.TryAddWithoutValidation("MCP-Protocol-Version", "2025-06-18");
+        var listResponse = await client.SendAsync(listRequest, cancellationToken);
+        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+        var listJson = await ReadMcpJson(listResponse, cancellationToken);
+        var advertisedTools = listJson.GetProperty("result").GetProperty("tools").EnumerateArray().ToArray();
+        var toolNames = advertisedTools
+            .Select(tool => tool.GetProperty("name").GetString())
+            .ToHashSet(StringComparer.Ordinal);
+        Assert.True(new[]
+        {
+            "list_financial_accounts",
+            "get_financial_account",
+            "list_transactions",
+            "get_transaction",
+            "get_investment_portfolio",
+            "list_reference_data"
+        }.All(toolNames.Contains));
+        Assert.All(advertisedTools, tool => Assert.True(
+            tool.GetProperty("annotations").GetProperty("readOnlyHint").GetBoolean()));
+        var portfolioTool = Assert.Single(advertisedTools, tool =>
+            tool.GetProperty("name").GetString() == "get_investment_portfolio");
+        Assert.True(portfolioTool.GetProperty("annotations").GetProperty("openWorldHint").GetBoolean());
+
+        var accounts = await CallTool(client, accessToken, 2, "list_financial_accounts", new { }, cancellationToken);
+        Assert.Contains("MCP cash", accounts, StringComparison.Ordinal);
+        Assert.Contains("MCP broker", accounts, StringComparison.Ordinal);
+        Assert.DoesNotContain("Foreign", accounts, StringComparison.OrdinalIgnoreCase);
+
+        var account = await CallTool(client, accessToken, 3, "get_financial_account", new { accountId = 11 }, cancellationToken);
+        Assert.Contains("MCP cash", account, StringComparison.Ordinal);
+
+        var transactions = await CallTool(client, accessToken, 4, "list_transactions", new
+        {
+            startDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1),
+            endDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1)
+        }, cancellationToken);
+        Assert.Contains("MCP lunch", transactions, StringComparison.Ordinal);
+        Assert.Contains("MCP broker", transactions, StringComparison.Ordinal);
+        Assert.DoesNotContain("FOREIGN", transactions, StringComparison.Ordinal);
+        Assert.DoesNotContain("internal counterparty", transactions, StringComparison.Ordinal);
+
+        var transaction = await CallTool(client, accessToken, 5, "get_transaction", new
+        {
+            accountType = "currency",
+            accountId = 11,
+            transactionId = 301
+        }, cancellationToken);
+        Assert.Contains("MCP lunch", transaction, StringComparison.Ordinal);
+
+        var foreignTransaction = await CallTool(client, accessToken, 6, "get_transaction", new
+        {
+            accountType = "currency",
+            accountId = 12,
+            transactionId = 777
+        }, cancellationToken);
+        Assert.DoesNotContain("Foreign", foreignTransaction, StringComparison.OrdinalIgnoreCase);
+
+        var portfolio = await CallTool(client, accessToken, 7, "get_investment_portfolio", new
+        {
+            asOfDate = DateOnly.FromDateTime(DateTime.UtcNow)
+        }, cancellationToken);
+        Assert.Contains("MCP broker", portfolio, StringComparison.Ordinal);
+        Assert.Contains("1234", portfolio, StringComparison.Ordinal);
+        Assert.DoesNotContain("FOREIGN", portfolio, StringComparison.Ordinal);
+        Assert.DoesNotContain("9999", portfolio, StringComparison.Ordinal);
+
+        var referenceData = await CallTool(client, accessToken, 8, "list_reference_data", new { }, cancellationToken);
+        Assert.Contains("PLN", referenceData, StringComparison.Ordinal);
+        Assert.Contains("MCP category", referenceData, StringComparison.Ordinal);
+
+        foreach (var response in new[] { accounts, account, transactions, transaction, foreignTransaction, portfolio, referenceData })
+        {
+            Assert.DoesNotContain("userId", response, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("createdAt", response, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     [Fact]
@@ -264,4 +432,47 @@ public sealed class McpEndpointTests : IDisposable
         }
         return JsonDocument.Parse(body).RootElement.Clone();
     }
+
+    private static async Task<string> CallTool(
+        HttpClient client,
+        string accessToken,
+        int id,
+        string name,
+        object arguments,
+        CancellationToken cancellationToken)
+    {
+        using var request = McpRequest("tools/call", id, new { name, arguments }, accessToken);
+        request.Headers.TryAddWithoutValidation("MCP-Protocol-Version", "2025-06-18");
+        var response = await client.SendAsync(request, cancellationToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = (await ReadMcpJson(response, cancellationToken)).GetProperty("result");
+        Assert.False(result.TryGetProperty("isError", out var isError) && isError.GetBoolean());
+        return result.GetRawText();
+    }
+
+    private static InvestmentTransaction InvestmentTransaction(
+        int userId,
+        int accountId,
+        long listingId,
+        string ticker,
+        decimal quantity) => new()
+        {
+            Id = listingId,
+            UserId = userId,
+            AccountId = accountId,
+            AssetListingId = listingId,
+            Type = InvestmentTransactionType.Buy,
+            Quantity = quantity,
+            UnitPrice = 100,
+            Currency = "USD",
+            TradeDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            AssetListing = new AssetListing
+            {
+                Id = listingId,
+                Ticker = ticker,
+                ExchangeMic = "XNYS",
+                ExchangeName = "New York Stock Exchange",
+                TradingCurrency = "USD"
+            }
+        };
 }
