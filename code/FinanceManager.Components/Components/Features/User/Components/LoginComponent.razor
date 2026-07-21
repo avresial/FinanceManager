@@ -11,6 +11,10 @@
             <MudPaper Class="p-5">
                 <MudText Typo="Typo.h4" Class="text-center mb-3 mt-3">Finance Manager</MudText>
                 <MudText Typo="Typo.h2" Class="mb-4 fs-6 fw-normal text-center"> Sign in to your account</MudText>
+                @if (!string.IsNullOrWhiteSpace(ReturnUrl))
+                {
+                    <MudAlert Severity="Severity.Info" Class="my-3">Sign in to authorize MCP access to your Finance Manager account.</MudAlert>
+                }
                 @if (_errors is not null)
                 {
                     @foreach (var error in _errors)
@@ -37,9 +41,12 @@
                     <MudLink Href="landingpage" Class="mt-3">
                         <MudText Typo="Typo.subtitle1">Learn more</MudText>
                     </MudLink>
-                    <MudLink @onclick=LogGuest data-testid="login-demo" aria-label="Check out demo account">
-                        <MudText Typo="Typo.subtitle1">Check out demo</MudText>
-                    </MudLink>
+                    @if (string.IsNullOrWhiteSpace(ReturnUrl))
+                    {
+                        <MudLink @onclick=LogGuest data-testid="login-demo" aria-label="Check out demo account">
+                            <MudText Typo="Typo.subtitle1">Check out demo</MudText>
+                        </MudLink>
+                    }
                 </MudForm>
             </MudPaper>
         </MudItem>

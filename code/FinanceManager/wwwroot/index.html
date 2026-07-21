@@ -222,6 +222,34 @@
 
                 return null;
             },
+            postOAuthBridge: async function (token, returnUrl) {
+                let csrfToken = window.financeManager.getCookie('fm_csrf');
+                if (!csrfToken) {
+                    const response = await fetch('/api/Auth/csrf-token', { credentials: 'same-origin' });
+                    if (!response.ok) throw new Error('Unable to initialize the OAuth security token.');
+                    csrfToken = window.financeManager.getCookie('fm_csrf');
+                }
+                if (!csrfToken) throw new Error('The OAuth security token was not issued.');
+
+                const form = document.createElement('form');
+                form.method = 'post';
+                form.action = '/api/Auth/oauth-bridge';
+                form.style.display = 'none';
+
+                const addField = function (name, value) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = name;
+                    input.value = value;
+                    form.appendChild(input);
+                };
+
+                addField('token', token);
+                addField('returnUrl', returnUrl);
+                addField('__RequestVerificationToken', csrfToken);
+                document.body.appendChild(form);
+                form.submit();
+            },
             downloadFileFromBase64: function (fileName, contentType, base64Content) {
                 const byteCharacters = atob(base64Content);
                 const byteNumbers = new Array(byteCharacters.length);

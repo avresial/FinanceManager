@@ -33,6 +33,17 @@ public class McpOAuthTests
     }
 
     [Fact]
+    public void Validator_RejectsNonPositiveTokenAndSessionLifetimes()
+    {
+        var options = CreateOptions(lifetime: TimeSpan.Zero);
+
+        var result = CreateValidator(Environments.Development).Validate(null, options);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(4, result.Failures!.Count(failure => failure.Contains("Lifetime", StringComparison.Ordinal)));
+    }
+
+    [Fact]
     public async Task Reconciler_ReplacesRedirectUrisPermissionsAndPkceRequirement()
     {
         var services = new ServiceCollection();
@@ -88,12 +99,17 @@ public class McpOAuthTests
         string redirectUri = "http://localhost/callback",
         string resource = "http://localhost/mcp",
         bool requirePkce = true,
-        string clientId = "finance-manager-mcp-test") => new()
+        string clientId = "finance-manager-mcp-test",
+        TimeSpan? lifetime = null) => new()
         {
             Enabled = true,
             Issuer = "http://localhost/",
             Resource = resource,
             LoginUrl = "http://localhost/login",
+            AuthorizationCodeLifetime = lifetime ?? TimeSpan.FromMinutes(2),
+            AccessTokenLifetime = lifetime ?? TimeSpan.FromMinutes(15),
+            RefreshTokenLifetime = lifetime ?? TimeSpan.FromDays(30),
+            AuthorizationSessionLifetime = lifetime ?? TimeSpan.FromMinutes(10),
             Clients =
             [
                 new McpOAuthClientOptions

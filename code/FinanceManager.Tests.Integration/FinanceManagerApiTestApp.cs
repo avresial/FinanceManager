@@ -14,6 +14,7 @@ internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<ApiEntryP
 {
     private readonly string _environmentName;
     private readonly Action<IServiceCollection>? _services;
+    private readonly IReadOnlyDictionary<string, string?>? _hostSettings;
 
     static FinanceManagerApiTestApp()
     {
@@ -27,16 +28,31 @@ internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<ApiEntryP
 
     public HttpClient Client { get; }
 
-    public FinanceManagerApiTestApp(Action<IServiceCollection>? services = null, string environmentName = "test")
+    public FinanceManagerApiTestApp(
+        Action<IServiceCollection>? services = null,
+        string environmentName = "test",
+        IReadOnlyDictionary<string, string?>? hostSettings = null)
     {
         _services = services;
         _environmentName = environmentName;
+        _hostSettings = hostSettings;
         Client = CreateClient();
         Client.BaseAddress = new Uri("http://localhost/");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // WebApplicationFactory instances must never fall through to the production SQL provider when a
+        // controller test doesn't replace AppDbContext itself. Each factory receives an isolated EF in-memory
+        // root, which is sufficient for host-level integration tests and avoids external database dependencies.
+        builder.UseSetting("UseInMemoryDatabase", "true");
+
+        if (_hostSettings is not null)
+        {
+            foreach (var setting in _hostSettings)
+                builder.UseSetting(setting.Key, setting.Value);
+        }
+
         builder.ConfigureServices(s =>
         {
             // Remove hosted services that access DB on startup to avoid
@@ -87,7 +103,10 @@ internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<ApiEntryP
             builder.UseSetting("JwtConfig:TokenValidityMins", "60");
             builder.UseSetting("ReverseProxy:KnownProxies:0", "127.0.0.1");
             builder.UseSetting("Cors:AllowedOrigins:0", "https://localhost:7206");
-            builder.UseSetting("McpOAuth:Enabled", "true");
+            // Non-Test environment hosts exercise unrelated production guards and do not carry real OAuth
+            // certificates. Keep the rollout gate closed there; dedicated OAuth tests run in Test with
+            // ephemeral keys, while unit tests cover the production certificate requirements.
+            builder.UseSetting("McpOAuth:Enabled", "false");
             builder.UseSetting("McpOAuth:Issuer", "https://localhost/");
             builder.UseSetting("McpOAuth:Resource", "https://localhost/mcp");
             builder.UseSetting("McpOAuth:LoginUrl", "https://localhost/login");

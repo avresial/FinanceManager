@@ -13,6 +13,10 @@ public sealed class McpOAuthOptions
     public string? SigningCertificatePassword { get; init; }
     public string? EncryptionCertificatePath { get; init; }
     public string? EncryptionCertificatePassword { get; init; }
+    public TimeSpan AuthorizationCodeLifetime { get; init; } = TimeSpan.FromMinutes(2);
+    public TimeSpan AccessTokenLifetime { get; init; } = TimeSpan.FromMinutes(15);
+    public TimeSpan RefreshTokenLifetime { get; init; } = TimeSpan.FromDays(30);
+    public TimeSpan AuthorizationSessionLifetime { get; init; } = TimeSpan.FromMinutes(10);
     public McpOAuthClientOptions[] Clients { get; init; } = [];
 }
 

@@ -3,4 +3,10 @@
 
 <PageTitle>Sign in</PageTitle>
 
-<LoginComponent />
+<LoginComponent ReturnUrl="@ReturnUrl" />
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+}
