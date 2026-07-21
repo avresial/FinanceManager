@@ -12,12 +12,6 @@
 	</PropertyGroup>
 	
 	<ItemGroup>
-	  <Compile Remove="Services\**" />
-	  <EmbeddedResource Remove="Services\**" />
-	  <None Remove="Services\**" />
-	</ItemGroup>
-	
-	<ItemGroup>
 		<PackageReference Include="coverlet.collector">
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
@@ -29,8 +23,6 @@
 		</PackageReference>
 		<PackageReference Include="Microsoft.NET.Test.Sdk" />
 		<PackageReference Include="Moq" />
-		<PackageReference Include="System.Configuration.ConfigurationManager" />
-		<PackageReference Include="System.Threading.RateLimiting" />
 		<PackageReference Include="xunit.runner.visualstudio">
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>

@@ -28,8 +28,6 @@ internal class InvestmentBalanceService(
     IFinancialAccountRepository financialAccountRepository,
     IInvestmentValuationService investmentValuationService) : IBalanceServiceTyped
 {
-    public bool IsOfType<T>() => typeof(T) == typeof(InvestmentAccount);
-
     // Cash flow is intentionally empty for investment accounts to avoid double counting against the
     // cash account that books the investment outflow. See the class remarks.
     public Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end) =>

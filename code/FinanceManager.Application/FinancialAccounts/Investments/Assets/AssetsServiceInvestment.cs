@@ -23,8 +23,6 @@ internal class AssetsServiceInvestment(
     IInvestmentPriceProvider priceProvider,
     ICurrencyExchangeService currencyExchangeService) : IAssetsServiceTyped
 {
-    public bool IsOfType<T>() => typeof(T) == typeof(InvestmentAccount);
-
     public async Task<bool> IsAnyAccountWithAssets(int userId)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);

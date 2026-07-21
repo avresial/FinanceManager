@@ -22,13 +22,6 @@ public class InvestmentBalanceServiceTests
     }
 
     [Fact]
-    public void IsOfType_StockAccount_IsTrue()
-    {
-        Assert.True(_service.IsOfType<InvestmentAccount>());
-        Assert.False(_service.IsOfType<CurrencyAccount>());
-    }
-
-    [Fact]
     public async Task GetClosingBalance_AggregatesValuationSeriesAcrossInvestmentAccounts()
     {
         DateTime start = new(2024, 1, 1);

@@ -28,7 +28,6 @@ using FinanceManager.Domain.Shared.ExternalServices.Repositories;
 using FinanceManager.Domain.Shared.Maintenance.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Guest;
-using FinanceManager.Infrastructure.Providers;
 using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
@@ -67,10 +66,6 @@ public static class ServiceCollectionExtension
             sp.GetRequiredService<ILogger<FallbackStockPriceSource>>()));
         services.AddHttpClient<OpenFigiClient>();
         services.AddScoped<IOpenFigiClient>(sp => sp.GetRequiredService<OpenFigiClient>());
-        services.AddScoped<IQuoteFactorResolver>(sp =>
-            new QuoteFactorResolver(
-                sp.GetRequiredService<ICurrencyExchangeService>(),
-                sp.GetRequiredService<ILogger<QuoteFactorResolver>>()));
         services.AddHttpClient<ICurrencyExchangeRateProvider, FawazAhmedCurrencyApiClient>();
 
         services.AddAI();
@@ -96,7 +91,6 @@ public static class ServiceCollectionExtension
                 .AddScoped<IExchangeRateRepository, ExchangeRateRepository>()
                 .AddScoped<IBondDetailsRepository, BondDetailsRepository>()
                 .AddScoped<ICsvHeaderMappingRepository, CsvHeaderMappingRepository>()
-                .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()
                 .AddScoped<IAiProviderConfigRepository, AiProviderConfigRepository>()
                 .AddScoped<IExternalServiceConfigRepository, ExternalServiceConfigRepository>()
                 .AddScoped<IMaintenanceKeyRepository, MaintenanceKeyRepository>()

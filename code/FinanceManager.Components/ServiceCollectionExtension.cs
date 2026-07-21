@@ -4,7 +4,6 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
-using FinanceManager.Infrastructure.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FinanceManager.Components;
@@ -68,9 +67,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IUserService, UserService>()
                 .AddScoped<IFinancialAccountService, FinancialAccountService>()
                 .AddScoped<UserSettingsService>()
-                .AddScoped<ISettingsService>(sp => sp.GetRequiredService<UserSettingsService>())
-                .AddScoped<IUserRepository, UserLocalStorageRepository>();
-        ;
+                .AddScoped<ISettingsService>(sp => sp.GetRequiredService<UserSettingsService>());
 
         return services;
     }

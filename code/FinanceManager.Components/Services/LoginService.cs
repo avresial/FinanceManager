@@ -5,7 +5,6 @@ using FinanceManager.Application.Identity;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
-using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
@@ -19,7 +18,6 @@ public class LoginService : ILoginService
     private UserSession? _loggedUser = null;
     private readonly ISessionStorageService _sessionStorageService;
     private readonly ILocalStorageService _localStorageService;
-    private readonly IUserRepository _loginRepository;
     private readonly HttpClient _httpClient;
     private readonly ILogger<LoginService> _logger;
     private readonly IAntiforgeryTokenService _antiforgeryTokenService;
@@ -37,18 +35,16 @@ public class LoginService : ILoginService
 
     private readonly AuthenticationStateProvider _authStateProvider;
     public LoginService(ISessionStorageService sessionStorageService, ILocalStorageService localStorageService,
-        AuthenticationStateProvider authState, IUserRepository loginRepository, HttpClient httpClient,
+        AuthenticationStateProvider authState, HttpClient httpClient,
         IAntiforgeryTokenService antiforgeryTokenService, ILogger<LoginService> logger)
     {
         _sessionStorageService = sessionStorageService;
         _localStorageService = localStorageService;
         _authStateProvider = authState;
 
-        _loginRepository = loginRepository;
         _httpClient = httpClient;
         _antiforgeryTokenService = antiforgeryTokenService;
         _logger = logger;
-        _ = _loginRepository.AddUser("Guest", PasswordEncryptionProvider.EncryptPassword("GuestPassword"), PricingLevel.Basic, UserRole.User);
     }
 
     public async Task<UserSession?> GetLoggedUser()

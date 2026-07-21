@@ -174,13 +174,13 @@ public class CurrencyAccountControllerTests
     {
         // Arrange
         var userId = 1;
-        DeleteAccount deleteAccount = new(1);
-        CurrencyAccount account = new(userId, deleteAccount.AccountId, "Test Account");
-        _mockAccountRepository.Setup(repo => repo.Get(deleteAccount.AccountId)).ReturnsAsync(account);
-        _mockAccountRepository.Setup(repo => repo.Delete(deleteAccount.AccountId)).ReturnsAsync(true);
+        const int accountId = 1;
+        CurrencyAccount account = new(userId, accountId, "Test Account");
+        _mockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
+        _mockAccountRepository.Setup(repo => repo.Delete(accountId)).ReturnsAsync(true);
 
         // Act
-        var result = await _controller.Delete(deleteAccount.AccountId);
+        var result = await _controller.Delete(accountId);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);

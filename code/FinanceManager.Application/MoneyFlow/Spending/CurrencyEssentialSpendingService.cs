@@ -14,8 +14,6 @@ public class CurrencyEssentialSpendingService(IFinancialAccountRepository financ
 {
     private static readonly TimeSpan _oneDay = TimeSpan.FromDays(1);
 
-    public bool IsOfType<T>() => typeof(T) == typeof(CurrencyAccount);
-
     public Task<List<TimeSeriesModel>> GetEssentialSpending(int userId, Currency currency, DateTime start, DateTime end) =>
         GetEssentialSpending(userId, currency, start, end, []);
 

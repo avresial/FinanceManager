@@ -671,7 +671,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     [Fact]
     public async Task GetClosingBalance_IncludesInvestmentAccountHoldings()
     {
-        var day0 = new DateTime(2024, 6, 1);
+        var day0 = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc);
         await SeedCashAndInvestmentAccounts(day0);
         Authorize("TestUser", 1, UserRole.User);
 
@@ -686,7 +686,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     [Fact]
     public async Task CashFlow_DoesNotDoubleCountInvestmentHoldings()
     {
-        var day0 = new DateTime(2024, 6, 1);
+        var day0 = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc);
         await SeedCashAndInvestmentAccounts(day0);
         Authorize("TestUser", 1, UserRole.User);
 

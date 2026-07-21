@@ -3,9 +3,6 @@ using System.Net.Http.Json;
 
 namespace FinanceManager.Components.HttpClients;
 
-public sealed record MaintenanceKeyStatusResponse(bool HasKey, DateTimeOffset? CreatedAt);
-public sealed record GeneratedMaintenanceKeyResponse(string Key, DateTimeOffset CreatedAt);
-
 public class AdminMaintenanceKeyHttpClient(HttpClient httpClient)
 {
     public async Task<MaintenanceKeyStatusResponse?> GetStatusAsync(CancellationToken ct = default) =>

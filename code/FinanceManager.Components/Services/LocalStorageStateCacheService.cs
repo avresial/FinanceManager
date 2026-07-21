@@ -9,7 +9,7 @@ public abstract class LocalStorageStateCacheService<TState, TRefreshContext, TCa
     ILocalStorageService localStorageService,
     IMemoryCache memoryCache,
     ILogger logger,
-    string cacheKeyPrefix) : IUiStateCacheService<TState, TRefreshContext, TCacheKey>
+    string cacheKeyPrefix)
     where TState : class
     where TCacheKey : notnull
 {
