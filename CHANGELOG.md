@@ -18,6 +18,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- The **Investment rate** chart is now interactive: selecting a month highlights its bar and shows that month's salary and invested amount, while the average line displays its value. #576
 - The dashboard date picker has been redesigned into a compact pill: the active preset (This month / This quarter / This year) is now highlighted, and the custom range opens in a calendar dialog — consistent with the account details pages — showing the selected dates next to the presets. #559
 - The app loading screen has been redesigned: an animated logo and branded wordmark replace the plain title, and an indefinite spinner has been replaced with a progress ring showing the real download progress while the app boots. #553
 - The expanded investment transaction details now use a two-column layout on mobile instead of stacking every field in a single narrow column, so the previously empty right half of the screen is used and the details take up roughly half the vertical space.
