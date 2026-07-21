@@ -319,7 +319,9 @@ public sealed class McpOAuthControllerTests : IDisposable
         string? csrfToken = null) => new(new Dictionary<string, string>
         {
             ["token"] = token,
-            ["returnUrl"] = Uri.TryCreate(returnUrl, UriKind.Absolute, out _) ? returnUrl : "http://localhost" + returnUrl,
+            ["returnUrl"] = returnUrl.StartsWith("/", StringComparison.Ordinal)
+            ? "http://localhost" + returnUrl
+            : returnUrl,
             ["__RequestVerificationToken"] = csrfToken ?? string.Empty
         });
 
