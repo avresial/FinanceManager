@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Components.Authorization;
+﻿using FinanceManager.Domain.Identity.Entities;
+using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;
 
 namespace FinanceManager.Application.Identity;
@@ -10,7 +11,7 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
     public override Task<AuthenticationState> GetAuthenticationStateAsync() =>
         Task.FromResult(new AuthenticationState(this.CurrentUser));
 
-    public Task<AuthenticationState> ChangeUser(string username, string id, string role)
+    public Task<AuthenticationState> ChangeUser(string username, string id, UserRole role)
     {
         this.CurrentUser = GetUser(username, id, role);
         var task = this.GetAuthenticationStateAsync();
@@ -26,12 +27,12 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
         return task;
     }
 
-    private static ClaimsPrincipal GetUser(string userName, string id, string role) =>
+    private static ClaimsPrincipal GetUser(string userName, string id, UserRole role) =>
        new(new ClaimsIdentity(
        [
             new(ClaimTypes. Sid, id),
             new(ClaimTypes.Name, userName),
-            new(ClaimTypes.Role, role)
+            .. role.GetAssignedRoles().Select(roleName => new Claim(ClaimTypes.Role, roleName))
        ], "Bearer"));
 
 

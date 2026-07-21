@@ -1,27 +1,15 @@
 ﻿@using FinanceManager.Domain.Identity.Entities
 <MudNavMenu Class="pt-2" aria-label="Primary">
-    <AuthorizeView>
-        <Authorized>
-            @if (@context.User.IsInRole(UserRole.Admin.ToString()))
-            {
-                <MudNavLink Icon="@Icons.Material.Filled.Dashboard" href="Admin/Dashboard">Finance Manager</MudNavLink>
-            }
-            else if (@context.User.IsInRole(UserRole.User.ToString()))
-            {
-                @if (DrawerIsOpen)
-                {
-                    <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary">FinanceManager</MudText>
-                    <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">@ApplicationVersion.Version</MudText>
-                }
-                else
-                {
-                    <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary">FM</MudText>
-                    <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary" Style="color:transparent">@ApplicationVersion.Version</MudText>
-                }
-                
-            }
-        </Authorized>
-    </AuthorizeView>
+    @if (DrawerIsOpen)
+    {
+        <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary">FinanceManager</MudText>
+        <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">@ApplicationVersion.Version</MudText>
+    }
+    else
+    {
+        <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary" aria-label="FinanceManager">FM</MudText>
+        <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary" Style="color:transparent" aria-hidden="true">@ApplicationVersion.Version</MudText>
+    }
     <MudDivider Class="my-2" />
     <MudNavLink Icon="@Icons.Material.Filled.Dashboard" Href="" Match="NavLinkMatch.All" data-testid="nav-dashboard">Dashboard</MudNavLink>
 
@@ -60,7 +48,7 @@
         <Authorized>
             @if (@context.User.IsInRole(UserRole.Admin.ToString()))
             {
-                <MudNavLink Icon="@Icons.Material.Filled.AdminPanelSettings" Href="Admin/Dashboard" data-testid="nav-admin">Admin page</MudNavLink>
+                <MudNavLink Icon="@Icons.Material.Filled.AdminPanelSettings" Href="Admin/Dashboard" data-testid="nav-admin">Admin</MudNavLink>
             }
         </Authorized>
     </AuthorizeView>

@@ -222,6 +222,6 @@ public class LoginService : ILoginService
         _antiforgeryTokenService.ClearToken();
 
         await ((CustomAuthenticationStateProvider)_authStateProvider)
-            .ChangeUser(session.UserName, session.UserId.ToString(), session.UserRole.ToString());
+            .ChangeUser(session.UserName, session.UserId.ToString(), session.UserRole);
     }
 }

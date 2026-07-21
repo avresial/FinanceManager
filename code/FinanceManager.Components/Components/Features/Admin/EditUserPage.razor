@@ -39,42 +39,35 @@
             <MudDivider Class="my-3" />
         </MudItem>
 
-        @if (_userData.UserRole != UserRole.Admin)
-        {
-            <MudItem xs="12">
-                <MudText Typo="Typo.h6">Change pricing plan</MudText>
-                <MudGrid>
-                    <MudItem xs="8">
-                        <MudSelect T="string" Label="Select Plan" @bind-Value="_selectedPlan">
-                            @foreach (var plan in _plans)
-                            {
-                                <MudSelectItem Value="@plan">@plan</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-                    <MudItem xs="4">
-                        <MudButton @onclick=UpgradePricingPlan Variant="Variant.Text" Color="Color.Primary" Class="mt-4"
-                            FullWidth Disabled=@(_userData?.PricingLevel.ToString() == _selectedPlan )>Upgrade Plan</MudButton>
-                    </MudItem>
-                </MudGrid>
-                <MudDivider Class="my-3" />
-            </MudItem>
-        }
-
         <MudItem xs="12">
-            <MudText Typo="Typo.h6">Change role</MudText>
+            <MudText Typo="Typo.h6">Change pricing plan</MudText>
             <MudGrid>
                 <MudItem xs="8">
-                    <MudSelect T="string" Label="Select role" @bind-Value="_selectedUserRole">
-                        @foreach (var plan in _roles)
+                    <MudSelect T="string" Label="Select Plan" @bind-Value="_selectedPlan">
+                        @foreach (var plan in _plans)
                         {
                             <MudSelectItem Value="@plan">@plan</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="4">
+                    <MudButton @onclick=UpgradePricingPlan Variant="Variant.Text" Color="Color.Primary" Class="mt-4"
+                        FullWidth Disabled=@(_userData?.PricingLevel.ToString() == _selectedPlan )>Upgrade Plan</MudButton>
+                </MudItem>
+            </MudGrid>
+            <MudDivider Class="my-3" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudText Typo="Typo.h6">Roles</MudText>
+            <MudGrid>
+                <MudItem xs="8">
+                    <MudCheckBox T="bool" Value="true" Label="User" ReadOnly />
+                    <MudCheckBox T="bool" @bind-Value="_isAdmin" Label="Admin" Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="4">
                     <MudButton @onclick=ChangeUserRole Variant="Variant.Text" Color="Color.Primary" Class="mt-4" FullWidth
-                        Disabled=@(_userData?.UserRole.ToString() == _selectedUserRole )>Change role</MudButton>
+                        Disabled="@((_userData.UserRole == UserRole.Admin) == _isAdmin)">Save roles</MudButton>
                 </MudItem>
             </MudGrid>
             <MudDivider Class="my-3" />

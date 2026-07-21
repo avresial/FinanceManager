@@ -198,6 +198,21 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
     }
 
     [Fact]
+    public async Task UpdateUserRole_AddsAdminAccessWithoutRemovingUserAccess()
+    {
+        await SeedUser();
+        Authorize("admin", 1, UserRole.Admin);
+
+        var result = await new UserHttpClient(Client).UpdateRole(new(_testUserId, UserRole.Admin));
+
+        Assert.True(result);
+        var updatedUser = await _testDatabase!.Context.Users
+            .SingleAsync(user => user.Id == _testUserId, TestContext.Current.CancellationToken);
+        Assert.Equal(UserRole.Admin, updatedUser.UserRole);
+        Assert.Equal([nameof(UserRole.User), nameof(UserRole.Admin)], updatedUser.UserRole.GetAssignedRoles());
+    }
+
+    [Fact]
     public async Task Delete_ReturnsOkTrue()
     {
         // arrange
