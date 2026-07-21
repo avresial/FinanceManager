@@ -17,7 +17,12 @@ public static class McpFeatureExtensions
                 "Finance Manager tools operate only on the authenticated user's financial data. " +
                 "Call who_am_i to confirm the current identity before working with user-specific data.")
             .WithHttpTransport(transport => transport.Stateless = true)
-            .WithTools<IdentityTools>();
+            .WithTools<IdentityTools>()
+            .WithTools<FinancialAccountTools>()
+            .WithTools<TransactionTools>()
+            .WithTools<InvestmentTools>()
+            .WithTools<ReferenceDataTools>();
+        services.AddScoped<McpUserContext>();
         return services;
     }
 

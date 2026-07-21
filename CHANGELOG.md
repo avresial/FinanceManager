@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Connected AI clients can now read the signed-in user's financial accounts, filtered transaction history, investment positions and valuations, currencies, and financial labels through owner-isolated MCP tools. #590
 - AI clients can now connect to a protected MCP endpoint, discover its OAuth settings automatically, verify the signed-in identity, and follow a responsive setup guide with copyable and downloadable configuration. #589
 - MCP clients can now securely sign in through Finance Manager and receive scoped, refreshable access tokens. #588
 - Admin access can now be assigned alongside normal user access, with direct links between the Finance Manager and admin dashboards and role controls on the admin user editor. #585

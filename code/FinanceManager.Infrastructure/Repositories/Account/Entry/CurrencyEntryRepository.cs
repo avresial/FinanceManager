@@ -172,6 +172,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
 
     public async Task<CurrencyAccountEntry?> Get(int accountId, int entryId) => await context.CurrencyEntries
             .AsNoTracking()
+            .Include(entry => entry.Labels)
             .FirstOrDefaultAsync(x => x.AccountId == accountId && x.EntryId == entryId);
 
     public async Task<int> GetCount(int accountId) => await context.CurrencyEntries.AsNoTracking().CountAsync(x => x.AccountId == accountId);

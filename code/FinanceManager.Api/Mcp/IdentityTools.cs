@@ -6,17 +6,14 @@ using System.Security.Claims;
 namespace FinanceManager.Api.Mcp;
 
 [McpServerToolType]
-public sealed class IdentityTools(IHttpContextAccessor httpContextAccessor)
+public sealed class IdentityTools(McpUserContext userContext)
 {
-    [McpServerTool(Name = "who_am_i")]
+    [McpServerTool(Name = "who_am_i", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Return the authenticated Finance Manager user's id, login, and roles.")]
     public McpIdentity WhoAmI()
     {
-        var user = httpContextAccessor.HttpContext?.User
-            ?? throw new InvalidOperationException("The authenticated MCP request is unavailable.");
-        var subject = user.FindFirstValue(OpenIddictConstants.Claims.Subject)
-            ?? user.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new InvalidOperationException("The authenticated MCP identity has no subject.");
+        var user = userContext.Principal;
+        var subject = userContext.GetUserId().ToString();
         var login = user.FindFirstValue(OpenIddictConstants.Claims.Name)
             ?? user.Identity?.Name
             ?? string.Empty;
