@@ -19,6 +19,14 @@ public sealed class McpOAuthOptionsValidator(IHostEnvironment environment) : IVa
 
         if (string.IsNullOrWhiteSpace(options.DisplayName))
             failures.Add("McpOAuth:DisplayName must be configured.");
+        if (options.AuthorizationCodeLifetime <= TimeSpan.Zero)
+            failures.Add("McpOAuth:AuthorizationCodeLifetime must be greater than zero.");
+        if (options.AccessTokenLifetime <= TimeSpan.Zero)
+            failures.Add("McpOAuth:AccessTokenLifetime must be greater than zero.");
+        if (options.RefreshTokenLifetime <= TimeSpan.Zero)
+            failures.Add("McpOAuth:RefreshTokenLifetime must be greater than zero.");
+        if (options.AuthorizationSessionLifetime <= TimeSpan.Zero)
+            failures.Add("McpOAuth:AuthorizationSessionLifetime must be greater than zero.");
         var clients = options.Clients ?? [];
         if (clients.Length == 0)
             failures.Add("McpOAuth:Clients must contain at least one client.");

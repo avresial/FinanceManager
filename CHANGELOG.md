@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- MCP clients can now securely sign in through Finance Manager and receive scoped, refreshable access tokens. #588
 - Admin access can now be assigned alongside normal user access, with direct links between the Finance Manager and admin dashboards and role controls on the admin user editor. #585
 - Investment closing prices are now backfilled automatically every Saturday for every held instrument, so charts and valuations keep a complete weekly price history even for instruments nobody opened recently. #569
 - Admins can generate, roll, or revoke the maintenance API key that authorises the scheduled backfill from the **Admin → Service Keys** page — the key is stored hashed and shown exactly once at generation. #569

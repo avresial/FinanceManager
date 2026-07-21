@@ -2,10 +2,12 @@ using Blazored.LocalStorage;
 using FinanceManager.Components.Models;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 using MudBlazor;
 
 namespace FinanceManager.Components.Components.Features.User.Components;
@@ -26,6 +28,9 @@ public partial class LoginComponent
     [Inject] public required ILocalStorageService LocalStorageService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
+    [Inject] public required IJSRuntime JSRuntime { get; set; }
+
+    [Parameter] public string? ReturnUrl { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -43,7 +48,7 @@ public partial class LoginComponent
         await NotifyIfSessionExpired();
 
         bool firstVisit = !(await LocalStorageService.ContainKeyAsync("isThisFirstVisit"));
-        if (firstVisit)
+        if (firstVisit && string.IsNullOrWhiteSpace(ReturnUrl))
         {
             await LocalStorageService.SetItemAsync("isThisFirstVisit", true);
             Navigation.NavigateTo("landingpage");
@@ -54,7 +59,12 @@ public partial class LoginComponent
         // user returning within the refresh window lands straight back in the app without re-entering credentials.
         var loggedUser = await LoginService.GetLoggedUser();
         if (loggedUser is not null)
+        {
+            if (await ContinueOAuth(loggedUser))
+                return;
+
             Navigation.NavigateTo("");
+        }
     }
 
     private async Task NotifyIfSessionExpired()
@@ -84,6 +94,8 @@ public partial class LoginComponent
             {
                 var loggedUser = await LoginService.GetLoggedUser();
                 if (loggedUser is null) return;
+                if (await ContinueOAuth(loggedUser))
+                    return;
 
                 switch (loggedUser.UserRole)
                 {
@@ -108,6 +120,15 @@ public partial class LoginComponent
         {
             _isProcessing = false;
         }
+    }
+
+    private async Task<bool> ContinueOAuth(UserSession user)
+    {
+        if (string.IsNullOrWhiteSpace(ReturnUrl) || string.IsNullOrWhiteSpace(user.Token))
+            return false;
+
+        await JSRuntime.InvokeVoidAsync("financeManager.postOAuthBridge", user.Token, ReturnUrl);
+        return true;
     }
 
 
