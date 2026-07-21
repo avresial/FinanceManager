@@ -28,6 +28,7 @@ using FinanceManager.Domain.Shared.ExternalServices.Repositories;
 using FinanceManager.Domain.Shared.Maintenance.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Guest;
+using FinanceManager.Infrastructure.OAuth;
 using FinanceManager.Infrastructure.Repositories;
 using FinanceManager.Infrastructure.Repositories.Account;
 using FinanceManager.Infrastructure.Repositories.Account.Entry;
@@ -140,6 +141,10 @@ public static class ServiceCollectionExtension
 
     public static IServiceCollection AddDatabase(this IServiceCollection services, IConfigurationManager configuration)
     {
+        services.AddOpenIddict()
+            .AddCore(options => options.UseEntityFrameworkCore().UseDbContext<AppDbContext>());
+        services.AddScoped<McpOAuthConfigurationReconciler>();
+
         // The cleanup service builds standalone AppDbContexts to drop expired guest sandboxes; without a shared
         // root, EF Core's InMemory provider uses a per-internal-provider singleton, so the standalone context
         // would target a different store than the DI-resolved one and EnsureDeleted() would silently miss.
@@ -150,7 +155,8 @@ public static class ServiceCollectionExtension
             services.AddDbContext<AppDbContext>((sp, options) =>
             {
                 var dbName = GuestDatabaseNaming.ResolveDatabaseName(sp, defaultName: "Db");
-                options.UseInMemoryDatabase(databaseName: dbName, sp.GetRequiredService<InMemoryDatabaseRoot>());
+                options.UseInMemoryDatabase(databaseName: dbName, sp.GetRequiredService<InMemoryDatabaseRoot>())
+                    .UseOpenIddict();
             });
         }
         else
@@ -177,6 +183,8 @@ public static class ServiceCollectionExtension
                 {
                     options.UseSqlServer(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
                 }
+
+                options.UseOpenIddict();
             }
 
             // Guest sandbox resolves a per-user in-memory database name at request time; that
@@ -190,6 +198,7 @@ public static class ServiceCollectionExtension
                     if (guestDbName is not null)
                     {
                         options.UseInMemoryDatabase(databaseName: guestDbName, sp.GetRequiredService<InMemoryDatabaseRoot>());
+                        options.UseOpenIddict();
                         return;
                     }
                     ConfigureRelational(options);

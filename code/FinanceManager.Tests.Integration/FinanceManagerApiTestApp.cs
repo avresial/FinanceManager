@@ -87,6 +87,16 @@ internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<ApiEntryP
             builder.UseSetting("JwtConfig:TokenValidityMins", "60");
             builder.UseSetting("ReverseProxy:KnownProxies:0", "127.0.0.1");
             builder.UseSetting("Cors:AllowedOrigins:0", "https://localhost:7206");
+            builder.UseSetting("McpOAuth:Enabled", "true");
+            builder.UseSetting("McpOAuth:Issuer", "https://localhost/");
+            builder.UseSetting("McpOAuth:Resource", "https://localhost/mcp");
+            builder.UseSetting("McpOAuth:LoginUrl", "https://localhost/login");
+            builder.UseSetting("McpOAuth:SigningCertificatePath", "test-signing.pfx");
+            builder.UseSetting("McpOAuth:EncryptionCertificatePath", "test-encryption.pfx");
+            builder.UseSetting("McpOAuth:Clients:0:ClientId", "finance-manager-mcp-test");
+            builder.UseSetting("McpOAuth:Clients:0:DisplayName", "Finance Manager MCP (Test)");
+            builder.UseSetting("McpOAuth:Clients:0:RequirePkce", "true");
+            builder.UseSetting("McpOAuth:Clients:0:RedirectUris:0", "https://localhost/oauth/callback");
         }
 
         builder.UseEnvironment(_environmentName);

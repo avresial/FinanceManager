@@ -29,7 +29,8 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found in configuration.");
 
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
+            .UseNpgsql(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"))
+            .UseOpenIddict();
 
         return new AppDbContext(optionsBuilder.Options);
     }
