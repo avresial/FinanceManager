@@ -8,7 +8,7 @@ internal sealed class McpOAuthConfigurationReconciler(
     IOpenIddictApplicationManager applications,
     IOpenIddictScopeManager scopes)
 {
-    private const string ManagedProperty = "finance_manager_mcp_managed";
+    private const string _managedProperty = "finance_manager_mcp_managed";
 
     public async Task ReconcileAsync(McpOAuthOptions options, CancellationToken cancellationToken)
     {
@@ -22,7 +22,7 @@ internal sealed class McpOAuthConfigurationReconciler(
                 ConsentType = ConsentTypes.Implicit,
                 DisplayName = configuredClient.DisplayName
             };
-            descriptor.Properties[ManagedProperty] = JsonSerializer.SerializeToElement(true);
+            descriptor.Properties[_managedProperty] = JsonSerializer.SerializeToElement(true);
             foreach (var redirectUri in configuredClient.RedirectUris)
                 descriptor.RedirectUris.Add(new Uri(redirectUri));
             descriptor.Permissions.UnionWith([
@@ -49,7 +49,7 @@ internal sealed class McpOAuthConfigurationReconciler(
         {
             var properties = await applications.GetPropertiesAsync(application, cancellationToken);
             var clientId = await applications.GetClientIdAsync(application, cancellationToken);
-            if (properties.TryGetValue(ManagedProperty, out var managed) && managed.ValueKind == JsonValueKind.True &&
+            if (properties.TryGetValue(_managedProperty, out var managed) && managed.ValueKind == JsonValueKind.True &&
                 clientId is not null && !configuredClientIds.Contains(clientId))
             {
                 staleApplications.Add(application);
