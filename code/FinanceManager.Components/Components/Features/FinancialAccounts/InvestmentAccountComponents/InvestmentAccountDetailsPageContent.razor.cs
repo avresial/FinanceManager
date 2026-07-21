@@ -1,6 +1,7 @@
 using FinanceManager.Components.Components.Features.FinancialAccounts.Shared;
 using FinanceManager.Components.Helpers;
 using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
@@ -18,7 +19,9 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
 
     [Inject] public required InvestmentTransactionHttpClient TransactionHttpClient { get; set; }
     [Inject] public required InvestmentValuationHttpClient ValuationHttpClient { get; set; }
+    [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
     [Inject] public required InvestmentAccountHttpClient InvestmentAccountHttpClient { get; set; }
+    [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
@@ -173,6 +176,11 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     {
         var series = await ValuationHttpClient.GetValueSeriesAsync(accountId, currency.Id, dateStart, dateEnd);
         var holdings = await ValuationHttpClient.GetHoldingsAsync(accountId, dateEnd);
+        var user = await LoginService.GetLoggedUser();
+        var appreciation = user is null
+            ? null
+            : (await AssetsHttpClient.GetUnrealizedGainLossPerAccount(user.UserId, currency, dateEnd))
+                .SingleOrDefault(x => x.AccountId == accountId);
         if (refreshVersion != _chartRefreshVersion || accountId != AccountId) return;
 
         // Keep the full ordered series for balance maths; trim only leading zeros for the chart so
@@ -184,17 +192,17 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
 
         ChartData.Clear();
         ChartData.AddRange(orderedSeries.SkipWhile(x => x.Value == 0));
-        UpdateBalanceFromChartData(orderedSeries);
+        UpdateBalanceFromChartData(orderedSeries, appreciation);
         UpdateHoldings(holdings, dateEnd);
     }
 
-    private void UpdateBalanceFromChartData(IReadOnlyList<TimeSeriesModel> balanceSeries)
+    private void UpdateBalanceFromChartData(
+        IReadOnlyList<TimeSeriesModel> balanceSeries,
+        UnrealizedGainLossAccountResult? appreciation)
     {
         _currentBalance = balanceSeries.LastOrDefault()?.Value ?? 0;
-        _balanceChange = balanceSeries.Count >= 2 ? balanceSeries[^1].Value - balanceSeries[0].Value : 0;
-
-        var startBalance = _currentBalance - _balanceChange;
-        _balanceChangePercent = startBalance == 0 ? null : _balanceChange / startBalance * 100m;
+        _balanceChange = appreciation?.UnrealizedGainLoss ?? 0m;
+        _balanceChangePercent = appreciation is null ? null : appreciation.UnrealizedGainLossPercent;
     }
 
     private void UpdateHoldings(IReadOnlyDictionary<long, decimal> holdings, DateTime asOf)

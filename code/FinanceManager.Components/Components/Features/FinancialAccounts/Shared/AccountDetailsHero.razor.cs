@@ -14,6 +14,8 @@ public partial class AccountDetailsHero
     [Parameter] public decimal Balance { get; set; }
     [Parameter] public decimal BalanceChange { get; set; }
     [Parameter] public decimal? BalanceChangePercent { get; set; }
+    [Parameter] public string ChangeLabel { get; set; } = "Change";
+    [Parameter] public bool ShowChangeRange { get; set; } = true;
     [Parameter] public string SelectedRange { get; set; } = "3M";
     [Parameter] public EventCallback<string> SelectedRangeChanged { get; set; }
     [Parameter] public DateRange? CustomDateRange { get; set; }
