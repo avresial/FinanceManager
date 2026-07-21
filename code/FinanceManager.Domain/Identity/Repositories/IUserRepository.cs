@@ -14,6 +14,7 @@ public interface IUserRepository
     Task<bool> UpdatePassword(int userId, string password);
     Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel);
     Task<bool> UpdatePreferredCurrency(int userId, int currencyId);
+    Task<bool> UpdateRole(int userId, UserRole userRole);
     Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole, string? firstName = null, string? lastName = null);
 
     /// <summary>

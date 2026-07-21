@@ -224,4 +224,15 @@ public class UserRepository(AppDbContext context) : IUserRepository
 
         return await Task.FromResult(true);
     }
+
+    public async Task<bool> UpdateRole(int userId, UserRole userRole)
+    {
+        var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user is null) return false;
+
+        user.UserRole = userRole;
+        await context.SaveChangesAsync();
+
+        return true;
+    }
 }

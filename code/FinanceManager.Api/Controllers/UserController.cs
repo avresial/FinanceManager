@@ -157,4 +157,18 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
         var result = await userRepository.UpdatePricingPlan(updatePricingPlan.UserId, updatePricingPlan.PricingLevel);
         return result ? Ok(result) : NotFound();
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPut]
+    [Route("UpdateUserRole")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateUserRole(UpdateUserRole updateUserRole, CancellationToken cancellationToken = default)
+    {
+        if (!Enum.IsDefined(updateUserRole.UserRole)) return BadRequest();
+
+        var result = await userRepository.UpdateRole(updateUserRole.UserId, updateUserRole.UserRole);
+        return result ? Ok(result) : NotFound();
+    }
 }

@@ -18,13 +18,12 @@ public partial class EditUserPage : ComponentBase
     private bool _isLoadingPage;
     private bool _success;
     private string _selectedPlan = $"{PricingLevel.Free}";
-    private string? _selectedUserRole;
+    private bool _isAdmin;
     private string? _password;
     private string? _confirmPassword;
     private MudForm? _passwordForm;
     private MudTextField<string>? _passwordField;
     private List<string> _plans = [$"{PricingLevel.Free}", $"{PricingLevel.Basic}", $"{PricingLevel.Premium}"];
-    private List<string> _roles = [$"{UserRole.User}", $"{UserRole.Admin}"];
     private RecordCapacity? _recordCapacity;
 
     [Parameter] public required int UserId { get; set; }
@@ -40,7 +39,7 @@ public partial class EditUserPage : ComponentBase
         try
         {
             _userData = await UserService.GetUser(UserId);
-            _selectedUserRole = _userData?.UserRole.ToString() ?? $"{UserRole.User}";
+            _isAdmin = _userData?.UserRole == UserRole.Admin;
             _selectedPlan = _userData?.PricingLevel.ToString() ?? $"{PricingLevel.Free}";
         }
         catch (Exception ex)
@@ -86,16 +85,18 @@ public partial class EditUserPage : ComponentBase
     private async Task ChangeUserRole()
     {
         if (_userData is null) return;
-        if (string.IsNullOrEmpty(_selectedUserRole)) return;
 
         try
         {
-
-            var result = await UserService.UpdateRole(_userData.UserId, (UserRole)Enum.Parse(typeof(UserRole), _selectedUserRole));
+            var role = _isAdmin ? UserRole.Admin : UserRole.User;
+            var result = await UserService.UpdateRole(_userData.UserId, role);
             if (!result)
                 _errors.Insert(0, "Failed to change role.");
             else
-                _info.Insert(0, $"Successfully changed role");
+            {
+                _userData.UserRole = role;
+                _info.Insert(0, "Successfully changed roles.");
+            }
         }
         catch (Exception ex)
         {

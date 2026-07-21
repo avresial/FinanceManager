@@ -22,8 +22,8 @@ public partial class JwtTokenGenerator(IOptions<JwtAuthOptions> jwtOptions)
         {
             new(JwtRegisteredClaimNames.Name, userName),
             new(ClaimTypes.NameIdentifier, userId.ToString()),
-            new(ClaimTypes.Role, userRole.ToString()),
         };
+        claims.AddRange(userRole.GetAssignedRoles().Select(role => new Claim(ClaimTypes.Role, role)));
         if (isGuest)
             claims.Add(new(GuestClaims.IsGuest, "true"));
 
