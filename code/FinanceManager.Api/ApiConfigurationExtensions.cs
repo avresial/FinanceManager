@@ -3,9 +3,11 @@ using FinanceManager.Api.Services;
 using FinanceManager.Api.Services.Guest;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Infrastructure.OAuth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
@@ -27,6 +29,10 @@ public static class ApiConfigurationExtensions
         services.Configure<JwtAuthOptions>(configuration.GetSection("JwtConfig"));
         services.Configure<RefreshTokenOptions>(configuration.GetSection(RefreshTokenOptions.SectionName));
         services.Configure<PasswordResetOptions>(configuration.GetSection(PasswordResetOptions.SectionName));
+        services.AddOptions<McpOAuthOptions>()
+            .Bind(configuration.GetSection(McpOAuthOptions.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<McpOAuthOptions>, McpOAuthOptionsValidator>();
         services.AddAntiforgery(options =>
         {
             options.HeaderName = "X-CSRF-Token";

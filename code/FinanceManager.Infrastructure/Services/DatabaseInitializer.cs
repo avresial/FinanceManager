@@ -1,9 +1,11 @@
 ﻿using FinanceManager.Application.Shared.Seeders;
 using FinanceManager.Infrastructure.Contexts;
+using FinanceManager.Infrastructure.OAuth;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace FinanceManager.Infrastructure.Services;
 
@@ -47,6 +49,13 @@ internal class DatabaseInitializer(
         else
         {
             logger.LogInformation("Relational database not configured. Skipping migrations.");
+        }
+
+        var oauthOptions = scope.ServiceProvider.GetRequiredService<IOptions<McpOAuthOptions>>().Value;
+        if (oauthOptions.Enabled)
+        {
+            var oauthReconciler = scope.ServiceProvider.GetRequiredService<McpOAuthConfigurationReconciler>();
+            await oauthReconciler.ReconcileAsync(oauthOptions, cancellationToken);
         }
 
         _ = Task.Run(() => SeedData(applicationLifetime.ApplicationStopping), CancellationToken.None);

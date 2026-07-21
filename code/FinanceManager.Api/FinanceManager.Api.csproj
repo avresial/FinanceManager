@@ -17,6 +17,8 @@
 		<PackageReference Include="Microsoft.OpenApi" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
 		<PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
+		<PackageReference Include="ModelContextProtocol.AspNetCore" />
+		<PackageReference Include="OpenIddict.AspNetCore" />
 		<PackageReference Include="Scalar.AspNetCore" />
 	</ItemGroup>
 
