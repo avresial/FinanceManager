@@ -48,7 +48,9 @@ public class AdministrationUsersService(IFinancialAccountRepository financialAcc
         var users = await userRepository.GetUsers(recordIndex, recordsCount).ToListAsync();
         if (users.Count == 0) yield break;
 
-        var usedCapacities = await userPlanVerifier.GetUsedRecordsCapacity(users.Select(x => x.UserId).ToList());
+        var userIds = users.Select(x => x.UserId).ToList();
+        var usedCapacities = await userPlanVerifier.GetUsedRecordsCapacity(userIds);
+        var lastLoginTimes = await activeUsersRepository.GetLastLoginTimes(userIds);
 
         foreach (var user in users)
         {
@@ -61,7 +63,8 @@ public class AdministrationUsersService(IFinancialAccountRepository financialAcc
                 {
                     UsedCapacity = usedCapacities.TryGetValue(user.UserId, out var used) ? used : 0,
                     TotalCapacity = PricingProvider.GetMaxAllowedEntries(user.PricingLevel)
-                }
+                },
+                LastLoggedAt = lastLoginTimes.TryGetValue(user.UserId, out var lastLogin) ? lastLogin : null
             };
         }
     }

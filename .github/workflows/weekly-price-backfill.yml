@@ -1,0 +1,33 @@
+# Triggers the investment closing-price backfill for the past week. The scheduling lives here
+# (not in the app) because the free-tier App Service unloads when idle, so an in-process timer
+# cannot be trusted to fire — this HTTP call both wakes the app and queues the run.
+name: Weekly price backfill
+
+on:
+  schedule:
+    # Saturday 06:00 UTC, after Friday's close is available from the price providers.
+    - cron: '0 6 * * 6'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  trigger-backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call backfill endpoint
+        env:
+          APP_URL: https://financemanager.mikikarkowski.dev
+          MAINTENANCE_KEY: ${{ secrets.MAINTENANCE_API_KEY }}
+        run: |
+          if [ -z "$MAINTENANCE_KEY" ]; then
+            echo "::error::MAINTENANCE_API_KEY secret is not configured."
+            exit 1
+          fi
+          # Retries cover the free-tier cold start: the first request may time out while the app
+          # boots, so give it a few attempts before declaring the trigger failed.
+          curl --fail-with-body --silent --show-error \
+            --retry 5 --retry-delay 15 --retry-all-errors \
+            --max-time 60 \
+            -X POST "$APP_URL/api/PriceBackfill" \
+            -H "X-Maintenance-Key: $MAINTENANCE_KEY"

@@ -18,6 +18,7 @@
     <link href="_content/FinanceManager.Components/css/cardStyle.css" rel="stylesheet" />
     <link href="_content/FinanceManager.Components/css/time-series-card.css" rel="stylesheet" />
     <link href="_content/FinanceManager.Components/css/money-by-label-card.css" rel="stylesheet" />
+    <link href="_content/FinanceManager.Components/css/transaction-log-card.css" rel="stylesheet" />
 
     <!-- Start Single Page Apps for GitHub Pages -->
     <script type="text/javascript">
@@ -48,8 +49,10 @@
         :root {
             --app-bg: #ffffff;
             --app-text: #111827;
+            --app-text-muted: #6b7280;
             --app-spinner: #0d6efd;
             /* bootstrap primary */
+            --app-ring-track: #e5e7eb;
         }
 
         /* Keep a non-white background even after preload ends; MudBlazor theme variables take over when available */
@@ -65,7 +68,9 @@
                 --app-bg: rgba(33, 33, 33, 1);
                 /* dark slate */
                 --app-text: #e6eef8;
+                --app-text-muted: #94a3b8;
                 --app-spinner: #66a3ff;
+                --app-ring-track: #3a3f46;
             }
         }
 
@@ -82,14 +87,113 @@
             min-height: 100vh;
         }
 
-        html.preload #app h1,
-        body.preload #app h1 {
+        /* --- WASM boot screen (static HTML/CSS only; replaced when Blazor starts) --- */
+        .boot-screen {
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            padding: 1.5rem;
+            font-family: "Roboto", system-ui, sans-serif;
             color: var(--app-text);
+            animation: boot-fade-in 400ms ease-out both;
         }
 
-        html.preload .spinner-border,
-        body.preload .spinner-border {
+        .boot-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+        }
+
+        .boot-logo {
+            width: 3rem;
+            height: 3rem;
+            flex: none;
             color: var(--app-spinner);
+        }
+
+        .boot-logo .boot-logo-bar {
+            transform-origin: center bottom;
+            transform-box: fill-box;
+            animation: boot-bar-grow 1.8s ease-in-out infinite;
+        }
+
+        .boot-logo .boot-logo-bar:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .boot-logo .boot-logo-bar:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        .boot-title {
+            margin: 0;
+            font-size: clamp(1.6rem, 5vw, 2.2rem);
+            font-weight: 300;
+            letter-spacing: 0.04em;
+        }
+
+        .boot-title strong {
+            font-weight: 600;
+        }
+
+        /* Progress ring driven by Blazor's real boot progress.
+           The runtime updates --blazor-load-percentage / --blazor-load-percentage-text while assets download. */
+        .boot-progress {
+            position: relative;
+            width: 5.5rem;
+            height: 5.5rem;
+            border-radius: 50%;
+            background:
+                conic-gradient(var(--app-spinner) var(--blazor-load-percentage, 0%), var(--app-ring-track) 0);
+            -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 0.45rem), #000 calc(100% - 0.4rem));
+            mask: radial-gradient(closest-side, transparent calc(100% - 0.45rem), #000 calc(100% - 0.4rem));
+        }
+
+        .boot-progress-text {
+            font-size: 0.95rem;
+            font-variant-numeric: tabular-nums;
+            color: var(--app-text-muted);
+            letter-spacing: 0.02em;
+        }
+
+        .boot-progress-text::after {
+            content: var(--blazor-load-percentage-text, "Loading…");
+        }
+
+        @keyframes boot-fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(0.5rem);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        @keyframes boot-bar-grow {
+
+            0%,
+            100% {
+                transform: scaleY(0.55);
+            }
+
+            50% {
+                transform: scaleY(1);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            .boot-screen,
+            .boot-logo .boot-logo-bar {
+                animation: none;
+            }
         }
     </style>
 
@@ -142,11 +246,21 @@
     </script>
 
     <div id="app">
-        <div style="position:absolute; top:30vh; width:100%; text-align:center">
-            <h1>Finance manager</h1>
-            <div style="display:flex; gap:10px; justify-content:center; align-items:center">
-                <div class="spinner-border" role="status"></div>
+        <div class="boot-screen" role="status" aria-label="Finance manager is loading">
+            <div class="boot-brand">
+                <svg class="boot-logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true">
+                    <rect x="2" y="2" width="44" height="44" rx="10" stroke="currentColor" stroke-width="3" />
+                    <g fill="currentColor">
+                        <rect class="boot-logo-bar" x="11" y="24" width="6" height="13" rx="2" />
+                        <rect class="boot-logo-bar" x="21" y="17" width="6" height="20" rx="2" />
+                        <rect class="boot-logo-bar" x="31" y="11" width="6" height="26" rx="2" />
+                    </g>
+                </svg>
+                <h1 class="boot-title">Finance <strong>manager</strong></h1>
             </div>
+            <div class="boot-progress"></div>
+            <div class="boot-progress-text"></div>
         </div>
     </div>
 

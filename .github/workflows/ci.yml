@@ -284,6 +284,16 @@ jobs:
           path: '${{ github.workspace }}/TestResults/**/architecture-test-results.trx'
           reporter: dotnet-trx
 
+  # Deploy note: the target Azure Web Apps run on the free (F1) tier with a 1 GB disk quota.
+  # To avoid the "restart the app to make the deploy pass" problem (the deploy needs the old and
+  # new site on disk at once, and locked files block the swap), set the app setting
+  #   WEBSITE_RUN_FROM_PACKAGE=1
+  # on both FinanceManagerApi and FinanceManagerApi-dev so the site runs directly from the mounted
+  # deployment zip instead of being extracted into wwwroot.
+  #
+  # RID-scoping (optional, further shrinks foreign-RID native libs): once the App Service OS is
+  # confirmed, add "-r <rid> --self-contained false" (e.g. linux-x64 or win-x64) to the Publish API
+  # step below. Do NOT guess the RID — publishing the wrong one yields an app that will not start.
   publish:
     runs-on: ubuntu-latest
     needs: [build, unit-tests, integration-tests, architecture-tests, code-quality, security-scan]

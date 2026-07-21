@@ -11,6 +11,20 @@ public interface IInvestmentTransactionRepository
     /// <summary>Get all transactions belonging to the given account.</summary>
     Task<IReadOnlyList<InvestmentTransaction>> GetByAccount(int accountId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Get all transactions belonging to any of the given accounts in a single query. Lets callers
+    /// value several accounts without a per-account round-trip on the shared scoped context.
+    /// </summary>
+    Task<IReadOnlyList<InvestmentTransaction>> GetByAccounts(IReadOnlyCollection<int> accountIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get the <paramref name="count"/> most recent transactions across the given accounts in a single
+    /// bounded query, ordered by <see cref="InvestmentTransaction.TradeDate"/> descending then id descending.
+    /// Enforces the limit at the database level so callers composing recent-activity views (e.g. the
+    /// dashboard transaction log) never materialise a whole transaction history.
+    /// </summary>
+    Task<IReadOnlyList<InvestmentTransaction>> GetMostRecentByAccounts(IReadOnlyCollection<int> accountIds, int count, CancellationToken cancellationToken = default);
+
     /// <summary>Get a user's transactions whose <see cref="InvestmentTransaction.TradeDate"/> falls within [startDate, endDate].</summary>
     Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 
@@ -28,4 +42,11 @@ public interface IInvestmentTransactionRepository
     /// Replaces the old per-ISIN running-balance boundary lookups with a single grouped query.
     /// </summary>
     Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsOf(IReadOnlyCollection<int> accountIds, DateOnly asOf, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The distinct <see cref="AssetListing"/> ids referenced by any investment transaction across all
+    /// users, resolved in a single grouped query. Feeds maintenance jobs (e.g. the weekly price
+    /// backfill) that must cover every instrument anyone holds without materialising transactions.
+    /// </summary>
+    Task<IReadOnlyList<long>> GetDistinctAssetListingIds(CancellationToken cancellationToken = default);
 }

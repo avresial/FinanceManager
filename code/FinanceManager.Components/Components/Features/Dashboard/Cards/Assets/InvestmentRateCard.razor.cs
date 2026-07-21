@@ -9,53 +9,61 @@ using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
+using System.Globalization;
 
 namespace FinanceManager.Components.Components.Features.Dashboard.Cards.Assets;
 
 public partial class InvestmentRateCard
 {
     private const string _highlightColor = "#FF9800";
+    private const decimal _maximumChartPercentage = 300m;
     private const string _mutedBarColor = "#5F6368";
     private const string _mutedLabelColor = "var(--mud-palette-text-secondary)";
 
     private static readonly string[] _singleLetterMonths =
         ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 
+    private readonly DateTime _asOfDate = DateTime.UtcNow;
     private bool _isLoading;
     private Currency _currency = DefaultCurrency.PLN;
 
-    public List<InvestmentRate> InvestmentRates { get; set; } = [];
     public List<InvestmentRate> MonthlyInvestmentRates { get; set; } = [];
 
-    private InvestmentRate? LatestInvestmentRate => InvestmentRates.FirstOrDefault(x => x.Salary != 0);
     private InvestmentRate? CurrentMonthRate => MonthlyInvestmentRates.LastOrDefault();
+
+    internal InvestmentRate? SelectedMonthRate =>
+        _selectedRateIndex >= 0 && _selectedRateIndex < MonthlyInvestmentRates.Count
+            ? MonthlyInvestmentRates[_selectedRateIndex]
+            : null;
+
+    private string SelectedMonthName =>
+        SelectedMonthRate?.Start.ToString("MMMM", CultureInfo.InvariantCulture) ?? "Month";
 
     private decimal _currentMonthPercentage;
     private decimal _ytdAveragePercentage;
     private decimal? _endOfYearProjection;
+    private int _selectedRateIndex;
     private List<MonthBar> _series = [];
     private ApexChartOptions<MonthBar>? _chartOptions;
 
     [Parameter] public string Height { get; set; } = "300px";
-    [Parameter] public DateTime StartDateTime { get; set; }
-    [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
 
     [Inject] public required ILogger<InvestmentRateCard> Logger { get; set; }
-    [Inject] public required AssetsPageCardsCacheService AssetsPageCardsCacheService { get; set; }
+    [Inject] public required InvestmentRateCacheService InvestmentRateCacheService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _currency = SettingsService.GetCurrency();
+        _currency = await SettingsService.GetCurrencyAsync();
+        await LoadInvestmentRatesAsync();
     }
 
-    protected override async Task OnParametersSetAsync()
+    private async Task LoadInvestmentRatesAsync()
     {
         _isLoading = true;
         try
         {
-            InvestmentRates.Clear();
             MonthlyInvestmentRates.Clear();
 
             var user = await LoginService.GetLoggedUser();
@@ -63,16 +71,14 @@ public partial class InvestmentRateCard
 
             try
             {
-                var context = new AssetsPageCardsRefreshContext
+                var context = new InvestmentRateRefreshContext
                 {
                     UserId = user.UserId,
                     CurrencyId = _currency.Id,
-                    StartDateTime = StartDateTime,
-                    EndDateTime = EndDateTime,
+                    EndDateTime = _asOfDate,
                 };
 
-                var snapshot = await AssetsPageCardsCacheService.GetSnapshotAsync(context);
-                InvestmentRates = [.. snapshot.InvestmentRates];
+                var snapshot = await InvestmentRateCacheService.GetSnapshotAsync(context);
                 MonthlyInvestmentRates = [.. snapshot.MonthlyInvestmentRates];
 
                 BuildDerivedState();
@@ -90,21 +96,16 @@ public partial class InvestmentRateCard
 
     private void BuildDerivedState()
     {
+        _selectedRateIndex = MonthlyInvestmentRates.Count - 1;
         _currentMonthPercentage = CurrentMonthRate?.GetPercentage() ?? 0m;
 
-        var currentYear = EndDateTime.Year;
-        var ytdEntries = MonthlyInvestmentRates
-            .Where(r => r.Start.Year == currentYear && r.Salary != 0)
-            .ToList();
+        var currentYear = _asOfDate.Year;
+        var ytdEntries = MonthlyInvestmentRates.Where(r => r.Start.Year == currentYear).ToList();
+        var salaryYtd = ytdEntries.Sum(r => r.Salary);
+        var investedYtd = ytdEntries.Sum(r => r.InvestmentsChange);
+        _ytdAveragePercentage = salaryYtd == 0m ? 0m : investedYtd / salaryYtd;
 
-        _ytdAveragePercentage = ytdEntries.Count == 0
-            ? 0m
-            : ytdEntries.Average(r => r.GetPercentage());
-
-        var monthsElapsed = EndDateTime.Month;
-        var investedYtd = MonthlyInvestmentRates
-            .Where(r => r.Start.Year == currentYear)
-            .Sum(r => r.InvestmentsChange);
+        var monthsElapsed = _asOfDate.Month;
 
         _endOfYearProjection = monthsElapsed == 0 || investedYtd == 0
             ? null
@@ -121,14 +122,14 @@ public partial class InvestmentRateCard
             var rate = i < MonthlyInvestmentRates.Count ? MonthlyInvestmentRates[i] : null;
             var monthIndex = rate is not null ? rate.Start.Month - 1 : i;
             var label = _singleLetterMonths[monthIndex];
-            var pct = rate is not null ? (decimal)rate.GetPercentage() * 100m : 0m;
-            bars.Add(new MonthBar(label, pct, IsCurrent: i == 11, Key: $"{i}-{label}"));
+            var pct = rate is not null ? Math.Min(rate.GetPercentage() * 100m, _maximumChartPercentage) : 0m;
+            bars.Add(new MonthBar(label, pct, IsSelected: i == _selectedRateIndex, Key: $"{i}-{label}"));
         }
 
         _series = bars;
 
         var labelColors = bars
-            .Select(b => b.IsCurrent ? _highlightColor : _mutedLabelColor)
+            .Select(b => b.IsSelected ? _highlightColor : _mutedLabelColor)
             .ToArray();
 
         _chartOptions = new ApexChartOptions<MonthBar>
@@ -189,10 +190,35 @@ public partial class InvestmentRateCard
                         BorderColor = _mutedLabelColor,
                         StrokeDashArray = 4,
                         BorderWidth = 1,
+                        Label = new Label
+                        {
+                            Text = FormatAveragePercentage(_ytdAveragePercentage),
+                            Position = LabelPosition.Right,
+                            BorderColor = "transparent",
+                            Style = new Style
+                            {
+                                Background = "transparent",
+                                Color = _mutedLabelColor,
+                                FontSize = "11px",
+                            },
+                        },
                     },
                 ],
             };
         }
+    }
+
+    private void OnBarSelected(SelectedData<MonthBar> selection)
+    {
+        if (!SelectMonth(selection.DataPointIndex)) return;
+        BuildChart();
+    }
+
+    internal bool SelectMonth(int index)
+    {
+        if (index < 0 || index >= MonthlyInvestmentRates.Count) return false;
+        _selectedRateIndex = index;
+        return true;
     }
 
     private static string FormatRateNumber(decimal value) => $"{value * 100m:0.00}";
@@ -207,5 +233,5 @@ public partial class InvestmentRateCard
         ? "—"
         : $"{_endOfYearProjection.Value:N0} {_currency.ShortName}";
 
-    internal record MonthBar(string Label, decimal Percentage, bool IsCurrent, string Key);
+    internal record MonthBar(string Label, decimal Percentage, bool IsSelected, string Key);
 }

@@ -19,6 +19,29 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<InvestmentTransaction>> GetByAccounts(IReadOnlyCollection<int> accountIds, CancellationToken cancellationToken = default)
+    {
+        if (accountIds.Count == 0) return [];
+
+        return await context.InvestmentTransactions.AsNoTracking()
+            .Include(x => x.AssetListing)
+            .Where(x => accountIds.Contains(x.AccountId))
+            .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<InvestmentTransaction>> GetMostRecentByAccounts(IReadOnlyCollection<int> accountIds, int count, CancellationToken cancellationToken = default)
+    {
+        if (accountIds.Count == 0 || count <= 0) return [];
+
+        return await context.InvestmentTransactions.AsNoTracking()
+            .Include(x => x.AssetListing)
+            .Where(x => accountIds.Contains(x.AccountId))
+            .OrderByDescending(x => x.TradeDate).ThenByDescending(x => x.Id)
+            .Take(count)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default) =>
         await context.InvestmentTransactions.AsNoTracking()
             .Include(x => x.AssetListing)
@@ -80,4 +103,11 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
                 g => g.Key,
                 g => g.Sum(t => t.Type == InvestmentTransactionType.Sell ? -t.Quantity : t.Quantity));
     }
+
+    public async Task<IReadOnlyList<long>> GetDistinctAssetListingIds(CancellationToken cancellationToken = default) =>
+        await context.InvestmentTransactions.AsNoTracking()
+            .Select(x => x.AssetListingId)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToListAsync(cancellationToken);
 }

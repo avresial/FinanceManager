@@ -1,4 +1,5 @@
 using ApexCharts;
+using FinanceManager.Components.Helpers;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -13,6 +14,8 @@ public partial class AccountDetailsHero
     [Parameter] public decimal Balance { get; set; }
     [Parameter] public decimal BalanceChange { get; set; }
     [Parameter] public decimal? BalanceChangePercent { get; set; }
+    [Parameter] public string ChangeLabel { get; set; } = "Change";
+    [Parameter] public bool ShowChangeRange { get; set; } = true;
     [Parameter] public string SelectedRange { get; set; } = "3M";
     [Parameter] public EventCallback<string> SelectedRangeChanged { get; set; }
     [Parameter] public DateRange? CustomDateRange { get; set; }
@@ -21,7 +24,9 @@ public partial class AccountDetailsHero
     [Parameter] public List<TimeSeriesModel> ChartData { get; set; } = [];
     [Parameter] public bool IsMobile { get; set; }
 
-    public const string CustomRangeKey = "Range";
+    // Must match the key DateRangeHelper.GetAccountDetailsRange resolves the custom
+    // range with; a diverging literal here made custom ranges fall back to the default.
+    public const string CustomRangeKey = DateRangeHelper.CustomRangeKey;
 
     private readonly string[] _ranges = ["Month", "1M", "3M", "6M", "YTD"];
 

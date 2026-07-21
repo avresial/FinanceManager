@@ -19,6 +19,9 @@ public interface IPriceQuoteRepository
     /// <summary>Insert the quote, or update the existing one matched by (AssetListingId, Provider, PriceTime, QuoteType).</summary>
     Task<PriceQuote> Upsert(PriceQuote quote, CancellationToken cancellationToken = default);
 
+    /// <summary>Insert or update multiple quotes in a single transaction, loading existing rows once and calling SaveChangesAsync once.</summary>
+    Task<IReadOnlyList<PriceQuote>> UpsertRange(IReadOnlyList<PriceQuote> quotes, CancellationToken cancellationToken = default);
+
     /// <summary>Delete the quote with the given id. Returns <c>false</c> when no such quote exists.</summary>
     Task<bool> Delete(long id, CancellationToken cancellationToken = default);
 }

@@ -25,6 +25,7 @@ using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Domain.Shared.Ai.Repositories;
 using FinanceManager.Domain.Shared.Charting;
 using FinanceManager.Domain.Shared.ExternalServices.Repositories;
+using FinanceManager.Domain.Shared.Maintenance.Repositories;
 using FinanceManager.Infrastructure.Contexts;
 using FinanceManager.Infrastructure.Guest;
 using FinanceManager.Infrastructure.Providers;
@@ -68,18 +69,8 @@ public static class ServiceCollectionExtension
         services.AddScoped<IOpenFigiClient>(sp => sp.GetRequiredService<OpenFigiClient>());
         services.AddScoped<IQuoteFactorResolver>(sp =>
             new QuoteFactorResolver(
-                sp.GetRequiredService<ICurrencyExchangeRateProvider>(),
+                sp.GetRequiredService<ICurrencyExchangeService>(),
                 sp.GetRequiredService<ILogger<QuoteFactorResolver>>()));
-        services.AddScoped<IInstrumentResolver>(sp =>
-            new InstrumentResolver(
-                sp.GetRequiredService<IOpenFigiClient>(),
-                sp.GetRequiredService<IAlphaVantageClient>(),
-                sp.GetRequiredService<IAssetRepository>(),
-                sp.GetRequiredService<IAssetListingRepository>(),
-                sp.GetRequiredService<IMarketDataSymbolRepository>(),
-                sp.GetRequiredService<IQuoteFactorResolver>(),
-                sp.GetRequiredService<IMemoryCache>(),
-                sp.GetRequiredService<ILogger<InstrumentResolver>>()));
         services.AddHttpClient<ICurrencyExchangeRateProvider, FawazAhmedCurrencyApiClient>();
 
         services.AddAI();
@@ -102,11 +93,13 @@ public static class ServiceCollectionExtension
                 .AddScoped<IFinancialInsightsRepository, FinancialInsightsRepository>()
                 .AddScoped<IFinancialLabelsRepository, FinancialLabelsRepository>()
                 .AddScoped<ICurrencyRepository, CurrencyRepository>()
+                .AddScoped<IExchangeRateRepository, ExchangeRateRepository>()
                 .AddScoped<IBondDetailsRepository, BondDetailsRepository>()
                 .AddScoped<ICsvHeaderMappingRepository, CsvHeaderMappingRepository>()
                 .AddScoped<IInflationDataProvider, InMemoryInflationDataProvider>()
                 .AddScoped<IAiProviderConfigRepository, AiProviderConfigRepository>()
                 .AddScoped<IExternalServiceConfigRepository, ExternalServiceConfigRepository>()
+                .AddScoped<IMaintenanceKeyRepository, MaintenanceKeyRepository>()
                 .AddScoped<ILogEntryRepository, LogEntryRepository>()
 
                 .AddSingleton<IInsightsPromptProvider, InsightsPromptProvider>()

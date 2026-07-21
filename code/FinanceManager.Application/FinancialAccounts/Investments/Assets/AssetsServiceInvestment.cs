@@ -1,5 +1,6 @@
 using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
@@ -19,7 +20,8 @@ internal class AssetsServiceInvestment(
     IFinancialAccountRepository financialAccountRepository,
     IInvestmentValuationService valuationService,
     IInvestmentTransactionRepository transactionRepository,
-    IInvestmentPriceProvider priceProvider) : IAssetsServiceTyped
+    IInvestmentPriceProvider priceProvider,
+    ICurrencyExchangeService currencyExchangeService) : IAssetsServiceTyped
 {
     public bool IsOfType<T>() => typeof(T) == typeof(InvestmentAccount);
 
@@ -42,10 +44,14 @@ internal class AssetsServiceInvestment(
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         if (start == default) return [];
 
-        Dictionary<DateTime, decimal> values = [];
+        List<int> accountIds = [];
         await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, start, end))
+            accountIds.Add(account.AccountId);
+
+        Dictionary<DateTime, decimal> values = [];
+        var seriesByAccount = await valuationService.GetAccountValueSeriesAsync(accountIds, currency, start, end);
+        foreach (var series in seriesByAccount.Values)
         {
-            var series = await valuationService.GetAccountValueSeriesAsync(account.AccountId, currency, start, end);
             foreach (var (date, value) in series)
             {
                 if (!values.TryAdd(date, value))
@@ -66,19 +72,26 @@ internal class AssetsServiceInvestment(
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
     {
+        List<InvestmentAccount> accounts = [];
         await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, asOfDate.AddMinutes(-1), asOfDate))
+            accounts.Add(account);
+
+        var valuesByAccount = await valuationService.GetAccountValueAsync(accounts.Select(a => a.AccountId).ToList(), currency, asOfDate);
+        foreach (var account in accounts)
         {
-            var value = await valuationService.GetAccountValueAsync(account.AccountId, currency, asOfDate);
-            if (value > 0)
+            if (valuesByAccount.TryGetValue(account.AccountId, out var value) && value > 0)
                 yield return new NameValueResult(account.Name, value);
         }
     }
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
     {
-        decimal total = 0;
+        List<int> accountIds = [];
         await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, asOfDate.AddMinutes(-1), asOfDate))
-            total += await valuationService.GetAccountValueAsync(account.AccountId, currency, asOfDate);
+            accountIds.Add(account.AccountId);
+
+        var valuesByAccount = await valuationService.GetAccountValueAsync(accountIds, currency, asOfDate);
+        var total = valuesByAccount.Values.Sum();
 
         if (total > 0)
             yield return new NameValueResult(InvestmentType.Stock.ToString(), total);
@@ -102,23 +115,35 @@ internal class AssetsServiceInvestment(
                 var listing = group.First().AssetListing;
                 var instrumentName = listing?.Ticker ?? group.Key.ToString();
 
-                // Average-cost basis from buy legs (including fees). Cost basis is recorded in each
-                // transaction's currency; when that differs from the requested display currency we
-                // cannot convert historical FX here, so flag the instrument and exclude it from totals.
                 var buys = group.Where(t => t.Type == InvestmentTransactionType.Buy).ToList();
                 var boughtQty = buys.Sum(t => t.Quantity);
-                var boughtCost = buys.Sum(t => t.Quantity * t.UnitPrice + (t.Fee ?? 0));
+                decimal boughtCost = 0m;
+                var missingExchangeRate = false;
+                foreach (var buy in buys)
+                {
+                    var sourceCurrency = new Currency { ShortName = buy.Currency, Symbol = buy.Currency };
+                    var exchangeRate = string.Equals(buy.Currency, currency.ShortName, StringComparison.OrdinalIgnoreCase)
+                        ? 1m
+                        : await currencyExchangeService.GetExchangeRateAsync(
+                            sourceCurrency, currency, buy.TradeDate.ToDateTime(TimeOnly.MinValue));
+                    if (exchangeRate is not decimal rate || rate <= 0m)
+                    {
+                        missingExchangeRate = true;
+                        break;
+                    }
+
+                    boughtCost += (buy.Quantity * buy.UnitPrice + (buy.Fee ?? 0m)) * rate;
+                }
                 var avgCost = boughtQty > 0 ? boughtCost / boughtQty : 0;
                 var costBasis = avgCost * holding;
 
                 var price = await priceProvider.GetPricePerUnitAsync(group.Key, currency, asOfDate);
                 var currentValue = holding * price;
 
-                var crossCurrency = group.Any(t => !string.Equals(t.Currency, currency.ShortName, StringComparison.OrdinalIgnoreCase));
-                var excluded = price <= 0 || crossCurrency;
+                var excluded = price <= 0 || missingExchangeRate;
                 string? warning = price <= 0
                     ? "No price available for this instrument."
-                    : crossCurrency ? "Cost basis is in a different currency; excluded from totals." : null;
+                    : missingExchangeRate ? "No exchange rate available for the transaction date." : null;
 
                 var unrealized = currentValue - costBasis;
                 var unrealizedPercent = costBasis == 0 ? 0 : unrealized / costBasis * 100;

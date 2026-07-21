@@ -1,156 +1,84 @@
-﻿@using FinanceManager.Components.Helpers
+@using FinanceManager.Components.Helpers
 
-@if (StockStyle)
-{
-    <MudToggleGroup T="string" @bind-Value="selectedStockTimeSpan" Outlined=false Delimiters=false>
-        @* <MudToggleItem Value="@("1D")" /> *@
-        <MudToggleItem Value="@("5D")" />
-        <MudToggleItem Value="@("1M")" />
-        <MudToggleItem Value="@("6M")" />
-        <MudToggleItem Value="@("YTD")" />
-        <MudToggleItem Value="@("1Y")" />
-        <MudToggleItem Value="@("5Y")" />
-        <MudToggleItem Value="@("Max")" />
-    </MudToggleGroup>
-}
-else
-{
+<MudPaper Elevation="3" Class="rounded-pill px-1 py-1" Style="right: 30px; position: fixed; bottom: 3vh; z-index: 2;">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0">
+        @foreach (var (key, label) in _presets)
+        {
+            <MudButton Variant="Variant.Text" Size="Size.Small" Class="rounded-pill px-3"
+                       Color="@(_selected == key ? Color.Primary : Color.Default)"
+                       Style="@($"font-weight: {(_selected == key ? 700 : 500)};")"
+                       OnClick="@(() => SelectPreset(key))">@label</MudButton>
+        }
 
-    <MudPaper Elevation="1" Style="right: 30px; position: fixed; bottom: 3vh; z-index:2;">
-        <MudStack Spacing="0">
+        @if (_selected == DateRangeHelper.CustomRangeKey && _customRange is { Start: DateTime customStart, End: DateTime customEnd })
+        {
+            <MudText Typo="Typo.caption" Color="Color.Primary" Class="px-2"
+                     Style="font-weight: 700; white-space: nowrap;">
+                @customStart.ToString("dd MMM") &ndash; @customEnd.ToString("dd MMM")
+            </MudText>
+        }
 
-            <MudButtonGroup Variant="Variant.Text">
+        <MudIconButton Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small"
+                       Color="@(_selected == DateRangeHelper.CustomRangeKey ? Color.Primary : Color.Default)"
+                       OnClick="OpenCustomDateRangePicker" aria-label="Select custom date range" />
+    </MudStack>
+</MudPaper>
 
-                <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentMonthRange()))>This month</MudButton>
-                <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentQuarterRange()))>This quarter</MudButton>
-                <MudButton @onclick=@(() => SetRange(DateRangeHelper.GetCurrentYearRange()))>This year</MudButton>
-
-                <MudIconButton Icon="@Icons.Material.Filled.ArrowDropDown" OnClick="@(() => _expanded = !_expanded)" aria-label="More date range options" />
-            </MudButtonGroup>
-
-            <MudCollapse Expanded="_expanded">
-                <MudPaper Elevation="0" Style="max-width: 350px; min-height:50px">
-                    <MudDateRangePicker @bind-DateRange="dateRange" RelativeWidth="DropdownWidth.Ignore"
-                                        Class="px-1 pt-1" />
-                </MudPaper>
-            </MudCollapse>
-        </MudStack>
-    </MudPaper>
-}
-
+@* Hidden picker opened programmatically by the calendar icon; the Dialog variant matches
+   the custom-range picker on the account details pages. *@
+<div class="fm-dashboard-custom-range-picker">
+    <MudDateRangePicker @ref="_customDateRangePicker" DateRange="_customRange" DateFormat="dd/MM/yyyy"
+                        DateRangeChanged="OnCustomDateRangeChanged" PickerVariant="PickerVariant.Dialog" />
+</div>
 
 @code {
-    private bool _expanded;
+    private static readonly (string Key, string Label)[] _presets =
+    [
+        ("ThisMonth", "This month"),
+        ("Quarter", "This quarter"),
+        ("ThisYear", "This year"),
+    ];
 
-    private string _selectedStockTimeSpan = "1M";
+    private string _selected = "ThisMonth";
+    private DateRange? _customRange;
+    private MudDateRangePicker? _customDateRangePicker;
 
-    public string selectedStockTimeSpan
-    {
-        get { return _selectedStockTimeSpan; }
-        set
-        {
-            _selectedStockTimeSpan = value;
-            StockTimeSpanChanged(value);
-        }
-    }
-
-    private void StockTimeSpanChanged(string value)
-    {
-        switch (_selectedStockTimeSpan)
-        {
-            case "1D":
-                _dateRange = new DateRange(DateTime.UtcNow.AddDays(-1), DateTime.UtcNow);
-                break;
-            case "5D":
-                _dateRange = new DateRange(DateTime.UtcNow.AddDays(-5), DateTime.UtcNow);
-                break;
-            case "1W":
-                _dateRange = new DateRange(DateTime.UtcNow.AddDays(-7), DateTime.UtcNow);
-                break;
-            case "1M":
-                _dateRange = new DateRange(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
-                break;
-            case "6M":
-                _dateRange = new DateRange(DateTime.UtcNow.AddMonths(-6), DateTime.UtcNow);
-                break;
-            case "1YTD":
-                _dateRange = new DateRange(DateTime.UtcNow.AddYears(-1), DateTime.UtcNow);
-                break;
-            case "1Y":
-                _dateRange = new DateRange(DateTime.UtcNow.AddYears(-1), DateTime.UtcNow);
-                break;
-            case "5Y":
-                _dateRange = new DateRange(DateTime.UtcNow.AddYears(-5), DateTime.UtcNow);
-                break;
-            case "Max":
-                _dateRange = new DateRange(DateTime.UtcNow.AddYears(-99), DateTime.UtcNow);
-                break;
-        }
-
-        DateChanged((_dateRange!.Start!.Value, _dateRange!.End!.Value));
-    }
-
-    private DateRange _dateRange = new DateRange();
-
-    public DateRange dateRange
-    {
-        get { return _dateRange; }
-        set
-        {
-            if (_dateRange == value) return;
-
-            _dateRange = value;
-            ApplyDates();
-        }
-    }
-
-
-    [Parameter] public DateRange? InitialDateRange { get; set; } = null;
-    [Parameter] public bool StockStyle { get; set; }
     [Parameter] public string StartingOption { get; set; } = "ThisMonth";
     [Parameter] public required Action<(DateTime Start, DateTime End)> DateChanged { get; set; }
 
     protected override void OnInitialized()
     {
-        (DateTime Start, DateTime End)? range = null;
-        if (InitialDateRange is not null && InitialDateRange.Start is not null)
-            range = (InitialDateRange.Start.Value, InitialDateRange.Start.Value);
-
-        switch (StartingOption)
-        {
-            case "ThisMonth":
-                range = DateRangeHelper.GetCurrentMonthRange();
-                break;
-            case "Quarter":
-                range = DateRangeHelper.GetCurrentQuarterRange();
-                break;
-            case "ThisYear":
-                range = DateRangeHelper.GetCurrentYearRange();
-                break;
-            default:
-                range = DateRangeHelper.GetCurrentMonthRange();
-                break;
-        }
-
-        if (range is not null)
-        {
-            var end = range.Value.End < DateTime.UtcNow ? range.Value.End : DateTime.UtcNow;
-            _dateRange = new DateRange(range.Value.Start, end);
-        }
+        if (_presets.Any(p => p.Key == StartingOption))
+            _selected = StartingOption;
     }
 
-    public void SetRange((DateTime Start, DateTime End) range)
+    private Task OpenCustomDateRangePicker() =>
+        _customDateRangePicker?.OpenAsync() ?? Task.CompletedTask;
+
+    private void SelectPreset(string key)
     {
-        _dateRange = new DateRange(range.Start, range.End);
+        _selected = key;
+        var range = key switch
+        {
+            "Quarter" => DateRangeHelper.GetCurrentQuarterRange(),
+            "ThisYear" => DateRangeHelper.GetCurrentYearRange(),
+            _ => DateRangeHelper.GetCurrentMonthRange(),
+        };
 
-        if (_dateRange.Start is null || _dateRange.End is null) return;
-
-        DateChanged((_dateRange.Start.Value, _dateRange.End.Value < DateTime.UtcNow ? _dateRange.End.Value : DateTime.UtcNow));
+        var now = DateTime.UtcNow;
+        DateChanged((range.Start, range.End < now ? range.End : now));
     }
-    public void ApplyDates()
-    {
-        if (_dateRange.Start is null || _dateRange.End is null) return;
 
-        DateChanged((_dateRange.Start.Value.ToUniversalTime(), _dateRange.End.Value.ToUniversalTime()));
+    private void OnCustomDateRangeChanged(DateRange? range)
+    {
+        _customRange = range;
+        if (range is not { Start: DateTime start, End: DateTime end }) return;
+
+        _selected = DateRangeHelper.CustomRangeKey;
+
+        // The picker returns midnight for the end day; include the whole selected day, clamped to now.
+        var now = DateTime.UtcNow;
+        var inclusiveEnd = end.Date.AddDays(1).AddTicks(-1);
+        DateChanged((start, inclusiveEnd < now ? inclusiveEnd : now));
     }
 }

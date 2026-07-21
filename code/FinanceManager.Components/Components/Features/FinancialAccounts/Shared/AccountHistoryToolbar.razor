@@ -23,7 +23,7 @@
             <ActivatorContent>
                 <MudButton Variant="Variant.Outlined" Color="@(SelectedLabels.Count > 0 ? Color.Primary : Color.Default)"
                            Size="Size.Medium" StartIcon="@Icons.Material.Filled.FilterList"
-                           EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
+                           EndIcon="@Icons.Material.Filled.KeyboardArrowDown" OnClick="ToggleLabelMenu"
                            Style="text-transform: none; white-space: nowrap; flex-shrink: 0; padding: 6.5px;">
                     @CategoryButtonText
                 </MudButton>

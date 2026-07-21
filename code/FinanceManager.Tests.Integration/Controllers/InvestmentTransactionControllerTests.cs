@@ -78,7 +78,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
-    private async Task<long> SeedTransaction(InvestmentTransactionType type, decimal quantity, DateOnly tradeDate)
+    private async Task<long> SeedTransaction(InvestmentTransactionType type, decimal quantity, DateOnly tradeDate, decimal unitPrice = 100m)
     {
         await SeedAccount();
         await SeedListing();
@@ -89,7 +89,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
             AssetListingId = _listingId,
             Type = type,
             Quantity = quantity,
-            UnitPrice = 100m,
+            UnitPrice = unitPrice,
             Currency = "USD",
             TradeDate = tradeDate
         };
@@ -115,6 +115,23 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Assert.NotNull(result);
         Assert.Equal(321.45m, result.LatestPrice);
         Assert.Equal("USD", result.Currency);
+    }
+
+    [Fact]
+    public async Task ListingPrice_UsesTradeDateWhenProvided()
+    {
+        await SeedListing();
+        Authorize("testuser", _testUserId, UserRole.User);
+        var tradeDate = new DateOnly(2024, 6, 1);
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(),
+                tradeDate.ToDateTime(TimeOnly.MinValue), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(300m);
+
+        var result = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(_listingId, tradeDate);
+
+        Assert.NotNull(result);
+        Assert.Equal(300m, result.LatestPrice);
     }
 
     [Fact]
@@ -171,6 +188,27 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         var transactions = await client.GetByAccountAsync(_testAccountId);
 
         Assert.Equal(2, transactions.Count);
+    }
+
+    [Fact]
+    public async Task GetByAccount_RecoversAllMissingPrices()
+    {
+        var tradeDate = new DateOnly(2024, 1, 10);
+        await SeedTransaction(InvestmentTransactionType.Buy, 5m, tradeDate, unitPrice: 0m);
+        await SeedTransaction(InvestmentTransactionType.Sell, 2m, tradeDate, unitPrice: 0m);
+        Authorize("testuser", _testUserId, UserRole.User);
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(), It.Is<DateTime>(d => d.Date == tradeDate.ToDateTime(TimeOnly.MinValue).Date), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(321.45m);
+
+        var transactions = await new InvestmentTransactionHttpClient(Client).GetByAccountAsync(_testAccountId);
+
+        Assert.Equal(2, transactions.Count);
+        Assert.All(transactions, transaction => Assert.Equal(321.45m, transaction.UnitPrice));
+        Assert.All(await _testDatabase!.Context.InvestmentTransactions.ToListAsync(TestContext.Current.CancellationToken), transaction => Assert.Equal(321.45m, transaction.UnitPrice));
+        _priceProvider.Verify(
+            x => x.GetPricePerUnitAsync(_listingId, It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

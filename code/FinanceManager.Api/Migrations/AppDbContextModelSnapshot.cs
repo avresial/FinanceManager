@@ -607,6 +607,39 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("CurrencyEntries");
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Currencies.Entities.ExchangeRate", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FromCurrency")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<decimal>("Rate")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("numeric(18,8)");
+
+                    b.Property<string>("ToCurrency")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FromCurrency", "ToCurrency", "Date")
+                        .IsUnique();
+
+                    b.ToTable("ExchangeRates");
+                });
+
             modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Investments.Entities.InvestmentTransaction", b =>
                 {
                     b.Property<long>("Id")
@@ -818,6 +851,9 @@ namespace FinanceManager.Api.Migrations
                     b.Property<string>("Password")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("PreferredCurrencyId")
+                        .HasColumnType("integer");
 
                     b.Property<int>("PricingLevel")
                         .HasColumnType("integer");
@@ -1057,6 +1093,27 @@ namespace FinanceManager.Api.Migrations
                     b.HasKey("ServiceName");
 
                     b.ToTable("ExternalServiceConfigurations");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Shared.Maintenance.Entities.MaintenanceApiKey", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("KeyHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MaintenanceApiKeys");
                 });
 
             modelBuilder.Entity("CurrencyAccountEntryFinancialLabel", b =>

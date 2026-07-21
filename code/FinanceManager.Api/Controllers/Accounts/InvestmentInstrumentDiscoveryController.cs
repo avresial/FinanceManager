@@ -13,7 +13,9 @@ namespace FinanceManager.Api.Controllers.Accounts;
 [ApiController]
 [Route("api/investments/instruments")]
 [Tags("Investment Instruments")]
-public class InvestmentInstrumentDiscoveryController(IInvestmentInstrumentDiscoveryService discoveryService) : ControllerBase
+public class InvestmentInstrumentDiscoveryController(
+    IInvestmentInstrumentDiscoveryService discoveryService,
+    IInstrumentImportService importService) : ControllerBase
 {
     [HttpGet("search")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InstrumentDiscoveryResultDto>))]
@@ -29,7 +31,7 @@ public class InvestmentInstrumentDiscoveryController(IInvestmentInstrumentDiscov
     [HttpPost("import-preview")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(InstrumentImportPreviewDto))]
     public async Task<IActionResult> ImportPreview([FromBody] InstrumentDiscoveryResultDto instrument, CancellationToken cancellationToken) =>
-        Ok(await discoveryService.GetImportPreviewAsync(instrument, cancellationToken));
+        Ok(await importService.GetImportPreviewAsync(instrument, cancellationToken));
 
     [HttpPost("import")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ImportedInstrumentDto))]
@@ -37,7 +39,7 @@ public class InvestmentInstrumentDiscoveryController(IInvestmentInstrumentDiscov
     {
         try
         {
-            return Ok(await discoveryService.ImportAsync(command, cancellationToken));
+            return Ok(await importService.ImportAsync(command, cancellationToken));
         }
         catch (ArgumentException ex)
         {

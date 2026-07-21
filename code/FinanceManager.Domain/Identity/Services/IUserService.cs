@@ -12,6 +12,7 @@ public interface IUserService
     Task<bool> Delete(int userId);
     Task<bool> UpdatePassword(int userId, string newPassword, string? currentPassword = null);
     Task<bool> UpdatePricingPlan(int userId, PricingLevel newPricingLevel);
+    Task<bool> UpdatePreferredCurrency(int userId, int currencyId);
     Task<bool> UpdateRole(int userId, UserRole userRole);
 
 }

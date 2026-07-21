@@ -1,5 +1,4 @@
 @namespace FinanceManager.Components.Components.Features.FinancialAccounts.InvestmentAccountComponents
-@using FinanceManager.Domain.Assets.Dtos
 @using FinanceManager.Domain.FinancialAccounts.Investments.Entities
 @using FinanceManager.Components.Components.Features.FinancialAccounts.InvestmentAccountComponents.TransactionHistory
 @using FinanceManager.Components.Components.Features.FinancialAccounts.Shared
@@ -23,6 +22,7 @@ else
 {
     <AccountDetailsHero AccountName="@_accountName" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
                         Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
+                        ChangeLabel="Asset appreciation" ShowChangeRange="false"
                         SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged" IsChartLoading="@_isChartLoading"
                         CustomDateRange="@_customDateRange" CustomDateRangeChanged="OnCustomDateRangeChanged"
                         ChartData="@ChartData" IsMobile="@_isMobile" />
@@ -66,6 +66,8 @@ else
                 <MudItem lg="4">
                     <MudStack Spacing="4">
                         <BalanceChangeCard BalanceChange="@_balanceChange" Currency="@_currency.ShortName"
+                                           Label="Asset appreciation" ShowRange="false"
+                                           Description="Current value minus remaining buy cost"
                                            RangeLabel="@_selectedRange" FromDate="@_dateStart" ToDate="@_dateEnd" />
 
                         @HoldingsCard
@@ -89,7 +91,9 @@ else
             </MudStack>
             <MudDivider />
             <MudStack Spacing="4" Class="pa-4">
-                <BalanceChangeCard BalanceChange="@_balanceChange" Currency="@_currency.ShortName" RangeLabel="@_selectedRange"
+                <BalanceChangeCard BalanceChange="@_balanceChange" Currency="@_currency.ShortName"
+                                   Label="Asset appreciation" ShowRange="false"
+                                   Description="Current value minus remaining buy cost" RangeLabel="@_selectedRange"
                                    FromDate="@_dateStart" ToDate="@_dateEnd" />
 
                 @HoldingsCard
@@ -100,45 +104,8 @@ else
     }
 }
 
-<MudOverlay Visible="@_formVisible" DarkBackground="true" ZIndex="1300">
-    <MudPaper Class="pa-5" Style="width: min(460px, 92vw);">
-        <MudText Typo="Typo.h6" Class="mb-3">@(_editingId is null ? "Add transaction" : "Edit transaction")</MudText>
-        <MudStack Spacing="3">
-            <MudAutocomplete T="InstrumentSearchResultDto" Label="Instrument"
-                             Value="_selectedInstrument"
-                             ValueChanged="OnInstrumentSelectedAsync"
-                             SearchFunc="SearchInstrumentsAsync"
-                             ToStringFunc="@(dto => dto is null ? string.Empty : $"{dto.Ticker} — {dto.ExchangeName}")"
-                             MinCharacters="1"
-                             DebounceInterval="300"
-                             ResetValueOnEmptyText="true"
-                             CoerceText="false"
-                             Dense="true" />
-            @if (_editingId is null)
-            {
-                <InstrumentImport ButtonText="Can't find it? Import instrument" Imported="OnInstrumentImportedAsync" />
-            }
-            <MudSelect T="InvestmentTransactionType" Label="Type" @bind-Value="_formType" Dense="true">
-                <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Buy">Buy</MudSelectItem>
-                <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Sell">Sell</MudSelectItem>
-            </MudSelect>
-            <MudNumericField T="decimal" Label="Units" @bind-Value="_formQuantity" Min="0" Step="0.0001M" />
-            <MudTextField T="string" Label="Unit price" Value="@(_selectedInstrument is null ? string.Empty : _formUnitPrice.ToString("N2"))" ReadOnly="true" Disabled="true" />
-            @if (_noPriceAvailable && _selectedInstrument is not null)
-            {
-                <MudAlert Severity="Severity.Info" Dense="true">No price data found for this instrument. You can still save the transaction — the unit price will be recalculated once a price quote is available.</MudAlert>
-            }
-            <MudTextField T="string" Label="Currency" Value="@_formCurrency" ReadOnly="true" Disabled="true" />
-            <MudDatePicker Label="Trade date" @bind-Date="_formTradeDate" />
-            <MudNumericField T="decimal?" Label="Fee (optional)" @bind-Value="_formFee" Min="0" Step="0.01M" />
-            <MudTextField T="string" Label="Notes (optional)" @bind-Value="_formNotes" />
-            <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
-                <MudButton Variant="Variant.Text" OnClick="CloseForm" Disabled="@_saving">Cancel</MudButton>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@(_saving || !CanSave)">Save</MudButton>
-            </MudStack>
-        </MudStack>
-    </MudPaper>
-</MudOverlay>
+<InvestmentTransactionForm AccountId="@AccountId" Visible="@_formVisible" VisibleChanged="OnFormVisibleChanged"
+                           Transaction="@_editingTransaction" OnSaved="OnTransactionSavedAsync" />
 
 <MudScrollToTop TopOffset="400" ScrollBehavior="ScrollBehavior.Smooth">
     <MudFab Color="Color.Primary" Size="Size.Medium" StartIcon="@Icons.Material.Filled.KeyboardArrowUp"

@@ -22,6 +22,14 @@ public partial class TimeSeriesValueCard
     private string? _builtForAccent;
     private string? _builtForCurrency;
 
+    // ApexCharts draws via JS interop only when the ApexChart component is first
+    // rendered; feeding new Data into an already-rendered chart changes nothing on
+    // screen. Track which chart instance drew which points so OnAfterRenderAsync can
+    // ask the live chart to redraw when the series content actually changed
+    // (e.g. the dashboard reloading all cards after a date-range change).
+    private ApexChart<TimeSeriesModel>? _drawnChart;
+    private List<(DateTime DateTime, decimal Value)> _drawnPoints = [];
+
     /// <summary>Card title shown top-left (e.g. "Assets value over time").</summary>
     [Parameter] public string Title { get; set; } = string.Empty;
 
@@ -131,33 +139,47 @@ public partial class TimeSeriesValueCard
             _hoverIndex = null;
     }
 
-    // Pin the Y axis to a "nice" zero-based range so the card shows ~5 round
-    // gridline labels (2.5k / 5k / …) like the design, instead of ApexCharts
-    // collapsing forceNiceScale to one or two ticks. Always spans the zero
-    // baseline so the area fill reads correctly for positive (assets) and
-    // negative (liabilities) series alike.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (State != LoadState.Ready || _chart is null) return;
+
+        // Hover raises StateHasChanged, so this runs often: compare lazily and only
+        // materialize the points when they are actually stored.
+        var points = Data.Select(p => (p.DateTime, p.Value));
+        if (!ReferenceEquals(_chart, _drawnChart))
+        {
+            // A freshly created chart instance (first render, or remounted after a
+            // loading/empty/error state) has just drawn the current data itself.
+            _drawnChart = _chart;
+            _drawnPoints = points.ToList();
+            return;
+        }
+
+        if (points.SequenceEqual(_drawnPoints)) return;
+
+        _drawnPoints = points.ToList();
+        await _chart.RenderAsync();
+    }
+
+    // Keep small changes visible by padding the displayed data range instead
+    // of forcing every series through zero.
     private void ApplyYScale()
     {
         var axis = _options?.Yaxis?.FirstOrDefault();
         if (axis is null || Data.Count == 0) return;
 
-        double lo = Math.Min(0d, (double)Data.Min(p => p.Value));
-        double hi = Math.Max(0d, (double)Data.Max(p => p.Value));
-        if (hi <= lo) hi = lo + 1d;
-
-        double rawStep = (hi - lo) / 5d;
-        double mag = Math.Pow(10, Math.Floor(Math.Log10(rawStep)));
-        double norm = rawStep / mag;
-        double step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10) * mag;
-
-        double niceMin = Math.Floor(lo / step) * step;
-        double niceMax = Math.Ceiling(hi / step) * step;
-        int ticks = Math.Max(1, (int)Math.Round((niceMax - niceMin) / step));
-
-        axis.Min = niceMin;
-        axis.Max = niceMax;
-        axis.TickAmount = ticks;
+        var bounds = AddYRangePadding((double)Data.Min(p => p.Value), (double)Data.Max(p => p.Value));
+        axis.Min = bounds.Min;
+        axis.Max = bounds.Max;
+        axis.TickAmount = 5;
         axis.ForceNiceScale = false;
+    }
+
+    internal static (double Min, double Max) AddYRangePadding(double minimum, double maximum)
+    {
+        var range = maximum - minimum;
+        var padding = range == 0 ? Math.Max(Math.Abs(minimum) * 0.05, 1) : range * 0.05;
+        return (minimum - padding, maximum + padding);
     }
 
     private void OnPointEnter(HoverData<TimeSeriesModel> hoverData)

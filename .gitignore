@@ -33,6 +33,7 @@ bld/
 [Ll]ogs/
 
 # Root-level static publish output from the old GitHub Pages deployment.
+/output/
 /_content/
 /_framework/
 /css/

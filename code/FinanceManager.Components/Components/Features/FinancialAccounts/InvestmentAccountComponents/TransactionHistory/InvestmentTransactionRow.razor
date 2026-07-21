@@ -14,6 +14,12 @@
             <MudText Typo="Typo.body1" Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@Transaction.Ticker</MudText>
             <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
                 <MudText Typo="Typo.caption" Color="Color.Default" Class="fm-tabular">@Transaction.Quantity.ToString("N4") @@ @Transaction.UnitPrice.ToString("N2") @Transaction.Currency</MudText>
+                @if (Transaction.UnitPrice <= 0m)
+                {
+                    <MudTooltip Text="Price cannot be obtained">
+                        <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Warning" Size="Size.Small" aria-label="Price cannot be obtained" />
+                    </MudTooltip>
+                }
                 @if (!IsMobile && !string.IsNullOrWhiteSpace(Transaction.ExchangeName))
                 {
                     <MudText Typo="Typo.caption" Color="Color.Default">·</MudText>
@@ -31,49 +37,57 @@
 </div>
 
 <MudCollapse Expanded="_expanded">
-    <div class="px-4 pb-3" style="padding-left: 60px;" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
-        <MudDivider Class="mb-3" Style="border-style: dashed;" />
-        <MudGrid Spacing="3">
-            <MudItem xs="12" sm="6">
+    <div class="@(IsMobile ? "px-3 pb-3" : "px-4 pb-3")" style="@(IsMobile ? "" : "padding-left: 60px;")" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+        <MudDivider Class="mb-2" Style="border-style: dashed;" />
+        <MudGrid Spacing="2">
+            <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Trade date</MudText>
                 <MudText Typo="Typo.body2" Class="fm-tabular">@Transaction.TradeDate.ToString("dd-MM-yyyy")</MudText>
             </MudItem>
-            <MudItem xs="12" sm="6">
+            <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Type</MudText>
                 <MudText Typo="Typo.body2">@TypeLabel</MudText>
             </MudItem>
-            <MudItem xs="12" sm="6">
+            <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Ticker</MudText>
                 <MudText Typo="Typo.body2">@Transaction.Ticker</MudText>
             </MudItem>
-            <MudItem xs="12" sm="6">
+            <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Exchange</MudText>
                 <MudText Typo="Typo.body2">@(string.IsNullOrWhiteSpace(Transaction.ExchangeName) ? "—" : Transaction.ExchangeName)</MudText>
             </MudItem>
-            <MudItem xs="12" sm="6">
+            <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Quantity</MudText>
                 <MudText Typo="Typo.body2" Class="fm-tabular">@Transaction.Quantity.ToString("N4")</MudText>
             </MudItem>
-            <MudItem xs="12" sm="6">
+            <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Unit price</MudText>
-                <MudText Typo="Typo.body2" Class="fm-tabular">@Transaction.UnitPrice.ToString("N2") @Transaction.Currency</MudText>
+                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@Transaction.UnitPrice.ToString("N2") @Transaction.Currency</MudText>
+                    @if (Transaction.UnitPrice <= 0m)
+                    {
+                        <MudTooltip Text="Price cannot be obtained">
+                            <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Warning" Size="Size.Small" aria-label="Price cannot be obtained" />
+                        </MudTooltip>
+                    }
+                </MudStack>
             </MudItem>
-            <MudItem xs="12" sm="6">
+            <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Gross value</MudText>
                 <MudText Typo="Typo.body2" Class="fm-tabular">@GrossValue.ToString("N2") @Transaction.Currency</MudText>
             </MudItem>
-            <MudItem xs="12" sm="6">
+            <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Fee</MudText>
                 <MudText Typo="Typo.body2" Class="fm-tabular">@((Transaction.Fee ?? 0m).ToString("N2")) @Transaction.Currency</MudText>
             </MudItem>
-            <MudItem xs="12" sm="6">
+            <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Cash impact</MudText>
                 <MudText Typo="Typo.body2" Class="fm-tabular"
                          Color="@(CashImpact >= 0 ? Color.Success : Color.Error)">
                     @(CashImpact >= 0 ? "+" : "")@CashImpact.ToString("N2") @Transaction.Currency
                 </MudText>
             </MudItem>
-            <MudItem xs="12" sm="6">
+            <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Currency</MudText>
                 <MudText Typo="Typo.body2">@Transaction.Currency</MudText>
             </MudItem>

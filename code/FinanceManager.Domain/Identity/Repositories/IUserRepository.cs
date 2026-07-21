@@ -13,6 +13,7 @@ public interface IUserRepository
     IAsyncEnumerable<int> GetUsersIds(int recordIndex, int recordsCount);
     Task<bool> UpdatePassword(int userId, string password);
     Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel);
+    Task<bool> UpdatePreferredCurrency(int userId, int currencyId);
     Task<bool> AddUser(string login, string password, PricingLevel pricingLevel, UserRole userRole, string? firstName = null, string? lastName = null);
 
     /// <summary>

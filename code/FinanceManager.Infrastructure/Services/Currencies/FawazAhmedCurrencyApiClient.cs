@@ -16,6 +16,13 @@ internal sealed class FawazAhmedCurrencyApiClient(
         try
         {
             var response = await httpClient.GetAsync($"https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date:yyyy-MM-dd}/v1/currencies/{fromCurrency.ShortName.ToLower()}.json");
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorMessage = await response.Content.ReadAsStringAsync();
+                logger.LogWarning("Currency API returned {StatusCode} for {FromCurrency} to {ToCurrency} on {Date}: {Message}", response.StatusCode, fromCurrency, toCurrency, date, errorMessage.Trim());
+                return null;
+            }
+
             await using var contentStream = await response.Content.ReadAsStreamAsync();
             using var document = await JsonDocument.ParseAsync(contentStream);
 
@@ -24,6 +31,11 @@ internal sealed class FawazAhmedCurrencyApiClient(
                 exchangeRate.TryGetDecimal(out var value))
                 return value;
 
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            logger.LogWarning(ex, "Currency API returned invalid JSON for {FromCurrency} to {ToCurrency} on {Date}", fromCurrency, toCurrency, date);
             return null;
         }
         catch (Exception ex)

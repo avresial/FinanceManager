@@ -69,12 +69,11 @@ IBondDetailsRepository bondDetailsRepository, IInvestmentValuationService invest
             investmentAccounts.Add(account);
 
         // Investment accounts (new asset model) value per account/day through the valuation service.
-        // Fetch one account at a time: the valuation service reads through a scoped
-        // IInvestmentTransactionRepository backed by a single AppDbContext, which EF Core does not
-        // allow to service concurrent operations.
-        Dictionary<int, IReadOnlyDictionary<DateTime, decimal>> investmentValuesByAccount = [];
-        foreach (var account in investmentAccounts)
-            investmentValuesByAccount[account.AccountId] = await investmentValuationService.GetAccountValueSeriesAsync(account.AccountId, currency, start.Date, end.Date);
+        // One batched call issues a single transactions query for all accounts and prices each
+        // distinct listing once across them, rather than a per-account round-trip on the shared
+        // AppDbContext (which EF Core cannot service concurrently anyway).
+        var investmentValuesByAccount = await investmentValuationService.GetAccountValueSeriesAsync(
+            investmentAccounts.Select(a => a.AccountId).ToList(), currency, start.Date, end.Date);
 
         for (DateTime date = end; date >= start; date = date.AddDays(-1))
         {

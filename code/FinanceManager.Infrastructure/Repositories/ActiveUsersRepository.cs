@@ -39,4 +39,17 @@ public class ActiveUsersRepository(AppDbContext context) : IActiveUsersRepositor
 
         return results;
     }
+
+    public async Task<IReadOnlyDictionary<int, DateTime>> GetLastLoginTimes(IReadOnlyCollection<int> userIds)
+    {
+        if (userIds.Count == 0) return new Dictionary<int, DateTime>();
+
+        var lastLogins = await context.ActiveUsers
+            .Where(x => userIds.Contains(x.UserId))
+            .GroupBy(x => x.UserId)
+            .Select(g => new { UserId = g.Key, LastLoginTime = g.Max(x => x.LoginTime) })
+            .ToListAsync();
+
+        return lastLogins.ToDictionary(x => x.UserId, x => x.LastLoginTime);
+    }
 }

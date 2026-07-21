@@ -30,17 +30,12 @@ public class InvestmentPriceProvider(
 {
     private const int _fetchLookbackDays = 7;
     private static readonly TimeSpan _cacheTtl = TimeSpan.FromMinutes(60);
+    private static readonly TimeSpan _failedFetchCooldown = TimeSpan.FromMinutes(15);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> _fetchLocks = new();
 
     // Minor "pence"-style quote units collapse to their major currency once PriceMultiplier is
     // applied (1 GBX = 0.01 GBP), so FX conversion can use a currency the rate provider knows.
-    private static readonly Dictionary<string, string> _minorToMajorCurrency = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["GBX"] = "GBP",
-        ["GBP."] = "GBP",
-        ["ZAC"] = "ZAR",
-        ["ILA"] = "ILS",
-    };
+    private static readonly IReadOnlyDictionary<string, string> _minorToMajorCurrency = DefaultCurrency.MinorQuoteUnits;
 
     public async Task<decimal> GetPricePerUnitAsync(long assetListingId, Currency targetCurrency, DateTime asOf, CancellationToken ct = default)
     {
@@ -62,8 +57,11 @@ public class InvestmentPriceProvider(
 
         if (quote is null) return 0m;
 
-        var price = await ConvertAsync(quote.Price, quote.Currency, targetCurrency, asOf, ct);
-        if (price > 0)
+        var (price, direct) = await ConvertAsync(quote.Price, quote.Currency, targetCurrency, asOf, ct);
+
+        // A USD-fallback value is not denominated in the target currency, so caching it under the
+        // target-currency key would serve mislabelled amounts for the whole TTL.
+        if (price > 0 && direct)
             cache.Set(cacheKey, price, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = _cacheTtl });
 
         return price;
@@ -119,6 +117,20 @@ public class InvestmentPriceProvider(
                     rateMap[rateDate.Date] = value.Value;
             }
 
+            FillRateGaps(rateMap, startDate, endDate);
+
+            // A currency with no rate anywhere in the range gets one whole-range fallback
+            // conversion (which may cross through USD), never one lookup per day.
+            if (rateMap.Count == 0)
+            {
+                var (unitRate, _) = await ConvertAsync(1m, name, targetCurrency, endDate, ct);
+                if (unitRate > 0)
+                {
+                    for (var date = startDate; date <= endDate; date = date.AddDays(1))
+                        rateMap[date] = unitRate;
+                }
+            }
+
             ratesByCurrency[name] = rateMap;
         }
 
@@ -132,21 +144,14 @@ public class InvestmentPriceProvider(
 
             if (latestKnown is null) continue;
 
-            decimal converted;
+            // Days whose rate is still unknown after prefetch + gap filling are skipped rather
+            // than resolved individually: a per-day fallback multiplies the full provider chain
+            // by the range length and is what pushed chart requests past the client timeout.
+            decimal converted = 0m;
             if (string.Equals(latestKnown.Currency, targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase))
-            {
                 converted = latestKnown.Price;
-            }
             else if (ratesByCurrency.TryGetValue(latestKnown.Currency, out var rateMap) && rateMap.TryGetValue(date, out var rate))
-            {
                 converted = latestKnown.Price * rate;
-            }
-            else
-            {
-                // Dates outside the prefetched range or with a missing rate fall back to the
-                // per-call path so the result matches the point lookup.
-                converted = await ConvertAsync(latestKnown.Price, latestKnown.Currency, targetCurrency, date, ct);
-            }
 
             if (converted > 0)
                 series[date] = converted;
@@ -155,16 +160,72 @@ public class InvestmentPriceProvider(
         return series;
     }
 
-    private async Task<decimal> ConvertAsync(decimal price, string sourceCurrencyName, Currency targetCurrency, DateTime date, CancellationToken ct)
+    public async Task<bool> EnsureQuotesAsync(long assetListingId, DateTime start, DateTime end, CancellationToken ct = default)
     {
-        if (price <= 0) return 0m;
+        if (assetListingId <= 0 || start == default || end == default || end < start)
+            return false;
+
+        var listing = await listingRepository.Get(assetListingId, ct);
+        if (listing is null) return false;
+
+        var startDate = start.Date;
+        var endDate = end.Date;
+
+        // Coverage check before the fetch path, mirroring GetPricePerUnitSeriesAsync: an
+        // already-covered listing skips the per-symbol lock and the provider chain entirely.
+        var existing = await priceQuoteRepository.GetRange(assetListingId, DayStart(startDate), DayEnd(endDate), ct);
+        if (!NeedsFetch(existing, startDate, endDate))
+            return existing.Count > 0;
+
+        await TryFetchAndStoreAsync(listing, startDate, endDate, ct);
+
+        existing = await priceQuoteRepository.GetRange(assetListingId, DayStart(startDate), DayEnd(endDate), ct);
+        return existing.Count > 0;
+    }
+
+    // FX gaps (weekends, holidays, dates past the exchange service's per-call resolution cap)
+    // reuse the nearest known rate in the range: forward-fill first, then backfill the leading
+    // edge from the earliest known rate.
+    private static void FillRateGaps(Dictionary<DateTime, decimal> rateMap, DateTime startDate, DateTime endDate)
+    {
+        if (rateMap.Count == 0) return;
+
+        decimal? carried = null;
+        for (var date = startDate; date <= endDate; date = date.AddDays(1))
+        {
+            if (rateMap.TryGetValue(date, out var known))
+                carried = known;
+            else if (carried is decimal rate)
+                rateMap[date] = rate;
+        }
+
+        var earliest = rateMap[rateMap.Keys.Min()];
+        for (var date = startDate; date <= endDate && !rateMap.ContainsKey(date); date = date.AddDays(1))
+            rateMap[date] = earliest;
+    }
+
+    // Direct is false when the returned value is the USD fallback (i.e. not denominated in
+    // targetCurrency); such values must not be cached under the target currency.
+    private async Task<(decimal Price, bool Direct)> ConvertAsync(decimal price, string sourceCurrencyName, Currency targetCurrency, DateTime date, CancellationToken ct)
+    {
+        if (price <= 0) return (0m, true);
         if (string.Equals(sourceCurrencyName, targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase))
-            return price;
+            return (price, true);
 
         if (date > DateTime.UtcNow) date = DateTime.UtcNow;
         var sourceCurrency = await currencyRepository.GetOrAdd(sourceCurrencyName, sourceCurrencyName, ct);
         var rate = await currencyExchangeService.GetExchangeRateAsync(sourceCurrency, targetCurrency, date.Date);
-        return rate is decimal value ? price * value : 0m;
+        if (rate is decimal value) return (price * value, true);
+
+        // The preferred currency could not be reached; fall back to USD so the position keeps a
+        // value instead of collapsing to zero.
+        logger.LogWarning("No exchange rate {From}→{To} on {Date}; falling back to USD", sourceCurrency.ShortName, targetCurrency.ShortName, date.Date);
+
+        if (string.Equals(sourceCurrencyName, DefaultCurrency.USD.ShortName, StringComparison.OrdinalIgnoreCase))
+            return (price, false);
+
+        var usdRate = await currencyExchangeService.GetExchangeRateAsync(sourceCurrency, DefaultCurrency.USD, date.Date);
+        return usdRate is decimal toUsd ? (price * toUsd, false) : (0m, false);
     }
 
     private async Task TryFetchAndStoreAsync(AssetListing listing, DateTime start, DateTime end, CancellationToken ct)
@@ -178,6 +239,15 @@ public class InvestmentPriceProvider(
         if (symbol is null)
         {
             logger.LogDebug("Listing {ListingId} has no enabled market-data symbol; cannot fetch prices", listing.Id);
+            return;
+        }
+
+        // A symbol whose most recent attempt failed keeps failing for a while (bad symbol,
+        // rate-limited provider). Without a cooldown every chart request would re-run the whole
+        // provider fallback chain for it, adding external-call latency to each page load.
+        if (symbol.LastError is not null && DateTimeOffset.UtcNow - symbol.UpdatedAt < _failedFetchCooldown)
+        {
+            logger.LogDebug("Skipping price fetch for listing {ListingId}: last attempt failed at {UpdatedAt} and is within the cooldown", listing.Id, symbol.UpdatedAt);
             return;
         }
 
@@ -216,11 +286,12 @@ public class InvestmentPriceProvider(
             }
 
             var normalizedCurrencyName = NormalizedCurrencyName(rawCurrencyName, listing.PriceMultiplier);
+            var quotes = new List<PriceQuote>(prices.Count);
             foreach (var price in prices)
             {
                 if (price.PricePerUnit <= 0) continue;
 
-                await priceQuoteRepository.Upsert(new PriceQuote
+                quotes.Add(new PriceQuote
                 {
                     AssetListingId = listing.Id,
                     MarketDataSymbolId = symbol.Id,
@@ -232,8 +303,11 @@ public class InvestmentPriceProvider(
                     RawPrice = price.PricePerUnit,
                     RawCurrency = rawCurrencyName,
                     FetchedAt = DateTimeOffset.UtcNow
-                }, ct);
+                });
             }
+
+            if (quotes.Count > 0)
+                await priceQuoteRepository.UpsertRange(quotes, ct);
 
             await symbolRepository.RecordFetchResult(symbol.Id, DateTimeOffset.UtcNow, null, ct);
         }
@@ -260,13 +334,17 @@ public class InvestmentPriceProvider(
         if (existing is null || existing.Count == 0) return true;
 
         var existingDates = existing.Select(x => x.PriceTime.Date).ToHashSet();
-        for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
-        {
-            if (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) continue;
-            if (!existingDates.Contains(date)) return true;
-        }
 
-        return false;
+        // Boundary-coverage check using the 7-day lookback tolerance: ensure data exists
+        // within [start, start+7d] and [end-7d, end]. This allows for market holidays and
+        // weekends without triggering a full refetch, while genuine gaps at boundaries do.
+        var startBoundary = start.AddDays(_fetchLookbackDays);
+        var hasStartCoverage = existingDates.Any(d => d >= start && d <= startBoundary);
+
+        var endBoundary = end.AddDays(-_fetchLookbackDays);
+        var hasEndCoverage = existingDates.Any(d => d >= endBoundary && d <= end);
+
+        return !hasStartCoverage || !hasEndCoverage;
     }
 
     private static DateTimeOffset DayStart(DateTime date) => new(date.Date, TimeSpan.Zero);

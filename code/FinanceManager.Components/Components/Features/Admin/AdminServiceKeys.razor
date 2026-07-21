@@ -105,5 +105,66 @@ else
                 </MudItem>
             }
         </MudGrid>
+
+        <MudText Typo="Typo.h5" Class="mt-4">Maintenance API Key</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            Shared secret for scheduled maintenance calls (e.g. the weekly investment price backfill
+            triggered from GitHub Actions). The key is stored hashed and shown only once — copy it into
+            the <code>MAINTENANCE_API_KEY</code> repository secret right after generating.
+        </MudText>
+
+        <MudCard Outlined>
+            <MudCardContent>
+                <MudStack Spacing="3">
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                        @if (_maintenanceKeyStatus?.HasKey == true)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                            <MudText Typo="Typo.body2" Color="Color.Success">
+                                Key active since @_maintenanceKeyStatus.CreatedAt?.ToString("yyyy-MM-dd HH:mm") UTC
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                            <MudText Typo="Typo.body2" Color="Color.Warning">No key generated — maintenance endpoints are disabled</MudText>
+                        }
+                    </MudStack>
+
+                    @if (_generatedMaintenanceKey is not null)
+                    {
+                        <MudAlert Severity="Severity.Info" data-testid="generated-maintenance-key">
+                            <MudStack Spacing="2">
+                                <MudText Typo="Typo.body2">
+                                    Copy this key now — it cannot be shown again. Rolling or revoking invalidates it.
+                                </MudText>
+                                <MudTextField T="string" Value="@_generatedMaintenanceKey" ReadOnly
+                                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                                              Label="Maintenance API key" />
+                            </MudStack>
+                        </MudAlert>
+                    }
+                </MudStack>
+            </MudCardContent>
+            <MudCardActions>
+                <MudStack Row Spacing="2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               OnClick="GenerateMaintenanceKeyAsync"
+                               Disabled="@_maintenanceKeyBusy"
+                               data-testid="generate-maintenance-key">
+                        @(_maintenanceKeyStatus?.HasKey == true ? "Roll key" : "Generate key")
+                    </MudButton>
+                    @if (_maintenanceKeyStatus?.HasKey == true)
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                                   OnClick="RevokeMaintenanceKeyAsync"
+                                   Disabled="@_maintenanceKeyBusy"
+                                   data-testid="revoke-maintenance-key">
+                            Revoke
+                        </MudButton>
+                    }
+                </MudStack>
+            </MudCardActions>
+        </MudCard>
     </MudStack>
 }

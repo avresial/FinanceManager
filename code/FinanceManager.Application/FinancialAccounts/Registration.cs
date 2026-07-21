@@ -68,8 +68,10 @@ internal static class Registration
                 .AddScoped<IBondAccountExportService, BondAccountExportService>()
                 .AddScoped<IAccountCsvExportService<BondAccountExportDto>, BondAccountCsvExportService>()
                 .AddScoped<IInvestmentPriceProvider, InvestmentPriceProvider>()
+                .AddScoped<IInvestmentPriceBackfillService, InvestmentPriceBackfillService>()
                 .AddScoped<IInvestmentValuationService, InvestmentValuationService>()
                 .AddScoped<IInvestmentInstrumentDiscoveryService, InvestmentInstrumentDiscoveryService>()
+                .AddScoped<IInstrumentImportService, InstrumentImportService>()
                 .AddScoped<IBondUnrealizedGainLossCalculator, BondUnrealizedGainLossCalculator>()
                 .AddScoped<IBondService, BondService>();
 

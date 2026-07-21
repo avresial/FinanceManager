@@ -16,6 +16,14 @@ internal sealed class CachedCurrencyExchangeService(
         SlidingExpiration = TimeSpan.FromHours(1)
     };
 
+    // Failed lookups are cached too, with a shorter TTL: a pair/date no provider knows would
+    // otherwise re-run the full provider chain (DB + external HTTP) on every call, and a chart
+    // request can ask for the same unknown rate hundreds of times.
+    private static readonly MemoryCacheEntryOptions _missCacheOptions = new()
+    {
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15)
+    };
+
     public async Task<decimal?> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
     {
         var key = $"EXCHANGE_RATE_{fromCurrency.ShortName}_{toCurrency.ShortName}_{date:yyyyMMdd}";
@@ -25,51 +33,22 @@ internal sealed class CachedCurrencyExchangeService(
 
         var rate = await inner.GetExchangeRateAsync(fromCurrency, toCurrency, date);
 
-        if (rate is not null)
-            cache.Set(key, rate, _cacheOptions);
+        cache.Set(key, rate, rate is null ? _missCacheOptions : _cacheOptions);
 
         return rate;
     }
 
     public async Task<List<(DateTime Date, decimal? Value)>> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
     {
-        if (dateStart == default || dateEnd == default) return [];
+        var rates = await inner.GetExchangeRateAsync(fromCurrency, toCurrency, dateStart, dateEnd);
 
-        var start = dateStart.Date;
-        var end = dateEnd.Date;
-        if (start > end) (start, end) = (end, start);
-        if (end > DateTime.UtcNow.Date) end = DateTime.UtcNow.Date;
-
-        var totalDays = (end - start).Days + 1;
-        if (totalDays <= 0) return [];
-
-        if (fromCurrency == toCurrency)
+        foreach (var (date, value) in rates)
         {
-            List<(DateTime Date, decimal? Value)> sameCurrencyRates = new(totalDays);
-            for (var i = 0; i < totalDays; i++)
-                sameCurrencyRates.Add((start.AddDays(i), 1m));
-            return sameCurrencyRates;
-        }
-
-        const int batchSize = 50;
-        List<(DateTime Date, decimal? Value)> rates = new(totalDays);
-
-        for (var offset = 0; offset < totalDays; offset += batchSize)
-        {
-            var currentBatchSize = Math.Min(batchSize, totalDays - offset);
-            List<DateTime> batchDates = new(currentBatchSize);
-            List<Task<decimal?>> batchTasks = new(currentBatchSize);
-
-            for (var i = 0; i < currentBatchSize; i++)
+            if (value is not null)
             {
-                var date = start.AddDays(offset + i);
-                batchDates.Add(date);
-                batchTasks.Add(GetExchangeRateAsync(fromCurrency, toCurrency, date));
+                var key = $"EXCHANGE_RATE_{fromCurrency.ShortName}_{toCurrency.ShortName}_{date:yyyyMMdd}";
+                cache.Set(key, value, _cacheOptions);
             }
-
-            var batchResults = await Task.WhenAll(batchTasks);
-            for (var i = 0; i < batchResults.Length; i++)
-                rates.Add((batchDates[i], batchResults[i]));
         }
 
         return rates;

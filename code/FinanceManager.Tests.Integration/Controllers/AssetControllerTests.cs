@@ -141,6 +141,101 @@ public class AssetControllerTests(OptionsProvider optionsProvider) : ControllerT
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task AddManualPrice_AsAdmin_ValidRequest_UpsertsPriceQuote()
+    {
+        var asset = await CreateAssetAsAdmin();
+        var listing = await AddListing(asset.Id, "MSFT", "XNAS", "USD");
+
+        var request = new ManualPriceRequest(350.50m, DateTimeOffset.UtcNow.AddDays(-1));
+        var response = await Client.PostAsJsonAsync(
+            $"api/admin/assets/listings/{listing.Id}/prices/manual",
+            request,
+            TestContext.Current.CancellationToken);
+
+        response.EnsureSuccessStatusCode();
+
+        var quotes = await _testDatabase!.Context.PriceQuotes
+            .Where(q => q.AssetListingId == listing.Id)
+            .ToListAsync(TestContext.Current.CancellationToken);
+
+        var quote = Assert.Single(quotes);
+        Assert.Equal(350.50m, quote.Price);
+        Assert.Equal(MarketDataProvider.Manual, quote.Provider);
+        Assert.Equal(PriceQuoteType.Manual, quote.QuoteType);
+        Assert.Equal("USD", quote.Currency);
+        Assert.Equal(new DateTimeOffset(request.Date.UtcDateTime.Date, TimeSpan.Zero), quote.PriceTime);
+    }
+
+    [Fact]
+    public async Task AddManualPrice_AsAdmin_NonExistentListing_ReturnsNotFound()
+    {
+        Authorize("admin", 1, UserRole.Admin);
+        var request = new ManualPriceRequest(150.00m, DateTimeOffset.UtcNow.AddDays(-1));
+        var response = await Client.PostAsJsonAsync(
+            "api/admin/assets/listings/999999/prices/manual",
+            request,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AddManualPrice_AsAdmin_InvalidPrice_ReturnsBadRequest()
+    {
+        var asset = await CreateAssetAsAdmin();
+        var listing = await AddListing(asset.Id, "MSFT", "XNAS", "USD");
+
+        var request = new ManualPriceRequest(-10.00m, DateTimeOffset.UtcNow.AddDays(-1));
+        var response = await Client.PostAsJsonAsync(
+            $"api/admin/assets/listings/{listing.Id}/prices/manual",
+            request,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AddManualPrice_AsAdmin_FutureDate_ReturnsBadRequest()
+    {
+        var asset = await CreateAssetAsAdmin();
+        var listing = await AddListing(asset.Id, "MSFT", "XNAS", "USD");
+
+        var request = new ManualPriceRequest(150.00m, DateTimeOffset.UtcNow.AddDays(1));
+        var response = await Client.PostAsJsonAsync(
+            $"api/admin/assets/listings/{listing.Id}/prices/manual",
+            request,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AddManualPrice_AsNonAdmin_ReturnsForbidden()
+    {
+        Authorize("user", 2, UserRole.User);
+        var request = new ManualPriceRequest(150.00m, DateTimeOffset.UtcNow.AddDays(-1));
+        var response = await Client.PostAsJsonAsync(
+            "api/admin/assets/listings/1/prices/manual",
+            request,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AddManualPrice_Anonymous_ReturnsUnauthorized()
+    {
+        ClearAuthorization();
+        var request = new ManualPriceRequest(150.00m, DateTimeOffset.UtcNow.AddDays(-1));
+        var response = await Client.PostAsJsonAsync(
+            "api/admin/assets/listings/1/prices/manual",
+            request,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     private async Task<AssetListingDto> AddListing(long assetId, string ticker, string mic, string currency,
         bool primary = false, decimal priceMultiplier = 1m)
     {

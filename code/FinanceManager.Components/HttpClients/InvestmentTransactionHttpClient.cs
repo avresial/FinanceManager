@@ -50,9 +50,13 @@ public class InvestmentTransactionHttpClient(HttpClient httpClient)
         return await response.Content.ReadFromJsonAsync<List<InstrumentSearchResultDto>>() ?? [];
     }
 
-    public async Task<ListingPriceDto?> GetListingPriceAsync(long listingId)
+    public async Task<ListingPriceDto?> GetListingPriceAsync(long listingId, DateOnly? asOf = null)
     {
-        using var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/InvestmentTransaction/ListingPrice/{listingId}");
+        var url = $"{httpClient.BaseAddress}api/InvestmentTransaction/ListingPrice/{listingId}";
+        if (asOf is DateOnly date)
+            url += $"?asOf={date:yyyy-MM-dd}";
+
+        using var response = await httpClient.GetAsync(url);
         if (!response.IsSuccessStatusCode) return null;
         return await response.Content.ReadFromJsonAsync<ListingPriceDto>();
     }

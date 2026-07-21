@@ -13,7 +13,6 @@ using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
-using System.Text.Json;
 
 namespace FinanceManager.Components.Components.Features.FinancialAccounts.CurrencyAccountComponents.TransactionHistory;
 
@@ -60,7 +59,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
-    [Inject] public required ISnapshotService SnapshotService { get; set; }
+    [Inject] public required AccountDetailsSnapshotStore SnapshotStore { get; set; }
     [Inject] public required ILogger<CurrencyAccountDetailsPageContent> Logger { get; set; }
     [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
 
@@ -285,7 +284,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     {
         if (Account is null || _user is null) return;
 
-        _currency = SettingsService.GetCurrency();
+        _currency = await SettingsService.GetCurrencyAsync();
         var chartData = await MoneyFlowHttpClient.GetClosingBalance(_user.UserId, _currency, _dateStart, _dateEnd, [AccountId]);
         if (refreshVersion != _chartRefreshVersion) return;
 
@@ -398,40 +397,20 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private void SetDateRangeForSelection()
     {
         var today = DateTime.UtcNow;
-        if (_selectedRange == AccountDetailsHero.CustomRangeKey)
-        {
-            _dateStart = _customDateRange?.Start ?? Account?.Start ?? today.AddMonths(-3);
-            _dateEnd = _customDateRange?.End ?? today;
-            if (_dateEnd > today)
-                _dateEnd = today;
-            return;
-        }
-
-        _dateStart = _selectedRange switch
-        {
-            "Month" => DateRangeHelper.GetCurrentMonthRange().Start,
-            "1M" => today.AddMonths(-1),
-            "3M" => today.AddMonths(-3),
-            "6M" => today.AddMonths(-6),
-            "YTD" => new DateTime(today.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            _ => DateRangeHelper.GetCurrentMonthRange().Start,
-        };
-        _dateEnd = today;
+        (_dateStart, _dateEnd) = DateRangeHelper.GetAccountDetailsRange(
+            _selectedRange, _customDateRange?.Start, _customDateRange?.End,
+            Account?.Start ?? today.AddMonths(-3), new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc), today);
     }
 
     private void ApplyAutomaticCustomRange(DateTime selectedStart)
     {
-        var oldestFetchedEntryDate = Account?.Entries?.MinBy(x => x.PostingDate)?.PostingDate;
-        if (oldestFetchedEntryDate is null || oldestFetchedEntryDate.Value >= selectedStart)
-            return;
+        var expandedStart = DateRangeHelper.GetExpandedStart(selectedStart, Account?.Entries?.MinBy(x => x.PostingDate)?.PostingDate);
+        if (expandedStart is not DateTime oldest) return;
 
         _selectedRange = AccountDetailsHero.CustomRangeKey;
-        _dateStart = oldestFetchedEntryDate.Value;
+        _dateStart = oldest;
         _customDateRange = new DateRange(_dateStart, _dateEnd);
     }
-
-    // Per user + account, with no date component, so a single snapshot per account is overwritten each save.
-    private string BuildSnapshotKey(int userId) => $"account-details:{userId}:{AccountId}";
 
     // Reads the persisted snapshot and paints its entries so the page feels instant on
     // re-navigation. Chart data is not snapshotted; UpdateInfo queues a fresh API load.
@@ -439,18 +418,8 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     {
         if (_user is null) return null;
 
-        AccountDetailsSnapshot<CurrencyAccountEntry>? snapshot = null;
-        try
-        {
-            snapshot = await SnapshotService.GetAsync<AccountDetailsSnapshot<CurrencyAccountEntry>>(BuildSnapshotKey(_user.UserId));
-        }
-        catch (Exception ex)
-        {
-            // A storage/interop failure on read must not abort the load — fall through to the fresh fetch.
-            Logger.LogWarning(ex, "Failed to read account details snapshot; continuing with fresh fetch.");
-        }
-
-        if (snapshot is null || snapshot.AccountId != AccountId) return null;
+        var snapshot = await SnapshotStore.GetAsync<CurrencyAccountEntry>(_user.UserId, AccountId);
+        if (snapshot is null) return null;
 
         Account = new CurrencyAccount(snapshot.UserId, snapshot.AccountId, snapshot.Name, snapshot.Entries, snapshot.AccountType);
         await UpdateInfo();
@@ -464,9 +433,6 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     {
         if (_user is null || Account is null) return;
 
-        if (previous is not null && EntriesMatch(Account.Entries, previous.Entries))
-            return;
-
         var snapshot = new AccountDetailsSnapshot<CurrencyAccountEntry>
         {
             UserId = _user.UserId,
@@ -475,16 +441,6 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
             AccountType = Account.AccountType,
             Entries = Account.Entries,
         };
-        try
-        {
-            await SnapshotService.SetAsync(BuildSnapshotKey(_user.UserId), snapshot);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Account details loaded but snapshot save failed.");
-        }
+        await SnapshotStore.SaveIfChangedAsync(snapshot, previous);
     }
-
-    private static bool EntriesMatch(List<CurrencyAccountEntry> fresh, List<CurrencyAccountEntry> snapshot)
-        => JsonSerializer.Serialize(fresh) == JsonSerializer.Serialize(snapshot);
 }

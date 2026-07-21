@@ -31,4 +31,10 @@
 	  <Folder Include="Migrations\" />
 	</ItemGroup>
 
+	<!-- The Blazor debug proxy (~12 MB) is only used when debugging a WASM client; it has no
+	     purpose in a Release deployment and needlessly inflates the Azure publish package. -->
+	<Target Name="RemoveBlazorDebugProxyFromPublish" AfterTargets="Publish">
+		<RemoveDir Directories="$(PublishDir)BlazorDebugProxy" />
+	</Target>
+
 </Project>

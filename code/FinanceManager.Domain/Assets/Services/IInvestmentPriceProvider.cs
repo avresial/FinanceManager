@@ -31,4 +31,12 @@ public interface IInvestmentPriceProvider
         DateTime start,
         DateTime end,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Ensure stored end-of-day quotes exist for <paramref name="assetListingId"/> over
+    /// [<paramref name="start"/>, <paramref name="end"/>], fetching from the provider chain and
+    /// persisting when coverage is missing. Performs no currency conversion. Returns <c>true</c>
+    /// when at least one quote exists in the range after the attempt.
+    /// </summary>
+    Task<bool> EnsureQuotesAsync(long assetListingId, DateTime start, DateTime end, CancellationToken ct = default);
 }

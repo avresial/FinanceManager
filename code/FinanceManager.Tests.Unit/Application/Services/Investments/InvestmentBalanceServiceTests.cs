@@ -40,18 +40,20 @@ public class InvestmentBalanceServiceTests
         _financialAccountRepository.Setup(repo => repo.GetAccounts<InvestmentAccount>(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                    .Returns(new[] { account1, account2 }.ToAsyncEnumerable());
 
-        _valuationService.Setup(x => x.GetAccountValueSeriesAsync(10, DefaultCurrency.PLN, start.Date, end.Date, It.IsAny<CancellationToken>()))
-                         .ReturnsAsync(new Dictionary<DateTime, decimal>
+        _valuationService.Setup(x => x.GetAccountValueSeriesAsync(It.Is<IReadOnlyCollection<int>>(a => a.Contains(10) && a.Contains(20)), DefaultCurrency.PLN, start.Date, end.Date, It.IsAny<CancellationToken>()))
+                         .ReturnsAsync(new Dictionary<int, IReadOnlyDictionary<DateTime, decimal>>
                          {
-                             [start] = 100,
-                             [start.AddDays(1)] = 110,
-                             [end] = 120
-                         });
-        _valuationService.Setup(x => x.GetAccountValueSeriesAsync(20, DefaultCurrency.PLN, start.Date, end.Date, It.IsAny<CancellationToken>()))
-                         .ReturnsAsync(new Dictionary<DateTime, decimal>
-                         {
-                             [start] = 5,
-                             [end] = 7
+                             [10] = new Dictionary<DateTime, decimal>
+                             {
+                                 [start] = 100,
+                                 [start.AddDays(1)] = 110,
+                                 [end] = 120
+                             },
+                             [20] = new Dictionary<DateTime, decimal>
+                             {
+                                 [start] = 5,
+                                 [end] = 7
+                             }
                          });
 
         var result = await _service.GetClosingBalance(_userId, DefaultCurrency.PLN, start, end);
@@ -75,14 +77,18 @@ public class InvestmentBalanceServiceTests
         _financialAccountRepository.Setup(repo => repo.GetAccounts<InvestmentAccount>(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                    .Returns(new[] { account1, account2 }.ToAsyncEnumerable());
 
-        _valuationService.Setup(x => x.GetAccountValueSeriesAsync(10, DefaultCurrency.PLN, start.Date, end.Date, It.IsAny<CancellationToken>()))
-                         .ReturnsAsync(new Dictionary<DateTime, decimal> { [start] = 100 });
+        _valuationService.Setup(x => x.GetAccountValueSeriesAsync(It.Is<IReadOnlyCollection<int>>(a => a.Contains(10)), DefaultCurrency.PLN, start.Date, end.Date, It.IsAny<CancellationToken>()))
+                         .ReturnsAsync(new Dictionary<int, IReadOnlyDictionary<DateTime, decimal>>
+                         {
+                             [10] = new Dictionary<DateTime, decimal> { [start] = 100 }
+                         });
 
         var result = await _service.GetClosingBalance(_userId, DefaultCurrency.PLN, start, end, new[] { 10 });
 
         Assert.Single(result);
         Assert.Equal(100, result.Single().Value);
-        _valuationService.Verify(x => x.GetAccountValueSeriesAsync(20, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+        // The filtered-out account 20 must never reach the batched valuation call.
+        _valuationService.Verify(x => x.GetAccountValueSeriesAsync(It.Is<IReadOnlyCollection<int>>(a => a.Contains(20)), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -96,9 +102,10 @@ public class InvestmentBalanceServiceTests
         _financialAccountRepository.Setup(repo => repo.GetAccounts<InvestmentAccount>(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                    .Returns(new[] { legacyStockAccount }.ToAsyncEnumerable());
 
-        // Legacy stock accounts hold no investment transactions, so the valuation service returns empty.
-        _valuationService.Setup(x => x.GetAccountValueSeriesAsync(30, DefaultCurrency.PLN, start.Date, end.Date, It.IsAny<CancellationToken>()))
-                         .ReturnsAsync(new Dictionary<DateTime, decimal>());
+        // Legacy stock accounts hold no investment transactions, so the batched valuation result
+        // simply omits them (empty dictionary).
+        _valuationService.Setup(x => x.GetAccountValueSeriesAsync(It.IsAny<IReadOnlyCollection<int>>(), DefaultCurrency.PLN, start.Date, end.Date, It.IsAny<CancellationToken>()))
+                         .ReturnsAsync(new Dictionary<int, IReadOnlyDictionary<DateTime, decimal>>());
 
         var result = await _service.GetClosingBalance(_userId, DefaultCurrency.PLN, start, end);
 

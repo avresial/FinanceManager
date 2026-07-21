@@ -82,7 +82,9 @@ public class MoneyFlowController(INetWorthService netWorthService, ILabelsValueS
 
     [HttpGet("GetInvestmentRate")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InvestmentRate>))]
-    public async Task<IActionResult> GetInvestmentRate([FromQuery] int userId, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long? step = null, CancellationToken cancellationToken = default) =>
-        ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await investmentRateService.GetInvestmentRate(userId, start, end).ToListAsync(cancellationToken)) : Forbid();
+    public async Task<IActionResult> GetInvestmentRate([FromQuery] int userId, [FromQuery] int currencyId, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long? step = null, CancellationToken cancellationToken = default) =>
+        ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)
+            ? Ok(await investmentRateService.GetInvestmentRate(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), start, end).ToListAsync(cancellationToken))
+            : Forbid();
 
 }

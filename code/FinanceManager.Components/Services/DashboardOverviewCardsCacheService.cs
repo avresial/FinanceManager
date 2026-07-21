@@ -32,8 +32,10 @@ public class DashboardOverviewCardsCacheService(
         var startDate = refreshContext.StartDateTime.Date;
         var endDate = refreshContext.EndDateTime;
 
-        var netCashFlowTask = moneyFlowHttpClient.GetNetCashFlow(refreshContext.UserId, DefaultCurrency.PLN, startDate, endDate);
-        var closingBalanceTask = moneyFlowHttpClient.GetClosingBalance(refreshContext.UserId, DefaultCurrency.PLN, startDate, endDate);
+        // Only the id crosses the wire, so the requested currency can be rebuilt from the context.
+        var currency = new Currency { Id = refreshContext.CurrencyId };
+        var netCashFlowTask = moneyFlowHttpClient.GetNetCashFlow(refreshContext.UserId, currency, startDate, endDate);
+        var closingBalanceTask = moneyFlowHttpClient.GetClosingBalance(refreshContext.UserId, currency, startDate, endDate);
 
         await Task.WhenAll(netCashFlowTask, closingBalanceTask);
 
