@@ -13,8 +13,6 @@ namespace FinanceManager.Application.FinancialAccounts.Currencies.Assets;
 
 internal class AssetsServiceCurrency(IFinancialAccountRepository financialAccountRepository) : IAssetsServiceTyped
 {
-    public bool IsOfType<T>() => typeof(T) == typeof(CurrencyAccount);
-
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;

@@ -11,8 +11,6 @@ namespace FinanceManager.Application.MoneyFlow.Spending;
 
 public class CurrencyExpenseDistributionService(IFinancialAccountRepository financialAccountRepository) : IExpenseDistributionServiceTyped
 {
-    public bool IsOfType<T>() => typeof(T) == typeof(CurrencyAccount);
-
     public async Task<List<NameValueResult>> GetExpenseDistribution(int userId, Currency currency, DateTime start, DateTime end)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;

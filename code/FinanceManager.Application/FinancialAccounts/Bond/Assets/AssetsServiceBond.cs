@@ -19,7 +19,6 @@ public class AssetsServiceBond(
     IBondDetailsRepository bondDetailsRepository,
     IBondUnrealizedGainLossCalculator bondUnrealizedGainLossCalculator) : IAssetsServiceTyped
 {
-    public bool IsOfType<T>() => typeof(T) == typeof(BondAccount);
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;

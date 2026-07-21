@@ -90,11 +90,6 @@ public class FinancialAccountBase<T> : BasicAccountInformation where T : Financi
         RecalculateEntryValues(indexToRemove - 1);
     }
     public int? GetMaxId() => Entries.Count == 0 ? null : Entries.Max(x => x.EntryId);
-    public IEnumerable<T> GetDaily() => throw new NotImplementedException();
-    public IEnumerable<T> GetMonthly() => throw new NotImplementedException();
-    public IEnumerable<T> GetYearly() => throw new NotImplementedException();
-    public IEnumerable<T> GetExpenses() => throw new NotImplementedException();
-    public IEnumerable<T> GetEarnings() => throw new NotImplementedException();
     public virtual void RecalculateEntryValues(int? startingIndex)
     {
         if (Entries.Count == 0) return;

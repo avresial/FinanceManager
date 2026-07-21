@@ -12,8 +12,6 @@ namespace FinanceManager.Application.FinancialAccounts.Bond.Balance;
 
 internal class BondBalanceService(IFinancialAccountRepository financialAccountRepository, IBondDetailsRepository bondDetailsRepository) : IBalanceServiceTyped
 {
-    public bool IsOfType<T>() => typeof(T) == typeof(BondAccount);
-
     public Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end) =>
         GetInflow(userId, currency, start, end, []);
 

@@ -4,7 +4,6 @@ using FinanceManager.Application.Commands.Login;
 using FinanceManager.Application.Identity;
 using FinanceManager.Components.Services;
 using FinanceManager.Domain.Identity.Entities;
-using FinanceManager.Domain.Identity.Repositories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using System.Net;
@@ -45,7 +44,6 @@ public class LoginServiceTests
             Mock.Of<ISessionStorageService>(),
             Mock.Of<ILocalStorageService>(),
             new CustomAuthenticationStateProvider(),
-            Mock.Of<IUserRepository>(),
             httpClient,
             antiforgery.Object,
             NullLogger<LoginService>.Instance);

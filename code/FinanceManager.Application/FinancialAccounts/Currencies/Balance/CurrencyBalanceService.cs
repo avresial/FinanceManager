@@ -13,8 +13,6 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
 {
     private static readonly TimeSpan _oneDay = TimeSpan.FromDays(1);
 
-    public bool IsOfType<T>() => typeof(T) == typeof(CurrencyAccount);
-
     public Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end) =>
         GetInflow(userId, currency, start, end, []);
 

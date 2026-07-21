@@ -1,5 +1,5 @@
-using FinanceManager.Api.Controllers.Admin;
 using FinanceManager.Application.Commands.Login;
+using FinanceManager.Domain.Administration;
 using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
 using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Commands;

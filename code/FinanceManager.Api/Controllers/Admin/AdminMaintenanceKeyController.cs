@@ -1,14 +1,9 @@
 using FinanceManager.Application.Shared.Maintenance;
+using FinanceManager.Domain.Administration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceManager.Api.Controllers.Admin;
-
-/// <summary>Status of the maintenance key as shown to the admin (never the key itself).</summary>
-public record MaintenanceKeyStatusResponse(bool HasKey, DateTimeOffset? CreatedAt);
-
-/// <summary>Result of generating (or rolling) the key — the only time the plaintext is available.</summary>
-public record GeneratedMaintenanceKeyResponse(string Key, DateTimeOffset CreatedAt);
 
 [Route("api/admin/maintenance-key")]
 [Authorize(Roles = "Admin")]

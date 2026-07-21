@@ -1,4 +1,5 @@
 using FinanceManager.Application.Shared.Ai;
+using FinanceManager.Domain.Administration;
 using FinanceManager.Domain.Shared.Ai.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
