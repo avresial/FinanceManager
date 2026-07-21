@@ -9,6 +9,7 @@ namespace FinanceManager.Api.OAuth;
 
 public static class McpOAuthAuthentication
 {
+    public const string SchemeName = "McpOAuth";
     public const string PolicyName = "Mcp";
     public const string SessionScheme = "McpOAuthSession";
 }

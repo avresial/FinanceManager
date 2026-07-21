@@ -1,0 +1,196 @@
+@page "/connect/mcp"
+@layout NoNavbarLayout
+@using System.Net.Http.Json
+@using System.Text.Json
+@using Microsoft.JSInterop
+
+<PageTitle>Connect an AI client</PageTitle>
+
+<main class="mcp-connect">
+    <header class="hero">
+        <div class="back-link"><MudLink Href="/" Underline="Underline.None">← Finance Manager</MudLink></div>
+        <MudText Typo="Typo.overline" Color="Color.Primary">MODEL CONTEXT PROTOCOL</MudText>
+        <MudText Typo="Typo.h2" HtmlTag="h1">Connect your AI client</MudText>
+        <MudText Typo="Typo.body1" Class="hero-copy">
+            Give ChatGPT, Claude, or another MCP client secure access to your Finance Manager account.
+            You sign in with OAuth, so there is no API key or password to paste into the client.
+        </MudText>
+    </header>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" aria-label="Loading MCP connection details" />
+    }
+    else if (_discovery is null)
+    {
+        <MudAlert Severity="Severity.Error" data-testid="mcp-discovery-error">
+            Connection details are unavailable. MCP access may not be enabled on this Finance Manager server.
+        </MudAlert>
+    }
+    else
+    {
+        <section class="connect-card" aria-labelledby="server-title">
+            <MudText Typo="Typo.h4" HtmlTag="h2" id="server-title">Server details</MudText>
+            <MudText Typo="Typo.body2" Class="section-copy">Most clients only need the server URL and discover the OAuth settings automatically.</MudText>
+
+            <div class="value-block">
+                <span class="value-label">MCP server URL</span>
+                <div class="copy-row">
+                    <code data-testid="mcp-server-url">@_discovery.McpEndpoint</code>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => CopyAsync(_discovery.McpEndpoint, "server"))">Copy</MudButton>
+                </div>
+                @if (_copied == "server")
+                {
+                    <span class="copied" role="status">Copied to clipboard</span>
+                }
+            </div>
+
+            <div class="client-grid">
+                <article>
+                    <MudText Typo="Typo.h6" HtmlTag="h3">Claude</MudText>
+                    <ol>
+                        <li>Open <strong>Settings → Connectors</strong> and choose to add a custom connector.</li>
+                        <li>Paste the MCP server URL above.</li>
+                        <li>Complete the Finance Manager sign-in and authorization window.</li>
+                    </ol>
+                </article>
+                <article>
+                    <MudText Typo="Typo.h6" HtmlTag="h3">ChatGPT</MudText>
+                    <ol>
+                        <li>Enable developer mode for apps/connectors, then create a custom MCP app.</li>
+                        <li>Choose OAuth with a user-defined public client and enter the values below.</li>
+                        <li>Save the app and complete the Finance Manager sign-in.</li>
+                    </ol>
+                </article>
+            </div>
+        </section>
+
+        <section class="connect-card" aria-labelledby="config-title">
+            <MudText Typo="Typo.h4" HtmlTag="h2" id="config-title">Copy or download configuration</MudText>
+            <MudText Typo="Typo.body2" Class="section-copy">Use this JSON when your client accepts an MCP configuration file.</MudText>
+            <pre><code data-testid="mcp-config">@ConfigurationJson</code></pre>
+            <div class="actions">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Download" OnClick="DownloadConfigurationAsync">
+                    Download JSON
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick="@(() => CopyAsync(ConfigurationJson, "config"))">
+                    Copy JSON
+                </MudButton>
+            </div>
+            @if (_copied == "config")
+            {
+                <span class="copied" role="status">Configuration copied to clipboard</span>
+            }
+        </section>
+
+        <section class="connect-card" aria-labelledby="manual-title">
+            <MudText Typo="Typo.h4" HtmlTag="h2" id="manual-title">Manual OAuth settings</MudText>
+            <dl>
+                <div><dt>Transport</dt><dd>Streamable HTTP</dd></div>
+                <div><dt>Authentication</dt><dd>OAuth 2.0 Authorization Code with PKCE</dd></div>
+                <div><dt>Client ID</dt><dd><code>@_discovery.ClientId</code></dd></div>
+                <div><dt>Client secret</dt><dd>Leave empty (public client)</dd></div>
+                <div><dt>Scope</dt><dd><code>@string.Join(' ', _discovery.ScopesSupported)</code></dd></div>
+                <div><dt>Resource</dt><dd><code>@_discovery.McpEndpoint</code></dd></div>
+                <div><dt>Authorization server</dt><dd><code>@_discovery.AuthorizationServer</code></dd></div>
+                <div><dt>Authorization URL</dt><dd><code>@_discovery.AuthorizationEndpoint</code></dd></div>
+                <div><dt>Token URL</dt><dd><code>@_discovery.TokenEndpoint</code></dd></div>
+            </dl>
+            <MudButton Class="mt-5" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => CopyAsync(ManualSettings, "manual"))">
+                Copy all settings
+            </MudButton>
+            @if (_copied == "manual")
+            {
+                <span class="copied" role="status">Settings copied to clipboard</span>
+            }
+        </section>
+
+        <section class="connect-card guidance" aria-labelledby="help-title">
+            <MudText Typo="Typo.h4" HtmlTag="h2" id="help-title">Troubleshooting and disconnecting</MudText>
+            <MudExpansionPanels Elevation="0" Class="mt-4">
+                <MudExpansionPanel Text="The OAuth redirect or callback is rejected">
+                    Copy the exact callback URL shown by your client. It must be registered by the Finance Manager administrator;
+                    do not substitute a similar URL or add a trailing slash.
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="Sign-in does not return to the client on mobile">
+                    Keep the client open while signing in. If the authorization window opens another browser, return to the client after approval.
+                    When that fails, reconnect from the desktop client where the callback can reopen it directly.
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="The client reports an expired or unauthorized session">
+                    Disconnect and reconnect the Finance Manager integration. This starts a new OAuth authorization and replaces the client's saved tokens.
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="Remove access">
+                    Remove or disconnect Finance Manager in the AI client's connector settings. That deletes the credentials held by that client;
+                    any already-issued short-lived access token expires automatically.
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        </section>
+    }
+</main>
+
+@code {
+    [Inject] public required HttpClient Http { get; set; }
+    [Inject] public required IJSRuntime JS { get; set; }
+
+    private McpDiscovery? _discovery;
+    private bool _loading = true;
+    private string? _copied;
+
+    private string ConfigurationJson => _discovery is null ? string.Empty : JsonSerializer.Serialize(new
+    {
+        mcpServers = new Dictionary<string, object>
+        {
+            ["finance-manager"] = new { type = "http", url = _discovery.McpEndpoint }
+        }
+    }, new JsonSerializerOptions { WriteIndented = true });
+
+    private string ManualSettings => _discovery is null ? string.Empty :
+        $"Server URL: {_discovery.McpEndpoint}\n" +
+        "Transport: Streamable HTTP\n" +
+        "Authentication: OAuth 2.0 Authorization Code with PKCE\n" +
+        $"Client ID: {_discovery.ClientId}\n" +
+        "Client secret: (leave empty)\n" +
+        $"Scope: {string.Join(' ', _discovery.ScopesSupported)}\n" +
+        $"Resource: {_discovery.McpEndpoint}\n" +
+        $"Authorization URL: {_discovery.AuthorizationEndpoint}\n" +
+        $"Token URL: {_discovery.TokenEndpoint}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _discovery = await Http.GetFromJsonAsync<McpDiscovery>("/.well-known/mcp.json");
+        }
+        catch (Exception exception) when (exception is HttpRequestException or JsonException)
+        {
+            _discovery = null;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task CopyAsync(string value, string marker)
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", value);
+        _copied = marker;
+    }
+
+    private Task DownloadConfigurationAsync() => JS.InvokeVoidAsync(
+        "financeManager.downloadFileFromBase64",
+        "finance-manager-mcp.json",
+        "application/json",
+        Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(ConfigurationJson))).AsTask();
+
+    private sealed record McpDiscovery(
+        [property: System.Text.Json.Serialization.JsonPropertyName("name")] string Name,
+        [property: System.Text.Json.Serialization.JsonPropertyName("version")] string Version,
+        [property: System.Text.Json.Serialization.JsonPropertyName("description")] string Description,
+        [property: System.Text.Json.Serialization.JsonPropertyName("mcp_endpoint")] string McpEndpoint,
+        [property: System.Text.Json.Serialization.JsonPropertyName("authorization_server")] string AuthorizationServer,
+        [property: System.Text.Json.Serialization.JsonPropertyName("authorization_endpoint")] string AuthorizationEndpoint,
+        [property: System.Text.Json.Serialization.JsonPropertyName("token_endpoint")] string TokenEndpoint,
+        [property: System.Text.Json.Serialization.JsonPropertyName("client_id")] string ClientId,
+        [property: System.Text.Json.Serialization.JsonPropertyName("scopes_supported")] string[] ScopesSupported);
+}
