@@ -1,5 +1,6 @@
 using FinanceManager.Api;
 using FinanceManager.Api.Logging;
+using FinanceManager.Api.Mcp;
 using FinanceManager.Api.Middleware;
 using FinanceManager.Application;
 using FinanceManager.Application.Shared.Diagnostics;
@@ -48,6 +49,7 @@ builder.WebHost.ConfigureKestrel(options =>
 
 builder.Services.AddApiOptions(builder.Configuration);
 builder.Services.AddApiSecurity(builder.Configuration, builder.Environment);
+builder.Services.AddMcpFeature(builder.Configuration);
 
 builder.Services.AddApiRateLimiting(builder.Configuration);
 builder.Services.AddMemoryCache();
@@ -123,6 +125,7 @@ app.UseAuthorization();
 app.MapDefaultEndpoints("Admin");
 
 app.MapControllers();
+app.MapMcpFeature(app.Configuration);
 app.MapHub<FinanceManager.Api.Hubs.CurrencyImportHub>("/hubs/currency-import");
 app.MapHub<FinanceManager.Api.Hubs.LabelSetterProgressHub>("/hubs/label-setter-progress");
 app.MapHub<FinanceManager.Api.Hubs.AdminLogsHub>("/hubs/admin-logs");

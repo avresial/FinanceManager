@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- AI clients can now connect to a protected MCP endpoint, discover its OAuth settings automatically, verify the signed-in identity, and follow a responsive setup guide with copyable and downloadable configuration. #589
 - MCP clients can now securely sign in through Finance Manager and receive scoped, refreshable access tokens. #588
 - Admin access can now be assigned alongside normal user access, with direct links between the Finance Manager and admin dashboards and role controls on the admin user editor. #585
 - Investment closing prices are now backfilled automatically every Saturday for every held instrument, so charts and valuations keep a complete weekly price history even for instruments nobody opened recently. #569

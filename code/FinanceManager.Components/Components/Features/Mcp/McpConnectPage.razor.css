@@ -1,0 +1,167 @@
+.mcp-connect {
+    width: min(58rem, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: clamp(2rem, 6vw, 4.5rem) 0 5rem;
+}
+
+.hero {
+    max-width: 45rem;
+    margin-bottom: 2rem;
+}
+
+.back-link {
+    margin-bottom: 2rem;
+}
+
+.hero ::deep h1:focus {
+    outline: none;
+}
+
+.hero-copy,
+.section-copy {
+    color: var(--mud-palette-text-secondary);
+}
+
+.hero-copy {
+    max-width: 42rem;
+    margin-top: .75rem;
+    font-size: 1.05rem;
+    line-height: 1.7;
+}
+
+.connect-card {
+    margin-top: 1.25rem;
+    padding: clamp(1.25rem, 4vw, 2rem);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 1rem;
+    background: var(--mud-palette-surface);
+    box-shadow: 0 .7rem 2.4rem rgb(0 0 0 / 6%);
+}
+
+.section-copy {
+    margin-top: .35rem;
+}
+
+.value-block {
+    margin-top: 1.5rem;
+}
+
+.value-label {
+    display: block;
+    margin-bottom: .4rem;
+    color: var(--mud-palette-text-secondary);
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.copy-row,
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .75rem;
+}
+
+.copy-row code {
+    flex: 1 1 20rem;
+}
+
+code {
+    overflow-wrap: anywhere;
+}
+
+.copy-row code,
+dl code {
+    padding: .45rem .65rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: .4rem;
+    background: var(--mud-palette-background-gray);
+}
+
+.copied {
+    display: inline-block;
+    margin-top: .55rem;
+    color: var(--mud-palette-success);
+    font-size: .85rem;
+    font-weight: 600;
+}
+
+.client-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-top: 2rem;
+}
+
+.client-grid article {
+    padding: 1.25rem;
+    border-radius: .75rem;
+    background: var(--mud-palette-background-gray);
+}
+
+ol {
+    display: grid;
+    gap: .55rem;
+    margin: .75rem 0 0;
+    padding-left: 1.25rem;
+    line-height: 1.55;
+}
+
+pre {
+    margin: 1.25rem 0 1rem;
+    padding: 1rem;
+    border-radius: .65rem;
+    background: #1f2430;
+    color: #f5f7fa;
+    overflow-x: auto;
+}
+
+pre code {
+    overflow-wrap: normal;
+}
+
+dl {
+    display: grid;
+    gap: 0;
+    margin: 1.25rem 0 0;
+}
+
+dl > div {
+    display: grid;
+    grid-template-columns: minmax(9rem, 13rem) minmax(0, 1fr);
+    gap: 1rem;
+    padding: .8rem 0;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+dt {
+    color: var(--mud-palette-text-secondary);
+    font-weight: 600;
+}
+
+dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 42rem) {
+    .mcp-connect {
+        width: min(100% - 1.25rem, 58rem);
+    }
+
+    .client-grid {
+        grid-template-columns: 1fr;
+    }
+
+    dl > div {
+        grid-template-columns: 1fr;
+        gap: .35rem;
+    }
+
+    .copy-row > ::deep .mud-button-root,
+    .actions > ::deep .mud-button-root {
+        width: 100%;
+    }
+}

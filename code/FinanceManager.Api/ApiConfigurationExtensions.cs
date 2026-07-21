@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using ModelContextProtocol.AspNetCore.Authentication;
 using OpenIddict.Abstractions;
 using OpenIddict.Validation.AspNetCore;
 using System.Security.Claims;
@@ -140,7 +141,7 @@ public static class ApiConfigurationExtensions
                 "Cors:AllowedOrigins is not configured. Provide explicit allowed origins via the " +
                 "Cors__AllowedOrigins configuration; AllowAnyOrigin is only permitted in Development.");
 
-        services.AddCors(options =>
+        var authentication = services.AddCors(options =>
         {
             options.AddPolicy("ApiCorsPolicy",
                 corsPolicyBuilder =>
@@ -248,6 +249,21 @@ public static class ApiConfigurationExtensions
         if (mcpOAuth.Enabled)
         {
             var allowHttp = environment.IsDevelopment() || environment.IsEnvironment("Test");
+            authentication
+                .AddPolicyScheme(McpOAuthAuthentication.SchemeName, "MCP OAuth", options =>
+                {
+                    options.ForwardAuthenticate = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
+                    options.ForwardChallenge = McpAuthenticationDefaults.AuthenticationScheme;
+                    options.ForwardForbid = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
+                })
+                .AddMcp(options => options.ResourceMetadata = new()
+                {
+                    Resource = mcpOAuth.Resource,
+                    AuthorizationServers = { mcpOAuth.Issuer },
+                    ScopesSupported = ["mcp"],
+                    ResourceName = mcpOAuth.DisplayName
+                });
+
             services.AddOpenIddict()
                 .AddServer(options =>
                 {
@@ -298,7 +314,7 @@ public static class ApiConfigurationExtensions
         services.AddScoped<McpOAuthBridgeTokenValidator>();
         services.AddAuthorization(options => options.AddPolicy(McpOAuthAuthentication.PolicyName, policy =>
         {
-            policy.AddAuthenticationSchemes(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
+            policy.AddAuthenticationSchemes(McpOAuthAuthentication.SchemeName);
             policy.RequireAuthenticatedUser();
             policy.RequireAssertion(context =>
                 context.User.HasScope("mcp") && context.User.GetAudiences().Contains(mcpOAuth.Resource, StringComparer.Ordinal));
