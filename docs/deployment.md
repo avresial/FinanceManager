@@ -25,6 +25,58 @@ A merge to `develop` triggers build → unit tests → code-quality → security
 
 After step 3 is done, the next merge into `develop` will deploy automatically. Validate at `https://FinanceManagerApi-dev.azurewebsites.net`.
 
+## MCP OAuth production configuration
+
+The MCP endpoint is disabled unless `McpOAuth:Enabled` is `true`. Production and hosted development environments must use their public HTTPS origin consistently; internal App Service or container URLs must not appear in OAuth metadata.
+
+Configure these settings through the platform secret/configuration store (Azure App Settings use `__` in place of `:`):
+
+| Setting | Production requirement |
+|---------|------------------------|
+| `McpOAuth__Enabled` | `true` to publish `/mcp`, OAuth endpoints, and discovery metadata. |
+| `McpOAuth__Issuer` | Public HTTPS origin with trailing slash, for example `https://finance.example.com/`. |
+| `McpOAuth__Resource` | Exact public MCP URL, normally the issuer origin plus `/mcp`. |
+| `McpOAuth__LoginUrl` | Public HTTPS Blazor login URL. |
+| `McpOAuth__Clients__0__ClientId` | Public client identifier advertised to the MCP client. It is not a secret. |
+| `McpOAuth__Clients__0__DisplayName` | Non-empty operator-facing name for the client; startup validation requires it. |
+| `McpOAuth__Clients__0__RedirectUris__0` | Exact redirect URI registered by ChatGPT, Claude, or another client. Add array entries for every supported URI; matching is strict. |
+| `McpOAuth__Clients__0__RequirePkce` | `true` unless that specific client is known not to support PKCE. Do not disable PKCE globally. |
+| `McpOAuth__SigningCertificatePath` / `McpOAuth__EncryptionCertificatePath` | Absolute paths to persistent PKCS#12 (`.pfx`) files mounted outside the application content directory. |
+| `McpOAuth__SigningCertificatePassword` / `McpOAuth__EncryptionCertificatePassword` | Passwords supplied only through the secret store. |
+
+Use separate MCP client entries when clients require different redirect URIs or PKCE behavior. On startup Finance Manager reconciles configured client redirect URIs, permissions, and PKCE requirements with OpenIddict, removing stale configuration. A removed redirect URI therefore stops working after the next successful startup.
+
+### Reverse proxy and discovery URLs
+
+The TLS-terminating proxy must forward the original scheme and client address. Set `ReverseProxy__KnownProxies` or `ReverseProxy__KnownNetworks` to only the actual proxy IPs/CIDR ranges; the application refuses to start outside Development when neither is configured. Never trust forwarded headers from arbitrary sources.
+
+After deployment, verify all returned URLs use the public HTTPS origin:
+
+- `/.well-known/openid-configuration`
+- `/.well-known/oauth-authorization-server`
+- `/.well-known/oauth-protected-resource/mcp`
+- `/.well-known/mcp.json`
+- `/connect/mcp`
+
+Also complete one authorization-code flow through the real proxy and confirm that an unauthenticated `/mcp` request returns `401` with resource-metadata discovery. Do not put access tokens or authorization codes in command lines, logs, screenshots, or support tickets.
+
+### Signing and encryption key lifecycle
+
+Development certificates are used only in the local Development environment. Test uses ephemeral keys. Every other environment fails startup unless persistent signing and encryption certificates are configured; production never writes development certificates to the host certificate store.
+
+Store the `.pfx` files in a managed secret/certificate service or a read-only protected mount. Restrict file and secret access to the application identity, back up the certificates according to the service recovery policy, and monitor their expiry dates.
+
+The current configuration supports one active signing certificate and one active encryption certificate, so rotation is deliberately disruptive rather than seamless. Use this runbook:
+
+1. Generate new signing and encryption certificates and stage their `.pfx` files and passwords without replacing the active files.
+2. Schedule a reconnect window. Stop or drain all application instances so two different key sets cannot issue tokens concurrently.
+3. From a one-off process with the current deployed configuration and database access, run `dotnet FinanceManager.Api.dll --revoke-mcp-client <client-id>`. The command revokes that client's authorizations and tokens through OpenIddict, prints only counts, and exits. A missing client returns exit code `3`; invalid arguments return `2`. Existing SPA JWT and refresh-token records are separate and are not touched.
+4. Atomically change all four certificate path/password settings to the new pair, then restart every instance.
+5. Verify discovery, complete a new OAuth connection, refresh it once, and call `who_am_i` before restoring traffic.
+6. Retain the old certificates only for the audited recovery period, then destroy them through the secret store. Never commit either certificate or password to the repository.
+
+Because old encrypted refresh tokens cannot be used after the key change, connected MCP clients must authorize again. Normal Finance Manager logout ends the browser/SPA session but does not revoke an independent MCP grant; users disconnect in their AI client, while operators revoke compromised MCP grants in the OpenIddict store.
+
 ## Health probes
 
 The API exposes three health endpoints (mapped in every environment, including production):

@@ -274,6 +274,7 @@ public static class ApiConfigurationExtensions
                         .SetTokenEndpointUris("/connect/token")
                         .AllowAuthorizationCodeFlow()
                         .AllowRefreshTokenFlow()
+                        .UseReferenceAccessTokens()
                         .RegisterScopes("mcp")
                         .RegisterResources(mcpOAuth.Resource)
                         .SetAuthorizationCodeLifetime(mcpOAuth.AuthorizationCodeLifetime)
@@ -306,6 +307,7 @@ public static class ApiConfigurationExtensions
                 .AddValidation(options =>
                 {
                     options.UseLocalServer();
+                    options.EnableAuthorizationEntryValidation();
                     options.EnableTokenEntryValidation();
                     options.UseAspNetCore();
                 });

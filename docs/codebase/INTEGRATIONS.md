@@ -14,6 +14,7 @@
 | GitHub Models via Copilot SDK | External AI service | Alternate AI provider in configured fallback chain | Copilot SDK session auth `[TODO]` | Medium | `code\FinanceManager.Infrastructure\Services\Ai\CopilotChatClient.cs`, `code\FinanceManager.Api\appsettings.json` |
 | Ollama | Local/remote AI endpoint | Final AI fallback provider | No auth detected in code | Medium | `code\FinanceManager.Infrastructure\Services\Ai\OllamaChatClient.cs`, `code\FinanceManager.Api\appsettings.json` |
 | SignalR hub (`/hubs/currency-import`) | Realtime transport | Import job progress/events between API and browser | JWT via query-string token handling | Medium | `code\FinanceManager.Api\Program.cs` |
+| MCP/OAuth (`/mcp`, `/connect/*`) | Stateless MCP transport and OAuth authorization server | Gives configured AI clients owner-isolated read access to Finance Manager data | OpenIddict authorization code, refresh token, resource, and `mcp` scope validation | High | `code\FinanceManager.Api\Mcp`, `code\FinanceManager.Api\Controllers\McpOAuthController.cs`, `docs\deployment.md` |
 | Browser local/session storage | Browser-side storage | Persist user session and login state | Same-origin browser storage | Medium | `code\FinanceManager\Program.cs`, `code\FinanceManager.Components\Services\LoginService.cs` |
 
 ### 2) Data Stores
@@ -22,6 +23,7 @@
 |-------|------|--------------|----------|----------|
 | EF Core relational database (`AppDbContext`) | System-of-record for users, accounts, entries, prices, labels, imports | `FinanceManager.Infrastructure\Repositories\*` via `AppDbContext` | Database-provider drift between SQL Server and PostgreSQL setups | `code\FinanceManager.Infrastructure\Contexts\AppDbContext.cs`, `code\FinanceManager.Infrastructure\ServiceCollectionExtension.cs` |
 | In-memory EF Core database | Test-only persistence for integration tests | `FinanceManager.Tests.Integration\TestDatabase.cs` | Divergence from relational behavior in production | `code\FinanceManager.Tests.Integration\TestDatabase.cs`, `code\FinanceManager.Tests.Integration\FinanceManagerApiTestApp.cs` |
+| OpenIddict entities in `AppDbContext` | MCP OAuth clients, authorizations, scopes, and refresh/token state | OpenIddict EF Core stores and startup reconciliation | Grant revocation and persistent encryption keys must remain operational across deployments | `code\FinanceManager.Infrastructure\Contexts\AppDbContext.cs`, `code\FinanceManager.Infrastructure\OAuth`, `docs\deployment.md` |
 | `IMemoryCache` | Client caches and stock-price memoization | `FinanceManager.Components` and `FinanceManager.Application\Providers` | Cache scope is per process/browser and not shared across instances | `code\FinanceManager.Components\ServiceCollectionExtension.cs`, `code\FinanceManager.Application\Providers\StockPriceProvider.cs` |
 | Browser local/session storage | User session persistence in the frontend | `LoginService` | Token/session handling depends on browser storage state | `code\FinanceManager.Components\Services\LoginService.cs` |
 
@@ -29,7 +31,7 @@
 
 - Credential sources: appsettings files, environment variables (notably `FINANCE_MANAGER_DB_KEY` and optional OTLP endpoint), ASP.NET User Secrets (`UserSecretsId`), and runtime options sections
 - Hardcoding checks: development/test JWT signing keys and a development SQL Server connection string are committed in `appsettings.*`; external AI/stock API keys are present as config slots but blank in the checked-in config
-- Rotation or lifecycle notes: `[TODO]` no documented secret-rotation process was found in the repository
+- Rotation or lifecycle notes: MCP OAuth signing/encryption certificate storage and disruptive rotation are documented in `docs\deployment.md`; a general rotation runbook for the other application secrets is still `[TODO]`
 
 ### 4) Reliability and Failure Behavior
 
@@ -53,4 +55,3 @@
 - `code\FinanceManager.Api\appsettings.Development.json`
 - `code\ServiceDefaults\Extensions.cs`
 - `code\AppHost\AppHost.cs`
-

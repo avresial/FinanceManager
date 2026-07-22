@@ -6,6 +6,7 @@ using FinanceManager.Application;
 using FinanceManager.Application.Shared.Diagnostics;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Infrastructure;
+using FinanceManager.Infrastructure.OAuth;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Options;
 using OpenTelemetry.Metrics;
@@ -130,4 +131,30 @@ app.MapHub<FinanceManager.Api.Hubs.CurrencyImportHub>("/hubs/currency-import");
 app.MapHub<FinanceManager.Api.Hubs.LabelSetterProgressHub>("/hubs/label-setter-progress");
 app.MapHub<FinanceManager.Api.Hubs.AdminLogsHub>("/hubs/admin-logs");
 app.MapFallbackToFile("index.html");
+
+var revokeClientArgument = Array.IndexOf(args, "--revoke-mcp-client");
+if (revokeClientArgument >= 0)
+{
+    if (args.Length != 2 || revokeClientArgument != 0 || string.IsNullOrWhiteSpace(args[1]))
+    {
+        Console.Error.WriteLine("Usage: FinanceManager.Api --revoke-mcp-client <client-id>");
+        Environment.ExitCode = 2;
+        return;
+    }
+
+    using var scope = app.Services.CreateScope();
+    var result = await scope.ServiceProvider.GetRequiredService<McpOAuthGrantRevoker>()
+        .RevokeClientAsync(args[1]);
+    if (result is null)
+    {
+        Console.Error.WriteLine($"MCP OAuth client '{args[1]}' was not found.");
+        Environment.ExitCode = 3;
+        return;
+    }
+
+    Console.WriteLine(
+        $"Revoked {result.Authorizations} authorization(s) and {result.Tokens} token(s) for MCP OAuth client '{args[1]}'.");
+    return;
+}
+
 app.Run();

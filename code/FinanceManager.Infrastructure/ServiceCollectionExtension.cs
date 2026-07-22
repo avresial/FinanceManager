@@ -144,6 +144,7 @@ public static class ServiceCollectionExtension
         services.AddOpenIddict()
             .AddCore(options => options.UseEntityFrameworkCore().UseDbContext<AppDbContext>());
         services.AddScoped<McpOAuthConfigurationReconciler>();
+        services.AddScoped<McpOAuthGrantRevoker>();
 
         // The cleanup service builds standalone AppDbContexts to drop expired guest sandboxes; without a shared
         // root, EF Core's InMemory provider uses a per-internal-provider singleton, so the standalone context

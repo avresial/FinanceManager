@@ -22,6 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Moq;
+using OpenIddict.Abstractions;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -188,6 +189,118 @@ public sealed class McpEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task McpWithTokenMissingMcpScope_IsForbidden()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var client = CreateBrowser();
+        var tokens = await GetTokenResponse(client, cancellationToken);
+        var refreshToken = tokens.GetProperty("refresh_token").GetString();
+        var refreshResponse = await client.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["grant_type"] = "refresh_token",
+            ["client_id"] = "finance-manager-mcp-test",
+            ["refresh_token"] = refreshToken!,
+            ["scope"] = "offline_access"
+        }), cancellationToken);
+        Assert.Equal(HttpStatusCode.OK, refreshResponse.StatusCode);
+        var refreshed = await refreshResponse.Content.ReadFromJsonAsync<JsonElement>(cancellationToken);
+        Assert.False(refreshed.TryGetProperty("scope", out var scope) &&
+            scope.GetString()!.Split(' ').Contains("mcp", StringComparer.Ordinal));
+
+        using var request = McpRequest(
+            "tools/list", 1, new { }, refreshed.GetProperty("access_token").GetString());
+        var response = await client.SendAsync(request, cancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task McpWithRevokedAuthorization_IsUnauthorized()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var client = CreateBrowser();
+        var accessToken = await GetAccessToken(client, cancellationToken);
+        using (var scope = _app.Services.CreateScope())
+        {
+            var authorizationManager = scope.ServiceProvider.GetRequiredService<IOpenIddictAuthorizationManager>();
+            var revoked = 0;
+            await foreach (var authorization in authorizationManager.FindBySubjectAsync(
+                               _userId.ToString(), cancellationToken))
+            {
+                Assert.True(await authorizationManager.TryRevokeAsync(authorization, cancellationToken));
+                revoked++;
+            }
+            Assert.True(revoked > 0);
+        }
+
+        using var request = McpRequest("tools/list", 1, new { }, accessToken);
+        var response = await client.SendAsync(request, cancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task McpWithRevokedAccessToken_IsUnauthorized()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var client = CreateBrowser();
+        var accessToken = await GetAccessToken(client, cancellationToken);
+        using (var scope = _app.Services.CreateScope())
+        {
+            var tokenManager = scope.ServiceProvider.GetRequiredService<IOpenIddictTokenManager>();
+            var token = await tokenManager.FindByReferenceIdAsync(accessToken, cancellationToken);
+            Assert.NotNull(token);
+            Assert.True(await tokenManager.TryRevokeAsync(token, cancellationToken));
+        }
+
+        using var request = McpRequest("tools/list", 1, new { }, accessToken);
+        var response = await client.SendAsync(request, cancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task McpWithExpiredAccessToken_IsUnauthorized()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var users = new Mock<IUserRepository>();
+        users.Setup(repository => repository.GetUser(_userId)).ReturnsAsync(new User
+        {
+            UserId = _userId,
+            Login = _userLogin,
+            UserRole = UserRole.User,
+            CreationDate = DateTime.UtcNow
+        });
+        using var app = new FinanceManagerApiTestApp(services =>
+        {
+            services.RemoveAll<IUserRepository>();
+            services.AddSingleton(users.Object);
+        }, hostSettings: new Dictionary<string, string?>
+        {
+            ["McpOAuth:AccessTokenLifetime"] = "00:00:01"
+        });
+        using (var scope = app.Services.CreateScope())
+        {
+            scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureCreated();
+            var options = scope.ServiceProvider.GetRequiredService<IOptions<McpOAuthOptions>>().Value;
+            await scope.ServiceProvider.GetRequiredService<McpOAuthConfigurationReconciler>()
+                .ReconcileAsync(options, cancellationToken);
+        }
+        using var client = app.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("http://localhost/")
+        });
+        var accessToken = await GetAccessToken(client, cancellationToken, app);
+        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+
+        using var request = McpRequest("tools/list", 1, new { }, accessToken);
+        var response = await client.SendAsync(request, cancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task AuthenticatedClient_CanInitializeListToolsAndCallWhoAmI()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -351,7 +464,16 @@ public sealed class McpEndpointTests : IDisposable
         BaseAddress = new Uri("http://localhost/")
     });
 
-    private async Task<string> GetAccessToken(HttpClient client, CancellationToken cancellationToken)
+    private async Task<string> GetAccessToken(
+        HttpClient client,
+        CancellationToken cancellationToken,
+        FinanceManagerApiTestApp? app = null) =>
+        (await GetTokenResponse(client, cancellationToken, app)).GetProperty("access_token").GetString()!;
+
+    private async Task<JsonElement> GetTokenResponse(
+        HttpClient client,
+        CancellationToken cancellationToken,
+        FinanceManagerApiTestApp? app = null)
     {
         var verifier = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
         var challenge = WebEncoders.Base64UrlEncode(SHA256.HashData(Encoding.ASCII.GetBytes(verifier)));
@@ -369,7 +491,7 @@ public sealed class McpEndpointTests : IDisposable
         var csrfToken = await BootstrapCsrfToken(client, cancellationToken);
         var bridge = await client.PostAsync("/api/Auth/oauth-bridge", new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            ["token"] = IssueJwt(),
+            ["token"] = IssueJwt(app),
             ["returnUrl"] = "http://localhost" + authorizationUrl,
             ["__RequestVerificationToken"] = csrfToken
         }), cancellationToken);
@@ -388,13 +510,12 @@ public sealed class McpEndpointTests : IDisposable
             ["code_verifier"] = verifier
         }), cancellationToken);
         Assert.Equal(HttpStatusCode.OK, tokenResponse.StatusCode);
-        var token = await tokenResponse.Content.ReadFromJsonAsync<JsonElement>(cancellationToken);
-        return token.GetProperty("access_token").GetString()!;
+        return await tokenResponse.Content.ReadFromJsonAsync<JsonElement>(cancellationToken);
     }
 
-    private string IssueJwt()
+    private string IssueJwt(FinanceManagerApiTestApp? app = null)
     {
-        using var scope = _app.Services.CreateScope();
+        using var scope = (app ?? _app).Services.CreateScope();
         return scope.ServiceProvider.GetRequiredService<JwtTokenGenerator>()
             .GenerateToken(_userLogin, _userId, UserRole.User, false)
             .AccessToken;
