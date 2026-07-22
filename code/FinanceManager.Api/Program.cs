@@ -6,6 +6,7 @@ using FinanceManager.Application;
 using FinanceManager.Application.Shared.Diagnostics;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Infrastructure;
+using FinanceManager.Infrastructure.OAuth;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Options;
 using OpenTelemetry.Metrics;
@@ -130,4 +131,11 @@ app.MapHub<FinanceManager.Api.Hubs.CurrencyImportHub>("/hubs/currency-import");
 app.MapHub<FinanceManager.Api.Hubs.LabelSetterProgressHub>("/hubs/label-setter-progress");
 app.MapHub<FinanceManager.Api.Hubs.AdminLogsHub>("/hubs/admin-logs");
 app.MapFallbackToFile("index.html");
+
+if (McpClientRevocationCommand.IsRequested(args))
+{
+    Environment.ExitCode = await McpClientRevocationCommand.RunAsync(args, app.Services);
+    return;
+}
+
 app.Run();
