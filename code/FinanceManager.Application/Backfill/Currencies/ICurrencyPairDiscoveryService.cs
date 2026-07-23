@@ -1,8 +1,5 @@
 namespace FinanceManager.Application.Backfill.Currencies;
 
-/// <summary>A normalized, upper-cased currency pair to backfill (<see cref="From"/> → <see cref="To"/>).</summary>
-public readonly record struct CurrencyPair(string From, string To);
-
 /// <summary>
 /// Discovers the distinct currency pairs the system needs exchange rates for: every currency an
 /// instrument trades in, valued into every currency a user has chosen to see their portfolio in.
