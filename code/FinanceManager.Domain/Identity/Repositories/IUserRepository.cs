@@ -51,4 +51,11 @@ public interface IUserRepository
     Task<bool> AddUserWithId(int userId, string login, string password, PricingLevel pricingLevel, UserRole userRole, string? firstName = null, string? lastName = null);
 
     Task<bool> RemoveUser(int userId);
+
+    /// <summary>
+    /// The distinct preferred-currency ids across all users, resolved in a single grouped query.
+    /// Feeds the startup currency backfill, which must cover every currency a portfolio is valued in
+    /// without enumerating users one by one.
+    /// </summary>
+    Task<IReadOnlyList<int>> GetDistinctPreferredCurrencyIds(CancellationToken ct = default);
 }

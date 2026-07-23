@@ -215,6 +215,7 @@ Integration tests use the EF Core **InMemory** provider. They also remove `Datab
 - Latest C# features allowed by the configured `LangVersion` are fair game.
 - Private/internal fields: `_camelCase`. Interfaces: `IPascalCase`. Files and types: `PascalCase`.
 - Namespaces must match folder paths (`dotnet_style_namespace_match_folder = true` in `.editorconfig`).
+- **One top-level type per file**, and the file is named after that type. Do not co-locate a supporting type (a result record, enum, DTO, etc.) in another type's file — e.g. a `FooResult` record belongs in `FooResult.cs`, not alongside `IFoo` in `IFoo.cs`. Nested/private helper types declared *inside* another type are exempt.
 
 ## Razor / DI Injection
 

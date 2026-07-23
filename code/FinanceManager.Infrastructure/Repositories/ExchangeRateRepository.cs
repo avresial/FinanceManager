@@ -120,6 +120,128 @@ public class ExchangeRateRepository(AppDbContext context) : IExchangeRateReposit
         }
     }
 
+    public async Task<DateTime?> GetLatestDate(string fromCurrency, string toCurrency, CancellationToken ct = default)
+    {
+        var from = Normalize(fromCurrency);
+        var to = Normalize(toCurrency);
+
+        await _contextLock.WaitAsync(ct);
+        try
+        {
+            var dates = context.ExchangeRates
+                .AsNoTracking()
+                .Where(x => x.FromCurrency == from && x.ToCurrency == to)
+                .Select(x => x.Date);
+
+            // MaxAsync throws on an empty sequence; project to nullable and use a scalar aggregate so
+            // an unseen pair returns null instead of blowing up.
+            return await dates.MaxAsync(d => (DateTime?)d, ct);
+        }
+        finally
+        {
+            _contextLock.Release();
+        }
+    }
+
+    public async Task<IReadOnlyCollection<DateTime>> GetExistingDates(string fromCurrency, string toCurrency, DateTime dateStart, DateTime dateEnd, CancellationToken ct = default)
+    {
+        var from = Normalize(fromCurrency);
+        var to = Normalize(toCurrency);
+        var startDay = NormalizeDate(dateStart);
+        var endDay = NormalizeDate(dateEnd);
+
+        if (startDay > endDay)
+            (startDay, endDay) = (endDay, startDay);
+
+        await _contextLock.WaitAsync(ct);
+        try
+        {
+            return await context.ExchangeRates
+                .AsNoTracking()
+                .Where(x => x.FromCurrency == from && x.ToCurrency == to && x.Date >= startDay && x.Date <= endDay)
+                .Select(x => x.Date)
+                .ToListAsync(ct);
+        }
+        finally
+        {
+            _contextLock.Release();
+        }
+    }
+
+    public async Task<int> AddRange(string fromCurrency, string toCurrency, IReadOnlyCollection<(DateTime Date, decimal Rate)> rates, CancellationToken ct = default)
+    {
+        if (rates.Count == 0) return 0;
+
+        var from = Normalize(fromCurrency);
+        var to = Normalize(toCurrency);
+
+        // Collapse duplicate dates in the incoming batch (last wins) and normalise the kind so the
+        // in-memory existence check matches what the database stores.
+        var byDate = new Dictionary<DateTime, decimal>();
+        foreach (var (date, rate) in rates)
+            byDate[NormalizeDate(date)] = rate;
+
+        await _contextLock.WaitAsync(ct);
+        try
+        {
+            var minDay = byDate.Keys.Min();
+            var maxDay = byDate.Keys.Max();
+
+            var existing = await context.ExchangeRates
+                .AsNoTracking()
+                .Where(x => x.FromCurrency == from && x.ToCurrency == to && x.Date >= minDay && x.Date <= maxDay)
+                .Select(x => x.Date)
+                .ToListAsync(ct);
+
+            var existingDates = existing.ToHashSet();
+
+            var toInsert = byDate
+                .Where(kvp => !existingDates.Contains(kvp.Key))
+                .Select(kvp => new ExchangeRate
+                {
+                    FromCurrency = from,
+                    ToCurrency = to,
+                    Date = kvp.Key,
+                    Rate = kvp.Value
+                })
+                .ToList();
+
+            if (toInsert.Count == 0) return 0;
+
+            context.ExchangeRates.AddRange(toInsert);
+            try
+            {
+                await context.SaveChangesAsync(ct);
+                return toInsert.Count;
+            }
+            catch (DbUpdateException)
+            {
+                // A concurrent backfill inserted overlapping dates between the read above and this
+                // save. Drop this context's pending inserts, then re-insert only the dates that are
+                // still missing so completed rows stay committed and the run remains idempotent.
+                context.ChangeTracker.Clear();
+
+                var nowExisting = (await context.ExchangeRates
+                        .AsNoTracking()
+                        .Where(x => x.FromCurrency == from && x.ToCurrency == to && x.Date >= minDay && x.Date <= maxDay)
+                        .Select(x => x.Date)
+                        .ToListAsync(ct))
+                    .ToHashSet();
+
+                var retry = toInsert.Where(r => !nowExisting.Contains(r.Date)).ToList();
+                if (retry.Count == 0) return 0;
+
+                context.ExchangeRates.AddRange(retry);
+                await context.SaveChangesAsync(ct);
+                return retry.Count;
+            }
+        }
+        finally
+        {
+            _contextLock.Release();
+        }
+    }
+
     private static string Normalize(string currency) => currency.Trim().ToUpperInvariant();
 
     // Rates are daily; store the UTC day start so lookups are exact and PostgreSQL accepts the value.

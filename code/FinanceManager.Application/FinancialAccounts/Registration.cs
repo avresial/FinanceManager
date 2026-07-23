@@ -1,4 +1,6 @@
 using FinanceManager.Application.Assets.Pricing;
+using FinanceManager.Application.Backfill;
+using FinanceManager.Application.Backfill.Currencies;
 using FinanceManager.Application.FinancialAccounts.Bond;
 using FinanceManager.Application.FinancialAccounts.Bond.Assets;
 using FinanceManager.Application.FinancialAccounts.Bond.Balance;
@@ -69,6 +71,9 @@ internal static class Registration
                 .AddScoped<IAccountCsvExportService<BondAccountExportDto>, BondAccountCsvExportService>()
                 .AddScoped<IInvestmentPriceProvider, InvestmentPriceProvider>()
                 .AddScoped<IInvestmentPriceBackfillService, InvestmentPriceBackfillService>()
+                .AddScoped<ICurrencyPairDiscoveryService, CurrencyPairDiscoveryService>()
+                .AddScoped<IBackfillService, StockPriceBackfillService>()
+                .AddScoped<IBackfillService, CurrencyRateBackfillService>()
                 .AddScoped<IInvestmentValuationService, InvestmentValuationService>()
                 .AddScoped<IInvestmentTransactionValuationService, InvestmentTransactionValuationService>()
                 .AddScoped<IInvestmentInstrumentDiscoveryService, InvestmentInstrumentDiscoveryService>()

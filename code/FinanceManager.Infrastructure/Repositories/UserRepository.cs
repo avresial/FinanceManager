@@ -235,4 +235,11 @@ public class UserRepository(AppDbContext context) : IUserRepository
 
         return true;
     }
+
+    public async Task<IReadOnlyList<int>> GetDistinctPreferredCurrencyIds(CancellationToken ct = default) =>
+        await context.Users
+            .AsNoTracking()
+            .Select(x => x.PreferredCurrencyId)
+            .Distinct()
+            .ToListAsync(ct);
 }
