@@ -78,6 +78,7 @@ public static class ApiConfigurationExtensions
             .ValidateOnStart();
         services.Configure<AiProviderOptions>(configuration.GetSection("AiProvider"));
         services.Configure<MaintenanceOptions>(configuration.GetSection(MaintenanceOptions.SectionName));
+        services.Configure<BackfillOptions>(configuration.GetSection(BackfillOptions.SectionName));
         services.Configure<List<AiProviderFallbackStrategyOption>>(configuration.GetSection("AIProviderFallbackStrategies"));
 
         return services;
@@ -394,6 +395,7 @@ public static class ApiConfigurationExtensions
         services.AddHostedService<CurrencyImportBackgroundService>();
         services.AddSingleton<IPriceBackfillJobChannel, PriceBackfillJobChannel>();
         services.AddHostedService<PriceBackfillBackgroundService>();
+        services.AddHostedService<StartupBackfillBackgroundService>();
 
         services.Configure<LogRetentionOptions>(configuration.GetSection(LogRetentionOptions.SectionName));
         services.AddSingleton<ILogEntryQueue, LogEntryQueue>();

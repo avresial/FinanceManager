@@ -1,4 +1,5 @@
-﻿using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
+﻿using FinanceManager.Application.Backfill.Currencies;
+using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Application.Insights.Generation;
 using FinanceManager.Application.Labels.Setter;
@@ -68,6 +69,7 @@ public static class ServiceCollectionExtension
         services.AddHttpClient<OpenFigiClient>();
         services.AddScoped<IOpenFigiClient>(sp => sp.GetRequiredService<OpenFigiClient>());
         services.AddHttpClient<ICurrencyExchangeRateProvider, FawazAhmedCurrencyApiClient>();
+        services.AddHttpClient<IFxDailySource, AlphaVantageFxClient>();
 
         services.AddAI();
 

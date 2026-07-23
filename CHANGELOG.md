@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- The API now backfills historical stock closing prices and currency exchange rates in the background each time it starts, filling in any missing daily points from Alpha Vantage so charts and valuations stay complete without waiting for the weekly schedule. Runs are idempotent (existing rows are never overwritten or duplicated), skip instruments and currency pairs that are already up to date, avoid needless calls over weekends or on restarts the same day, and stop gracefully when the provider's rate limit is reached — resuming on the next start. Startup backfill can be turned off or tuned per dataset via the `Backfill` configuration section. #597
 - Expanding an investment purchase now shows its value on the purchase date, the current market price and valuation, and the gain/loss in both amount and percentage — converted to your preferred currency using the historical rate for the purchase and the latest rate for the current value, or shown in the instrument's own currency when no rate is available. #596
 - Connected AI clients can now read the signed-in user's financial accounts, filtered transaction history, investment positions and valuations, currencies, and financial labels through owner-isolated MCP tools. #590
 - AI clients can now connect to a protected MCP endpoint, discover its OAuth settings automatically, verify the signed-in identity, and follow a responsive setup guide with copyable and downloadable configuration. #589

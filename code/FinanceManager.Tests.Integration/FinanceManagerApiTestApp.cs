@@ -86,6 +86,9 @@ internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<ApiEntryP
                 // appsettings.json restricts AllowedHosts to the production hostname; the test host serves
                 // requests over http://localhost, so relax host filtering here or every request 400s.
                 ["AllowedHosts"] = "*",
+                // The startup backfill reaches out to Alpha Vantage; keep it off in tests so the host
+                // starts deterministically without external calls or DB races on the in-memory context.
+                ["Backfill:RunOnStartup"] = "false",
             };
 
             config.AddInMemoryCollection(settings);
