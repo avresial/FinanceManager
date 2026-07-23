@@ -119,11 +119,7 @@ internal class AssetsServiceInvestment(
                 var missingExchangeRate = false;
                 foreach (var buy in buys)
                 {
-                    var sourceCurrency = new Currency { ShortName = buy.Currency, Symbol = buy.Currency };
-                    var exchangeRate = string.Equals(buy.Currency, currency.ShortName, StringComparison.OrdinalIgnoreCase)
-                        ? 1m
-                        : await currencyExchangeService.GetExchangeRateAsync(
-                            sourceCurrency, currency, buy.TradeDate.ToDateTime(TimeOnly.MinValue));
+                    var exchangeRate = await GetBuyExchangeRateAsync(buy, currency, asOfDate);
                     if (exchangeRate is not decimal rate || rate <= 0m)
                     {
                         missingExchangeRate = true;
@@ -192,5 +188,25 @@ internal class AssetsServiceInvestment(
         }
 
         return results;
+    }
+
+    // The capital value of a holding is its remaining buy cost converted into the target currency at
+    // the trade-date rate. Historical FX rates are sometimes missing (old trades, thinly-quoted pairs),
+    // and dropping the whole holding from the totals in that case is exactly what made an account's
+    // capital value — and therefore its gain/loss — collapse to 0 even while the position was still
+    // valued fine. Fall back to the as-of-date rate for the same pair so the position keeps a
+    // best-effort capital value instead of being excluded.
+    private async Task<decimal?> GetBuyExchangeRateAsync(InvestmentTransaction buy, Currency targetCurrency, DateTime asOfDate)
+    {
+        if (string.Equals(buy.Currency, targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase))
+            return 1m;
+
+        var sourceCurrency = new Currency { ShortName = buy.Currency, Symbol = buy.Currency };
+        var tradeDateRate = await currencyExchangeService.GetExchangeRateAsync(
+            sourceCurrency, targetCurrency, buy.TradeDate.ToDateTime(TimeOnly.MinValue));
+        if (tradeDateRate is decimal rate && rate > 0m)
+            return rate;
+
+        return await currencyExchangeService.GetExchangeRateAsync(sourceCurrency, targetCurrency, asOfDate);
     }
 }

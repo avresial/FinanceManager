@@ -78,4 +78,64 @@ public class AssetsServiceInvestmentTests
         Assert.Equal(2500m, result.CurrentValue);
         Assert.Equal(460m, result.UnrealizedGainLoss);
     }
+
+    [Fact]
+    public async Task GetUnrealizedGainLossPerAccount_FallsBackToAsOfRate_WhenTradeDateRateMissing()
+    {
+        var accountRepository = new Mock<IFinancialAccountRepository>();
+        var transactionRepository = new Mock<IInvestmentTransactionRepository>();
+        var priceProvider = new Mock<IInvestmentPriceProvider>();
+        var exchangeService = new Mock<ICurrencyExchangeService>();
+        var valuationService = new Mock<IInvestmentValuationService>();
+        var account = new InvestmentAccount(1, 7, "Broker");
+        var tradeDate = new DateOnly(2026, 1, 10);
+        var asOfDate = new DateTime(2026, 7, 23);
+        var listing = new AssetListing { Id = 11, Ticker = "CSPX" };
+        var transactions = new List<InvestmentTransaction>
+        {
+            new()
+            {
+                AccountId = account.AccountId,
+                AssetListingId = listing.Id,
+                AssetListing = listing,
+                Type = InvestmentTransactionType.Buy,
+                Quantity = 10m,
+                UnitPrice = 100m,
+                Currency = "USD",
+                TradeDate = tradeDate,
+            },
+        };
+
+        accountRepository
+            .Setup(x => x.GetAccounts<InvestmentAccount>(1, DateTime.MinValue, It.IsAny<DateTime>()))
+            .Returns(new[] { account }.ToAsyncEnumerable());
+        transactionRepository.Setup(x => x.GetByAccount(account.AccountId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(transactions);
+        priceProvider.Setup(x => x.GetPricePerUnitAsync(listing.Id, DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(500m);
+
+        // The trade-date rate is unavailable (returns null); only the as-of-date rate is known.
+        exchangeService.Setup(x => x.GetExchangeRateAsync(
+                It.Is<Currency>(c => c.ShortName == "USD"), DefaultCurrency.PLN,
+                tradeDate.ToDateTime(TimeOnly.MinValue)))
+            .ReturnsAsync((decimal?)null);
+        exchangeService.Setup(x => x.GetExchangeRateAsync(
+                It.Is<Currency>(c => c.ShortName == "USD"), DefaultCurrency.PLN, asOfDate))
+            .ReturnsAsync(4m);
+
+        var service = new AssetsServiceInvestment(
+            accountRepository.Object,
+            valuationService.Object,
+            transactionRepository.Object,
+            priceProvider.Object,
+            exchangeService.Object);
+
+        var result = Assert.Single(await service.GetUnrealizedGainLossPerAccount(1, DefaultCurrency.PLN, asOfDate));
+
+        // Capital value falls back to the as-of rate (10 * 100 * 4) instead of collapsing to zero,
+        // so gain/loss is a real figure: 5000 current value - 4000 capital value = 1000.
+        Assert.Equal(4000m, result.CostBasis);
+        Assert.Equal(5000m, result.CurrentValue);
+        Assert.Equal(1000m, result.UnrealizedGainLoss);
+    }
 }

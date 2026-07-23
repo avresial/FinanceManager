@@ -48,6 +48,8 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private bool _isChartLoading;
     private int _chartRefreshVersion;
     private decimal _currentBalance;
+    private decimal _capitalValue;
+    private decimal _currentValue;
     private decimal _balanceChange;
     private decimal? _balanceChangePercent;
     public List<TimeSeriesModel> ChartData { get; set; } = [];
@@ -221,8 +223,14 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         UnrealizedGainLossAccountResult? appreciation)
     {
         _currentBalance = balanceSeries.LastOrDefault()?.Value ?? 0;
-        _balanceChange = appreciation?.UnrealizedGainLoss ?? 0m;
-        _balanceChangePercent = appreciation is null ? null : appreciation.UnrealizedGainLossPercent;
+
+        // Capital value (remaining buy cost) and current valuation are the two source-of-truth
+        // figures; the gain/loss shown in the hero and the breakdown card is derived purely from
+        // their difference so the number can never disagree with the two amounts on display.
+        _capitalValue = appreciation?.CostBasis ?? 0m;
+        _currentValue = appreciation?.CurrentValue ?? 0m;
+        _balanceChange = _currentValue - _capitalValue;
+        _balanceChangePercent = _capitalValue == 0m ? null : _balanceChange / _capitalValue * 100m;
     }
 
     private void UpdateHoldings(IReadOnlyDictionary<long, decimal> holdings, DateTime asOf)
