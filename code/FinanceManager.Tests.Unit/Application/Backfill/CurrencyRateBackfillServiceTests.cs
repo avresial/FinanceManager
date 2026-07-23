@@ -39,10 +39,11 @@ public class CurrencyRateBackfillServiceTests
     public async Task FreshPair_SkipsProviderCall()
     {
         SetupPairs(("USD", "PLN"));
-        // The newest stored date is today, so it is already at least the last closed market day.
+        // A date in the future is always at least the last closed market day, so the pair is fresh
+        // regardless of any UTC-day (or Sunday→Monday) rollover between fixture setup and the SUT run.
         _exchangeRates
             .Setup(x => x.GetLatestDate("USD", "PLN", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(DateTime.UtcNow.Date);
+            .ReturnsAsync(DateTime.UtcNow.Date.AddDays(1));
 
         var result = await CreateSut().BackfillAsync(TestContext.Current.CancellationToken);
 

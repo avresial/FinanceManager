@@ -28,6 +28,23 @@ public class StartupBackfillBackgroundServiceTests
     }
 
     [Fact]
+    public async Task EqualOrder_BreaksTieByNameAscending()
+    {
+        var log = new List<string>();
+        // Same Order, registered in reverse-alphabetical order: the ThenBy(Name) tie-break must still
+        // run them alphabetically.
+        var services = new List<IBackfillService>
+        {
+            new FakeBackfillService("zeta", 10, log),
+            new FakeBackfillService("alpha", 10, log),
+        };
+
+        await RunAsync(services, CancellationToken.None);
+
+        Assert.Equal(["alpha", "zeta"], log);
+    }
+
+    [Fact]
     public async Task ContinuesAfterOneServiceThrows()
     {
         var log = new List<string>();
