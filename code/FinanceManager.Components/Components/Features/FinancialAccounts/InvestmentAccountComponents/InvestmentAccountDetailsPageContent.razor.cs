@@ -36,6 +36,8 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private readonly string _accountTypeLabel = "Investment account";
     private Currency _currency = DefaultCurrency.USD;
     private List<InvestmentTransactionDto> _transactions = [];
+    private IReadOnlyDictionary<long, InvestmentTransactionValuationDto> _valuations =
+        new Dictionary<long, InvestmentTransactionValuationDto>();
     private List<HoldingRow> _holdings = [];
 
     // Range / chart state.
@@ -111,6 +113,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             if (initialLoad)
                 ApplyAutomaticCustomRange();
 
+            await LoadValuationsAsync();
             await UpdateInfo();
         }
         catch (Exception ex)
@@ -121,6 +124,23 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         finally
         {
             _isLoading = false;
+        }
+    }
+
+    // Per-transaction purchase value / current valuation / gain-loss is priced server-side (needs
+    // market prices + FX). It only enriches the detail rows, so a failure here must not hide the
+    // transaction list itself.
+    private async Task LoadValuationsAsync()
+    {
+        try
+        {
+            _valuations = (await ValuationHttpClient.GetTransactionValuationsAsync(AccountId, _currency.Id))
+                .ToDictionary(v => v.TransactionId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to load transaction valuations for account {AccountId}", AccountId);
+            _valuations = new Dictionary<long, InvestmentTransactionValuationDto>();
         }
     }
 

@@ -154,6 +154,38 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
     }
 
     [Fact]
+    public async Task GetTransactionValuations_ReturnsBuyPerformance()
+    {
+        await SeedHoldingsWithPrice();
+        Authorize("testuser", _testUserId, UserRole.User);
+        var client = new InvestmentValuationHttpClient(Client);
+
+        var valuations = await client.GetTransactionValuationsAsync(_testAccountId, _usdCurrencyId);
+
+        // Only the Buy (5 @ 90 USD) is valued; latest quote is 100 USD.
+        var valuation = Assert.Single(valuations);
+        Assert.True(valuation.IsConverted);
+        Assert.Equal("USD", valuation.Currency);
+        Assert.True(valuation.HasCurrentPrice);
+        Assert.Equal(450m, valuation.PurchaseValue);    // 5 * 90
+        Assert.Equal(100m, valuation.CurrentPrice);
+        Assert.Equal(500m, valuation.CurrentValuation); // 5 * 100
+        Assert.Equal(50m, valuation.GainLoss);
+    }
+
+    [Fact]
+    public async Task GetTransactionValuations_ForOtherUsersAccount_ReturnsForbidden()
+    {
+        await SeedHoldingsWithPrice();
+        Authorize("otheruser", _testUserId + 1, UserRole.User);
+
+        var response = await Client.GetAsync(
+            $"api/InvestmentValuation/TransactionValuations/{_testAccountId}/{_usdCurrencyId}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetHoldings_ForUnknownAccount_ReturnsNotFound()
     {
         await SeedAccount();

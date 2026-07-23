@@ -1,3 +1,4 @@
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using System.Globalization;
 using System.Net.Http.Json;
 
@@ -5,6 +6,14 @@ namespace FinanceManager.Components.HttpClients;
 
 public class InvestmentValuationHttpClient(HttpClient httpClient)
 {
+    public async Task<IReadOnlyList<InvestmentTransactionValuationDto>> GetTransactionValuationsAsync(int accountId, int currencyId)
+    {
+        using var response = await httpClient.GetAsync(
+            $"{httpClient.BaseAddress}api/InvestmentValuation/TransactionValuations/{accountId}/{currencyId}");
+        if (!response.IsSuccessStatusCode) return [];
+        return await response.Content.ReadFromJsonAsync<IReadOnlyList<InvestmentTransactionValuationDto>>() ?? [];
+    }
+
     public async Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsync(int accountId, DateTime date)
     {
         using var response = await httpClient.GetAsync(

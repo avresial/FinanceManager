@@ -56,7 +56,7 @@ else
                     @foreach (var group in dayGroups)
                     {
                         <InvestmentDayGroupCard Day="@group.Key" Transactions="@group" Currency="@_currency.ShortName"
-                                                IsMobile="@_isMobile" OnEdit="ShowEdit" OnDelete="DeleteAsync" />
+                                                Valuations="@_valuations" IsMobile="@_isMobile" OnEdit="ShowEdit" OnDelete="DeleteAsync" />
                     }
                 }
             </MudItem>

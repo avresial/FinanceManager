@@ -1,6 +1,7 @@
 @namespace FinanceManager.Components.Components.Features.FinancialAccounts.InvestmentAccountComponents.TransactionHistory
 @using FinanceManager.Domain.FinancialAccounts.Investments.Dtos
 @using FinanceManager.Domain.FinancialAccounts.Investments.Entities
+@using System.Collections.Generic
 
 <MudCard Outlined="true" Class="mb-3" Style="background-color: transparent;">
     <MudCardHeader Class="py-1 px-4">
@@ -31,7 +32,8 @@
         <MudStack Spacing="0">
             @foreach (var transaction in TransactionList)
             {
-                <InvestmentTransactionRow @key="transaction.Id" Transaction="transaction" IsMobile="@IsMobile" OnEdit="OnEdit" OnDelete="OnDelete" />
+                <InvestmentTransactionRow @key="transaction.Id" Transaction="transaction" IsMobile="@IsMobile"
+                                          Valuation="@GetValuation(transaction.Id)" OnEdit="OnEdit" OnDelete="OnDelete" />
                 <MudDivider />
             }
         </MudStack>
@@ -43,10 +45,16 @@
     [Parameter] public required IEnumerable<InvestmentTransactionDto> Transactions { get; set; }
     [Parameter] public required string Currency { get; set; }
     [Parameter] public bool IsMobile { get; set; }
+
+    /// <summary>Per-transaction valuation figures keyed by transaction id; null/absent entries render without them.</summary>
+    [Parameter] public IReadOnlyDictionary<long, InvestmentTransactionValuationDto>? Valuations { get; set; }
     [Parameter] public EventCallback<InvestmentTransactionDto> OnEdit { get; set; }
     [Parameter] public EventCallback<InvestmentTransactionDto> OnDelete { get; set; }
 
     private List<InvestmentTransactionDto> TransactionList => Transactions as List<InvestmentTransactionDto> ?? Transactions.ToList();
+
+    private InvestmentTransactionValuationDto? GetValuation(long transactionId) =>
+        Valuations is not null && Valuations.TryGetValue(transactionId, out var valuation) ? valuation : null;
 
     private DateTime DayDateTime => Day.ToDateTime(TimeOnly.MinValue);
 
