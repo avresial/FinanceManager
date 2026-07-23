@@ -10,6 +10,9 @@ public partial class InvestmentTransactionRow
 {
     [Parameter] public required InvestmentTransactionDto Transaction { get; set; }
     [Parameter] public bool IsMobile { get; set; }
+
+    /// <summary>Valuation/performance figures for this transaction (Buy only); null when not available.</summary>
+    [Parameter] public InvestmentTransactionValuationDto? Valuation { get; set; }
     [Parameter] public EventCallback<InvestmentTransactionDto> OnEdit { get; set; }
     [Parameter] public EventCallback<InvestmentTransactionDto> OnDelete { get; set; }
 
@@ -19,6 +22,9 @@ public partial class InvestmentTransactionRow
     private Color TypeColor => Transaction.Type == InvestmentTransactionType.Sell ? Color.Error : Color.Success;
 
     private decimal GrossValue => Transaction.Quantity * Transaction.UnitPrice;
+
+    // Performance tiles apply to purchases only, and only once the server has priced the position.
+    private bool ShowValuation => Transaction.Type == InvestmentTransactionType.Buy && Valuation is not null;
 
     // Buy is a cash outflow (negative), sell is a cash inflow (positive). Fees always reduce the cash impact.
     private decimal CashImpact => Transaction.Type == InvestmentTransactionType.Sell

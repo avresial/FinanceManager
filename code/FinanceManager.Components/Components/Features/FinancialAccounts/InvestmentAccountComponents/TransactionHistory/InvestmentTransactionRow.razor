@@ -91,6 +91,53 @@
                 <MudText Typo="Typo.overline" Color="Color.Default">Currency</MudText>
                 <MudText Typo="Typo.body2">@Transaction.Currency</MudText>
             </MudItem>
+            @if (ShowValuation)
+            {
+                <MudItem xs="12">
+                    <MudDivider Class="my-1" Style="border-style: dashed;" />
+                </MudItem>
+                <MudItem xs="6" sm="6">
+                    <MudText Typo="Typo.overline" Color="Color.Default">Purchase value</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@Valuation!.PurchaseValue.ToString("N2") @Valuation.Currency</MudText>
+                </MudItem>
+                <MudItem xs="6" sm="6">
+                    <MudText Typo="Typo.overline" Color="Color.Default">Current price</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">
+                        @(Valuation!.HasCurrentPrice ? $"{Valuation.CurrentPrice:N2} {Valuation.Currency}" : "—")
+                    </MudText>
+                </MudItem>
+                <MudItem xs="6" sm="6">
+                    <MudText Typo="Typo.overline" Color="Color.Default">Current valuation</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">
+                        @(Valuation!.HasCurrentPrice ? $"{Valuation.CurrentValuation:N2} {Valuation.Currency}" : "—")
+                    </MudText>
+                </MudItem>
+                <MudItem xs="6" sm="6">
+                    <MudText Typo="Typo.overline" Color="Color.Default">Gain / loss</MudText>
+                    @if (Valuation!.HasCurrentPrice)
+                    {
+                        <MudText Typo="Typo.body2" Class="fm-tabular"
+                                 Color="@(Valuation.GainLoss >= 0 ? Color.Success : Color.Error)">
+                            @(Valuation.GainLoss >= 0 ? "+" : "")@Valuation.GainLoss.ToString("N2") @Valuation.Currency
+                            (@(Valuation.GainLoss >= 0 ? "+" : "")@Valuation.GainLossPercent.ToString("N2")%)
+                        </MudText>
+                    }
+                    else
+                    {
+                        <MudTooltip Text="No current market price is available for this instrument.">
+                            <MudText Typo="Typo.body2" Color="Color.Default">Price unavailable</MudText>
+                        </MudTooltip>
+                    }
+                </MudItem>
+                @if (!Valuation!.IsConverted)
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption" Color="Color.Default">
+                            Shown in @Valuation.Currency — no conversion to your default currency was available.
+                        </MudText>
+                    </MudItem>
+                }
+            }
             @if (!string.IsNullOrWhiteSpace(Transaction.Notes))
             {
                 <MudItem xs="12">
