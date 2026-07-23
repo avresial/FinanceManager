@@ -65,10 +65,8 @@ else
             {
                 <MudItem lg="4">
                     <MudStack Spacing="4">
-                        <BalanceChangeCard BalanceChange="@_balanceChange" Currency="@_currency.ShortName"
-                                           Label="Asset appreciation" ShowRange="false"
-                                           Description="Current value minus remaining buy cost"
-                                           RangeLabel="@_selectedRange" FromDate="@_dateStart" ToDate="@_dateEnd" />
+                        <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
+                                                   Currency="@_currency.ShortName" Label="Asset appreciation" />
 
                         @HoldingsCard
 
@@ -91,10 +89,8 @@ else
             </MudStack>
             <MudDivider />
             <MudStack Spacing="4" Class="pa-4">
-                <BalanceChangeCard BalanceChange="@_balanceChange" Currency="@_currency.ShortName"
-                                   Label="Asset appreciation" ShowRange="false"
-                                   Description="Current value minus remaining buy cost" RangeLabel="@_selectedRange"
-                                   FromDate="@_dateStart" ToDate="@_dateEnd" />
+                <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
+                                           Currency="@_currency.ShortName" Label="Asset appreciation" />
 
                 @HoldingsCard
 
