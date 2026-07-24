@@ -90,7 +90,7 @@ else
             <MudDivider />
             <MudStack Spacing="4" Class="pa-4">
                 <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
-                                           Currency="@_currency.ShortName" Label="Asset appreciation" />
+                                           Currency="@_currency.ShortName" Label="Asset appreciation" IsLoading="@_isChartLoading" />
 
                 @HoldingsCard
 
