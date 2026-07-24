@@ -103,22 +103,26 @@
                     <MudDivider Class="my-1" Style="border-style: dashed;" />
                 </MudItem>
                 <MudItem xs="6" sm="6">
-                    <MudText Typo="Typo.overline" Color="Color.Default">Purchase value</MudText>
-                    <MudText Typo="Typo.body2" Class="fm-tabular">@Valuation!.PurchaseValue.ToString("N2") @Valuation.Currency</MudText>
+                    <MudText Typo="Typo.overline" Color="Color.Default">Unit price at purchase</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@Valuation!.PurchaseUnitPrice.ToString("N2") @Valuation.Currency</MudText>
                 </MudItem>
                 <MudItem xs="6" sm="6">
-                    <MudText Typo="Typo.overline" Color="Color.Default">Current price</MudText>
+                    <MudText Typo="Typo.overline" Color="Color.Default">Unit price now</MudText>
                     <MudText Typo="Typo.body2" Class="fm-tabular">
                         @(Valuation!.HasCurrentPrice ? $"{Valuation.CurrentPrice:N2} {Valuation.Currency}" : "—")
                     </MudText>
                 </MudItem>
                 <MudItem xs="6" sm="6">
-                    <MudText Typo="Typo.overline" Color="Color.Default">Current valuation</MudText>
+                    <MudText Typo="Typo.overline" Color="Color.Default">Value at purchase</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@Valuation!.PurchaseValue.ToString("N2") @Valuation.Currency</MudText>
+                </MudItem>
+                <MudItem xs="6" sm="6">
+                    <MudText Typo="Typo.overline" Color="Color.Default">Value now</MudText>
                     <MudText Typo="Typo.body2" Class="fm-tabular">
                         @(Valuation!.HasCurrentPrice ? $"{Valuation.CurrentValuation:N2} {Valuation.Currency}" : "—")
                     </MudText>
                 </MudItem>
-                <MudItem xs="6" sm="6">
+                <MudItem xs="12">
                     <MudText Typo="Typo.overline" Color="Color.Default">Gain / loss</MudText>
                     @if (Valuation!.HasCurrentPrice)
                     {

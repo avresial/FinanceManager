@@ -50,6 +50,9 @@ internal class InvestmentTransactionValuationService(
             var displayCurrency = converted ? targetCurrency : new Currency { ShortName = transaction.Currency, Symbol = transaction.Currency };
 
             var purchaseValue = converted ? purchaseValueInTradeCurrency * purchaseRate!.Value : purchaseValueInTradeCurrency;
+            // Per-unit purchase price in the display currency, so it can be compared like-for-like
+            // against the current unit price below.
+            var purchaseUnitPrice = converted ? transaction.UnitPrice * purchaseRate!.Value : transaction.UnitPrice;
 
             // Current price is fetched already denominated in the display currency: the provider
             // applies the latest exchange rate for us, matching "latest rate for current valuation".
@@ -62,6 +65,7 @@ internal class InvestmentTransactionValuationService(
 
             results.Add(new InvestmentTransactionValuationDto(
                 transaction.Id,
+                purchaseUnitPrice,
                 purchaseValue,
                 currentPrice,
                 currentValuation,

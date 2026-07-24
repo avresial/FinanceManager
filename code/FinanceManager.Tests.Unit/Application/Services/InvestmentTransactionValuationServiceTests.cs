@@ -60,6 +60,7 @@ public class InvestmentTransactionValuationServiceTests
         Assert.True(result.IsConverted);
         Assert.Equal("PLN", result.Currency);
         Assert.True(result.HasCurrentPrice);
+        Assert.Equal(400m, result.PurchaseUnitPrice); // 100 * 4
         Assert.Equal(4000m, result.PurchaseValue);   // 10 * 100 * 4
         Assert.Equal(500m, result.CurrentPrice);
         Assert.Equal(5000m, result.CurrentValuation); // 10 * 500
@@ -83,6 +84,7 @@ public class InvestmentTransactionValuationServiceTests
 
         Assert.False(result.IsConverted);
         Assert.Equal("EUR", result.Currency);
+        Assert.Equal(50m, result.PurchaseUnitPrice);  // 50, unconverted
         Assert.Equal(100m, result.PurchaseValue);     // 2 * 50, unconverted
         Assert.Equal(120m, result.CurrentValuation);  // 2 * 60
         Assert.Equal(20m, result.GainLoss);
