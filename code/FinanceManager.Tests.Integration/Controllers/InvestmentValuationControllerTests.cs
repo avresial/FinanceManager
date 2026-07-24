@@ -167,6 +167,7 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         Assert.True(valuation.IsConverted);
         Assert.Equal("USD", valuation.Currency);
         Assert.True(valuation.HasCurrentPrice);
+        Assert.Equal(90m, valuation.PurchaseUnitPrice); // 90 per unit
         Assert.Equal(450m, valuation.PurchaseValue);    // 5 * 90
         Assert.Equal(100m, valuation.CurrentPrice);
         Assert.Equal(500m, valuation.CurrentValuation); // 5 * 100

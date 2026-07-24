@@ -21,6 +21,58 @@ public partial class BondTransactionRow
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILogger<BondTransactionRow> Logger { get; set; }
 
+    // Valuation figures for the detail view, mirroring the investment transaction row: the per-unit
+    // price and the position's value, at posting time versus now, plus the gain/loss between them.
+    // Bonds are priced with the domain's own accrual model (BondAccountEntry.GetPriceAt), so the
+    // "now" figures carry accrued interest and no external market data is needed.
+    private bool _showValuation;
+    private decimal _unitPricePurchase;
+    private decimal _unitPriceNow;
+    private decimal _valuePurchase;
+    private decimal _valueNow;
+    private decimal _gainLoss;
+    private decimal _gainLossPercent;
+    private string _valuationCurrency = string.Empty;
+
+    protected override void OnParametersSet() => ComputeValuation();
+
+    // Values the position established by this entry (Entry.Value units) at its posting-date price and at
+    // today's accrued price. Left hidden when there is no bond detail, no priced units, or the accrual
+    // model cannot produce a positive figure (e.g. no calculation method covers the dates), so the row
+    // never shows a misleading zero valuation or a -100% loss.
+    private void ComputeValuation()
+    {
+        _showValuation = false;
+
+        if (BondDetails is null || Entry.Value <= 0m || BondDetails.CalculationMethods.Count == 0)
+            return;
+
+        try
+        {
+            var postingDay = DateOnly.FromDateTime(Entry.PostingDate);
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+            var valuePurchase = Entry.GetPriceAt(postingDay, BondDetails);
+            var valueNow = Entry.GetPriceAt(today, BondDetails);
+            if (valuePurchase <= 0m || valueNow <= 0m)
+                return;
+
+            _valuePurchase = valuePurchase;
+            _valueNow = valueNow;
+            _unitPricePurchase = valuePurchase / Entry.Value;
+            _unitPriceNow = valueNow / Entry.Value;
+            _gainLoss = valueNow - valuePurchase;
+            _gainLossPercent = (valueNow / valuePurchase - 1m) * 100m;
+            _valuationCurrency = BondDetails.Currency.ShortName;
+            _showValuation = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not compute bond valuation for entry {EntryId}", Entry.EntryId);
+            _showValuation = false;
+        }
+    }
+
     private void ToggleExpanded() => _expanded = !_expanded;
 
     private void OnKeyDown(KeyboardEventArgs e)

@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Expanding a bond entry now shows the same valuation breakdown as investment purchases: the unit price and the position's value at the posting date versus now, plus the accrued gain/loss in amount and percentage. Figures come from the bond's own interest-accrual model and are shown in the bond's currency; the breakdown is hidden when the bond has no calculation method covering the dates so no misleading zero is shown.
 - The API now backfills historical stock closing prices and currency exchange rates in the background each time it starts, filling in any missing daily points from Alpha Vantage so charts and valuations stay complete without waiting for the weekly schedule. Runs are idempotent (existing rows are never overwritten or duplicated), skip instruments and currency pairs that are already up to date, avoid needless calls over weekends or on restarts the same day, and stop gracefully when the provider's rate limit is reached — resuming on the next start. Startup backfill can be turned off or tuned per dataset via the `Backfill` configuration section. #597
 - Expanding an investment purchase now shows its value on the purchase date, the current market price and valuation, and the gain/loss in both amount and percentage — converted to your preferred currency using the historical rate for the purchase and the latest rate for the current value, or shown in the instrument's own currency when no rate is available. #596
 - Connected AI clients can now read the signed-in user's financial accounts, filtered transaction history, investment positions and valuations, currencies, and financial labels through owner-isolated MCP tools. #590
@@ -24,6 +25,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- The expanded investment purchase details now label the valuation figures more clearly — pairing the unit price at purchase with the current unit price, and the value at purchase with the current value — so a per-unit price is no longer shown alongside position totals under ambiguous "Current price"/"Current valuation" labels.
 - The investment account details page now shows loading placeholders for the balance and asset appreciation (and the capital value / current valuation breakdown) while those figures are still being calculated, instead of briefly displaying a misleading `0.00`.
 - The investment transaction list now leads each purchase with its unrealised gain/loss (amount and percentage) rather than the original cash outlay; sells and not-yet-priced trades continue to show their cash impact.
 - MCP access tokens and grants can now be revoked server-side, and deployment guidance covers secure certificate configuration and rotation. #584
