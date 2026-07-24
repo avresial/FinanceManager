@@ -24,6 +24,8 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- The investment account details page now shows loading placeholders for the balance and asset appreciation (and the capital value / current valuation breakdown) while those figures are still being calculated, instead of briefly displaying a misleading `0.00`.
+- The investment transaction list now leads each purchase with its unrealised gain/loss (amount and percentage) rather than the original cash outlay; sells and not-yet-priced trades continue to show their cash impact.
 - MCP access tokens and grants can now be revoked server-side, and deployment guidance covers secure certificate configuration and rotation. #584
 - Investment accounts now show asset appreciation based on current holdings value minus the remaining buy cost, with transaction-date currency conversion. #578
 - The **Investment rate** chart is now interactive: selecting a month highlights its bar and shows that month's salary and invested amount, while the average line displays its value. #576

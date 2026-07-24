@@ -28,11 +28,17 @@
             </MudStack>
         </MudStack>
 
-        <MudText Typo="Typo.body1" Class="fm-tabular"
-                 Color="@(CashImpact >= 0 ? Color.Success : Color.Error)"
-                 Style="flex-shrink: 0;">
-            @(CashImpact >= 0 ? "+" : "")@CashImpact.ToString("N2") @Transaction.Currency
-        </MudText>
+        <MudStack Spacing="0" AlignItems="AlignItems.End" Style="flex-shrink: 0;">
+            <MudText Typo="Typo.body1" Class="fm-tabular"
+                     Color="@(PrimaryAmount >= 0 ? Color.Success : Color.Error)">
+                @(PrimaryAmount >= 0 ? "+" : "")@PrimaryAmount.ToString("N2") @PrimaryCurrency
+            </MudText>
+            <MudText Typo="Typo.caption" Color="Color.Default">
+                @(ShowGainLoss
+                    ? $"Gain / loss · {(Valuation!.GainLoss >= 0 ? "+" : "")}{Valuation.GainLossPercent.ToString("N2")}%"
+                    : "Cash impact")
+            </MudText>
+        </MudStack>
     </MudStack>
 </div>
 

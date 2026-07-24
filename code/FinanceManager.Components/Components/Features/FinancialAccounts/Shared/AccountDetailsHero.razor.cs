@@ -21,6 +21,12 @@ public partial class AccountDetailsHero
     [Parameter] public DateRange? CustomDateRange { get; set; }
     [Parameter] public EventCallback<DateRange?> CustomDateRangeChanged { get; set; }
     [Parameter] public bool IsChartLoading { get; set; }
+
+    // Some account types (investments) only know their balance/appreciation after an async
+    // valuation call that resolves after the transaction list has already rendered. While that
+    // is in flight this shows a skeleton in place of a misleading 0.00 figure. Left false by
+    // callers whose balance is known synchronously.
+    [Parameter] public bool IsBalanceLoading { get; set; }
     [Parameter] public List<TimeSeriesModel> ChartData { get; set; } = [];
     [Parameter] public bool IsMobile { get; set; }
 

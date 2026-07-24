@@ -22,7 +22,7 @@ else
 {
     <AccountDetailsHero AccountName="@_accountName" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
                         Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
-                        ChangeLabel="Asset appreciation" ShowChangeRange="false"
+                        ChangeLabel="Asset appreciation" ShowChangeRange="false" IsBalanceLoading="@_isChartLoading"
                         SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged" IsChartLoading="@_isChartLoading"
                         CustomDateRange="@_customDateRange" CustomDateRangeChanged="OnCustomDateRangeChanged"
                         ChartData="@ChartData" IsMobile="@_isMobile" />
@@ -66,7 +66,7 @@ else
                 <MudItem lg="4">
                     <MudStack Spacing="4">
                         <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
-                                                   Currency="@_currency.ShortName" Label="Asset appreciation" />
+                                                   Currency="@_currency.ShortName" Label="Asset appreciation" IsLoading="@_isChartLoading" />
 
                         @HoldingsCard
 

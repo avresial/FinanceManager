@@ -46,31 +46,45 @@
             <MudStack Row="true" AlignItems="AlignItems.End" Justify="Justify.SpaceBetween" Spacing="4">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">Balance</MudText>
-                    <MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="1">
-                        <MudText Typo="Typo.h3" Class="fm-tabular">@Balance.ToString("N2")</MudText>
-                        <MudText Typo="Typo.h5" Color="MudBlazor.Color.Default">@Currency</MudText>
-                    </MudStack>
+                    @if (IsBalanceLoading)
+                    {
+                        <MudSkeleton SkeletonType="SkeletonType.Text" Animation="Animation.Wave" Width="180px" Height="60px" />
+                    }
+                    else
+                    {
+                        <MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="1">
+                            <MudText Typo="Typo.h3" Class="fm-tabular">@Balance.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h5" Color="MudBlazor.Color.Default">@Currency</MudText>
+                        </MudStack>
+                    }
                 </MudStack>
 
                 <MudStack Spacing="1" AlignItems="AlignItems.End">
                     <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">@ChangeLabel@(ShowChangeRange ? $" · {SelectedRange}" : null)</MudText>
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                        <MudIcon
-                        Icon="@(BalanceChange >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
-                        Color="@(BalanceChange >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)"
-                        Size="MudBlazor.Size.Small" />
-                        <MudText Typo="Typo.h6"
-                                 Color="@(BalanceChange >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)"
-                                 Class="fm-tabular">
-                            @(BalanceChange >= 0 ? "+" : "")@BalanceChange.ToString("N2") @Currency
-                        </MudText>
-                        @if (BalanceChangePercent.HasValue)
-                        {
-                            <MudText Typo="Typo.body2" Color="MudBlazor.Color.Default" Class="fm-tabular">
-                                · @(BalanceChange >= 0 ? "+" : "")@BalanceChangePercent.Value.ToString("0.0")%
+                    @if (IsBalanceLoading)
+                    {
+                        <MudSkeleton SkeletonType="SkeletonType.Text" Animation="Animation.Wave" Width="120px" Height="40px" />
+                    }
+                    else
+                    {
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon
+                            Icon="@(BalanceChange >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
+                            Color="@(BalanceChange >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)"
+                            Size="MudBlazor.Size.Small" />
+                            <MudText Typo="Typo.h6"
+                                     Color="@(BalanceChange >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)"
+                                     Class="fm-tabular">
+                                @(BalanceChange >= 0 ? "+" : "")@BalanceChange.ToString("N2") @Currency
                             </MudText>
-                        }
-                    </MudStack>
+                            @if (BalanceChangePercent.HasValue)
+                            {
+                                <MudText Typo="Typo.body2" Color="MudBlazor.Color.Default" Class="fm-tabular">
+                                    · @(BalanceChange >= 0 ? "+" : "")@BalanceChangePercent.Value.ToString("0.0")%
+                                </MudText>
+                            }
+                        </MudStack>
+                    }
                 </MudStack>
             </MudStack>
         </MudStack>
