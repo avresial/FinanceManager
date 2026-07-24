@@ -26,9 +26,9 @@ public partial class BondTransactionRow
     // Bonds are priced with the domain's own accrual model (BondAccountEntry.GetPriceAt), so the
     // "now" figures carry accrued interest and no external market data is needed.
     private bool _showValuation;
-    private decimal _unitPricePurchase;
+    private decimal _unitPriceAtPosting;
     private decimal _unitPriceNow;
-    private decimal _valuePurchase;
+    private decimal _valueAtPosting;
     private decimal _valueNow;
     private decimal _gainLoss;
     private decimal _gainLossPercent;
@@ -36,10 +36,11 @@ public partial class BondTransactionRow
 
     protected override void OnParametersSet() => ComputeValuation();
 
-    // Values the position established by this entry (Entry.Value units) at its posting-date price and at
-    // today's accrued price. Left hidden when there is no bond detail, no priced units, or the accrual
-    // model cannot produce a positive figure (e.g. no calculation method covers the dates), so the row
-    // never shows a misleading zero valuation or a -100% loss.
+    // Values the position held after this entry (Entry.Value units) at its posting-date price and at
+    // today's accrued price. Entries can also reduce a position (negative ValueChange), so the figures
+    // are labelled "at transaction" rather than "at purchase". Left hidden when there is no bond detail,
+    // no priced units, or the accrual model cannot produce a positive figure (e.g. no calculation method
+    // covers the dates), so the row never shows a misleading zero valuation or a -100% loss.
     private void ComputeValuation()
     {
         _showValuation = false;
@@ -52,17 +53,17 @@ public partial class BondTransactionRow
             var postingDay = DateOnly.FromDateTime(Entry.PostingDate);
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-            var valuePurchase = Entry.GetPriceAt(postingDay, BondDetails);
+            var valueAtPosting = Entry.GetPriceAt(postingDay, BondDetails);
             var valueNow = Entry.GetPriceAt(today, BondDetails);
-            if (valuePurchase <= 0m || valueNow <= 0m)
+            if (valueAtPosting <= 0m || valueNow <= 0m)
                 return;
 
-            _valuePurchase = valuePurchase;
+            _valueAtPosting = valueAtPosting;
             _valueNow = valueNow;
-            _unitPricePurchase = valuePurchase / Entry.Value;
+            _unitPriceAtPosting = valueAtPosting / Entry.Value;
             _unitPriceNow = valueNow / Entry.Value;
-            _gainLoss = valueNow - valuePurchase;
-            _gainLossPercent = (valueNow / valuePurchase - 1m) * 100m;
+            _gainLoss = valueNow - valueAtPosting;
+            _gainLossPercent = (valueNow / valueAtPosting - 1m) * 100m;
             _valuationCurrency = BondDetails.Currency.ShortName;
             _showValuation = true;
         }

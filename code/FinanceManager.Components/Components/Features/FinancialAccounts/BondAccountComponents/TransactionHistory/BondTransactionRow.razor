@@ -73,16 +73,16 @@
                     <MudDivider Class="my-1" Style="border-style: dashed;" />
                 </MudItem>
                 <MudItem xs="6">
-                    <MudText Typo="Typo.caption" Color="Color.Default">Unit price at purchase</MudText>
-                    <MudText Typo="Typo.body2" Class="fm-tabular">@_unitPricePurchase.ToString("N2") @_valuationCurrency</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">Unit price at transaction</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@_unitPriceAtPosting.ToString("N2") @_valuationCurrency</MudText>
                 </MudItem>
                 <MudItem xs="6">
                     <MudText Typo="Typo.caption" Color="Color.Default">Unit price now</MudText>
                     <MudText Typo="Typo.body2" Class="fm-tabular">@_unitPriceNow.ToString("N2") @_valuationCurrency</MudText>
                 </MudItem>
                 <MudItem xs="6">
-                    <MudText Typo="Typo.caption" Color="Color.Default">Value at purchase</MudText>
-                    <MudText Typo="Typo.body2" Class="fm-tabular">@_valuePurchase.ToString("N2") @_valuationCurrency</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">Value at transaction</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@_valueAtPosting.ToString("N2") @_valuationCurrency</MudText>
                 </MudItem>
                 <MudItem xs="6">
                     <MudText Typo="Typo.caption" Color="Color.Default">Value now</MudText>
