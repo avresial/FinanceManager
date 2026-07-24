@@ -31,6 +31,14 @@ public partial class InvestmentTransactionRow
         ? GrossValue - (Transaction.Fee ?? 0m)
         : -(GrossValue + (Transaction.Fee ?? 0m));
 
+    // The overview line leads with unrealised performance for priced purchases — what the position is
+    // worth now versus what it cost — because that answers "how is this doing?" more naturally than the
+    // purchase outlay. Sells and not-yet-priced buys have no gain/loss figure, so they fall back to the
+    // trade's cash impact, which is the only amount available for them.
+    private bool ShowGainLoss => Transaction.Type == InvestmentTransactionType.Buy && Valuation is { HasCurrentPrice: true };
+    private decimal PrimaryAmount => ShowGainLoss ? Valuation!.GainLoss : CashImpact;
+    private string PrimaryCurrency => ShowGainLoss ? Valuation!.Currency : Transaction.Currency;
+
     private void ToggleExpanded() => _expanded = !_expanded;
 
     private void OnKeyDown(KeyboardEventArgs e)

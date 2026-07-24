@@ -60,12 +60,23 @@
 
     // A day-level net only makes sense when every trade settles in the same currency; otherwise the sum
     // would mix units. When mixed, the header suppresses the aggregate instead of showing a wrong total.
-    private bool IsSingleCurrency => TransactionList.Select(t => t.Currency).Distinct().Count() <= 1;
+    // Currency is taken from each row's displayed figure so the header always matches the sum of the rows.
+    private bool IsSingleCurrency => TransactionList.Select(DisplayCurrency).Distinct().Count() <= 1;
 
-    private string DayCurrency => TransactionList.FirstOrDefault()?.Currency ?? Currency;
+    private string DayCurrency => TransactionList.Select(DisplayCurrency).FirstOrDefault() ?? Currency;
 
-    // Daily net cash impact: sells add cash (gross minus fee), buys remove cash (gross plus fee).
-    private decimal DailyNet => TransactionList.Sum(CashImpact);
+    // The header aggregates whatever each row shows: unrealised gain/loss for priced purchases, cash
+    // impact for everything else. This keeps a single-trade day's header identical to its one row.
+    private decimal DailyNet => TransactionList.Sum(DisplayAmount);
+
+    private bool ShowGainLoss(InvestmentTransactionDto t) =>
+        t.Type == InvestmentTransactionType.Buy && GetValuation(t.Id) is { HasCurrentPrice: true };
+
+    private decimal DisplayAmount(InvestmentTransactionDto t) =>
+        ShowGainLoss(t) ? GetValuation(t.Id)!.GainLoss : CashImpact(t);
+
+    private string DisplayCurrency(InvestmentTransactionDto t) =>
+        ShowGainLoss(t) ? GetValuation(t.Id)!.Currency : t.Currency;
 
     private static decimal CashImpact(InvestmentTransactionDto t)
     {
