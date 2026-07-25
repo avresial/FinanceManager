@@ -101,6 +101,23 @@ public class CachedAccountEntryRepositoryTests
     }
 
     [Fact]
+    public async Task DateBoundaries_SecondCall_ServedFromCache()
+    {
+        var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        inner.Setup(r => r.GetNextOlder(_accountId, _date)).ReturnsAsync(Entry(1));
+        inner.Setup(r => r.GetNextYounger(_accountId, _date)).ReturnsAsync(Entry(2));
+        var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), Mock.Of<ICacheInvalidator>(), CreateCache());
+
+        await sut.GetNextOlder(_accountId, _date);
+        await sut.GetNextOlder(_accountId, _date);
+        await sut.GetNextYounger(_accountId, _date);
+        await sut.GetNextYounger(_accountId, _date);
+
+        inner.Verify(r => r.GetNextOlder(_accountId, _date), Times.Once);
+        inner.Verify(r => r.GetNextYounger(_accountId, _date), Times.Once);
+    }
+
+    [Fact]
     public async Task GetYoungest_WhenOwnerUnresolved_BypassesCache()
     {
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();

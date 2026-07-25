@@ -228,6 +228,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         if (accountIds.Count == 0) return [];
 
         var rows = await context.BondEntries
+            .AsNoTracking()
             .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate < date)
             .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.PostingDate < date
                 && (o.PostingDate > e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId > e.EntryId))))
@@ -241,6 +242,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         if (accountIds.Count == 0) return [];
 
         var rows = await context.BondEntries
+            .AsNoTracking()
             .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate > date)
             .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.PostingDate > date
                 && (o.PostingDate < e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId < e.EntryId))))
@@ -256,6 +258,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         // One row per (account, bond details id): the entry no other older-than-date entry of the same
         // account+bond beats on (PostingDate, EntryId).
         var rows = await context.BondEntries
+            .AsNoTracking()
             .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate < date)
             .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.BondDetailsId == e.BondDetailsId && o.PostingDate < date
                 && (o.PostingDate > e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId > e.EntryId))))
@@ -270,6 +273,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         if (accountIds.Count == 0) return [];
 
         var rows = await context.BondEntries
+            .AsNoTracking()
             .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate > date)
             .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.BondDetailsId == e.BondDetailsId && o.PostingDate > date
                 && (o.PostingDate < e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId < e.EntryId))))

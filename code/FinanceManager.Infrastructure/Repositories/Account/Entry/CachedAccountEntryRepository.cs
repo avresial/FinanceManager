@@ -9,7 +9,8 @@ namespace FinanceManager.Infrastructure.Repositories.Account.Entry;
 /// <summary>
 /// Caches the cheap, high-frequency point-reads of an <see cref="IAccountEntryRepository{T}"/>
 /// (<see cref="GetYoungest"/>, <see cref="GetOldest"/>, <see cref="GetCount"/>,
-/// <see cref="GetPostingDates"/>), keyed per account and tagged per owning user (<c>global:u{userId}</c>).
+/// <see cref="GetPostingDates"/>, and date-boundary reads), keyed per account and tagged per owning user
+/// (<c>global:u{userId}</c>).
 /// Also caches range reads (<see cref="Get(int,DateTime,DateTime)"/>, <see cref="GetRange"/>) using
 /// calendar-month buckets, inflated to whole-month boundaries on every miss, within a rolling
 /// 12-month horizon. Any write to an account busts the owner's cache through
@@ -24,6 +25,8 @@ public class CachedAccountEntryRepository<T>(
     EntryRangeCacheOptions rangeOptions) : IAccountEntryRepository<T> where T : FinancialEntryBase
 {
     private static readonly HybridCacheEntryOptions _pointReadOptions = new() { Expiration = TimeSpan.FromMinutes(5) };
+    protected IAccountUserResolver AccountUserResolver => userResolver;
+    protected HybridCache EntryCache => cache;
 
     // ----- Cached point reads (per account, tagged per owning user) -----
 
@@ -190,9 +193,9 @@ public class CachedAccountEntryRepository<T>(
     public Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default) => inner.GetByIds(entryIds, cancellationToken);
     public Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default) => inner.GetRecentUnlabelled(count, cancellationToken);
     public Task<T?> GetNextYounger(int accountId, int entryId) => inner.GetNextYounger(accountId, entryId);
-    public Task<T?> GetNextYounger(int accountId, DateTime date) => inner.GetNextYounger(accountId, date);
+    public Task<T?> GetNextYounger(int accountId, DateTime date) => GetBoundary(accountId, date, "younger", inner.GetNextYounger);
     public Task<T?> GetNextOlder(int accountId, int entryId) => inner.GetNextOlder(accountId, entryId);
-    public Task<T?> GetNextOlder(int accountId, DateTime date) => inner.GetNextOlder(accountId, date);
+    public Task<T?> GetNextOlder(int accountId, DateTime date) => GetBoundary(accountId, date, "older", inner.GetNextOlder);
     public Task<Dictionary<int, T>> GetNextOlder(IReadOnlyCollection<int> accountIds, DateTime date) => inner.GetNextOlder(accountIds, date);
     public Task<Dictionary<int, T>> GetNextYounger(IReadOnlyCollection<int> accountIds, DateTime date) => inner.GetNextYounger(accountIds, date);
     public Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default) => inner.GetEntriesCountPerUser(userIds, cancellationToken);
@@ -314,6 +317,22 @@ public class CachedAccountEntryRepository<T>(
 
     private static string Key(int userId, int accountId, string read) => $"global:u{userId}:a{accountId}:{read}";
     private static string Tag(int userId) => $"global:u{userId}";
+
+    private async Task<T?> GetBoundary(
+        int accountId,
+        DateTime date,
+        string direction,
+        Func<int, DateTime, Task<T?>> read)
+    {
+        if (await userResolver.GetUserId(accountId) is not int userId)
+            return await read(accountId, date);
+
+        return await cache.GetOrCreateAsync<T?>(
+            Key(userId, accountId, $"{direction}:{date.Ticks}"),
+            _ => new ValueTask<T?>(read(accountId, date)),
+            _pointReadOptions,
+            tags: [Tag(userId)]);
+    }
 
     private async Task InvalidateAccounts(IEnumerable<int> accountIds, CancellationToken cancellationToken = default)
     {
