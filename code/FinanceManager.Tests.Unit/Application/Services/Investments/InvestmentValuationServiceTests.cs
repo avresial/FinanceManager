@@ -49,12 +49,8 @@ public class InvestmentValuationServiceTests
     {
         var asOf = new DateTime(2024, 6, 30);
         _transactionRepository
-            .Setup(x => x.GetByAccounts(It.Is<IReadOnlyCollection<int>>(a => a.Contains(_accountId)), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<InvestmentTransaction>
-            {
-                Tx(10, InvestmentTransactionType.Buy, 3m, new DateOnly(2024, 6, 1)),
-                Tx(20, InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 6, 1))
-            });
+            .Setup(x => x.GetHoldingsAsOf(It.Is<IReadOnlyCollection<int>>(a => a.Contains(_accountId)), DateOnly.FromDateTime(asOf), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<long, decimal> { [10] = 3m, [20] = 2m });
         _priceProvider.Setup(x => x.GetPricePerUnitAsync(10, _usd, asOf, It.IsAny<CancellationToken>())).ReturnsAsync(100m);
         _priceProvider.Setup(x => x.GetPricePerUnitAsync(20, _usd, asOf, It.IsAny<CancellationToken>())).ReturnsAsync(50m);
 
@@ -68,8 +64,8 @@ public class InvestmentValuationServiceTests
     {
         var asOf = new DateTime(2024, 6, 30);
         _transactionRepository
-            .Setup(x => x.GetByAccounts(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<InvestmentTransaction>());
+            .Setup(x => x.GetHoldingsAsOf(It.IsAny<IReadOnlyCollection<int>>(), DateOnly.FromDateTime(asOf), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<long, decimal>());
 
         var value = await CreateSut().GetAccountValueAsync(_accountId, _usd, asOf, TestContext.Current.CancellationToken);
 
@@ -84,12 +80,8 @@ public class InvestmentValuationServiceTests
     {
         var asOf = new DateTime(2024, 6, 30);
         _transactionRepository
-            .Setup(x => x.GetByAccounts(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<InvestmentTransaction>
-            {
-                Tx(10, InvestmentTransactionType.Buy, 6m, new DateOnly(2024, 6, 1)),
-                Tx(10, InvestmentTransactionType.Sell, 2m, new DateOnly(2024, 6, 2))
-            });
+            .Setup(x => x.GetHoldingsAsOf(It.IsAny<IReadOnlyCollection<int>>(), DateOnly.FromDateTime(asOf), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<long, decimal> { [10] = 4m });
         _priceProvider.Setup(x => x.GetPricePerUnitAsync(10, _usd, asOf, It.IsAny<CancellationToken>())).ReturnsAsync(25m);
 
         var value = await CreateSut().GetAccountValueAsync(_accountId, _usd, asOf, TestContext.Current.CancellationToken);
@@ -102,12 +94,8 @@ public class InvestmentValuationServiceTests
     {
         var asOf = new DateTime(2024, 6, 30);
         _transactionRepository
-            .Setup(x => x.GetByAccounts(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<InvestmentTransaction>
-            {
-                Tx(10, InvestmentTransactionType.Buy, 4m, new DateOnly(2024, 6, 1)),
-                Tx(10, InvestmentTransactionType.Buy, 10m, new DateOnly(2024, 7, 15)) // after asOf, must be ignored
-            });
+            .Setup(x => x.GetHoldingsAsOf(It.IsAny<IReadOnlyCollection<int>>(), DateOnly.FromDateTime(asOf), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<long, decimal> { [10] = 4m });
         _priceProvider.Setup(x => x.GetPricePerUnitAsync(10, _usd, asOf, It.IsAny<CancellationToken>())).ReturnsAsync(25m);
 
         var value = await CreateSut().GetAccountValueAsync(_accountId, _usd, asOf, TestContext.Current.CancellationToken);
@@ -147,15 +135,8 @@ public class InvestmentValuationServiceTests
     {
         var asOf = new DateTime(2024, 6, 30);
         _transactionRepository
-            .Setup(x => x.GetByAccounts(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<InvestmentTransaction>
-            {
-                // Listing 10 is fully closed (net 0) and must not be priced.
-                Tx(10, InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 6, 1)),
-                Tx(10, InvestmentTransactionType.Sell, 5m, new DateOnly(2024, 6, 2)),
-                // Listing 20 stays open and contributes the whole value.
-                Tx(20, InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 6, 1))
-            });
+            .Setup(x => x.GetHoldingsAsOf(It.IsAny<IReadOnlyCollection<int>>(), DateOnly.FromDateTime(asOf), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<long, decimal> { [10] = 0m, [20] = 2m });
         _priceProvider.Setup(x => x.GetPricePerUnitAsync(20, _usd, asOf, It.IsAny<CancellationToken>())).ReturnsAsync(50m);
 
         var value = await CreateSut().GetAccountValueAsync(_accountId, _usd, asOf, TestContext.Current.CancellationToken);
