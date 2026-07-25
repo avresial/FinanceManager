@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>FinanceManager.Benchmarks</RootNamespace>
+		<OutputType>Exe</OutputType>
+		<IsPackable>false</IsPackable>
+		<!-- BenchmarkDotNet refuses to measure a non-optimized build. Default to Release so a bare
+		     `dotnet run` from this directory produces usable numbers instead of an error. -->
+		<Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+		<!-- The generated benchmark runners and the seeded SQLite file are throwaway artefacts; keep the
+		     server GC off so measurements aren't skewed by background collections on a 2-4 core sandbox. -->
+		<ServerGarbageCollection>false</ServerGarbageCollection>
+		<ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="BenchmarkDotNet" />
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+		<!-- Direct reference so the central pin (3.0.3) overrides the vulnerable 2.1.11 that
+		     Microsoft.EntityFrameworkCore.Sqlite brings in transitively (GHSA-2m69-gcr7-jv3q);
+		     transitive pinning is disabled centrally. Same reason as FinanceManager.Tests.Unit. -->
+		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\FinanceManager.Api\FinanceManager.Api.csproj" />
+		<ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
+	</ItemGroup>
+
+</Project>

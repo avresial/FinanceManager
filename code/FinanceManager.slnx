@@ -17,6 +17,7 @@
     <File Path="GlobalUsings.cs" />
   </Folder>
   <Project Path="FinanceManager.Application/FinanceManager.Application.csproj" />
+  <Project Path="FinanceManager.Benchmarks/FinanceManager.Benchmarks.csproj" />
   <Project Path="FinanceManager.Tests.Architecture/FinanceManager.Tests.Architecture.csproj" />
   <Project Path="FinanceManager.Domain/FinanceManager.Domain.csproj" />
   <Project Path="FinanceManager.Infrastructure/FinanceManager.Infrastructure.csproj" />

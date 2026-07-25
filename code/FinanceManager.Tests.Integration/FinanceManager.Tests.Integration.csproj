@@ -16,6 +16,13 @@
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+		<!-- SqliteRecalculateValuesTests exercises the hand-written set-based UPDATE on a real
+		     relational provider; SQLite is the only one that runs in-process with no server. -->
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+		<!-- Direct reference so the central pin (3.0.3) overrides the vulnerable 2.1.11 that
+		     Microsoft.EntityFrameworkCore.Sqlite brings in transitively (GHSA-2m69-gcr7-jv3q);
+		     transitive pinning is disabled centrally. -->
+		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" />
 		<PackageReference Include="Moq" />
 		<PackageReference Include="xunit.runner.visualstudio">
