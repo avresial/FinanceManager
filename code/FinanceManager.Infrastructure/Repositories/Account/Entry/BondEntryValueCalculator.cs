@@ -7,13 +7,46 @@ internal sealed class BondEntryValueCalculator(AppDbContext context)
 {
     public async Task Recalculate(int accountId, DateTime startDate)
     {
-        if (!context.Database.IsRelational())
+        // Each supported provider gets its own dialect below; anything else falls back to the managed
+        // loop rather than being handed SQL Server syntax it cannot parse.
+        if (!context.Database.IsRelational() || !DatabaseProviders.HasSetBasedRecalculation(context))
         {
             await RecalculateInMemory(accountId, startDate);
             return;
         }
 
-        if (context.Database.ProviderName?.StartsWith("Npgsql") == true)
+        if (DatabaseProviders.IsSqlite(context))
+        {
+            // SQLite has no DISTINCT ON, so the per-bond anchor is picked with ROW_NUMBER as on SQL
+            // Server; the UPDATE names its target table rather than aliasing it, as SQLite requires.
+            await context.Database.ExecuteSqlAsync($"""
+                WITH anchors_raw AS (
+                    SELECT "BondDetailsId", "Value" AS "AnchorValue",
+                           ROW_NUMBER() OVER (PARTITION BY "BondDetailsId" ORDER BY "PostingDate" DESC, "EntryId" DESC) AS "rn"
+                    FROM "BondEntries"
+                    WHERE "AccountId" = {accountId} AND "PostingDate" < {startDate}
+                ),
+                anchors AS (
+                    SELECT "BondDetailsId", "AnchorValue" FROM anchors_raw WHERE "rn" = 1
+                ),
+                running AS (
+                    SELECT e."EntryId",
+                           COALESCE(a."AnchorValue", 0) + SUM(e."ValueChange") OVER (
+                               PARTITION BY e."BondDetailsId"
+                               ORDER BY e."PostingDate", e."EntryId"
+                               ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                           ) AS "NewValue"
+                    FROM "BondEntries" e
+                    LEFT JOIN anchors a ON a."BondDetailsId" = e."BondDetailsId"
+                    WHERE e."AccountId" = {accountId} AND e."PostingDate" >= {startDate}
+                )
+                UPDATE "BondEntries"
+                SET "Value" = r."NewValue"
+                FROM running AS r
+                WHERE "BondEntries"."EntryId" = r."EntryId"
+                """);
+        }
+        else if (DatabaseProviders.IsNpgsql(context))
         {
             await context.Database.ExecuteSqlAsync($"""
                 WITH anchors AS (

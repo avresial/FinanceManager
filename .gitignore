@@ -77,6 +77,13 @@ dlldata.c
 # Benchmark Results
 BenchmarkDotNet.Artifacts/
 
+# Seeded SQLite databases built by FinanceManager.Benchmarks. Normally live under bin/, but
+# FM_BENCH_DATA_DIR can point anywhere, so keep them out of commits wherever they land.
+benchmark-data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
 # .NET Core
 project.lock.json
 project.fragment.lock.json

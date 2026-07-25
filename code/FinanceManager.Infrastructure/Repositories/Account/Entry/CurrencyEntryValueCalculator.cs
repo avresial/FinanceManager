@@ -15,7 +15,9 @@ internal sealed class CurrencyEntryValueCalculator(AppDbContext context)
             .Select(e => (decimal?)e.Value)
             .FirstOrDefaultAsync();
 
-        if (!context.Database.IsRelational())
+        // Each supported provider gets its own dialect below; anything else falls back to the managed
+        // loop rather than being handed SQL Server syntax it cannot parse.
+        if (!context.Database.IsRelational() || !DatabaseProviders.HasSetBasedRecalculation(context))
         {
             var entries = await context.CurrencyEntries
                 .Where(e => e.AccountId == accountId && e.PostingDate >= startDate)
@@ -34,7 +36,28 @@ internal sealed class CurrencyEntryValueCalculator(AppDbContext context)
             return;
         }
 
-        if (context.Database.ProviderName?.StartsWith("Npgsql") == true)
+        if (DatabaseProviders.IsSqlite(context))
+        {
+            // SQLite supports window functions and UPDATE ... FROM, but not SQL Server's
+            // "UPDATE <alias> ... FROM <table> AS <alias>" form: the target is named, not aliased.
+            await context.Database.ExecuteSqlAsync($"""
+                WITH running AS (
+                    SELECT "EntryId",
+                           {anchor ?? 0m} + SUM("ValueChange") OVER (
+                               ORDER BY "PostingDate", "EntryId"
+                               ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                           ) AS "NewValue"
+                    FROM "CurrencyEntries"
+                    WHERE "AccountId" = {accountId}
+                      AND "PostingDate" >= {startDate}
+                )
+                UPDATE "CurrencyEntries"
+                SET "Value" = r."NewValue"
+                FROM running AS r
+                WHERE "CurrencyEntries"."EntryId" = r."EntryId"
+                """);
+        }
+        else if (DatabaseProviders.IsNpgsql(context))
         {
             await context.Database.ExecuteSqlAsync($"""
                 WITH running AS (
