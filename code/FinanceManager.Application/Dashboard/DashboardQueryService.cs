@@ -1,6 +1,7 @@
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
@@ -22,10 +23,12 @@ public class DashboardQueryService(
     IAssetsService assetsService,
     ILiabilitiesService liabilitiesService,
     IExpenseDistributionService expenseDistributionService,
-    ICurrencyRepository currencyRepository) : IDashboardQueryService
+    ICurrencyRepository currencyRepository,
+    IFinancialAccountRepository financialAccountRepository) : IDashboardQueryService
 {
     public async Task<DashboardOverviewDto?> GetOverview(int userId, int currencyId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
     {
+        using var readScope = financialAccountRepository.BeginReadScope();
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return null;
 

@@ -4,6 +4,11 @@ namespace FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 
 public interface IFinancialAccountRepository
 {
+    /// <summary>
+    /// Reuses identical account-range reads until the returned scope is disposed.
+    /// Intended for read models that compose several calculations over one snapshot.
+    /// </summary>
+    IDisposable BeginReadScope();
     public Task<Dictionary<int, Type>> GetAvailableAccounts(int userId);
     public Task<int> GetAccountsCount();
     public Task<T?> GetAccount<T>(int userId, int id, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation;

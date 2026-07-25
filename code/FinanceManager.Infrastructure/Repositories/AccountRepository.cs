@@ -13,6 +13,16 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     IAccountEntryRepository<CurrencyAccountEntry> currencyEntryRepository, IBondAccountEntryRepository<BondAccountEntry> bondEntryRepository
      ) : IFinancialAccountRepository
 {
+    private Dictionary<(Type Type, int UserId, DateTime Start, DateTime End), IReadOnlyList<BasicAccountInformation>>? _readCache;
+    private int _readScopeDepth;
+
+    public IDisposable BeginReadScope()
+    {
+        _readScopeDepth++;
+        _readCache ??= [];
+        return new ReadScope(this);
+    }
+
     public async Task<Dictionary<int, Type>> GetAvailableAccounts(int userId)
     {
         Dictionary<int, Type> result = [];
@@ -93,25 +103,44 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     public Task<T?> GetAccount<T>(int userId, int id) where T : BasicAccountInformation => GetAccount<T>(userId, id, DateTime.UtcNow, DateTime.UtcNow);
     public async IAsyncEnumerable<T> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
     {
+        var cacheKey = (typeof(T), userId, dateStart, dateEnd);
+        if (_readCache?.TryGetValue(cacheKey, out var cachedAccounts) is true)
+        {
+            foreach (var account in cachedAccounts)
+                yield return (T)account;
+            yield break;
+        }
+
+        List<T> accounts;
         switch (typeof(T))
         {
             case Type t when t == typeof(CurrencyAccount):
-                foreach (var account in await GetCurrencyAccounts(userId, dateStart, dateEnd))
-                    yield return (T)(BasicAccountInformation)account;
-                yield break;
+                accounts = (await GetCurrencyAccounts(userId, dateStart, dateEnd))
+                    .Select(account => (T)(BasicAccountInformation)account)
+                    .ToList();
+                break;
 
             case Type t when t == typeof(InvestmentAccount):
-                foreach (var account in await investmentAccountRepository.GetAll(userId))
-                    yield return (T)(BasicAccountInformation)account;
-                yield break;
+                accounts = (await investmentAccountRepository.GetAll(userId))
+                    .Select(account => (T)(BasicAccountInformation)account)
+                    .ToList();
+                break;
 
             case Type t when t == typeof(BondAccount):
-                foreach (var account in await GetBondAccounts(userId, dateStart, dateEnd))
-                    yield return (T)(BasicAccountInformation)account;
-                yield break;
+                accounts = (await GetBondAccounts(userId, dateStart, dateEnd))
+                    .Select(account => (T)(BasicAccountInformation)account)
+                    .ToList();
+                break;
+
+            default:
+                throw new NotSupportedException($"Account type {typeof(T)} is not supported.");
         }
 
-        throw new NotSupportedException($"Account type {typeof(T)} is not supported.");
+        if (_readCache is not null)
+            _readCache[cacheKey] = accounts;
+
+        foreach (var account in accounts)
+            yield return account;
     }
 
     // The methods below load a whole user's accounts of one type in a constant number of queries
@@ -175,6 +204,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
 
     public async Task<int?> AddAccount<T>(T account) where T : BasicAccountInformation
     {
+        _readCache?.Clear();
         switch (account)
         {
             case CurrencyAccount currencyAccount:
@@ -211,6 +241,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     }
     public Task UpdateAccount<T>(T account) where T : BasicAccountInformation
     {
+        _readCache?.Clear();
         if (account is CurrencyAccount currencyAccount) return currencyAccountRepository.Update(currencyAccount.AccountId, currencyAccount.Name, currencyAccount.AccountType);
         if (account is InvestmentAccount investmentAccount) return investmentAccountRepository.Update(investmentAccount.AccountId, investmentAccount.Name);
         if (account is BondAccount bondAccount) return bondAccountRepository.Update(bondAccount.AccountId, bondAccount.Name);
@@ -219,6 +250,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     }
     public async Task RemoveAccount(Type accountType, int id)
     {
+        _readCache?.Clear();
         switch (accountType)
         {
             case Type t when t == typeof(CurrencyAccount):
@@ -243,6 +275,24 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
                 break;
             default:
                 throw new InvalidOperationException($"Account with id {id} not found.");
+        }
+    }
+
+    private void EndReadScope()
+    {
+        if (--_readScopeDepth != 0) return;
+
+        _readCache = null;
+    }
+
+    private sealed class ReadScope(AccountRepository owner) : IDisposable
+    {
+        private AccountRepository? _owner = owner;
+
+        public void Dispose()
+        {
+            _owner?.EndReadScope();
+            _owner = null;
         }
     }
 }

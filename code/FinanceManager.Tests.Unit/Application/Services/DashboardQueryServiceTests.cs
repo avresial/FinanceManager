@@ -1,6 +1,7 @@
 using FinanceManager.Application.Dashboard;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
@@ -25,6 +26,7 @@ public class DashboardQueryServiceTests
     private readonly Mock<ILiabilitiesService> _liabilitiesService = new();
     private readonly Mock<IExpenseDistributionService> _expenseDistributionService = new();
     private readonly Mock<ICurrencyRepository> _currencyRepository = new();
+    private readonly Mock<IFinancialAccountRepository> _financialAccountRepository = new();
     private readonly DashboardQueryService _service;
 
     public DashboardQueryServiceTests()
@@ -36,7 +38,8 @@ public class DashboardQueryServiceTests
             _assetsService.Object,
             _liabilitiesService.Object,
             _expenseDistributionService.Object,
-            _currencyRepository.Object);
+            _currencyRepository.Object,
+            _financialAccountRepository.Object);
     }
 
     [Fact]
