@@ -426,56 +426,14 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
     async Task<Dictionary<int, BondAccountEntry>> IBondAccountEntryRepository<BondAccountEntry>.GetNextOlder(int accountId, DateTime date)
     {
-        Dictionary<int, BondAccountEntry> result = [];
-
-        var bondDetailsIds = await context.BondEntries
-                                .AsNoTracking()
-                                .Where(e => e.AccountId == accountId)
-                                .Select(m => m.BondDetailsId)
-                                .Distinct()
-                                .ToListAsync();
-
-        foreach (var bondDetailsId in bondDetailsIds)
-        {
-            var nextOlder = await context.BondEntries
-                   .AsNoTracking()
-                   .Where(e => e.BondDetailsId == bondDetailsId && e.AccountId == accountId && e.PostingDate < date)
-                   .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId)
-                   .FirstOrDefaultAsync();
-
-            if (nextOlder is null) continue;
-
-            result.Add(bondDetailsId, nextOlder);
-        }
-
-        return result;
+        var byAccount = await GetNextOlderPerInstrument([accountId], date);
+        return byAccount.GetValueOrDefault(accountId) ?? [];
     }
 
     async Task<Dictionary<int, BondAccountEntry>> IBondAccountEntryRepository<BondAccountEntry>.GetNextYounger(int accountId, DateTime date)
     {
-        Dictionary<int, BondAccountEntry> result = [];
-
-        var bondDetailsIds = await context.BondEntries
-                                .AsNoTracking()
-                                .Where(e => e.AccountId == accountId)
-                                .Select(m => m.BondDetailsId)
-                                .Distinct()
-                                .ToListAsync();
-
-        foreach (var bondDetailsId in bondDetailsIds)
-        {
-            var nextYounger = await context.BondEntries
-                   .AsNoTracking()
-                   .Where(e => e.BondDetailsId == bondDetailsId && e.AccountId == accountId && e.PostingDate > date)
-                   .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId)
-                   .LastOrDefaultAsync();
-
-            if (nextYounger is null) continue;
-
-            result.Add(bondDetailsId, nextYounger);
-        }
-
-        return result;
+        var byAccount = await GetNextYoungerPerInstrument([accountId], date);
+        return byAccount.GetValueOrDefault(accountId) ?? [];
     }
 
 
