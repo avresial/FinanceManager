@@ -1,0 +1,55 @@
+using FinanceManager.Domain.Administration.Monitoring;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+
+namespace FinanceManager.Infrastructure.Features.Administration.Repositories;
+
+public class ActiveUsersRepository(AppDbContext context) : IActiveUsersRepository
+{
+    public async Task Add(int userId, DateOnly dateOnly)
+    {
+        if (await Get(userId, dateOnly) is not null) return;
+
+        await context.ActiveUsers.AddAsync(new ActiveUser()
+        {
+            UserId = userId,
+            LoginTime = dateOnly.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
+        });
+
+        await context.SaveChangesAsync();
+    }
+
+    public Task<ActiveUser?> Get(int userId, DateOnly dateOnly) =>
+        context.ActiveUsers.FirstOrDefaultAsync(x => x.UserId == userId && x.LoginTime.Date == dateOnly.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+
+    public Task<int> GetActiveUsersCount(DateOnly dateOnly) =>
+        context.ActiveUsers.CountAsync(x => x.LoginTime.Date == dateOnly.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+
+    public async Task<IEnumerable<(DateOnly, int)>> GetActiveUsersCount(DateOnly dateStart, DateOnly dateEnd)
+    {
+        List<(DateOnly, int)> results = [];
+
+        for (DateTime i = dateStart.ToDateTime(new TimeOnly()); i <= dateEnd.ToDateTime(new TimeOnly()); i = i.AddDays(1))
+        {
+            var activeUsers = await GetActiveUsersCount(DateOnly.FromDateTime(i));
+            results.Add((DateOnly.FromDateTime(i), activeUsers));
+        }
+
+        return results;
+    }
+
+    public async Task<IReadOnlyDictionary<int, DateTime>> GetLastLoginTimes(IReadOnlyCollection<int> userIds)
+    {
+        if (userIds.Count == 0) return new Dictionary<int, DateTime>();
+
+        var lastLogins = await context.ActiveUsers
+            .Where(x => userIds.Contains(x.UserId))
+            .GroupBy(x => x.UserId)
+            .Select(g => new { UserId = g.Key, LastLoginTime = g.Max(x => x.LoginTime) })
+            .ToListAsync();
+
+        return lastLogins.ToDictionary(x => x.UserId, x => x.LastLoginTime);
+    }
+}

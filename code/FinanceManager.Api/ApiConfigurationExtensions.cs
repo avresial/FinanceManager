@@ -8,7 +8,7 @@ using FinanceManager.Api.Features.Maintenance.Services;
 using FinanceManager.Api.Features.Mcp.OAuth;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Infrastructure.OAuth;
+using FinanceManager.Infrastructure.Features.Mcp.OAuth;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;

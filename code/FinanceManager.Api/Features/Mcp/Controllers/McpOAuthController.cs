@@ -2,7 +2,7 @@ using FinanceManager.Api.Features.Mcp.OAuth;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Infrastructure.OAuth;
+using FinanceManager.Infrastructure.Features.Mcp.OAuth;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http.Extensions;

@@ -1,7 +1,7 @@
 using FinanceManager.Application.Identity.Lockout;
 using FinanceManager.Domain.Identity.Entities;
-using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Repositories;
+using FinanceManager.Infrastructure.Features.Identity.Repositories;
+using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 

@@ -1,8 +1,8 @@
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Repositories.Assets;
-using FinanceManager.Infrastructure.Repositories.Investments;
+using FinanceManager.Infrastructure.Features.Assets.Repositories;
+using FinanceManager.Infrastructure.Features.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Tests.Unit.Infrastructure.Repositories;

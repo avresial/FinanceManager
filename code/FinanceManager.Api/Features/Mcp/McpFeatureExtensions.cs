@@ -1,6 +1,6 @@
 using FinanceManager.Api.Features.Mcp.OAuth;
 using FinanceManager.Api.Features.Mcp.Tools;
-using FinanceManager.Infrastructure.OAuth;
+using FinanceManager.Infrastructure.Features.Mcp.OAuth;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 

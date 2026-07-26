@@ -24,7 +24,7 @@ public static class FinanceManagerArchitecture
     // project reference (so the assembly is copied to the output dir for the loader).
     private static readonly System.Reflection.Assembly _domainAssembly = typeof(FinanceManager.Domain.Administration.Logging.LogEntry).Assembly;
     private static readonly System.Reflection.Assembly _applicationAssembly = typeof(FinanceManager.Application.Administration.Users.AdministrationUsersService).Assembly;
-    private static readonly System.Reflection.Assembly _infrastructureAssembly = typeof(FinanceManager.Infrastructure.Repositories.AccountRepository).Assembly;
+    private static readonly System.Reflection.Assembly _infrastructureAssembly = typeof(FinanceManager.Infrastructure.Features.FinancialAccounts.Shared.Repositories.AccountRepository).Assembly;
     private static readonly System.Reflection.Assembly _apiAssembly = typeof(FinanceManager.Api.Features.MoneyFlow.Controllers.AssetsController).Assembly;
     private static readonly System.Reflection.Assembly _componentsAssembly = typeof(FinanceManager.Components.HttpClients.AdminAiProvidersHttpClient).Assembly;
     private static readonly System.Reflection.Assembly _webUiAssembly = typeof(FinanceManager.WebUi.App).Assembly;

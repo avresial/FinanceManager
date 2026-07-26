@@ -1,5 +1,4 @@
-using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Guest;
+using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 

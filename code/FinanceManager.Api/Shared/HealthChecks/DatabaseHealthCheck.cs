@@ -1,4 +1,4 @@
-using FinanceManager.Infrastructure.Contexts;
+using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 

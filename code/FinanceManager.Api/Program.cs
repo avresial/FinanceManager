@@ -9,7 +9,6 @@ using FinanceManager.Application;
 using FinanceManager.Application.Shared.Diagnostics;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Infrastructure;
-using FinanceManager.Infrastructure.OAuth;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Options;
 using OpenTelemetry.Metrics;

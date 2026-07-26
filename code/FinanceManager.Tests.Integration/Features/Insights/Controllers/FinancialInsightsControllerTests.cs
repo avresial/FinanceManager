@@ -2,7 +2,7 @@ using FinanceManager.Application.Insights.Generation;
 using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Insights.Entities;
-using FinanceManager.Infrastructure.Contexts;
+using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

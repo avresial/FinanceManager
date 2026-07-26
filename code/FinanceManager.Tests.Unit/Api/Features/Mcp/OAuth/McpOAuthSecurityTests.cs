@@ -2,7 +2,7 @@ using FinanceManager.Api.Features.Identity.Services;
 using FinanceManager.Api.Features.Mcp.OAuth;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Identity.Entities;
-using FinanceManager.Infrastructure.OAuth;
+using FinanceManager.Infrastructure.Features.Mcp.OAuth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;

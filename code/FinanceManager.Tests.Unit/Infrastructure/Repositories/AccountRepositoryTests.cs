@@ -6,7 +6,7 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Entities;
-using FinanceManager.Infrastructure.Repositories;
+using FinanceManager.Infrastructure.Features.FinancialAccounts.Shared.Repositories;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Infrastructure.Repositories;

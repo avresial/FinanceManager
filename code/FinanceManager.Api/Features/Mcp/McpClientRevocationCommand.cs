@@ -1,5 +1,5 @@
-using FinanceManager.Infrastructure.OAuth;
 
+using FinanceManager.Infrastructure.Features.Mcp.OAuth;
 namespace FinanceManager.Api.Features.Mcp;
 
 internal static class McpClientRevocationCommand

@@ -1,5 +1,5 @@
 using FinanceManager.Api.Features.Mcp;
-using FinanceManager.Infrastructure.OAuth;
+using FinanceManager.Infrastructure.Features.Mcp.OAuth;
 
 namespace FinanceManager.Tests.Unit.Api.Features.Mcp;
 

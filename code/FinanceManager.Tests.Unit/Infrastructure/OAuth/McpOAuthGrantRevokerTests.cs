@@ -1,4 +1,4 @@
-using FinanceManager.Infrastructure.OAuth;
+using FinanceManager.Infrastructure.Features.Mcp.OAuth;
 using Moq;
 using OpenIddict.Abstractions;
 

@@ -4,7 +4,7 @@ using FinanceManager.Components.HttpClients;
 using FinanceManager.Domain.Identity.Commands;
 using FinanceManager.Domain.Identity.Dtos;
 using FinanceManager.Domain.Identity.Entities;
-using FinanceManager.Infrastructure.Contexts;
+using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Features.Administration.Controllers;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;

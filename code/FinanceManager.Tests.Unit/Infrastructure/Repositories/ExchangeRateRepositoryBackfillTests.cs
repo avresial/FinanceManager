@@ -1,5 +1,5 @@
-using FinanceManager.Infrastructure.Contexts;
-using FinanceManager.Infrastructure.Repositories;
+using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Tests.Unit.Infrastructure.Repositories;

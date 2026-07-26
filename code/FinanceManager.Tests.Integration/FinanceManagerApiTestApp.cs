@@ -1,7 +1,7 @@
 using FinanceManager.Api;
 using FinanceManager.Api.Features.Administration.Logging;
 using FinanceManager.Api.Features.Labels.Services;
-using FinanceManager.Infrastructure.Services;
+using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
