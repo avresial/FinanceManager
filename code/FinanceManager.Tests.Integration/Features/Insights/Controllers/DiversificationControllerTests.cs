@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Features.Insights.HttpClients;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;

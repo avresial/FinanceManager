@@ -1,0 +1,75 @@
+@namespace FinanceManager.Components.Features.FinancialAccounts.Components.Shared
+
+@{
+    var gain = CurrentValue - CapitalValue;
+    var gainPercent = CapitalValue == 0 ? (decimal?)null : gain / CapitalValue * 100m;
+    var gainColor = gain >= 0 ? Color.Success : Color.Error;
+}
+
+<MudCard Outlined="true" Style="background-color: transparent;">
+    <MudCardContent>
+        <MudText Typo="Typo.overline" Color="Color.Default">@Label</MudText>
+
+        <MudStack Spacing="1" Class="mt-2">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.body2" Color="Color.Default">Capital value</MudText>
+                @if (IsLoading)
+                {
+                    <MudSkeleton SkeletonType="SkeletonType.Text" Animation="Animation.Wave" Width="90px" />
+                }
+                else
+                {
+                    <MudText Typo="Typo.body1" Class="fm-tabular">@CapitalValue.ToString("N2") @Currency</MudText>
+                }
+            </MudStack>
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.body2" Color="Color.Default">Current valuation</MudText>
+                @if (IsLoading)
+                {
+                    <MudSkeleton SkeletonType="SkeletonType.Text" Animation="Animation.Wave" Width="90px" />
+                }
+                else
+                {
+                    <MudText Typo="Typo.body1" Class="fm-tabular">@CurrentValue.ToString("N2") @Currency</MudText>
+                }
+            </MudStack>
+        </MudStack>
+
+        <MudDivider Class="my-3" />
+
+        @if (IsLoading)
+        {
+            <MudSkeleton SkeletonType="SkeletonType.Text" Animation="Animation.Wave" Width="140px" Height="40px" />
+        }
+        else
+        {
+            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                <MudIcon Size="Size.Small"
+                         Icon="@(gain >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
+                         Color="@gainColor" />
+                <MudText Typo="Typo.h5" Class="fm-tabular" Color="@gainColor">
+                    @(gain >= 0 ? "+" : "")@gain.ToString("N2") @Currency
+                </MudText>
+                @if (gainPercent.HasValue)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Default" Class="fm-tabular">
+                        · @(gain >= 0 ? "+" : "")@gainPercent.Value.ToString("0.0")%
+                    </MudText>
+                }
+            </MudStack>
+        }
+
+        <MudText Typo="Typo.caption" Color="Color.Default" Class="mt-1">
+            @(Description ?? "Current valuation minus capital value")
+        </MudText>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public decimal CapitalValue { get; set; }
+    [Parameter] public decimal CurrentValue { get; set; }
+    [Parameter] public required string Currency { get; set; }
+    [Parameter] public string Label { get; set; } = "Asset appreciation";
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+}

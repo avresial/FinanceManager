@@ -1,0 +1,9 @@
+@using FinanceManager.Components.Shared.Components.Charts
+
+<TimeSeriesValueCard Title="Net worth over time"
+                     Data="_series"
+                     IsLoading="_isLoading"
+                     HasError="_hasError"
+                     OnRetry="Reload"
+                     CurrencyShortName="@_currency"
+                     Height="@Height" />

@@ -1,5 +1,5 @@
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;

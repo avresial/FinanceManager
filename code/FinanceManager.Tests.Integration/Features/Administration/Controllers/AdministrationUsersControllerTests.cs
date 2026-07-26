@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Features.Administration.HttpClients;
 using FinanceManager.Domain.Administration.Monitoring;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;

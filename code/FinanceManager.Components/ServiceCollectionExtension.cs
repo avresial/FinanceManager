@@ -1,5 +1,14 @@
-using FinanceManager.Components.HttpClients;
-using FinanceManager.Components.Services;
+using FinanceManager.Components.Features.Administration.HttpClients;
+using FinanceManager.Components.Features.Dashboard.HttpClients;
+using FinanceManager.Components.Features.Dashboard.Services;
+using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.FinancialAccounts.Services;
+using FinanceManager.Components.Features.Identity.HttpClients;
+using FinanceManager.Components.Features.Identity.Services;
+using FinanceManager.Components.Features.Insights.HttpClients;
+using FinanceManager.Components.Features.Labels.HttpClients;
+using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;

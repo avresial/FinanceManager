@@ -1,0 +1,153 @@
+@using FinanceManager.Components.Features.Dashboard.Components.Cards
+@using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets
+@using FinanceManager.Components.Features.Dashboard.Components.Cards.Liabilities
+@using FinanceManager.Components.Features.Dashboard.Components.Cards.TimeSeries
+@using FinanceManager.Components.Features.Dashboard.Models
+
+<MudContainer Class="py-2">
+    <div class="d-flex justify-end mb-2">
+        <MudMenu Label="Customize" StartIcon="@Icons.Material.Filled.Tune" Variant="Variant.Text"
+                 Color="Color.Default" Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+            <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1" Style="display:block">Show cards</MudText>
+            @foreach (var card in DashboardCards.All)
+            {
+                <MudMenuItem OnClick="@(() => ToggleCard(card.Id))" AutoClose="false" Style="padding: 2.65px;">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudCheckBox Value="@(!CardVisibility.IsHidden(card.Id))" T="bool" Dense="true" ReadOnly="true"
+                                     Color="Color.Primary" />
+                        <MudText Typo="Typo.body2">@card.Title</MudText>
+                        @if (IsAutoHiddenWhenEmpty(card.Id))
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">(no data)</MudText>
+                        }
+                    </MudStack>
+                </MudMenuItem>
+            }
+        </MudMenu>
+    </div>
+
+    @if (_overview is null && _isLoading)
+    {
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@($"{_unitHeight * 2}px")" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@($"{_unitHeight * 2}px")" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@($"{_unitHeight * 2}px")" />
+            </MudItem>
+            <MudItem xs="12" md="6" lg="4">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@($"{_unitHeight * 3}px")" />
+            </MudItem>
+            <MudItem xs="12" md="6" lg="4">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@($"{_unitHeight * 3}px")" />
+            </MudItem>
+            <MudItem xs="12" md="6" lg="4">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@($"{_unitHeight * 3}px")" />
+            </MudItem>
+        </MudGrid>
+    }
+    else
+    {
+        @if (_hasError)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-2" ShowCloseIcon="false">
+                <div class="d-flex align-center justify-space-between" style="width:100%">
+                    <span>Unable to load dashboard data.</span>
+                    <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="LoadOverview">Retry</MudButton>
+                </div>
+            </MudAlert>
+        }
+
+        @if (!AnyCardVisible)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-2" ShowCloseIcon="false">
+                All cards are hidden. Use <b>Customize</b> above to show the cards you want to see.
+            </MudAlert>
+        }
+
+        <MudGrid Spacing="2">
+
+            @if (IsCardVisible(DashboardCards.NetWorth))
+            {
+                <MudItem xs="12">
+                    <NetWorthTimeSeriesCard StartDateTime="@DisplayStartDate" EndDateTime="@DisplayEndDate" Model="@NetWorthModel" />
+                </MudItem>
+            }
+
+            @if (IsCardVisible(DashboardCards.NetCashFlow))
+            {
+                <MudItem xs="12" md="6">
+                    <NetCashFlowOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@DisplayStartDate"
+                                             EndDateTime="@DisplayEndDate" Model="@NetCashFlowModel" />
+                </MudItem>
+            }
+
+            @if (IsCardVisible(DashboardCards.ClosingBalance))
+            {
+                <MudItem xs="12" md="6">
+                    <ClosingBalanceOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@DisplayStartDate"
+                                                EndDateTime="@DisplayEndDate" Model="@ClosingBalanceModel" />
+                </MudItem>
+            }
+
+            @if (IsCardVisible(DashboardCards.Liabilities))
+            {
+                <MudItem xs="12" md="6" lg="4">
+                    <LiabilitiesDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@DisplayStartDate"
+                                                         EndDateTime="@DisplayEndDate" Model="@LiabilitiesModel" />
+                </MudItem>
+            }
+
+            @if (IsCardVisible(DashboardCards.Labels))
+            {
+                <MudItem xs="12" md="6" lg="4">
+                    <FinancialLabelsListCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@DisplayStartDate"
+                                             EndDateTime="@DisplayEndDate" Model="@LabelsModel" />
+                </MudItem>
+            }
+
+            @if (IsCardVisible(DashboardCards.Assets))
+            {
+                <MudItem xs="12" md="6" lg="4">
+                    <AssetsDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@DisplayStartDate"
+                                                    EndDateTime="@DisplayEndDate" Model="@AssetsModel" />
+                </MudItem>
+            }
+
+            @if (IsCardVisible(DashboardCards.Expenses))
+            {
+                <MudItem xs="12" md="6" lg="4">
+                    <ExpenseDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@DisplayStartDate"
+                                                     EndDateTime="@DisplayEndDate" Model="@ExpenseModel" />
+                </MudItem>
+            }
+
+            @if (IsCardVisible(DashboardCards.Insights))
+            {
+                <MudItem xs="12" md="6" lg="4">
+                    <FinancialInsightsCarousel Height="@($"{_unitHeight * 3}px")" Count="3" />
+                </MudItem>
+            }
+
+            @if (IsCardVisible(DashboardCards.RecurringTransactions))
+            {
+                <MudItem xs="12" md="6" lg="4">
+                    <RecurringTransactionDetectorCard Height="@($"{_unitHeight * 3}px")" />
+                </MudItem>
+            }
+
+            @if (IsCardVisible(DashboardCards.TransactionLog))
+            {
+                <MudItem xs="12" md="6" lg="4">
+                    <TransactionLogCard Height="@($"{_unitHeight * 3}px")" />
+                </MudItem>
+            }
+
+        </MudGrid>
+    }
+</MudContainer>
+
+<DashboardDatePicker DateChanged=DateChanged StartingOption="ThisMonth" />

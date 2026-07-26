@@ -1,5 +1,5 @@
 using FinanceManager.Application.Insights.Generation;
-using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Features.Insights.HttpClients;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Infrastructure.Persistence;

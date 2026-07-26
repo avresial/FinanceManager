@@ -1,4 +1,4 @@
-using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Features.Labels.HttpClients;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;

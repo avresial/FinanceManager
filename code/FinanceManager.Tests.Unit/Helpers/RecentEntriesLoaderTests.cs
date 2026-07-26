@@ -1,4 +1,4 @@
-using FinanceManager.Components.Helpers;
+using FinanceManager.Components.Shared.Helpers;
 
 namespace FinanceManager.Tests.Unit.Helpers;
 

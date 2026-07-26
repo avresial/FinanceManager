@@ -1,6 +1,6 @@
 using FinanceManager.Application.Identity;
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Components.HttpClients;
+using FinanceManager.Components.Features.Identity.HttpClients;
 using FinanceManager.Domain.Identity.Commands;
 using FinanceManager.Domain.Identity.Dtos;
 using FinanceManager.Domain.Identity.Entities;

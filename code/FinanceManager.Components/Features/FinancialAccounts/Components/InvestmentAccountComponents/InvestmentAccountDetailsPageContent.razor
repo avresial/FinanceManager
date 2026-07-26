@@ -1,0 +1,148 @@
+@namespace FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents
+@using FinanceManager.Domain.FinancialAccounts.Investments.Entities
+@using FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents.TransactionHistory
+@using FinanceManager.Components.Features.FinancialAccounts.Components.Shared
+
+@if (_isLoading && _transactions.Count == 0)
+{
+    <AccountDetailsPageContentSkeleton />
+}
+else if (_transactions.Count == 0)
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="px-0">
+        <MudPaper Class="pa-8 d-flex flex-column align-center" Elevation="0" Style="background-color: transparent;">
+            <MudText Typo="Typo.h6" Class="mb-1">@_accountName</MudText>
+            <MudAlert Severity="Severity.Info" Class="my-3">No transactions yet.</MudAlert>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="ShowAdd">Add transaction</MudButton>
+        </MudPaper>
+    </MudContainer>
+}
+else
+{
+    <AccountDetailsHero AccountName="@_accountName" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
+                        Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
+                        ChangeLabel="Asset appreciation" ShowChangeRange="false" IsBalanceLoading="@_isChartLoading"
+                        SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged" IsChartLoading="@_isChartLoading"
+                        CustomDateRange="@_customDateRange" CustomDateRangeChanged="OnCustomDateRangeChanged"
+                        ChartData="@ChartData" IsMobile="@_isMobile" />
+
+    <MudContainer MaxWidth="MaxWidth.Large" Class="px-0">
+        <MudGrid Spacing="3">
+            <MudItem xs="12" lg="8">
+                <AccountHistoryToolbar AccountId="@AccountId" SearchText="@_searchText"
+                                       SearchTextChanged="OnSearchChanged" ActiveFilter="@_activeFilter"
+                                       ActiveFilterChanged="OnTxFilterChanged" OnAddEntry="ShowAdd"
+                                       ShowInsightsButton="@_isMobile" OnInsightsClick="ToggleInsightsDrawer" IsMobile="@_isMobile" />
+
+                @{
+                    var filteredTransactions = GetFilteredTransactions();
+                    var dayGroups = filteredTransactions
+                        .GroupBy(t => t.TradeDate)
+                        .OrderByDescending(g => g.Key)
+                        .ToList();
+                }
+
+                @if (HasActiveFilter && dayGroups.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Class="my-3">No trades match the current filter.</MudAlert>
+                }
+                else if (dayGroups.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Class="my-3">No trades in the selected range.</MudAlert>
+                }
+                else
+                {
+                    @foreach (var group in dayGroups)
+                    {
+                        <InvestmentDayGroupCard Day="@group.Key" Transactions="@group" Currency="@_currency.ShortName"
+                                                Valuations="@_valuations" IsMobile="@_isMobile" OnEdit="ShowEdit" OnDelete="DeleteAsync" />
+                    }
+                }
+            </MudItem>
+
+            @if (!_isMobile)
+            {
+                <MudItem lg="4">
+                    <MudStack Spacing="4">
+                        <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
+                                                   Currency="@_currency.ShortName" Label="Asset appreciation" IsLoading="@_isChartLoading" />
+
+                        @HoldingsCard
+
+                        <InvestmentAccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])" />
+                    </MudStack>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudContainer>
+
+    @if (_isMobile)
+    {
+        <MudOverlay Visible="@_insightsDrawerOpen" OnClick="CloseInsightsDrawer" DarkBackground="true" ZIndex="1300" />
+        <div role="dialog" aria-modal="true" aria-label="Insights"
+             aria-hidden="@(_insightsDrawerOpen ? null : "true")" inert="@(!_insightsDrawerOpen)"
+            style="@($"position: fixed; top: 0; right: 0; bottom: 0; width: min(360px, 90vw); background: var(--mud-palette-surface); box-shadow: -4px 0 16px rgba(0,0,0,0.4); overflow-y: auto; z-index: 1301; transform: translateX({(_insightsDrawerOpen ? "0" : "100%")}); transition: transform 225ms cubic-bezier(0,0,0.2,1);")">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="pa-3">
+                <MudText Typo="Typo.h6">Insights</MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="CloseInsightsDrawer" aria-label="Close insights" />
+            </MudStack>
+            <MudDivider />
+            <MudStack Spacing="4" Class="pa-4">
+                <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
+                                           Currency="@_currency.ShortName" Label="Asset appreciation" IsLoading="@_isChartLoading" />
+
+                @HoldingsCard
+
+                <InvestmentAccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])" />
+            </MudStack>
+        </div>
+    }
+}
+
+<InvestmentTransactionForm AccountId="@AccountId" Visible="@_formVisible" VisibleChanged="OnFormVisibleChanged"
+                           Transaction="@_editingTransaction" OnSaved="OnTransactionSavedAsync" />
+
+<MudScrollToTop TopOffset="400" ScrollBehavior="ScrollBehavior.Smooth">
+    <MudFab Color="Color.Primary" Size="Size.Medium" StartIcon="@Icons.Material.Filled.KeyboardArrowUp"
+            aria-label="Scroll to top" />
+</MudScrollToTop>
+
+@code {
+    private RenderFragment HoldingsCard => __builder =>
+    {
+        <MudCard Outlined="true" Style="background-color: transparent;">
+            <MudCardHeader Class="py-2 px-4">
+                <CardHeaderContent><MudText Typo="Typo.subtitle2">Holdings</MudText></CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent Class="pa-0">
+                @if (_holdings.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Class="ma-4">No open holdings.</MudAlert>
+                }
+                else
+                {
+                    <MudSimpleTable Hover="true" Dense="true" Striped="true">
+                        <thead>
+                            <tr><th>Instrument</th><th class="text-right">Units</th><th class="text-right">Price</th><th class="text-right">Value</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var h in _holdings)
+                            {
+                                <tr>
+                                    <td>
+                                        <MudText Typo="Typo.body2">@h.Ticker</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@h.ExchangeName</MudText>
+                                    </td>
+                                    <td class="text-right">@h.Quantity.ToString("N4")</td>
+                                    <td class="text-right">@h.LatestPrice.ToString("N2") @h.Currency</td>
+                                    <td class="text-right">@h.Value.ToString("N2") @h.Currency</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                }
+            </MudCardContent>
+        </MudCard>
+    };
+}

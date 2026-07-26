@@ -2,7 +2,7 @@ using Blazored.LocalStorage;
 using Blazored.SessionStorage;
 using FinanceManager.Application;
 using FinanceManager.Components;
-using FinanceManager.Components.Services;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.WebUi;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
