@@ -2,7 +2,7 @@ using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Reposi
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FinanceManager.Tests.Unit.Infrastructure.Repositories;
+namespace FinanceManager.Tests.Unit.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
 
 /// <summary>
 /// Covers the backfill-facing exchange-rate repository methods (issue #597): latest-date lookup,

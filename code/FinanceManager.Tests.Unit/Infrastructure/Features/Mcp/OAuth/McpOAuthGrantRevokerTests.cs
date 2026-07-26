@@ -2,7 +2,7 @@ using FinanceManager.Infrastructure.Features.Mcp.OAuth;
 using Moq;
 using OpenIddict.Abstractions;
 
-namespace FinanceManager.Tests.Unit.Infrastructure.OAuth;
+namespace FinanceManager.Tests.Unit.Infrastructure.Features.Mcp.OAuth;
 
 public sealed class McpOAuthGrantRevokerTests
 {

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
-namespace FinanceManager.Tests.Unit.Infrastructure.Repositories;
+namespace FinanceManager.Tests.Unit.Infrastructure.Features.FinancialAccounts.Shared.Repositories;
 
 /// <summary>
 /// Tests for the range/bucket caching layer added in issue #456 on top of the

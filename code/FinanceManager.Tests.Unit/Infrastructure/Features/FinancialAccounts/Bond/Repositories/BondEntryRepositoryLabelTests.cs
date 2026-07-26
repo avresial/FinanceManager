@@ -4,7 +4,7 @@ using FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Repositories
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FinanceManager.Tests.Unit.Infrastructure.Repositories;
+namespace FinanceManager.Tests.Unit.Infrastructure.Features.FinancialAccounts.Bond.Repositories;
 
 [Collection("Infrastructure")]
 [Trait("Category", "Unit")]

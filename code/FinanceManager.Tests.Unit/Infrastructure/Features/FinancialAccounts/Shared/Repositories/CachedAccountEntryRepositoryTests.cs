@@ -7,7 +7,7 @@ using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
-namespace FinanceManager.Tests.Unit.Infrastructure.Repositories;
+namespace FinanceManager.Tests.Unit.Infrastructure.Features.FinancialAccounts.Shared.Repositories;
 
 [Trait("Category", "Unit")]
 public class CachedAccountEntryRepositoryTests

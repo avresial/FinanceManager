@@ -5,7 +5,7 @@ using FinanceManager.Infrastructure.Features.FinancialAccounts.Investments.Repos
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FinanceManager.Tests.Unit.Infrastructure.Repositories;
+namespace FinanceManager.Tests.Unit.Infrastructure.Features.FinancialAccounts.Investments.Repositories;
 
 /// <summary>
 /// Covers the issue #474 acceptance criteria for the new investment model: creating assets,

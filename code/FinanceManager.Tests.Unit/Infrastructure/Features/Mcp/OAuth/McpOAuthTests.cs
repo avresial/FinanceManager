@@ -8,7 +8,7 @@ using Moq;
 using OpenIddict.Abstractions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
-namespace FinanceManager.Tests.Unit.Infrastructure.OAuth;
+namespace FinanceManager.Tests.Unit.Infrastructure.Features.Mcp.OAuth;
 
 public class McpOAuthTests
 {

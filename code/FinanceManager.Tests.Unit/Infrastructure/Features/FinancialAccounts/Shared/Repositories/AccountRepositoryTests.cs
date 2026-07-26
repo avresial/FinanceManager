@@ -9,7 +9,7 @@ using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Shared.Repositories;
 using Moq;
 
-namespace FinanceManager.Tests.Unit.Infrastructure.Repositories;
+namespace FinanceManager.Tests.Unit.Infrastructure.Features.FinancialAccounts.Shared.Repositories;
 
 [Trait("Category", "Unit")]
 public class AccountRepositoryTests

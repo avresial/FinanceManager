@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net;
 
-namespace FinanceManager.Tests.Unit.Infrastructure.Services.Stocks;
+namespace FinanceManager.Tests.Unit.Infrastructure.Features.Assets.Providers;
 
 [Collection("Infrastructure")]
 [Trait("Category", "Unit")]

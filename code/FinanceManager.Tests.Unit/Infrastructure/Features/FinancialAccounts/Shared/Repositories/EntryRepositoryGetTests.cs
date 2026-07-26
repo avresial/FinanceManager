@@ -6,7 +6,7 @@ using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Reposi
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FinanceManager.Tests.Unit.Infrastructure.Repositories;
+namespace FinanceManager.Tests.Unit.Infrastructure.Features.FinancialAccounts.Shared.Repositories;
 
 [Collection("Infrastructure")]
 [Trait("Category", "Unit")]

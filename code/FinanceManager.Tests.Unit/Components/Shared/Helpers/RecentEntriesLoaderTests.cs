@@ -1,6 +1,6 @@
 using FinanceManager.Components.Shared.Helpers;
 
-namespace FinanceManager.Tests.Unit.Helpers;
+namespace FinanceManager.Tests.Unit.Components.Shared.Helpers;
 
 [Collection("Api")]
 [Trait("Category", "Unit")]
