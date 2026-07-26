@@ -13,15 +13,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     IAccountEntryRepository<CurrencyAccountEntry> currencyEntryRepository, IBondAccountEntryRepository<BondAccountEntry> bondEntryRepository
      ) : IFinancialAccountRepository
 {
-    private Dictionary<(Type Type, int UserId, DateTime Start, DateTime End), IReadOnlyList<BasicAccountInformation>>? _readCache;
-    private int _readScopeDepth;
-
-    public IDisposable BeginReadScope()
-    {
-        _readScopeDepth++;
-        _readCache ??= [];
-        return new ReadScope(this);
-    }
+    private readonly Dictionary<(Type Type, int UserId, DateTime Start, DateTime End), IReadOnlyList<BasicAccountInformation>> _readCache = [];
 
     public async Task<Dictionary<int, Type>> GetAvailableAccounts(int userId)
     {
@@ -104,7 +96,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     public async IAsyncEnumerable<T> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
     {
         var cacheKey = (typeof(T), userId, dateStart, dateEnd);
-        if (_readCache?.TryGetValue(cacheKey, out var cachedAccounts) is true)
+        if (_readCache.TryGetValue(cacheKey, out var cachedAccounts))
         {
             foreach (var account in cachedAccounts)
                 yield return (T)account;
@@ -136,8 +128,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
                 throw new NotSupportedException($"Account type {typeof(T)} is not supported.");
         }
 
-        if (_readCache is not null)
-            _readCache[cacheKey] = accounts;
+        _readCache[cacheKey] = accounts;
 
         foreach (var account in accounts)
             yield return account;
@@ -204,7 +195,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
 
     public async Task<int?> AddAccount<T>(T account) where T : BasicAccountInformation
     {
-        _readCache?.Clear();
+        _readCache.Clear();
         switch (account)
         {
             case CurrencyAccount currencyAccount:
@@ -241,7 +232,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     }
     public Task UpdateAccount<T>(T account) where T : BasicAccountInformation
     {
-        _readCache?.Clear();
+        _readCache.Clear();
         if (account is CurrencyAccount currencyAccount) return currencyAccountRepository.Update(currencyAccount.AccountId, currencyAccount.Name, currencyAccount.AccountType);
         if (account is InvestmentAccount investmentAccount) return investmentAccountRepository.Update(investmentAccount.AccountId, investmentAccount.Name);
         if (account is BondAccount bondAccount) return bondAccountRepository.Update(bondAccount.AccountId, bondAccount.Name);
@@ -250,7 +241,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     }
     public async Task RemoveAccount(Type accountType, int id)
     {
-        _readCache?.Clear();
+        _readCache.Clear();
         switch (accountType)
         {
             case Type t when t == typeof(CurrencyAccount):
@@ -278,21 +269,4 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
         }
     }
 
-    private void EndReadScope()
-    {
-        if (--_readScopeDepth != 0) return;
-
-        _readCache = null;
-    }
-
-    private sealed class ReadScope(AccountRepository owner) : IDisposable
-    {
-        private AccountRepository? _owner = owner;
-
-        public void Dispose()
-        {
-            _owner?.EndReadScope();
-            _owner = null;
-        }
-    }
 }

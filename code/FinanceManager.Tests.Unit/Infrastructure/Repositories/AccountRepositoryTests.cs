@@ -15,7 +15,7 @@ namespace FinanceManager.Tests.Unit.Infrastructure.Repositories;
 public class AccountRepositoryTests
 {
     [Fact]
-    public async Task ReadScope_ReusesIdenticalAccountRangeOnlyUntilDisposed()
+    public async Task GetAccounts_ReusesIdenticalRangeUntilAWrite()
     {
         var currencyAccounts = new Mock<ICurrencyAccountRepository<CurrencyAccount>>();
         var currencyEntries = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
@@ -31,6 +31,9 @@ public class AccountRepositoryTests
         currencyEntries
             .Setup(repository => repository.GetNextYounger(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>()))
             .ReturnsAsync([]);
+        currencyAccounts
+            .Setup(repository => repository.Update(account.AccountId, account.Name, account.AccountType))
+            .ReturnsAsync(true);
 
         var repository = new AccountRepository(
             currencyAccounts.Object,
@@ -41,12 +44,9 @@ public class AccountRepositoryTests
         var start = new DateTime(2024, 1, 1);
         var end = new DateTime(2024, 2, 1);
 
-        using (repository.BeginReadScope())
-        {
-            await repository.GetAccounts<CurrencyAccount>(1, start, end).ToListAsync(TestContext.Current.CancellationToken);
-            await repository.GetAccounts<CurrencyAccount>(1, start, end).ToListAsync(TestContext.Current.CancellationToken);
-        }
-
+        await repository.GetAccounts<CurrencyAccount>(1, start, end).ToListAsync(TestContext.Current.CancellationToken);
+        await repository.GetAccounts<CurrencyAccount>(1, start, end).ToListAsync(TestContext.Current.CancellationToken);
+        await repository.UpdateAccount(account);
         await repository.GetAccounts<CurrencyAccount>(1, start, end).ToListAsync(TestContext.Current.CancellationToken);
 
         currencyAccounts.Verify(value => value.GetAll(1), Times.Exactly(2));
