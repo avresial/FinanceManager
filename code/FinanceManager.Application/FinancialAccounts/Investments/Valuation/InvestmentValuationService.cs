@@ -33,8 +33,19 @@ internal class InvestmentValuationService(
 
     public async Task<decimal> GetAccountValueAsync(int accountId, Currency targetCurrency, DateTime asOf, CancellationToken ct = default)
     {
-        var byAccount = await GetAccountValueAsync([accountId], targetCurrency, asOf, ct);
-        return byAccount.TryGetValue(accountId, out var value) ? value : 0m;
+        var holdings = await transactionRepository.GetHoldingsAsOf([accountId], DateOnly.FromDateTime(asOf), ct);
+        decimal total = 0m;
+
+        foreach (var (listingId, holding) in holdings)
+        {
+            if (holding == 0m) continue;
+
+            var price = await priceProvider.GetPricePerUnitAsync(listingId, targetCurrency, asOf, ct);
+            if (price > 0m)
+                total += holding * price;
+        }
+
+        return total;
     }
 
     public async Task<IReadOnlyDictionary<int, decimal>> GetAccountValueAsync(

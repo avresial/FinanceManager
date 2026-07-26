@@ -26,6 +26,7 @@ rules agents must follow when updating this file.
 
 ### Changed
 - The dashboard now loads account data once per overview request, making the first uncached view substantially faster. #608
+- Financial account pages now load faster by reusing transaction-history boundaries, batching bond lookups, and avoiding redundant currency and investment data reads. #606
 - The expanded investment purchase details now label the valuation figures more clearly — pairing the unit price at purchase with the current unit price, and the value at purchase with the current value — so a per-unit price is no longer shown alongside position totals under ambiguous "Current price"/"Current valuation" labels.
 - The investment account details page now shows loading placeholders for the balance and asset appreciation (and the capital value / current valuation breakdown) while those figures are still being calculated, instead of briefly displaying a misleading `0.00`.
 - The investment transaction list now leads each purchase with its unrealised gain/loss (amount and percentage) rather than the original cash outlay; sells and not-yet-priced trades continue to show their cash impact.

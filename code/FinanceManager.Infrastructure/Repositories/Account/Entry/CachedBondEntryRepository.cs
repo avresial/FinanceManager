@@ -19,8 +19,12 @@ public class CachedBondEntryRepository(
     : CachedAccountEntryRepository<BondAccountEntry>(inner, userResolver, cacheInvalidator, cache, rangeOptions),
       IBondAccountEntryRepository<BondAccountEntry>
 {
-    Task<Dictionary<int, BondAccountEntry>> IBondAccountEntryRepository<BondAccountEntry>.GetNextOlder(int accountId, DateTime date) => inner.GetNextOlder(accountId, date);
-    Task<Dictionary<int, BondAccountEntry>> IBondAccountEntryRepository<BondAccountEntry>.GetNextYounger(int accountId, DateTime date) => inner.GetNextYounger(accountId, date);
+    Task<Dictionary<int, BondAccountEntry>> IBondAccountEntryRepository<BondAccountEntry>.GetNextOlder(int accountId, DateTime date) =>
+        GetCached(accountId, $"bond:older:{date.Ticks}", () => inner.GetNextOlder(accountId, date));
+
+    Task<Dictionary<int, BondAccountEntry>> IBondAccountEntryRepository<BondAccountEntry>.GetNextYounger(int accountId, DateTime date) =>
+        GetCached(accountId, $"bond:younger:{date.Ticks}", () => inner.GetNextYounger(accountId, date));
+
     public Task<Dictionary<int, Dictionary<int, BondAccountEntry>>> GetNextOlderPerInstrument(IReadOnlyCollection<int> accountIds, DateTime date) => inner.GetNextOlderPerInstrument(accountIds, date);
     public Task<Dictionary<int, Dictionary<int, BondAccountEntry>>> GetNextYoungerPerInstrument(IReadOnlyCollection<int> accountIds, DateTime date) => inner.GetNextYoungerPerInstrument(accountIds, date);
 }
