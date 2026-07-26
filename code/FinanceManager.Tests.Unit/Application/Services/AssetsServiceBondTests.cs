@@ -74,7 +74,7 @@ public class AssetsServiceBondTests
         };
 
         _financialAccountRepositoryMock
-            .Setup(x => x.GetAccounts<BondAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Setup(x => x.GetAccounts<BondAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
             .Returns(new[] { account }.ToAsyncEnumerable());
         _bondDetailsRepositoryMock
             .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -127,7 +127,7 @@ public class AssetsServiceBondTests
         };
 
         _financialAccountRepositoryMock
-            .Setup(x => x.GetAccounts<BondAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Setup(x => x.GetAccounts<BondAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
             .Returns(new[] { account }.ToAsyncEnumerable());
         _bondDetailsRepositoryMock
             .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))

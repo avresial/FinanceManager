@@ -25,6 +25,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Asset and liability charts now load substantially faster, especially on the first uncached view. #610
 - The dashboard now loads account data once per overview request, making the first uncached view substantially faster. #608
 - Financial account pages now load faster by reusing transaction-history boundaries, batching bond lookups, and avoiding redundant currency and investment data reads. #606
 - The expanded investment purchase details now label the valuation figures more clearly — pairing the unit price at purchase with the current unit price, and the value at purchase with the current value — so a per-unit price is no longer shown alongside position totals under ambiguous "Current price"/"Current valuation" labels.

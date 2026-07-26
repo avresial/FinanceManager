@@ -27,7 +27,8 @@ public class AssetsServiceBond(
         Dictionary<DateTime, decimal> prices = [];
         TimeSpan step = TimeSpan.FromDays(1);
         List<BondDetails> bondDetails = await bondDetailsRepository.GetAllAsync().ToListAsync();
-        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end).Where(x => x.ContainsAssets))
+        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(
+            userId, start, end, includeEntryMetadata: false).Where(x => x.ContainsAssets))
         {
             foreach (var price in account.GetDailyPrice(DateOnly.FromDateTime(start), DateOnly.FromDateTime(end), bondDetails))
             {
@@ -49,7 +50,8 @@ public class AssetsServiceBond(
         Dictionary<DateTime, decimal> prices = [];
         TimeSpan step = TimeSpan.FromDays(1);
         List<BondDetails> bondDetails = await bondDetailsRepository.GetAllAsync().ToListAsync();
-        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end).Where(x => x.ContainsAssets && x.AccountType.ToString() == investmentType.ToString()))
+        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(
+            userId, start, end, includeEntryMetadata: false).Where(x => x.ContainsAssets && x.AccountType.ToString() == investmentType.ToString()))
         {
             foreach (var price in account.GetDailyPrice(DateOnly.FromDateTime(start), DateOnly.FromDateTime(end), bondDetails))
             {

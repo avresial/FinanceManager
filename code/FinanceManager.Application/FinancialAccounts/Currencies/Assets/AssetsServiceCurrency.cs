@@ -21,7 +21,8 @@ internal class AssetsServiceCurrency(IFinancialAccountRepository financialAccoun
         Dictionary<DateTime, decimal> prices = [];
         TimeSpan step = TimeSpan.FromDays(1);
 
-        await foreach (CurrencyAccount? account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end).Where(x => x.ContainsAssets))
+        await foreach (CurrencyAccount? account in financialAccountRepository.GetAccounts<CurrencyAccount>(
+            userId, start, end, includeEntryMetadata: false).Where(x => x.ContainsAssets))
         {
             var entry = account.GetThisOrNextOlder(end);
             if (entry is null || entry.Value <= 0) continue;
@@ -52,7 +53,8 @@ internal class AssetsServiceCurrency(IFinancialAccountRepository financialAccoun
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         List<(DateTime Date, decimal Value)> assets = [];
 
-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end).Where(x => x.ContainsAssets && x.AccountType.ToString() == investmentType.ToString()))
+        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(
+            userId, start, end, includeEntryMetadata: false).Where(x => x.ContainsAssets && x.AccountType.ToString() == investmentType.ToString()))
             assets.AddRange(account.Entries.GetAssets(start, end));
 
         List<TimeSeriesModel> result = [];
@@ -73,8 +75,6 @@ internal class AssetsServiceCurrency(IFinancialAccountRepository financialAccoun
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
     {
-        financialAccountRepository.GetAccounts<CurrencyAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Select(x => x.AccountType).Distinct();
-
         Dictionary<AccountLabel, NameValueResult> accountLabelResults = [];
 
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Where(x => x.ContainsAssets))

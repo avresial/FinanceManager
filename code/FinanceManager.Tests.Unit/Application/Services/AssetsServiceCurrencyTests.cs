@@ -25,7 +25,7 @@ public class AssetsServiceCurrencyTests
         var account = new CurrencyAccount(1, 1, "acct-a", AccountLabel.Cash);
         account.Add(new CurrencyAccountEntry(1, 1, _end, 10, 0), false);
 
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
         .Returns(new[] { account }.ToAsyncEnumerable());
 
         // act
@@ -42,7 +42,7 @@ public class AssetsServiceCurrencyTests
         var account = new CurrencyAccount(1, 1, "currency-a", AccountLabel.Cash);
         account.Add(new CurrencyAccountEntry(1, 1, _end, 15, 0), false);
 
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
         .Returns(new[] { account }.ToAsyncEnumerable());
 
         // act
@@ -64,7 +64,7 @@ public class AssetsServiceCurrencyTests
         var account2 = new CurrencyAccount(1, 2, "currency-b", AccountLabel.Cash);
         account2.Add(new CurrencyAccountEntry(1, 1, _end, 5, 0), false);
 
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
         .Returns(new[] { account1, account2 }.ToAsyncEnumerable());
 
         // act
@@ -84,7 +84,7 @@ public class AssetsServiceCurrencyTests
         account.Add(new CurrencyAccountEntry(1, 1, _start, 10, 0), false);
         account.Add(new CurrencyAccountEntry(1, 2, _end, 0, 20));
 
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
         .Returns(new[] { account }.ToAsyncEnumerable());
 
         // act
