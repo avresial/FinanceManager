@@ -241,6 +241,18 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             .ToListAsync();
     }
 
+    public async Task<List<CurrencyAccountEntry>> GetValueRange(IReadOnlyCollection<int> accountIds, DateTime startDate, DateTime endDate)
+    {
+        if (accountIds.Count == 0) return [];
+
+        return await context.CurrencyEntries
+            .AsNoTracking()
+            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate >= startDate && x.PostingDate <= endDate)
+            .OrderByDescending(x => x.PostingDate)
+            .ThenByDescending(x => x.EntryId)
+            .ToListAsync();
+    }
+
     public async Task<Dictionary<int, CurrencyAccountEntry>> GetNextOlder(IReadOnlyCollection<int> accountIds, DateTime date)
     {
         if (accountIds.Count == 0) return [];

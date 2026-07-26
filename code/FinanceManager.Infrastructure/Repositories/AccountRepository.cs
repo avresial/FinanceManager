@@ -13,7 +13,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     IAccountEntryRepository<CurrencyAccountEntry> currencyEntryRepository, IBondAccountEntryRepository<BondAccountEntry> bondEntryRepository
      ) : IFinancialAccountRepository
 {
-    private readonly Dictionary<(Type Type, int UserId, DateTime Start, DateTime End), IReadOnlyList<BasicAccountInformation>> _readCache = [];
+    private readonly Dictionary<(Type Type, int UserId, DateTime Start, DateTime End, bool IncludeEntryMetadata), IReadOnlyList<BasicAccountInformation>> _readCache = [];
 
     public async Task<Dictionary<int, Type>> GetAvailableAccounts(int userId)
     {
@@ -93,9 +93,9 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
         throw new NotSupportedException($"Account type {typeof(T)} is not supported.");
     }
     public Task<T?> GetAccount<T>(int userId, int id) where T : BasicAccountInformation => GetAccount<T>(userId, id, DateTime.UtcNow, DateTime.UtcNow);
-    public async IAsyncEnumerable<T> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
+    public async IAsyncEnumerable<T> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd, bool includeEntryMetadata = true) where T : BasicAccountInformation
     {
-        var cacheKey = (typeof(T), userId, dateStart, dateEnd);
+        var cacheKey = (typeof(T), userId, dateStart, dateEnd, includeEntryMetadata);
         if (_readCache.TryGetValue(cacheKey, out var cachedAccounts))
         {
             foreach (var account in cachedAccounts)
@@ -107,7 +107,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
         switch (typeof(T))
         {
             case Type t when t == typeof(CurrencyAccount):
-                accounts = (await GetCurrencyAccounts(userId, dateStart, dateEnd))
+                accounts = (await GetCurrencyAccounts(userId, dateStart, dateEnd, includeEntryMetadata))
                     .Select(account => (T)(BasicAccountInformation)account)
                     .ToList();
                 break;
@@ -119,7 +119,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
                 break;
 
             case Type t when t == typeof(BondAccount):
-                accounts = (await GetBondAccounts(userId, dateStart, dateEnd))
+                accounts = (await GetBondAccounts(userId, dateStart, dateEnd, includeEntryMetadata))
                     .Select(account => (T)(BasicAccountInformation)account)
                     .ToList();
                 break;
@@ -137,13 +137,16 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     // The methods below load a whole user's accounts of one type in a constant number of queries
     // (accounts, in-range entries, next-older boundary, next-younger boundary) instead of the ~5 queries
     // per account that GetAccount issues. This collapses the dashboard N+1 described in issue #411.
-    private async Task<List<CurrencyAccount>> GetCurrencyAccounts(int userId, DateTime dateStart, DateTime dateEnd)
+    private async Task<List<CurrencyAccount>> GetCurrencyAccounts(int userId, DateTime dateStart, DateTime dateEnd, bool includeEntryMetadata)
     {
         var accounts = await currencyAccountRepository.GetAll(userId);
         if (accounts.Count == 0) return [];
 
         var accountIds = accounts.Select(a => a.AccountId).ToList();
-        var entriesByAccount = (await currencyEntryRepository.GetRange(accountIds, dateStart, dateEnd))
+        var rangeEntries = includeEntryMetadata
+            ? await currencyEntryRepository.GetRange(accountIds, dateStart, dateEnd)
+            : await currencyEntryRepository.GetValueRange(accountIds, dateStart, dateEnd);
+        var entriesByAccount = rangeEntries
             .GroupBy(e => e.AccountId)
             .ToDictionary(g => g.Key, g => g.ToList());
         var nextOlder = await currencyEntryRepository.GetNextOlder(accountIds, dateStart);
@@ -165,13 +168,16 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
         return result;
     }
 
-    private async Task<List<BondAccount>> GetBondAccounts(int userId, DateTime dateStart, DateTime dateEnd)
+    private async Task<List<BondAccount>> GetBondAccounts(int userId, DateTime dateStart, DateTime dateEnd, bool includeEntryMetadata)
     {
         var accounts = await bondAccountRepository.GetAll(userId);
         if (accounts.Count == 0) return [];
 
         var accountIds = accounts.Select(a => a.AccountId).ToList();
-        var entriesByAccount = (await bondEntryRepository.GetRange(accountIds, dateStart, dateEnd))
+        var rangeEntries = includeEntryMetadata
+            ? await bondEntryRepository.GetRange(accountIds, dateStart, dateEnd)
+            : await bondEntryRepository.GetValueRange(accountIds, dateStart, dateEnd);
+        var entriesByAccount = rangeEntries
             .GroupBy(e => e.AccountId)
             .ToDictionary(g => g.Key, g => g.ToList());
         var nextOlder = await bondEntryRepository.GetNextOlderPerInstrument(accountIds, dateStart);

@@ -32,7 +32,7 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
     }
     public async IAsyncEnumerable<NameValueResult> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end)
     {
-        await foreach (CurrencyAccount account in financialAccountService.GetAccounts<CurrencyAccount>(userId, start, end))
+        await foreach (CurrencyAccount account in financialAccountService.GetAccounts<CurrencyAccount>(userId, end, end))
         {
             if (account is null || account.Entries is null) continue;
             var entry = account.Entries.FirstOrDefault();
@@ -55,7 +55,7 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
     }
     public async IAsyncEnumerable<NameValueResult> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
     {
-        await foreach (var accounts in financialAccountService.GetAccounts<CurrencyAccount>(userId, start, end).GroupBy(x => x.AccountType))
+        await foreach (var accounts in financialAccountService.GetAccounts<CurrencyAccount>(userId, end, end).GroupBy(x => x.AccountType))
         {
             NameValueResult? result = null;
             foreach (var account in accounts)
@@ -97,7 +97,8 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
         Dictionary<DateTime, decimal> prices = [];
         TimeSpan step = new(1, 0, 0, 0);
 
-        await foreach (var account in financialAccountService.GetAccounts<CurrencyAccount>(userId, start, end))
+        await foreach (var account in financialAccountService.GetAccounts<CurrencyAccount>(
+            userId, start, end, includeEntryMetadata: false))
         {
             if (account is null || account.Entries is null) continue;
 
@@ -109,7 +110,6 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
                 previousValue = account.NextOlderEntry.Value;
 
             if (previousValue > 0) continue;
-
 
             for (var date = start; date <= end; date = date.Add(step))
             {

@@ -141,6 +141,35 @@ public class CachedAccountEntryRepository<T>(
         return results;
     }
 
+    public async Task<List<T>> GetValueRange(IReadOnlyCollection<int> accountIds, DateTime startDate, DateTime endDate)
+    {
+        if (accountIds.Count == 0) return [];
+
+        var orderedIds = accountIds.Order().ToList();
+        if (await userResolver.GetUserId(orderedIds[0]) is not int userId)
+            return await inner.GetValueRange(orderedIds, startDate, endDate);
+
+        var bucketStart = new DateTime(startDate.Year, startDate.Month, 1, 0, 0, 0, startDate.Kind);
+        var bucketEnd = MonthBucket.MonthEndInclusive(new DateTime(endDate.Year, endDate.Month, 1, 0, 0, 0, endDate.Kind));
+        var cacheKey = $"{Tag(userId)}:{typeof(T).Name}:values:{string.Join('-', orderedIds)}:{bucketStart:yyyyMM}:{bucketEnd:yyyyMM}";
+        var options = new HybridCacheEntryOptions
+        {
+            Expiration = bucketEnd >= DateTime.UtcNow
+                ? rangeOptions.OpenMonthTtl
+                : rangeOptions.ElapsedMonthTtl
+        };
+
+        var entries = await cache.GetOrCreateAsync(
+            cacheKey,
+            _ => new ValueTask<List<T>>(inner.GetValueRange(orderedIds, bucketStart, bucketEnd)),
+            options,
+            tags: [Tag(userId)]);
+
+        return entries!
+            .Where(entry => entry.PostingDate >= startDate && entry.PostingDate <= endDate)
+            .ToList();
+    }
+
     // ----- Pass-through reads (relative / single-entry; not range reads) -----
 
     public Task<List<T>> Get(int accountId, DateTime date, int count, bool olderThenDate = true) => inner.Get(accountId, date, count, olderThenDate);

@@ -223,6 +223,18 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             .ToListAsync();
     }
 
+    public async Task<List<BondAccountEntry>> GetValueRange(IReadOnlyCollection<int> accountIds, DateTime startDate, DateTime endDate)
+    {
+        if (accountIds.Count == 0) return [];
+
+        return await context.BondEntries
+            .AsNoTracking()
+            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate >= startDate && x.PostingDate <= endDate)
+            .OrderByDescending(x => x.PostingDate)
+            .ThenByDescending(x => x.EntryId)
+            .ToListAsync();
+    }
+
     public async Task<Dictionary<int, BondAccountEntry>> GetNextOlder(IReadOnlyCollection<int> accountIds, DateTime date)
     {
         if (accountIds.Count == 0) return [];

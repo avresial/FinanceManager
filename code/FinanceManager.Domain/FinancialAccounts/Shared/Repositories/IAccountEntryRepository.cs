@@ -38,6 +38,12 @@ public interface IAccountEntryRepository<T>
     Task<List<T>> GetRange(IReadOnlyCollection<int> accountIds, DateTime startDate, DateTime endDate);
 
     /// <summary>
+    /// Returns the same value history without loading labels or using cache buckets. Intended for
+    /// calculations that only need entry dates and amounts.
+    /// </summary>
+    Task<List<T>> GetValueRange(IReadOnlyCollection<int> accountIds, DateTime startDate, DateTime endDate);
+
+    /// <summary>
     /// Returns, per account, the single newest entry strictly older than <paramref name="date"/> in one
     /// query. Instrument-aware repositories (stock/bond) expose a per-instrument variant of their own.
     /// </summary>

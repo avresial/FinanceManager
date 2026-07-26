@@ -373,6 +373,33 @@ public class CachedAccountEntryRepositoryRangeTests
     }
 
     [Fact]
+    public async Task GetValueRange_OverlappingRequests_ShareOneMetadataFreeQuery()
+    {
+        var jan5 = _jan.AddDays(4);
+        var jan10 = _jan.AddDays(9);
+        var jan20 = _jan.AddDays(19);
+        var jan25 = _jan.AddDays(24);
+        var janEnd = MonthBucket.MonthEndInclusive(_jan);
+
+        var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        inner.Setup(r => r.GetValueRange(
+                It.Is<IReadOnlyCollection<int>>(ids => ids.SequenceEqual(new[] { _accountId })),
+                _jan,
+                janEnd))
+            .ReturnsAsync([Entry(2, jan20), Entry(1, jan10)]);
+
+        var sut = CreateSut(inner.Object, BuildCache());
+
+        var first = await sut.GetValueRange([_accountId], jan10, jan20);
+        var second = await sut.GetValueRange([_accountId], jan5, jan25);
+
+        Assert.Equal(2, first.Count);
+        Assert.Equal(2, second.Count);
+        inner.Verify(r => r.GetValueRange(
+            It.IsAny<IReadOnlyCollection<int>>(), _jan, janEnd), Times.Once);
+    }
+
+    [Fact]
     public async Task GetEntriesWithMinimumCount_UsesCachedPostingDatesAndBucketedGet()
     {
         var jan5 = _jan.AddDays(4);
