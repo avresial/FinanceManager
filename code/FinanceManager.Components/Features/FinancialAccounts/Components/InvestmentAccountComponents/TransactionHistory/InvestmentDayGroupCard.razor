@@ -1,0 +1,87 @@
+@namespace FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents.TransactionHistory
+@using FinanceManager.Domain.FinancialAccounts.Investments.Dtos
+@using FinanceManager.Domain.FinancialAccounts.Investments.Entities
+@using System.Collections.Generic
+
+<MudCard Outlined="true" Class="mb-3" Style="background-color: transparent;">
+    <MudCardHeader Class="py-1 px-4">
+        <CardHeaderContent>
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Baseline">
+                    <MudText Typo="Typo.subtitle2">@DayDateTime.ToString("dd MMM")</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">@DayDateTime.ToString("dddd")</MudText>
+                </MudStack>
+                <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Baseline">
+                    <MudText Typo="Typo.caption" Color="Color.Default">@TransactionList.Count @(TransactionList.Count == 1 ? "trade" : "trades")</MudText>
+                    @if (IsSingleCurrency)
+                    {
+                        <MudText Typo="Typo.caption" Class="fm-tabular"
+                                 Color="@(DailyNet >= 0 ? Color.Success : Color.Error)">
+                            @(DailyNet >= 0 ? "+" : "")@DailyNet.ToString("N2") @DayCurrency
+                        </MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Default">Mixed currencies</MudText>
+                    }
+                </MudStack>
+            </MudStack>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent Class="pa-0">
+        <MudStack Spacing="0">
+            @foreach (var transaction in TransactionList)
+            {
+                <InvestmentTransactionRow @key="transaction.Id" Transaction="transaction" IsMobile="@IsMobile"
+                                          Valuation="@GetValuation(transaction.Id)" OnEdit="OnEdit" OnDelete="OnDelete" />
+                <MudDivider />
+            }
+        </MudStack>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public DateOnly Day { get; set; }
+    [Parameter] public required IEnumerable<InvestmentTransactionDto> Transactions { get; set; }
+    [Parameter] public required string Currency { get; set; }
+    [Parameter] public bool IsMobile { get; set; }
+
+    /// <summary>Per-transaction valuation figures keyed by transaction id; null/absent entries render without them.</summary>
+    [Parameter] public IReadOnlyDictionary<long, InvestmentTransactionValuationDto>? Valuations { get; set; }
+    [Parameter] public EventCallback<InvestmentTransactionDto> OnEdit { get; set; }
+    [Parameter] public EventCallback<InvestmentTransactionDto> OnDelete { get; set; }
+
+    private List<InvestmentTransactionDto> TransactionList => Transactions as List<InvestmentTransactionDto> ?? Transactions.ToList();
+
+    private InvestmentTransactionValuationDto? GetValuation(long transactionId) =>
+        Valuations is not null && Valuations.TryGetValue(transactionId, out var valuation) ? valuation : null;
+
+    private DateTime DayDateTime => Day.ToDateTime(TimeOnly.MinValue);
+
+    // A day-level net only makes sense when every trade settles in the same currency; otherwise the sum
+    // would mix units. When mixed, the header suppresses the aggregate instead of showing a wrong total.
+    // Currency is taken from each row's displayed figure so the header always matches the sum of the rows.
+    private bool IsSingleCurrency => TransactionList.Select(DisplayCurrency).Distinct().Count() <= 1;
+
+    private string DayCurrency => TransactionList.Select(DisplayCurrency).FirstOrDefault() ?? Currency;
+
+    // The header aggregates whatever each row shows: unrealised gain/loss for priced purchases, cash
+    // impact for everything else. This keeps a single-trade day's header identical to its one row.
+    private decimal DailyNet => TransactionList.Sum(DisplayAmount);
+
+    private bool ShowGainLoss(InvestmentTransactionDto t) =>
+        t.Type == InvestmentTransactionType.Buy && GetValuation(t.Id) is { HasCurrentPrice: true };
+
+    private decimal DisplayAmount(InvestmentTransactionDto t) =>
+        ShowGainLoss(t) ? GetValuation(t.Id)!.GainLoss : CashImpact(t);
+
+    private string DisplayCurrency(InvestmentTransactionDto t) =>
+        ShowGainLoss(t) ? GetValuation(t.Id)!.Currency : t.Currency;
+
+    private static decimal CashImpact(InvestmentTransactionDto t)
+    {
+        var gross = t.Quantity * t.UnitPrice;
+        var fee = t.Fee ?? 0m;
+        return t.Type == InvestmentTransactionType.Sell ? gross - fee : -(gross + fee);
+    }
+}

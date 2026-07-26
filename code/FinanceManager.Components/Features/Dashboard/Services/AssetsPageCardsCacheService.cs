@@ -1,0 +1,73 @@
+using Blazored.LocalStorage;
+using FinanceManager.Components.Features.Dashboard.Models;
+using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Shared.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
+
+namespace FinanceManager.Components.Features.Dashboard.Services;
+
+public class AssetsPageCardsCacheService(
+    ILocalStorageService localStorageService,
+    IMemoryCache memoryCache,
+    AssetsHttpClient assetsHttpClient,
+    ILogger<AssetsPageCardsCacheService> logger)
+    : LocalStorageStateCacheService<AssetsPageCardsCacheSnapshot, AssetsPageCardsRefreshContext, string>(
+        localStorageService,
+        memoryCache,
+        logger,
+        _cacheKeyPrefix)
+{
+    private const string _cacheKeyPrefix = "assets-page-cards-cache-v1";
+    private static readonly TimeSpan _maxStale = TimeSpan.FromMinutes(5);
+
+    public Task<AssetsPageCardsCacheSnapshot> GetSnapshotAsync(AssetsPageCardsRefreshContext context)
+        => GetOrRefreshAsync(context);
+
+    protected override string GetCacheKey(AssetsPageCardsRefreshContext refreshContext)
+        => BuildCacheKey(refreshContext.UserId, refreshContext.CurrencyId, refreshContext.StartDateTime, refreshContext.EndDateTime);
+
+    protected override async Task<AssetsPageCardsCacheSnapshot> BuildStateAsync(AssetsPageCardsRefreshContext refreshContext)
+    {
+        var startDate = refreshContext.StartDateTime.Date;
+        var endDate = refreshContext.EndDateTime;
+
+        // Only the id crosses the wire, so the requested currency can be rebuilt from the context.
+        var currency = new Currency { Id = refreshContext.CurrencyId };
+        var assetsTimeSeriesTask = assetsHttpClient.GetAssetsTimeSeries(refreshContext.UserId, currency, startDate, endDate);
+        var assetsPerTypeTask = assetsHttpClient.GetEndAssetsPerType(refreshContext.UserId, currency, endDate);
+        var assetsPerAccountTask = assetsHttpClient.GetEndAssetsPerAccount(refreshContext.UserId, currency, endDate);
+        await Task.WhenAll(assetsTimeSeriesTask, assetsPerTypeTask, assetsPerAccountTask);
+
+        return new AssetsPageCardsCacheSnapshot
+        {
+            SchemaVersion = AssetsPageCardsCacheSnapshot.CurrentSchemaVersion,
+            UserId = refreshContext.UserId,
+            CurrencyId = refreshContext.CurrencyId,
+            StartDateTime = startDate,
+            EndDateTime = endDate,
+            FetchedAtUtc = DateTime.UtcNow,
+            AssetsTimeSeries = [.. (await assetsTimeSeriesTask)],
+            EndAssetsPerType = [.. (await assetsPerTypeTask)],
+            EndAssetsPerAccount = [.. (await assetsPerAccountTask)],
+        };
+    }
+
+    protected override bool IsUsable(AssetsPageCardsCacheSnapshot? state, string cacheKey, DateTime utcNow)
+    {
+        if (state is null)
+            return false;
+
+        if (state.SchemaVersion != AssetsPageCardsCacheSnapshot.CurrentSchemaVersion)
+            return false;
+
+        if (utcNow - state.FetchedAtUtc > _maxStale)
+            return false;
+
+        return BuildCacheKey(state.UserId, state.CurrencyId, state.StartDateTime, state.EndDateTime) == cacheKey;
+    }
+
+    private static string BuildCacheKey(int userId, int currencyId, DateTime startDateTime, DateTime endDateTime)
+        => $"{userId}:{currencyId}:{startDateTime.Date:O}:{endDateTime:O}";
+}

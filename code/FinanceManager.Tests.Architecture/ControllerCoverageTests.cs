@@ -1,4 +1,4 @@
-using FinanceManager.Api.Controllers;
+using FinanceManager.Api.Features.MoneyFlow.Controllers;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceManager.Tests.Architecture;
@@ -18,9 +18,9 @@ public class ControllerCoverageTests
             .Order(StringComparer.Ordinal)
             .ToArray();
 
-        var integrationTestsPath = GetRepositoryPath("code", "FinanceManager.Tests.Integration", "Controllers");
+        var integrationTestsPath = GetRepositoryPath("code", "FinanceManager.Tests.Integration", "Features");
         var testedControllerNames = Directory
-            .EnumerateFiles(integrationTestsPath, "*ControllerTests.cs", SearchOption.TopDirectoryOnly)
+            .EnumerateFiles(integrationTestsPath, "*ControllerTests.cs", SearchOption.AllDirectories)
             .Select(Path.GetFileNameWithoutExtension)
             .Where(name => name is not null)
             .Select(name => name![..^"Tests".Length])

@@ -1,12 +1,14 @@
 using FinanceManager.Api;
-using FinanceManager.Api.Logging;
-using FinanceManager.Api.Mcp;
-using FinanceManager.Api.Middleware;
+using FinanceManager.Api.Features.Administration.Hubs;
+using FinanceManager.Api.Features.Administration.Logging;
+using FinanceManager.Api.Features.FinancialAccounts.Currencies.Hubs;
+using FinanceManager.Api.Features.Labels.Hubs;
+using FinanceManager.Api.Features.Mcp;
+using FinanceManager.Api.Shared.Middleware;
 using FinanceManager.Application;
 using FinanceManager.Application.Shared.Diagnostics;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Infrastructure;
-using FinanceManager.Infrastructure.OAuth;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Options;
 using OpenTelemetry.Metrics;
@@ -25,7 +27,7 @@ builder.Services.AddOpenTelemetry()
 
 builder.Services
     .AddProblemDetails()
-    .AddExceptionHandler<FinanceManager.Api.Middleware.GlobalExceptionHandler>()
+    .AddExceptionHandler<GlobalExceptionHandler>()
     .AddSingleton(typeof(IOptionsSnapshot<>), typeof(OptionsManager<>))
     .AddSingleton(typeof(IOptionsFactory<>), typeof(OptionsFactory<>))
     .AddOpenApi("v1", options =>
@@ -127,9 +129,9 @@ app.MapDefaultEndpoints("Admin");
 
 app.MapControllers();
 app.MapMcpFeature(app.Configuration);
-app.MapHub<FinanceManager.Api.Hubs.CurrencyImportHub>("/hubs/currency-import");
-app.MapHub<FinanceManager.Api.Hubs.LabelSetterProgressHub>("/hubs/label-setter-progress");
-app.MapHub<FinanceManager.Api.Hubs.AdminLogsHub>("/hubs/admin-logs");
+app.MapHub<CurrencyImportHub>("/hubs/currency-import");
+app.MapHub<LabelSetterProgressHub>("/hubs/label-setter-progress");
+app.MapHub<AdminLogsHub>("/hubs/admin-logs");
 app.MapFallbackToFile("index.html");
 
 if (McpClientRevocationCommand.IsRequested(args))

@@ -2,7 +2,7 @@ using FinanceManager.Api;
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Benchmarks.Configuration;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
-using FinanceManager.Infrastructure.Contexts;
+using FinanceManager.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;

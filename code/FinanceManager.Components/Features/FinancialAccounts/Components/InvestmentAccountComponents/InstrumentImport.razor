@@ -1,0 +1,87 @@
+@using FinanceManager.Components.Features.Administration.HttpClients;
+@using FinanceManager.Components.Features.Dashboard.HttpClients;
+@using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+@using FinanceManager.Components.Features.Identity.HttpClients;
+@using FinanceManager.Components.Features.Insights.HttpClients;
+@using FinanceManager.Components.Features.Labels.HttpClients;
+@using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+@using FinanceManager.Domain.Assets.Discovery
+@using Microsoft.AspNetCore.Components
+
+<MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.CloudDownload" OnClick="@(() => _open = true)" aria-label="@ButtonText">@ButtonText</MudButton>
+
+<MudOverlay Visible="@_open" DarkBackground="true" ZIndex="1400">
+    <MudPaper Class="pa-5" Style="width: min(620px, 94vw);">
+        <MudText Typo="Typo.h6" Class="mb-3">Import instrument</MudText>
+        <MudAutocomplete T="InstrumentDiscoveryResultDto" Label="Ticker, name, or ISIN"
+                         Value="_selected" ValueChanged="SelectAsync" SearchFunc="SearchAsync"
+                         ToStringFunc="@(x => x is null ? string.Empty : $"{x.Ticker} · {x.ExchangeName ?? x.ExchangeMic} · {x.TradingCurrency} — {x.DisplayName}")"
+                         MinCharacters="2" DebounceInterval="400" Dense="true" />
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mt-3">@_error</MudAlert>
+        }
+        @if (_preview is not null)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3">
+                Asset: @(_preview.AssetAlreadyExists ? "reuse" : "create") · Listing: @(_preview.ListingAlreadyExists ? "reuse" : "create") · Symbol: @(_preview.MarketDataSymbolAlreadyExists ? "reuse" : "create")
+            </MudAlert>
+            @foreach (var warning in _preview.Warnings)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">@warning</MudAlert>
+            }
+        }
+        <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2" Class="mt-4">
+            <MudButton Variant="Variant.Text" OnClick="Close" Disabled="@_busy">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ImportAsync" Disabled="@(_busy || _preview?.CanImport != true)">Import</MudButton>
+        </MudStack>
+    </MudPaper>
+</MudOverlay>
+
+@code {
+    [Inject] public required InvestmentInstrumentDiscoveryHttpClient Client { get; set; }
+    [Parameter] public string ButtonText { get; set; } = "Import instrument";
+    [Parameter] public EventCallback<ImportedInstrumentDto> Imported { get; set; }
+
+    private bool _open;
+    private bool _busy;
+    private InstrumentDiscoveryResultDto? _selected;
+    private InstrumentImportPreviewDto? _preview;
+    private string? _error;
+
+    private async Task<IEnumerable<InstrumentDiscoveryResultDto>> SearchAsync(string value, CancellationToken ct) =>
+        string.IsNullOrWhiteSpace(value) ? [] : await Client.SearchAsync(value, ct);
+
+    private async Task SelectAsync(InstrumentDiscoveryResultDto? value)
+    {
+        _selected = value;
+        _error = null;
+        try { _preview = value is null ? null : await Client.PreviewAsync(value); }
+        catch { _preview = null; _error = "Could not prepare the import preview."; }
+    }
+
+    private async Task ImportAsync()
+    {
+        if (_selected is null) return;
+        _busy = true;
+        try
+        {
+            var result = await Client.ImportAsync(_selected);
+            if (result is not null)
+            {
+                Close();
+                await Imported.InvokeAsync(result);
+            }
+        }
+        catch { _error = "Could not import the instrument."; }
+        finally { _busy = false; }
+    }
+
+    private void Close()
+    {
+        _open = false;
+        _selected = null;
+        _preview = null;
+        _error = null;
+    }
+}

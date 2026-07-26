@@ -1,0 +1,30 @@
+@page "/Assets"
+@using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets
+
+<PageTitle>Assets</PageTitle>
+<MudContainer Class="py-2">
+    <MudGrid Spacing="2">
+        <MudItem xs="12">
+            <AssetsTimeSeriesCard StartDateTime=StartDate EndDateTime="@EndDate" />
+        </MudItem>
+
+        <MudItem xs="12" lg="4">
+            <AssetsDistributionOverviewCard StartDateTime=StartDate EndDateTime="@EndDate"
+                                            Height="@($"{2 * _unitHeight}px")" />
+        </MudItem>
+
+        <MudItem xs="12" lg="4">
+            <InvestmentPaycheckEstimatorCard Height="@($"{2 * _unitHeight}px")" />
+        </MudItem>
+
+        <MudItem xs="12" lg="4">
+            <InvestmentRateCard Height="@($"{2 * _unitHeight}px")" />
+        </MudItem>
+
+        <MudItem xs="12" lg="4">
+            <DiversificationProxyCard Height="@($"{2 * _unitHeight}px")" />
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<DashboardDatePicker DateChanged=DateChanged StartingOption="ThisMonth" />
