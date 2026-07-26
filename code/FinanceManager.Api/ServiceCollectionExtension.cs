@@ -1,4 +1,4 @@
-using FinanceManager.Api.HealthChecks;
+using FinanceManager.Api.Shared.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace FinanceManager.Api;

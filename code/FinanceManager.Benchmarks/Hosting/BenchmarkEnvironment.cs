@@ -1,4 +1,4 @@
-using FinanceManager.Api.Services;
+using FinanceManager.Api.Features.Identity.Services;
 using FinanceManager.Application.Identity.Seeders;
 using FinanceManager.Benchmarks.Configuration;
 using FinanceManager.Domain.Dashboard.Services;
