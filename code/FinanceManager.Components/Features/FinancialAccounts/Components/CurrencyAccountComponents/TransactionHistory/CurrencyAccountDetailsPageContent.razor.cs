@@ -424,17 +424,28 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
 
         var snapshotPainted = false;
 
+        // The fresh account is applied as served. Only its rendered content goes through the
+        // snapshot model, so state the snapshot cannot carry — NextOlderEntry/NextYoungerEntry,
+        // which decide whether the page shows history at all — survives the refresh.
+        CurrencyAccount? freshAccount = null;
+
         var result = await SnapshotStore.RefreshAsync<CurrencyAccountEntry>(
             _user.UserId,
             AccountId,
             _entriesGate,
-            fetchAsync: () => FetchInitialAccountModel(snapshotPainted),
+            fetchAsync: async () =>
+            {
+                freshAccount = await FetchInitialAccount(snapshotPainted);
+                return freshAccount is null || _user is null
+                    ? null
+                    : new AccountDetailsModel<CurrencyAccountEntry>(_user.UserId, AccountId, freshAccount.Name, freshAccount.AccountType, freshAccount.Entries);
+            },
             onSnapshotPainted: model =>
             {
                 snapshotPainted = true;
-                return ApplyAccountModel(model, expandRange: false);
+                return ApplyAccount(BuildAccount(model), expandRange: false);
             },
-            onRefreshed: model => ApplyAccountModel(model, expandRange: true));
+            onRefreshed: model => ApplyAccount(freshAccount ?? BuildAccount(model), expandRange: true));
 
         // A failed refresh behind a painted snapshot keeps the stale entries on screen instead of
         // replacing them with an error the user cannot act on.
@@ -442,7 +453,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
             ErrorMessage = error.Message;
     }
 
-    private async Task<AccountDetailsModel<CurrencyAccountEntry>?> FetchInitialAccountModel(bool snapshotPainted)
+    private async Task<CurrencyAccount?> FetchInitialAccount(bool snapshotPainted)
     {
         var loadTask = FetchAccount(initialLoad: true);
 
@@ -457,15 +468,16 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
             }
         }
 
-        var account = await loadTask;
-        if (account is null || _user is null) return null;
-
-        return new AccountDetailsModel<CurrencyAccountEntry>(_user.UserId, AccountId, account.Name, account.AccountType, account.Entries);
+        return await loadTask;
     }
 
-    private async Task ApplyAccountModel(AccountDetailsModel<CurrencyAccountEntry> model, bool expandRange)
+    // Rebuilds an account from a snapshot, which stores rendered entries only.
+    private static CurrencyAccount BuildAccount(AccountDetailsModel<CurrencyAccountEntry> model) =>
+        new(model.UserId, model.AccountId, model.Name, model.Entries, model.AccountType);
+
+    private async Task ApplyAccount(CurrencyAccount account, bool expandRange)
     {
-        Account = new CurrencyAccount(model.UserId, model.AccountId, model.Name, model.Entries, model.AccountType);
+        Account = account;
 
         // Only a fresh response may widen the selected range: it is the one that knows how far
         // back the account's entries actually reach.

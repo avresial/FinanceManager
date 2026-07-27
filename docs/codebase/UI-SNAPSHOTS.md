@@ -75,6 +75,22 @@ identically. Keep the model free of fields that move on every fetch — a reques
 server-generated id — or the surface repaints and rewrites storage every time. When such a field
 cannot be avoided, pass a custom `IEqualityComparer<TModel>` as `ContentComparer`.
 
+### Empty results vs. no result
+
+`FetchAsync` returning `null` means *no usable response came back*. It is treated as a soft failure:
+a painted snapshot stays on screen and storage is left alone. A surface that legitimately has **no
+data** must return an *empty model* instead — an empty model compares unequal to a populated
+snapshot, so it clears the UI and replaces the stored snapshot, which is what "the account now has
+zero entries" should do. Returning `null` for that case would silently keep stale content visible.
+
+### Preserving state the snapshot cannot carry
+
+A snapshot stores rendered content only. When the API response carries more than that — pagination
+cursors, neighbouring-entry markers such as `NextOlderEntry` — apply the *fetched object itself* on
+refresh and use the model purely for equality and persistence. Rebuilding the response from the
+model would silently drop those fields; the account-details pages keep the fetched account in a
+local and hand it to their apply step for exactly this reason.
+
 ### Component structure
 
 Data fetching and snapshot reconciliation belong in the page coordinator or a container component,

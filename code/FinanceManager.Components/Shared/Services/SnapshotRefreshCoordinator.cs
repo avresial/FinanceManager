@@ -8,6 +8,10 @@ namespace FinanceManager.Components.Shared.Services;
 /// its own — race protection lives in the <see cref="RefreshVersionGate"/> the caller owns — so a
 /// single instance can serve every surface.
 /// </summary>
+/// <remarks>
+/// Diagnostics name the snapshot <em>type</em>, never the key: keys embed the owning user and
+/// account ids, which must not reach logs.
+/// </remarks>
 public sealed class SnapshotRefreshCoordinator(
     ISnapshotService snapshots,
     ILogger<SnapshotRefreshCoordinator> logger) : ISnapshotRefreshCoordinator
@@ -19,7 +23,8 @@ public sealed class SnapshotRefreshCoordinator(
         var version = request.ClaimedVersion ?? request.Gate?.Claim() ?? 0;
         bool IsCurrent() => request.Gate is null || request.Gate.IsCurrent(version);
 
-        var snapshot = await ReadSnapshotAsync(request.Key, typeof(TSnapshot).Name, () => snapshots.GetAsync<TSnapshot>(request.Key));
+        var snapshotTypeName = typeof(TSnapshot).Name;
+        var snapshot = await ReadSnapshotAsync(request.Key, snapshotTypeName, () => snapshots.GetAsync<TSnapshot>(request.Key));
 
         if (!IsCurrent())
             return new SnapshotRefreshResult<TModel>(SnapshotRefreshOutcome.Superseded, null, false);
@@ -44,7 +49,9 @@ public sealed class SnapshotRefreshCoordinator(
         catch (Exception ex)
         {
             // A painted snapshot stays on screen; only a surface with nothing to show reports a blocking failure.
-            logger.LogError(ex, "Fresh load for snapshot {SnapshotKey} failed.", request.Key);
+            // Request timeouts surface here as TaskCanceledException and must keep that treatment, so
+            // cancellation is deliberately not singled out.
+            logger.LogError(ex, "Fresh load for {SnapshotType} failed.", snapshotTypeName);
             return new SnapshotRefreshResult<TModel>(SnapshotRefreshOutcome.Failed, paintedModel, paintedModel is not null, ex);
         }
 
@@ -67,7 +74,7 @@ public sealed class SnapshotRefreshCoordinator(
 
         // Skip the write once a newer run has claimed the gate — that run owns the stored snapshot now.
         if (IsCurrent())
-            await WriteSnapshotAsync(request.Key, () => snapshots.SetAsync(request.Key, request.ToSnapshot(freshModel)));
+            await WriteSnapshotAsync(snapshotTypeName, () => snapshots.SetAsync(request.Key, request.ToSnapshot(freshModel)));
 
         return new SnapshotRefreshResult<TModel>(SnapshotRefreshOutcome.Refreshed, freshModel, paintedModel is not null);
     }
@@ -79,23 +86,30 @@ public sealed class SnapshotRefreshCoordinator(
         {
             return await read();
         }
+        catch (OperationCanceledException ex)
+        {
+            // A cancelled read says nothing about whether the stored snapshot is usable, so it must
+            // not trigger eviction. Fall through to a plain fetch and leave the entry alone.
+            logger.LogDebug(ex, "Reading {SnapshotType} snapshot was cancelled; continuing with fresh fetch.", snapshotTypeName);
+            return null;
+        }
         catch (Exception ex)
         {
             // An unreadable snapshot must never abort the load; drop it and fall through to a plain fetch.
-            logger.LogWarning(ex, "Failed to read {SnapshotType} snapshot {SnapshotKey}; continuing with fresh fetch.", snapshotTypeName, key);
+            logger.LogWarning(ex, "Failed to read {SnapshotType} snapshot; continuing with fresh fetch.", snapshotTypeName);
             try
             {
                 await snapshots.RemoveAsync(key);
             }
             catch (Exception removeEx)
             {
-                logger.LogWarning(removeEx, "Failed to evict unusable snapshot {SnapshotKey}.", key);
+                logger.LogWarning(removeEx, "Failed to evict unusable {SnapshotType} snapshot.", snapshotTypeName);
             }
             return null;
         }
     }
 
-    private async Task WriteSnapshotAsync(string key, Func<Task> write)
+    private async Task WriteSnapshotAsync(string snapshotTypeName, Func<Task> write)
     {
         try
         {
@@ -104,7 +118,7 @@ public sealed class SnapshotRefreshCoordinator(
         catch (Exception ex)
         {
             // Persistence is best-effort: the fresh data is already rendered either way.
-            logger.LogWarning(ex, "Fresh data rendered but saving snapshot {SnapshotKey} failed.", key);
+            logger.LogWarning(ex, "Fresh data rendered but saving {SnapshotType} snapshot failed.", snapshotTypeName);
         }
     }
 }

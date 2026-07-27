@@ -29,8 +29,14 @@ public sealed class SnapshotRefreshRequest<TSnapshot, TModel>
 
     /// <summary>
     /// Requests fresh data and maps it to the rendered model. Always invoked, snapshot or not.
-    /// Return <c>null</c> when the response holds nothing to render; throw to report a failure.
+    /// Throw to report a failure. Return <c>null</c> only when no usable response came back — that
+    /// is treated as a soft failure, leaving a painted snapshot on screen.
     /// </summary>
+    /// <remarks>
+    /// A surface that legitimately has <em>no data</em> must return an empty model rather than
+    /// <c>null</c>: an empty model compares unequal to a populated snapshot, so it clears the UI and
+    /// replaces the stored snapshot, whereas <c>null</c> deliberately changes nothing.
+    /// </remarks>
     public required Func<Task<TModel?>> FetchAsync { get; init; }
 
     /// <summary>Maps the fresh model back to the snapshot to persist.</summary>

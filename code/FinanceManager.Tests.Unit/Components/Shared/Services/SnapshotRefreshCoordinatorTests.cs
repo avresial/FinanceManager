@@ -262,6 +262,19 @@ public class SnapshotRefreshCoordinatorTests
     }
 
     [Fact]
+    public async Task RunAsync_CancelledSnapshotRead_DoesNotEvictSnapshot()
+    {
+        // Cancellation says nothing about whether the stored snapshot is usable, so it must survive.
+        _snapshots.Setup(x => x.GetAsync<TestSnapshot>(_key)).ThrowsAsync(new OperationCanceledException());
+
+        var result = await CreateCoordinator().RunAsync(Request(
+            fetchAsync: () => Task.FromResult<TestModel?>(new TestModel("fresh"))));
+
+        _snapshots.Verify(x => x.RemoveAsync(It.IsAny<string>()), Times.Never);
+        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+    }
+
+    [Fact]
     public async Task RunAsync_SnapshotWriteFails_KeepsFreshResult()
     {
         _snapshots.Setup(x => x.SetAsync(_key, It.IsAny<TestSnapshot>())).ThrowsAsync(new InvalidOperationException("storage full"));
