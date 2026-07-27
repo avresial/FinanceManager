@@ -42,6 +42,7 @@ rules agents must follow when updating this file.
 - Exchange rates are now stored in the application database: a conversion first checks the in-memory cache and the database (including inverse pairs), and only on a miss asks the external rate provider — whose answer is persisted so the same pair and date never leave the app twice. Unknown pairs additionally fall back to a cross-rate via USD.
 
 ### Fixed
+- Historical currency backfills now skip unavailable Fawaz API dates before March 2, 2024 without sending requests or flooding warnings, while allowing other configured providers to supply those rates. #617
 - Investment account **asset appreciation** no longer shows `+0.00` when a holding's purchase-date exchange rate is missing. The account details page now shows the **capital value** (remaining buy cost) and the **current valuation** side by side and derives the gain/loss as their difference; when a trade-date rate is unavailable the capital value falls back to the current rate for the same pair instead of dropping the holding from the totals. #600
 - Dashboard time-series charts now scale to the displayed values with padding, making smaller changes clearly visible. #574
 - CSV files can now be imported into cash and bond accounts without the upload failing while the browser reads the selected file, including exports encoded as Windows-1250. #571

@@ -17,37 +17,47 @@ internal sealed class CsvCurrencyExchangeProvider(
 {
     private static readonly ConcurrentDictionary<string, List<(DateTime Date, decimal Close)>> _csvCache = new();
 
-    public async Task<decimal?> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
+    public async Task<CurrencyExchangeRateProviderResult> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
     {
-        var csvDirectory = configuration["CurrencyExchangeRates:CsvDirectory"];
-        if (string.IsNullOrWhiteSpace(csvDirectory))
-            return null;
-
-        var direct = await TryLoadCsvAsync(csvDirectory, fromCurrency.ShortName, toCurrency.ShortName);
-        if (direct is not null)
+        try
         {
-            var entry = direct.FirstOrDefault(x => x.Date.Date <= date.Date);
-            if (entry != default) return entry.Close;
-        }
+            var csvDirectory = configuration["CurrencyExchangeRates:CsvDirectory"];
+            if (string.IsNullOrWhiteSpace(csvDirectory))
+                return new(CurrencyExchangeRateProviderStatus.NotFound);
 
-        var inverse = await TryLoadCsvAsync(csvDirectory, toCurrency.ShortName, fromCurrency.ShortName);
-        if (inverse is not null)
+            var direct = await TryLoadCsvAsync(csvDirectory, fromCurrency.ShortName, toCurrency.ShortName);
+            if (direct is not null)
+            {
+                var entry = direct.FirstOrDefault(x => x.Date.Date <= date.Date);
+                if (entry != default)
+                    return new(CurrencyExchangeRateProviderStatus.Success, entry.Close);
+            }
+
+            var inverse = await TryLoadCsvAsync(csvDirectory, toCurrency.ShortName, fromCurrency.ShortName);
+            if (inverse is not null)
+            {
+                var entry = inverse.FirstOrDefault(x => x.Date.Date <= date.Date);
+                if (entry != default && entry.Close != 0)
+                    return new(CurrencyExchangeRateProviderStatus.Success, 1m / entry.Close);
+            }
+
+            return new(CurrencyExchangeRateProviderStatus.NotFound);
+        }
+        catch (Exception ex)
         {
-            var entry = inverse.FirstOrDefault(x => x.Date.Date <= date.Date);
-            if (entry != default && entry.Close != 0) return 1m / entry.Close;
+            logger.LogError(ex, "Failed to load CSV exchange rate for {FromCurrency} to {ToCurrency} on {Date}", fromCurrency, toCurrency, date);
+            return new(CurrencyExchangeRateProviderStatus.Failed);
         }
-
-        return null;
     }
 
-    public async Task<List<(DateTime Date, decimal? Value)>> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
+    public async Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
     {
         var start = dateStart.Date;
         var end = dateEnd.Date;
         var totalDays = (end - start).Days + 1;
         if (totalDays <= 0) return [];
 
-        List<(DateTime Date, decimal? Value)> rates = [];
+        List<(DateTime Date, CurrencyExchangeRateProviderResult Result)> rates = [];
         for (var i = 0; i < totalDays; i++)
         {
             var date = start.AddDays(i);
@@ -67,17 +77,9 @@ internal sealed class CsvCurrencyExchangeProvider(
         if (_csvCache.TryGetValue(filePath, out var cached))
             return cached;
 
-        try
-        {
-            var rows = await LoadCsvRowsAsync(filePath);
-            _csvCache[filePath] = rows;
-            return rows;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to load CSV exchange rate file {FilePath}", filePath);
-            return null;
-        }
+        var rows = await LoadCsvRowsAsync(filePath);
+        _csvCache[filePath] = rows;
+        return rows;
     }
 
     private static async Task<List<(DateTime Date, decimal Close)>> LoadCsvRowsAsync(string filePath)

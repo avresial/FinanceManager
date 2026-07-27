@@ -105,16 +105,21 @@ internal class CurrencyExchangeService(
 
     public async Task<decimal?> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
     {
-        var rate = await ResolveDirectAsync(fromCurrency, toCurrency, date);
+        HashSet<ICurrencyExchangeRateProvider> outOfRangeProviders = [];
+        var rate = await ResolveDirectAsync(fromCurrency, toCurrency, date, outOfRangeProviders);
         if (rate is not null) return rate;
 
-        return await ResolveViaUsdAsync(fromCurrency, toCurrency, date);
+        return await ResolveViaUsdAsync(fromCurrency, toCurrency, date, outOfRangeProviders);
     }
 
     // Cheapest sources first: the application's own database, then the configured providers
     // (local CSV files, then external APIs). External hits are persisted so the same pair and
     // date never leave the app twice.
-    private async Task<decimal?> ResolveDirectAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
+    private async Task<decimal?> ResolveDirectAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date,
+        HashSet<ICurrencyExchangeRateProvider> outOfRangeProviders)
     {
         var stored = await exchangeRateRepository.Get(fromCurrency.ShortName, toCurrency.ShortName, date);
         if (stored is not null) return stored;
@@ -124,10 +129,19 @@ internal class CurrencyExchangeService(
 
         foreach (var provider in providers)
         {
-            var rate = await provider.GetExchangeRateAsync(fromCurrency, toCurrency, date);
-            if (rate is not null)
+            if (outOfRangeProviders.Contains(provider))
+                continue;
+
+            var result = await provider.GetExchangeRateAsync(fromCurrency, toCurrency, date);
+            if (result.Status == CurrencyExchangeRateProviderStatus.OutOfRange)
             {
-                await exchangeRateRepository.Add(fromCurrency.ShortName, toCurrency.ShortName, date, rate.Value);
+                outOfRangeProviders.Add(provider);
+                continue;
+            }
+
+            if (result is { Status: CurrencyExchangeRateProviderStatus.Success, Value: decimal rate })
+            {
+                await exchangeRateRepository.Add(fromCurrency.ShortName, toCurrency.ShortName, date, rate);
                 return rate;
             }
         }
@@ -137,15 +151,19 @@ internal class CurrencyExchangeService(
 
     // When no source knows the pair directly, cross through USD (from → USD → to) so values can
     // still be expressed in the requested currency.
-    private async Task<decimal?> ResolveViaUsdAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
+    private async Task<decimal?> ResolveViaUsdAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date,
+        HashSet<ICurrencyExchangeRateProvider> outOfRangeProviders)
     {
         var usd = DefaultCurrency.USD;
         if (IsUsd(fromCurrency) || IsUsd(toCurrency)) return null;
 
-        var fromToUsd = await ResolveDirectAsync(fromCurrency, usd, date);
+        var fromToUsd = await ResolveDirectAsync(fromCurrency, usd, date, outOfRangeProviders);
         if (fromToUsd is null) return null;
 
-        var usdToTarget = await ResolveDirectAsync(usd, toCurrency, date);
+        var usdToTarget = await ResolveDirectAsync(usd, toCurrency, date, outOfRangeProviders);
         if (usdToTarget is null) return null;
 
         return fromToUsd * usdToTarget;
