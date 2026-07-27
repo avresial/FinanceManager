@@ -48,6 +48,7 @@ Representative flow for stock prices:
 | Hosted background services + channel abstractions | `code\FinanceManager.Api\Program.cs` | Runs asynchronous insights, label setting, and import jobs outside request handlers |
 | Provider fallback strategy | `code\FinanceManager.Application\Providers\StockPriceProvider.cs`, `code\FinanceManager.Infrastructure\Services\Ai\ServiceCollectionExtension.cs`, `code\FinanceManager.Api\appsettings.json` | Falls back from cached/local data to external stock or AI providers |
 | Razor code-behind | `code\FinanceManager.Components\Components\AssetsPage.razor` + `.razor.cs`, `code\FinanceManager.Components\Components\FinancialAccounts\...` | Splits markup from complex component logic |
+| Stale-while-revalidate UI snapshots | `code\FinanceManager.Components\Shared\Services\SnapshotRefreshCoordinator.cs`, `docs\codebase\UI-SNAPSHOTS.md` | Paints a surface's last-rendered state instantly, then reconciles it against an always-issued fresh request — distinct from the time-based `LocalStorageStateCacheService` |
 
 ### 5) Known Architectural Risks
 

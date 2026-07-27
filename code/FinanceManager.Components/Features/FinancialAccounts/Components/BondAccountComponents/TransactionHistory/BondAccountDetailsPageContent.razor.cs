@@ -6,6 +6,7 @@ using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Helpers;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
@@ -25,6 +26,13 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     private bool _insightsDrawerOpen;
 
     private const int _initialMinimumEntriesCount = 100;
+
+    // How long the initial load may run before the blocking spinner replaces the empty page.
+    // Only applies when there is no snapshot to paint in the meantime.
+    private static readonly TimeSpan _spinnerDelay = TimeSpan.FromSeconds(2);
+
+    // Keeps a slower initial load from overwriting state a newer load already committed.
+    private readonly RefreshVersionGate _entriesGate = new();
 
     private string _selectedRange = "Month";
     private DateTime _dateStart;
@@ -174,23 +182,8 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
             }
 
             SetDateRangeForSelection();
-
-            // Paint the last-rendered entries instantly, then reconcile against a fresh fetch.
-            var previousSnapshot = await PaintSnapshotIfAvailable();
-
-            var loadTask = UpdateEntries(initialLoad: true);
-            if (previousSnapshot is null)
-            {
-                var delayTask = Task.Delay(2000);
-                if (await Task.WhenAny(loadTask, delayTask) == delayTask)
-                {
-                    IsLoading = true;
-                    StateHasChanged();
-                }
-            }
-            await loadTask;
+            await LoadInitialEntries();
             IsLoading = false;
-            await SaveSnapshotIfChanged(previousSnapshot);
 
             AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
         }
@@ -225,14 +218,8 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
         {
             if (_user is null) return;
 
-            if (_selectedRange != AccountDetailsHero.CustomRangeKey)
-                _dateEnd = DateTime.UtcNow;
-
             var selectedStart = _dateStart;
-            Account = initialLoad
-                ? await FinancialAccountService.GetInitialTransactionHistory<BondAccount>(_user.UserId, AccountId, _dateStart, _dateEnd,
-                    _initialMinimumEntriesCount)
-                : await FinancialAccountService.GetAccount<BondAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
+            Account = await FetchAccount(initialLoad);
 
             if (initialLoad)
                 ApplyAutomaticCustomRange(selectedStart);
@@ -245,6 +232,21 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
             ErrorMessage = ex.Message;
             Logger.LogError(ex, "Error while loading bond account details for account ID {AccountId}", AccountId);
         }
+    }
+
+    // Loads the account without touching rendered state, so a stale-while-revalidate run can decide
+    // whether the response is worth painting.
+    private async Task<BondAccount?> FetchAccount(bool initialLoad)
+    {
+        if (_user is null) return null;
+
+        if (_selectedRange != AccountDetailsHero.CustomRangeKey)
+            _dateEnd = DateTime.UtcNow;
+
+        return initialLoad
+            ? await FinancialAccountService.GetInitialTransactionHistory<BondAccount>(_user.UserId, AccountId, _dateStart, _dateEnd,
+                _initialMinimumEntriesCount)
+            : await FinancialAccountService.GetAccount<BondAccount>(_user.UserId, AccountId, _dateStart, _dateEnd);
     }
 
     private void QueueChartDataRefresh()
@@ -417,35 +419,65 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
         _customDateRange = new DateRange(_dateStart, _dateEnd);
     }
 
-    // Reads the persisted snapshot and paints its entries so the page feels instant on
-    // re-navigation. Chart data is not snapshotted; UpdateInfo queues a fresh API load.
-    private async Task<AccountDetailsSnapshot<BondAccountEntry>?> PaintSnapshotIfAvailable()
+    // Stale-while-revalidate: paint the last-rendered entries instantly, always re-fetch, and only
+    // repaint and re-persist when the entries actually changed. Chart data is never snapshotted —
+    // UpdateInfo queues a fresh API load for it. See docs/codebase/UI-SNAPSHOTS.md.
+    private async Task LoadInitialEntries()
     {
-        if (_user is null) return null;
+        if (_user is null) return;
 
-        var snapshot = await SnapshotStore.GetAsync<BondAccountEntry>(_user.UserId, AccountId);
-        if (snapshot is null) return null;
+        var snapshotPainted = false;
 
-        Account = new BondAccount(snapshot.UserId, snapshot.AccountId, snapshot.Name, snapshot.Entries, snapshot.AccountType);
+        var result = await SnapshotStore.RefreshAsync<BondAccountEntry>(
+            _user.UserId,
+            AccountId,
+            _entriesGate,
+            fetchAsync: () => FetchInitialAccountModel(snapshotPainted),
+            onSnapshotPainted: model =>
+            {
+                snapshotPainted = true;
+                return ApplyAccountModel(model, expandRange: false);
+            },
+            onRefreshed: model => ApplyAccountModel(model, expandRange: true));
+
+        // A failed refresh behind a painted snapshot keeps the stale entries on screen instead of
+        // replacing them with an error the user cannot act on.
+        if (result.IsBlockingFailure && result.Error is Exception error)
+            ErrorMessage = error.Message;
+    }
+
+    private async Task<AccountDetailsModel<BondAccountEntry>?> FetchInitialAccountModel(bool snapshotPainted)
+    {
+        var loadTask = FetchAccount(initialLoad: true);
+
+        // With nothing painted the page is blank, so show the spinner once the load looks slow.
+        if (!snapshotPainted)
+        {
+            var delayTask = Task.Delay(_spinnerDelay);
+            if (await Task.WhenAny(loadTask, delayTask) == delayTask)
+            {
+                IsLoading = true;
+                StateHasChanged();
+            }
+        }
+
+        var account = await loadTask;
+        if (account is null || _user is null) return null;
+
+        return new AccountDetailsModel<BondAccountEntry>(_user.UserId, AccountId, account.Name, account.AccountType, account.Entries);
+    }
+
+    private async Task ApplyAccountModel(AccountDetailsModel<BondAccountEntry> model, bool expandRange)
+    {
+        Account = new BondAccount(model.UserId, model.AccountId, model.Name, model.Entries, model.AccountType);
+
+        // Only a fresh response may widen the selected range: it is the one that knows how far
+        // back the account's entries actually reach.
+        if (expandRange)
+            ApplyAutomaticCustomRange(_dateStart);
+
         await UpdateInfo();
         IsLoading = false;
         StateHasChanged();
-        return snapshot;
-    }
-
-    // Persists the freshly loaded entries, skipping the write when they match the snapshot we already painted.
-    private async Task SaveSnapshotIfChanged(AccountDetailsSnapshot<BondAccountEntry>? previous)
-    {
-        if (_user is null || Account is null) return;
-
-        var snapshot = new AccountDetailsSnapshot<BondAccountEntry>
-        {
-            UserId = _user.UserId,
-            AccountId = AccountId,
-            Name = Account.Name,
-            AccountType = Account.AccountType,
-            Entries = Account.Entries,
-        };
-        await SnapshotStore.SaveIfChangedAsync(snapshot, previous);
     }
 }

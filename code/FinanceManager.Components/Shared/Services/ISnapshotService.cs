@@ -10,6 +10,8 @@ namespace FinanceManager.Components.Shared.Services;
 /// <remarks>
 /// Keys should be scoped to the owning user (e.g. include the user id) and must not
 /// encode a date/range, so a single snapshot per surface is overwritten on each save.
+/// This is raw storage — components should go through <see cref="ISnapshotRefreshCoordinator"/>,
+/// which owns the stale-while-revalidate workflow around it (docs/codebase/UI-SNAPSHOTS.md).
 /// </remarks>
 public interface ISnapshotService
 {

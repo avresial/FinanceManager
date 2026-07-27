@@ -67,6 +67,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<DashboardOverviewCardsCacheService>()
                 .AddScoped<DashboardCardVisibilityService>()
                 .AddScoped<ISnapshotService, LocalStorageSnapshotService>()
+                .AddScoped<ISnapshotRefreshCoordinator, SnapshotRefreshCoordinator>()
                 .AddScoped<AccountDetailsSnapshotStore>()
                 .AddTransient<CurrencyImportJobTracker>()
                 .AddScoped<AssetsPageCardsCacheService>()
