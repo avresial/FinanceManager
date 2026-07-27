@@ -10,8 +10,6 @@ using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace FinanceManager.Components.Features.Dashboard.Components;
 
@@ -32,7 +30,7 @@ public partial class Dashboard : ComponentBase
     // Guards against a slower, earlier reload overwriting a newer date selection:
     // every LoadOverview claims an incrementing version and only commits its result
     // if it is still the latest in-flight request.
-    private int _loadOverviewVersion;
+    private readonly RefreshVersionGate _overviewGate = new();
 
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; } = DateTime.UtcNow;
@@ -45,11 +43,10 @@ public partial class Dashboard : ComponentBase
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required DashboardHttpClient DashboardHttpClient { get; set; }
-    [Inject] public required ISnapshotService SnapshotService { get; set; }
+    [Inject] public required ISnapshotRefreshCoordinator SnapshotRefreshCoordinator { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required DashboardCardVisibilityService CardVisibility { get; set; }
-    [Inject] public required ILogger<Dashboard> Logger { get; set; }
 
     // Card-specific models mapped from the single overview response. They are null
     // until the first load resolves (and when the overview is unavailable), in which
@@ -98,9 +95,14 @@ public partial class Dashboard : ComponentBase
         _ = LoadOverview();
     }
 
+    // Stale-while-revalidate: paint the stored snapshot, always re-fetch, and only repaint and
+    // re-persist when the fresh overview differs. SnapshotRefreshCoordinator owns that workflow —
+    // see docs/codebase/UI-SNAPSHOTS.md.
     private async Task LoadOverview()
     {
-        var requestVersion = Interlocked.Increment(ref _loadOverviewVersion);
+        // Claimed here rather than inside the coordinator so the same version also guards the
+        // logged-out branch below, which commits state before the run starts.
+        var requestVersion = _overviewGate.Claim();
         var startDate = StartDate;
         var endDate = EndDate;
 
@@ -109,7 +111,7 @@ public partial class Dashboard : ComponentBase
         var user = await LoginService.GetLoggedUser();
         if (user is null)
         {
-            if (requestVersion == _loadOverviewVersion)
+            if (_overviewGate.IsCurrent(requestVersion))
             {
                 _overview = null;
                 _isLoading = false;
@@ -119,97 +121,54 @@ public partial class Dashboard : ComponentBase
         }
 
         var currency = await SettingsService.GetCurrencyAsync();
-        var snapshotKey = BuildSnapshotKey(user.UserId, currency.Id);
 
-        // Paint the last-rendered snapshot immediately so the page feels instant on
-        // re-navigation. The API call below always runs and reconciles the view.
-        DashboardOverviewSnapshot? snapshot = null;
-        try
+        var result = await SnapshotRefreshCoordinator.RunAsync(new SnapshotRefreshRequest<DashboardOverviewSnapshot, DashboardOverviewDto>
         {
-            snapshot = await SnapshotService.GetAsync<DashboardOverviewSnapshot>(snapshotKey);
-        }
-        catch (Exception snapshotReadEx)
-        {
-            // A storage/interop failure on read must not abort the load — fall through to the fresh fetch.
-            Logger.LogWarning(snapshotReadEx, "Failed to read dashboard snapshot; continuing with fresh fetch.");
-        }
+            Key = BuildSnapshotKey(user.UserId, currency.Id),
+            Gate = _overviewGate,
+            ClaimedVersion = requestVersion,
+            ToModel = snapshot => snapshot.ToDto(),
+            FetchAsync = () => DashboardHttpClient.GetOverview(user.UserId, currency.Id, startDate, endDate),
+            ToSnapshot = DashboardOverviewSnapshot.FromDto,
 
-        if (snapshot is not null && requestVersion == _loadOverviewVersion)
-        {
-            _overview = snapshot.ToDto();
-            _overviewStart = snapshot.StartDate;
-            _overviewEnd = snapshot.EndDate;
-            _isLoading = false;
-            StateHasChanged();
-        }
-        else if (requestVersion == _loadOverviewVersion)
-        {
-            _isLoading = true;
-            StateHasChanged();
-        }
-
-        DashboardOverviewDto? freshOverview = null;
-        var changed = false;
-        try
-        {
-            freshOverview = await DashboardHttpClient.GetOverview(user.UserId, currency.Id, startDate, endDate);
-
-            // Only repaint and persist when the fresh data actually differs from the
-            // snapshot we already rendered — avoids a redundant flush on every visit.
-            changed = freshOverview is not null && !IsSameAsSnapshot(freshOverview, snapshot);
-
-            if (requestVersion == _loadOverviewVersion && changed)
+            // The snapshot renders the range it was captured for; fresh data renders the requested one.
+            OnSnapshotPainted = overview => ShowOverview(overview, overview.StartDate, overview.EndDate),
+            OnSnapshotMissing = () =>
             {
-                _overview = freshOverview;
-                _overviewStart = startDate;
-                _overviewEnd = endDate;
-            }
-        }
-        catch (Exception ex)
-        {
-            // If we already rendered a snapshot, keep it visible rather than blanking the screen.
-            if (requestVersion == _loadOverviewVersion && snapshot is null)
-            {
-                _overview = null;
-                _hasError = true;
-            }
-            Logger.LogError(ex, "Error loading dashboard overview");
-        }
-        finally
-        {
-            if (requestVersion == _loadOverviewVersion)
-            {
-                _isLoading = false;
+                _isLoading = true;
                 StateHasChanged();
-            }
+                return Task.CompletedTask;
+            },
+            OnRefreshed = overview => ShowOverview(overview, startDate, endDate),
+        });
+
+        if (!_overviewGate.IsCurrent(requestVersion))
+            return;
+
+        // A failed fetch behind a painted snapshot keeps the snapshot on screen; only a surface
+        // with nothing to show falls back to the error state.
+        if (result.IsBlockingFailure)
+        {
+            _overview = null;
+            _hasError = true;
         }
 
-        // Skip the write when a newer load has superseded this one, so a slower
-        // earlier request can't overwrite the latest request's snapshot.
-        if (requestVersion == _loadOverviewVersion && freshOverview is not null && changed)
-        {
-            try
-            {
-                await SnapshotService.SetAsync(snapshotKey, DashboardOverviewSnapshot.FromDto(freshOverview));
-            }
-            catch (Exception snapshotEx)
-            {
-                Logger.LogWarning(snapshotEx, "Dashboard overview loaded but snapshot save failed.");
-            }
-        }
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    private Task ShowOverview(DashboardOverviewDto overview, DateTime start, DateTime end)
+    {
+        _overview = overview;
+        _overviewStart = start;
+        _overviewEnd = end;
+        _isLoading = false;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     // Per-user key with no date component, so a single snapshot per user is overwritten each save.
     // The key is currency-scoped so a snapshot saved before a preferred-currency change is never
     // painted with the new currency's labels.
     private static string BuildSnapshotKey(int userId, int currencyId) => $"dashboard-overview:{userId}:{currencyId}";
-
-    private static bool IsSameAsSnapshot(DashboardOverviewDto overview, DashboardOverviewSnapshot? snapshot)
-    {
-        if (snapshot is null)
-            return false;
-
-        // Compare rendered content only; FetchedAtUtc lives on the snapshot, not the DTO.
-        return JsonSerializer.Serialize(overview) == JsonSerializer.Serialize(snapshot.ToDto());
-    }
 }

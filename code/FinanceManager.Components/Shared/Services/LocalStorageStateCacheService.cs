@@ -5,6 +5,15 @@ using System.Text.Json;
 
 namespace FinanceManager.Components.Shared.Services;
 
+/// <summary>
+/// Time-based data cache over memory + local storage: while a cached entry is still valid it is
+/// returned and <b>no API request is made</b>.
+/// </summary>
+/// <remarks>
+/// This is not the UI snapshot mechanism. Use <see cref="ISnapshotRefreshCoordinator"/> when the
+/// goal is to paint the last-rendered state immediately and still always re-request fresh data —
+/// see docs/codebase/UI-SNAPSHOTS.md for the comparison.
+/// </remarks>
 public abstract class LocalStorageStateCacheService<TState, TRefreshContext, TCacheKey>(
     ILocalStorageService localStorageService,
     IMemoryCache memoryCache,

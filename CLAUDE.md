@@ -197,6 +197,7 @@ Razor component → typed HttpClient → API controller → application/domain s
 - **DI registration**: each layer exposes a `ServiceCollectionExtension.cs` with an `Add*` extension method. Wire new services there.
 - **Typed HTTP clients** (`code/FinanceManager.Components/HttpClients/`) wrap all API route details; Razor components never call `HttpClient` directly.
 - **Provider fallback chain**: AI calls go through a configured fallback (OpenRouter → GitHub Models → Ollama). Stock price reads check repository/cache before hitting Alpha Vantage.
+- **UI snapshots vs. data caching**: cards and transaction lists paint their last-rendered state from local storage and *always* re-fetch, via `ISnapshotRefreshCoordinator`. `LocalStorageStateCacheService` is the separate time-based cache that *skips* the request. See [`docs/codebase/UI-SNAPSHOTS.md`](./docs/codebase/UI-SNAPSHOTS.md) before adding either.
 - **Background services + channels**: async jobs (insights, label setting, import) run as hosted services registered in `Program.cs`, communicating via SignalR (`/hubs/currency-import`).
 - **Razor code-behind**: complex components split into `.razor` + `.razor.cs` pairs.
 
