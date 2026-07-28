@@ -24,7 +24,7 @@
                                 <dd>Presets at 3% / 4% / 5%. Lower rates reduce the risk of running out; higher rates pay more but deplete faster.</dd>
                                 <dt>Replacement %</dt>
                                 <dd>What share of your average monthly salary this paycheck would cover.</dd>
-                                <dt>Investments value</dt>
+                                <dt>Total investments value</dt>
                                 <dd>Current market value of your investable assets (stocks, bonds, funds). Cash and liabilities are excluded.</dd>
                                 <dt>@_estimate.SalaryMonthsUsed of @_estimate.SalaryMonthsRequested months</dt>
                                 <dd>Months of salary history the average is calculated from.</dd>
@@ -96,12 +96,17 @@
 
         <div class="pc-foot">
             <span>
-                Investments value:
+                <MudTooltip Text="The total value of all investments currently owned by the user.">
+                    <span class="pc-foot-label">Total investments value:</span>
+                </MudTooltip>
                 <span class="pc-foot-num">@FormatCurrency(_estimate.InvestableAssetsValue)</span>
             </span>
-            <span class="@(_estimate.HasPartialSalaryHistory ? "pc-foot-meta pc-foot-meta--warn" : "pc-foot-meta")">
-                @_estimate.SalaryMonthsUsed of @_estimate.SalaryMonthsRequested mo
-            </span>
+            @if (_estimate.SalaryMonthsUsed != _estimate.SalaryMonthsRequested)
+            {
+                <span class="@(_estimate.HasPartialSalaryHistory ? "pc-foot-meta pc-foot-meta--warn" : "pc-foot-meta")">
+                    @_estimate.SalaryMonthsUsed of @_estimate.SalaryMonthsRequested mo
+                </span>
+            }
         </div>
     </MudCardContent>
 </MudCard>

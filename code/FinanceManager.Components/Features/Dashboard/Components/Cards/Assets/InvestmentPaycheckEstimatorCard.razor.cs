@@ -28,9 +28,8 @@ public partial class InvestmentPaycheckEstimatorCard
 
     private bool _isLoading;
     private Currency _currency = DefaultCurrency.PLN;
-    private InvestmentPaycheckEstimate _estimate = new() { AnnualWithdrawalRate = _defaultRate, SalaryMonthsRequested = 3 };
-    private decimal _annualWithdrawalRate = _defaultRate;
-    private CancellationTokenSource? _persistCts;
+    internal InvestmentPaycheckEstimate _estimate = new() { AnnualWithdrawalRate = _defaultRate, SalaryMonthsRequested = 3 };
+    internal decimal _annualWithdrawalRate = _defaultRate;
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public int SalaryMonths { get; set; } = 3;
@@ -40,9 +39,9 @@ public partial class InvestmentPaycheckEstimatorCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    private decimal MonthlyPaycheck => _estimate.InvestableAssetsValue * _annualWithdrawalRate / 12m;
+    internal decimal MonthlyPaycheck => _estimate.InvestableAssetsValue * _annualWithdrawalRate / 12m;
 
-    private decimal? ReplacementRatio
+    internal decimal? ReplacementRatio
     {
         get
         {
@@ -55,19 +54,15 @@ public partial class InvestmentPaycheckEstimatorCard
     protected override async Task OnInitializedAsync()
     {
         _currency = await SettingsService.GetCurrencyAsync();
-        await RefreshEstimate(showLoading: true);
+        await RefreshEstimate();
     }
 
-    // showLoading is suppressed for slider/preset changes: the paycheck is recomputed
-    // client-side from the (rate-independent) estimate, so the value is already correct
-    // the instant the rate moves. Flashing the spinner there only hides an unchanged value.
-    private async Task RefreshEstimate(bool showLoading)
+    // Source data is loaded once during initialization. Withdrawal-rate changes are
+    // recomputed client-side from the (rate-independent) estimate, so they never re-fetch.
+    private async Task RefreshEstimate()
     {
-        if (showLoading)
-        {
-            _isLoading = true;
-            StateHasChanged();
-        }
+        _isLoading = true;
+        StateHasChanged();
 
         try
         {
@@ -104,38 +99,11 @@ public partial class InvestmentPaycheckEstimatorCard
         }
     }
 
-    private void OnRateChanged(decimal value)
-    {
-        _annualWithdrawalRate = value;
-        SchedulePersist();
-    }
+    // Rate changes only recompute the displayed paycheck locally (see MonthlyPaycheck /
+    // ReplacementRatio); no API request is made. Blazor re-renders after the event callback.
+    internal void OnRateChanged(decimal value) => _annualWithdrawalRate = value;
 
-    private void OnPresetSelected(decimal rate)
-    {
-        _annualWithdrawalRate = rate;
-        SchedulePersist();
-    }
-
-    private void SchedulePersist()
-    {
-        _persistCts?.Cancel();
-        _persistCts = new CancellationTokenSource();
-        var token = _persistCts.Token;
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(350), token);
-                if (token.IsCancellationRequested)
-                    return;
-                await InvokeAsync(() => RefreshEstimate(showLoading: false));
-            }
-            catch (TaskCanceledException)
-            {
-            }
-        });
-    }
+    internal void OnPresetSelected(decimal rate) => _annualWithdrawalRate = rate;
 
     private string FormatCurrency(decimal value) => $"{value:0.00} {_currency.ShortName}";
 

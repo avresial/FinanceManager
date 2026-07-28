@@ -204,6 +204,12 @@
     color: var(--mud-palette-text-secondary);
 }
 
+.pc-foot-label {
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+    cursor: help;
+}
+
 .pc-foot-num {
     color: var(--mud-palette-text-primary);
     font-weight: 500;
