@@ -4,7 +4,12 @@
 		<ApplicationIcon>wwwroot\favicon.ico</ApplicationIcon>
 		<WasmEnableHotReload>false</WasmEnableHotReload>
 	  <UserSecretsId>dc6a3527-8cc4-4968-bc2c-e88cc40e7804</UserSecretsId>
+		<ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
   </PropertyGroup>
+
+	<ItemGroup>
+		<ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<Compile Include="..\GlobalUsings.cs" Link="GlobalUsings.cs" />
