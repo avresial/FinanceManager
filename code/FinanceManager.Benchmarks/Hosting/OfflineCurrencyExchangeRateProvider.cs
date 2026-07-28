@@ -17,16 +17,18 @@ public sealed class OfflineCurrencyExchangeRateProvider : ICurrencyExchangeRateP
 {
     private const decimal _rate = 1.25m;
 
-    public Task<decimal?> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date) =>
-        Task.FromResult<decimal?>(fromCurrency.Id == toCurrency.Id ? 1m : _rate);
+    public Task<CurrencyExchangeRateProviderResult> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date) =>
+        Task.FromResult(new CurrencyExchangeRateProviderResult(
+            CurrencyExchangeRateProviderStatus.Success,
+            fromCurrency.Id == toCurrency.Id ? 1m : _rate));
 
-    public Task<List<(DateTime Date, decimal? Value)>> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
+    public Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
     {
         var value = fromCurrency.Id == toCurrency.Id ? 1m : _rate;
-        var rates = new List<(DateTime Date, decimal? Value)>();
+        var rates = new List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>();
 
         for (var date = dateStart.Date; date <= dateEnd.Date; date = date.AddDays(1))
-            rates.Add((date, value));
+            rates.Add((date, new(CurrencyExchangeRateProviderStatus.Success, value)));
 
         return Task.FromResult(rates);
     }

@@ -9,7 +9,7 @@
 | SQL Server | Relational database | Primary persistence option for accounts, users, prices, labels, imports | Connection string from config/env | High | `code\FinanceManager.Infrastructure\ServiceCollectionExtension.cs`, `code\FinanceManager.Api\appsettings.Development.json` |
 | PostgreSQL | Relational database | Alternate persistence option and Aspire-local database | Connection string / service binding | High | `code\FinanceManager.Infrastructure\ServiceCollectionExtension.cs`, `code\AppHost\AppHost.cs` |
 | Alpha Vantage | External HTTP API | Stock symbol search, daily price history, listings | API key | High | `code\FinanceManager.Infrastructure\Services\Stocks\AlphaVantageClient.cs`, `code\FinanceManager.Api\appsettings.json` |
-| Fawaz Ahmed Currency API via jsDelivr | External HTTP API | Currency exchange-rate lookup | No app-level auth detected | Medium | `code\FinanceManager.Infrastructure\Services\Currencies\FawazAhmedCurrencyApiClient.cs` |
+| Fawaz Ahmed Currency API via jsDelivr | External HTTP API | Currency exchange-rate lookup | No API key | Medium | `code\FinanceManager.Infrastructure\Features\FinancialAccounts\Currencies\Providers\FawazAhmedCurrencyApiClient.cs` |
 | OpenRouter | External AI API | AI chat provider for insights/label generation | API key | Medium | `code\FinanceManager.Infrastructure\Services\Ai\OpenRouterChatClient.cs`, `code\FinanceManager.Api\appsettings.json` |
 | GitHub Models via Copilot SDK | External AI service | Alternate AI provider in configured fallback chain | Copilot SDK session auth `[TODO]` | Medium | `code\FinanceManager.Infrastructure\Services\Ai\CopilotChatClient.cs`, `code\FinanceManager.Api\appsettings.json` |
 | Ollama | Local/remote AI endpoint | Final AI fallback provider | No auth detected in code | Medium | `code\FinanceManager.Infrastructure\Services\Ai\OllamaChatClient.cs`, `code\FinanceManager.Api\appsettings.json` |
@@ -38,6 +38,7 @@
 - Retry/backoff behavior: shared HTTP clients get the standard .NET resilience handler via `ServiceDefaults`, but individual external adapters often just log and return empty/null results
 - Timeout policy: `HttpClientResilience` timeouts are configurable in appsettings and applied in `ServiceDefaults`; OpenRouter timeout is separately configurable in `OpenRouterOptions`
 - Circuit-breaker or fallback behavior: HTTP circuit-breaker sampling is configured in `ServiceDefaults`; AI calls are wired through a fallback chain in config and DI; stock price reads first check repository/cache before hitting Alpha Vantage
+- Fawaz currency data is free, requires no API key, and has no provider request-rate limit. It is published as daily date-versioned npm packages beginning on `2024-03-02`; earlier dates return `OutOfRange` without an HTTP request so another configured provider can resolve them.
 
 ### 5) Observability for Integrations
 
@@ -49,7 +50,7 @@
 
 - `code\FinanceManager.Infrastructure\ServiceCollectionExtension.cs`
 - `code\FinanceManager.Infrastructure\Services\Stocks\AlphaVantageClient.cs`
-- `code\FinanceManager.Infrastructure\Services\Currencies\FawazAhmedCurrencyApiClient.cs`
+- `code\FinanceManager.Infrastructure\Features\FinancialAccounts\Currencies\Providers\FawazAhmedCurrencyApiClient.cs`
 - `code\FinanceManager.Infrastructure\Services\Ai\ServiceCollectionExtension.cs`
 - `code\FinanceManager.Api\appsettings.json`
 - `code\FinanceManager.Api\appsettings.Development.json`

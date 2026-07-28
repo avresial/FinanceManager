@@ -19,7 +19,7 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 [Trait("Category", "Unit")]
 public class CurrencyExchangeServiceTests : IDisposable
 {
-    private readonly ILogger<FawazAhmedCurrencyApiClient> _loggerMock = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<FawazAhmedCurrencyApiClient>();
+    private readonly ListLogger<FawazAhmedCurrencyApiClient> _logger = new();
     private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock = new();
     private readonly Mock<IExchangeRateRepository> _exchangeRateRepositoryMock = new();
     private readonly HttpClient _httpClient;
@@ -35,7 +35,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
-        var date = new DateTime(2024, 1, 15);
+        var date = new DateTime(2024, 3, 15);
         var expectedRate = 0.92m;
 
         var jsonResponse = $@"{{""usd"": {{""eur"": {expectedRate}}}}}";
@@ -52,12 +52,12 @@ public class CurrencyExchangeServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetExchangeRateAsync_HttpRequestFails_ReturnsNull()
+    public async Task GetExchangeRateAsync_HttpRequestFails_ReturnsFailed()
     {
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
-        var date = new DateTime(2024, 1, 15);
+        var date = new DateTime(2024, 3, 15);
 
         _httpMessageHandlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync",
@@ -65,69 +65,132 @@ public class CurrencyExchangeServiceTests : IDisposable
                 ItExpr.IsAny<CancellationToken>())
             .ThrowsAsync(new HttpRequestException("Network error"));
 
-        var service = CreateService();
+        var provider = CreateProvider();
 
         // Act
-        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, date);
+        var result = await provider.GetExchangeRateAsync(fromCurrency, toCurrency, date);
 
         // Assert
-        Assert.Null(result);
+        Assert.Equal(CurrencyExchangeRateProviderStatus.Failed, result.Status);
     }
 
     [Fact]
-    public async Task GetExchangeRateAsync_InvalidJson_ReturnsNull()
+    public async Task GetExchangeRateAsync_InvalidJson_ReturnsFailed()
     {
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
-        var date = new DateTime(2024, 1, 15);
+        var date = new DateTime(2024, 3, 15);
 
         SetupHttpResponse(HttpStatusCode.OK, "invalid json {");
-        var service = CreateService();
+        var provider = CreateProvider();
 
         // Act
-        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, date);
+        var result = await provider.GetExchangeRateAsync(fromCurrency, toCurrency, date);
 
         // Assert
-        Assert.Null(result);
+        Assert.Equal(CurrencyExchangeRateProviderStatus.Failed, result.Status);
     }
 
     [Fact]
-    public async Task GetExchangeRateAsync_MissingRateInResponse_ReturnsNull()
+    public async Task GetExchangeRateAsync_MissingRateInResponse_ReturnsNotFound()
     {
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
-        var date = new DateTime(2024, 1, 15);
+        var date = new DateTime(2024, 3, 15);
 
         var jsonResponse = @"{""usd"": {""gbp"": 0.78}}"; // EUR missing
         SetupHttpResponse(HttpStatusCode.OK, jsonResponse);
 
-        var service = CreateService();
+        var provider = CreateProvider();
 
         // Act
-        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, date);
+        var result = await provider.GetExchangeRateAsync(fromCurrency, toCurrency, date);
 
         // Assert
-        Assert.Null(result);
+        Assert.Equal(CurrencyExchangeRateProviderStatus.NotFound, result.Status);
     }
 
     [Fact]
-    public async Task GetExchangeRateAsync_NotFoundResponse_ReturnsNull()
+    public async Task GetExchangeRateAsync_NotFoundResponse_ReturnsNotFound()
     {
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
-        var date = new DateTime(2024, 1, 15);
+        var date = new DateTime(2024, 3, 15);
 
         SetupHttpResponse(HttpStatusCode.NotFound, "Not found");
-        var service = CreateService();
+        var provider = CreateProvider();
 
         // Act
-        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, date);
+        var result = await provider.GetExchangeRateAsync(fromCurrency, toCurrency, date);
 
         // Assert
-        Assert.Null(result);
+        Assert.Equal(CurrencyExchangeRateProviderStatus.NotFound, result.Status);
+    }
+
+    [Fact]
+    public async Task GetExchangeRateAsync_BeforeFirstAvailableDate_ReturnsOutOfRangeWithoutHttpOrWarning()
+    {
+        var result = await CreateProvider().GetExchangeRateAsync(
+            new Currency(1, "USD", "$"),
+            new Currency(2, "EUR", "€"),
+            new DateTime(2024, 3, 1));
+
+        Assert.Equal(CurrencyExchangeRateProviderStatus.OutOfRange, result.Status);
+        _httpMessageHandlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Never(),
+            ItExpr.IsAny<HttpRequestMessage>(),
+            ItExpr.IsAny<CancellationToken>());
+        VerifyNoWarningOrErrorLogs();
+    }
+
+    [Fact]
+    public async Task GetExchangeRateAsync_FirstAvailableDate_PerformsNormalRequest()
+    {
+        SetupHttpResponse(HttpStatusCode.OK, """{"usd":{"eur":0.92}}""");
+
+        var result = await CreateProvider().GetExchangeRateAsync(
+            new Currency(1, "USD", "$"),
+            new Currency(2, "EUR", "€"),
+            new DateTime(2024, 3, 2));
+
+        Assert.Equal(new(CurrencyExchangeRateProviderStatus.Success, 0.92m), result);
+        _httpMessageHandlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.IsAny<HttpRequestMessage>(),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetExchangeRateAsync_MixedRange_OnlyFetchesSupportedDatesInOrder()
+    {
+        SetupHttpResponse(HttpStatusCode.OK, """{"usd":{"eur":0.92}}""");
+
+        var result = await CreateProvider().GetExchangeRateAsync(
+            new Currency(1, "USD", "$"),
+            new Currency(2, "EUR", "€"),
+            new DateTime(2024, 3, 1),
+            new DateTime(2024, 3, 3));
+
+        Assert.Equal(
+            [
+                CurrencyExchangeRateProviderStatus.OutOfRange,
+                CurrencyExchangeRateProviderStatus.Success,
+                CurrencyExchangeRateProviderStatus.Success,
+            ],
+            result.Select(x => x.Result.Status));
+        Assert.Equal(
+            [new DateTime(2024, 3, 1), new DateTime(2024, 3, 2), new DateTime(2024, 3, 3)],
+            result.Select(x => x.Date));
+        _httpMessageHandlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Exactly(2),
+            ItExpr.IsAny<HttpRequestMessage>(),
+            ItExpr.IsAny<CancellationToken>());
     }
 
     [Fact]
@@ -161,7 +224,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
-        var date = new DateTime(2024, 1, 6); // Saturday
+        var date = new DateTime(2024, 3, 2); // Saturday
         var expectedRate = 0.92m;
 
         var jsonResponse = $@"{{""usd"": {{""eur"": {expectedRate}}}}}";
@@ -183,7 +246,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
-        var date = new DateTime(2024, 1, 15);
+        var date = new DateTime(2024, 3, 15);
 
         SetupHttpResponse(HttpStatusCode.OK, "{}");
         var service = CreateService();
@@ -201,7 +264,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "JPY", "¥");
-        var date = new DateTime(2024, 1, 15);
+        var date = new DateTime(2024, 3, 15);
         var expectedRate = 149.85m;
 
         var jsonResponse = $@"{{""usd"": {{""jpy"": {expectedRate}}}}}";
@@ -223,7 +286,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         // Arrange
         var fromCurrency = new Currency(1, "JPY", "¥");
         var toCurrency = new Currency(2, "USD", "$");
-        var date = new DateTime(2024, 1, 15);
+        var date = new DateTime(2024, 3, 15);
         var expectedRate = 0.006678m;
 
         var jsonResponse = $@"{{""jpy"": {{""usd"": {expectedRate}}}}}";
@@ -245,7 +308,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
-        var date = new DateTime(2024, 1, 15);
+        var date = new DateTime(2024, 3, 15);
 
         _exchangeRateRepositoryMock
             .Setup(x => x.Get("USD", "EUR", date, It.IsAny<CancellationToken>()))
@@ -271,7 +334,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
-        var date = new DateTime(2024, 1, 15);
+        var date = new DateTime(2024, 3, 15);
 
         _exchangeRateRepositoryMock
             .Setup(x => x.Get("EUR", "USD", date, It.IsAny<CancellationToken>()))
@@ -297,7 +360,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
-        var date = new DateTime(2024, 1, 15);
+        var date = new DateTime(2024, 3, 15);
 
         var jsonResponse = @"{""usd"": {""eur"": 0.92}}";
         SetupHttpResponse(HttpStatusCode.OK, jsonResponse);
@@ -318,7 +381,7 @@ public class CurrencyExchangeServiceTests : IDisposable
         // Arrange
         var fromCurrency = new Currency(1, "GBP", "£");
         var toCurrency = new Currency(2, "PLN", "zł");
-        var date = new DateTime(2024, 1, 15);
+        var date = new DateTime(2024, 3, 15);
 
         _exchangeRateRepositoryMock
             .Setup(x => x.Get("GBP", "USD", date, It.IsAny<CancellationToken>()))
@@ -340,21 +403,71 @@ public class CurrencyExchangeServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetExchangeRateAsync_OutOfRangeProvider_ContinuesToLaterProvider()
+    {
+        var fromCurrency = new Currency(1, "USD", "$");
+        var toCurrency = new Currency(2, "EUR", "€");
+        var date = new DateTime(2024, 3, 1);
+        var laterProvider = new Mock<ICurrencyExchangeRateProvider>();
+        laterProvider
+            .Setup(x => x.GetExchangeRateAsync(fromCurrency, toCurrency, date))
+            .ReturnsAsync(new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.Success, 0.92m));
+
+        var service = CreateService([CreateProvider(), laterProvider.Object]);
+
+        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, date);
+
+        Assert.Equal(0.92m, result);
+        laterProvider.Verify(x => x.GetExchangeRateAsync(fromCurrency, toCurrency, date), Times.Once);
+        _exchangeRateRepositoryMock.Verify(
+            x => x.Add("USD", "EUR", date, 0.92m, It.IsAny<CancellationToken>()),
+            Times.Once);
+        _httpMessageHandlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Never(),
+            ItExpr.IsAny<HttpRequestMessage>(),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetExchangeRateAsync_OutOfRangeProvider_IsNotRetriedForUsdCross()
+    {
+        var provider = new Mock<ICurrencyExchangeRateProvider>();
+        provider
+            .Setup(x => x.GetExchangeRateAsync(
+                It.IsAny<Currency>(),
+                It.IsAny<Currency>(),
+                It.IsAny<DateTime>()))
+            .ReturnsAsync(new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.OutOfRange));
+        var service = CreateService([provider.Object]);
+
+        var result = await service.GetExchangeRateAsync(
+            new Currency(1, "GBP", "£"),
+            new Currency(2, "PLN", "zł"),
+            new DateTime(2024, 3, 1));
+
+        Assert.Null(result);
+        provider.Verify(
+            x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task GetExchangeRateAsync_FullyStoredRange_UsesBulkReadAndNoProviderCalls()
     {
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
-        var dateStart = new DateTime(2024, 1, 15);
-        var dateEnd = new DateTime(2024, 1, 17);
+        var dateStart = new DateTime(2024, 3, 15);
+        var dateEnd = new DateTime(2024, 3, 17);
 
         // Setup bulk read to return all rates
         IReadOnlyDictionary<(string From, string To, DateTime Date), decimal> storedRates =
             new Dictionary<(string, string, DateTime), decimal>
             {
-                { ("USD", "EUR", new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc)), 0.92m },
-                { ("USD", "EUR", new DateTime(2024, 1, 16, 0, 0, 0, DateTimeKind.Utc)), 0.91m },
-                { ("USD", "EUR", new DateTime(2024, 1, 17, 0, 0, 0, DateTimeKind.Utc)), 0.93m }
+                { ("USD", "EUR", new DateTime(2024, 3, 15, 0, 0, 0, DateTimeKind.Utc)), 0.92m },
+                { ("USD", "EUR", new DateTime(2024, 3, 16, 0, 0, 0, DateTimeKind.Utc)), 0.91m },
+                { ("USD", "EUR", new DateTime(2024, 3, 17, 0, 0, 0, DateTimeKind.Utc)), 0.93m }
             };
 
         _exchangeRateRepositoryMock
@@ -391,15 +504,15 @@ public class CurrencyExchangeServiceTests : IDisposable
         // Arrange
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
-        var dateStart = new DateTime(2024, 1, 15);
-        var dateEnd = new DateTime(2024, 1, 17);
+        var dateStart = new DateTime(2024, 3, 15);
+        var dateEnd = new DateTime(2024, 3, 17);
 
         // Setup bulk read to return only first and last rates
         IReadOnlyDictionary<(string From, string To, DateTime Date), decimal> storedRates =
             new Dictionary<(string, string, DateTime), decimal>
             {
-                { ("USD", "EUR", new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc)), 0.92m },
-                { ("USD", "EUR", new DateTime(2024, 1, 17, 0, 0, 0, DateTimeKind.Utc)), 0.93m }
+                { ("USD", "EUR", new DateTime(2024, 3, 15, 0, 0, 0, DateTimeKind.Utc)), 0.92m },
+                { ("USD", "EUR", new DateTime(2024, 3, 17, 0, 0, 0, DateTimeKind.Utc)), 0.93m }
             };
 
         _exchangeRateRepositoryMock
@@ -450,13 +563,13 @@ public class CurrencyExchangeServiceTests : IDisposable
         // more than the per-call provider resolution cap of 60.
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
-        var dateStart = new DateTime(2024, 1, 1);
+        var dateStart = new DateTime(2024, 3, 2);
         var dateEnd = dateStart.AddDays(99);
 
         IReadOnlyDictionary<(string From, string To, DateTime Date), decimal> storedRates =
             new Dictionary<(string, string, DateTime), decimal>
             {
-                { ("USD", "EUR", new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)), 0.92m }
+                { ("USD", "EUR", new DateTime(2024, 3, 2, 0, 0, 0, DateTimeKind.Utc)), 0.92m }
             };
 
         _exchangeRateRepositoryMock
@@ -489,8 +602,33 @@ public class CurrencyExchangeServiceTests : IDisposable
 
     private CurrencyExchangeService CreateService()
     {
-        ICurrencyExchangeRateProvider[] providers = [new FawazAhmedCurrencyApiClient(_httpClient, _loggerMock)];
+        ICurrencyExchangeRateProvider[] providers = [CreateProvider()];
         return new CurrencyExchangeService(_exchangeRateRepositoryMock.Object, providers);
+    }
+
+    private CurrencyExchangeService CreateService(ICurrencyExchangeRateProvider[] providers) =>
+        new(_exchangeRateRepositoryMock.Object, providers);
+
+    private FawazAhmedCurrencyApiClient CreateProvider() => new(_httpClient, _logger);
+
+    private void VerifyNoWarningOrErrorLogs() =>
+        Assert.DoesNotContain(_logger.Levels, level => level >= LogLevel.Warning);
+
+    private sealed class ListLogger<T> : ILogger<T>
+    {
+        public List<LogLevel> Levels { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter) =>
+            Levels.Add(logLevel);
     }
     public void Dispose() => _httpClient?.Dispose();
     private void SetupHttpResponse(HttpStatusCode statusCode, string content)
