@@ -83,6 +83,24 @@ public class InvestmentPaycheckEstimatorCardTests
     }
 
     [Fact]
+    public void MonthlyPaycheck_And_ReplacementRatio_RoundToServerPrecision()
+    {
+        // Matches InvestmentPaycheckEstimatorService: paycheck rounded to 2 decimals,
+        // ratio rounded to 4 decimals from that rounded paycheck.
+        var card = CreateCard(new InvestmentPaycheckEstimate
+        {
+            InvestableAssetsValue = 100_000m,
+            SalaryMonthsUsed = 3,
+            AverageMonthlySalary = 3_000m,
+        }, 0.05m);
+
+        // 100000 * 0.05 / 12 = 416.66666... -> 416.67
+        Assert.Equal(416.67m, card.MonthlyPaycheck);
+        // 416.67 / 3000 = 0.138890 -> 0.1389
+        Assert.Equal(0.1389m, card.ReplacementRatio);
+    }
+
+    [Fact]
     public void ReplacementRatio_IsNull_WhenNoSalaryData()
     {
         var card = CreateCard(new InvestmentPaycheckEstimate { InvestableAssetsValue = 120_000m }, 0.04m);

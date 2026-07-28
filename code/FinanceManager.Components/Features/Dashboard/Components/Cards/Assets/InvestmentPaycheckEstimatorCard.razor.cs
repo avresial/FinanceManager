@@ -39,7 +39,10 @@ public partial class InvestmentPaycheckEstimatorCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
-    internal decimal MonthlyPaycheck => _estimate.InvestableAssetsValue * _annualWithdrawalRate / 12m;
+    // Rounded to the same precision as InvestmentPaycheckEstimatorService (paycheck to 2 decimals,
+    // ratio to 4 decimals from the rounded paycheck) so a local rate-change recompute yields the
+    // same figures as a server refresh instead of drifting by a fractional cent.
+    internal decimal MonthlyPaycheck => Math.Round(_estimate.InvestableAssetsValue * _annualWithdrawalRate / 12m, 2);
 
     internal decimal? ReplacementRatio
     {
@@ -47,7 +50,7 @@ public partial class InvestmentPaycheckEstimatorCard
         {
             if (_estimate.AverageMonthlySalary is not { } avg || avg == 0m)
                 return null;
-            return MonthlyPaycheck / avg;
+            return Math.Round(MonthlyPaycheck / avg, 4);
         }
     }
 
