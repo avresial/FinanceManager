@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.MoneyFlow.Entities;
+﻿namespace FinanceManager.Domain.MoneyFlow.Entities;
 
 public class InvestmentRate
 {
