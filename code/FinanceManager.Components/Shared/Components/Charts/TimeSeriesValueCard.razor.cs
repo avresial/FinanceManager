@@ -1,4 +1,5 @@
 using ApexCharts;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.Shared.Charting;
 using Microsoft.AspNetCore.Components;
@@ -168,18 +169,11 @@ public partial class TimeSeriesValueCard
         var axis = _options?.Yaxis?.FirstOrDefault();
         if (axis is null || Data.Count == 0) return;
 
-        var bounds = AddYRangePadding((double)Data.Min(p => p.Value), (double)Data.Max(p => p.Value));
+        var bounds = ChartHelper.AddYRangePadding((double)Data.Min(p => p.Value), (double)Data.Max(p => p.Value));
         axis.Min = bounds.Min;
         axis.Max = bounds.Max;
         axis.TickAmount = 5;
         axis.ForceNiceScale = false;
-    }
-
-    internal static (double Min, double Max) AddYRangePadding(double minimum, double maximum)
-    {
-        var range = maximum - minimum;
-        var padding = range == 0 ? Math.Max(Math.Abs(minimum) * 0.05, 1) : range * 0.05;
-        return (minimum - padding, maximum + padding);
     }
 
     private void OnPointEnter(HoverData<TimeSeriesModel> hoverData)
@@ -313,8 +307,7 @@ public partial class TimeSeriesValueCard
                         OffsetX = 24,
                         Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
                         // compact currency ticks: 2.5k / 7.5k / 10k / 13k
-                        Formatter = "function(v){ if(!v) return ''; var k=v/1000; " +
-                                    "return (Math.abs(k)<10 && k%1!==0 ? k.toFixed(1) : Math.round(k))+'k'; }",
+                        Formatter = ChartHelper.CompactCurrencyTickFormatter,
                     },
                 },
             ],

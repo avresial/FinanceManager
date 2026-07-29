@@ -1,0 +1,24 @@
+/* Styles for the AccountDetailsHero chart on the account transaction pages. Shipped as a
+   plain (non-isolated) stylesheet and linked from index.html, because this app's scoped-CSS
+   bundle (FinanceManager.WebUi.styles.css) is not wired up, so .razor.css isolation does not
+   apply at runtime. Class names are fm-hero-* to avoid collisions. */
+
+/* Subtle halo on the overlaid axis labels so they stay legible over the gradient fill —
+   the y-axis labels float on top of the plot. The stroke is kept thin and theme-neutral so
+   it only lifts the text off the fill without thickening the glyphs into a heavy/bold look.
+   Mirrors the treatment on the dashboard time-series cards. */
+.fm-hero-chart .apexcharts-yaxis-texts-g text,
+.fm-hero-chart .apexcharts-xaxis-texts-g text {
+    paint-order: stroke;
+    stroke: rgba(128, 128, 128, 0.25);
+    stroke-width: 1px;
+    stroke-linejoin: round;
+}
+
+/* ApexCharts overlays a full-plot <foreignObject> (it only carries an injected <style>
+   block) with pointer-events:auto, which sits on top of the series and swallows mousemove.
+   The element is purely decorative, so disabling its pointer events lets the crosshair
+   reach the plot. */
+.fm-hero-chart .apexcharts-svg > foreignObject {
+    pointer-events: none;
+}
