@@ -9,7 +9,3 @@ public sealed class RecurringTransactionsSnapshot : SnapshotBase
     public List<RecurringTransactionResult> Data { get; set; } = [];
     public decimal TotalMonthlySpend { get; set; }
 }
-
-public sealed record RecurringTransactionsCardModel(
-    List<RecurringTransactionResult> Data,
-    decimal TotalMonthlySpend);
