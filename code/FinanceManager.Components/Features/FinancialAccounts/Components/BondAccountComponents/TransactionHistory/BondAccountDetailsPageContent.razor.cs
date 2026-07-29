@@ -295,11 +295,11 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
                     onRefreshed: ApplyChartModel);
 
                 if (_chartGate.IsCurrent(version) && result.IsBlockingFailure)
-                    Logger.LogError(result.Error, "Error while loading bond account chart data for account ID {AccountId}", accountId);
+                    Logger.LogError(result.Error, "Error while loading bond account chart data.");
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error while loading bond account chart data for account ID {AccountId}", accountId);
+                Logger.LogError(ex, "Error while loading bond account chart data.");
             }
             finally
             {

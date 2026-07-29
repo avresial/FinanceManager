@@ -216,11 +216,11 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
                     onRefreshed: ApplyChartModel);
 
                 if (_chartGate.IsCurrent(version) && result.IsBlockingFailure)
-                    Logger.LogError(result.Error, "Error while loading investment account chart data for account ID {AccountId}", accountId);
+                    Logger.LogError(result.Error, "Error while loading investment account chart data.");
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error while loading investment account chart data for account ID {AccountId}", accountId);
+                Logger.LogError(ex, "Error while loading investment account chart data.");
             }
             finally
             {

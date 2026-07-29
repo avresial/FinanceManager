@@ -301,11 +301,11 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
                     onRefreshed: ApplyChartModel);
 
                 if (_chartGate.IsCurrent(version) && result.IsBlockingFailure)
-                    Logger.LogError(result.Error, "Error while loading currency account chart data for account ID {AccountId}", accountId);
+                    Logger.LogError(result.Error, "Error while loading currency account chart data.");
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error while loading currency account chart data for account ID {AccountId}", accountId);
+                Logger.LogError(ex, "Error while loading currency account chart data.");
             }
             finally
             {
