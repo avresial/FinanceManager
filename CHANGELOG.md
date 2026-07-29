@@ -26,6 +26,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Currency, bond, and investment account charts now repaint their last-rendered series and matching range/summary values instantly on re-navigation, reconcile through their existing independent requests, and keep cached chart state visible when refresh fails. #616
 - The dashboard **Liabilities value over time** and **Liabilities distribution** cards now repaint their last-rendered state instantly on re-navigation and reconcile against a fresh request in the background, only redrawing when the data actually changed. A failed refresh keeps the cached view on screen instead of blanking to a spinner or error. Each card keeps using its own existing API call. #616
 - The dashboard **Investment paycheck** card no longer re-fetches when you move the withdrawal-rate slider or pick a Conservative/Standard/Aggressive preset — its data loads once and the paycheck and salary-coverage figures now recalculate instantly on the client. The footer value is relabelled **Total investments value** with a tooltip clarifying it covers all investments you own, and the `X of Y mo` salary-history counter is hidden once the full range is shown. #614
 - Asset and liability charts now load substantially faster, especially on the first uncached view. #610

@@ -54,7 +54,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private string _accountTypeLabel = "Cash account";
     private UserSession? _user;
     private bool _isChartLoading;
-    private int _chartRefreshVersion;
+    private readonly RefreshVersionGate _chartGate = new();
 
     public bool IsLoading = false;
     public CurrencyAccount? Account { get; set; }
@@ -69,6 +69,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required AccountDetailsSnapshotStore SnapshotStore { get; set; }
+    [Inject] public required AccountChartSnapshotStore ChartSnapshotStore { get; set; }
     [Inject] public required ILogger<CurrencyAccountDetailsPageContent> Logger { get; set; }
     [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
 
@@ -259,23 +260,56 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
 
     private void QueueChartDataRefresh()
     {
-        var refreshVersion = ++_chartRefreshVersion;
+        if (Account is null || _user is null) return;
+
+        var version = _chartGate.Claim();
+        var userId = _user.UserId;
+        var accountId = AccountId;
+        var currency = _currency;
+        var selectedRange = _selectedRange;
+        var dateStart = _dateStart;
+        var dateEnd = _dateEnd;
+        var currentBalance = _currentBalance;
+        var balanceChange = _balanceChange;
+        var balanceChangePercent = _balanceChangePercent;
         _isChartLoading = true;
-        ChartData.Clear();
 
         _ = InvokeAsync(async () =>
         {
             try
             {
-                await UpdateChartData(refreshVersion);
+                var result = await ChartSnapshotStore.RefreshCurrencyAsync(
+                    userId,
+                    accountId,
+                    currency.Id,
+                    _chartGate,
+                    version,
+                    async () =>
+                    {
+                        var series = await MoneyFlowHttpClient.GetClosingBalance(userId, currency, dateStart, dateEnd, [accountId]);
+                        return new AccountChartModel(
+                            selectedRange,
+                            dateStart,
+                            dateEnd,
+                            [.. series.SkipWhile(x => x.Value == 0)],
+                            currentBalance,
+                            balanceChange,
+                            balanceChangePercent);
+                    },
+                    onSnapshotPainted: ApplyChartModel,
+                    onSnapshotMissing: ShowChartLoading,
+                    onRefreshed: ApplyChartModel);
+
+                if (_chartGate.IsCurrent(version) && result.IsBlockingFailure)
+                    Logger.LogError(result.Error, "Error while loading currency account chart data for account ID {AccountId}", accountId);
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error while loading currency account chart data for account ID {AccountId}", AccountId);
+                Logger.LogError(ex, "Error while loading currency account chart data for account ID {AccountId}", accountId);
             }
             finally
             {
-                if (refreshVersion == _chartRefreshVersion)
+                if (_chartGate.IsCurrent(version))
                     _isChartLoading = false;
 
                 StateHasChanged();
@@ -283,16 +317,28 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         });
     }
 
-    private async Task UpdateChartData(int refreshVersion)
+    private Task ApplyChartModel(AccountChartModel model)
     {
-        if (Account is null || _user is null) return;
-
-        _currency = await SettingsService.GetCurrencyAsync();
-        var chartData = await MoneyFlowHttpClient.GetClosingBalance(_user.UserId, _currency, _dateStart, _dateEnd, [AccountId]);
-        if (refreshVersion != _chartRefreshVersion) return;
-
+        _selectedRange = model.SelectedRange;
+        _dateStart = model.StartDate;
+        _dateEnd = model.EndDate;
+        _customDateRange = model.SelectedRange == AccountDetailsHero.CustomRangeKey
+            ? new DateRange(model.StartDate, model.EndDate)
+            : null;
         ChartData.Clear();
-        ChartData.AddRange(chartData.SkipWhile(x => x.Value == 0));
+        ChartData.AddRange(model.Series);
+        _currentBalance = model.CurrentBalance;
+        _balanceChange = model.BalanceChange;
+        _balanceChangePercent = model.BalanceChangePercent;
+        _isChartLoading = false;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task ShowChartLoading()
+    {
+        ChartData.Clear();
+        _isChartLoading = true;
+        return InvokeAsync(StateHasChanged);
     }
 
     private void AccountDataSynchronizationService_AccountsChanged()
