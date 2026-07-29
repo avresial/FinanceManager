@@ -40,6 +40,14 @@ public class UserHttpClient(HttpClient httpClient)
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<bool> UpdatePreferredBenchmark(UpdatePreferredBenchmark updatePreferredBenchmark)
+    {
+        var response = await httpClient.PutAsJsonAsync(
+            $"{httpClient.BaseAddress}api/User/UpdatePreferredBenchmark/",
+            updatePreferredBenchmark);
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<bool> UpdateRole(UpdateUserRole updateUserRole)
     {
         var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/User/UpdateUserRole/", updateUserRole);

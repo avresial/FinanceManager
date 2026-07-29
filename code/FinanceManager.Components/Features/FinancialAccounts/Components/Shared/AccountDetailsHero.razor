@@ -100,6 +100,11 @@
             <ApexChart TItem="TimeSeriesModel" Options="_heroChartOptions" Height="200">
                 <ApexPointSeries TItem="TimeSeriesModel" Items="ChartData" Name="Balance" SeriesType="SeriesType.Area"
                                  XValue="@(p => p.DateTime.ToLocalTime())" YValue="@(p => p.Value)" />
+                @if (BenchmarkData.Count > 0)
+                {
+                    <ApexPointSeries TItem="TimeSeriesModel" Items="BenchmarkData" Name="@BenchmarkName" SeriesType="SeriesType.Line"
+                                     XValue="@(p => p.DateTime.ToLocalTime())" YValue="@(p => p.Value)" />
+                }
             </ApexChart>
         }
     </div>

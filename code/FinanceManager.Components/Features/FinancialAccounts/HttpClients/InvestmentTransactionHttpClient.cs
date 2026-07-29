@@ -41,13 +41,24 @@ public class InvestmentTransactionHttpClient(HttpClient httpClient)
         return response.IsSuccessStatusCode;
     }
 
-    public async Task<IReadOnlyList<InstrumentSearchResultDto>> SearchListingsAsync(string query, int maxResults = 20)
+    public async Task<IReadOnlyList<InstrumentSearchResultDto>> SearchListingsAsync(
+        string query,
+        int maxResults = 20,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query)) return [];
         var url = $"{httpClient.BaseAddress}api/InvestmentTransaction/SearchListings?q={Uri.EscapeDataString(query)}&maxResults={maxResults}";
-        using var response = await httpClient.GetAsync(url);
+        using var response = await httpClient.GetAsync(url, cancellationToken);
         if (!response.IsSuccessStatusCode) return [];
-        return await response.Content.ReadFromJsonAsync<List<InstrumentSearchResultDto>>() ?? [];
+        return await response.Content.ReadFromJsonAsync<List<InstrumentSearchResultDto>>(cancellationToken) ?? [];
+    }
+
+    public async Task<InstrumentSearchResultDto?> GetListingAsync(long listingId)
+    {
+        using var response = await httpClient.GetAsync(
+            $"{httpClient.BaseAddress}api/InvestmentTransaction/Listing/{listingId}");
+        if (!response.IsSuccessStatusCode) return null;
+        return await response.Content.ReadFromJsonAsync<InstrumentSearchResultDto>();
     }
 
     public async Task<ListingPriceDto?> GetListingPriceAsync(long listingId, DateOnly? asOf = null)
