@@ -69,6 +69,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<ISnapshotService, LocalStorageSnapshotService>()
                 .AddScoped<ISnapshotRefreshCoordinator, SnapshotRefreshCoordinator>()
                 .AddScoped<AccountDetailsSnapshotStore>()
+                .AddScoped<LiabilitiesSnapshotStore>()
                 .AddTransient<CurrencyImportJobTracker>()
                 .AddScoped<AssetsPageCardsCacheService>()
                 .AddScoped<InvestmentPaycheckEstimateCacheService>()
