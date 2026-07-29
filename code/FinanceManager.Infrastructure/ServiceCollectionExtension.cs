@@ -40,6 +40,7 @@ using FinanceManager.Infrastructure.Features.Identity.Repositories;
 using FinanceManager.Infrastructure.Features.Insights.Repositories;
 using FinanceManager.Infrastructure.Features.Labels.Repositories;
 using FinanceManager.Infrastructure.Features.Mcp.OAuth;
+using FinanceManager.Infrastructure.Features.MoneyFlow.Providers;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Infrastructure.Shared.Ai;
 using Microsoft.EntityFrameworkCore;
@@ -72,6 +73,8 @@ public static class ServiceCollectionExtension
         services.AddScoped<IOpenFigiClient>(sp => sp.GetRequiredService<OpenFigiClient>());
         services.AddHttpClient<ICurrencyExchangeRateProvider, FawazAhmedCurrencyApiClient>();
         services.AddHttpClient<IFxDailySource, AlphaVantageFxClient>();
+        services.AddHttpClient<IInflationIndexProvider, EurostatInflationIndexProvider>(client =>
+            client.BaseAddress = new Uri("https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/"));
 
         services.AddAI();
 

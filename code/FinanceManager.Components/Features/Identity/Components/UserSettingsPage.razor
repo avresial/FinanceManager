@@ -1,4 +1,5 @@
 @page "/UserSettings"
+@using FinanceManager.Domain.Assets.Dtos
 @using FinanceManager.Domain.Identity.Entities
 
 <PageTitle>User settings</PageTitle>
@@ -91,6 +92,23 @@
                                     <MudSelectItem T="int" Value="@currency.Id">@($"{currency.ShortName} ({currency.Symbol})")</MudSelectItem>
                                 }
                             </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudAutocomplete T="InstrumentSearchResultDto"
+                                             Label="Investment benchmark"
+                                             Value="@_selectedBenchmark"
+                                             ValueChanged="OnBenchmarkChanged"
+                                             SearchFunc="SearchBenchmarksAsync"
+                                             ToStringFunc="@(benchmark => benchmark is null ? string.Empty : $"{benchmark.Ticker} — {benchmark.ExchangeName}")"
+                                             HelperText="Leave empty to compare against Polish inflation."
+                                             Placeholder="Polish inflation"
+                                             Clearable="true"
+                                             MinCharacters="1"
+                                             DebounceInterval="300"
+                                             ResetValueOnEmptyText="true"
+                                             CoerceText="false"
+                                             Variant="Variant.Outlined"
+                                             Margin="Margin.Dense" />
                         </MudItem>
                     </MudGrid>
                 </section>

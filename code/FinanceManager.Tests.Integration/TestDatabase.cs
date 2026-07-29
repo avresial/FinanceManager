@@ -8,7 +8,7 @@ internal sealed class TestDatabase : IDisposable
     public AppDbContext Context { get; }
 
     public TestDatabase() =>
-        Context = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(databaseName: "Db").Options);
+        Context = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
 
     public void Dispose()
     {
