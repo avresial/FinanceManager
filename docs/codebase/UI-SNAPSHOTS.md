@@ -83,6 +83,13 @@ data** must return an *empty model* instead — an empty model compares unequal 
 snapshot, so it clears the UI and replaces the stored snapshot, which is what "the account now has
 zero entries" should do. Returning `null` for that case would silently keep stale content visible.
 
+**Check the HTTP client before wiring a surface up.** A client that catches its own failures and
+returns an empty list makes the two cases indistinguishable: every failed request then looks like
+"the user has no data", so the coordinator clears the card *and* overwrites the snapshot with
+nothing — the opposite of the guarantee above, and the damage outlives the failure because the next
+visit paints the empty snapshot. A client feeding a snapshot surface must throw (or return `null`)
+on failure and reserve the empty list for a genuinely empty success.
+
 ### Preserving state the snapshot cannot carry
 
 A snapshot stores rendered content only. When the API response carries more than that — pagination
@@ -104,6 +111,8 @@ and hands finished card models down to the cards.
 |---|---|
 | Dashboard overview | `code\FinanceManager.Components\Features\Dashboard\Components\Dashboard.razor.cs` |
 | Account transaction lists | `code\FinanceManager.Components\Features\FinancialAccounts\Services\AccountDetailsSnapshotStore.cs` |
+| Liabilities cards | `code\FinanceManager.Components\Features\Dashboard\Services\LiabilitiesSnapshotStore.cs` |
+| Dashboard insights / recurring / transaction-log cards | `code\FinanceManager.Components\Features\Dashboard\Services\DashboardCardsSnapshotStore.cs` |
 
 `AccountDetailsSnapshotStore` shows the recommended shape for a surface with several callers: a thin
 feature-level wrapper that owns the key shape and the snapshot↔model mapping, leaving the workflow
