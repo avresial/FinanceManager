@@ -1,5 +1,8 @@
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.Labels.HttpClients;
+using FinanceManager.Components.Features.Labels.Models;
+using FinanceManager.Components.Features.Labels.Services;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
@@ -11,58 +14,134 @@ using MudBlazor;
 
 namespace FinanceManager.Components.Features.Labels.Components;
 
+/// <summary>
+/// Coordinator for the Subscriptions page: resolves user and currency, runs the stale-while-revalidate
+/// snapshot workflow for each of the page's two surfaces, and hands finished models to the views.
+/// </summary>
+/// <remarks>
+/// The summary tiles and the list are snapshotted separately — separate keys, separate content
+/// equality — so a change that only moves the list (a renamed pattern, a new charge date) does not
+/// repaint or rewrite the tiles, and vice versa. Both are fed from the single subscriptions request
+/// the page already made, so splitting the snapshots costs no extra HTTP call. See
+/// docs/codebase/UI-SNAPSHOTS.md.
+/// </remarks>
 public partial class SubscriptionsPage : ComponentBase
 {
-    private bool _isLoading = true;
+    private bool _isSummaryLoading = true;
+    private bool _isListLoading = true;
     private bool _showInactive;
     private int? _userId;
     private Currency _currency = DefaultCurrency.PLN;
+    private SubscriptionsSummaryModel _summary = SubscriptionsSummaryModel.Empty;
     private List<RecurringTransactionResult> _subscriptions = [];
     private readonly HashSet<Guid> _updating = [];
+
+    // Shared by both surfaces so one reload claims a single version for the pair; a newer reload
+    // then supersedes both together rather than leaving the tiles and the list from different runs.
+    private readonly RefreshVersionGate _refreshGate = new();
 
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required RecurringTransactionDetectorHttpClient HttpClient { get; set; }
+    [Inject] public required SubscriptionsSnapshotStore SnapshotStore { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required ILogger<SubscriptionsPage> Logger { get; set; }
 
-    private List<RecurringTransactionResult> VisibleSubscriptions =>
-        _subscriptions
-            .Where(x => _showInactive || (!x.IsMuted && !x.IsCancelled))
-            .OrderByDescending(x => x.IsFlaggedForReview)
-            .ThenBy(x => x.NextExpectedChargeDate)
-            .ToList();
+    protected override Task OnInitializedAsync() => LoadData();
 
-    private IEnumerable<RecurringTransactionResult> ActiveSubscriptions =>
-        _subscriptions.Where(x => !x.IsMuted && !x.IsCancelled);
-
-    private int ActiveCount => ActiveSubscriptions.Count();
-    private decimal ActiveMonthlyCost => ActiveSubscriptions.Sum(x => x.MonthlyCost);
-    private int IncreaseCount => ActiveSubscriptions.Count(x => x.PriceDelta > 0);
-
-    protected override async Task OnInitializedAsync()
+    private async Task LoadData()
     {
-        try
-        {
-            var user = await LoginService.GetLoggedUser();
-            if (user is null) return;
+        // Claimed here rather than inside the coordinator so the same version guards the logged-out
+        // branch below and is shared by both surfaces.
+        var version = _refreshGate.Claim();
 
-            _userId = user.UserId;
-            _currency = await SettingsService.GetCurrencyAsync();
-            _subscriptions = await HttpClient.GetRecurringTransactions(user.UserId);
-        }
-        catch (Exception ex)
+        var user = await LoginService.GetLoggedUser();
+        if (!_refreshGate.IsCurrent(version)) return;
+        if (user is null)
         {
-            Logger.LogError(ex, "Unable to load subscriptions");
+            _isSummaryLoading = false;
+            _isListLoading = false;
+            StateHasChanged();
+            return;
+        }
+
+        _userId = user.UserId;
+        _currency = await SettingsService.GetCurrencyAsync();
+        if (!_refreshGate.IsCurrent(version)) return;
+
+        var currency = _currency.ShortName;
+
+        // One request feeds both surfaces: the first surface to reach its fetch starts it, the other
+        // awaits the same task. Lazy is thread-safe by default, so neither ordering issues a second call.
+        var subscriptions = new Lazy<Task<List<RecurringTransactionResult>>>(
+            () => HttpClient.GetRecurringTransactions(user.UserId));
+
+        // Run both surfaces concurrently so each paints its own snapshot as soon as it is read,
+        // instead of the list waiting for the tiles to finish reconciling.
+        var summaryRun = SnapshotStore.RefreshSummaryAsync(
+            user.UserId,
+            currency,
+            _refreshGate,
+            version,
+            async () => SubscriptionsSummaryModel.FromSubscriptions(await subscriptions.Value),
+            onSnapshotPainted: ShowSummary,
+            onSnapshotMissing: () => ShowLoading(summary: true),
+            onRefreshed: ShowSummary);
+
+        var listRun = SnapshotStore.RefreshListAsync(
+            user.UserId,
+            currency,
+            _refreshGate,
+            version,
+            async () => await subscriptions.Value,
+            onSnapshotPainted: ShowSubscriptions,
+            onSnapshotMissing: () => ShowLoading(summary: false),
+            onRefreshed: ShowSubscriptions);
+
+        await Task.WhenAll(summaryRun, listRun);
+        if (!_refreshGate.IsCurrent(version)) return;
+
+        var summaryResult = await summaryRun;
+        var listResult = await listRun;
+
+        _isSummaryLoading = false;
+        _isListLoading = false;
+
+        // A failed request behind a painted snapshot keeps that snapshot on screen; only a surface
+        // with nothing to show reports the failure. Both surfaces share the one request, so a single
+        // message covers them.
+        if (summaryResult.IsBlockingFailure || listResult.IsBlockingFailure)
+        {
+            Logger.LogError(summaryResult.Error ?? listResult.Error, "Unable to load subscriptions");
             Snackbar.Add("Unable to load subscriptions.", Severity.Error);
         }
-        finally
-        {
-            _isLoading = false;
-        }
+
+        StateHasChanged();
     }
 
-    private bool IsUpdating(RecurringTransactionResult item) => _updating.Contains(item.PatternId);
+    private Task ShowSummary(SubscriptionsSummaryModel model)
+    {
+        _summary = model;
+        _isSummaryLoading = false;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task ShowSubscriptions(List<RecurringTransactionResult> subscriptions)
+    {
+        _subscriptions = subscriptions;
+        _isListLoading = false;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task ShowLoading(bool summary)
+    {
+        if (summary)
+            _isSummaryLoading = true;
+        else
+            _isListLoading = true;
+
+        return InvokeAsync(StateHasChanged);
+    }
 
     private Task ToggleMuted(RecurringTransactionResult item) =>
         Update(item, !item.IsMuted, item.IsCancelled, item.IsFlaggedForReview);
@@ -96,6 +175,9 @@ public partial class SubscriptionsPage : ComponentBase
             item.IsMuted = isMuted;
             item.IsCancelled = isCancelled;
             item.IsFlaggedForReview = isFlaggedForReview;
+            _summary = SubscriptionsSummaryModel.FromSubscriptions(_subscriptions);
+
+            await PersistSnapshots();
         }
         catch (Exception ex)
         {
@@ -108,13 +190,25 @@ public partial class SubscriptionsPage : ComponentBase
         }
     }
 
-    private static string CadenceLabel(RecurringCadence cadence) =>
-        cadence switch
-        {
-            RecurringCadence.Weekly => "Weekly",
-            RecurringCadence.Monthly => "Monthly",
-            RecurringCadence.Quarterly => "Quarterly",
-            RecurringCadence.Annual => "Annual",
-            _ => cadence.ToString()
-        };
+    /// <summary>
+    /// Re-persists both surfaces after a toggle so the next visit paints the state the user just
+    /// produced instead of the pre-toggle one. Runs through the coordinator with the current models
+    /// as the "fresh" data and no paint callbacks: it reconciles storage only, without re-requesting
+    /// and without repainting what is already on screen.
+    /// </summary>
+    private Task PersistSnapshots()
+    {
+        if (_userId is null) return Task.CompletedTask;
+
+        var version = _refreshGate.Claim();
+        var currency = _currency.ShortName;
+        var summary = _summary;
+        var subscriptions = _subscriptions;
+
+        return Task.WhenAll(
+            SnapshotStore.RefreshSummaryAsync(_userId.Value, currency, _refreshGate, version,
+                () => Task.FromResult<SubscriptionsSummaryModel?>(summary)),
+            SnapshotStore.RefreshListAsync(_userId.Value, currency, _refreshGate, version,
+                () => Task.FromResult<List<RecurringTransactionResult>?>(subscriptions)));
+    }
 }
