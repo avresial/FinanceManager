@@ -50,6 +50,7 @@ public partial class RecurringTransactionDetectorCard
             _data = [];
             _totalMonthlySpend = 0;
             _isLoading = false;
+            StateHasChanged();
             return;
         }
 
