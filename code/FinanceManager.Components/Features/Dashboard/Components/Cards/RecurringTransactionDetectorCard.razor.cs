@@ -50,7 +50,9 @@ public partial class RecurringTransactionDetectorCard
                 return;
             }
 
-            _data = await RecurringTransactionDetectorHttpClient.GetRecurringTransactions(user.UserId);
+            _data = (await RecurringTransactionDetectorHttpClient.GetRecurringTransactions(user.UserId))
+                .Where(x => !x.IsMuted && !x.IsCancelled)
+                .ToList();
             _totalMonthlySpend = _data.Count == 0 ? 0 : Math.Round(_data.Sum(x => x.Value), 2);
         }
         catch (Exception ex)
