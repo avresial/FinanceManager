@@ -1,6 +1,7 @@
 using FinanceManager.Application.Identity;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.Identity.HttpClients;
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Identity.Commands;
 using FinanceManager.Domain.Identity.Dtos;
 using FinanceManager.Domain.Identity.Entities;
@@ -212,6 +213,32 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
             .SingleAsync(user => user.Id == _testUserId, TestContext.Current.CancellationToken);
         Assert.Equal(UserRole.Admin, updatedUser.UserRole);
         Assert.Equal([nameof(UserRole.User), nameof(UserRole.Admin)], updatedUser.UserRole.GetAssignedRoles());
+    }
+
+    [Fact]
+    public async Task UpdatePreferredBenchmark_AcceptsOnlyExistingInvestmentListings()
+    {
+        await SeedUser();
+        Authorize(_testUserName, _testUserId, UserRole.User);
+        const long listingId = 981;
+        _testDatabase!.Context.AssetListings.Add(new AssetListing
+        {
+            Id = listingId,
+            AssetId = 91,
+            Ticker = "VWCE",
+            ExchangeMic = "XETR",
+            ExchangeName = "Xetra",
+            TradingCurrency = "EUR",
+            IsActive = true
+        });
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var client = new UserHttpClient(Client);
+
+        Assert.False(await client.UpdatePreferredBenchmark(new(_testUserId, listingId + 1)));
+        Assert.True(await client.UpdatePreferredBenchmark(new(_testUserId, listingId)));
+
+        var user = await client.GetUser(_testUserId);
+        Assert.Equal(listingId, user?.PreferredBenchmarkListingId);
     }
 
     [Fact]

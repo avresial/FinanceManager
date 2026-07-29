@@ -23,6 +23,9 @@ public class UserDto
     /// <summary>Currency all asset values are presented in for this user. Defaults to PLN.</summary>
     public int PreferredCurrencyId { get; set; } = DefaultCurrency.PLN.Id;
 
+    /// <summary>Asset listing used as the investment benchmark; null selects Polish inflation.</summary>
+    public long? PreferredBenchmarkListingId { get; set; }
+
     public User ToUser() => new()
     {
         UserId = Id,
@@ -32,7 +35,8 @@ public class UserDto
         PricingLevel = PricingLevel,
         UserRole = UserRole,
         CreationDate = CreationDate,
-        PreferredCurrencyId = PreferredCurrencyId
+        PreferredCurrencyId = PreferredCurrencyId,
+        PreferredBenchmarkListingId = PreferredBenchmarkListingId
     };
 
 }

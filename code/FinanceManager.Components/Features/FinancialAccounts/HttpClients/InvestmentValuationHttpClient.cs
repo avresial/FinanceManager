@@ -38,6 +38,23 @@ public class InvestmentValuationHttpClient(HttpClient httpClient)
         return await response.Content.ReadFromJsonAsync<Dictionary<DateTime, decimal>>() ?? [];
     }
 
+    public async Task<IReadOnlyDictionary<DateTime, decimal>> GetBenchmarkSeriesAsync(
+        int currencyId,
+        DateTime start,
+        DateTime end,
+        decimal baseValue,
+        long? listingId)
+    {
+        var url = $"{httpClient.BaseAddress}api/InvestmentValuation/BenchmarkSeries/"
+            + $"{currencyId}/{Iso(start)}/{Iso(end)}?baseValue={baseValue.ToString(CultureInfo.InvariantCulture)}";
+        if (listingId is long id)
+            url += $"&listingId={id}";
+
+        using var response = await httpClient.GetAsync(url);
+        if (!response.IsSuccessStatusCode) return new Dictionary<DateTime, decimal>();
+        return await response.Content.ReadFromJsonAsync<Dictionary<DateTime, decimal>>() ?? [];
+    }
+
     // Date-only ISO form so the value binds cleanly to the route's DateTime constraint.
     private static string Iso(DateTime date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 }

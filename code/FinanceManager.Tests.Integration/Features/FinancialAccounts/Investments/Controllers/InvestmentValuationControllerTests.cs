@@ -6,10 +6,12 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using System.Net;
 using Xunit;
@@ -26,6 +28,7 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
     private const int _usdCurrencyId = 840;
     private static readonly DateTime _asOf = new(2024, 6, 10);
     private TestDatabase? _testDatabase;
+    private readonly Mock<IInflationIndexProvider> _inflationIndexProvider = new();
 
     protected override void ConfigureServices(IServiceCollection services)
     {
@@ -40,6 +43,8 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         planVerifierMock.Setup(x => x.CanAddMoreAccounts(_testUserId)).ReturnsAsync(true);
         planVerifierMock.Setup(x => x.CanAddMoreEntries(_testUserId, It.IsAny<int>())).ReturnsAsync(true);
         services.AddSingleton(planVerifierMock.Object);
+        services.RemoveAll<IInflationIndexProvider>();
+        services.AddSingleton(_inflationIndexProvider.Object);
     }
 
     private async Task SeedAccount()
@@ -140,6 +145,32 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetBenchmarkSeries_DefaultsToInflationAndRebasesIt()
+    {
+        await SeedHoldingsWithPrice();
+        Authorize("testuser", _testUserId, UserRole.User);
+        var start = _asOf.AddMonths(-1);
+        _inflationIndexProvider
+            .Setup(x => x.GetIndexSeriesAsync(start, _asOf, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, decimal>
+            {
+                [start] = 100m,
+                [_asOf] = 105m
+            });
+        var client = new InvestmentValuationHttpClient(Client);
+
+        var series = await client.GetBenchmarkSeriesAsync(
+            _usdCurrencyId,
+            start,
+            _asOf,
+            300m,
+            null);
+
+        Assert.Equal(300m, series[start]);
+        Assert.Equal(315m, series[_asOf]);
     }
 
     [Fact]

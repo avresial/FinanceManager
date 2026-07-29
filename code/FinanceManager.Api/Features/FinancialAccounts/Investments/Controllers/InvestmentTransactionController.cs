@@ -170,6 +170,17 @@ public class InvestmentTransactionController(
         return Ok(listings.Select(x => new InstrumentSearchResultDto(x.Id, x.Ticker, x.ExchangeName, x.TradingCurrency)).ToList());
     }
 
+    [HttpGet("Listing/{listingId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(InstrumentSearchResultDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetListing(long listingId, CancellationToken cancellationToken = default)
+    {
+        var listing = await assetListingRepository.Get(listingId, cancellationToken);
+        return listing is null
+            ? NotFound()
+            : Ok(new InstrumentSearchResultDto(listing.Id, listing.Ticker, listing.ExchangeName, listing.TradingCurrency));
+    }
+
     [HttpGet("ListingPrice/{listingId:long}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ListingPriceDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
