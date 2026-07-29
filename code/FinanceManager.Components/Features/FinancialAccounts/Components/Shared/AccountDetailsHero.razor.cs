@@ -46,6 +46,9 @@ public partial class AccountDetailsHero
 
     private const int _yAxisTickCount = 5;
 
+    /// <summary>Legend/series name for the account's own balance series.</summary>
+    public const string BalanceSeriesName = "Balance";
+
     private MudDateRangePicker? _customDateRangePicker;
 
     private Task OpenCustomDateRangePicker() =>
@@ -62,7 +65,7 @@ public partial class AccountDetailsHero
     // Track which instance drew which points and ask the live chart to redraw when they change.
     private ApexChart<TimeSeriesModel>? _chart;
     private ApexChart<TimeSeriesModel>? _drawnChart;
-    private List<(DateTime DateTime, decimal Value)> _drawnPoints = [];
+    private List<(string Series, DateTime DateTime, decimal Value)> _drawnPoints = [];
 
     protected override void OnParametersSet() => ApplyYScale();
 
@@ -70,7 +73,12 @@ public partial class AccountDetailsHero
     {
         if (IsChartLoading || _chart is null) return;
 
-        var points = ChartData.Concat(BenchmarkData).Select(p => (p.DateTime, p.Value));
+        // Each point carries its series name so the comparison notices a moved boundary
+        // between the two series (a flat concatenation of the same points would compare
+        // equal) and a renamed benchmark, which changes the legend without changing values.
+        var points = ChartData
+            .Select(p => (BalanceSeriesName, p.DateTime, p.Value))
+            .Concat(BenchmarkData.Select(p => (BenchmarkName, p.DateTime, p.Value)));
         if (!ReferenceEquals(_chart, _drawnChart))
         {
             // A freshly mounted chart instance (first render, or remounted after the loading

@@ -64,4 +64,20 @@ public class ChartHelperTests
 
         Assert.Contains("maximumFractionDigits:2", formatter);
     }
+
+    [Fact]
+    public void CompactCurrencyTickFormatter_LabelsZeroInsteadOfBlankingTheTick()
+    {
+        // A loan paid down to zero, or any range straddling zero, puts a real tick at 0.
+        // A truthiness guard (`if(!v)`) would silently blank that gridline's label.
+        Assert.DoesNotContain("if(!v)", ChartHelper.CompactCurrencyTickFormatter);
+        Assert.Contains("if(v===0) return '0'", ChartHelper.CompactCurrencyTickFormatter);
+    }
+
+    [Fact]
+    public void CompactCurrencyTickFormatter_StillDropsNonNumericValues()
+    {
+        // Guarding zero must not lose the null/undefined/NaN guard, or those render "NaNk".
+        Assert.Contains("Number.isFinite(v)", ChartHelper.CompactCurrencyTickFormatter);
+    }
 }

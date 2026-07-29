@@ -5,10 +5,11 @@ public static class ChartHelper
     /// <summary>
     /// Compact currency tick labels for a y-axis: 2.5k / 7.5k / 10k / 13k. Shared by the
     /// dashboard time-series cards and the account details hero chart so both label their
-    /// value axis identically.
+    /// value axis identically. Zero is labelled "0" rather than "0k"; only non-numeric
+    /// values are dropped, so an axis crossing zero still labels that gridline.
     /// </summary>
     public const string CompactCurrencyTickFormatter =
-        "function(v){ if(!v) return ''; var k=v/1000; " +
+        "function(v){ if(!Number.isFinite(v)) return ''; if(v===0) return '0'; var k=v/1000; " +
         "return (Math.abs(k)<10 && k%1!==0 ? k.toFixed(1) : Math.round(k))+'k'; }";
 
     /// <summary>

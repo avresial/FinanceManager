@@ -98,7 +98,7 @@
         else
         {
             <ApexChart @ref="_chart" TItem="TimeSeriesModel" Options="_heroChartOptions" Height="200">
-                <ApexPointSeries TItem="TimeSeriesModel" Items="ChartData" Name="Balance" SeriesType="SeriesType.Area"
+                <ApexPointSeries TItem="TimeSeriesModel" Items="ChartData" Name="@BalanceSeriesName" SeriesType="SeriesType.Area"
                                  XValue="@(p => p.DateTime.ToLocalTime())" YValue="@(p => p.Value)" />
                 @if (BenchmarkData.Count > 0)
                 {
