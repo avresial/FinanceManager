@@ -3,6 +3,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
+using FinanceManager.Domain.MoneyFlow.Services;
 
 namespace FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 
@@ -21,7 +22,8 @@ namespace FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 /// </remarks>
 internal class InvestmentValuationService(
     IInvestmentTransactionRepository transactionRepository,
-    IInvestmentPriceProvider priceProvider) : IInvestmentValuationService
+    IInvestmentPriceProvider priceProvider,
+    IInflationIndexProvider inflationIndexProvider) : IInvestmentValuationService
 {
     public async Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsOfAsync(int accountId, DateOnly asOf, CancellationToken ct = default)
     {
@@ -189,5 +191,26 @@ internal class InvestmentValuationService(
         }
 
         return result;
+    }
+
+    public async Task<IReadOnlyDictionary<DateTime, decimal>> GetBenchmarkSeriesAsync(
+        long? assetListingId,
+        Currency targetCurrency,
+        DateTime start,
+        DateTime end,
+        decimal baseValue,
+        CancellationToken ct = default)
+    {
+        if (baseValue <= 0 || start == default || end == default || end < start)
+            return new Dictionary<DateTime, decimal>();
+
+        var raw = assetListingId is long listingId
+            ? await priceProvider.GetPricePerUnitSeriesAsync(listingId, targetCurrency, start, end, ct)
+            : await inflationIndexProvider.GetIndexSeriesAsync(start, end, ct);
+        var ordered = raw.Where(x => x.Value > 0).OrderBy(x => x.Key).ToList();
+        if (ordered.Count == 0) return new Dictionary<DateTime, decimal>();
+
+        var firstValue = ordered[0].Value;
+        return ordered.ToDictionary(x => x.Key, x => baseValue * x.Value / firstValue);
     }
 }

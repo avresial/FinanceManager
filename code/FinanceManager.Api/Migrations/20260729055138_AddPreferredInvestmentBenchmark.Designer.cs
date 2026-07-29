@@ -3,6 +3,7 @@ using System;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FinanceManager.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260729055138_AddPreferredInvestmentBenchmark")]
+    partial class AddPreferredInvestmentBenchmark
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -991,42 +994,6 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("FinancialInsights");
                 });
 
-            modelBuilder.Entity("FinanceManager.Domain.Labels.Entities.RecurringSubscription", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsCancelled")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsFlaggedForReview")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsMuted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("MerchantKey")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "MerchantKey")
-                        .IsUnique();
-
-                    b.ToTable("RecurringSubscriptions");
-                });
-
             modelBuilder.Entity("FinanceManager.Domain.Shared.Ai.Entities.AiFallbackEntry", b =>
                 {
                     b.Property<int>("Id")
@@ -1474,15 +1441,6 @@ namespace FinanceManager.Api.Migrations
                     b.HasOne("FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel", null)
                         .WithMany("Classifications")
                         .HasForeignKey("LabelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("FinanceManager.Domain.Labels.Entities.RecurringSubscription", b =>
-                {
-                    b.HasOne("FinanceManager.Domain.Identity.Dtos.UserDto", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

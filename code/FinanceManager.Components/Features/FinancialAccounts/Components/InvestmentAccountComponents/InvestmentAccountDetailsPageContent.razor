@@ -25,7 +25,8 @@ else
                         ChangeLabel="Asset appreciation" ShowChangeRange="false" IsBalanceLoading="@_isChartLoading"
                         SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged" IsChartLoading="@_isChartLoading"
                         CustomDateRange="@_customDateRange" CustomDateRangeChanged="OnCustomDateRangeChanged"
-                        ChartData="@ChartData" IsMobile="@_isMobile" />
+                        ChartData="@ChartData" BenchmarkData="@BenchmarkData" BenchmarkName="@_benchmarkName"
+                        IsMobile="@_isMobile" />
 
     <MudContainer MaxWidth="MaxWidth.Large" Class="px-0">
         <MudGrid Spacing="3">

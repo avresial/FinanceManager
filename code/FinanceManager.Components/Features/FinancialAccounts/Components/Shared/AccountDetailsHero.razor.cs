@@ -28,6 +28,8 @@ public partial class AccountDetailsHero
     // callers whose balance is known synchronously.
     [Parameter] public bool IsBalanceLoading { get; set; }
     [Parameter] public List<TimeSeriesModel> ChartData { get; set; } = [];
+    [Parameter] public List<TimeSeriesModel> BenchmarkData { get; set; } = [];
+    [Parameter] public string BenchmarkName { get; set; } = "Benchmark";
     [Parameter] public bool IsMobile { get; set; }
 
     // Must match the key DateRangeHelper.GetAccountDetailsRange resolves the custom
@@ -49,10 +51,10 @@ public partial class AccountDetailsHero
             Toolbar = new Toolbar { Show = false },
             Animations = new Animations { Enabled = false },
         },
-        Colors = ["#ffab00"],
+        Colors = ["#ffab00", "#42a5f5"],
         Stroke = new Stroke { Curve = Curve.Smooth, Width = 2, LineCap = LineCap.Round },
         DataLabels = new DataLabels { Enabled = false },
-        Legend = new Legend { Show = false },
+        Legend = new Legend { Show = true, ShowForSingleSeries = false },
         Fill = new Fill
         {
             Type = [FillType.Gradient],
