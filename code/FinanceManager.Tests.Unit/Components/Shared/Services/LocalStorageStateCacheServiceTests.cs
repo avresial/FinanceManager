@@ -68,6 +68,26 @@ public class LocalStorageStateCacheServiceTests
             Times.Once);
     }
 
+    // Deliberate: local storage outlives a session, so an entry for another user or a currency the user
+    // switched away from is not preserved — nothing is displaying it, and leaving it there would keep
+    // those figures in the browser indefinitely.
+    [Fact]
+    public async Task Write_WhenRetainingOnlyLatestEntry_RemovesOtherUsersAndCurrenciesToo()
+    {
+        const string otherUserStorageKey = $"{_prefix}:8:0:2026-07-29";
+        const string otherCurrencyStorageKey = $"{_prefix}:7:1:2026-07-29";
+        var localStorage = CreateLocalStorage(otherUserStorageKey, otherCurrencyStorageKey, _currentStorageKey);
+        var cache = CreateCache(localStorage, retainsOnlyLatestEntry: true);
+
+        await cache.GetOrRefreshAsync(_currentKey);
+
+        localStorage.Verify(
+            s => s.RemoveItemsAsync(
+                It.Is<IEnumerable<string>>(keys => keys.SequenceEqual(new[] { otherUserStorageKey, otherCurrencyStorageKey })),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     [Fact]
     public async Task Write_WhenNotRetainingOnlyLatestEntry_KeepsSiblingEntries()
     {

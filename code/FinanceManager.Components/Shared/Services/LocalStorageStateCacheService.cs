@@ -133,11 +133,14 @@ public abstract class LocalStorageStateCacheService<TState, TRefreshContext, TCa
     /// cache's prefix, so the cache holds at most one entry at a time.
     /// </summary>
     /// <remarks>
-    /// Opt in when the key covers only inputs the user does not switch between (one entry per user and
-    /// currency): any key change is then a supersession — a schema bump, a day rollover — and the previous
-    /// entry is dead weight that would otherwise sit in local storage forever. Leave it
-    /// <see langword="false"/> for caches that legitimately hold several entries at once, such as one per
-    /// date range the user can pick, where pruning would throw away entries still worth reading.
+    /// Opt in when the surface shows one thing at a time, so any other entry under the prefix is one
+    /// nothing is displaying: an earlier day, a schema bump, a currency the user switched away from, a
+    /// previously signed-in user. Clearing all of them rather than only the entry the new key directly
+    /// replaces is deliberate — local storage outlives a session (<c>LoginService.EndSession</c> removes
+    /// the session key alone), so a scope left behind would keep that user's figures in the browser
+    /// indefinitely. Leave it <see langword="false"/> for caches that legitimately hold several entries at
+    /// once, such as one per date range the user can pick, where pruning would throw away entries still
+    /// worth reading.
     /// </remarks>
     protected virtual bool RetainsOnlyLatestEntry => false;
 

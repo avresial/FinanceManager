@@ -76,10 +76,13 @@ grows an orphaned entry every time. Two guards keep that from happening:
   "as of" instant, or a range end clamped to now by `DateRangeHelper` — so format them with
   `CacheKeyDate.ToSegment` and keep the exact instant on the snapshot instead. Freshness inside the day
   is the staleness check's job, not the key's.
-- **Prune when the cache holds one entry.** A cache keyed only on inputs the user cannot switch between
-  (one entry per user and currency) should override `RetainsOnlyLatestEntry` to `true`, so a key change —
-  a schema bump, a day rollover — evicts what it superseded rather than leaving it in storage forever.
-  Leave it `false` where several entries are legitimate, such as one per date range the user can pick.
+- **Prune when the surface shows one thing at a time.** Such a cache should override
+  `RetainsOnlyLatestEntry` to `true`: a write then clears every other entry under its prefix, since each
+  of them — an earlier day, a currency switched away from, a previously signed-in user — is one nothing
+  is displaying. Clearing the other scopes rather than only the superseded key is the point: local
+  storage outlives a session, so anything left behind keeps that user's figures in the browser
+  indefinitely. Leave it `false` where several entries are legitimate at once, such as one per date range
+  the user can pick.
 
 ### Content equality
 

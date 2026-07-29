@@ -28,7 +28,8 @@ public class InvestmentRateCacheService(
     public Task<InvestmentRateCacheSnapshot> GetSnapshotAsync(InvestmentRateRefreshContext context)
         => GetOrRefreshAsync(context);
 
-    // The key covers one user and currency, so a key change always supersedes the previous entry.
+    // The card shows one set of rates at a time, so every other entry under this prefix — an earlier day,
+    // a currency switched away from, a previous user — is one nothing is displaying.
     protected override bool RetainsOnlyLatestEntry => true;
 
     protected override string GetCacheKey(InvestmentRateRefreshContext refreshContext)
