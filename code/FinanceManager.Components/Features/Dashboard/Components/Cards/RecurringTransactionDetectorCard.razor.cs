@@ -1,6 +1,9 @@
+using FinanceManager.Components.Features.Dashboard.Models;
+using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.Labels.HttpClients;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
@@ -12,15 +15,17 @@ using MudBlazor;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Cards;
 
-public partial class RecurringTransactionDetectorCard
+public partial class RecurringTransactionDetectorCard : IDisposable
 {
     private bool _isLoading;
+    private bool _disposed;
     private bool _isLoadingDetail;
     private List<RecurringTransactionResult> _data = [];
     private decimal _totalMonthlySpend;
     private RecurringTransactionResult? _selectedItem;
     private List<CurrencyAccountEntry> _detailEntries = [];
     private int _detailRequestVersion;
+    private readonly RefreshVersionGate _refreshGate = new();
 
     [Parameter] public string Height { get; set; } = "300px";
 
@@ -29,6 +34,7 @@ public partial class RecurringTransactionDetectorCard
     [Inject] public required RecurringTransactionDetectorHttpClient RecurringTransactionDetectorHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required CurrencyEntryHttpClient CurrencyEntryHttpClient { get; set; }
+    [Inject] public required DashboardCardsSnapshotStore SnapshotStore { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -37,34 +43,59 @@ public partial class RecurringTransactionDetectorCard
 
     private async Task LoadData()
     {
-        _isLoading = true;
-        StateHasChanged();
-
-        try
+        var version = _refreshGate.Claim();
+        var user = await LoginService.GetLoggedUser();
+        if (_disposed || !_refreshGate.IsCurrent(version)) return;
+        if (user is null)
         {
-            var user = await LoginService.GetLoggedUser();
-            if (user is null)
-            {
-                _data = [];
-                _totalMonthlySpend = 0;
-                return;
-            }
-
-            _data = (await RecurringTransactionDetectorHttpClient.GetRecurringTransactions(user.UserId))
-                .Where(x => !x.IsMuted && !x.IsCancelled)
-                .ToList();
-            _totalMonthlySpend = _data.Count == 0 ? 0 : Math.Round(_data.Sum(x => x.Value), 2);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, ex.Message);
-            Snackbar.Add("Unable to load recurring transactions.", Severity.Error);
-        }
-        finally
-        {
+            _data = [];
+            _totalMonthlySpend = 0;
             _isLoading = false;
             StateHasChanged();
+            return;
         }
+
+        var result = await SnapshotStore.RefreshRecurringTransactionsAsync(
+            user.UserId,
+            _refreshGate,
+            version,
+            async () =>
+            {
+                var data = (await RecurringTransactionDetectorHttpClient.GetRecurringTransactions(user.UserId))
+                    .Where(x => !x.IsMuted && !x.IsCancelled)
+                    .ToList();
+                return new(data, data.Count == 0 ? 0 : Math.Round(data.Sum(x => x.Value), 2));
+            },
+            onSnapshotPainted: ShowData,
+            onSnapshotMissing: ShowLoading,
+            onRefreshed: ShowData);
+        if (_disposed || !_refreshGate.IsCurrent(version)) return;
+
+        _isLoading = false;
+        if (result.IsBlockingFailure)
+        {
+            Logger.LogError(result.Error, "Unable to load recurring transactions.");
+            Snackbar.Add("Unable to load recurring transactions.", Severity.Error);
+        }
+        StateHasChanged();
+    }
+
+    private Task ShowData(RecurringTransactionsCardModel model)
+    {
+        if (_disposed) return Task.CompletedTask;
+
+        _data = model.Data;
+        _totalMonthlySpend = model.TotalMonthlySpend;
+        _isLoading = false;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task ShowLoading()
+    {
+        if (_disposed) return Task.CompletedTask;
+
+        _isLoading = true;
+        return InvokeAsync(StateHasChanged);
     }
 
     private async Task SelectItem(RecurringTransactionResult item)
@@ -106,5 +137,11 @@ public partial class RecurringTransactionDetectorCard
         _selectedItem = null;
         _detailEntries = [];
         _isLoadingDetail = false;
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        Interlocked.Increment(ref _detailRequestVersion);
     }
 }

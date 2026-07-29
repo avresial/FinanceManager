@@ -315,10 +315,16 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         }
 
         Authorize("TestUser", 1, UserRole.User);
+        var client = new MoneyFlowHttpClient(Client);
+
+        // The first request through the test host pays for pipeline and EF query-plan JIT, which on a
+        // cold CI runner alone can approach the budget below. Warm it up so the measurement reflects
+        // the cost of the query over 500 entries, which is what this test is guarding.
+        await client.GetNetWorth(1, DefaultCurrency.USD, _nowUtc);
 
         // Act - Measure performance
         var startTime = DateTime.UtcNow;
-        var result = await new MoneyFlowHttpClient(Client).GetNetWorth(1, DefaultCurrency.USD, _nowUtc);
+        var result = await client.GetNetWorth(1, DefaultCurrency.USD, _nowUtc);
         var duration = DateTime.UtcNow - startTime;
 
         // Assert
@@ -519,10 +525,14 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         }
 
         Authorize("TestUser", 1, UserRole.User);
+        var client = new MoneyFlowHttpClient(Client);
+
+        // Warm up first, for the same reason as GetNetWorth_LargePortfolio_PerformsEfficiently.
+        await client.GetNetWorth(1, DefaultCurrency.USD, _nowUtc.AddDays(-365), _nowUtc);
 
         // Act - 365-day range
         var startTime = DateTime.UtcNow;
-        var result = await new MoneyFlowHttpClient(Client).GetNetWorth(1, DefaultCurrency.USD, _nowUtc.AddDays(-365), _nowUtc);
+        var result = await client.GetNetWorth(1, DefaultCurrency.USD, _nowUtc.AddDays(-365), _nowUtc);
         var duration = DateTime.UtcNow - startTime;
 
         // Assert
