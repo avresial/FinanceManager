@@ -1,6 +1,7 @@
 using Blazored.LocalStorage;
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
@@ -25,6 +26,10 @@ public class InvestmentPaycheckEstimateCacheService(
 
     public async Task<InvestmentPaycheckEstimateCacheSnapshot> GetSnapshotAsync(InvestmentPaycheckEstimateRefreshContext context)
         => await GetOrRefreshAsync(context);
+
+    // The card shows one estimate at a time, so every other entry under this prefix — an earlier day, a
+    // currency switched away from, a previous user — is one nothing is displaying.
+    protected override bool RetainsOnlyLatestEntry => true;
 
     protected override string GetCacheKey(InvestmentPaycheckEstimateRefreshContext refreshContext)
         => BuildCacheKey(refreshContext.UserId, refreshContext.CurrencyId, refreshContext.EndDateTime, refreshContext.WithdrawalRate, refreshContext.SalaryMonths);
@@ -70,6 +75,9 @@ public class InvestmentPaycheckEstimateCacheService(
         return BuildCacheKey(state.UserId, state.CurrencyId, state.EndDateTime, state.WithdrawalRate, state.SalaryMonths) == cacheKey;
     }
 
+    // The card's "as of" instant is a live clock read, so it differs on every mount; only its day reaches
+    // the key (see CacheKeyDate). The exact instant stays on the snapshot for the request itself, and
+    // staleness inside the day is bounded by the FetchedAtUtc check in IsUsable.
     private static string BuildCacheKey(int userId, int currencyId, DateTime endDateTime, decimal withdrawalRate, int salaryMonths)
-        => $"{userId}:{currencyId}:{endDateTime:O}:{Math.Round(withdrawalRate, 4):0.0000}:{salaryMonths}";
+        => $"{userId}:{currencyId}:{CacheKeyDate.ToSegment(endDateTime)}:{Math.Round(withdrawalRate, 4):0.0000}:{salaryMonths}";
 }

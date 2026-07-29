@@ -1,6 +1,7 @@
 using Blazored.LocalStorage;
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using Microsoft.Extensions.Caching.Memory;
@@ -68,6 +69,8 @@ public class AssetsPageCardsCacheService(
         return BuildCacheKey(state.UserId, state.CurrencyId, state.StartDateTime, state.EndDateTime) == cacheKey;
     }
 
+    // Presets clamp the range end to the current clock, so only the day of each bound reaches the key —
+    // see CacheKeyDate. One entry per picked range is intended here; one per visit is not.
     private static string BuildCacheKey(int userId, int currencyId, DateTime startDateTime, DateTime endDateTime)
-        => $"{userId}:{currencyId}:{startDateTime.Date:O}:{endDateTime:O}";
+        => $"{userId}:{currencyId}:{CacheKeyDate.ToSegment(startDateTime)}:{CacheKeyDate.ToSegment(endDateTime)}";
 }

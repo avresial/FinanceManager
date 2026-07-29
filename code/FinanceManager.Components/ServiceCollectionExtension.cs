@@ -7,6 +7,7 @@ using FinanceManager.Components.Features.Identity.HttpClients;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.Insights.HttpClients;
 using FinanceManager.Components.Features.Labels.HttpClients;
+using FinanceManager.Components.Features.Labels.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
@@ -73,6 +74,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<LiabilitiesSnapshotStore>()
                 .AddScoped<DashboardCardsSnapshotStore>()
                 .AddScoped<DiversificationSnapshotStore>()
+                .AddScoped<SubscriptionsSnapshotStore>()
                 .AddTransient<CurrencyImportJobTracker>()
                 .AddScoped<AssetsPageCardsCacheService>()
                 .AddScoped<InvestmentPaycheckEstimateCacheService>()

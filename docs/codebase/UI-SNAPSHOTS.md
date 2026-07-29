@@ -68,6 +68,22 @@ each save overwrites, rather than accumulating an entry per range the user has e
 the range inside the snapshot instead when the view needs to know what produced it (the dashboard
 does this so amounts and their period label stay paired during a reload).
 
+The same rule holds for the time-based cache, for a different reason: a key that moves per visit means
+`GetOrRefreshAsync` never finds what the last visit wrote, so the cache never hits *and* local storage
+grows an orphaned entry every time. Two guards keep that from happening:
+
+- **Never put sub-day precision in a key.** The dates that reach one are usually clock reads — a card's
+  "as of" instant, or a range end clamped to now by `DateRangeHelper` — so format them with
+  `CacheKeyDate.ToSegment` and keep the exact instant on the snapshot instead. Freshness inside the day
+  is the staleness check's job, not the key's.
+- **Prune when the surface shows one thing at a time.** Such a cache should override
+  `RetainsOnlyLatestEntry` to `true`: a write then clears every other entry under its prefix, since each
+  of them — an earlier day, a currency switched away from, a previously signed-in user — is one nothing
+  is displaying. Clearing the other scopes rather than only the superseded key is the point: local
+  storage outlives a session, so anything left behind keeps that user's figures in the browser
+  indefinitely. Leave it `false` where several entries are legitimate at once, such as one per date range
+  the user can pick.
+
 ### Content equality
 
 The default `JsonContentComparer<TModel>` treats two models as equal when they serialize
@@ -105,6 +121,13 @@ not in a reusable view component. View components should take a prepared model a
 dashboard follows this shape: `Dashboard.razor.cs` resolves user and currency, runs the coordinator,
 and hands finished card models down to the cards.
 
+One page can own several surfaces without one request per surface. When a single response feeds more
+than one surface, run a coordinator request per surface — separate keys, separate content equality,
+so a change confined to one of them repaints and rewrites only that one — and share the response
+between them (the Subscriptions page hands both runs the same lazily started fetch, and runs them
+concurrently so each paints its own snapshot as soon as it is read). Splitting the snapshots must not
+split the request.
+
 ## Where it is used
 
 | Surface | Entry point |
@@ -113,6 +136,7 @@ and hands finished card models down to the cards.
 | Account transaction lists | `code\FinanceManager.Components\Features\FinancialAccounts\Services\AccountDetailsSnapshotStore.cs` |
 | Liabilities cards | `code\FinanceManager.Components\Features\Dashboard\Services\LiabilitiesSnapshotStore.cs` |
 | Dashboard insights / recurring / transaction-log cards | `code\FinanceManager.Components\Features\Dashboard\Services\DashboardCardsSnapshotStore.cs` |
+| Subscriptions page summary tiles and list | `code\FinanceManager.Components\Features\Labels\Services\SubscriptionsSnapshotStore.cs` |
 
 `AccountDetailsSnapshotStore` shows the recommended shape for a surface with several callers: a thin
 feature-level wrapper that owns the key shape and the snapshot↔model mapping, leaving the workflow

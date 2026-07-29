@@ -1,0 +1,56 @@
+@using FinanceManager.Components.Features.Labels.Models
+
+@if (IsLoading)
+{
+    <MudGrid Spacing="2" Class="mb-4">
+        @for (var i = 0; i < 3; i++)
+        {
+            <MudItem xs="12" sm="4">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="110px" />
+            </MudItem>
+        }
+    </MudGrid>
+}
+else
+{
+    <MudGrid Spacing="2" Class="mb-4">
+        <MudItem xs="12" sm="4">
+            <MudPaper Outlined Class="pa-4 h-100">
+                <MudText Typo="Typo.overline">Fixed monthly cost</MudText>
+                <MudText Typo="Typo.h4" Color="Color.Warning">
+                    @($"{Model.MonthlyCost:N2} {Currency}")
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    across @Model.ActiveCount active subscriptions
+                </MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudPaper Outlined Class="pa-4 h-100">
+                <MudText Typo="Typo.overline">Annual equivalent</MudText>
+                <MudText Typo="Typo.h4">@($"{Model.AnnualCost:N2} {Currency}")</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">based on detected cadence</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudPaper Outlined Class="pa-4 h-100">
+                <MudText Typo="Typo.overline">Price increases</MudText>
+                <MudText Typo="Typo.h4" Color="@(Model.IncreaseCount > 0 ? Color.Warning : Color.Default)">
+                    @Model.IncreaseCount
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">since the previous charge</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    /// <summary>Totals to render. Painted from the surface's snapshot first, then from the fresh response.</summary>
+    [Parameter] public SubscriptionsSummaryModel Model { get; set; } = SubscriptionsSummaryModel.Empty;
+
+    /// <summary>Shows placeholders while the page has neither a snapshot nor a response for this surface.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+
+    /// <summary>Currency short name appended to the amounts.</summary>
+    [Parameter] public string Currency { get; set; } = string.Empty;
+}

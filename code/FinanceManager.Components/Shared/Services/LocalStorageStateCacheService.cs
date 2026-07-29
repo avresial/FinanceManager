@@ -85,6 +85,7 @@ public abstract class LocalStorageStateCacheService<TState, TRefreshContext, TCa
             var snapshot = await BuildStateAsync(refreshContext);
             memoryCache.Set(memoryStateKey, snapshot, BuildStateMemoryOptions());
             await localStorageService.SetItemAsync(BuildStorageKey(cacheKey), snapshot);
+            await PruneSupersededEntriesAsync(cacheKey);
             return snapshot;
         }
         finally
@@ -106,6 +107,7 @@ public abstract class LocalStorageStateCacheService<TState, TRefreshContext, TCa
             var snapshot = await BuildStateAsync(refreshContext);
             memoryCache.Set(memoryStateKey, snapshot, BuildStateMemoryOptions());
             await localStorageService.SetItemAsync(BuildStorageKey(cacheKey), snapshot);
+            await PruneSupersededEntriesAsync(cacheKey);
             return snapshot;
         }
         finally
@@ -125,6 +127,49 @@ public abstract class LocalStorageStateCacheService<TState, TRefreshContext, TCa
     protected abstract Task<TState> BuildStateAsync(TRefreshContext refreshContext);
 
     protected abstract bool IsUsable(TState? state, TCacheKey cacheKey, DateTime utcNow);
+
+    /// <summary>
+    /// When <see langword="true"/>, a successful write removes every other persisted entry sharing this
+    /// cache's prefix, so the cache holds at most one entry at a time.
+    /// </summary>
+    /// <remarks>
+    /// Opt in when the surface shows one thing at a time, so any other entry under the prefix is one
+    /// nothing is displaying: an earlier day, a schema bump, a currency the user switched away from, a
+    /// previously signed-in user. Clearing all of them rather than only the entry the new key directly
+    /// replaces is deliberate — local storage outlives a session (<c>LoginService.EndSession</c> removes
+    /// the session key alone), so a scope left behind would keep that user's figures in the browser
+    /// indefinitely. Leave it <see langword="false"/> for caches that legitimately hold several entries at
+    /// once, such as one per date range the user can pick, where pruning would throw away entries still
+    /// worth reading.
+    /// </remarks>
+    protected virtual bool RetainsOnlyLatestEntry => false;
+
+    private async Task PruneSupersededEntriesAsync(TCacheKey cacheKey)
+    {
+        if (!RetainsOnlyLatestEntry)
+            return;
+
+        var currentStorageKey = BuildStorageKey(cacheKey);
+
+        try
+        {
+            var supersededKeys = (await localStorageService.KeysAsync())
+                .Where(key => key.StartsWith($"{cacheKeyPrefix}:", StringComparison.Ordinal)
+                              && !string.Equals(key, currentStorageKey, StringComparison.Ordinal))
+                .ToList();
+
+            if (supersededKeys.Count == 0)
+                return;
+
+            await localStorageService.RemoveItemsAsync(supersededKeys);
+        }
+        catch (Exception ex)
+        {
+            // Pruning is housekeeping: the freshly written entry is already usable, so a failure here
+            // must not surface to the caller.
+            logger.LogWarning(ex, "Failed to prune superseded {CacheType} entries.", typeof(TState).Name);
+        }
+    }
 
     private SemaphoreSlim GetRefreshLock(TCacheKey cacheKey)
     {
