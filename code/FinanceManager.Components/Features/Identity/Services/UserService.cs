@@ -128,6 +128,26 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
         return false;
     }
 
+    public async Task<bool> UpdatePreferredBenchmark(int userId, long? assetListingId)
+    {
+        try
+        {
+            var existingUser = await GetUser(userId);
+            if (existingUser is null) return false;
+            if (await httpClient.UpdatePreferredBenchmark(new(userId, assetListingId)))
+            {
+                OnUserChangeEvent?.Invoke(existingUser);
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating preferred benchmark for user {UserId}", userId);
+        }
+
+        return false;
+    }
+
     public async Task<bool> UpdateRole(int userId, UserRole userRole)
     {
         try

@@ -1,4 +1,5 @@
 using FinanceManager.Api.Shared.Helpers;
+using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
@@ -17,7 +18,8 @@ public class InvestmentValuationController(
     IAccountRepository<InvestmentAccount> accountRepository,
     IInvestmentValuationService valuationService,
     IInvestmentTransactionValuationService transactionValuationService,
-    ICurrencyRepository currencyRepository) : ControllerBase
+    ICurrencyRepository currencyRepository,
+    IAssetListingRepository assetListingRepository) : ControllerBase
 {
     [HttpGet("Holdings/{accountId:int}/{date:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyDictionary<long, decimal>))]
@@ -68,6 +70,29 @@ public class InvestmentValuationController(
 
         var series = await valuationService.GetAccountValueSeriesAsync(accountId, currency, startDate, endDate, cancellationToken);
         return Ok(series);
+    }
+
+    [HttpGet("BenchmarkSeries/{currencyId:int}/{startDate:DateTime}/{endDate:DateTime}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyDictionary<DateTime, decimal>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetBenchmarkSeries(
+        int currencyId,
+        DateTime startDate,
+        DateTime endDate,
+        [FromQuery] decimal baseValue,
+        [FromQuery] long? listingId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (endDate < startDate || baseValue <= 0) return BadRequest();
+
+        var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
+        if (currency is null) return NotFound("Currency not found.");
+        if (listingId is long id && await assetListingRepository.Get(id, cancellationToken) is null)
+            return NotFound("Investment benchmark not found.");
+
+        return Ok(await valuationService.GetBenchmarkSeriesAsync(
+            listingId, currency, startDate, endDate, baseValue, cancellationToken));
     }
 
     [HttpGet("TransactionValuations/{accountId:int}/{currencyId:int}")]
