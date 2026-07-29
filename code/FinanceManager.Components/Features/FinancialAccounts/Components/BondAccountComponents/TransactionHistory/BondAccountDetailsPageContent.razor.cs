@@ -271,6 +271,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
                     userId,
                     accountId,
                     currency.Id,
+                    AccountChartSnapshotStore.BuildRangeKey(selectedRange, dateStart, dateEnd),
                     _chartGate,
                     version,
                     async () =>
@@ -311,14 +312,12 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
         });
     }
 
+    // Only chart data is restored. The selected range and its dates stay owned by the user's
+    // selection: the snapshot key already pins a snapshot to the range it was captured for, and
+    // writing those fields back here would revert the range chip mid-refresh and shift the date
+    // window that a concurrent entries load is reading.
     private Task ApplyChartModel(AccountChartModel model)
     {
-        _selectedRange = model.SelectedRange;
-        _dateStart = model.StartDate;
-        _dateEnd = model.EndDate;
-        _customDateRange = model.SelectedRange == AccountDetailsHero.CustomRangeKey
-            ? new DateRange(model.StartDate, model.EndDate)
-            : null;
         ChartData.Clear();
         ChartData.AddRange(model.Series);
         _currentBalance = model.CurrentBalance;
@@ -458,8 +457,8 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     }
 
     // Stale-while-revalidate: paint the last-rendered entries instantly, always re-fetch, and only
-    // repaint and re-persist when the entries actually changed. Chart data is never snapshotted —
-    // UpdateInfo queues a fresh API load for it. See docs/codebase/UI-SNAPSHOTS.md.
+    // repaint and re-persist when the entries actually changed. Chart data has its own
+    // per-range snapshot, queued by UpdateInfo. See docs/codebase/UI-SNAPSHOTS.md.
     private async Task LoadInitialEntries()
     {
         if (_user is null) return;

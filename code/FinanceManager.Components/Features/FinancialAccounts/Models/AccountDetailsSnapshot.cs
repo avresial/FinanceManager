@@ -6,8 +6,8 @@ namespace FinanceManager.Components.Features.FinancialAccounts.Models;
 /// <summary>
 /// Persisted snapshot of an account's initial transaction history so the account
 /// details page can paint its last-rendered entries instantly on re-navigation,
-/// then reconcile against a fresh API response. Chart data is never snapshotted —
-/// it always loads from the API.
+/// then reconcile against a fresh API response. Chart data is snapshotted separately,
+/// per selected range, by AccountChartSnapshotStore.
 /// </summary>
 /// <remarks>
 /// Only the entries and the identity needed to rebuild the account are stored. The

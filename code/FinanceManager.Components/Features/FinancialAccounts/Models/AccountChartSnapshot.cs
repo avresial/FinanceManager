@@ -8,14 +8,6 @@ public sealed class AccountChartSnapshot : SnapshotBase
     public int UserId { get; set; }
     public int AccountId { get; set; }
     public int CurrencyId { get; set; }
+    public required string RangeKey { get; set; }
     public required AccountChartModel Model { get; set; }
-}
-
-public sealed class InvestmentAccountChartSnapshot : SnapshotBase
-{
-    public int UserId { get; set; }
-    public int AccountId { get; set; }
-    public int CurrencyId { get; set; }
-    public long? BenchmarkListingId { get; set; }
-    public required InvestmentAccountChartModel Model { get; set; }
 }

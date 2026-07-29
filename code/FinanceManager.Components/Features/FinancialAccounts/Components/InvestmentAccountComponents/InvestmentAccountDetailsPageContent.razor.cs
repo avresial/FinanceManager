@@ -199,6 +199,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
                     accountId,
                     currency.Id,
                     benchmark?.ListingId,
+                    AccountChartSnapshotStore.BuildRangeKey(selectedRange, dateStart, dateEnd),
                     _chartGate,
                     version,
                     () => FetchChartModel(
@@ -286,14 +287,12 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             BuildHoldings(transactions, holdings, dateEnd));
     }
 
+    // Only chart data is restored. The selected range and its dates stay owned by the user's
+    // selection: the snapshot key already pins a snapshot to the range it was captured for, and
+    // writing those fields back here would revert the range chip mid-refresh and shift the date
+    // window that a concurrent entries load is reading.
     private Task ApplyChartModel(InvestmentAccountChartModel model)
     {
-        _selectedRange = model.SelectedRange;
-        _dateStart = model.StartDate;
-        _dateEnd = model.EndDate;
-        _customDateRange = model.SelectedRange == AccountDetailsHero.CustomRangeKey
-            ? new DateRange(model.StartDate, model.EndDate)
-            : null;
         ChartData.Clear();
         ChartData.AddRange(model.Series);
         BenchmarkData.Clear();

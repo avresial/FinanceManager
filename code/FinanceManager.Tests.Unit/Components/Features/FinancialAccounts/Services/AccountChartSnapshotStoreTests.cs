@@ -11,9 +11,9 @@ namespace FinanceManager.Tests.Unit.Components.Features.FinancialAccounts.Servic
 [Trait("Category", "Unit")]
 public class AccountChartSnapshotStoreTests
 {
-    private const string _currencyKey = "account-chart:currency:1:2:3";
-    private const string _bondKey = "account-chart:bond:1:2:3";
-    private const string _investmentKey = "account-chart:investment:1:2:3:42";
+    private const string _currencyKey = "account-chart:currency:1:2:3:Month";
+    private const string _bondKey = "account-chart:bond:1:2:3:Month";
+    private const string _investmentKey = "account-chart:investment:1:2:3:42:3M";
     private static readonly DateTime _start = new(2026, 1, 1);
     private static readonly DateTime _end = new(2026, 2, 1);
     private readonly Mock<ISnapshotService> _snapshots = new();
@@ -33,6 +33,7 @@ public class AccountChartSnapshotStoreTests
             1,
             2,
             3,
+            "Month",
             new RefreshVersionGate(),
             null,
             () =>
@@ -58,6 +59,7 @@ public class AccountChartSnapshotStoreTests
             1,
             2,
             3,
+            "Month",
             new RefreshVersionGate(),
             null,
             () => Task.FromResult<AccountChartModel?>(StandardModel(20m)));
@@ -82,6 +84,7 @@ public class AccountChartSnapshotStoreTests
                 UserId = 99,
                 AccountId = 2,
                 CurrencyId = 3,
+                RangeKey = "Month",
                 Model = StandardModel(10m)
             });
         var painted = false;
@@ -90,6 +93,7 @@ public class AccountChartSnapshotStoreTests
             1,
             2,
             3,
+            "Month",
             new RefreshVersionGate(),
             null,
             () => Task.FromResult<AccountChartModel?>(StandardModel(10m)),
@@ -105,6 +109,43 @@ public class AccountChartSnapshotStoreTests
     }
 
     [Fact]
+    public async Task Currency_SnapshotForAnotherRange_IsNeitherReadNorPainted()
+    {
+        // A "Month" snapshot must not paint into a "1Y" view: the series covers the wrong window,
+        // and painting it would fight the range the user just selected.
+        _snapshots.Setup(x => x.GetAsync<AccountChartSnapshot>(_currencyKey))
+            .ReturnsAsync(StandardSnapshot("currency", StandardModel(10m)));
+        var painted = false;
+
+        var result = await CreateStore().RefreshCurrencyAsync(
+            1,
+            2,
+            3,
+            "1Y",
+            new RefreshVersionGate(),
+            null,
+            () => Task.FromResult<AccountChartModel?>(StandardModel(10m)),
+            _ =>
+            {
+                painted = true;
+                return Task.CompletedTask;
+            });
+
+        Assert.False(painted);
+        Assert.False(result.SnapshotPainted);
+        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+        _snapshots.Verify(x => x.GetAsync<AccountChartSnapshot>(_currencyKey), Times.Never);
+        _snapshots.Verify(x => x.SetAsync("account-chart:currency:1:2:3:1Y", It.IsAny<AccountChartSnapshot>()), Times.Once);
+    }
+
+    [Fact]
+    public void BuildRangeKey_CustomRange_CarriesItsDates()
+    {
+        Assert.Equal("Month", AccountChartSnapshotStore.BuildRangeKey("Month", _start, _end));
+        Assert.Equal("Custom:20260101:20260201", AccountChartSnapshotStore.BuildRangeKey("Custom", _start, _end));
+    }
+
+    [Fact]
     public async Task Currency_FailedRefresh_KeepsPaintedChart()
     {
         _snapshots.Setup(x => x.GetAsync<AccountChartSnapshot>(_currencyKey))
@@ -114,6 +155,7 @@ public class AccountChartSnapshotStoreTests
             1,
             2,
             3,
+            "Month",
             new RefreshVersionGate(),
             null,
             () => throw new HttpRequestException());
@@ -130,6 +172,7 @@ public class AccountChartSnapshotStoreTests
             1,
             2,
             3,
+            "Month",
             new RefreshVersionGate(),
             null,
             () => throw new HttpRequestException());
@@ -148,6 +191,7 @@ public class AccountChartSnapshotStoreTests
             2,
             3,
             42,
+            "3M",
             new RefreshVersionGate(),
             null,
             () => Task.FromResult<InvestmentAccountChartModel?>(model));
@@ -177,6 +221,7 @@ public class AccountChartSnapshotStoreTests
             2,
             3,
             null,
+            "3M",
             gate,
             null,
             () =>
@@ -190,7 +235,7 @@ public class AccountChartSnapshotStoreTests
     }
 
     private static AccountChartSnapshot StandardSnapshot(string variant, AccountChartModel model) =>
-        new() { Variant = variant, UserId = 1, AccountId = 2, CurrencyId = 3, Model = model };
+        new() { Variant = variant, UserId = 1, AccountId = 2, CurrencyId = 3, RangeKey = "Month", Model = model };
 
     private static AccountChartModel StandardModel(decimal value) =>
         new("Month", _start, _end, [new(_end, value)], value, 5m, 50m);
