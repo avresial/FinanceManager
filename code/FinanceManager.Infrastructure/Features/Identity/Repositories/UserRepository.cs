@@ -213,6 +213,16 @@ public class UserRepository(AppDbContext context) : IUserRepository
 
         return true;
     }
+    public async Task<bool> UpdatePreferredBenchmark(int userId, long? assetListingId)
+    {
+        var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user is null) return false;
+
+        user.PreferredBenchmarkListingId = assetListingId;
+        await context.SaveChangesAsync();
+
+        return true;
+    }
     public async Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel)
     {
         var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);

@@ -16,6 +16,8 @@ public sealed record InvestmentAccountChartModel(
     DateTime StartDate,
     DateTime EndDate,
     List<TimeSeriesModel> Series,
+    List<TimeSeriesModel> BenchmarkSeries,
+    string BenchmarkName,
     decimal CurrentBalance,
     decimal CapitalValue,
     decimal CurrentValue,

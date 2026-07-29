@@ -3,6 +3,7 @@ using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.MoneyFlow.Services;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services.Investments;
@@ -15,8 +16,10 @@ public class InvestmentValuationServiceTests
 
     private readonly Mock<IInvestmentTransactionRepository> _transactionRepository = new();
     private readonly Mock<IInvestmentPriceProvider> _priceProvider = new();
+    private readonly Mock<IInflationIndexProvider> _inflationIndexProvider = new();
 
-    private InvestmentValuationService CreateSut() => new(_transactionRepository.Object, _priceProvider.Object);
+    private InvestmentValuationService CreateSut() =>
+        new(_transactionRepository.Object, _priceProvider.Object, _inflationIndexProvider.Object);
 
     private static InvestmentTransaction Tx(long listingId, InvestmentTransactionType type, decimal qty, DateOnly tradeDate, int accountId = _accountId) =>
         new()
@@ -252,5 +255,59 @@ public class InvestmentValuationServiceTests
 
         // The listing shared by both accounts is priced once across the whole set.
         _priceProvider.Verify(x => x.GetPricePerUnitSeriesAsync(10, _usd, start, end, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetBenchmarkSeries_DefaultsToInflation_AndRebasesToPortfolio()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = new DateTime(2024, 3, 1);
+        _inflationIndexProvider
+            .Setup(x => x.GetIndexSeriesAsync(start, end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, decimal>
+            {
+                [start] = 100m,
+                [end] = 105m
+            });
+
+        var series = await CreateSut().GetBenchmarkSeriesAsync(
+            null, _usd, start, end, 1_000m, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1_000m, series[start]);
+        Assert.Equal(1_050m, series[end]);
+        _priceProvider.Verify(
+            x => x.GetPricePerUnitSeriesAsync(
+                It.IsAny<long>(),
+                It.IsAny<Currency>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetBenchmarkSeries_UsesSelectedAvailableInvestment()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = new DateTime(2024, 1, 2);
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitSeriesAsync(42, _usd, start, end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, decimal>
+            {
+                [start] = 50m,
+                [end] = 60m
+            });
+
+        var series = await CreateSut().GetBenchmarkSeriesAsync(
+            42, _usd, start, end, 500m, TestContext.Current.CancellationToken);
+
+        Assert.Equal(500m, series[start]);
+        Assert.Equal(600m, series[end]);
+        _inflationIndexProvider.Verify(
+            x => x.GetIndexSeriesAsync(
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

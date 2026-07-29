@@ -6,6 +6,7 @@ using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
+using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
@@ -27,6 +28,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     [Inject] public required InvestmentAccountHttpClient InvestmentAccountHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
+    [Inject] public required UserSettingsService UserSettingsService { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
     [Inject] public required ILogger<InvestmentAccountDetailsPageContent> Logger { get; set; }
@@ -58,6 +60,9 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private decimal _balanceChange;
     private decimal? _balanceChangePercent;
     public List<TimeSeriesModel> ChartData { get; set; } = [];
+    public List<TimeSeriesModel> BenchmarkData { get; set; } = [];
+    private InstrumentSearchResultDto? _benchmark;
+    private string _benchmarkName = "Polish inflation";
 
     // Toolbar filter state.
     private string? _searchText;
@@ -111,6 +116,8 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     {
         _isLoading = true;
         _currency = await SettingsService.GetCurrencyAsync();
+        _benchmark = await UserSettingsService.GetBenchmarkAsync();
+        _benchmarkName = _benchmark?.Ticker ?? "Polish inflation";
         try
         {
             _accountName = (await InvestmentAccountHttpClient.GetAccountAsync(AccountId))?.Name ?? "Investments";
@@ -176,6 +183,8 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         var dateStart = _dateStart;
         var dateEnd = _dateEnd;
         var transactions = _transactions.ToList();
+        var benchmark = _benchmark;
+        var benchmarkName = _benchmarkName;
         _isChartLoading = true;
 
         _ = InvokeAsync(async () =>
@@ -189,9 +198,19 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
                     user.UserId,
                     accountId,
                     currency.Id,
+                    benchmark?.ListingId,
                     _chartGate,
                     version,
-                    () => FetchChartModel(user.UserId, accountId, currency, selectedRange, dateStart, dateEnd, transactions),
+                    () => FetchChartModel(
+                        user.UserId,
+                        accountId,
+                        currency,
+                        selectedRange,
+                        dateStart,
+                        dateEnd,
+                        transactions,
+                        benchmark,
+                        benchmarkName),
                     onSnapshotPainted: ApplyChartModel,
                     onSnapshotMissing: ShowChartLoading,
                     onRefreshed: ApplyChartModel);
@@ -220,7 +239,9 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         string selectedRange,
         DateTime dateStart,
         DateTime dateEnd,
-        List<InvestmentTransactionDto> transactions)
+        List<InvestmentTransactionDto> transactions,
+        InstrumentSearchResultDto? benchmark,
+        string benchmarkName)
     {
         var series = await ValuationHttpClient.GetValueSeriesAsync(accountId, currency.Id, dateStart, dateEnd);
         var holdings = await ValuationHttpClient.GetHoldingsAsync(accountId, dateEnd);
@@ -233,6 +254,15 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             .OrderBy(kv => kv.Key)
             .Select(kv => new TimeSeriesModel(kv.Key, kv.Value))
             .ToList();
+        var basePoint = orderedSeries.FirstOrDefault(x => x.Value > 0);
+        var benchmarkSeries = basePoint is not null
+            ? await ValuationHttpClient.GetBenchmarkSeriesAsync(
+                currency.Id,
+                basePoint.DateTime,
+                dateEnd,
+                basePoint.Value,
+                benchmark?.ListingId)
+            : new Dictionary<DateTime, decimal>();
         var currentBalance = orderedSeries.LastOrDefault()?.Value ?? 0;
 
         // Capital value (remaining buy cost) and current valuation are the two source-of-truth
@@ -246,6 +276,8 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             dateStart,
             dateEnd,
             [.. orderedSeries.SkipWhile(x => x.Value == 0)],
+            [.. benchmarkSeries.OrderBy(x => x.Key).Select(x => new TimeSeriesModel(x.Key, x.Value))],
+            benchmarkName,
             currentBalance,
             capitalValue,
             currentValue,
@@ -264,6 +296,9 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             : null;
         ChartData.Clear();
         ChartData.AddRange(model.Series);
+        BenchmarkData.Clear();
+        BenchmarkData.AddRange(model.BenchmarkSeries);
+        _benchmarkName = model.BenchmarkName;
         _currentBalance = model.CurrentBalance;
         _capitalValue = model.CapitalValue;
         _currentValue = model.CurrentValue;
@@ -277,6 +312,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private Task ShowChartLoading()
     {
         ChartData.Clear();
+        BenchmarkData.Clear();
         _isChartLoading = true;
         return InvokeAsync(StateHasChanged);
     }

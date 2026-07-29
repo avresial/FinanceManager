@@ -36,6 +36,7 @@ public sealed class AccountChartSnapshotStore(ISnapshotRefreshCoordinator coordi
         int userId,
         int accountId,
         int currencyId,
+        long? benchmarkListingId,
         RefreshVersionGate gate,
         int? claimedVersion,
         Func<Task<InvestmentAccountChartModel?>> fetchAsync,
@@ -44,12 +45,13 @@ public sealed class AccountChartSnapshotStore(ISnapshotRefreshCoordinator coordi
         Func<InvestmentAccountChartModel, Task>? onRefreshed = null) =>
         coordinator.RunAsync(new SnapshotRefreshRequest<InvestmentAccountChartSnapshot, InvestmentAccountChartModel>
         {
-            Key = $"account-chart:investment:{userId}:{accountId}:{currencyId}",
+            Key = $"account-chart:investment:{userId}:{accountId}:{currencyId}:{benchmarkListingId?.ToString() ?? "inflation"}",
             Gate = gate,
             ClaimedVersion = claimedVersion,
             ToModel = snapshot => snapshot.UserId == userId
                 && snapshot.AccountId == accountId
                 && snapshot.CurrencyId == currencyId
+                && snapshot.BenchmarkListingId == benchmarkListingId
                 ? snapshot.Model
                 : null,
             FetchAsync = fetchAsync,
@@ -58,6 +60,7 @@ public sealed class AccountChartSnapshotStore(ISnapshotRefreshCoordinator coordi
                 UserId = userId,
                 AccountId = accountId,
                 CurrencyId = currencyId,
+                BenchmarkListingId = benchmarkListingId,
                 Model = model
             },
             OnSnapshotPainted = onSnapshotPainted,

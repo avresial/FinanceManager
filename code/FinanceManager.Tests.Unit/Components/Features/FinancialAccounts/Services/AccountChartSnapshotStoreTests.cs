@@ -13,7 +13,7 @@ public class AccountChartSnapshotStoreTests
 {
     private const string _currencyKey = "account-chart:currency:1:2:3";
     private const string _bondKey = "account-chart:bond:1:2:3";
-    private const string _investmentKey = "account-chart:investment:1:2:3";
+    private const string _investmentKey = "account-chart:investment:1:2:3:42";
     private static readonly DateTime _start = new(2026, 1, 1);
     private static readonly DateTime _end = new(2026, 2, 1);
     private readonly Mock<ISnapshotService> _snapshots = new();
@@ -147,6 +147,7 @@ public class AccountChartSnapshotStoreTests
             1,
             2,
             3,
+            42,
             new RefreshVersionGate(),
             null,
             () => Task.FromResult<InvestmentAccountChartModel?>(model));
@@ -156,7 +157,10 @@ public class AccountChartSnapshotStoreTests
             snapshot => snapshot.UserId == 1
                 && snapshot.AccountId == 2
                 && snapshot.CurrencyId == 3
+                && snapshot.BenchmarkListingId == 42
                 && snapshot.Model.Series.Single().Value == 30m
+                && snapshot.Model.BenchmarkSeries.Single().Value == 25m
+                && snapshot.Model.BenchmarkName == "WIG20"
                 && snapshot.Model.CurrentBalance == 30m
                 && snapshot.Model.CapitalValue == 20m
                 && snapshot.Model.CurrentValue == 30m
@@ -172,6 +176,7 @@ public class AccountChartSnapshotStoreTests
             1,
             2,
             3,
+            null,
             gate,
             null,
             () =>
@@ -196,6 +201,8 @@ public class AccountChartSnapshotStoreTests
             _start,
             _end,
             [new(_end, value)],
+            [new(_end, 25m)],
+            "WIG20",
             value,
             20m,
             value,
