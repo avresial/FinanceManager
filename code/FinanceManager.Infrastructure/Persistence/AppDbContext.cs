@@ -10,6 +10,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.Identity.Dtos;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Insights.Entities;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Shared.Ai.Entities;
 using FinanceManager.Domain.Shared.ExternalServices.Entities;
 using FinanceManager.Domain.Shared.Maintenance.Entities;
@@ -39,6 +40,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<FinancialInsight> FinancialInsights { get; set; } = default!;
     public DbSet<FinancialLabel> FinancialLabels { get; set; } = default!;
     public DbSet<FinancialLabelClassification> FinancialLabelClassifications { get; set; } = default!;
+    public DbSet<RecurringSubscription> RecurringSubscriptions { get; set; } = default!;
     public DbSet<BondDetails> Bonds { get; set; } = default!;
     public DbSet<CsvHeaderMapping> CsvHeaderMappings { get; set; } = default!;
     public DbSet<AiProviderConfiguration> AiProviderConfigurations { get; set; } = default!;
@@ -72,6 +74,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new CsvHeaderMappingConfiguration());
         modelBuilder.ApplyConfiguration(new FinancialLabelConfiguration());
         modelBuilder.ApplyConfiguration(new FinancialLabelClassificationConfiguration());
+        modelBuilder.ApplyConfiguration(new RecurringSubscriptionConfiguration());
         modelBuilder.ApplyConfiguration(new AiProviderConfigurationConfiguration());
         modelBuilder.ApplyConfiguration(new AiFallbackEntryConfiguration());
         modelBuilder.ApplyConfiguration(new AiProviderModelConfiguration());

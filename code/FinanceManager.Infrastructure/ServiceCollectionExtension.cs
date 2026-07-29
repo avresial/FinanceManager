@@ -95,6 +95,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<INewVisitsRepository, NewVisitsRepository>()
                 .AddScoped<IFinancialInsightsRepository, FinancialInsightsRepository>()
                 .AddScoped<IFinancialLabelsRepository, FinancialLabelsRepository>()
+                .AddScoped<IRecurringSubscriptionRepository, RecurringSubscriptionRepository>()
                 .AddScoped<ICurrencyRepository, CurrencyRepository>()
                 .AddScoped<IExchangeRateRepository, ExchangeRateRepository>()
                 .AddScoped<IBondDetailsRepository, BondDetailsRepository>()

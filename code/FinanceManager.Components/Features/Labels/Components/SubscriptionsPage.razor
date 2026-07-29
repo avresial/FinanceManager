@@ -1,0 +1,161 @@
+@page "/Subscriptions"
+@using FinanceManager.Domain.Labels.Entities
+
+<PageTitle>Subscriptions</PageTitle>
+
+<SectionContent SectionName="page-title">
+    <MudText Typo="Typo.h6">Subscriptions</MudText>
+</SectionContent>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <div class="d-flex flex-wrap justify-space-between align-center gap-3 mb-5">
+        <div>
+            <MudText Typo="Typo.h4" HtmlTag="h1">Subscriptions</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                Upcoming recurring charges and price changes in one place.
+            </MudText>
+        </div>
+        <MudCheckBox T="bool" @bind-Value="_showInactive"
+                     Label="Show muted and cancelled"
+                     Color="Color.Primary" />
+    </div>
+
+    @if (_isLoading)
+    {
+        <MudGrid Spacing="2">
+            @for (var i = 0; i < 3; i++)
+            {
+                <MudItem xs="12" md="4">
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="150px" />
+                </MudItem>
+            }
+        </MudGrid>
+    }
+    else
+    {
+        <MudGrid Spacing="2" Class="mb-4">
+            <MudItem xs="12" sm="4">
+                <MudPaper Outlined Class="pa-4 h-100">
+                    <MudText Typo="Typo.overline">Fixed monthly cost</MudText>
+                    <MudText Typo="Typo.h4" Color="Color.Warning">
+                        @($"{ActiveMonthlyCost:N2} {_currency.ShortName}")
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        across @ActiveCount active subscriptions
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudPaper Outlined Class="pa-4 h-100">
+                    <MudText Typo="Typo.overline">Annual equivalent</MudText>
+                    <MudText Typo="Typo.h4">@($"{ActiveMonthlyCost * 12m:N2} {_currency.ShortName}")</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">based on detected cadence</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudPaper Outlined Class="pa-4 h-100">
+                    <MudText Typo="Typo.overline">Price increases</MudText>
+                    <MudText Typo="Typo.h4" Color="@(IncreaseCount > 0 ? Color.Warning : Color.Default)">
+                        @IncreaseCount
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">since the previous charge</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        @if (VisibleSubscriptions.Count == 0)
+        {
+            <MudPaper Outlined Class="pa-8 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Subscriptions" Size="Size.Large" Color="Color.Secondary" />
+                <MudText Typo="Typo.h6" Class="mt-2">No subscriptions to show</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Import more transaction history or show muted and cancelled items.
+                </MudText>
+            </MudPaper>
+        }
+        else
+        {
+            <MudGrid Spacing="2">
+                @foreach (var item in VisibleSubscriptions)
+                {
+                    <MudItem xs="12" md="6" xl="4">
+                        <MudPaper Outlined Class="pa-4 h-100">
+                            <div class="d-flex justify-space-between align-start gap-2">
+                                <div Style="min-width:0; overflow:hidden;">
+                                    <MudText Typo="Typo.h6" HtmlTag="h2"
+                                             Style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                        @item.Name
+                                    </MudText>
+                                    <div class="d-flex flex-wrap gap-1 mt-1">
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                            @CadenceLabel(item.Cadence)
+                                        </MudChip>
+                                        @if (item.IsCancelled)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Error">Cancelled</MudChip>
+                                        }
+                                        @if (item.IsMuted)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Secondary">Muted</MudChip>
+                                        }
+                                        @if (item.PriceDelta > 0)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Warning"
+                                                     Icon="@Icons.Material.Filled.TrendingUp">
+                                                @($"+{item.PriceDelta:N2} {_currency.ShortName}")
+                                            </MudChip>
+                                        }
+                                    </div>
+                                </div>
+                                <MudIconButton Icon="@(item.IsFlaggedForReview ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
+                                               Color="@(item.IsFlaggedForReview ? Color.Warning : Color.Default)"
+                                               Disabled="@IsUpdating(item)"
+                                               OnClick="() => ToggleFlag(item)"
+                                               aria-label="@(item.IsFlaggedForReview ? $"Unflag {item.Name}" : $"Flag {item.Name} for review")" />
+                            </div>
+
+                            <MudDivider Class="my-3" />
+
+                            <MudGrid Spacing="1">
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Next expected</MudText>
+                                    <MudText Typo="Typo.body1" Class="font-weight-600">
+                                        @(item.IsCancelled ? "—" : item.NextExpectedChargeDate.ToString("dd MMM yyyy"))
+                                    </MudText>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Last charge</MudText>
+                                    <MudText Typo="Typo.body1" Class="font-weight-600">
+                                        @($"{item.LastAmount:N2} {_currency.ShortName}")
+                                    </MudText>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Monthly equivalent</MudText>
+                                    <MudText Typo="Typo.body1">@($"{item.MonthlyCost:N2} {_currency.ShortName}")</MudText>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Annual cost</MudText>
+                                    <MudText Typo="Typo.body1">@($"{item.AnnualCost:N2} {_currency.ShortName}")</MudText>
+                                </MudItem>
+                            </MudGrid>
+
+                            <div class="d-flex justify-end gap-1 mt-3">
+                                <MudButton Variant="Variant.Text" Size="Size.Small"
+                                           Disabled="@IsUpdating(item)"
+                                           OnClick="() => ToggleMuted(item)">
+                                    @(item.IsMuted ? "Unmute" : "Mute")
+                                </MudButton>
+                                <MudButton Variant="Variant.Text" Size="Size.Small"
+                                           Color="@(item.IsCancelled ? Color.Success : Color.Error)"
+                                           Disabled="@IsUpdating(item)"
+                                           OnClick="() => ToggleCancelled(item)">
+                                    @(item.IsCancelled ? "Mark active" : "Mark cancelled")
+                                </MudButton>
+                            </div>
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    }
+</MudContainer>
