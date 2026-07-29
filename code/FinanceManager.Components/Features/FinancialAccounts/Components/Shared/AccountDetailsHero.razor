@@ -90,15 +90,15 @@
         </MudStack>
     }
 
-    <div class="mx-n6 mt-2" style="min-height: 200px; position: relative;">
+    <div class="mx-n6 mt-2 fm-hero-chart" style="min-height: 200px; position: relative;">
         @if (IsChartLoading)
         {
             <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Height="200px" Width="100%" />
         }
         else
         {
-            <ApexChart TItem="TimeSeriesModel" Options="_heroChartOptions" Height="200">
-                <ApexPointSeries TItem="TimeSeriesModel" Items="ChartData" Name="Balance" SeriesType="SeriesType.Area"
+            <ApexChart @ref="_chart" TItem="TimeSeriesModel" Options="_heroChartOptions" Height="200">
+                <ApexPointSeries TItem="TimeSeriesModel" Items="ChartData" Name="@BalanceSeriesName" SeriesType="SeriesType.Area"
                                  XValue="@(p => p.DateTime.ToLocalTime())" YValue="@(p => p.Value)" />
                 @if (BenchmarkData.Count > 0)
                 {
