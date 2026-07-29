@@ -1,4 +1,5 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.Logging;
@@ -13,9 +14,12 @@ public class UserSettingsService(
     ILoginService loginService,
     IUserService userService,
     CurrencyHttpClient currencyHttpClient,
+    InvestmentTransactionHttpClient investmentTransactionHttpClient,
     ILogger<UserSettingsService> logger) : ISettingsService
 {
     private Currency? _cachedCurrency;
+    private bool _benchmarkLoaded;
+    private InstrumentSearchResultDto? _cachedBenchmark;
 
     public Currency GetCurrency() => _cachedCurrency ?? DefaultCurrency.PLN;
 
@@ -45,4 +49,30 @@ public class UserSettingsService(
 
     /// <summary>Refreshes the cached currency after the user changed the preference in settings.</summary>
     public void SetCurrency(Currency currency) => _cachedCurrency = currency;
+
+    public async Task<InstrumentSearchResultDto?> GetBenchmarkAsync()
+    {
+        if (_benchmarkLoaded) return _cachedBenchmark;
+
+        try
+        {
+            var loggedUser = await loginService.GetLoggedUser();
+            var user = loggedUser is null ? null : await userService.GetUser(loggedUser.UserId);
+            if (user?.PreferredBenchmarkListingId is long listingId)
+                _cachedBenchmark = await investmentTransactionHttpClient.GetListingAsync(listingId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to resolve the user's preferred investment benchmark");
+        }
+
+        _benchmarkLoaded = true;
+        return _cachedBenchmark;
+    }
+
+    public void SetBenchmark(InstrumentSearchResultDto? benchmark)
+    {
+        _cachedBenchmark = benchmark;
+        _benchmarkLoaded = true;
+    }
 }

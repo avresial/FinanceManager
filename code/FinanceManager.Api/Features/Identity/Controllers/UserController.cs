@@ -1,6 +1,7 @@
 using FinanceManager.Api.Shared.Helpers;
 using FinanceManager.Application.Identity;
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.Identity.Commands;
 using FinanceManager.Domain.Identity.Dtos;
@@ -15,7 +16,12 @@ namespace FinanceManager.Api.Features.Identity.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Users")]
-public class UserController(IUserRepository userRepository, UsersService usersService, IUserPlanVerifier userPlanVerifier, ICurrencyRepository currencyRepository) : ControllerBase
+public class UserController(
+    IUserRepository userRepository,
+    UsersService usersService,
+    IUserPlanVerifier userPlanVerifier,
+    ICurrencyRepository currencyRepository,
+    IAssetListingRepository assetListingRepository) : ControllerBase
 {
 
     [AllowAnonymous]
@@ -144,6 +150,29 @@ public class UserController(IUserRepository userRepository, UsersService usersSe
             return BadRequest("Unknown currency.");
 
         var result = await userRepository.UpdatePreferredCurrency(updatePreferredCurrency.UserId, updatePreferredCurrency.CurrencyId);
+        return result ? Ok(result) : BadRequest();
+    }
+
+    [Authorize(Roles = "Admin, User")]
+    [HttpPut]
+    [Route("UpdatePreferredBenchmark")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> UpdatePreferredBenchmark(
+        UpdatePreferredBenchmark updatePreferredBenchmark,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ApiAuthenticationHelper.IsAdminOrAuthenticatedUser(User, updatePreferredBenchmark.UserId))
+            return Forbid();
+
+        if (updatePreferredBenchmark.AssetListingId is long listingId
+            && await assetListingRepository.Get(listingId, cancellationToken) is null)
+            return BadRequest("Unknown investment benchmark.");
+
+        var result = await userRepository.UpdatePreferredBenchmark(
+            updatePreferredBenchmark.UserId,
+            updatePreferredBenchmark.AssetListingId);
         return result ? Ok(result) : BadRequest();
     }
 

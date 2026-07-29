@@ -66,4 +66,16 @@ public interface IInvestmentValuationService
         DateTime start,
         DateTime end,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns a benchmark rebased to <paramref name="baseValue"/> over the requested range.
+    /// A null listing selects the default Polish inflation index.
+    /// </summary>
+    Task<IReadOnlyDictionary<DateTime, decimal>> GetBenchmarkSeriesAsync(
+        long? assetListingId,
+        Currency targetCurrency,
+        DateTime start,
+        DateTime end,
+        decimal baseValue,
+        CancellationToken ct = default);
 }

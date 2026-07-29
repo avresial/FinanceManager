@@ -1,6 +1,7 @@
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.Identity.Services;
+using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
@@ -42,6 +43,8 @@ public partial class UserSettingsPage : ComponentBase
     private List<Currency> _currencies = [];
     private int _selectedCurrencyId = DefaultCurrency.PLN.Id;
     private int _initialCurrencyId = DefaultCurrency.PLN.Id;
+    private InstrumentSearchResultDto? _selectedBenchmark;
+    private InstrumentSearchResultDto? _initialBenchmark;
     private string? _selectedSection = "profile";
     private string? _deleteConfirmation;
 
@@ -55,6 +58,7 @@ public partial class UserSettingsPage : ComponentBase
     [Inject] public required IUserService UserService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
+    [Inject] public required InvestmentTransactionHttpClient InvestmentTransactionHttpClient { get; set; }
     [Inject] public required UserSettingsService UserSettingsService { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
     [Inject] public required IJSRuntime JSRuntime { get; set; }
@@ -95,6 +99,8 @@ public partial class UserSettingsPage : ComponentBase
             ? _userData.PreferredCurrencyId
             : DefaultCurrency.PLN.Id;
         _initialCurrencyId = _selectedCurrencyId;
+        _selectedBenchmark = await UserSettingsService.GetBenchmarkAsync();
+        _initialBenchmark = _selectedBenchmark;
 
         try
         {
@@ -114,6 +120,7 @@ public partial class UserSettingsPage : ComponentBase
         if (_displayName != _initialDisplayName) return true;
         if (_selectedPlan != _initialPlan) return true;
         if (_selectedCurrencyId != _initialCurrencyId) return true;
+        if (_selectedBenchmark?.ListingId != _initialBenchmark?.ListingId) return true;
         if (!string.IsNullOrEmpty(_currentPassword)) return true;
         if (!string.IsNullOrEmpty(_newPassword)) return true;
         if (!string.IsNullOrEmpty(_confirmPassword)) return true;
@@ -156,6 +163,11 @@ public partial class UserSettingsPage : ComponentBase
             await UpdatePreferredCurrency();
         }
 
+        if (_selectedBenchmark?.ListingId != _initialBenchmark?.ListingId)
+        {
+            await UpdatePreferredBenchmark();
+        }
+
         _initialDisplayName = _displayName;
         _isDirty = HasChanges();
     }
@@ -165,6 +177,7 @@ public partial class UserSettingsPage : ComponentBase
         _displayName = _initialDisplayName;
         _selectedPlan = _initialPlan;
         _selectedCurrencyId = _initialCurrencyId;
+        _selectedBenchmark = _initialBenchmark;
         _currentPassword = null;
         _newPassword = null;
         _confirmPassword = null;
@@ -250,6 +263,40 @@ public partial class UserSettingsPage : ComponentBase
             UserSettingsService.SetCurrency(selectedCurrency);
             _info.Insert(0, $"Preferred currency changed to {selectedCurrency.ShortName}.");
         }
+    }
+
+    private async Task UpdatePreferredBenchmark()
+    {
+        if (_loggedUser is null) return;
+
+        var result = await UserService.UpdatePreferredBenchmark(_loggedUser.UserId, _selectedBenchmark?.ListingId);
+        if (!result)
+        {
+            _errors.Insert(0, "Failed to change investment benchmark.");
+            return;
+        }
+
+        _initialBenchmark = _selectedBenchmark;
+        UserSettingsService.SetBenchmark(_selectedBenchmark);
+        _info.Insert(0, _selectedBenchmark is null
+            ? "Investment benchmark changed to Polish inflation."
+            : $"Investment benchmark changed to {_selectedBenchmark.Ticker}.");
+    }
+
+    private void OnBenchmarkChanged(InstrumentSearchResultDto? benchmark)
+    {
+        _selectedBenchmark = benchmark;
+        MarkDirty();
+    }
+
+    private async Task<IEnumerable<InstrumentSearchResultDto>> SearchBenchmarksAsync(
+        string value,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return [];
+        return await InvestmentTransactionHttpClient.SearchListingsAsync(
+            value,
+            cancellationToken: cancellationToken);
     }
 
     private async Task DeleteMyAccount()
