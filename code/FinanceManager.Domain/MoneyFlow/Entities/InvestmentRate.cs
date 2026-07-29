@@ -8,5 +8,11 @@ public class InvestmentRate
     public decimal Salary { get; set; }
     public decimal InvestmentsChange { get; set; }
 
-    public decimal GetPercentage() => Salary == 0 ? 0 : InvestmentsChange / Salary;
+    /// <summary>
+    /// A rate is only meaningful when a salary actually landed in the period. Without one there is no
+    /// denominator to measure the investments against, so the rate is undefined rather than zero.
+    /// </summary>
+    public bool HasRate => Salary != 0;
+
+    public decimal? GetPercentage() => HasRate ? InvestmentsChange / Salary : null;
 }

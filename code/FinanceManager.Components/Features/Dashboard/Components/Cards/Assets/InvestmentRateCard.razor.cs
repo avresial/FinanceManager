@@ -24,7 +24,8 @@ public partial class InvestmentRateCard
     private static readonly string[] _singleLetterMonths =
         ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 
-    private readonly DateTime _asOfDate = DateTime.UtcNow;
+    internal DateTime AsOfDate { get; set; } = DateTime.UtcNow;
+
     private bool _isLoading;
     private Currency _currency = DefaultCurrency.PLN;
 
@@ -37,11 +38,15 @@ public partial class InvestmentRateCard
             ? MonthlyInvestmentRates[_selectedRateIndex]
             : null;
 
+    internal decimal? CurrentMonthPercentage => _currentMonthPercentage;
+    internal decimal? YtdAveragePercentage => _ytdAveragePercentage;
+    internal IReadOnlyList<MonthBar> Series => _series;
+
     private string SelectedMonthName =>
         SelectedMonthRate?.Start.ToString("MMMM", CultureInfo.InvariantCulture) ?? "Month";
 
-    private decimal _currentMonthPercentage;
-    private decimal _ytdAveragePercentage;
+    private decimal? _currentMonthPercentage;
+    private decimal? _ytdAveragePercentage;
     private decimal? _endOfYearProjection;
     private int _selectedRateIndex;
     private List<MonthBar> _series = [];
@@ -76,7 +81,7 @@ public partial class InvestmentRateCard
                 {
                     UserId = user.UserId,
                     CurrencyId = _currency.Id,
-                    EndDateTime = _asOfDate,
+                    EndDateTime = AsOfDate,
                 };
 
                 var snapshot = await InvestmentRateCacheService.GetSnapshotAsync(context);
@@ -95,18 +100,22 @@ public partial class InvestmentRateCard
         }
     }
 
-    private void BuildDerivedState()
+    internal void BuildDerivedState()
     {
         _selectedRateIndex = MonthlyInvestmentRates.Count - 1;
-        _currentMonthPercentage = CurrentMonthRate?.GetPercentage() ?? 0m;
+        _currentMonthPercentage = CurrentMonthRate?.GetPercentage();
 
-        var currentYear = _asOfDate.Year;
+        var currentYear = AsOfDate.Year;
         var ytdEntries = MonthlyInvestmentRates.Where(r => r.Start.Year == currentYear).ToList();
-        var salaryYtd = ytdEntries.Sum(r => r.Salary);
-        var investedYtd = ytdEntries.Sum(r => r.InvestmentsChange);
-        _ytdAveragePercentage = salaryYtd == 0m ? 0m : investedYtd / salaryYtd;
 
-        var monthsElapsed = _asOfDate.Month;
+        // Months without a salary have no rate, so they must stay out of the average entirely —
+        // counting their investments against the other months' salary would overstate it.
+        var ratedYtdEntries = ytdEntries.Where(r => r.HasRate).ToList();
+        var salaryYtd = ratedYtdEntries.Sum(r => r.Salary);
+        _ytdAveragePercentage = salaryYtd == 0m ? null : ratedYtdEntries.Sum(r => r.InvestmentsChange) / salaryYtd;
+
+        var investedYtd = ytdEntries.Sum(r => r.InvestmentsChange);
+        var monthsElapsed = AsOfDate.Month;
 
         _endOfYearProjection = monthsElapsed == 0 || investedYtd == 0
             ? null
@@ -123,7 +132,10 @@ public partial class InvestmentRateCard
             var rate = i < MonthlyInvestmentRates.Count ? MonthlyInvestmentRates[i] : null;
             var monthIndex = rate is not null ? rate.Start.Month - 1 : i;
             var label = _singleLetterMonths[monthIndex];
-            var pct = rate is not null ? Math.Min(rate.GetPercentage() * 100m, _maximumChartPercentage) : 0m;
+            // A month with no salary has no rate to plot — leave the bar empty rather than drawing a 0 %.
+            var pct = rate?.GetPercentage() is decimal percentage
+                ? Math.Min(percentage * 100m, _maximumChartPercentage)
+                : (decimal?)null;
             bars.Add(new MonthBar(label, pct, IsSelected: i == _selectedRateIndex, Key: $"{i}-{label}"));
         }
 
@@ -179,7 +191,7 @@ public partial class InvestmentRateCard
             Yaxis = [new YAxis { Show = false }],
         };
 
-        if (_ytdAveragePercentage != 0m)
+        if (_ytdAveragePercentage is decimal average && average != 0m)
         {
             _chartOptions.Annotations = new Annotations
             {
@@ -187,13 +199,13 @@ public partial class InvestmentRateCard
                 [
                     new AnnotationsYAxis
                     {
-                        Y = _ytdAveragePercentage * 100m,
+                        Y = average * 100m,
                         BorderColor = _mutedLabelColor,
                         StrokeDashArray = 4,
                         BorderWidth = 1,
                         Label = new Label
                         {
-                            Text = FormatAveragePercentage(_ytdAveragePercentage),
+                            Text = FormatAveragePercentage(average),
                             Position = LabelPosition.Right,
                             BorderColor = "transparent",
                             Style = new Style
@@ -223,7 +235,7 @@ public partial class InvestmentRateCard
     }
 
     private static string FormatRateNumber(decimal value) => $"{value * 100m:0.00}";
-    private static string FormatAveragePercentage(decimal value) => $"{value * 100m:0.0}%";
+    private static string FormatAveragePercentage(decimal? value) => value is decimal average ? $"{average * 100m:0.0}%" : "—";
     private string FormatAmount(decimal value) => $"{value:N2} {_currency.ShortName}";
     private string FormatChange(decimal value)
     {
@@ -234,5 +246,5 @@ public partial class InvestmentRateCard
         ? "—"
         : $"{_endOfYearProjection.Value:N0} {_currency.ShortName}";
 
-    internal record MonthBar(string Label, decimal Percentage, bool IsSelected, string Key);
+    internal record MonthBar(string Label, decimal? Percentage, bool IsSelected, string Key);
 }

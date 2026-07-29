@@ -19,21 +19,16 @@ public class InvestmentRateService(
     ICurrencyRepository currencyRepository,
     ICurrencyExchangeService currencyExchangeService) : IInvestmentRateService
 {
-    private const int _salaryLookbackMonths = 12;
-
     public async IAsyncEnumerable<Domain.MoneyFlow.Entities.InvestmentRate> GetInvestmentRate(int userId, Currency currency, DateTime start, DateTime end)
     {
         var labels = await financialLabelsRepository.GetLabels().ToListAsync();
         var salaryLabel = labels.Single(x => x.Name.ToLower() == "salary");
 
+        // Only salary that actually landed inside the window counts. Borrowing an earlier month's
+        // salary would report a rate against income the user has not received yet.
         decimal salary = 0;
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
             salary += SumSalary(account, salaryLabel);
-
-        // Salaries and investment purchases regularly land in different months, so a window without a
-        // salary entry still needs a denominator — use the most recent salary before the window.
-        if (salary == 0)
-            salary = await GetMostRecentSalaryBefore(userId, start, salaryLabel);
 
         decimal investmentsChange = 0;
         var transactions = await investmentTransactionRepository.GetByUser(userId, DateOnly.FromDateTime(start), DateOnly.FromDateTime(end));
@@ -63,22 +58,6 @@ public class InvestmentRateService(
             Salary = salary,
             InvestmentsChange = investmentsChange
         };
-    }
-
-    private async Task<decimal> GetMostRecentSalaryBefore(int userId, DateTime start, FinancialLabel salaryLabel)
-    {
-        List<CurrencyAccountEntry> salaryEntries = [];
-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start.AddMonths(-_salaryLookbackMonths), start))
-            salaryEntries.AddRange(GetSalaryEntries(account, salaryLabel).Where(x => x.PostingDate < start));
-
-        if (salaryEntries.Count == 0) return 0;
-
-        // Sum the whole latest salary month rather than taking the single latest entry, so split
-        // payouts (e.g. bi-weekly) still add up to one monthly salary.
-        var latestSalaryDate = salaryEntries.Max(x => x.PostingDate);
-        return salaryEntries
-            .Where(x => x.PostingDate.Year == latestSalaryDate.Year && x.PostingDate.Month == latestSalaryDate.Month)
-            .Sum(x => x.ValueChange);
     }
 
     private static decimal SumSalary(CurrencyAccount account, FinancialLabel salaryLabel) =>

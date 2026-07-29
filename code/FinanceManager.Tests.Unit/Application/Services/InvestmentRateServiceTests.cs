@@ -69,25 +69,26 @@ public class InvestmentRateServiceTests
     }
 
     [Fact]
-    public async Task GetInvestmentRate_NoSalaryInWindow_FallsBackToMostRecentEarlierSalary()
+    public async Task GetInvestmentRate_SalaryPaidInEarlierMonth_ReportsZeroSalaryAndNoRate()
     {
-        // A salary was paid two months ago and the investments changed this month. Querying just the
-        // current month must not come back empty — the rate should use the most recent earlier salary.
+        // The salary for the current month has not arrived yet — the last one landed in the previous
+        // month — but investments were made this month. The earlier salary must not be carried into
+        // this month: the month reports 0 salary, the real investments, and no rate at all.
         // Arrange
         var userId = 1;
         var salaryLabel = new FinancialLabel { Id = 1, Name = "Salary" };
         _financialLabelsRepositoryMock.Setup(repo => repo.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { salaryLabel }.ToAsyncEnumerable());
 
         var monthStart = new DateTime(_endDate.Year, _endDate.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var salaryDate = monthStart.AddMonths(-2).AddDays(9);
+        var salaryDate = monthStart.AddMonths(-1).AddDays(25);
 
-        var accountWithOldSalary = new CurrencyAccount(userId, 1, "Currency Account 1", AccountLabel.Cash);
-        accountWithOldSalary.Add(new CurrencyAccountEntry(1, 1, salaryDate, 1000, 1000) { Labels = [salaryLabel] }, false);
+        var accountWithPreviousMonthSalary = new CurrencyAccount(userId, 1, "Currency Account 1", AccountLabel.Cash);
+        accountWithPreviousMonthSalary.Add(new CurrencyAccountEntry(1, 1, salaryDate, 9456.88m, 9456.88m) { Labels = [salaryLabel] }, false);
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, monthStart, _endDate))
             .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, monthStart.AddMonths(-12), monthStart))
-            .Returns(new[] { accountWithOldSalary }.ToAsyncEnumerable());
+            .Returns(new[] { accountWithPreviousMonthSalary }.ToAsyncEnumerable());
 
         _investmentTransactionRepositoryMock
             .Setup(x => x.GetByUser(userId, DateOnly.FromDateTime(monthStart), DateOnly.FromDateTime(_endDate), It.IsAny<CancellationToken>()))
@@ -98,9 +99,10 @@ public class InvestmentRateServiceTests
 
         // Assert
         var rate = Assert.Single(result);
-        Assert.Equal(1000, rate.Salary);
+        Assert.Equal(0, rate.Salary);
         Assert.Equal(500, rate.InvestmentsChange);
-        Assert.Equal(0.5m, rate.GetPercentage());
+        Assert.False(rate.HasRate);
+        Assert.Null(rate.GetPercentage());
     }
 
     [Fact]
@@ -126,15 +128,15 @@ public class InvestmentRateServiceTests
         var rate = Assert.Single(result);
         Assert.Equal(0, rate.Salary);
         Assert.Equal(250, rate.InvestmentsChange);
-        Assert.Equal(0, rate.GetPercentage());
+        Assert.False(rate.HasRate);
+        Assert.Null(rate.GetPercentage());
     }
 
     [Fact]
-    public async Task GetInvestmentRate_MonthWithNoActivity_ReportsZeroRate()
+    public async Task GetInvestmentRate_MonthWithNoActivity_ReturnsEmpty()
     {
         // The user's most recent transactions are months old: the queried month has no salary and no
-        // investment value change. The carried-forward salary must not fabricate a non-zero rate —
-        // the month reports 0 %.
+        // investment purchases. Nothing happened, so there is nothing to report for the month.
         // Arrange
         var userId = 1;
         var salaryLabel = new FinancialLabel { Id = 1, Name = "Salary" };
@@ -155,10 +157,7 @@ public class InvestmentRateServiceTests
         var result = await _investmentRateService.GetInvestmentRate(userId, DefaultCurrency.PLN, monthStart, _endDate).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        var rate = Assert.Single(result);
-        Assert.Equal(1000, rate.Salary);
-        Assert.Equal(0, rate.InvestmentsChange);
-        Assert.Equal(0, rate.GetPercentage());
+        Assert.Empty(result);
     }
 
     [Fact]
