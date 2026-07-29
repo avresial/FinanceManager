@@ -72,6 +72,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<AccountChartSnapshotStore>()
                 .AddScoped<LiabilitiesSnapshotStore>()
                 .AddScoped<DashboardCardsSnapshotStore>()
+                .AddScoped<DiversificationSnapshotStore>()
                 .AddTransient<CurrencyImportJobTracker>()
                 .AddScoped<AssetsPageCardsCacheService>()
                 .AddScoped<InvestmentPaycheckEstimateCacheService>()

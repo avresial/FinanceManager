@@ -1,5 +1,7 @@
+using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.Insights.HttpClients;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Insights.Entities;
@@ -45,6 +47,7 @@ public partial class DiversificationProxyCard
     private bool _showDetails;
     private bool _breakdownLoading;
     private DiversificationBreakdown? _breakdown;
+    private readonly RefreshVersionGate _refreshGate = new();
 
     [Parameter] public string Height { get; set; } = "300px";
 
@@ -52,6 +55,7 @@ public partial class DiversificationProxyCard
     [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required DiversificationHttpClient DiversificationHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required DiversificationSnapshotStore SnapshotStore { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -60,39 +64,55 @@ public partial class DiversificationProxyCard
 
     private async Task LoadData()
     {
-        _isLoading = true;
-        StateHasChanged();
-
-        try
+        var version = _refreshGate.Claim();
+        var user = await LoginService.GetLoggedUser();
+        if (!_refreshGate.IsCurrent(version)) return;
+        if (user is null)
         {
-            var user = await LoginService.GetLoggedUser();
-            if (user is null)
-            {
-                _score = null;
-                return;
-            }
-
-            _userId = user.UserId;
-            _asOfDate = DateTime.UtcNow;
-            _score = await DiversificationHttpClient.GetDiversificationScore(_userId.Value, _asOfDate);
-            if (_score is null) return;
-
-            _bandKey = _score.Band.ToLowerInvariant();
-            _bandStyle = BandVars(_bandKey);
-            _insightGlyphPath = _bandKey == "broad" ? _checkGlyph : _insightGlyph;
-            _explanations = BuildExplanations(_score);
-            BuildGauge(_score.Score);
+            _userId = null;
+            _score = null;
+            _isLoading = false;
+            return;
         }
-        catch (Exception ex)
+
+        _userId = user.UserId;
+        _asOfDate = DateTime.UtcNow;
+        var result = await SnapshotStore.RefreshAsync(
+            _userId.Value,
+            _asOfDate,
+            _refreshGate,
+            version,
+            async () => await DiversificationHttpClient.GetDiversificationScore(_userId.Value, _asOfDate),
+            onSnapshotPainted: ShowScore,
+            onSnapshotMissing: ShowLoading,
+            onRefreshed: ShowScore);
+        if (!_refreshGate.IsCurrent(version)) return;
+
+        _isLoading = false;
+        if (result.IsBlockingFailure)
         {
-            Logger.LogError(ex, "Error loading diversification score");
+            Logger.LogError(result.Error, "Error loading diversification score");
             Snackbar.Add("Unable to load diversification score.", Severity.Error);
         }
-        finally
-        {
-            _isLoading = false;
-            StateHasChanged();
-        }
+        StateHasChanged();
+    }
+
+    private Task ShowScore(DiversificationScore score)
+    {
+        _score = score;
+        _bandKey = score.Band.ToLowerInvariant();
+        _bandStyle = BandVars(_bandKey);
+        _insightGlyphPath = _bandKey == "broad" ? _checkGlyph : _insightGlyph;
+        _explanations = BuildExplanations(score);
+        BuildGauge(score.Score);
+        _isLoading = false;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task ShowLoading()
+    {
+        _isLoading = true;
+        return InvokeAsync(StateHasChanged);
     }
 
     // Inline-style custom properties so a single band drives every band-coloured element.
