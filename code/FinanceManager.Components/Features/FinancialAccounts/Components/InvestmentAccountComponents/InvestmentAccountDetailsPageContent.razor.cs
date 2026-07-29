@@ -1,8 +1,11 @@
 using FinanceManager.Components.Features.FinancialAccounts.Components.Shared;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.FinancialAccounts.Models;
+using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Helpers;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
@@ -29,6 +32,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
     [Inject] public required ILogger<InvestmentAccountDetailsPageContent> Logger { get; set; }
+    [Inject] public required AccountChartSnapshotStore ChartSnapshotStore { get; set; }
 
     private readonly Guid _viewportSubscriptionId = Guid.NewGuid();
     private bool _isMobile;
@@ -41,7 +45,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private List<InvestmentTransactionDto> _transactions = [];
     private IReadOnlyDictionary<long, InvestmentTransactionValuationDto> _valuations =
         new Dictionary<long, InvestmentTransactionValuationDto>();
-    private List<HoldingRow> _holdings = [];
+    private List<InvestmentHoldingModel> _holdings = [];
 
     // Range / chart state.
     private string _selectedRange = "3M";
@@ -49,7 +53,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private DateTime _dateEnd = DateTime.UtcNow;
     private DateRange? _customDateRange;
     private bool _isChartLoading;
-    private int _chartRefreshVersion;
+    private readonly RefreshVersionGate _chartGate = new();
     private decimal _currentBalance;
     private decimal _capitalValue;
     private decimal _currentValue;
@@ -172,30 +176,56 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
 
     private void QueueChartDataRefresh()
     {
-        var refreshVersion = ++_chartRefreshVersion;
-        // Snapshot the request inputs so an in-flight refresh keeps using the account/range it
-        // was started with, even if a newer range/account is selected before it completes.
+        var version = _chartGate.Claim();
         var accountId = AccountId;
         var currency = _currency;
+        var selectedRange = _selectedRange;
         var dateStart = _dateStart;
         var dateEnd = _dateEnd;
+        var transactions = _transactions.ToList();
+        var benchmark = _benchmark;
+        var benchmarkName = _benchmarkName;
         _isChartLoading = true;
-        ChartData.Clear();
-        BenchmarkData.Clear();
 
         _ = InvokeAsync(async () =>
         {
             try
             {
-                await UpdateChartData(refreshVersion, accountId, currency, dateStart, dateEnd);
+                var user = await LoginService.GetLoggedUser();
+                if (user is null) return;
+
+                var result = await ChartSnapshotStore.RefreshInvestmentAsync(
+                    user.UserId,
+                    accountId,
+                    currency.Id,
+                    benchmark?.ListingId,
+                    AccountChartSnapshotStore.BuildRangeKey(selectedRange, dateStart, dateEnd),
+                    _chartGate,
+                    version,
+                    () => FetchChartModel(
+                        user.UserId,
+                        accountId,
+                        currency,
+                        selectedRange,
+                        dateStart,
+                        dateEnd,
+                        transactions,
+                        benchmark,
+                        benchmarkName),
+                    onSnapshotPainted: ApplyChartModel,
+                    onSnapshotMissing: ShowChartLoading,
+                    onRefreshed: ApplyChartModel);
+
+                if (_chartGate.IsCurrent(version) && result.IsBlockingFailure)
+                    Logger.LogError(result.Error, "Error while loading investment account chart data.");
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error while loading investment account chart data for account ID {AccountId}", AccountId);
+                Logger.LogError(ex, "Error while loading investment account chart data.");
             }
             finally
             {
-                if (refreshVersion == _chartRefreshVersion)
+                if (_chartGate.IsCurrent(version))
                     _isChartLoading = false;
 
                 StateHasChanged();
@@ -203,16 +233,21 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         });
     }
 
-    private async Task UpdateChartData(int refreshVersion, int accountId, Currency currency, DateTime dateStart, DateTime dateEnd)
+    private async Task<InvestmentAccountChartModel?> FetchChartModel(
+        int userId,
+        int accountId,
+        Currency currency,
+        string selectedRange,
+        DateTime dateStart,
+        DateTime dateEnd,
+        List<InvestmentTransactionDto> transactions,
+        InstrumentSearchResultDto? benchmark,
+        string benchmarkName)
     {
         var series = await ValuationHttpClient.GetValueSeriesAsync(accountId, currency.Id, dateStart, dateEnd);
         var holdings = await ValuationHttpClient.GetHoldingsAsync(accountId, dateEnd);
-        var user = await LoginService.GetLoggedUser();
-        var appreciation = user is null
-            ? null
-            : (await AssetsHttpClient.GetUnrealizedGainLossPerAccount(user.UserId, currency, dateEnd))
-                .SingleOrDefault(x => x.AccountId == accountId);
-        if (refreshVersion != _chartRefreshVersion || accountId != AccountId) return;
+        var appreciation = (await AssetsHttpClient.GetUnrealizedGainLossPerAccount(userId, currency, dateEnd))
+            .SingleOrDefault(x => x.AccountId == accountId);
 
         // Keep the full ordered series for balance maths; trim only leading zeros for the chart so
         // a range that starts before the first holding still reports the true change from zero.
@@ -227,52 +262,87 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
                 basePoint.DateTime,
                 dateEnd,
                 basePoint.Value,
-                _benchmark?.ListingId)
+                benchmark?.ListingId)
             : new Dictionary<DateTime, decimal>();
-        if (refreshVersion != _chartRefreshVersion || accountId != AccountId) return;
-
-        ChartData.Clear();
-        ChartData.AddRange(orderedSeries.SkipWhile(x => x.Value == 0));
-        BenchmarkData.Clear();
-        BenchmarkData.AddRange(benchmarkSeries
-            .OrderBy(x => x.Key)
-            .Select(x => new TimeSeriesModel(x.Key, x.Value)));
-        UpdateBalanceFromChartData(orderedSeries, appreciation);
-        UpdateHoldings(holdings, dateEnd);
-    }
-
-    private void UpdateBalanceFromChartData(
-        IReadOnlyList<TimeSeriesModel> balanceSeries,
-        UnrealizedGainLossAccountResult? appreciation)
-    {
-        _currentBalance = balanceSeries.LastOrDefault()?.Value ?? 0;
+        var currentBalance = orderedSeries.LastOrDefault()?.Value ?? 0;
 
         // Capital value (remaining buy cost) and current valuation are the two source-of-truth
         // figures; the gain/loss shown in the hero and the breakdown card is derived purely from
         // their difference so the number can never disagree with the two amounts on display.
-        _capitalValue = appreciation?.CostBasis ?? 0m;
-        _currentValue = appreciation?.CurrentValue ?? 0m;
-        _balanceChange = _currentValue - _capitalValue;
-        _balanceChangePercent = _capitalValue == 0m ? null : _balanceChange / _capitalValue * 100m;
+        var capitalValue = appreciation?.CostBasis ?? 0m;
+        var currentValue = appreciation?.CurrentValue ?? 0m;
+        var balanceChange = currentValue - capitalValue;
+        return new InvestmentAccountChartModel(
+            selectedRange,
+            dateStart,
+            dateEnd,
+            [.. orderedSeries.SkipWhile(x => x.Value == 0)],
+            [.. benchmarkSeries.OrderBy(x => x.Key).Select(x => new TimeSeriesModel(x.Key, x.Value))],
+            benchmarkName,
+            currentBalance,
+            capitalValue,
+            currentValue,
+            balanceChange,
+            capitalValue == 0m ? null : balanceChange / capitalValue * 100m,
+            BuildHoldings(transactions, holdings, dateEnd));
     }
 
-    private void UpdateHoldings(IReadOnlyDictionary<long, decimal> holdings, DateTime asOf)
+    // Only chart data is restored. The selected range and its dates stay owned by the user's
+    // selection: the snapshot key already pins a snapshot to the range it was captured for, and
+    // writing those fields back here would revert the range chip mid-refresh and shift the date
+    // window that a concurrent entries load is reading.
+    private Task ApplyChartModel(InvestmentAccountChartModel model)
+    {
+        ChartData.Clear();
+        ChartData.AddRange(model.Series);
+        BenchmarkData.Clear();
+        BenchmarkData.AddRange(model.BenchmarkSeries);
+        _benchmarkName = model.BenchmarkName;
+        _currentBalance = model.CurrentBalance;
+        _capitalValue = model.CapitalValue;
+        _currentValue = model.CurrentValue;
+        _balanceChange = model.BalanceChange;
+        _balanceChangePercent = model.BalanceChangePercent;
+        _holdings = model.Holdings;
+        _isChartLoading = false;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task ShowChartLoading()
+    {
+        ChartData.Clear();
+        BenchmarkData.Clear();
+        _isChartLoading = true;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private static List<InvestmentHoldingModel> BuildHoldings(
+        List<InvestmentTransactionDto> transactions,
+        IReadOnlyDictionary<long, decimal> holdings,
+        DateTime asOf)
     {
         // Value each holding from its latest trade on or before the as-of date so historical
         // ranges don't pull ticker/price metadata from trades that happen after the range end.
         var asOfDate = DateOnly.FromDateTime(asOf);
-        var latestByListing = _transactions
+        var latestByListing = transactions
             .Where(t => t.TradeDate <= asOfDate)
             .GroupBy(t => t.AssetListingId)
             .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.TradeDate).ThenByDescending(t => t.Id).First());
 
-        var rows = new List<HoldingRow>();
+        var rows = new List<InvestmentHoldingModel>();
         foreach (var (listingId, quantity) in holdings)
         {
             if (quantity == 0m || !latestByListing.TryGetValue(listingId, out var latest)) continue;
-            rows.Add(new HoldingRow(listingId, latest.Ticker, latest.ExchangeName, latest.Currency, quantity, latest.UnitPrice, quantity * latest.UnitPrice));
+            rows.Add(new InvestmentHoldingModel(
+                listingId,
+                latest.Ticker,
+                latest.ExchangeName,
+                latest.Currency,
+                quantity,
+                latest.UnitPrice,
+                quantity * latest.UnitPrice));
         }
-        _holdings = [.. rows.OrderByDescending(h => h.Value)];
+        return [.. rows.OrderByDescending(h => h.Value)];
     }
 
     private bool HasActiveFilter => !string.IsNullOrWhiteSpace(_searchText) || _activeFilter is not null;
@@ -405,6 +475,4 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             Snackbar.Add("Could not remove the transaction.", Severity.Error);
         }
     }
-
-    private sealed record HoldingRow(long ListingId, string Ticker, string ExchangeName, string Currency, decimal Quantity, decimal LatestPrice, decimal Value);
 }

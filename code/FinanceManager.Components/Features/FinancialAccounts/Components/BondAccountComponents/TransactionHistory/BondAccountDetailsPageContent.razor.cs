@@ -56,7 +56,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     private readonly List<BondDetails> _bondDetails = [];
     private UserSession? _user;
     private bool _isChartLoading;
-    private int _chartRefreshVersion;
+    private readonly RefreshVersionGate _chartGate = new();
 
     public bool IsLoading = false;
     public BondAccount? Account { get; set; }
@@ -72,6 +72,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
     [Inject] public required AccountDetailsSnapshotStore SnapshotStore { get; set; }
+    [Inject] public required AccountChartSnapshotStore ChartSnapshotStore { get; set; }
     [Inject] public required ILogger<BondAccountDetailsPageContent> Logger { get; set; }
     [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
 
@@ -251,23 +252,59 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
 
     private void QueueChartDataRefresh()
     {
-        var refreshVersion = ++_chartRefreshVersion;
+        if (Account is null || _user is null) return;
+
+        var version = _chartGate.Claim();
+        var userId = _user.UserId;
+        var accountId = AccountId;
+        var currency = _currency;
+        var selectedRange = _selectedRange;
+        var dateStart = _dateStart;
+        var dateEnd = _dateEnd;
         _isChartLoading = true;
-        ChartData.Clear();
 
         _ = InvokeAsync(async () =>
         {
             try
             {
-                await UpdateChartData(refreshVersion);
+                var result = await ChartSnapshotStore.RefreshBondAsync(
+                    userId,
+                    accountId,
+                    currency.Id,
+                    AccountChartSnapshotStore.BuildRangeKey(selectedRange, dateStart, dateEnd),
+                    _chartGate,
+                    version,
+                    async () =>
+                    {
+                        var series = (await MoneyFlowHttpClient.GetClosingBalance(userId, currency, dateStart, dateEnd, [accountId]))
+                            .SkipWhile(x => x.Value == 0)
+                            .ToList();
+                        var currentBalance = series.LastOrDefault()?.Value ?? 0;
+                        var balanceChange = series.Count >= 2 ? series.Last().Value - series.First().Value : 0;
+                        var startBalance = currentBalance - balanceChange;
+                        return new AccountChartModel(
+                            selectedRange,
+                            dateStart,
+                            dateEnd,
+                            series,
+                            currentBalance,
+                            balanceChange,
+                            startBalance == 0 ? null : balanceChange / startBalance * 100m);
+                    },
+                    onSnapshotPainted: ApplyChartModel,
+                    onSnapshotMissing: ShowChartLoading,
+                    onRefreshed: ApplyChartModel);
+
+                if (_chartGate.IsCurrent(version) && result.IsBlockingFailure)
+                    Logger.LogError(result.Error, "Error while loading bond account chart data.");
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error while loading bond account chart data for account ID {AccountId}", AccountId);
+                Logger.LogError(ex, "Error while loading bond account chart data.");
             }
             finally
             {
-                if (refreshVersion == _chartRefreshVersion)
+                if (_chartGate.IsCurrent(version))
                     _isChartLoading = false;
 
                 StateHasChanged();
@@ -275,26 +312,26 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
         });
     }
 
-    private async Task UpdateChartData(int refreshVersion)
+    // Only chart data is restored. The selected range and its dates stay owned by the user's
+    // selection: the snapshot key already pins a snapshot to the range it was captured for, and
+    // writing those fields back here would revert the range chip mid-refresh and shift the date
+    // window that a concurrent entries load is reading.
+    private Task ApplyChartModel(AccountChartModel model)
     {
-        if (Account is null || _user is null) return;
-
-        _currency = await SettingsService.GetCurrencyAsync();
-        var chartData = await MoneyFlowHttpClient.GetClosingBalance(_user.UserId, _currency, _dateStart, _dateEnd, [AccountId]);
-        if (refreshVersion != _chartRefreshVersion) return;
-
         ChartData.Clear();
-        ChartData.AddRange(chartData.SkipWhile(x => x.Value == 0));
-        UpdateBalanceFromChartData();
+        ChartData.AddRange(model.Series);
+        _currentBalance = model.CurrentBalance;
+        _balanceChange = model.BalanceChange;
+        _balanceChangePercent = model.BalanceChangePercent;
+        _isChartLoading = false;
+        return InvokeAsync(StateHasChanged);
     }
 
-    private void UpdateBalanceFromChartData()
+    private Task ShowChartLoading()
     {
-        _currentBalance = ChartData.LastOrDefault()?.Value ?? 0;
-        _balanceChange = ChartData.Count >= 2 ? ChartData.Last().Value - ChartData.First().Value : 0;
-
-        var startBalance = _currentBalance - _balanceChange;
-        _balanceChangePercent = startBalance == 0 ? null : _balanceChange / startBalance * 100m;
+        ChartData.Clear();
+        _isChartLoading = true;
+        return InvokeAsync(StateHasChanged);
     }
 
     private void AccountDataSynchronizationService_AccountsChanged()
@@ -420,8 +457,8 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     }
 
     // Stale-while-revalidate: paint the last-rendered entries instantly, always re-fetch, and only
-    // repaint and re-persist when the entries actually changed. Chart data is never snapshotted —
-    // UpdateInfo queues a fresh API load for it. See docs/codebase/UI-SNAPSHOTS.md.
+    // repaint and re-persist when the entries actually changed. Chart data has its own
+    // per-range snapshot, queued by UpdateInfo. See docs/codebase/UI-SNAPSHOTS.md.
     private async Task LoadInitialEntries()
     {
         if (_user is null) return;
