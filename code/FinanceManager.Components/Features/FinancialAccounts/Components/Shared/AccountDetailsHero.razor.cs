@@ -42,9 +42,9 @@ public partial class AccountDetailsHero
     // the value has to clear the widest label rather than the narrowest: the dashboard's 24
     // suits "31k" but leaves a decimal tick like "301.03" flush against the page edge, and
     // the hero chart is full-bleed (mx-n6) so there is no card padding to fall back on.
-    private const double FloatingYLabelOffsetX = 48;
+    private const double _floatingYLabelOffsetX = 48;
 
-    private const int YAxisTickCount = 5;
+    private const int _yAxisTickCount = 5;
 
     private MudDateRangePicker? _customDateRangePicker;
 
@@ -103,14 +103,14 @@ public partial class AccountDetailsHero
         var bounds = ChartHelper.AddYRangePadding(values.Min(), values.Max());
         axis.Min = bounds.Min;
         axis.Max = bounds.Max;
-        axis.TickAmount = YAxisTickCount;
+        axis.TickAmount = _yAxisTickCount;
         axis.ForceNiceScale = false;
 
         // Account balances span a much wider magnitude range than the dashboard's portfolio
         // aggregates (a 300 PLN bond sits beside a 30k cash account), so the tick precision
         // is chosen from the scale actually on screen rather than fixed to "k".
         if (axis.Labels is YAxisLabels labels)
-            labels.Formatter = ChartHelper.GetYAxisTickFormatter(bounds.Min, bounds.Max, YAxisTickCount);
+            labels.Formatter = ChartHelper.GetYAxisTickFormatter(bounds.Min, bounds.Max, _yAxisTickCount);
     }
 
     private static ApexChartOptions<TimeSeriesModel> BuildChartOptions() => new()
@@ -184,7 +184,7 @@ public partial class AccountDetailsHero
                     Show = true,
                     // Nudges the floating labels right off the left chart edge so they sit
                     // just inside the visible area rather than being cut by it.
-                    OffsetX = FloatingYLabelOffsetX,
+                    OffsetX = _floatingYLabelOffsetX,
                     Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
                     Formatter = ChartHelper.CompactCurrencyTickFormatter,
                 },
