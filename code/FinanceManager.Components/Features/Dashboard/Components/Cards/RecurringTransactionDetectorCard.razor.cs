@@ -59,7 +59,9 @@ public partial class RecurringTransactionDetectorCard
             version,
             async () =>
             {
-                var data = await RecurringTransactionDetectorHttpClient.GetRecurringTransactions(user.UserId);
+                var data = (await RecurringTransactionDetectorHttpClient.GetRecurringTransactions(user.UserId))
+                    .Where(x => !x.IsMuted && !x.IsCancelled)
+                    .ToList();
                 return new(data, data.Count == 0 ? 0 : Math.Round(data.Sum(x => x.Value), 2));
             },
             onSnapshotPainted: ShowData,

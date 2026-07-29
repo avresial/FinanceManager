@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- A new **Subscriptions** inbox turns recurring charges into a managed list with stable identities, weekly through annual cadence detection, next expected charge dates, monthly and annual cost equivalents, price-increase warnings, and persisted mute, cancellation, and review flags. #306
 - Investment accounts now compare portfolio value with Polish inflation by default, or with any available investment selected in **Settings → Preferences**, across the account chart's full date range. #307
 - The app now installs a service worker that caches the WebAssembly runtime and app files in the browser after the first visit, so repeat visits skip the multi-megabyte download and boot near-instantly. After a new deploy, the update is picked up silently in the background and applied once all open tabs of the app are closed. #554
 - Expanding a bond entry now shows the same valuation breakdown as investment purchases: the unit price and the position's value at the posting date versus now, plus the accrued gain/loss in amount and percentage. Figures come from the bond's own interest-accrual model and are shown in the bond's currency; the breakdown is hidden when the bond has no calculation method covering the dates so no misleading zero is shown.
