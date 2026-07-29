@@ -42,6 +42,7 @@ public partial class TransactionLogCard
             _data = [];
             _isLoading = false;
             _hasError = false;
+            StateHasChanged();
             return;
         }
 

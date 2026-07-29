@@ -50,6 +50,7 @@ public partial class RecurringTransactionDetectorCard
             _data = [];
             _totalMonthlySpend = 0;
             _isLoading = false;
+            StateHasChanged();
             return;
         }
 
@@ -60,7 +61,7 @@ public partial class RecurringTransactionDetectorCard
             async () =>
             {
                 var data = await RecurringTransactionDetectorHttpClient.GetRecurringTransactions(user.UserId);
-                return new(data, data.Count == 0 ? 0 : Math.Round(data.Sum(x => x.Value), 2));
+                return new(data, Math.Round(data.Sum(x => x.Value), 2));
             },
             onSnapshotPainted: ShowData,
             onSnapshotMissing: ShowLoading,

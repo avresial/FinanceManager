@@ -123,6 +123,87 @@ public class DashboardCardsSnapshotStoreTests
     }
 
     [Fact]
+    public async Task Insights_FailedRefresh_KeepsStoredSnapshotAndDoesNotOverwriteIt()
+    {
+        const string key = "financial-insights:1:all:3";
+        _snapshots.Setup(x => x.GetAsync<FinancialInsightsSnapshot>(key))
+            .ReturnsAsync(new FinancialInsightsSnapshot { UserId = 1, Count = 3, Insights = [Insight(1)] });
+
+        var result = await CreateStore().RefreshInsightsAsync(
+            1,
+            3,
+            null,
+            new RefreshVersionGate(),
+            null,
+            () => throw new HttpRequestException());
+
+        Assert.Equal(SnapshotRefreshOutcome.Failed, result.Outcome);
+        Assert.False(result.IsBlockingFailure);
+        Assert.Equal(1, result.Model!.Single().Id);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<FinancialInsightsSnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Insights_GenuinelyEmptyResponse_ClearsCardAndOverwritesSnapshot()
+    {
+        const string key = "financial-insights:1:all:3";
+        _snapshots.Setup(x => x.GetAsync<FinancialInsightsSnapshot>(key))
+            .ReturnsAsync(new FinancialInsightsSnapshot { UserId = 1, Count = 3, Insights = [Insight(1)] });
+
+        var result = await CreateStore().RefreshInsightsAsync(
+            1,
+            3,
+            null,
+            new RefreshVersionGate(),
+            null,
+            () => Task.FromResult<List<FinancialInsight>?>([]));
+
+        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+        Assert.Empty(result.Model!);
+        _snapshots.Verify(x => x.SetAsync(key, It.Is<FinancialInsightsSnapshot>(s => s.Insights.Count == 0)), Times.Once);
+    }
+
+    [Fact]
+    public async Task Insights_NoSnapshotFailure_IsBlocking()
+    {
+        var result = await CreateStore().RefreshInsightsAsync(
+            1,
+            3,
+            null,
+            new RefreshVersionGate(),
+            null,
+            () => throw new HttpRequestException());
+
+        Assert.Equal(SnapshotRefreshOutcome.Failed, result.Outcome);
+        Assert.True(result.IsBlockingFailure);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<FinancialInsightsSnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task TransactionLog_RejectsSnapshotStoredForAnotherRowCount()
+    {
+        _snapshots.Setup(x => x.GetAsync<TransactionLogSnapshot>("transaction-log:1:10"))
+            .ReturnsAsync(new TransactionLogSnapshot { UserId = 1, Count = 5, Data = [Transaction(1)] });
+        var painted = false;
+
+        var result = await CreateStore().RefreshTransactionLogAsync(
+            1,
+            10,
+            new RefreshVersionGate(),
+            null,
+            () => Task.FromResult<List<TransactionLogEntryDto>?>([Transaction(1)]),
+            _ =>
+            {
+                painted = true;
+                return Task.CompletedTask;
+            });
+
+        Assert.False(painted);
+        Assert.False(result.SnapshotPainted);
+        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+    }
+
+    [Fact]
     public async Task TransactionLog_NoSnapshotFailure_IsBlocking()
     {
         var result = await CreateStore().RefreshTransactionLogAsync(

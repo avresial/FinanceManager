@@ -36,6 +36,7 @@ public partial class FinancialInsightsCarousel
         {
             _insights = [];
             _isLoading = false;
+            StateHasChanged();
             return;
         }
 
@@ -56,6 +57,9 @@ public partial class FinancialInsightsCarousel
         {
             Snackbar.Add("Unable to load financial insights.", Severity.Error);
         }
+        // Outcomes that never reach ShowInsights (blocking failure, empty response) still have to
+        // clear the spinner painted by ShowLoading.
+        StateHasChanged();
     }
 
     private Task ShowInsights(List<FinancialInsight> insights)
