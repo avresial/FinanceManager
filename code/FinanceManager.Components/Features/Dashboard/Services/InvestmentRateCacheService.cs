@@ -1,6 +1,7 @@
 using Blazored.LocalStorage;
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
@@ -26,6 +27,9 @@ public class InvestmentRateCacheService(
 
     public Task<InvestmentRateCacheSnapshot> GetSnapshotAsync(InvestmentRateRefreshContext context)
         => GetOrRefreshAsync(context);
+
+    // The key covers one user and currency, so a key change always supersedes the previous entry.
+    protected override bool RetainsOnlyLatestEntry => true;
 
     protected override string GetCacheKey(InvestmentRateRefreshContext refreshContext)
         => BuildCacheKey(refreshContext.UserId, refreshContext.CurrencyId, refreshContext.EndDateTime);
@@ -84,6 +88,10 @@ public class InvestmentRateCacheService(
         return BuildCacheKey(state.UserId, state.CurrencyId, state.EndDateTime) == cacheKey;
     }
 
+    // The card's "as of" instant is a live clock read, so it differs on every mount; only its day reaches
+    // the key (see CacheKeyDate). Rates are reported per month, so entries built at different times of the
+    // same day are equivalent — the exact instant stays on the snapshot for the request itself, and
+    // staleness inside the day is bounded by the FetchedAtUtc check in IsUsable.
     private static string BuildCacheKey(int userId, int currencyId, DateTime endDateTime)
-        => $"{userId}:{currencyId}:{endDateTime:O}";
+        => $"{userId}:{currencyId}:{CacheKeyDate.ToSegment(endDateTime)}";
 }

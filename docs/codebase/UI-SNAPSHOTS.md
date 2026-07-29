@@ -68,6 +68,19 @@ each save overwrites, rather than accumulating an entry per range the user has e
 the range inside the snapshot instead when the view needs to know what produced it (the dashboard
 does this so amounts and their period label stay paired during a reload).
 
+The same rule holds for the time-based cache, for a different reason: a key that moves per visit means
+`GetOrRefreshAsync` never finds what the last visit wrote, so the cache never hits *and* local storage
+grows an orphaned entry every time. Two guards keep that from happening:
+
+- **Never put sub-day precision in a key.** The dates that reach one are usually clock reads — a card's
+  "as of" instant, or a range end clamped to now by `DateRangeHelper` — so format them with
+  `CacheKeyDate.ToSegment` and keep the exact instant on the snapshot instead. Freshness inside the day
+  is the staleness check's job, not the key's.
+- **Prune when the cache holds one entry.** A cache keyed only on inputs the user cannot switch between
+  (one entry per user and currency) should override `RetainsOnlyLatestEntry` to `true`, so a key change —
+  a schema bump, a day rollover — evicts what it superseded rather than leaving it in storage forever.
+  Leave it `false` where several entries are legitimate, such as one per date range the user can pick.
+
 ### Content equality
 
 The default `JsonContentComparer<TModel>` treats two models as equal when they serialize
