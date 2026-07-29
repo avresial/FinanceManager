@@ -48,6 +48,9 @@ public partial class LiabilitiesDistributionOverviewCard
         // renders directly and this card only snapshots its standalone self-loading path.
         if (Model is not null)
         {
+            // Claim the gate so any self-load still in flight (from an earlier render when Model was null)
+            // is superseded and cannot overwrite the dashboard-supplied data with stale self-loaded values.
+            _gate.Claim();
             _typeData = ToPositive(Model.TypeData);
             _accountData = ToPositive(Model.AccountData);
             _isLoading = false;
@@ -85,6 +88,7 @@ public partial class LiabilitiesDistributionOverviewCard
             startDate,
             endDate,
             _gate,
+            requestVersion,
             fetchAsync: async () =>
             {
                 var typeTask = LiabilitiesHttpClient.GetEndLiabilitiesPerType(user.UserId, startDate, endDate).ToListAsync().AsTask();

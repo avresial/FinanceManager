@@ -92,7 +92,7 @@ public class LiabilitiesSnapshotStoreTests
         GivenStoredTimeSeries(1m, 2m);
         var store = CreateStore();
 
-        var result = await store.RefreshTimeSeriesAsync(1, "PLN", _start, _end, new RefreshVersionGate(),
+        var result = await store.RefreshTimeSeriesAsync(1, "PLN", _start, _end, new RefreshVersionGate(), claimedVersion: null,
             fetchAsync: () => throw new HttpRequestException());
 
         Assert.Equal(SnapshotRefreshOutcome.Failed, result.Outcome);
@@ -108,7 +108,7 @@ public class LiabilitiesSnapshotStoreTests
         var gate = new RefreshVersionGate();
         var store = CreateStore();
 
-        var result = await store.RefreshTimeSeriesAsync(1, "PLN", _start, _end, gate,
+        var result = await store.RefreshTimeSeriesAsync(1, "PLN", _start, _end, gate, claimedVersion: null,
             fetchAsync: () =>
             {
                 // A newer reload claims the gate mid-flight; this run must commit nothing.
@@ -118,6 +118,22 @@ public class LiabilitiesSnapshotStoreTests
 
         Assert.Equal(SnapshotRefreshOutcome.Superseded, result.Outcome);
         _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<LiabilitiesTimeSeriesSnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RefreshTimeSeries_ForwardsClaimedVersion_CallerGuardStaysCurrent()
+    {
+        // Regression: the card pre-claims a version and guards its post-run state with IsCurrent(claimedVersion).
+        // If the store let the coordinator claim a *newer* version instead of forwarding the pre-claimed one,
+        // that guard would never match and the card's error/loading commit would be skipped.
+        GivenStoredTimeSeries(1m, 2m);
+        var gate = new RefreshVersionGate();
+        var claimed = gate.Claim();
+
+        await CreateStore().RefreshTimeSeriesAsync(1, "PLN", _start, _end, gate, claimed,
+            () => Task.FromResult<TimeSeriesCardModel?>(Series(1m, 3m)));
+
+        Assert.True(gate.IsCurrent(claimed));
     }
 
     // ---- distribution surface ----
@@ -165,6 +181,42 @@ public class LiabilitiesSnapshotStoreTests
         Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
     }
 
+    [Fact]
+    public async Task RefreshDistribution_FetchFailureBehindSnapshot_KeepsPaintedSnapshot()
+    {
+        _snapshots.Setup(x => x.GetAsync<LiabilitiesDistributionSnapshot>(_distributionKey))
+            .ReturnsAsync(new LiabilitiesDistributionSnapshot { UserId = 1, CurrencyId = 2, TypeData = Values(("Loan", 5m)), AccountData = [] });
+        var store = CreateStore();
+
+        var result = await store.RefreshDistributionAsync(1, 2, _start, _end, new RefreshVersionGate(), claimedVersion: null,
+            fetchAsync: () => throw new HttpRequestException());
+
+        Assert.Equal(SnapshotRefreshOutcome.Failed, result.Outcome);
+        Assert.True(result.SnapshotPainted);
+        Assert.False(result.IsBlockingFailure);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<LiabilitiesDistributionSnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RefreshDistribution_SupersededBeforeCommit_DoesNotWrite()
+    {
+        _snapshots.Setup(x => x.GetAsync<LiabilitiesDistributionSnapshot>(_distributionKey))
+            .ReturnsAsync(new LiabilitiesDistributionSnapshot { UserId = 1, CurrencyId = 2, TypeData = Values(("Loan", 5m)), AccountData = [] });
+        var gate = new RefreshVersionGate();
+        var store = CreateStore();
+
+        var result = await store.RefreshDistributionAsync(1, 2, _start, _end, gate, claimedVersion: null,
+            fetchAsync: () =>
+            {
+                // A newer reload claims the gate mid-flight; this run must commit nothing.
+                gate.Claim();
+                return Task.FromResult<DistributionCardModel?>(new DistributionCardModel(Values(("Loan", 9m)), []));
+            });
+
+        Assert.Equal(SnapshotRefreshOutcome.Superseded, result.Outcome);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<LiabilitiesDistributionSnapshot>()), Times.Never);
+    }
+
     // ---- helpers ----
 
     private void GivenStoredTimeSeries(params decimal[] values) =>
@@ -174,13 +226,13 @@ public class LiabilitiesSnapshotStoreTests
     private Task<SnapshotRefreshResult<TimeSeriesCardModel>> RefreshTimeSeries(
         TimeSeriesCardModel? fresh,
         Func<TimeSeriesCardModel, Task>? onSnapshotPainted = null) =>
-        CreateStore().RefreshTimeSeriesAsync(1, "PLN", _start, _end, new RefreshVersionGate(),
+        CreateStore().RefreshTimeSeriesAsync(1, "PLN", _start, _end, new RefreshVersionGate(), claimedVersion: null,
             () => Task.FromResult(fresh), onSnapshotPainted);
 
     private Task<SnapshotRefreshResult<DistributionCardModel>> RefreshDistribution(
         DistributionCardModel? fresh,
         Func<DistributionCardModel, Task>? onSnapshotPainted = null) =>
-        CreateStore().RefreshDistributionAsync(1, 2, _start, _end, new RefreshVersionGate(),
+        CreateStore().RefreshDistributionAsync(1, 2, _start, _end, new RefreshVersionGate(), claimedVersion: null,
             () => Task.FromResult(fresh), onSnapshotPainted);
 
     private static TimeSeriesCardModel Series(params decimal[] values) => new(Points(values));

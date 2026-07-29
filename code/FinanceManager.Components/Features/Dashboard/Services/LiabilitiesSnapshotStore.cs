@@ -19,6 +19,12 @@ public sealed class LiabilitiesSnapshotStore(ISnapshotRefreshCoordinator coordin
     /// <param name="start">Range start the fresh model was requested for; stored for context only.</param>
     /// <param name="end">Range end the fresh model was requested for; stored for context only.</param>
     /// <param name="gate">Race protection shared with the card's other reloads.</param>
+    /// <param name="claimedVersion">
+    /// The version the caller already claimed from <paramref name="gate"/> before this call. Forwarded to the
+    /// coordinator so it reuses that version instead of claiming a newer one — otherwise the caller's own
+    /// post-run <c>IsCurrent</c> guard (which uses the pre-claimed version) would never match. Pass <c>null</c>
+    /// only when the caller has not pre-claimed.
+    /// </param>
     /// <param name="fetchAsync">Loads the chart fresh from the API. Returns an empty model when there is nothing to render.</param>
     /// <param name="onSnapshotPainted">Renders the stored series before the fresh request completes.</param>
     /// <param name="onSnapshotMissing">Runs instead of <paramref name="onSnapshotPainted"/> when no usable snapshot exists.</param>
@@ -29,6 +35,7 @@ public sealed class LiabilitiesSnapshotStore(ISnapshotRefreshCoordinator coordin
         DateTime start,
         DateTime end,
         RefreshVersionGate gate,
+        int? claimedVersion,
         Func<Task<TimeSeriesCardModel?>> fetchAsync,
         Func<TimeSeriesCardModel, Task>? onSnapshotPainted = null,
         Func<Task>? onSnapshotMissing = null,
@@ -37,6 +44,7 @@ public sealed class LiabilitiesSnapshotStore(ISnapshotRefreshCoordinator coordin
         {
             Key = BuildTimeSeriesKey(userId, currency),
             Gate = gate,
+            ClaimedVersion = claimedVersion,
 
             // A snapshot stored for a different user or currency is unusable; rejecting it falls back to a plain load.
             ToModel = snapshot => snapshot.UserId == userId && snapshot.Currency == currency
@@ -62,6 +70,12 @@ public sealed class LiabilitiesSnapshotStore(ISnapshotRefreshCoordinator coordin
     /// <param name="start">Range start the fresh model was requested for; stored for context only.</param>
     /// <param name="end">Range end the fresh model was requested for; stored for context only.</param>
     /// <param name="gate">Race protection shared with the card's other reloads.</param>
+    /// <param name="claimedVersion">
+    /// The version the caller already claimed from <paramref name="gate"/> before this call. Forwarded to the
+    /// coordinator so it reuses that version instead of claiming a newer one — otherwise the caller's own
+    /// post-run <c>IsCurrent</c> guard (which uses the pre-claimed version) would never match. Pass <c>null</c>
+    /// only when the caller has not pre-claimed.
+    /// </param>
     /// <param name="fetchAsync">Loads the breakdown fresh from the API. Returns an empty model when there is nothing to render.</param>
     /// <param name="onSnapshotPainted">Renders the stored breakdown before the fresh request completes.</param>
     /// <param name="onSnapshotMissing">Runs instead of <paramref name="onSnapshotPainted"/> when no usable snapshot exists.</param>
@@ -72,6 +86,7 @@ public sealed class LiabilitiesSnapshotStore(ISnapshotRefreshCoordinator coordin
         DateTime start,
         DateTime end,
         RefreshVersionGate gate,
+        int? claimedVersion,
         Func<Task<DistributionCardModel?>> fetchAsync,
         Func<DistributionCardModel, Task>? onSnapshotPainted = null,
         Func<Task>? onSnapshotMissing = null,
@@ -80,6 +95,7 @@ public sealed class LiabilitiesSnapshotStore(ISnapshotRefreshCoordinator coordin
         {
             Key = BuildDistributionKey(userId, currencyId),
             Gate = gate,
+            ClaimedVersion = claimedVersion,
 
             ToModel = snapshot => snapshot.UserId == userId && snapshot.CurrencyId == currencyId
                 ? new DistributionCardModel(snapshot.TypeData, snapshot.AccountData)

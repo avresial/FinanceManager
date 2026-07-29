@@ -68,6 +68,7 @@ public partial class LiabilitiesTimeSeriesCard
             startDate,
             endDate,
             _gate,
+            requestVersion,
             fetchAsync: async () =>
             {
                 var data = await LiabilitiesHttpClient.GetLiabilitiesTimeSeries(user.UserId, startDate, endDate).ToListAsync();
