@@ -1,0 +1,149 @@
+@using FinanceManager.Domain.Labels.Entities
+
+@if (IsLoading)
+{
+    <MudGrid Spacing="2">
+        @for (var i = 0; i < 3; i++)
+        {
+            <MudItem xs="12" md="6" xl="4">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="220px" />
+            </MudItem>
+        }
+    </MudGrid>
+}
+else if (VisibleSubscriptions.Count == 0)
+{
+    <MudPaper Outlined Class="pa-8 text-center">
+        <MudIcon Icon="@Icons.Material.Filled.Subscriptions" Size="Size.Large" Color="Color.Secondary" />
+        <MudText Typo="Typo.h6" Class="mt-2">No subscriptions to show</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            Import more transaction history or show muted and cancelled items.
+        </MudText>
+    </MudPaper>
+}
+else
+{
+    <MudGrid Spacing="2">
+        @foreach (var item in VisibleSubscriptions)
+        {
+            <MudItem xs="12" md="6" xl="4">
+                <MudPaper Outlined Class="pa-4 h-100">
+                    <div class="d-flex justify-space-between align-start gap-2">
+                        <div Style="min-width:0; overflow:hidden;">
+                            <MudText Typo="Typo.h6" HtmlTag="h2"
+                                     Style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                @item.Name
+                            </MudText>
+                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                    @CadenceLabel(item.Cadence)
+                                </MudChip>
+                                @if (item.IsCancelled)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Error">Cancelled</MudChip>
+                                }
+                                @if (item.IsMuted)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary">Muted</MudChip>
+                                }
+                                @if (item.PriceDelta > 0)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning"
+                                             Icon="@Icons.Material.Filled.TrendingUp">
+                                        @($"+{item.PriceDelta:N2} {Currency}")
+                                    </MudChip>
+                                }
+                            </div>
+                        </div>
+                        <MudIconButton Icon="@(item.IsFlaggedForReview ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
+                                       Color="@(item.IsFlaggedForReview ? Color.Warning : Color.Default)"
+                                       Disabled="@IsUpdating(item)"
+                                       OnClick="() => OnToggleFlag.InvokeAsync(item)"
+                                       aria-label="@(item.IsFlaggedForReview ? $"Unflag {item.Name}" : $"Flag {item.Name} for review")" />
+                    </div>
+
+                    <MudDivider Class="my-3" />
+
+                    <MudGrid Spacing="1">
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Next expected</MudText>
+                            <MudText Typo="Typo.body1" Class="font-weight-600">
+                                @(item.IsCancelled ? "—" : item.NextExpectedChargeDate.ToString("dd MMM yyyy"))
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Last charge</MudText>
+                            <MudText Typo="Typo.body1" Class="font-weight-600">
+                                @($"{item.LastAmount:N2} {Currency}")
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Monthly equivalent</MudText>
+                            <MudText Typo="Typo.body1">@($"{item.MonthlyCost:N2} {Currency}")</MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Annual cost</MudText>
+                            <MudText Typo="Typo.body1">@($"{item.AnnualCost:N2} {Currency}")</MudText>
+                        </MudItem>
+                    </MudGrid>
+
+                    <div class="d-flex justify-end gap-1 mt-3">
+                        <MudButton Variant="Variant.Text" Size="Size.Small"
+                                   Disabled="@IsUpdating(item)"
+                                   OnClick="() => OnToggleMuted.InvokeAsync(item)">
+                            @(item.IsMuted ? "Unmute" : "Mute")
+                        </MudButton>
+                        <MudButton Variant="Variant.Text" Size="Size.Small"
+                                   Color="@(item.IsCancelled ? Color.Success : Color.Error)"
+                                   Disabled="@IsUpdating(item)"
+                                   OnClick="() => OnToggleCancelled.InvokeAsync(item)">
+                            @(item.IsCancelled ? "Mark active" : "Mark cancelled")
+                        </MudButton>
+                    </div>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    /// <summary>Every detected subscription. Painted from the surface's snapshot first, then from the fresh response.</summary>
+    [Parameter] public List<RecurringTransactionResult> Subscriptions { get; set; } = [];
+
+    /// <summary>Shows placeholders while the page has neither a snapshot nor a response for this surface.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+
+    /// <summary>Currency short name appended to the amounts.</summary>
+    [Parameter] public string Currency { get; set; } = string.Empty;
+
+    /// <summary>Includes muted and cancelled subscriptions in the list. Purely a view filter — it never changes what is stored.</summary>
+    [Parameter] public bool ShowInactive { get; set; }
+
+    /// <summary>Pattern ids with an update in flight; their cards' actions are disabled.</summary>
+    [Parameter] public IReadOnlyCollection<Guid> UpdatingIds { get; set; } = [];
+
+    [Parameter] public EventCallback<RecurringTransactionResult> OnToggleFlag { get; set; }
+
+    [Parameter] public EventCallback<RecurringTransactionResult> OnToggleMuted { get; set; }
+
+    [Parameter] public EventCallback<RecurringTransactionResult> OnToggleCancelled { get; set; }
+
+    private List<RecurringTransactionResult> VisibleSubscriptions =>
+        Subscriptions
+            .Where(x => ShowInactive || (!x.IsMuted && !x.IsCancelled))
+            .OrderByDescending(x => x.IsFlaggedForReview)
+            .ThenBy(x => x.NextExpectedChargeDate)
+            .ToList();
+
+    private bool IsUpdating(RecurringTransactionResult item) => UpdatingIds.Contains(item.PatternId);
+
+    private static string CadenceLabel(RecurringCadence cadence) =>
+        cadence switch
+        {
+            RecurringCadence.Weekly => "Weekly",
+            RecurringCadence.Monthly => "Monthly",
+            RecurringCadence.Quarterly => "Quarterly",
+            RecurringCadence.Annual => "Annual",
+            _ => cadence.ToString()
+        };
+}

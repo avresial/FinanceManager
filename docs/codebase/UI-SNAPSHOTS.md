@@ -105,6 +105,13 @@ not in a reusable view component. View components should take a prepared model a
 dashboard follows this shape: `Dashboard.razor.cs` resolves user and currency, runs the coordinator,
 and hands finished card models down to the cards.
 
+One page can own several surfaces without one request per surface. When a single response feeds more
+than one surface, run a coordinator request per surface — separate keys, separate content equality,
+so a change confined to one of them repaints and rewrites only that one — and share the response
+between them (the Subscriptions page hands both runs the same lazily started fetch, and runs them
+concurrently so each paints its own snapshot as soon as it is read). Splitting the snapshots must not
+split the request.
+
 ## Where it is used
 
 | Surface | Entry point |
@@ -113,6 +120,7 @@ and hands finished card models down to the cards.
 | Account transaction lists | `code\FinanceManager.Components\Features\FinancialAccounts\Services\AccountDetailsSnapshotStore.cs` |
 | Liabilities cards | `code\FinanceManager.Components\Features\Dashboard\Services\LiabilitiesSnapshotStore.cs` |
 | Dashboard insights / recurring / transaction-log cards | `code\FinanceManager.Components\Features\Dashboard\Services\DashboardCardsSnapshotStore.cs` |
+| Subscriptions page summary tiles and list | `code\FinanceManager.Components\Features\Labels\Services\SubscriptionsSnapshotStore.cs` |
 
 `AccountDetailsSnapshotStore` shows the recommended shape for a surface with several callers: a thin
 feature-level wrapper that owns the key shape and the snapshot↔model mapping, leaving the workflow
