@@ -15,13 +15,13 @@ namespace FinanceManager.Api.Migrations
                 name: "RecurringSubscriptions",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    UserId = table.Column<int>(type: "integer", nullable: false),
-                    MerchantKey = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
-                    Name = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
-                    IsMuted = table.Column<bool>(type: "boolean", nullable: false),
-                    IsCancelled = table.Column<bool>(type: "boolean", nullable: false),
-                    IsFlaggedForReview = table.Column<bool>(type: "boolean", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<int>(nullable: false),
+                    MerchantKey = table.Column<string>(maxLength: 300, nullable: false),
+                    Name = table.Column<string>(maxLength: 300, nullable: false),
+                    IsMuted = table.Column<bool>(nullable: false),
+                    IsCancelled = table.Column<bool>(nullable: false),
+                    IsFlaggedForReview = table.Column<bool>(nullable: false)
                 },
                 constraints: table =>
                 {
