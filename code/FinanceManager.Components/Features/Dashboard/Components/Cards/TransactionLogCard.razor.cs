@@ -12,9 +12,10 @@ using System.Globalization;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Cards;
 
-public partial class TransactionLogCard
+public partial class TransactionLogCard : IDisposable
 {
     private bool _isLoading;
+    private bool _disposed;
     private bool _hasError;
     private List<TransactionLogEntryDto> _data = [];
     private readonly RefreshVersionGate _refreshGate = new();
@@ -36,7 +37,7 @@ public partial class TransactionLogCard
     {
         var version = _refreshGate.Claim();
         var user = await LoginService.GetLoggedUser();
-        if (!_refreshGate.IsCurrent(version)) return;
+        if (_disposed || !_refreshGate.IsCurrent(version)) return;
         if (user is null)
         {
             _data = [];
@@ -55,7 +56,7 @@ public partial class TransactionLogCard
             onSnapshotPainted: ShowData,
             onSnapshotMissing: ShowLoading,
             onRefreshed: ShowData);
-        if (!_refreshGate.IsCurrent(version)) return;
+        if (_disposed || !_refreshGate.IsCurrent(version)) return;
 
         _isLoading = false;
         _hasError = result.IsBlockingFailure;
@@ -68,6 +69,8 @@ public partial class TransactionLogCard
 
     private Task ShowData(List<TransactionLogEntryDto> data)
     {
+        if (_disposed) return Task.CompletedTask;
+
         _data = data;
         _isLoading = false;
         _hasError = false;
@@ -76,10 +79,14 @@ public partial class TransactionLogCard
 
     private Task ShowLoading()
     {
+        if (_disposed) return Task.CompletedTask;
+
         _isLoading = true;
         _hasError = false;
         return InvokeAsync(StateHasChanged);
     }
+
+    public void Dispose() => _disposed = true;
 
     private static string GetAccountTypeIcon(AccountType accountType) => accountType switch
     {

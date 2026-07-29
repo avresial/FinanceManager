@@ -15,9 +15,10 @@ using MudBlazor;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Cards;
 
-public partial class RecurringTransactionDetectorCard
+public partial class RecurringTransactionDetectorCard : IDisposable
 {
     private bool _isLoading;
+    private bool _disposed;
     private bool _isLoadingDetail;
     private List<RecurringTransactionResult> _data = [];
     private decimal _totalMonthlySpend;
@@ -44,7 +45,7 @@ public partial class RecurringTransactionDetectorCard
     {
         var version = _refreshGate.Claim();
         var user = await LoginService.GetLoggedUser();
-        if (!_refreshGate.IsCurrent(version)) return;
+        if (_disposed || !_refreshGate.IsCurrent(version)) return;
         if (user is null)
         {
             _data = [];
@@ -68,7 +69,7 @@ public partial class RecurringTransactionDetectorCard
             onSnapshotPainted: ShowData,
             onSnapshotMissing: ShowLoading,
             onRefreshed: ShowData);
-        if (!_refreshGate.IsCurrent(version)) return;
+        if (_disposed || !_refreshGate.IsCurrent(version)) return;
 
         _isLoading = false;
         if (result.IsBlockingFailure)
@@ -81,6 +82,8 @@ public partial class RecurringTransactionDetectorCard
 
     private Task ShowData(RecurringTransactionsCardModel model)
     {
+        if (_disposed) return Task.CompletedTask;
+
         _data = model.Data;
         _totalMonthlySpend = model.TotalMonthlySpend;
         _isLoading = false;
@@ -89,6 +92,8 @@ public partial class RecurringTransactionDetectorCard
 
     private Task ShowLoading()
     {
+        if (_disposed) return Task.CompletedTask;
+
         _isLoading = true;
         return InvokeAsync(StateHasChanged);
     }
@@ -132,5 +137,11 @@ public partial class RecurringTransactionDetectorCard
         _selectedItem = null;
         _detailEntries = [];
         _isLoadingDetail = false;
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        Interlocked.Increment(ref _detailRequestVersion);
     }
 }

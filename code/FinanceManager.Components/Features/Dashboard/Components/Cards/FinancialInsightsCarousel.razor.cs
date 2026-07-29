@@ -10,9 +10,10 @@ using MudBlazor;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Cards;
 
-public partial class FinancialInsightsCarousel
+public partial class FinancialInsightsCarousel : IDisposable
 {
     private bool _isLoading;
+    private bool _disposed;
     private List<FinancialInsight> _insights = [];
     private readonly RefreshVersionGate _refreshGate = new();
 
@@ -31,7 +32,7 @@ public partial class FinancialInsightsCarousel
     {
         var version = _refreshGate.Claim();
         var user = await LoginService.GetLoggedUser();
-        if (!_refreshGate.IsCurrent(version)) return;
+        if (_disposed || !_refreshGate.IsCurrent(version)) return;
         if (user is null)
         {
             _insights = [];
@@ -50,7 +51,7 @@ public partial class FinancialInsightsCarousel
             onSnapshotPainted: ShowInsights,
             onSnapshotMissing: ShowLoading,
             onRefreshed: ShowInsights);
-        if (!_refreshGate.IsCurrent(version)) return;
+        if (_disposed || !_refreshGate.IsCurrent(version)) return;
 
         _isLoading = false;
         if (result.IsBlockingFailure)
@@ -64,6 +65,8 @@ public partial class FinancialInsightsCarousel
 
     private Task ShowInsights(List<FinancialInsight> insights)
     {
+        if (_disposed) return Task.CompletedTask;
+
         _insights = insights;
         _isLoading = false;
         return InvokeAsync(StateHasChanged);
@@ -71,7 +74,11 @@ public partial class FinancialInsightsCarousel
 
     private Task ShowLoading()
     {
+        if (_disposed) return Task.CompletedTask;
+
         _isLoading = true;
         return InvokeAsync(StateHasChanged);
     }
+
+    public void Dispose() => _disposed = true;
 }
