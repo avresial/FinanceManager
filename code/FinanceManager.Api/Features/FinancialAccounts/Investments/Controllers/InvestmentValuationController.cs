@@ -72,19 +72,24 @@ public class InvestmentValuationController(
         return Ok(series);
     }
 
-    [HttpGet("BenchmarkSeries/{currencyId:int}/{startDate:DateTime}/{endDate:DateTime}")]
+    [HttpGet("BenchmarkSeries/{accountId:int}/{currencyId:int}/{startDate:DateTime}/{endDate:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyDictionary<DateTime, decimal>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetBenchmarkSeries(
+        int accountId,
         int currencyId,
         DateTime startDate,
         DateTime endDate,
-        [FromQuery] decimal baseValue,
         [FromQuery] long? listingId = null,
         CancellationToken cancellationToken = default)
     {
-        if (endDate < startDate || baseValue <= 0) return BadRequest();
+        if (endDate < startDate) return BadRequest("End date must be on or after start date.");
+
+        var account = await accountRepository.Get(accountId);
+        if (account is null) return NotFound();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return NotFound("Currency not found.");
@@ -92,7 +97,7 @@ public class InvestmentValuationController(
             return NotFound("Investment benchmark not found.");
 
         return Ok(await valuationService.GetBenchmarkSeriesAsync(
-            listingId, currency, startDate, endDate, baseValue, cancellationToken));
+            listingId, accountId, currency, startDate, endDate, cancellationToken));
     }
 
     [HttpGet("TransactionValuations/{accountId:int}/{currencyId:int}")]

@@ -195,22 +195,126 @@ internal class InvestmentValuationService(
 
     public async Task<IReadOnlyDictionary<DateTime, decimal>> GetBenchmarkSeriesAsync(
         long? assetListingId,
+        int accountId,
         Currency targetCurrency,
         DateTime start,
         DateTime end,
-        decimal baseValue,
         CancellationToken ct = default)
     {
-        if (baseValue <= 0 || start == default || end == default || end < start)
+        if (start == default || end == default || end < start)
             return new Dictionary<DateTime, decimal>();
+
+        var startDate = start.Date;
+        var endDate = end.Date;
+        var startDateOnly = DateOnly.FromDateTime(startDate);
+        var endDateOnly = DateOnly.FromDateTime(endDate);
+
+        var transactions = (await transactionRepository.GetByAccounts([accountId], ct))
+            .Where(t => t.TradeDate <= endDateOnly)
+            .ToList();
+        if (transactions.Count == 0) return new Dictionary<DateTime, decimal>();
 
         var raw = assetListingId is long listingId
             ? await priceProvider.GetPricePerUnitSeriesAsync(listingId, targetCurrency, start, end, ct)
             : await inflationIndexProvider.GetIndexSeriesAsync(start, end, ct);
-        var ordered = raw.Where(x => x.Value > 0).OrderBy(x => x.Key).ToList();
-        if (ordered.Count == 0) return new Dictionary<DateTime, decimal>();
+        var index = ToDailySeries(raw, startDate, endDate);
+        if (index.Count == 0) return new Dictionary<DateTime, decimal>();
 
-        var firstValue = ordered[0].Value;
-        return ordered.ToDictionary(x => x.Key, x => baseValue * x.Value / firstValue);
+        // Contributions are measured at the same market prices the account's own value series uses,
+        // so a day's contribution equals the value that trade added to the account that day.
+        var priceSeries = new Dictionary<long, Dictionary<DateTime, decimal>>();
+        foreach (var id in transactions.Select(t => t.AssetListingId).Distinct())
+        {
+            priceSeries[id] = ToDailySeries(
+                await priceProvider.GetPricePerUnitSeriesAsync(id, targetCurrency, start, end, ct),
+                startDate,
+                endDate);
+        }
+
+        return BuildContributionMatchedSeries(transactions, index, priceSeries, startDate, endDate, startDateOnly);
     }
+
+    // Both the benchmark index and instrument prices are published on their own calendars — monthly
+    // for inflation, trading days for a listing — so carry the latest published level forward across
+    // the gaps. Days before the first published point take that first level, which keeps a range that
+    // opens on a weekend or ahead of the first print from dropping its opening value.
+    private static Dictionary<DateTime, decimal> ToDailySeries(
+        IReadOnlyDictionary<DateTime, decimal> raw,
+        DateTime startDate,
+        DateTime endDate)
+    {
+        var result = new Dictionary<DateTime, decimal>();
+        var published = raw
+            .Where(x => x.Value > 0)
+            .Select(x => (Date: x.Key.Date, x.Value))
+            .OrderBy(x => x.Date)
+            .ToList();
+        if (published.Count == 0) return result;
+
+        var next = 0;
+        var level = published[0].Value;
+        for (var date = startDate; date <= endDate; date = date.AddDays(1))
+        {
+            while (next < published.Count && published[next].Date <= date)
+                level = published[next++].Value;
+            result[date] = level;
+        }
+
+        return result;
+    }
+
+    // Fold the account's cash flows into benchmark units: seed with whatever the account already held
+    // when the range opened, then buy or sell units as trades move money in and out.
+    private static Dictionary<DateTime, decimal> BuildContributionMatchedSeries(
+        IEnumerable<InvestmentTransaction> transactions,
+        IReadOnlyDictionary<DateTime, decimal> index,
+        IReadOnlyDictionary<long, Dictionary<DateTime, decimal>> priceSeries,
+        DateTime startDate,
+        DateTime endDate,
+        DateOnly startDateOnly)
+    {
+        var byDate = transactions
+            .Where(t => t.TradeDate >= startDateOnly)
+            .GroupBy(t => t.TradeDate.ToDateTime(TimeOnly.MinValue))
+            .ToDictionary(
+                g => g.Key,
+                g => g.GroupBy(t => t.AssetListingId)
+                    .Select(l => (ListingId: l.Key, Quantity: l.Sum(t => t.SignedQuantity)))
+                    .ToList());
+
+        var openingValue = transactions
+            .Where(t => t.TradeDate < startDateOnly)
+            .GroupBy(t => t.AssetListingId)
+            .Sum(g => g.Sum(t => t.SignedQuantity) * PriceOn(priceSeries, g.Key, startDate));
+
+        var result = new Dictionary<DateTime, decimal>();
+        decimal units = 0m;
+
+        for (var date = startDate; date <= endDate; date = date.AddDays(1))
+        {
+            var level = index[date];
+
+            if (date == startDate && openingValue > 0m)
+                units += openingValue / level;
+
+            if (byDate.TryGetValue(date, out var dayTrades))
+            {
+                var contribution = dayTrades.Sum(t => t.Quantity * PriceOn(priceSeries, t.ListingId, date));
+                if (contribution != 0m) units += contribution / level;
+            }
+
+            var value = units * level;
+            if (value > 0m) result[date] = value;
+        }
+
+        return result;
+    }
+
+    private static decimal PriceOn(
+        IReadOnlyDictionary<long, Dictionary<DateTime, decimal>> priceSeries,
+        long listingId,
+        DateTime date) =>
+        priceSeries.TryGetValue(listingId, out var series) && series.TryGetValue(date, out var price)
+            ? price
+            : 0m;
 }

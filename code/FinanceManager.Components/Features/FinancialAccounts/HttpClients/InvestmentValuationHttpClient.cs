@@ -39,16 +39,16 @@ public class InvestmentValuationHttpClient(HttpClient httpClient)
     }
 
     public async Task<IReadOnlyDictionary<DateTime, decimal>> GetBenchmarkSeriesAsync(
+        int accountId,
         int currencyId,
         DateTime start,
         DateTime end,
-        decimal baseValue,
         long? listingId)
     {
         var url = $"{httpClient.BaseAddress}api/InvestmentValuation/BenchmarkSeries/"
-            + $"{currencyId}/{Iso(start)}/{Iso(end)}?baseValue={baseValue.ToString(CultureInfo.InvariantCulture)}";
+            + $"{accountId}/{currencyId}/{Iso(start)}/{Iso(end)}";
         if (listingId is long id)
-            url += $"&listingId={id}";
+            url += $"?listingId={id}";
 
         using var response = await httpClient.GetAsync(url);
         if (!response.IsSuccessStatusCode) return new Dictionary<DateTime, decimal>();

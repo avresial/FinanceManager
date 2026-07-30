@@ -258,10 +258,13 @@ public class InvestmentValuationServiceTests
     }
 
     [Fact]
-    public async Task GetBenchmarkSeries_DefaultsToInflation_AndRebasesToPortfolio()
+    public async Task GetBenchmarkSeries_DefaultsToInflation_AndOpensAtTheCarriedInHolding()
     {
         var start = new DateTime(2024, 1, 1);
         var end = new DateTime(2024, 3, 1);
+        // 10 units bought before the range opens, worth 100 each on the first day.
+        SetupTransactions(Tx(1, InvestmentTransactionType.Buy, 10m, new DateOnly(2023, 12, 1)));
+        SetupPrices(1, new Dictionary<DateTime, decimal> { [start] = 100m, [end] = 130m });
         _inflationIndexProvider
             .Setup(x => x.GetIndexSeriesAsync(start, end, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<DateTime, decimal>
@@ -271,18 +274,77 @@ public class InvestmentValuationServiceTests
             });
 
         var series = await CreateSut().GetBenchmarkSeriesAsync(
-            null, _usd, start, end, 1_000m, TestContext.Current.CancellationToken);
+            null, _accountId, _usd, start, end, TestContext.Current.CancellationToken);
 
         Assert.Equal(1_000m, series[start]);
         Assert.Equal(1_050m, series[end]);
-        _priceProvider.Verify(
-            x => x.GetPricePerUnitSeriesAsync(
-                It.IsAny<long>(),
-                It.IsAny<Currency>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetBenchmarkSeries_AbsorbsContributionsMadeDuringTheRange()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var mid = new DateTime(2024, 1, 2);
+        var end = new DateTime(2024, 1, 3);
+        // Nothing carried in; one 500 purchase on the middle day.
+        SetupTransactions(Tx(1, InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 2)));
+        SetupPrices(1, new Dictionary<DateTime, decimal> { [start] = 100m, [mid] = 100m, [end] = 100m });
+        _inflationIndexProvider
+            .Setup(x => x.GetIndexSeriesAsync(start, end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, decimal>
+            {
+                [start] = 100m,
+                [mid] = 100m,
+                [end] = 110m
+            });
+
+        var series = await CreateSut().GetBenchmarkSeriesAsync(
+            null, _accountId, _usd, start, end, TestContext.Current.CancellationToken);
+
+        // Before the purchase the shadow portfolio holds nothing, so the day is omitted entirely.
+        Assert.DoesNotContain(start, series.Keys);
+        Assert.Equal(500m, series[mid]);
+        // The contribution rides the index from its own trade date: 500 * 110/100.
+        Assert.Equal(550m, series[end]);
+    }
+
+    [Fact]
+    public async Task GetBenchmarkSeries_TracksMoneyWithdrawnByASell()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = new DateTime(2024, 1, 2);
+        SetupTransactions(
+            Tx(1, InvestmentTransactionType.Buy, 10m, new DateOnly(2023, 12, 1)),
+            Tx(1, InvestmentTransactionType.Sell, 4m, new DateOnly(2024, 1, 2)));
+        SetupPrices(1, new Dictionary<DateTime, decimal> { [start] = 100m, [end] = 100m });
+        _inflationIndexProvider
+            .Setup(x => x.GetIndexSeriesAsync(start, end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, decimal> { [start] = 100m, [end] = 100m });
+
+        var series = await CreateSut().GetBenchmarkSeriesAsync(
+            null, _accountId, _usd, start, end, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1_000m, series[start]);
+        Assert.Equal(600m, series[end]); // 400 of the 1,000 withdrawn on the sell date
+    }
+
+    [Fact]
+    public async Task GetBenchmarkSeries_CarriesTheLastPublishedIndexLevelAcrossGaps()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = new DateTime(2024, 1, 3);
+        SetupTransactions(Tx(1, InvestmentTransactionType.Buy, 10m, new DateOnly(2023, 12, 1)));
+        SetupPrices(1, new Dictionary<DateTime, decimal> { [start] = 100m });
+        // Inflation only publishes monthly, so the range's later days have no point of their own.
+        _inflationIndexProvider
+            .Setup(x => x.GetIndexSeriesAsync(start, end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, decimal> { [start] = 100m });
+
+        var series = await CreateSut().GetBenchmarkSeriesAsync(
+            null, _accountId, _usd, start, end, TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, series.Count);
+        Assert.Equal(1_000m, series[end]);
     }
 
     [Fact]
@@ -290,19 +352,15 @@ public class InvestmentValuationServiceTests
     {
         var start = new DateTime(2024, 1, 1);
         var end = new DateTime(2024, 1, 2);
-        _priceProvider
-            .Setup(x => x.GetPricePerUnitSeriesAsync(42, _usd, start, end, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<DateTime, decimal>
-            {
-                [start] = 50m,
-                [end] = 60m
-            });
+        SetupTransactions(Tx(1, InvestmentTransactionType.Buy, 10m, new DateOnly(2023, 12, 1)));
+        SetupPrices(1, new Dictionary<DateTime, decimal> { [start] = 100m, [end] = 100m });
+        SetupPrices(42, new Dictionary<DateTime, decimal> { [start] = 50m, [end] = 60m });
 
         var series = await CreateSut().GetBenchmarkSeriesAsync(
-            42, _usd, start, end, 500m, TestContext.Current.CancellationToken);
+            42, _accountId, _usd, start, end, TestContext.Current.CancellationToken);
 
-        Assert.Equal(500m, series[start]);
-        Assert.Equal(600m, series[end]);
+        Assert.Equal(1_000m, series[start]);
+        Assert.Equal(1_200m, series[end]); // 1,000 * 60/50
         _inflationIndexProvider.Verify(
             x => x.GetIndexSeriesAsync(
                 It.IsAny<DateTime>(),
@@ -310,4 +368,28 @@ public class InvestmentValuationServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    [Fact]
+    public async Task GetBenchmarkSeries_ForAnAccountWithoutTransactions_IsEmpty()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = new DateTime(2024, 1, 2);
+        SetupTransactions();
+
+        var series = await CreateSut().GetBenchmarkSeriesAsync(
+            null, _accountId, _usd, start, end, TestContext.Current.CancellationToken);
+
+        Assert.Empty(series);
+    }
+
+    private void SetupTransactions(params InvestmentTransaction[] transactions) =>
+        _transactionRepository
+            .Setup(x => x.GetByAccounts(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(transactions);
+
+    private void SetupPrices(long listingId, Dictionary<DateTime, decimal> prices) =>
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitSeriesAsync(
+                listingId, _usd, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(prices);
 }

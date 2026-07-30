@@ -148,7 +148,7 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
     }
 
     [Fact]
-    public async Task GetBenchmarkSeries_DefaultsToInflationAndRebasesIt()
+    public async Task GetBenchmarkSeries_DefaultsToInflationAndMatchesTheAccountsContributions()
     {
         await SeedHoldingsWithPrice();
         Authorize("testuser", _testUserId, UserRole.User);
@@ -163,14 +163,30 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         var client = new InvestmentValuationHttpClient(Client);
 
         var series = await client.GetBenchmarkSeriesAsync(
+            _testAccountId,
             _usdCurrencyId,
             start,
             _asOf,
-            300m,
             null);
 
-        Assert.Equal(300m, series[start]);
+        // 5 units bought at 100 on 1 Jun, 2 sold back out on 5 Jun: 500 in, then 200 out, all while
+        // the index sits at 100, leaving 300 riding it up to the 105 print on the as-of date.
+        Assert.Equal(500m, series[new DateTime(2024, 6, 1)]);
+        Assert.Equal(300m, series[new DateTime(2024, 6, 5)]);
         Assert.Equal(315m, series[_asOf]);
+    }
+
+    [Fact]
+    public async Task GetBenchmarkSeries_ForOtherUsersAccount_ReturnsForbidden()
+    {
+        await SeedHoldingsWithPrice();
+        Authorize("otheruser", _testUserId + 1, UserRole.User);
+
+        var response = await Client.GetAsync(
+            $"api/InvestmentValuation/BenchmarkSeries/{_testAccountId}/{_usdCurrencyId}/{_asOf.AddMonths(-1):yyyy-MM-dd}/{_asOf:yyyy-MM-dd}",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
