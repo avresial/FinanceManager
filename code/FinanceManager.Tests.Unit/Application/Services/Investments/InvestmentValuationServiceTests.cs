@@ -370,6 +370,24 @@ public class InvestmentValuationServiceTests
     }
 
     [Fact]
+    public async Task GetBenchmarkSeries_BenchmarkingAgainstAHeldInstrument_PricesItOnce()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = new DateTime(2024, 1, 2);
+        SetupTransactions(Tx(42, InvestmentTransactionType.Buy, 10m, new DateOnly(2023, 12, 1)));
+        SetupPrices(42, new Dictionary<DateTime, decimal> { [start] = 50m, [end] = 60m });
+
+        var series = await CreateSut().GetBenchmarkSeriesAsync(
+            42, _accountId, _usd, start, end, TestContext.Current.CancellationToken);
+
+        Assert.Equal(500m, series[start]);
+        Assert.Equal(600m, series[end]);
+        _priceProvider.Verify(
+            x => x.GetPricePerUnitSeriesAsync(42, _usd, start, end, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task GetBenchmarkSeries_ForAnAccountWithoutTransactions_IsEmpty()
     {
         var start = new DateTime(2024, 1, 1);

@@ -225,10 +225,14 @@ internal class InvestmentValuationService(
         var priceSeries = new Dictionary<long, Dictionary<DateTime, decimal>>();
         foreach (var id in transactions.Select(t => t.AssetListingId).Distinct())
         {
-            priceSeries[id] = ToDailySeries(
-                await priceProvider.GetPricePerUnitSeriesAsync(id, targetCurrency, start, end, ct),
-                startDate,
-                endDate);
+            // Benchmarking against an instrument the account also holds would otherwise fetch that
+            // listing's prices twice over the same range — the benchmark's own series is identical.
+            priceSeries[id] = assetListingId == id
+                ? index
+                : ToDailySeries(
+                    await priceProvider.GetPricePerUnitSeriesAsync(id, targetCurrency, start, end, ct),
+                    startDate,
+                    endDate);
         }
 
         return BuildContributionMatchedSeries(transactions, index, priceSeries, startDate, endDate, startDateOnly);
