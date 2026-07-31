@@ -65,6 +65,14 @@ public static class ApiConfigurationExtensions
             .Bind(configuration.GetSection("Eodhd"))
             .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "Eodhd:BaseUrl must be configured.")
             .ValidateOnStart();
+        services.AddOptions<NbpOptions>()
+            .Bind(configuration.GetSection(NbpOptions.SectionName))
+            .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "Nbp:BaseUrl must be configured.")
+            .ValidateOnStart();
+        services.AddOptions<EcbOptions>()
+            .Bind(configuration.GetSection(EcbOptions.SectionName))
+            .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "Ecb:BaseUrl must be configured.")
+            .ValidateOnStart();
         services.Configure<LmStudioOptions>(configuration.GetSection("LmStudio"));
         services.AddOptions<OpenRouterOptions>()
             .Bind(configuration.GetSection("OpenRouter"))
