@@ -12,7 +12,8 @@ internal sealed class ExternalServiceConfigService(
     IServiceScopeFactory scopeFactory,
     IOptions<StockApiOptions> stockApiDefaults,
     IOptions<OpenFigiOptions> openFigiDefaults,
-    IOptions<EodhdOptions> eodhdDefaults) : IExternalServiceConfigService
+    IOptions<EodhdOptions> eodhdDefaults,
+    IOptions<TwelveDataOptions> twelveDataDefaults) : IExternalServiceConfigService
 {
     private List<ExternalServiceConfiguration>? _cache;
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -88,6 +89,13 @@ internal sealed class ExternalServiceConfigService(
             BaseUrl = eodhdDefaults.Value.BaseUrl,
             ApiKey = eodhdDefaults.Value.ApiKey,
             IsEnabled = true,
+        },
+        "TwelveData" => new ExternalServiceConfiguration
+        {
+            ServiceName = "TwelveData",
+            BaseUrl = twelveDataDefaults.Value.BaseUrl,
+            ApiKey = twelveDataDefaults.Value.ApiKey,
+            IsEnabled = twelveDataDefaults.Value.Enabled,
         },
         _ => new ExternalServiceConfiguration { ServiceName = serviceName, IsEnabled = true },
     };

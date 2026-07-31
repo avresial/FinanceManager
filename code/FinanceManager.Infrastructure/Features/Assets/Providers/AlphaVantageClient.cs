@@ -1,6 +1,7 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Application.Shared.Options;
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
@@ -25,6 +26,8 @@ internal sealed class AlphaVantageClient(
     };
 
     public string Name => "AlphaVantage";
+    public MarketDataProvider? Provider => MarketDataProvider.AlphaVantage;
+    public int Priority => 100;
 
     public async Task<IReadOnlyList<TickerSearchMatch>> SearchTicker(string keywords, CancellationToken ct = default)
     {

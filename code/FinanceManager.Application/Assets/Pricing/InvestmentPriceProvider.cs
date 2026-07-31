@@ -230,31 +230,24 @@ public class InvestmentPriceProvider(
 
     private async Task TryFetchAndStoreAsync(AssetListing listing, DateTime start, DateTime end, CancellationToken ct)
     {
-        var symbol = listing.MarketDataSymbols
+        var symbols = listing.MarketDataSymbols
             .Where(s => s.IsEnabled)
-            .OrderByDescending(s => s.IsPrimary)
+            .OrderBy(s => priceSource.SupportsProviderSelection ? priceSource.GetPriority(s.Provider) : 0)
+            .ThenByDescending(s => s.IsPrimary)
             .ThenBy(s => s.Id)
-            .FirstOrDefault();
+            .ToList();
 
-        if (symbol is null)
+        if (symbols.Count == 0)
         {
             logger.LogDebug("Listing {ListingId} has no enabled market-data symbol; cannot fetch prices", listing.Id);
             return;
         }
 
-        // A symbol whose most recent attempt failed keeps failing for a while (bad symbol,
-        // rate-limited provider). Without a cooldown every chart request would re-run the whole
-        // provider fallback chain for it, adding external-call latency to each page load.
-        if (symbol.LastError is not null && DateTimeOffset.UtcNow - symbol.UpdatedAt < _failedFetchCooldown)
-        {
-            logger.LogDebug("Skipping price fetch for listing {ListingId}: last attempt failed at {UpdatedAt} and is within the cooldown", listing.Id, symbol.UpdatedAt);
-            return;
-        }
+        if (!priceSource.SupportsProviderSelection)
+            symbols = [symbols[0]];
 
-        // Key the lock by listing+symbol only: _fetchLocks is static and never evicts, so per-range
-        // keys would leak a SemaphoreSlim per requested window. Sharing one lock per symbol also
-        // serialises overlapping range fetches, which is what we want.
-        var fetchKey = $"INVEST_FETCH_{listing.Id}_{symbol.Id}";
+        // One lock per listing serialises every provider symbol for the same instrument.
+        var fetchKey = $"INVEST_FETCH_{listing.Id}";
         var fetchLock = _fetchLocks.GetOrAdd(fetchKey, _ => new SemaphoreSlim(1, 1));
         await fetchLock.WaitAsync(ct);
         try
@@ -264,52 +257,65 @@ public class InvestmentPriceProvider(
             if (!NeedsFetch(existing, start.Date, end.Date))
                 return;
 
-            var rawCurrencyName = string.IsNullOrWhiteSpace(symbol.Currency) ? listing.TradingCurrency : symbol.Currency;
-            var rawCurrency = await currencyRepository.GetOrAdd(rawCurrencyName, rawCurrencyName, ct);
-
-            IReadOnlyList<Domain.FinancialAccounts.Investments.Entities.StockPrice> prices;
-            try
+            foreach (var symbol in symbols)
             {
-                prices = await priceSource.GetDailySeries(symbol.Symbol, string.Empty, start, end, rawCurrency, ct);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                logger.LogWarning(ex, "Price fetch failed for listing {ListingId} symbol {Symbol}", listing.Id, symbol.Symbol);
-                await symbolRepository.RecordFetchResult(symbol.Id, null, ex.Message, ct);
-                return;
-            }
-
-            if (prices.Count == 0)
-            {
-                await symbolRepository.RecordFetchResult(symbol.Id, null, "No price data returned", ct);
-                return;
-            }
-
-            var normalizedCurrencyName = NormalizedCurrencyName(rawCurrencyName, listing.PriceMultiplier);
-            var quotes = new List<PriceQuote>(prices.Count);
-            foreach (var price in prices)
-            {
-                if (price.PricePerUnit <= 0) continue;
-
-                quotes.Add(new PriceQuote
+                if (symbol.LastError is not null && DateTimeOffset.UtcNow - symbol.UpdatedAt < _failedFetchCooldown)
                 {
-                    AssetListingId = listing.Id,
-                    MarketDataSymbolId = symbol.Id,
-                    Provider = symbol.Provider,
-                    Price = price.PricePerUnit * listing.PriceMultiplier,
-                    Currency = normalizedCurrencyName,
-                    PriceTime = DayStart(price.Date),
-                    QuoteType = PriceQuoteType.EndOfDay,
-                    RawPrice = price.PricePerUnit,
-                    RawCurrency = rawCurrencyName,
-                    FetchedAt = DateTimeOffset.UtcNow
-                });
-            }
+                    logger.LogDebug(
+                        "Skipping price fetch for listing {ListingId} provider {Provider}: last attempt failed at {UpdatedAt}.",
+                        listing.Id, symbol.Provider, symbol.UpdatedAt);
+                    continue;
+                }
 
-            if (quotes.Count > 0)
+                var rawCurrencyName = string.IsNullOrWhiteSpace(symbol.Currency) ? listing.TradingCurrency : symbol.Currency;
+                var rawCurrency = await currencyRepository.GetOrAdd(rawCurrencyName, rawCurrencyName, ct);
+
+                IReadOnlyList<Domain.FinancialAccounts.Investments.Entities.StockPrice> prices;
+                try
+                {
+                    prices = priceSource.SupportsProviderSelection
+                        ? await priceSource.GetDailySeries(symbol.Provider, symbol.Symbol, string.Empty, start, end, rawCurrency, ct)
+                        : await priceSource.GetDailySeries(symbol.Symbol, string.Empty, start, end, rawCurrency, ct);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    logger.LogWarning(ex, "Price fetch failed for listing {ListingId} provider {Provider} symbol {Symbol}",
+                        listing.Id, symbol.Provider, symbol.Symbol);
+                    await symbolRepository.RecordFetchResult(symbol.Id, null, ex.Message, ct);
+                    continue;
+                }
+
+                if (prices.Count == 0)
+                {
+                    await symbolRepository.RecordFetchResult(symbol.Id, null, "No price data returned", ct);
+                    continue;
+                }
+
+                var normalizedCurrencyName = NormalizedCurrencyName(rawCurrencyName, listing.PriceMultiplier);
+                var quotes = prices
+                    .Where(price => price.PricePerUnit > 0)
+                    .Select(price => new PriceQuote
+                    {
+                        AssetListingId = listing.Id,
+                        MarketDataSymbolId = symbol.Id,
+                        Provider = symbol.Provider,
+                        Price = price.PricePerUnit * listing.PriceMultiplier,
+                        Currency = normalizedCurrencyName,
+                        PriceTime = DayStart(price.Date),
+                        QuoteType = PriceQuoteType.EndOfDay,
+                        RawPrice = price.PricePerUnit,
+                        RawCurrency = rawCurrencyName,
+                        FetchedAt = DateTimeOffset.UtcNow
+                    })
+                    .ToList();
+
+                if (quotes.Count == 0)
+                    continue;
+
                 await priceQuoteRepository.UpsertRange(quotes, ct);
-
-            await symbolRepository.RecordFetchResult(symbol.Id, DateTimeOffset.UtcNow, null, ct);
+                await symbolRepository.RecordFetchResult(symbol.Id, DateTimeOffset.UtcNow, null, ct);
+                return;
+            }
         }
         finally
         {

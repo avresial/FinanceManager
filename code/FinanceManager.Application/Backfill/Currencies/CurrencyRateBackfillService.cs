@@ -7,7 +7,7 @@ namespace FinanceManager.Application.Backfill.Currencies;
 
 /// <summary>
 /// Startup currency exchange-rate backfill. For each discovered pair it skips already-fresh pairs,
-/// calls Alpha Vantage <c>FX_DAILY</c> once for stale pairs, and inserts only the dates missing from
+/// calls the configured market-data fallback chain once for stale pairs, and inserts only the dates missing from
 /// the database. Provider calls are sequential (free-tier rate limits); a quota response stops the
 /// run early while every row inserted so far stays committed for the next startup to resume from.
 /// </summary>
@@ -68,7 +68,7 @@ public sealed class CurrencyRateBackfillService(
                 // rows remain committed and the next startup continues idempotently from here.
                 rateLimited = true;
                 logger.LogWarning(
-                    "Currency backfill hit the Alpha Vantage rate limit at pair {From}->{To}; stopping this run. " +
+                    "Currency backfill exhausted its provider quota at pair {From}->{To}; stopping this run. " +
                     "Inserted {Inserted} rows so far; remaining pairs resume on next start.",
                     pair.From, pair.To, inserted);
                 break;
