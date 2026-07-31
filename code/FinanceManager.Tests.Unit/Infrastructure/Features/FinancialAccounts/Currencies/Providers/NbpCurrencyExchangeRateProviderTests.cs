@@ -21,6 +21,10 @@ public class NbpCurrencyExchangeRateProviderTests
         {"table":"A","currency":"dolar amerykański","code":"USD","rates":[{"no":"1/A/NBP/2024","effectiveDate":"2024-01-02","mid":4.0000}]}
         """;
 
+    private const string _usdRangeResponse = """
+        {"table":"A","currency":"dolar amerykański","code":"USD","rates":[{"no":"1/A/NBP/2024","effectiveDate":"2024-01-02","mid":4.0000},{"no":"2/A/NBP/2024","effectiveDate":"2024-01-03","mid":4.1000}]}
+        """;
+
     private static NbpCurrencyExchangeRateProvider CreateProvider(MockHttpMessageHandler handler, bool enabled = true) =>
         new(new HttpClient(handler),
             Options.Create(new NbpOptions { BaseUrl = "https://api.nbp.pl/api", Enabled = enabled }),
@@ -96,6 +100,31 @@ public class NbpCurrencyExchangeRateProviderTests
         var result = await provider.GetExchangeRateAsync(_usd, _pln, _date);
 
         Assert.Equal(CurrencyExchangeRateProviderStatus.Failed, result.Status);
+    }
+
+    [Fact]
+    public async Task Range_ForeignToPln_MapsEachDay()
+    {
+        var provider = CreateProvider(new MockHttpMessageHandler(_ => Ok(_usdRangeResponse)));
+
+        var results = await provider.GetExchangeRateAsync(_usd, _pln, _date, _date.AddDays(1));
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal(4.0m, results[0].Result.Value);
+        Assert.Equal(4.1m, results[1].Result.Value);
+    }
+
+    [Fact]
+    public async Task Range_Disabled_PlnToPln_ReturnsNotFound_WithoutCallingApi()
+    {
+        var handler = new MockHttpMessageHandler(_ => Ok(_usdRangeResponse));
+        var provider = CreateProvider(handler, enabled: false);
+
+        var results = await provider.GetExchangeRateAsync(_pln, _pln, _date, _date.AddDays(1));
+
+        Assert.Equal(2, results.Count);
+        Assert.All(results, r => Assert.Equal(CurrencyExchangeRateProviderStatus.NotFound, r.Result.Status));
+        Assert.Equal(0, handler.CallCount);
     }
 
     private static HttpResponseMessage Ok(string body) =>

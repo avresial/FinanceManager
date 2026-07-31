@@ -115,6 +115,48 @@ public class EcbCurrencyExchangeRateProviderTests
         Assert.Equal(CurrencyExchangeRateProviderStatus.Failed, result.Status);
     }
 
+    [Fact]
+    public async Task Range_CrossRate_ComputesViaEur()
+    {
+        var provider = CreateProvider(new MockHttpMessageHandler(request =>
+            request.RequestUri!.AbsoluteUri.Contains("D.USD.EUR", StringComparison.Ordinal)
+                ? Ok(Csv("USD", "1.1000"))
+                : Ok(Csv("GBP", "0.8500"))));
+
+        var results = await provider.GetExchangeRateAsync(_usd, _gbp, _date, _date);
+
+        Assert.Single(results);
+        Assert.Equal(CurrencyExchangeRateProviderStatus.Success, results[0].Result.Status);
+        Assert.Equal(0.8500m / 1.1000m, results[0].Result.Value);
+    }
+
+    [Fact]
+    public async Task Range_ServerError_ReportsFailedForEveryDate()
+    {
+        var provider = CreateProvider(new MockHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError)
+        {
+            Content = new StringContent("boom")
+        }));
+
+        var results = await provider.GetExchangeRateAsync(_eur, _usd, _date, _date.AddDays(1));
+
+        Assert.Equal(2, results.Count);
+        Assert.All(results, r => Assert.Equal(CurrencyExchangeRateProviderStatus.Failed, r.Result.Status));
+    }
+
+    [Fact]
+    public async Task Range_Disabled_ReturnsNotFound_WithoutCallingApi()
+    {
+        var handler = new MockHttpMessageHandler(_ => Ok(Csv("USD", "1.1")));
+        var provider = CreateProvider(handler, enabled: false);
+
+        var results = await provider.GetExchangeRateAsync(_eur, _usd, _date, _date.AddDays(1));
+
+        Assert.Equal(2, results.Count);
+        Assert.All(results, r => Assert.Equal(CurrencyExchangeRateProviderStatus.NotFound, r.Result.Status));
+        Assert.Equal(0, handler.CallCount);
+    }
+
     private static HttpResponseMessage Ok(string body) =>
         new(HttpStatusCode.OK) { Content = new StringContent(body) };
 

@@ -41,7 +41,7 @@ internal sealed class NbpCurrencyExchangeRateProvider(
         if (!TryResolveForeignCode(fromCurrency, toCurrency, out var foreignCode, out var invert))
             return new(CurrencyExchangeRateProviderStatus.NotFound);
 
-        var url = BuildUrl($"exchangerates/rates/a/{foreignCode}/{date:yyyy-MM-dd}/?format=json");
+        var url = BuildUrl($"exchangerates/rates/a/{foreignCode}/{Iso(date)}/?format=json");
         var (failed, rates) = await FetchSeriesAsync(url, foreignCode, date, date);
         if (failed)
             return new(CurrencyExchangeRateProviderStatus.Failed);
@@ -61,7 +61,11 @@ internal sealed class NbpCurrencyExchangeRateProvider(
         if (start > end) (start, end) = (end, start);
         if ((end - start).Days < 0) return [];
 
-        if (!options.Value.Enabled || !TryResolveForeignCode(fromCurrency, toCurrency, out var foreignCode, out var invert))
+        // Match the single-date method: a disabled provider fully bypasses, even for PLN→PLN.
+        if (!options.Value.Enabled)
+            return EnumerateDates(start, end).Select(d => (d, new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.NotFound))).ToList();
+
+        if (!TryResolveForeignCode(fromCurrency, toCurrency, out var foreignCode, out var invert))
         {
             if (IsPln(fromCurrency) && IsPln(toCurrency))
                 return EnumerateDates(start, end).Select(d => (d, new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.Success, 1m))).ToList();
@@ -75,7 +79,7 @@ internal sealed class NbpCurrencyExchangeRateProvider(
             var chunkEnd = chunkStart.AddDays(_rangeChunkDays - 1);
             if (chunkEnd > end) chunkEnd = end;
 
-            var url = BuildUrl($"exchangerates/rates/a/{foreignCode}/{chunkStart:yyyy-MM-dd}/{chunkEnd:yyyy-MM-dd}/?format=json");
+            var url = BuildUrl($"exchangerates/rates/a/{foreignCode}/{Iso(chunkStart)}/{Iso(chunkEnd)}/?format=json");
             var (failed, rates) = await FetchSeriesAsync(url, foreignCode, chunkStart, chunkEnd);
             if (failed)
                 continue;
@@ -178,18 +182,13 @@ internal sealed class NbpCurrencyExchangeRateProvider(
 
     private static string Normalize(Currency currency) => currency.ShortName.Trim().ToUpperInvariant();
 
-    private sealed class NbpRatesResponse
-    {
-        [JsonPropertyName("rates")]
-        public List<NbpRate>? Rates { get; set; }
-    }
+    // yyyy-MM-dd is numeric; force invariant culture so non-Latin digit cultures still emit ASCII dates.
+    private static string Iso(DateTime date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-    private sealed class NbpRate
-    {
-        [JsonPropertyName("effectiveDate")]
-        public string EffectiveDate { get; set; } = string.Empty;
+    private sealed record NbpRatesResponse(
+        [property: JsonPropertyName("rates")] List<NbpRate>? Rates);
 
-        [JsonPropertyName("mid")]
-        public decimal Mid { get; set; }
-    }
+    private sealed record NbpRate(
+        [property: JsonPropertyName("effectiveDate")] string EffectiveDate,
+        [property: JsonPropertyName("mid")] decimal Mid);
 }

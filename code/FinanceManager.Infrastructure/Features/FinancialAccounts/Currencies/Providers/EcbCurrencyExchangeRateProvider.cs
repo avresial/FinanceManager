@@ -28,11 +28,13 @@ internal sealed class EcbCurrencyExchangeRateProvider(
         if (!options.Value.Enabled)
             return new(CurrencyExchangeRateProviderStatus.NotFound);
 
+        // Any identical pair is 1:1 — short-circuit before the cross-rate branch would issue two
+        // redundant HTTP calls for the same series.
+        if (IsSameCurrency(fromCurrency, toCurrency))
+            return new(CurrencyExchangeRateProviderStatus.Success, 1m);
+
         var fromEur = IsEur(fromCurrency);
         var toEur = IsEur(toCurrency);
-
-        if (fromEur && toEur)
-            return new(CurrencyExchangeRateProviderStatus.Success, 1m);
 
         if (fromEur)
         {
@@ -75,19 +77,22 @@ internal sealed class EcbCurrencyExchangeRateProvider(
         if (start > end) (start, end) = (end, start);
         if ((end - start).Days < 0) return [];
 
+        if (!options.Value.Enabled)
+            return AllDates(start, end, new(CurrencyExchangeRateProviderStatus.NotFound));
+
+        if (IsSameCurrency(fromCurrency, toCurrency))
+            return AllDates(start, end, new(CurrencyExchangeRateProviderStatus.Success, 1m));
+
         var fromEur = IsEur(fromCurrency);
         var toEur = IsEur(toCurrency);
-
-        if (!options.Value.Enabled)
-            return EnumerateDates(start, end).Select(d => (d, new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.NotFound))).ToList();
-
-        if (fromEur && toEur)
-            return EnumerateDates(start, end).Select(d => (d, new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.Success, 1m))).ToList();
 
         if (fromEur || toEur)
         {
             var code = Normalize(fromEur ? toCurrency : fromCurrency);
-            var (_, series) = await GetSeriesAsync(code, start, end);
+            var (failed, series) = await GetSeriesAsync(code, start, end);
+            if (failed)
+                return AllDates(start, end, new(CurrencyExchangeRateProviderStatus.Failed));
+
             return EnumerateDates(start, end).Select(d =>
             {
                 if (series.TryGetValue(d, out var codePerEur) && codePerEur > 0)
@@ -96,8 +101,15 @@ internal sealed class EcbCurrencyExchangeRateProvider(
             }).ToList();
         }
 
-        var (_, fromSeries) = await GetSeriesAsync(Normalize(fromCurrency), start, end);
-        var (_, toSeries) = await GetSeriesAsync(Normalize(toCurrency), start, end);
+        // The two legs are independent, so fetch them concurrently.
+        var fromTask = GetSeriesAsync(Normalize(fromCurrency), start, end);
+        var toTask = GetSeriesAsync(Normalize(toCurrency), start, end);
+        await Task.WhenAll(fromTask, toTask);
+        var (fromFailed, fromSeries) = await fromTask;
+        var (toFailed, toSeries) = await toTask;
+        if (fromFailed || toFailed)
+            return AllDates(start, end, new(CurrencyExchangeRateProviderStatus.Failed));
+
         return EnumerateDates(start, end).Select(d =>
         {
             if (fromSeries.TryGetValue(d, out var aPerEur) && aPerEur > 0 &&
@@ -106,6 +118,9 @@ internal sealed class EcbCurrencyExchangeRateProvider(
             return (d, new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.NotFound));
         }).ToList();
     }
+
+    private static List<(DateTime Date, CurrencyExchangeRateProviderResult Result)> AllDates(DateTime start, DateTime end, CurrencyExchangeRateProviderResult result) =>
+        EnumerateDates(start, end).Select(d => (d, result)).ToList();
 
     private async Task<(bool Failed, decimal? Value)> GetObservationAsync(string code, DateTime date)
     {
@@ -119,7 +134,7 @@ internal sealed class EcbCurrencyExchangeRateProvider(
     private async Task<(bool Failed, Dictionary<DateTime, decimal> Series)> GetSeriesAsync(string code, DateTime start, DateTime end)
     {
         var baseUrl = options.Value.BaseUrl.TrimEnd('/');
-        var url = $"{baseUrl}/data/EXR/D.{code}.EUR.SP00.A?startPeriod={start:yyyy-MM-dd}&endPeriod={end:yyyy-MM-dd}&format=csvdata";
+        var url = $"{baseUrl}/data/EXR/D.{code}.EUR.SP00.A?startPeriod={Iso(start)}&endPeriod={Iso(end)}&format=csvdata";
 
         try
         {
@@ -182,6 +197,12 @@ internal sealed class EcbCurrencyExchangeRateProvider(
     }
 
     private static bool IsEur(Currency currency) => string.Equals(currency.ShortName, _eur, StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSameCurrency(Currency from, Currency to) =>
+        string.Equals(from.ShortName, to.ShortName, StringComparison.OrdinalIgnoreCase);
+
+    // yyyy-MM-dd is numeric; force invariant culture so non-Latin digit cultures still emit ASCII dates.
+    private static string Iso(DateTime date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     private static string Normalize(Currency currency) => currency.ShortName.Trim().ToUpperInvariant();
 }
