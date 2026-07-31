@@ -255,15 +255,14 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             .OrderBy(kv => kv.Key)
             .Select(kv => new TimeSeriesModel(kv.Key, kv.Value))
             .ToList();
-        var basePoint = orderedSeries.FirstOrDefault(x => x.Value > 0);
-        var benchmarkSeries = basePoint is not null
-            ? await ValuationHttpClient.GetBenchmarkSeriesAsync(
-                currency.Id,
-                basePoint.DateTime,
-                dateEnd,
-                basePoint.Value,
-                benchmark?.ListingId)
-            : new Dictionary<DateTime, decimal>();
+        // The benchmark tracks the account's own contributions, so it is asked for the whole range
+        // and starts itself on the day the account first holds something — no base point to seed.
+        var benchmarkSeries = await ValuationHttpClient.GetBenchmarkSeriesAsync(
+            accountId,
+            currency.Id,
+            dateStart,
+            dateEnd,
+            benchmark?.ListingId);
         var currentBalance = orderedSeries.LastOrDefault()?.Value ?? 0;
 
         // Capital value (remaining buy cost) and current valuation are the two source-of-truth

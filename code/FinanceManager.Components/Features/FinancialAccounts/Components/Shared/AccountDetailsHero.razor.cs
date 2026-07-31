@@ -143,10 +143,15 @@ public partial class AccountDetailsHero
             Position = LegendPosition.Top,
             HorizontalAlign = ApexCharts.Align.Right,
         },
+        // Fill types are matched to series by index. The balance area (index 0) fades out
+        // downwards; the benchmark line (index 1) must be solid, because ApexCharts strokes a
+        // line series with its fill — a gradient there renders the line invisible at the end
+        // where the gradient reaches zero opacity.
         Fill = new Fill
         {
-            Type = [FillType.Gradient],
+            Type = [FillType.Gradient, FillType.Solid],
             Gradient = new FillGradient { OpacityFrom = 0.45, OpacityTo = 0d, Stops = [0, 100] },
+            Opacity = [1d, 1d],
         },
         Grid = new Grid
         {
