@@ -170,17 +170,20 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     {
         if (_user is null) return null;
 
+        // Pinned before the first await so every request, and the model they produce, belong to the
+        // same account even if the parameter moves under a rapid navigation between two accounts.
+        var accountId = AccountId;
         var currency = await SettingsService.GetCurrencyAsync();
 
-        var accountTask = InvestmentAccountHttpClient.GetAccountAsync(AccountId);
-        var transactionsTask = TransactionHttpClient.GetByAccountAsync(AccountId);
-        var valuationsTask = FetchValuationsAsync(currency.Id);
+        var accountTask = InvestmentAccountHttpClient.GetAccountAsync(accountId);
+        var transactionsTask = TransactionHttpClient.GetByAccountAsync(accountId);
+        var valuationsTask = FetchValuationsAsync(accountId, currency);
 
         await Task.WhenAll(accountTask, transactionsTask, valuationsTask);
 
         return new InvestmentAccountDetailsModel(
             _user.UserId,
-            AccountId,
+            accountId,
             (await accountTask)?.Name ?? _defaultAccountName,
             currency,
             [.. await transactionsTask],
@@ -188,19 +191,26 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     }
 
     // Per-transaction purchase value / current valuation / gain-loss is priced server-side (needs
-    // market prices + FX). It only enriches the trade rows, so a failure here must neither hide the
-    // trades nor overwrite the stored snapshot with un-priced rows: the valuations already on screen
-    // are carried over instead.
-    private async Task<IReadOnlyList<InvestmentTransactionValuationDto>> FetchValuationsAsync(int currencyId)
+    // market prices + FX). It only enriches the trade rows, so a failure here must not hide trades
+    // that loaded fine — the rows fall back to their cash impact, which is what they showed before
+    // pricing existed at all. Reporting the failure instead would replace a working trade list with
+    // "No transactions yet", which is the one thing that would be untrue.
+    private async Task<IReadOnlyList<InvestmentTransactionValuationDto>> FetchValuationsAsync(int accountId, Currency currency)
     {
         try
         {
-            return await ValuationHttpClient.GetTransactionValuationsAsync(AccountId, currencyId);
+            return await ValuationHttpClient.GetTransactionValuationsAsync(accountId, currency.Id);
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Failed to load transaction valuations for account {AccountId}", AccountId);
-            return _applied?.Valuations ?? [];
+            Logger.LogWarning(ex, "Failed to load transaction valuations for account {AccountId}", accountId);
+
+            // Carry over what is already on screen so a blip does not strip priced rows — but only
+            // while it was priced in the currency being rendered now. Amounts from a preference the
+            // user has since changed would be attached to a model labelled with the new one.
+            return _applied is { } applied && applied.AccountId == accountId && applied.Currency.Id == currency.Id
+                ? applied.Valuations
+                : [];
         }
     }
 

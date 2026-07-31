@@ -20,10 +20,12 @@ public class InvestmentAccountDetailsHttpClientTests
         await Assert.ThrowsAsync<HttpRequestException>(() => client.GetByAccountAsync(1));
     }
 
-    [Fact]
-    public async Task GetByAccountAsync_AccountWithoutTrades_ReturnsEmptyList()
+    [Theory]
+    [InlineData(HttpStatusCode.NoContent)]
+    [InlineData(HttpStatusCode.NotFound)]
+    public async Task GetByAccountAsync_AccountWithoutTrades_ReturnsEmptyList(HttpStatusCode statusCode)
     {
-        var client = new InvestmentTransactionHttpClient(CreateHttpClient(new HttpResponseMessage(HttpStatusCode.NoContent)));
+        var client = new InvestmentTransactionHttpClient(CreateHttpClient(new HttpResponseMessage(statusCode)));
 
         Assert.Empty(await client.GetByAccountAsync(1));
     }
