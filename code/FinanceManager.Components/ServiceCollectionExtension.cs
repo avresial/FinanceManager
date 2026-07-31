@@ -70,6 +70,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<ISnapshotService, LocalStorageSnapshotService>()
                 .AddScoped<ISnapshotRefreshCoordinator, SnapshotRefreshCoordinator>()
                 .AddScoped<AccountDetailsSnapshotStore>()
+                .AddScoped<InvestmentAccountDetailsSnapshotStore>()
                 .AddScoped<AccountChartSnapshotStore>()
                 .AddScoped<LiabilitiesSnapshotStore>()
                 .AddScoped<DashboardCardsSnapshotStore>()

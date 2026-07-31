@@ -128,12 +128,19 @@ between them (the Subscriptions page hands both runs the same lazily started fet
 concurrently so each paints its own snapshot as soon as it is read). Splitting the snapshots must not
 split the request.
 
+The reverse case — several responses feeding **one** surface — takes one snapshot holding all of
+them, and the requests run concurrently inside a single `FetchAsync`. The investment account trade
+list does this: a row leads with its gain/loss once the server has priced it and with its cash
+impact until then, so painting the trades without their valuations would flip every amount on
+screen a moment later. Splitting the request must not split the snapshot either.
+
 ## Where it is used
 
 | Surface | Entry point |
 |---|---|
 | Dashboard overview | `code\FinanceManager.Components\Features\Dashboard\Components\Dashboard.razor.cs` |
-| Account transaction lists | `code\FinanceManager.Components\Features\FinancialAccounts\Services\AccountDetailsSnapshotStore.cs` |
+| Account transaction lists (currency, bond) | `code\FinanceManager.Components\Features\FinancialAccounts\Services\AccountDetailsSnapshotStore.cs` |
+| Investment account trade list | `code\FinanceManager.Components\Features\FinancialAccounts\Services\InvestmentAccountDetailsSnapshotStore.cs` |
 | Liabilities cards | `code\FinanceManager.Components\Features\Dashboard\Services\LiabilitiesSnapshotStore.cs` |
 | Dashboard insights / recurring / transaction-log cards | `code\FinanceManager.Components\Features\Dashboard\Services\DashboardCardsSnapshotStore.cs` |
 | Subscriptions page summary tiles and list | `code\FinanceManager.Components\Features\Labels\Services\SubscriptionsSnapshotStore.cs` |

@@ -10,6 +10,7 @@ using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
@@ -33,19 +34,32 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
     [Inject] public required ILogger<InvestmentAccountDetailsPageContent> Logger { get; set; }
     [Inject] public required AccountChartSnapshotStore ChartSnapshotStore { get; set; }
+    [Inject] public required InvestmentAccountDetailsSnapshotStore DetailsSnapshotStore { get; set; }
+
+    private const string _defaultAccountName = "Investments";
+    private const string _defaultBenchmarkName = "Polish inflation";
 
     private readonly Guid _viewportSubscriptionId = Guid.NewGuid();
     private bool _isMobile;
     private bool _insightsDrawerOpen;
     private bool _isLoading = true;
     private int? _loadedAccountId;
-    private string _accountName = "Investments";
+    private UserSession? _user;
+    private string _accountName = _defaultAccountName;
     private readonly string _accountTypeLabel = "Investment account";
     private Currency _currency = DefaultCurrency.USD;
     private List<InvestmentTransactionDto> _transactions = [];
     private IReadOnlyDictionary<long, InvestmentTransactionValuationDto> _valuations =
         new Dictionary<long, InvestmentTransactionValuationDto>();
     private List<InvestmentHoldingModel> _holdings = [];
+
+    // Keeps a slower load from overwriting content a newer load already committed.
+    private readonly RefreshVersionGate _detailsGate = new();
+
+    // Last content applied to the screen. Kept whole so a valuations request that fails can fall
+    // back to the exact list already painted, rather than a re-ordered rebuild that would read as
+    // a change and trigger a needless repaint and re-write.
+    private InvestmentAccountDetailsModel? _applied;
 
     // Range / chart state.
     private string _selectedRange = "3M";
@@ -61,8 +75,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private decimal? _balanceChangePercent;
     public List<TimeSeriesModel> ChartData { get; set; } = [];
     public List<TimeSeriesModel> BenchmarkData { get; set; } = [];
-    private InstrumentSearchResultDto? _benchmark;
-    private string _benchmarkName = "Polish inflation";
+    private string _benchmarkName = _defaultBenchmarkName;
 
     // Toolbar filter state.
     private string? _searchText;
@@ -112,57 +125,108 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
 
     private void CloseInsightsDrawer() => _insightsDrawerOpen = false;
 
+    // Stale-while-revalidate: paint the last-rendered trades and their valuations instantly, always
+    // re-fetch, and only repaint and re-persist when the rendered content changed. Chart data,
+    // holdings and the appreciation figures have their own per-range snapshot, queued by UpdateInfo.
+    // See docs/codebase/UI-SNAPSHOTS.md.
     private async Task LoadAsync(bool initialLoad = false)
     {
-        _isLoading = true;
-        _currency = await SettingsService.GetCurrencyAsync();
-        _benchmark = await UserSettingsService.GetBenchmarkAsync();
-        _benchmarkName = _benchmark?.Ticker ?? "Polish inflation";
-        try
-        {
-            _accountName = (await InvestmentAccountHttpClient.GetAccountAsync(AccountId))?.Name ?? "Investments";
-            _transactions = [.. await TransactionHttpClient.GetByAccountAsync(AccountId)];
-            _loadedAccountId = AccountId;
-
-            if (initialLoad)
-                ApplyAutomaticCustomRange();
-
-            await LoadValuationsAsync();
-            await UpdateInfo();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to load investment account {AccountId}", AccountId);
-            Snackbar.Add("Could not load the investment account.", Severity.Error);
-        }
-        finally
+        _user ??= await LoginService.GetLoggedUser();
+        if (_user is null)
         {
             _isLoading = false;
+            return;
         }
+
+        _loadedAccountId = AccountId;
+
+        var result = await DetailsSnapshotStore.RefreshAsync(
+            _user.UserId,
+            AccountId,
+            _detailsGate,
+            fetchAsync: FetchDetailsAsync,
+
+            // A reload triggered by the user's own edit must not repaint the stored snapshot: it
+            // still holds the pre-edit trades and would flash the change back out for a moment.
+            onSnapshotPainted: initialLoad ? model => ApplyDetails(model, expandRange: true) : null,
+            onRefreshed: model => ApplyDetails(model, expandRange: initialLoad));
+
+        // A failed refresh behind painted content leaves it on screen; only a page with nothing to
+        // show reports the failure the user can act on.
+        if (result.IsBlockingFailure)
+        {
+            Logger.LogError(result.Error, "Failed to load investment account {AccountId}", AccountId);
+            Snackbar.Add("Could not load the investment account.", Severity.Error);
+        }
+
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    // The account name, the trades and the server-priced valuations are three independent requests,
+    // so they run together rather than in a chain: the trade list is not made to wait on the pricing
+    // round-trip that only enriches it.
+    private async Task<InvestmentAccountDetailsModel?> FetchDetailsAsync()
+    {
+        if (_user is null) return null;
+
+        var currency = await SettingsService.GetCurrencyAsync();
+
+        var accountTask = InvestmentAccountHttpClient.GetAccountAsync(AccountId);
+        var transactionsTask = TransactionHttpClient.GetByAccountAsync(AccountId);
+        var valuationsTask = FetchValuationsAsync(currency.Id);
+
+        await Task.WhenAll(accountTask, transactionsTask, valuationsTask);
+
+        return new InvestmentAccountDetailsModel(
+            _user.UserId,
+            AccountId,
+            (await accountTask)?.Name ?? _defaultAccountName,
+            currency,
+            [.. await transactionsTask],
+            [.. await valuationsTask]);
     }
 
     // Per-transaction purchase value / current valuation / gain-loss is priced server-side (needs
-    // market prices + FX). It only enriches the detail rows, so a failure here must not hide the
-    // transaction list itself.
-    private async Task LoadValuationsAsync()
+    // market prices + FX). It only enriches the trade rows, so a failure here must neither hide the
+    // trades nor overwrite the stored snapshot with un-priced rows: the valuations already on screen
+    // are carried over instead.
+    private async Task<IReadOnlyList<InvestmentTransactionValuationDto>> FetchValuationsAsync(int currencyId)
     {
         try
         {
-            _valuations = (await ValuationHttpClient.GetTransactionValuationsAsync(AccountId, _currency.Id))
-                .ToDictionary(v => v.TransactionId);
+            return await ValuationHttpClient.GetTransactionValuationsAsync(AccountId, currencyId);
         }
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Failed to load transaction valuations for account {AccountId}", AccountId);
-            _valuations = new Dictionary<long, InvestmentTransactionValuationDto>();
+            return _applied?.Valuations ?? [];
         }
     }
 
-    // Recomputes the in-range movers and, unless suppressed, queues a fresh chart + holdings refresh.
-    private Task UpdateInfo(bool refreshChart = true)
+    // Renders one version of the trade list — a painted snapshot or a fresh response — and queues
+    // the chart, holdings and appreciation figures that go with it.
+    private Task ApplyDetails(InvestmentAccountDetailsModel model, bool expandRange)
     {
-        _currency = SettingsService.GetCurrency();
+        _applied = model;
+        _accountName = model.Name;
+        _currency = model.Currency;
+        _transactions = [.. model.Transactions];
+        _valuations = model.Valuations.ToDictionary(v => v.TransactionId);
+        _isLoading = false;
 
+        // Only widen the window on an account's first load: the trades themselves say how far back
+        // its history reaches, and a later reload must not move a range the user has since picked.
+        if (expandRange)
+            ApplyAutomaticCustomRange();
+
+        UpdateInfo();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    // Recomputes the in-range movers and, unless suppressed, queues a fresh chart + holdings refresh.
+    private void UpdateInfo(bool refreshChart = true)
+    {
         var filtered = GetFilteredTransactions();
         var ordered = filtered.OrderByDescending(CashImpact).ToList();
         _top5 = [.. ordered.Where(t => CashImpact(t) > 0).Take(5)];
@@ -170,32 +234,33 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
 
         if (refreshChart)
             QueueChartDataRefresh();
-
-        return Task.CompletedTask;
     }
 
     private void QueueChartDataRefresh()
     {
+        if (_user is null) return;
+
         var version = _chartGate.Claim();
+        var userId = _user.UserId;
         var accountId = AccountId;
         var currency = _currency;
         var selectedRange = _selectedRange;
         var dateStart = _dateStart;
         var dateEnd = _dateEnd;
         var transactions = _transactions.ToList();
-        var benchmark = _benchmark;
-        var benchmarkName = _benchmarkName;
         _isChartLoading = true;
 
         _ = InvokeAsync(async () =>
         {
             try
             {
-                var user = await LoginService.GetLoggedUser();
-                if (user is null) return;
+                // Resolved here rather than on the load path: the benchmark only feeds the chart, so
+                // the trade list must not wait for the lookup that resolves it.
+                var benchmark = await UserSettingsService.GetBenchmarkAsync();
+                var benchmarkName = benchmark?.Ticker ?? _defaultBenchmarkName;
 
                 var result = await ChartSnapshotStore.RefreshInvestmentAsync(
-                    user.UserId,
+                    userId,
                     accountId,
                     currency.Id,
                     benchmark?.ListingId,
@@ -203,7 +268,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
                     _chartGate,
                     version,
                     () => FetchChartModel(
-                        user.UserId,
+                        userId,
                         accountId,
                         currency,
                         selectedRange,
@@ -371,34 +436,34 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             .ThenByDescending(t => t.Id)];
     }
 
-    private async Task OnRangeChanged(string value)
+    private void OnRangeChanged(string value)
     {
         _selectedRange = value;
         SetDateRangeForSelection();
-        await UpdateInfo();
+        UpdateInfo();
         StateHasChanged();
     }
 
-    private async Task OnCustomDateRangeChanged(DateRange? range)
+    private void OnCustomDateRangeChanged(DateRange? range)
     {
         _customDateRange = range;
         _selectedRange = AccountDetailsHero.CustomRangeKey;
         SetDateRangeForSelection();
-        await UpdateInfo();
+        UpdateInfo();
         StateHasChanged();
     }
 
-    private async Task OnSearchChanged(string? value)
+    private void OnSearchChanged(string? value)
     {
         _searchText = value;
-        await UpdateInfo(refreshChart: false);
+        UpdateInfo(refreshChart: false);
         StateHasChanged();
     }
 
-    private async Task OnTxFilterChanged(AccountHistoryToolbar.TxFilter? value)
+    private void OnTxFilterChanged(AccountHistoryToolbar.TxFilter? value)
     {
         _activeFilter = value;
-        await UpdateInfo(refreshChart: false);
+        UpdateInfo(refreshChart: false);
         StateHasChanged();
     }
 
