@@ -62,6 +62,28 @@ public class TwelveDataClientTests
     }
 
     [Fact]
+    public async Task GetLatestQuote_ReturnsNullForInvalidResponseShape()
+    {
+        var client = CreateClient(new MockHttpMessageHandler("""{ "close": {} }"""));
+
+        var result = await client.GetLatestQuote(
+            "AAPL", "US0378331005", _usd, TestContext.Current.CancellationToken);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetDailySeries_ReturnsEmptyForInvalidResponseShape()
+    {
+        var client = CreateClient(new MockHttpMessageHandler("""{ "values": {} }"""));
+
+        var result = await client.GetDailySeries(
+            "AAPL", "US0378331005", _start, _end, _usd, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
     public async Task GetDailyRatesAsync_MapsForexPair()
     {
         var handler = new MockHttpMessageHandler("""

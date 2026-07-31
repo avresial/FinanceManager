@@ -67,7 +67,17 @@ internal sealed class TwelveDataClient(
         if (response.Status != RequestStatus.Ok)
             return null;
 
-        var quote = JsonSerializer.Deserialize<TwelveDataQuoteResponse>(response.Content, _jsonOptions);
+        TwelveDataQuoteResponse? quote;
+        try
+        {
+            quote = JsonSerializer.Deserialize<TwelveDataQuoteResponse>(response.Content, _jsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            logger.LogWarning(ex, "Twelve Data returned unparseable quote content for {Symbol}.", Sanitize(providerSymbol));
+            return null;
+        }
+
         var close = ParseDecimal(quote?.Close);
         if (!TryParseDate(quote?.Datetime, out var date) || close <= 0)
             return null;
@@ -116,7 +126,17 @@ internal sealed class TwelveDataClient(
         if (response.Status != RequestStatus.Ok)
             return new(response.Status, null);
 
-        var body = JsonSerializer.Deserialize<TwelveDataTimeSeriesResponse>(response.Content, _jsonOptions);
+        TwelveDataTimeSeriesResponse? body;
+        try
+        {
+            body = JsonSerializer.Deserialize<TwelveDataTimeSeriesResponse>(response.Content, _jsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            logger.LogWarning(ex, "Twelve Data returned unparseable time series content for {Symbol}.", Sanitize(providerSymbol));
+            return new(RequestStatus.Error, null);
+        }
+
         if (string.Equals(body?.Status, "error", StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning("Twelve Data rejected {Symbol}: {Message}", Sanitize(providerSymbol), Sanitize(body?.Message ?? "unknown error"));
