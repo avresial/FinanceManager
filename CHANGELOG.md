@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Twelve Data can now supply daily stock and ETF prices, latest quotes, and daily forex rates through the existing market-data fallback flows. Provider priority, timeout, enabled state, and per-minute/daily credit budgets are configurable under `TwelveData`; provider-specific symbols stay on instrument listings, existing observations remain idempotently skipped, and Alpha Vantage remains available as an alternative. #643
 - Currency exchange rates can now be sourced from two official, free providers alongside the existing ones: **NBP** (Narodowy Bank Polski) for PLN pairs and the **ECB** (European Central Bank) Data Portal for EUR pairs, with automatic cross rates between two currencies both quoted against EUR. They are consulted ahead of the general currency API and fall back cleanly, treating non-trading days as "no rate" rather than errors; each can be turned off via the `Nbp` / `Ecb` configuration sections. #642
 - A new **Subscriptions** inbox turns recurring charges into a managed list with stable identities, weekly through annual cadence detection, next expected charge dates, monthly and annual cost equivalents, price-increase warnings, and persisted mute, cancellation, and review flags. #306
 - Investment accounts now compare portfolio value with Polish inflation by default, or with any available investment selected in **Settings → Preferences**, across the account chart's full date range. #307

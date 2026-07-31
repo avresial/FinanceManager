@@ -117,6 +117,52 @@ public class InvestmentPriceProviderTests
     }
 
     [Fact]
+    public async Task GetPricePerUnit_UsesProviderPriorityAndFallsBackToItsOwnSymbol()
+    {
+        var asOf = new DateTime(2024, 6, 3);
+        var listing = Listing();
+        listing.MarketDataSymbols.Add(new MarketDataSymbol
+        {
+            Id = 200,
+            AssetListingId = 10,
+            Provider = MarketDataProvider.TwelveData,
+            Symbol = "CSPX:LSE",
+            IsEnabled = true
+        });
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(listing);
+        _priceSource.SetupGet(x => x.SupportsProviderSelection).Returns(true);
+        _priceSource.Setup(x => x.GetPriority(MarketDataProvider.TwelveData)).Returns(50);
+        _priceSource.Setup(x => x.GetPriority(MarketDataProvider.AlphaVantage)).Returns(100);
+        _priceSource
+            .Setup(x => x.GetDailySeries(
+                MarketDataProvider.TwelveData,
+                "CSPX:LSE",
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<Currency>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _priceSource
+            .Setup(x => x.GetDailySeries(
+                MarketDataProvider.AlphaVantage,
+                "CSPX.LON",
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<Currency>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Price(200m, asOf)]);
+
+        var result = await CreateSut().GetPricePerUnitAsync(10, _usd, asOf, TestContext.Current.CancellationToken);
+
+        Assert.Equal(200m, result);
+        var stored = Assert.Single(_priceQuoteRepository.All);
+        Assert.Equal(MarketDataProvider.AlphaVantage, stored.Provider);
+        Assert.Equal(100, stored.MarketDataSymbolId);
+    }
+
+    [Fact]
     public async Task GetPricePerUnit_NormalisesGbxWithMultiplier_AndConvertsToTarget()
     {
         var asOf = new DateTime(2024, 6, 3);

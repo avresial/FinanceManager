@@ -1,5 +1,6 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Application.Shared.ExternalServices;
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using Microsoft.Extensions.Logging;
@@ -25,6 +26,8 @@ internal sealed class EodhdClient(
     };
 
     public string Name => "Eodhd";
+    public MarketDataProvider? Provider => MarketDataProvider.Eodhd;
+    public int Priority => 300;
 
     public async Task<IReadOnlyList<StockPrice>> GetDailySeries(string symbol, string isin, DateTime start, DateTime end, Currency currency, CancellationToken ct = default)
     {
