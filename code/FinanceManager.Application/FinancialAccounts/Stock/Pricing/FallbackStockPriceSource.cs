@@ -1,3 +1,4 @@
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using Microsoft.Extensions.Logging;
@@ -14,12 +15,17 @@ public sealed class FallbackStockPriceSource(
     ILogger<FallbackStockPriceSource> logger) : IStockPriceSource
 {
     public string Name => "Fallback";
+    public int Priority => 0;
+    public bool SupportsProviderSelection => true;
+    public IReadOnlySet<AssetType> SupportedAssetTypes => sources.SelectMany(x => x.SupportedAssetTypes).ToHashSet();
+    public IReadOnlySet<string> SupportedIntervals => sources.SelectMany(x => x.SupportedIntervals).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     public async Task<IReadOnlyList<StockPrice>> GetDailySeries(string symbol, string isin, DateTime start, DateTime end, Currency currency, CancellationToken ct = default)
     {
-        for (var i = 0; i < sources.Count; i++)
+        var ordered = sources.OrderBy(x => x.Priority).ToList();
+        for (var i = 0; i < ordered.Count; i++)
         {
-            var source = sources[i];
+            var source = ordered[i];
             ct.ThrowIfCancellationRequested();
 
             var prices = await source.GetDailySeries(symbol, isin, start, end, currency, ct);
@@ -35,6 +41,44 @@ public sealed class FallbackStockPriceSource(
 
         return [];
     }
+
+    public async Task<StockPrice?> GetLatestQuote(
+        string symbol,
+        string isin,
+        Currency currency,
+        CancellationToken ct = default)
+    {
+        foreach (var source in sources.OrderBy(x => x.Priority))
+        {
+            var quote = await source.GetLatestQuote(symbol, isin, currency, ct);
+            if (quote is not null)
+                return quote;
+        }
+
+        return null;
+    }
+
+    public Task<IReadOnlyList<StockPrice>> GetDailySeries(
+        MarketDataProvider provider,
+        string symbol,
+        string isin,
+        DateTime start,
+        DateTime end,
+        Currency currency,
+        CancellationToken ct = default)
+    {
+        var source = sources
+            .Where(x => x.Provider == provider)
+            .OrderBy(x => x.Priority)
+            .FirstOrDefault();
+
+        return source is null
+            ? Task.FromResult<IReadOnlyList<StockPrice>>([])
+            : source.GetDailySeries(symbol, isin, start, end, currency, ct);
+    }
+
+    public int GetPriority(MarketDataProvider provider) =>
+        sources.Where(x => x.Provider == provider).Select(x => x.Priority).DefaultIfEmpty(int.MaxValue).Min();
 
     // Strip CR/LF so an attacker-influenced symbol cannot forge log entries (log injection).
     private static string Sanitize(string value)

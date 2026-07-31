@@ -24,6 +24,9 @@ internal sealed class AlphaVantageFxClient(
         PropertyNameCaseInsensitive = true
     };
 
+    public string Name => "AlphaVantage";
+    public int Priority => 100;
+
     public async Task<FxDailyResult> GetDailyRatesAsync(string fromCurrency, string toCurrency, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(fromCurrency) || string.IsNullOrWhiteSpace(toCurrency))

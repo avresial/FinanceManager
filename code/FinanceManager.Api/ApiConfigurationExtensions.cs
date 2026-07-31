@@ -65,6 +65,14 @@ public static class ApiConfigurationExtensions
             .Bind(configuration.GetSection("Eodhd"))
             .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "Eodhd:BaseUrl must be configured.")
             .ValidateOnStart();
+        services.AddOptions<TwelveDataOptions>()
+            .Bind(configuration.GetSection(TwelveDataOptions.SectionName))
+            .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "TwelveData:BaseUrl must be configured.")
+            .Validate(o => o.Priority >= 0, "TwelveData:Priority cannot be negative.")
+            .Validate(o => o.PerMinuteCreditLimit > 0, "TwelveData:PerMinuteCreditLimit must be greater than 0.")
+            .Validate(o => o.DailyCreditLimit > 0, "TwelveData:DailyCreditLimit must be greater than 0.")
+            .Validate(o => o.RequestTimeoutSeconds > 0, "TwelveData:RequestTimeoutSeconds must be greater than 0.")
+            .ValidateOnStart();
         services.AddOptions<NbpOptions>()
             .Bind(configuration.GetSection(NbpOptions.SectionName))
             .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "Nbp:BaseUrl must be configured.")

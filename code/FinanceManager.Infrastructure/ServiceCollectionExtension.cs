@@ -5,6 +5,7 @@ using FinanceManager.Application.Insights.Generation;
 using FinanceManager.Application.Labels.Setter;
 using FinanceManager.Application.Labels.Suggestions;
 using FinanceManager.Application.Shared.ExternalServices;
+using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Administration.Logging;
 using FinanceManager.Domain.Administration.Monitoring;
 using FinanceManager.Domain.Assets.Repositories;
@@ -50,6 +51,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace FinanceManager.Infrastructure;
 
@@ -60,12 +62,14 @@ public static class ServiceCollectionExtension
         services.AddSingleton<IExternalServiceConfigService, ExternalServiceConfigService>();
         services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
         services.AddHttpClient<EodhdClient>();
-        // Daily-price fetches go through a fallback chain: Alpha Vantage first, then EODHD when the
-        // primary is rate-limited, unentitled, or has no data. AlphaVantageClient also implements
-        // IStockPriceSource, so reuse the same singleton-per-scope instance the typed client resolves.
+        services.AddSingleton<TwelveDataCreditBudget>();
+        services.AddHttpClient<TwelveDataClient>((sp, client) =>
+            client.Timeout = TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<TwelveDataOptions>>().Value.RequestTimeoutSeconds));
+        // Daily-price fetches use each provider's configured priority and provider-specific symbol.
         services.AddScoped<IStockPriceSource>(sp => new FallbackStockPriceSource(
             [
                 (IStockPriceSource)sp.GetRequiredService<IAlphaVantageClient>(),
+                sp.GetRequiredService<TwelveDataClient>(),
                 sp.GetRequiredService<EodhdClient>()
             ],
             sp.GetRequiredService<ILogger<FallbackStockPriceSource>>()));
@@ -79,7 +83,12 @@ public static class ServiceCollectionExtension
         services.AddHttpClient<ICurrencyExchangeRateProvider, EcbCurrencyExchangeRateProvider>(client =>
             client.Timeout = TimeSpan.FromSeconds(15));
         services.AddHttpClient<ICurrencyExchangeRateProvider, FawazAhmedCurrencyApiClient>();
-        services.AddHttpClient<IFxDailySource, AlphaVantageFxClient>();
+        services.AddHttpClient<AlphaVantageFxClient>();
+        services.AddScoped<IFxDailySource>(sp => new FallbackFxDailySource(
+        [
+            sp.GetRequiredService<AlphaVantageFxClient>(),
+            sp.GetRequiredService<TwelveDataClient>()
+        ]));
         services.AddHttpClient<IInflationIndexProvider, EurostatInflationIndexProvider>(client =>
             client.BaseAddress = new Uri("https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/"));
 
