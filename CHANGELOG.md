@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Currency exchange rates can now be sourced from two official, free providers alongside the existing ones: **NBP** (Narodowy Bank Polski) for PLN pairs and the **ECB** (European Central Bank) Data Portal for EUR pairs, with automatic cross rates between two currencies both quoted against EUR. They are consulted ahead of the general currency API and fall back cleanly, treating non-trading days as "no rate" rather than errors; each can be turned off via the `Nbp` / `Ecb` configuration sections. #642
 - A new **Subscriptions** inbox turns recurring charges into a managed list with stable identities, weekly through annual cadence detection, next expected charge dates, monthly and annual cost equivalents, price-increase warnings, and persisted mute, cancellation, and review flags. #306
 - Investment accounts now compare portfolio value with Polish inflation by default, or with any available investment selected in **Settings → Preferences**, across the account chart's full date range. #307
 - The app now installs a service worker that caches the WebAssembly runtime and app files in the browser after the first visit, so repeat visits skip the multi-megabyte download and boot near-instantly. After a new deploy, the update is picked up silently in the background and applied once all open tabs of the app are closed. #554

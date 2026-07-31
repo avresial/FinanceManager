@@ -71,6 +71,13 @@ public static class ServiceCollectionExtension
             sp.GetRequiredService<ILogger<FallbackStockPriceSource>>()));
         services.AddHttpClient<OpenFigiClient>();
         services.AddScoped<IOpenFigiClient>(sp => sp.GetRequiredService<OpenFigiClient>());
+        // Currency rate resolution runs as an ordered fallback chain (each provider reports NotFound for
+        // pairs it can't serve): NBP is preferred for PLN pairs, ECB for EUR pairs and non-EUR cross
+        // rates, then the general jsDelivr currency API. Both official sources are keyless.
+        services.AddHttpClient<ICurrencyExchangeRateProvider, NbpCurrencyExchangeRateProvider>(client =>
+            client.Timeout = TimeSpan.FromSeconds(15));
+        services.AddHttpClient<ICurrencyExchangeRateProvider, EcbCurrencyExchangeRateProvider>(client =>
+            client.Timeout = TimeSpan.FromSeconds(15));
         services.AddHttpClient<ICurrencyExchangeRateProvider, FawazAhmedCurrencyApiClient>();
         services.AddHttpClient<IFxDailySource, AlphaVantageFxClient>();
         services.AddHttpClient<IInflationIndexProvider, EurostatInflationIndexProvider>(client =>
