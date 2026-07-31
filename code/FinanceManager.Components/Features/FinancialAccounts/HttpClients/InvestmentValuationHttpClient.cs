@@ -6,11 +6,16 @@ namespace FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 
 public class InvestmentValuationHttpClient(HttpClient httpClient)
 {
+    /// <summary>
+    /// Per-transaction valuations, in server order. An empty list means nothing on the account could
+    /// be priced: a failed request throws instead, so the snapshot-backed details page can tell the
+    /// two apart and keep the valuations it already painted. See docs/codebase/UI-SNAPSHOTS.md.
+    /// </summary>
     public async Task<IReadOnlyList<InvestmentTransactionValuationDto>> GetTransactionValuationsAsync(int accountId, int currencyId)
     {
         using var response = await httpClient.GetAsync(
             $"{httpClient.BaseAddress}api/InvestmentValuation/TransactionValuations/{accountId}/{currencyId}");
-        if (!response.IsSuccessStatusCode) return [];
+        response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<IReadOnlyList<InvestmentTransactionValuationDto>>() ?? [];
     }
 
