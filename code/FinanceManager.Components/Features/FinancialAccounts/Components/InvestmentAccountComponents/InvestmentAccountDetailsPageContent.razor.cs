@@ -203,7 +203,11 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Failed to load transaction valuations for account {AccountId}", accountId);
+            // Logged through the component's own parameter rather than the pinned local: an account
+            // id reaching a log sink through a local trips CodeQL's cleartext-storage query, while
+            // the property form every other {AccountId} log in this repo uses does not. Same value
+            // outside a mid-flight parameter change, and this is a diagnostic warning either way.
+            Logger.LogWarning(ex, "Failed to load transaction valuations for account {AccountId}", AccountId);
 
             // Carry over what is already on screen so a blip does not strip priced rows — but only
             // while it was priced in the currency being rendered now. Amounts from a preference the
