@@ -12,13 +12,21 @@ namespace FinanceManager.Api.Features.Administration.Controllers;
 [Tags("Admin - AI Providers")]
 public class AdminAiProvidersController(IAiConfigurationService configService) : ControllerBase
 {
-    private static readonly string[] _knownProviders = ["OpenRouter", "LmStudio", "Ollama", "GitHub"];
+    // The catalogue of providers the app can talk to. Every entry is always listed, with its stored
+    // configuration falling back to appsettings — the same contract as Admin - Service Keys, so a key
+    // supplied through configuration is visible without an admin registering the provider first.
+    private static readonly IReadOnlyList<(string ProviderName, string DisplayName, string Description, string DocsUrl)> _knownProviders =
+    [
+        ("OpenRouter", "OpenRouter", "Hosted gateway to many commercial and open models through one OpenAI-compatible key.", "https://openrouter.ai/docs"),
+        ("GitHub",     "GitHub Models", "Models hosted by GitHub, authenticated with a personal access token.", "https://docs.github.com/en/github-models"),
+        ("Ollama",     "Ollama",     "Local model runner. Needs no API key — only a reachable base URL.", "https://github.com/ollama/ollama/blob/main/docs/api.md"),
+        ("LmStudio",   "LM Studio",  "Local OpenAI-compatible server for models running on your own machine.", "https://lmstudio.ai/docs/app/api"),
+    ];
 
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AiConfigurationResponse))]
     public async Task<IActionResult> GetConfiguration(CancellationToken ct)
     {
-        var providers = await configService.GetAllProvidersAsync(ct);
         var fallback = await configService.GetFallbackEntriesAsync(ct);
         var models = await configService.GetAllModelsAsync(ct);
 
@@ -26,46 +34,25 @@ public class AdminAiProvidersController(IAiConfigurationService configService) :
             .GroupBy(m => m.ProviderName, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.Select(m => new AiProviderModelDto(m.Id, m.ModelName, m.IsEnabled)).ToList(), StringComparer.OrdinalIgnoreCase);
 
-        var providerDtos = providers.Select(p => new AiProviderDto(
-            p.ProviderName,
-            p.BaseUrl,
-            !string.IsNullOrEmpty(p.ApiKey),
-            p.RequestTimeoutSeconds,
-            p.IsEnabled,
-            modelsByProvider.TryGetValue(p.ProviderName, out var providerModels) ? providerModels : [])).ToList();
+        var providerDtos = new List<AiProviderDto>(_knownProviders.Count);
+        foreach (var (providerName, displayName, description, docsUrl) in _knownProviders)
+        {
+            var config = await configService.GetProviderAsync(providerName, ct);
+            providerDtos.Add(new AiProviderDto(
+                providerName,
+                displayName,
+                description,
+                docsUrl,
+                config.BaseUrl,
+                !string.IsNullOrEmpty(config.ApiKey),
+                config.RequestTimeoutSeconds,
+                config.IsEnabled,
+                modelsByProvider.TryGetValue(providerName, out var providerModels) ? providerModels : []));
+        }
 
         var fallbackDtos = fallback.Select(e => new AiFallbackEntryDto(e.ProviderName, e.Model, e.Order)).ToList();
 
-        return Ok(new AiConfigurationResponse(providerDtos, fallbackDtos, _knownProviders));
-    }
-
-    [HttpPost]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> AddProvider([FromBody] AddProviderRequest request, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(request.ProviderName))
-            return BadRequest("Provider name is required.");
-
-        if (!_knownProviders.Contains(request.ProviderName, StringComparer.OrdinalIgnoreCase))
-            return BadRequest($"Unknown provider '{request.ProviderName}'. Supported: {string.Join(", ", _knownProviders)}.");
-
-        var existing = await configService.GetAllProvidersAsync(ct);
-        if (existing.Any(p => p.ProviderName.Equals(request.ProviderName, StringComparison.OrdinalIgnoreCase)))
-            return Conflict($"Provider '{request.ProviderName}' is already configured.");
-
-        var defaults = await configService.GetProviderAsync(request.ProviderName, ct);
-        var config = new AiProviderConfiguration
-        {
-            ProviderName = request.ProviderName,
-            BaseUrl = defaults.BaseUrl,
-            ApiKey = defaults.ApiKey,
-            RequestTimeoutSeconds = defaults.RequestTimeoutSeconds,
-            IsEnabled = true,
-        };
-        await configService.SaveProviderAsync(config, ct);
-        return NoContent();
+        return Ok(new AiConfigurationResponse(providerDtos, fallbackDtos));
     }
 
     [HttpPut("{providerName}")]
@@ -73,8 +60,8 @@ public class AdminAiProvidersController(IAiConfigurationService configService) :
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateProvider(string providerName, [FromBody] UpdateProviderRequest request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(providerName))
-            return BadRequest("Provider name is required.");
+        if (ResolveProviderName(providerName) is not string canonicalName)
+            return BadRequest(UnknownProviderMessage(providerName));
 
         if (string.IsNullOrWhiteSpace(request.BaseUrl))
             return BadRequest("BaseUrl is required.");
@@ -82,7 +69,7 @@ public class AdminAiProvidersController(IAiConfigurationService configService) :
         string apiKey;
         if (request.ApiKey is null)
         {
-            var existing = await configService.GetProviderAsync(providerName, ct);
+            var existing = await configService.GetProviderAsync(canonicalName, ct);
             apiKey = existing.ApiKey;
         }
         else
@@ -92,7 +79,7 @@ public class AdminAiProvidersController(IAiConfigurationService configService) :
 
         var config = new AiProviderConfiguration
         {
-            ProviderName = providerName,
+            ProviderName = canonicalName,
             BaseUrl = request.BaseUrl,
             ApiKey = apiKey,
             RequestTimeoutSeconds = request.RequestTimeoutSeconds,
@@ -103,32 +90,20 @@ public class AdminAiProvidersController(IAiConfigurationService configService) :
         return NoContent();
     }
 
-    [HttpDelete("{providerName}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> DeleteProvider(string providerName, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(providerName))
-            return BadRequest("Provider name is required.");
-
-        await configService.DeleteProviderAsync(providerName, ct);
-        return NoContent();
-    }
-
     [HttpPost("{providerName}/models")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> AddModel(string providerName, [FromBody] AddModelRequest request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(providerName))
-            return BadRequest("Provider name is required.");
+        if (ResolveProviderName(providerName) is not string canonicalName)
+            return BadRequest(UnknownProviderMessage(providerName));
 
         if (string.IsNullOrWhiteSpace(request.ModelName))
             return BadRequest("Model name is required.");
 
         await configService.AddModelAsync(new AiProviderModel
         {
-            ProviderName = providerName,
+            ProviderName = canonicalName,
             ModelName = request.ModelName.Trim(),
             IsEnabled = true,
         }, ct);
@@ -140,13 +115,16 @@ public class AdminAiProvidersController(IAiConfigurationService configService) :
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateModel(string providerName, int modelId, [FromBody] UpdateModelRequest request, CancellationToken ct)
     {
+        if (ResolveProviderName(providerName) is not string canonicalName)
+            return BadRequest(UnknownProviderMessage(providerName));
+
         if (string.IsNullOrWhiteSpace(request.ModelName))
             return BadRequest("Model name is required.");
 
         await configService.UpdateModelAsync(new AiProviderModel
         {
             Id = modelId,
-            ProviderName = providerName,
+            ProviderName = canonicalName,
             ModelName = request.ModelName.Trim(),
             IsEnabled = request.IsEnabled,
         }, ct);
@@ -177,4 +155,14 @@ public class AdminAiProvidersController(IAiConfigurationService configService) :
         await configService.SaveFallbackEntriesAsync(entries, ct);
         return NoContent();
     }
+
+    // Providers are keyed by name, so route values are mapped back onto the catalogue spelling before
+    // they reach storage — otherwise "openrouter" would create a second row alongside "OpenRouter".
+    private static string? ResolveProviderName(string providerName) =>
+        _knownProviders
+            .FirstOrDefault(p => p.ProviderName.Equals(providerName, StringComparison.OrdinalIgnoreCase))
+            .ProviderName;
+
+    private static string UnknownProviderMessage(string providerName) =>
+        $"Unknown provider '{providerName}'. Supported: {string.Join(", ", _knownProviders.Select(p => p.ProviderName))}.";
 }
