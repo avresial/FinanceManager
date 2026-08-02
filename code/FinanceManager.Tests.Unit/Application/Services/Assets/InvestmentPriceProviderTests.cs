@@ -509,6 +509,147 @@ public class InvestmentPriceProviderTests
         Assert.False(covered);
     }
 
+    // Exchanges are shut at weekends, so no provider publishes a Saturday or Sunday close. The
+    // tests below pin the two halves of that: weekend dates read the preceding Friday, and no
+    // weekend date is ever asked of the (rate-limited) provider chain.
+    // Week used throughout: Fri 2024-06-07, Sat 8th, Sun 9th, Mon 10th, Fri 14th.
+
+    [Fact]
+    public async Task GetPricePerUnit_OnWeekend_ServesPrecedingFridayClose_WithoutFetching()
+    {
+        var friday = new DateTime(2024, 6, 7);
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing());
+        _priceQuoteRepository.Seed(new PriceQuote
+        {
+            AssetListingId = 10,
+            Provider = MarketDataProvider.AlphaVantage,
+            Price = 123m,
+            Currency = "USD",
+            PriceTime = new DateTimeOffset(friday, TimeSpan.Zero),
+            QuoteType = PriceQuoteType.EndOfDay
+        });
+
+        var saturday = await CreateSut().GetPricePerUnitAsync(10, _usd, new DateTime(2024, 6, 8), TestContext.Current.CancellationToken);
+        var sunday = await CreateSut().GetPricePerUnitAsync(10, _usd, new DateTime(2024, 6, 9), TestContext.Current.CancellationToken);
+
+        Assert.Equal(123m, saturday);
+        Assert.Equal(123m, sunday);
+        _priceSource.Verify(
+            x => x.GetDailySeries(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetPricePerUnit_OnWeekend_AsksProviderOnlyUpToTheFriday()
+    {
+        var friday = new DateTime(2024, 6, 7);
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing());
+        _priceSource
+            .Setup(x => x.GetDailySeries("CSPX.LON", It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Price(200m, friday)]);
+
+        var result = await CreateSut().GetPricePerUnitAsync(10, _usd, new DateTime(2024, 6, 9), TestContext.Current.CancellationToken);
+
+        Assert.Equal(200m, result);
+        _priceSource.Verify(
+            x => x.GetDailySeries(
+                "CSPX.LON",
+                It.IsAny<string>(),
+                It.Is<DateTime>(d => d == new DateTime(2024, 5, 31)),
+                It.Is<DateTime>(d => d == friday),
+                It.IsAny<Currency>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetPricePerUnitSeries_OnWeekendOnlyRange_CarriesFridayForward_WithoutFetching()
+    {
+        var saturday = new DateTime(2024, 6, 8);
+        var sunday = new DateTime(2024, 6, 9);
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing());
+        _priceQuoteRepository.Seed(new PriceQuote
+        {
+            AssetListingId = 10,
+            Provider = MarketDataProvider.AlphaVantage,
+            Price = 150m,
+            Currency = "USD",
+            PriceTime = new DateTimeOffset(new DateTime(2024, 6, 7), TimeSpan.Zero),
+            QuoteType = PriceQuoteType.EndOfDay
+        });
+
+        var series = await CreateSut().GetPricePerUnitSeriesAsync(10, _usd, saturday, sunday, TestContext.Current.CancellationToken);
+
+        Assert.Equal(150m, series[saturday]);
+        Assert.Equal(150m, series[sunday]);
+        _priceSource.Verify(
+            x => x.GetDailySeries(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetPricePerUnitSeries_TrimsWeekendEdgesOffTheProviderRequest()
+    {
+        // Saturday → Sunday window: the provider must be asked for Mon 10th … Fri 14th only.
+        var start = new DateTime(2024, 6, 8);
+        var end = new DateTime(2024, 6, 16);
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing());
+        _priceSource
+            .Setup(x => x.GetDailySeries("CSPX.LON", It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Price(100m, new DateTime(2024, 6, 10)), Price(120m, new DateTime(2024, 6, 14))]);
+
+        var series = await CreateSut().GetPricePerUnitSeriesAsync(10, _usd, start, end, TestContext.Current.CancellationToken);
+
+        _priceSource.Verify(
+            x => x.GetDailySeries(
+                "CSPX.LON",
+                It.IsAny<string>(),
+                It.Is<DateTime>(d => d == new DateTime(2024, 6, 10)),
+                It.Is<DateTime>(d => d == new DateTime(2024, 6, 14)),
+                It.IsAny<Currency>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // The trailing weekend still reports a value — Friday's close carried forward.
+        Assert.Equal(120m, series[new DateTime(2024, 6, 15)]);
+        Assert.Equal(120m, series[end]);
+    }
+
+    [Fact]
+    public async Task EnsureQuotes_OnWeekendOnlyRange_ReportsCoveredFromLastClose_WithoutFetching()
+    {
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing());
+        _priceQuoteRepository.Seed(new PriceQuote
+        {
+            AssetListingId = 10,
+            Provider = MarketDataProvider.AlphaVantage,
+            Price = 150m,
+            Currency = "USD",
+            PriceTime = new DateTimeOffset(new DateTime(2024, 6, 7), TimeSpan.Zero),
+            QuoteType = PriceQuoteType.EndOfDay
+        });
+
+        var covered = await CreateSut().EnsureQuotesAsync(10, new DateTime(2024, 6, 8), new DateTime(2024, 6, 9), TestContext.Current.CancellationToken);
+
+        Assert.True(covered);
+        _priceSource.Verify(
+            x => x.GetDailySeries(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task EnsureQuotes_OnWeekendOnlyRange_DoesNotCallProvider_EvenWithNoHistory()
+    {
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing());
+
+        var covered = await CreateSut().EnsureQuotesAsync(10, new DateTime(2024, 6, 8), new DateTime(2024, 6, 9), TestContext.Current.CancellationToken);
+
+        Assert.False(covered);
+        _priceSource.Verify(
+            x => x.GetDailySeries(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     /// <summary>Minimal in-memory <see cref="IPriceQuoteRepository"/> so fetch→store→read flows are exercised end-to-end.</summary>
     private sealed class InMemoryPriceQuoteRepository : IPriceQuoteRepository
     {
