@@ -1,4 +1,7 @@
 using FinanceManager.Api.Shared.Helpers;
+using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
+using FinanceManager.Application.FinancialAccounts.Investments.Transactions;
+using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.Assets.Services;
@@ -21,8 +24,10 @@ namespace FinanceManager.Api.Features.FinancialAccounts.Investments.Controllers;
 public class InvestmentTransactionController(
     IAccountRepository<InvestmentAccount> accountRepository,
     IInvestmentTransactionRepository transactionRepository,
+    IInvestmentTransactionService transactionService,
     ICacheInvalidator dashboardCacheInvalidator,
     IAssetListingRepository assetListingRepository,
+    IInvestmentInstrumentSearchService instrumentSearchService,
     IInvestmentPriceProvider priceProvider,
     ILogger<InvestmentTransactionController> logger) : ControllerBase
 {
@@ -108,16 +113,23 @@ public class InvestmentTransactionController(
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Add(AddInvestmentTransactionRequest request, CancellationToken cancellationToken = default)
     {
-        if (!IsValid(request.AssetListingId, request.Quantity, request.UnitPrice, request.Currency, request.TradeDate))
-            return BadRequest("Invalid input parameters.");
-
         var account = await accountRepository.Get(request.AccountId);
         if (account is null) return NotFound();
         if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
-        var result = await transactionRepository.Add(request.ToEntity(account.UserId), cancellationToken);
-        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
-        return Ok(result.ToDto());
+        try
+        {
+            return Ok(await transactionService.AddAsync(request, account.UserId, cancellationToken));
+        }
+        catch (InvestmentTransactionCommandException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Could not save the transaction.",
+                detail: ex.Message,
+                type: $"https://financemanager.dev/problems/{ex.Code}",
+                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
+        }
     }
 
     [HttpPut("Update")]
@@ -168,6 +180,18 @@ public class InvestmentTransactionController(
         maxResults = Math.Clamp(maxResults, 1, 20);
         var listings = await assetListingRepository.SearchAsync(q, maxResults, cancellationToken);
         return Ok(listings.Select(x => new InstrumentSearchResultDto(x.Id, x.Ticker, x.ExchangeName, x.TradingCurrency)).ToList());
+    }
+
+    [HttpGet("SearchInstruments")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InvestmentInstrumentOptionDto>))]
+    public async Task<IActionResult> SearchInstruments(
+        [FromQuery] string? q,
+        [FromQuery] int maxResults = 20,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(q)) return Ok(Array.Empty<InvestmentInstrumentOptionDto>());
+        maxResults = Math.Clamp(maxResults, 1, 50);
+        return Ok(await instrumentSearchService.SearchAsync(q, maxResults, cancellationToken));
     }
 
     [HttpGet("Listing/{listingId:long}")]

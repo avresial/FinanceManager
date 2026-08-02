@@ -30,12 +30,18 @@ public class AssetListingRepository(AppDbContext context) : IAssetListingReposit
         if (string.IsNullOrWhiteSpace(query)) return [];
         var trimmed = query.Trim();
         // Tickers are stored uppercase; comparing directly against the uppercased input lets the index on Ticker be used.
-        // Exchange names are mixed-case so we use a LIKE pattern (case-sensitive on PG, insensitive on SQL Server by default).
+        // Exchange and asset text are mixed-case so we use LIKE patterns (case-sensitive on PG,
+        // insensitive on SQL Server by default).
         var upperTicker = trimmed.ToUpperInvariant();
         var likePattern = $"%{trimmed}%";
         return await context.AssetListings
             .AsNoTracking()
-            .Where(x => x.IsActive && (x.Ticker.StartsWith(upperTicker) || EF.Functions.Like(x.ExchangeName, likePattern)))
+            .Include(x => x.Asset)
+            .Include(x => x.MarketDataSymbols)
+            .Where(x => x.IsActive && (x.Ticker.StartsWith(upperTicker)
+                || EF.Functions.Like(x.ExchangeName, likePattern)
+                || EF.Functions.Like(x.Asset.Name, likePattern)
+                || EF.Functions.Like(x.Asset.Isin, likePattern)))
             .OrderByDescending(x => x.IsPrimaryListing)
             .ThenBy(x => x.Ticker)
             .Take(maxResults)

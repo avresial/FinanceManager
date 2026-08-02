@@ -55,7 +55,7 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
         var listings = await SafeOpenFigi(() => openFigiClient.MapByIsinAsync(isin, ct), nameof(SearchByIsinAsync));
 
         return listings
-            .Select(of => BuildFromOpenFigi(of, providerSymbol: null, avQuoteCurrency: null, isinOverride: isin))
+            .Select(of => BuildFromOpenFigi(of, providerSymbol: null, avQuoteCurrency: null, avSecurityType: null, isinOverride: isin))
             .ToList();
     }
 
@@ -67,10 +67,13 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
         if (string.IsNullOrWhiteSpace(baseTicker))
             return [];
 
+        var isTickerQuery = !baseTicker.Any(char.IsWhiteSpace);
         var openFigiExchCode = brokerSymbol.TryLookupExchange()?.OpenFigiExchCode;
 
         var avTask = SafeAlphaVantage(() => alphaVantageClient.SearchTicker(baseTicker, ct));
-        var ofTask = SafeOpenFigi(() => openFigiClient.MapByTickerAsync(baseTicker, openFigiExchCode, ct), nameof(SearchByTickerOrNameAsync));
+        var ofTask = isTickerQuery
+            ? SafeOpenFigi(() => openFigiClient.MapByTickerAsync(baseTicker, openFigiExchCode, ct), nameof(SearchByTickerOrNameAsync))
+            : Task.FromResult<IReadOnlyList<OpenFigiListing>>([]);
         await Task.WhenAll(avTask, ofTask);
 
         return Merge(baseTicker, avTask.Result, ofTask.Result);
@@ -98,7 +101,7 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
             if (av is not null)
                 consumedAvSymbols.Add(av.Symbol);
 
-            var dto = BuildFromOpenFigi(of, av?.Symbol, av?.Currency, isinOverride: null);
+            var dto = BuildFromOpenFigi(of, av?.Symbol, av?.Currency, av?.Type, isinOverride: null);
             var key = DedupeKey(dto);
             if (seen.Add(key))
                 results.Add(dto);
@@ -148,6 +151,7 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
         OpenFigiListing of,
         string? providerSymbol,
         string? avQuoteCurrency,
+        string? avSecurityType,
         string? isinOverride)
     {
         var (mic, exchangeName, exchangeCode) = ResolveVenue(of.ExchCode);
@@ -183,6 +187,7 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
             ShareClassFigi = of.ShareClassFigi,
             CompositeFigi = of.CompositeFigi,
             Isin = isinOverride ?? of.Isin,
+            SecurityType = avSecurityType,
             ProviderSymbol = providerSymbol,
             ConfidenceScore = confidence,
             Warnings = warnings,
@@ -204,7 +209,7 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
         {
             Source = "AlphaVantage",
             DisplayName = av.Name,
-            Ticker = string.IsNullOrWhiteSpace(baseTicker) ? av.Symbol : baseTicker,
+            Ticker = baseTicker.Any(char.IsWhiteSpace) ? av.Symbol : baseTicker,
             ExchangeMic = mic,
             ExchangeName = exchangeName,
             ExchangeCode = exchangeCode,

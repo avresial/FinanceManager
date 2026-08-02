@@ -1,7 +1,11 @@
+using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
+using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
@@ -26,6 +30,8 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     private const int _testAccountId = 791;
     private const long _listingId = 5001;
     private readonly Mock<IInvestmentPriceProvider> _priceProvider = new();
+    private readonly Mock<IOpenFigiClient> _openFigiClient = new();
+    private readonly Mock<IAlphaVantageClient> _alphaVantageClient = new();
     private TestDatabase? _testDatabase;
 
     protected override void ConfigureServices(IServiceCollection services)
@@ -42,6 +48,8 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         planVerifierMock.Setup(x => x.CanAddMoreEntries(_testUserId, It.IsAny<int>())).ReturnsAsync(true);
         services.AddSingleton(planVerifierMock.Object);
         services.AddSingleton(_priceProvider.Object);
+        services.AddSingleton(_openFigiClient.Object);
+        services.AddSingleton(_alphaVantageClient.Object);
     }
 
     private async Task SeedAccount()
@@ -139,6 +147,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     public async Task Add_CreatesTransaction()
     {
         await SeedAccount();
+        await SeedListing();
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new InvestmentTransactionHttpClient(Client);
 
@@ -153,6 +162,82 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Assert.NotNull(inDb);
         Assert.Equal(120m, inDb!.UnitPrice);
         Assert.Equal(_testUserId, inDb.UserId);
+    }
+
+    [Fact]
+    public async Task Add_WithExternalInstrument_CommitsInstrumentAndTransactionTogether()
+    {
+        await SeedAccount();
+        SetupExternalInstrument();
+        Authorize("testuser", _testUserId, UserRole.User);
+
+        var options = await Client.GetFromJsonAsync<List<InvestmentInstrumentOptionDto>>(
+            "api/InvestmentTransaction/SearchInstruments?q=CSPX",
+            TestContext.Current.CancellationToken);
+        var option = Assert.Single(options!);
+        Assert.Equal(InstrumentOptionSource.External, option.Source);
+
+        var request = new AddInvestmentTransactionRequest(
+            _testAccountId,
+            null,
+            InvestmentTransactionType.Buy,
+            2m,
+            100m,
+            "USD",
+            new DateOnly(2026, 1, 1),
+            ExternalInstrumentResultId: option.ResultId);
+        var response = await Client.PostAsJsonAsync(
+            "api/InvestmentTransaction/Add", request, TestContext.Current.CancellationToken);
+
+        response.EnsureSuccessStatusCode();
+        var transaction = await response.Content.ReadFromJsonAsync<InvestmentTransactionDto>(
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(transaction);
+        Assert.True(transaction!.AssetListingId > 0);
+        Assert.Single(await _testDatabase!.Context.Assets.ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Single(await _testDatabase.Context.AssetListings.ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Single(await _testDatabase.Context.MarketDataSymbols.ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Single(await _testDatabase.Context.InvestmentTransactions.ToListAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Add_WithInvalidExternalProviderResult_CreatesNoMasterData()
+    {
+        await SeedAccount();
+        SetupExternalInstrument();
+        _alphaVantageClient
+            .Setup(x => x.GetDailySeries(
+                "CSPX.LON",
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<Currency>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        Authorize("testuser", _testUserId, UserRole.User);
+
+        var options = await Client.GetFromJsonAsync<List<InvestmentInstrumentOptionDto>>(
+            "api/InvestmentTransaction/SearchInstruments?q=CSPX",
+            TestContext.Current.CancellationToken);
+        var request = new AddInvestmentTransactionRequest(
+            _testAccountId,
+            null,
+            InvestmentTransactionType.Buy,
+            2m,
+            100m,
+            "USD",
+            new DateOnly(2026, 1, 1),
+            ExternalInstrumentResultId: Assert.Single(options!).ResultId);
+        var response = await Client.PostAsJsonAsync(
+            "api/InvestmentTransaction/Add", request, TestContext.Current.CancellationToken);
+        var problem = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("market_data_symbol_invalid", problem!["code"]?.ToString());
+        Assert.Empty(await _testDatabase!.Context.Assets.ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Empty(await _testDatabase.Context.AssetListings.ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Empty(await _testDatabase.Context.InvestmentTransactions.ToListAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -283,6 +368,51 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         var inDb = await _testDatabase!.Context.InvestmentTransactions
             .FirstOrDefaultAsync(x => x.Id == id, TestContext.Current.CancellationToken);
         Assert.Null(inDb);
+    }
+
+    private void SetupExternalInstrument()
+    {
+        _openFigiClient
+            .Setup(x => x.MapByTickerAsync("CSPX", It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new OpenFigiListing(
+                    Isin: null,
+                    Ticker: "CSPX",
+                    Name: "iShares Core S&P 500 UCITS ETF",
+                    ExchCode: "LN",
+                    Currency: "USD",
+                    Figi: "BBG001",
+                    ShareClassFigi: "BBGSC")
+            ]);
+        _alphaVantageClient
+            .Setup(x => x.SearchTicker("CSPX", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new TickerSearchMatch
+                {
+                    Symbol = "CSPX.LON",
+                    Name = "iShares Core S&P 500 ETF",
+                    Type = "ETF",
+                    Region = "United Kingdom",
+                    Currency = "USD",
+                    MatchScore = 1m
+                }
+            ]);
+        _alphaVantageClient
+            .Setup(x => x.GetDailySeries(
+                "CSPX.LON",
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<Currency>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new StockPrice
+                {
+                    Isin = "CSPX.LON",
+                    PricePerUnit = 100m,
+                    Currency = new Currency(0, "USD", "USD"),
+                    Date = DateTime.UtcNow
+                }
+            ]);
     }
 
     public override void Dispose()
