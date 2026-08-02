@@ -18,7 +18,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.FinancialAccounts.Investments.Controllers;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class InvestmentValuationControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
@@ -28,10 +27,12 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
     private const int _usdCurrencyId = 840;
     private static readonly DateTime _asOf = new(2024, 6, 10);
     private TestDatabase? _testDatabase;
-    private readonly Mock<IInflationIndexProvider> _inflationIndexProvider = new();
+    private static readonly Mock<IInflationIndexProvider> _inflationIndexProvider = new();
 
     protected override void ConfigureServices(IServiceCollection services)
     {
+        _inflationIndexProvider.Reset();
+
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
         if (descriptor != null)
             services.Remove(descriptor);

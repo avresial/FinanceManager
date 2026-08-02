@@ -14,15 +14,16 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.MoneyFlow.Controllers;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class ExpenseDistributionControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
     private const int _testUserId = 521;
-    private readonly Mock<IExpenseDistributionService> _expenseDistributionServiceMock = new();
+    private static readonly Mock<IExpenseDistributionService> _expenseDistributionServiceMock = new();
 
     protected override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
     {
+        _expenseDistributionServiceMock.Reset();
+
 #pragma warning disable CS0854
         var currencyRepoMock = new Mock<ICurrencyRepository>();
         currencyRepoMock.Setup(x => x.GetCurrencies(It.IsAny<CancellationToken>()))

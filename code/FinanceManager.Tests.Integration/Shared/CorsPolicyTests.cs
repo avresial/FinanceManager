@@ -7,7 +7,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Shared;
 
-[Collection("api")]
 public sealed class CorsPolicyTests
 {
     // Configured in appsettings.test.json, which the "test" environment host loads.

@@ -21,7 +21,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.MoneyFlow.Controllers;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
@@ -29,6 +28,8 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     private DateTime _nowUtc;
     private int _valueChange = 10;
     private int _value;
+
+    protected override bool ReuseApplicationHost => false;
 
     protected override void ConfigureServices(IServiceCollection services)
     {

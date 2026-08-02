@@ -292,12 +292,24 @@ public sealed class McpEndpointTests : IDisposable
             BaseAddress = new Uri("http://localhost/")
         });
         var accessToken = await GetAccessToken(client, cancellationToken, app);
-        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+        HttpStatusCode responseStatus;
+        using var expirationTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken, expirationTimeout.Token);
+        do
+        {
+            using var request = McpRequest("tools/list", 1, new { }, accessToken);
+            using var response = await client.SendAsync(request, linkedCancellation.Token);
+            responseStatus = response.StatusCode;
+            if (responseStatus == HttpStatusCode.Unauthorized)
+            {
+                break;
+            }
 
-        using var request = McpRequest("tools/list", 1, new { }, accessToken);
-        var response = await client.SendAsync(request, cancellationToken);
+            await Task.Delay(TimeSpan.FromMilliseconds(50), linkedCancellation.Token);
+        } while (true);
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, responseStatus);
     }
 
     [Fact]

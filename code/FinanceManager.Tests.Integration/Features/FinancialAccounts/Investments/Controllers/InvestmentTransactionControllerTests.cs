@@ -22,20 +22,23 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.FinancialAccounts.Investments.Controllers;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class InvestmentTransactionControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private const int _testUserId = 91;
     private const int _testAccountId = 791;
     private const long _listingId = 5001;
-    private readonly Mock<IInvestmentPriceProvider> _priceProvider = new();
-    private readonly Mock<IOpenFigiClient> _openFigiClient = new();
-    private readonly Mock<IAlphaVantageClient> _alphaVantageClient = new();
+    private static readonly Mock<IInvestmentPriceProvider> _priceProvider = new();
+    private static readonly Mock<IOpenFigiClient> _openFigiClient = new();
+    private static readonly Mock<IAlphaVantageClient> _alphaVantageClient = new();
     private TestDatabase? _testDatabase;
 
     protected override void ConfigureServices(IServiceCollection services)
     {
+        _priceProvider.Reset();
+        _openFigiClient.Reset();
+        _alphaVantageClient.Reset();
+
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
         if (descriptor != null)
             services.Remove(descriptor);

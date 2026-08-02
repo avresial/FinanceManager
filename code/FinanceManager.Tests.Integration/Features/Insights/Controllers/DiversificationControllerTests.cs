@@ -15,7 +15,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.Insights.Controllers;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class DiversificationControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {

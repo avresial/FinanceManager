@@ -19,10 +19,12 @@ namespace FinanceManager.Tests.Integration.Features.Labels.Controllers;
 public class RecurringTransactionDetectorControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
     private const int _testUserId = 531;
-    private readonly Mock<IRecurringTransactionDetectorService> _serviceMock = new();
+    private static readonly Mock<IRecurringTransactionDetectorService> _serviceMock = new();
 
     protected override void ConfigureServices(IServiceCollection services)
     {
+        _serviceMock.Reset();
+
         _serviceMock
             .Setup(x => x.GetRecurringTransactions(_testUserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync([new RecurringTransactionResult("Subscription", -12m)]);

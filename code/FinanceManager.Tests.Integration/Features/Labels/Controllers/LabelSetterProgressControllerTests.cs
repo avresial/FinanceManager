@@ -9,7 +9,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.Labels.Controllers;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class LabelSetterProgressControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
