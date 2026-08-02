@@ -226,7 +226,7 @@ jobs:
       - name: Run integration tests
         run: |
           mkdir -p ${{ github.workspace }}/TestResults
-          ./code/FinanceManager.Tests.Integration/bin/Release/net10.0/FinanceManager.Tests.Integration -trx ${{ github.workspace }}/TestResults/integration-test-results.trx --max-threads unlimited
+          ./code/FinanceManager.Tests.Integration/bin/Release/net10.0/FinanceManager.Tests.Integration -trx ${{ github.workspace }}/TestResults/integration-test-results.trx -maxThreads unlimited
 
       - name: Publish integration test results
         uses: dorny/test-reporter@v3
