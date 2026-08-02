@@ -112,13 +112,46 @@ public class LoginServiceTests
         var gate = new TaskCompletionSource();
         gate.SetResult();
         var handler = new GatedHandler(gate.Task, HttpStatusCode.OK);
-        var loginService = CreateLoginService(handler, CookieReader(sessionPresent: false));
+        var loginService = CreateLoginService(handler, CookieReader(sessionPresent: false), LegacyProbe(alreadyProbed: true));
 
         var loggedUser = await loginService.GetLoggedUser();
 
         // A signed-out visitor loading the login page must cost nothing against the auth rate-limit budget.
         Assert.Equal(0, handler.RequestCount);
         Assert.Null(loggedUser);
+    }
+
+    [Fact]
+    public async Task GetLoggedUser_ForASessionIssuedBeforeTheHintExisted_StillRestoresIt()
+    {
+        var gate = new TaskCompletionSource();
+        gate.SetResult();
+        var handler = new GatedHandler(gate.Task, HttpStatusCode.OK);
+
+        // A refresh token issued before this change is valid for weeks but has no companion cookie. Trusting the
+        // hint straight away would sign those users out; the one-time probe is what keeps them signed in.
+        var loginService = CreateLoginService(handler, CookieReader(sessionPresent: false), LegacyProbe(alreadyProbed: false));
+
+        var loggedUser = await loginService.GetLoggedUser();
+
+        Assert.Equal(1, handler.RequestCount);
+        Assert.NotNull(loggedUser);
+    }
+
+    [Fact]
+    public async Task GetLoggedUser_RecordsTheLegacyProbeSoItRunsOnlyOncePerBrowser()
+    {
+        var gate = new TaskCompletionSource();
+        gate.SetResult();
+        var handler = new GatedHandler(gate.Task, HttpStatusCode.OK);
+        var localStorage = LegacyProbe(alreadyProbed: false);
+        var loginService = CreateLoginService(handler, CookieReader(sessionPresent: false), localStorage);
+
+        await loginService.GetLoggedUser();
+
+        Mock.Get(localStorage).Verify(
+            storage => storage.SetItemAsync("legacySessionProbed", true, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -158,7 +191,10 @@ public class LoginServiceTests
         Assert.NotNull(loggedUser);
     }
 
-    private static LoginService CreateLoginService(HttpMessageHandler handler, IBrowserCookieReader? cookieReader = null)
+    private static LoginService CreateLoginService(
+        HttpMessageHandler handler,
+        IBrowserCookieReader? cookieReader = null,
+        ILocalStorageService? localStorage = null)
     {
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
 
@@ -169,12 +205,23 @@ public class LoginServiceTests
 
         return new LoginService(
             Mock.Of<ISessionStorageService>(),
-            Mock.Of<ILocalStorageService>(),
+            localStorage ?? LegacyProbe(alreadyProbed: true),
             new CustomAuthenticationStateProvider(),
             httpClient,
             antiforgery.Object,
             cookieReader ?? CookieReader(sessionPresent: true),
             NullLogger<LoginService>.Instance);
+    }
+
+    // The default across most tests is "migration already done", so the presence cookie alone decides.
+    private static ILocalStorageService LegacyProbe(bool alreadyProbed)
+    {
+        var localStorage = new Mock<ILocalStorageService>();
+        localStorage
+            .Setup(storage => storage.ContainKeyAsync("legacySessionProbed", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(alreadyProbed);
+
+        return localStorage.Object;
     }
 
     private static IBrowserCookieReader CookieReader(bool sessionPresent)

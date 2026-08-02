@@ -223,6 +223,13 @@
 
                 return null;
             },
+            // Presence check for cookies whose meaning is "is it there", not "what does it say" — an empty value
+            // still counts as present, which getCookie above cannot express since it returns the value itself.
+            hasCookie: function (name) {
+                const prefix = name + '=';
+                const cookies = document.cookie ? document.cookie.split('; ') : [];
+                return cookies.some(cookie => cookie.startsWith(prefix));
+            },
             postOAuthBridge: async function (token, returnUrl) {
                 let csrfToken = window.financeManager.getCookie('fm_csrf');
                 if (!csrfToken) {

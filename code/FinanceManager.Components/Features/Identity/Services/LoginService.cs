@@ -20,6 +20,10 @@ public class LoginService : ILoginService
     public const string SessionPresenceCookieName = "fm_has_session";
 
     private const string _sessionString = "userSession";
+
+    // Marks that this browser has already made the one-time attempt to restore a pre-presence-cookie session.
+    // Deliberately survives logout: it records a migration step, not session state.
+    private const string _legacySessionProbedKey = "legacySessionProbed";
     private UserSession? _loggedUser = null;
     private readonly ISessionStorageService _sessionStorageService;
     private readonly ILocalStorageService _localStorageService;
@@ -80,7 +84,7 @@ public class LoginService : ILoginService
     {
         try
         {
-            if (!await HasRestorableSession())
+            if (!await ShouldAttemptRestore())
                 return;
 
             await TryRefresh();
@@ -88,6 +92,37 @@ public class LoginService : ILoginService
         finally
         {
             _initialRefreshAttempted = true;
+        }
+    }
+
+    private async Task<bool> ShouldAttemptRestore()
+    {
+        // Sessions issued before the presence cookie existed carry a valid refresh token but no hint, and a
+        // refresh token stays valid for weeks — so trusting the hint immediately would silently sign those users
+        // out on their next visit. Probing once per browser lets them restore normally and re-issues the hint as
+        // part of the rotation; every load after that consults the hint and costs nothing.
+        if (!await HasProbedForLegacySession())
+            return true;
+
+        return await HasRestorableSession();
+    }
+
+    private async Task<bool> HasProbedForLegacySession()
+    {
+        try
+        {
+            if (await _localStorageService.ContainKeyAsync(_legacySessionProbedKey))
+                return true;
+
+            await _localStorageService.SetItemAsync(_legacySessionProbedKey, true);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            // Treating the probe as already done keeps a storage failure from reinstating the per-load refresh
+            // for good; the hint below still governs, and it is correct for every session issued from now on.
+            _logger.LogWarning(ex, "Could not record the legacy-session probe; relying on the presence cookie.");
+            return true;
         }
     }
 
