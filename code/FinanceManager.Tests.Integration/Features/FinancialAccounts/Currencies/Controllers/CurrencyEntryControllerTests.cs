@@ -17,7 +17,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.FinancialAccounts.Currencies.Controllers;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {

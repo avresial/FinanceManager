@@ -8,7 +8,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.Administration.Controllers;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class AdminLogsControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {

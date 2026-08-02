@@ -5,7 +5,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Shared;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class RequestSizeLimitTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {

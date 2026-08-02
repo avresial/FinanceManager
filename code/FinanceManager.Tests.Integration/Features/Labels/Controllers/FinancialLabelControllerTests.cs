@@ -11,7 +11,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.Labels.Controllers;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {

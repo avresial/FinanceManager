@@ -23,7 +23,7 @@ public class PasswordResetControllerTests : ControllerTests
     private const string _login = "reset.user@example.com";
     private const int _userId = 7777;
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
-    private InMemoryPasswordResetTokenRepository? _tokenRepository;
+    private static readonly InMemoryPasswordResetTokenRepository _tokenRepository = new();
 
     public PasswordResetControllerTests(OptionsProvider optionsProvider)
         : base(optionsProvider, Environments.Development)
@@ -45,7 +45,7 @@ public class PasswordResetControllerTests : ControllerTests
 
         // A real-but-in-memory token store so the full controller → service → repository flow runs without depending
         // on a configured database provider.
-        _tokenRepository = new InMemoryPasswordResetTokenRepository();
+        _tokenRepository.Clear();
         services.AddSingleton<IPasswordResetTokenRepository>(_tokenRepository);
     }
 
@@ -204,6 +204,12 @@ public class PasswordResetControllerTests : ControllerTests
     {
         private readonly List<PasswordResetToken> _tokens = [];
         private int _nextId = 1;
+
+        public void Clear()
+        {
+            _tokens.Clear();
+            _nextId = 1;
+        }
 
         public Task Add(PasswordResetToken token)
         {

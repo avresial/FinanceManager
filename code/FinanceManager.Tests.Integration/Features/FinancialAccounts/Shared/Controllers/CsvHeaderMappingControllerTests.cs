@@ -9,14 +9,15 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.FinancialAccounts.Shared.Controllers;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class CsvHeaderMappingControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
-    private readonly Mock<ICsvHeaderMappingService> _mappingServiceMock = new();
+    private static readonly Mock<ICsvHeaderMappingService> _mappingServiceMock = new();
 
     protected override void ConfigureServices(IServiceCollection services)
     {
+        _mappingServiceMock.Reset();
+
         _mappingServiceMock
             .Setup(x => x.GetSuggestedMappingsAsync(It.IsAny<IEnumerable<string>>()))
             .ReturnsAsync([new HeaderMappingResultDto("Posting Date", "PostingDate")]);
