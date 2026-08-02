@@ -32,6 +32,12 @@ public class LoginService : ILoginService
     // instead of the second caller seeing the "attempted" flag and returning a null (unauthenticated) session.
     private Task? _initialRefreshTask;
 
+    // Sequence number and outcome of the last completed refresh. A caller snapshots the sequence before it
+    // queues on _refreshLock; if the sequence has moved by the time the lock is acquired, another caller
+    // already performed the refresh this one was about to duplicate, so its outcome is adopted instead.
+    private int _refreshSequence;
+    private bool _lastRefreshSucceeded;
+
     public event Action<bool>? LogginStateChanged;
 
     private readonly AuthenticationStateProvider _authStateProvider;
@@ -142,9 +148,36 @@ public class LoginService : ILoginService
 
     public async Task<bool> TryRefresh()
     {
-        // Serialise concurrent refreshes (e.g. a burst of dashboard cards all hitting a 401 at once) so we only
-        // rotate the refresh token once and the rest observe the freshly restored session.
+        // Coalesce concurrent refreshes (e.g. a burst of dashboard cards all hitting a 401 at once) so we only
+        // rotate the refresh token once and the rest observe the freshly restored session. Snapshot the sequence
+        // *before* queueing on the lock: every caller that was already waiting when the winner completed adopts
+        // its outcome instead of issuing a redundant refresh, which would otherwise burn the strict auth
+        // rate-limit budget and end the session with a 429 the moment an access token expires.
+        var observedSequence = Volatile.Read(ref _refreshSequence);
+
         await _refreshLock.WaitAsync();
+        try
+        {
+            if (Volatile.Read(ref _refreshSequence) != observedSequence)
+                return _lastRefreshSucceeded;
+
+            _lastRefreshSucceeded = await SendRefreshRequest();
+
+            // Only the lock holder advances the sequence, and only after the refresh it performed has settled,
+            // so a caller arriving after this point still gets a fresh refresh rather than a stale outcome.
+            Interlocked.Increment(ref _refreshSequence);
+            return _lastRefreshSucceeded;
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
+    }
+
+    // Performs the actual refresh round-trip. Never throws: a failure here means "the session could not be
+    // restored", which callers translate into ending the session rather than an error surfaced to the user.
+    private async Task<bool> SendRefreshRequest()
+    {
         try
         {
             using var request = await _antiforgeryTokenService.CreateRequest(
@@ -163,10 +196,6 @@ public class LoginService : ILoginService
         {
             _logger.LogError(ex, "Error refreshing session.");
             return false;
-        }
-        finally
-        {
-            _refreshLock.Release();
         }
     }
 
