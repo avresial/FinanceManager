@@ -86,6 +86,19 @@ else
                                                   AdornmentIcon="@(apiKeyVisible ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
                                                   OnAdornmentClick="@(() => ToggleApiKeyVisibility(provider.ProviderName))" />
 
+                                    <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                                        @if (provider.HasApiKey)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                            <MudText Typo="Typo.body2" Color="Color.Success">API key configured</MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                                            <MudText Typo="Typo.body2" Color="Color.Warning">No API key — using appsettings default</MudText>
+                                        }
+                                    </MudStack>
+
                                     <MudNumericField T="int" Label="Timeout (seconds)"
                                                      Value="@provider.RequestTimeoutSeconds"
                                                      ValueChanged="@(v => provider.RequestTimeoutSeconds = v)"
