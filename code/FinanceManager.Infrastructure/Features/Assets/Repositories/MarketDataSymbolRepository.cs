@@ -55,7 +55,19 @@ public class MarketDataSymbolRepository(AppDbContext context) : IMarketDataSymbo
             return existing;
         }
 
-        return await Add(symbol, cancellationToken);
+        try
+        {
+            return await Add(symbol, cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            context.Entry(symbol).State = EntityState.Detached;
+            var concurrent = await context.MarketDataSymbols.FirstOrDefaultAsync(
+                x => x.Provider == symbol.Provider && x.Symbol == symbol.Symbol,
+                cancellationToken);
+            if (concurrent is null) throw;
+            return concurrent;
+        }
     }
 
     public async Task<bool> RecordFetchResult(long id, DateTimeOffset? lastSuccessfulPriceFetchAt, string? lastError, CancellationToken cancellationToken = default)

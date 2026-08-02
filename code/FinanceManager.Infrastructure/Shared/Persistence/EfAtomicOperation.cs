@@ -20,7 +20,7 @@ public sealed class EfAtomicOperation(AppDbContext context) : IAtomicOperation
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await transaction.RollbackAsync(CancellationToken.None);
             throw;
         }
     }

@@ -23,14 +23,14 @@ public class InstrumentImportServiceTests
         new(_avClientMock.Object, _assetRepositoryMock.Object, _listingRepositoryMock.Object,
             _symbolRepositoryMock.Object, _logger);
 
-    private static InstrumentDiscoveryResultDto Instrument() => new()
+    private static InstrumentDiscoveryResultDto Instrument(string securityType = "ETF") => new()
     {
         DisplayName = "iShares Core S&P 500 UCITS ETF",
         Ticker = "CSPX",
         ExchangeMic = "XLON",
         ExchangeCode = "LN",
         TradingCurrency = "USD",
-        SecurityType = "ETF",
+        SecurityType = securityType,
         ShareClassFigi = "BBGSC",
         ListingFigi = "BBG001",
         ProviderSymbol = "CSPX.LON"
@@ -64,11 +64,11 @@ public class InstrumentImportServiceTests
     public async Task ImportAsync_WhenValidationReturnsNoPrices_SavesDisabledSymbol()
     {
         _assetRepositoryMock.Setup(x => x.GetAll(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        _assetRepositoryMock.Setup(x => x.Add(It.IsAny<Asset>(), It.IsAny<CancellationToken>()))
+        _assetRepositoryMock.Setup(x => x.Upsert(It.IsAny<Asset>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Asset asset, CancellationToken _) => { asset.Id = 1; return asset; });
-        _listingRepositoryMock.Setup(x => x.Add(It.IsAny<AssetListing>(), It.IsAny<CancellationToken>()))
+        _listingRepositoryMock.Setup(x => x.Upsert(It.IsAny<AssetListing>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((AssetListing listing, CancellationToken _) => { listing.Id = 2; return listing; });
-        _symbolRepositoryMock.Setup(x => x.Add(It.IsAny<MarketDataSymbol>(), It.IsAny<CancellationToken>()))
+        _symbolRepositoryMock.Setup(x => x.Upsert(It.IsAny<MarketDataSymbol>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((MarketDataSymbol symbol, CancellationToken _) => { symbol.Id = 3; return symbol; });
         _avClientMock.Setup(x => x.GetDailySeries("CSPX.LON", It.IsAny<DateTime>(), It.IsAny<DateTime>(),
             It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(), It.IsAny<CancellationToken>()))
@@ -78,8 +78,22 @@ public class InstrumentImportServiceTests
 
         Assert.True(result.CreatedMarketDataSymbol);
         Assert.Contains(result.Warnings, warning => warning.Contains("saved disabled", StringComparison.OrdinalIgnoreCase));
-        _symbolRepositoryMock.Verify(x => x.Add(It.Is<MarketDataSymbol>(symbol => !symbol.IsEnabled && symbol.LastError != null),
+        _symbolRepositoryMock.Verify(x => x.Upsert(It.Is<MarketDataSymbol>(symbol => !symbol.IsEnabled && symbol.LastError != null),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ImportValidatedAsync_WhenSecurityTypeIsUnknown_RejectsBeforePersistence()
+    {
+        var instrument = Instrument("Bond");
+
+        var exception = await Assert.ThrowsAsync<InstrumentImportException>(() =>
+            CreateService().ImportValidatedAsync(instrument, TestContext.Current.CancellationToken));
+
+        Assert.Equal("instrument_import_failed", exception.Code);
+        _assetRepositoryMock.Verify(x => x.Upsert(It.IsAny<Asset>(), It.IsAny<CancellationToken>()), Times.Never);
+        _avClientMock.Verify(x => x.GetDailySeries(
+            It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

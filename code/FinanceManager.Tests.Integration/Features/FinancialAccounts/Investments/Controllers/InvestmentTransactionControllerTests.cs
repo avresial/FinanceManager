@@ -237,6 +237,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Assert.Equal("market_data_symbol_invalid", problem!["code"]?.ToString());
         Assert.Empty(await _testDatabase!.Context.Assets.ToListAsync(TestContext.Current.CancellationToken));
         Assert.Empty(await _testDatabase.Context.AssetListings.ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Empty(await _testDatabase.Context.MarketDataSymbols.ToListAsync(TestContext.Current.CancellationToken));
         Assert.Empty(await _testDatabase.Context.InvestmentTransactions.ToListAsync(TestContext.Current.CancellationToken));
     }
 

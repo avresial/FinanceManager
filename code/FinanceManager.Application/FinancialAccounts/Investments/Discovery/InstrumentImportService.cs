@@ -42,10 +42,11 @@ public sealed class InstrumentImportService(
         await ValidateSymbolAsync(instrument, ct, strict: true);
     }
 
-    public Task<ImportedInstrumentDto> ImportValidatedAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default)
+    public async Task<ImportedInstrumentDto> ImportValidatedAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default)
     {
         ValidateTransactionImport(instrument);
-        return PersistAsync(instrument, strict: true, ct);
+        await ValidateSymbolAsync(instrument, ct, strict: true);
+        return await PersistAsync(instrument, strict: true, ct);
     }
 
     private async Task<ImportedInstrumentDto> PersistAsync(
@@ -56,7 +57,7 @@ public sealed class InstrumentImportService(
         var warnings = ImportWarnings(instrument).ToList();
         var (asset, listing, symbol) = await FindExistingAsync(instrument, ct);
         var createdAsset = asset is null;
-        asset ??= await assetRepository.Add(new Asset
+        asset ??= await assetRepository.Upsert(new Asset
         {
             Name = instrument.DisplayName,
             Type = ParseAssetType(instrument.SecurityType, defaultToStock: strict),
@@ -67,7 +68,7 @@ public sealed class InstrumentImportService(
         }, ct);
 
         var createdListing = listing is null;
-        listing ??= await listingRepository.Add(new AssetListing
+        listing ??= await listingRepository.Upsert(new AssetListing
         {
             AssetId = asset.Id,
             Ticker = instrument.Ticker.Trim().ToUpperInvariant(),
@@ -83,7 +84,7 @@ public sealed class InstrumentImportService(
         {
             var error = strict ? null : await ValidateSymbolAsync(instrument, ct);
             if (error is not null) warnings.Add(error);
-            symbol = await symbolRepository.Add(new MarketDataSymbol
+            symbol = await symbolRepository.Upsert(new MarketDataSymbol
             {
                 AssetListingId = listing.Id,
                 Provider = MarketDataProvider.AlphaVantage,
@@ -220,11 +221,10 @@ public sealed class InstrumentImportService(
             throw new InstrumentImportException(
                 "market_data_symbol_invalid",
                 "The selected instrument has no usable market-data symbol. No asset or transaction was created.");
-        if (!string.IsNullOrWhiteSpace(instrument.SecurityType)
-            && ParseAssetType(instrument.SecurityType) is AssetType.Other)
+        if (ParseAssetType(instrument.SecurityType) is AssetType.Other)
             throw new InstrumentImportException(
                 "instrument_import_failed",
-                "Only stocks and ETFs can be added to an investment transaction.");
+                "The selected instrument's asset type could not be determined; only stocks and ETFs can be added to an investment transaction.");
 
         if (instrument.Warnings.Any(w =>
                 w.Contains("ambiguous", StringComparison.OrdinalIgnoreCase)

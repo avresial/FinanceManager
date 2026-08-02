@@ -29,19 +29,20 @@ public class AssetListingRepository(AppDbContext context) : IAssetListingReposit
     {
         if (string.IsNullOrWhiteSpace(query)) return [];
         var trimmed = query.Trim();
-        // Tickers are stored uppercase; comparing directly against the uppercased input lets the index on Ticker be used.
-        // Exchange and asset text are mixed-case so we use LIKE patterns (case-sensitive on PG,
-        // insensitive on SQL Server by default).
-        var upperTicker = trimmed.ToUpperInvariant();
-        var likePattern = $"%{trimmed}%";
+        var escapedQuery = trimmed.ToUpperInvariant()
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
+        var tickerPattern = $"{escapedQuery}%";
+        var likePattern = $"%{escapedQuery}%";
         return await context.AssetListings
             .AsNoTracking()
             .Include(x => x.Asset)
             .Include(x => x.MarketDataSymbols)
-            .Where(x => x.IsActive && (x.Ticker.StartsWith(upperTicker)
-                || EF.Functions.Like(x.ExchangeName, likePattern)
-                || EF.Functions.Like(x.Asset.Name, likePattern)
-                || EF.Functions.Like(x.Asset.Isin, likePattern)))
+            .Where(x => x.IsActive && (EF.Functions.Like(x.Ticker.ToUpper(), tickerPattern, "\\")
+                || EF.Functions.Like(x.ExchangeName.ToUpper(), likePattern, "\\")
+                || EF.Functions.Like(x.Asset.Name.ToUpper(), likePattern, "\\")
+                || (x.Asset.Isin != null && EF.Functions.Like(x.Asset.Isin.ToUpper(), likePattern, "\\"))))
             .OrderByDescending(x => x.IsPrimaryListing)
             .ThenBy(x => x.Ticker)
             .Take(maxResults)
@@ -81,7 +82,19 @@ public class AssetListingRepository(AppDbContext context) : IAssetListingReposit
             return existing;
         }
 
-        return await Add(listing, cancellationToken);
+        try
+        {
+            return await Add(listing, cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            context.Entry(listing).State = EntityState.Detached;
+            var concurrent = await context.AssetListings.FirstOrDefaultAsync(
+                x => x.Ticker == listing.Ticker && x.ExchangeMic == listing.ExchangeMic && x.TradingCurrency == listing.TradingCurrency,
+                cancellationToken);
+            if (concurrent is null) throw;
+            return concurrent;
+        }
     }
 
     public async Task<bool> Update(AssetListing listing, CancellationToken cancellationToken = default)

@@ -73,7 +73,10 @@ public partial class InvestmentTransactionForm : ComponentBase
     private bool HasInstrument => _selectedInstrument is { Source: InstrumentOptionSource.Existing, AssetListingId: > 0 }
         || _selectedInstrument is { Source: InstrumentOptionSource.External, ResultId: not null and not "" };
 
-    private bool CanSave => HasInstrument && _formQuantity > 0 && _formUnitPrice >= 0
+    private bool IsUnsupportedExternalEdit => _editingId is not null
+        && _selectedInstrument?.Source == InstrumentOptionSource.External;
+
+    private bool CanSave => !IsUnsupportedExternalEdit && HasInstrument && _formQuantity > 0 && _formUnitPrice >= 0
         && _formTradeDate is not null && !string.IsNullOrWhiteSpace(_formCurrency);
 
     private async Task CloseAsync() => await VisibleChanged.InvokeAsync(false);
@@ -143,7 +146,10 @@ public partial class InvestmentTransactionForm : ComponentBase
         if (string.IsNullOrWhiteSpace(value)) return [];
         try
         {
-            return await TransactionHttpClient.SearchInstrumentsAsync(value, cancellationToken: cancellationToken);
+            var results = await TransactionHttpClient.SearchInstrumentsAsync(value, cancellationToken: cancellationToken);
+            return _editingId is null
+                ? results
+                : results.Where(x => x.Source == InstrumentOptionSource.Existing);
         }
         catch (Exception ex)
         {
@@ -154,6 +160,13 @@ public partial class InvestmentTransactionForm : ComponentBase
 
     private async Task SaveAsync()
     {
+        if (IsUnsupportedExternalEdit)
+        {
+            _error = "External instruments cannot replace an existing instrument while editing.";
+            Snackbar.Add(_error, Severity.Error);
+            return;
+        }
+
         if (!CanSave) return;
         _saving = true;
         _error = null;

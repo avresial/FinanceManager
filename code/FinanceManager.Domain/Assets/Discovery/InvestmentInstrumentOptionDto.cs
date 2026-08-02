@@ -1,5 +1,6 @@
 namespace FinanceManager.Domain.Assets.Discovery;
 
+// Property-initializer syntax keeps optional fields readable at named object-initializer call sites.
 public sealed record InvestmentInstrumentOptionDto
 {
     public string ResultId { get; init; } = string.Empty;

@@ -1,11 +1,13 @@
 using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
 using FinanceManager.Application.Shared.Persistence;
 using FinanceManager.Domain.Assets.Discovery;
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace FinanceManager.Application.FinancialAccounts.Investments.Transactions;
 
@@ -18,7 +20,7 @@ public sealed class InvestmentTransactionService(
     ICacheInvalidator cacheInvalidator,
     ILogger<InvestmentTransactionService> logger) : IInvestmentTransactionService
 {
-    private static readonly SemaphoreSlim _externalAddGate = new(1, 1);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _externalAddGates = new(StringComparer.OrdinalIgnoreCase);
 
     public async Task<InvestmentTransactionDto> AddAsync(
         AddInvestmentTransactionRequest request,
@@ -55,13 +57,16 @@ public sealed class InvestmentTransactionService(
                 "The selected instrument no longer exists. Search for it again.");
         }
 
+        var externalGate = external
+            ? _externalAddGates.GetOrAdd(GetExternalGateKey(instrument!), static _ => new(1, 1))
+            : null;
         var gateTaken = false;
         try
         {
-            if (external)
+            if (externalGate is not null)
             {
-                // ponytail: process-wide gate; use a distributed lock if imports run across multiple API instances.
-                await _externalAddGate.WaitAsync(cancellationToken);
+                // ponytail: process-local keyed gates plus database upserts; use a distributed lock if throughput or deployment scale requires it.
+                await externalGate.WaitAsync(cancellationToken);
                 gateTaken = true;
             }
 
@@ -121,7 +126,15 @@ public sealed class InvestmentTransactionService(
                 return result;
             }, cancellationToken);
 
-            await cacheInvalidator.InvalidateUser((int)userId, cancellationToken);
+            try
+            {
+                await cacheInvalidator.InvalidateUser((int)userId, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Transaction {TransactionId} was saved, but cache invalidation for user {UserId} failed", result.Id, userId);
+            }
+
             return result;
         }
         catch (InvestmentTransactionCommandException)
@@ -141,9 +154,12 @@ public sealed class InvestmentTransactionService(
         finally
         {
             if (gateTaken)
-                _externalAddGate.Release();
+                externalGate!.Release();
         }
     }
+
+    private static string GetExternalGateKey(InstrumentDiscoveryResultDto instrument) =>
+        $"{MarketDataProvider.AlphaVantage}:{instrument.ProviderSymbol!.Trim().ToUpperInvariant()}";
 
     private static void ValidateRequest(AddInvestmentTransactionRequest request)
     {
