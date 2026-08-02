@@ -1,6 +1,7 @@
 using FinanceManager.Api.Features.Identity.Services;
 using FinanceManager.Application.Commands.Login;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
@@ -10,6 +11,9 @@ namespace FinanceManager.Tests.Integration.Shared;
 
 public abstract class ControllerTests : IClassFixture<OptionsProvider>, IDisposable
 {
+    private static readonly object _appLock = new();
+    private static readonly Dictionary<string, FinanceManagerApiTestApp> _apps = [];
+
     private readonly FinanceManagerApiTestApp _app;
     private readonly JwtTokenGenerator? _jwtTokenGenerator;
     protected HttpClient Client { get; }
@@ -35,17 +39,61 @@ public abstract class ControllerTests : IClassFixture<OptionsProvider>, IDisposa
     {
         var authOptions = optionsProvider.Get<JwtAuthOptions>("JwtConfig");
         _jwtTokenGenerator = new JwtTokenGenerator(new OptionsWrapper<JwtAuthOptions>(authOptions));
-        _app = new FinanceManagerApiTestApp(ConfigureServices, environmentName);
-        Client = _app.Client;
+
+        if (!ReuseApplicationHost)
+        {
+            _app = new FinanceManagerApiTestApp(ConfigureServices, environmentName);
+            Client = _app.CreateClient();
+            Client.BaseAddress = new Uri("http://localhost/");
+            return;
+        }
+
+        var appKey = $"{GetType().AssemblyQualifiedName}|{environmentName}";
+        var created = false;
+        lock (_appLock)
+        {
+            if (!_apps.TryGetValue(appKey, out _app!))
+            {
+                _app = new FinanceManagerApiTestApp(services =>
+                {
+                    using (TestDatabase.UseDatabase(appKey))
+                        ConfigureServices(services);
+                }, environmentName);
+
+                _apps.Add(appKey, _app);
+                created = true;
+            }
+        }
+
+        if (!created)
+        {
+            using (TestDatabase.UseDatabase(appKey))
+                ConfigureServices(new ServiceCollection());
+        }
+
+        using (var scope = _app.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            database.ChangeTracker.Clear();
+            database.Database.EnsureDeleted();
+            database.Database.EnsureCreated();
+        }
+
+        Client = _app.CreateClient();
+        Client.BaseAddress = new Uri("http://localhost/");
     }
 
     protected virtual void ConfigureServices(IServiceCollection services)
     {
     }
 
+    protected virtual bool ReuseApplicationHost => true;
+
     public virtual void Dispose()
     {
         ClearAuthorization();
-        _app.Dispose();
+        Client.Dispose();
+        if (!ReuseApplicationHost)
+            _app.Dispose();
     }
 }

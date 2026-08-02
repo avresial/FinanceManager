@@ -25,6 +25,9 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
     private const int _testAccountId = 123;
     private TestDatabase? _testDatabase;
     private readonly DateTime _utcNow = DateTime.UtcNow;
+
+    protected override bool ReuseApplicationHost => false;
+
     protected override void ConfigureServices(IServiceCollection services)
     {
         // Replace DbContext with in-memory test context

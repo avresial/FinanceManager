@@ -29,6 +29,8 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     private int _valueChange = 10;
     private int _value;
 
+    protected override bool ReuseApplicationHost => false;
+
     protected override void ConfigureServices(IServiceCollection services)
     {
         _nowUtc = DateTime.UtcNow.Date;

@@ -14,10 +14,12 @@ namespace FinanceManager.Tests.Integration.Features.Dashboard.Controllers;
 public class TransactionLogControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
     private const int _testUserId = 641;
-    private readonly Mock<ITransactionLogService> _serviceMock = new();
+    private static readonly Mock<ITransactionLogService> _serviceMock = new();
 
     protected override void ConfigureServices(IServiceCollection services)
     {
+        _serviceMock.Reset();
+
         _serviceMock
             .Setup(x => x.GetLastTransactions(_testUserId, It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([new TransactionLogEntryDto(10, "Bank", AccountType.Currency, 1, new DateTime(2024, 3, 5), -50m, "Groceries")]);

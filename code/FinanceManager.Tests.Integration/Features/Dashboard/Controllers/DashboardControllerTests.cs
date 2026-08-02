@@ -16,10 +16,12 @@ namespace FinanceManager.Tests.Integration.Features.Dashboard.Controllers;
 public class DashboardControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
     private const int _testUserId = 733;
-    private readonly Mock<IDashboardQueryService> _dashboardQueryServiceMock = new();
+    private static readonly Mock<IDashboardQueryService> _dashboardQueryServiceMock = new();
 
     protected override void ConfigureServices(IServiceCollection services)
     {
+        _dashboardQueryServiceMock.Reset();
+
         _dashboardQueryServiceMock
             .Setup(x => x.GetOverview(_testUserId, It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DashboardOverviewDto

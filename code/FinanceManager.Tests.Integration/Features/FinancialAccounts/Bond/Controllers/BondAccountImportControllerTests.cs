@@ -23,10 +23,12 @@ public class BondAccountImportControllerTests(OptionsProvider optionsProvider) :
     private const int _otherUserId = 512;
     private const int _testAccountId = 1511;
     private TestDatabase? _testDatabase;
-    private Mock<IBondAccountImportService>? _importServiceMock;
+    private static readonly Mock<IBondAccountImportService> _importServiceMock = new();
 
     protected override void ConfigureServices(IServiceCollection services)
     {
+        _importServiceMock.Reset();
+
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
         if (descriptor != null)
             services.Remove(descriptor);
@@ -34,7 +36,6 @@ public class BondAccountImportControllerTests(OptionsProvider optionsProvider) :
         _testDatabase = new TestDatabase();
         services.AddSingleton(_testDatabase.Context);
 
-        _importServiceMock = new Mock<IBondAccountImportService>();
         _importServiceMock
             .Setup(x => x.ImportEntries(_testUserId, _testAccountId, It.IsAny<IEnumerable<BondEntryImport>>()))
             .ReturnsAsync(new BondImportResult(_testAccountId, 1, 0, [], []));
@@ -66,7 +67,7 @@ public class BondAccountImportControllerTests(OptionsProvider optionsProvider) :
         Assert.True(response.IsSuccessStatusCode);
         var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains($"\"accountId\":{_testAccountId}", content, StringComparison.OrdinalIgnoreCase);
-        _importServiceMock!.Verify(x => x.ImportEntries(_testUserId, _testAccountId, It.IsAny<IEnumerable<BondEntryImport>>()), Times.Once);
+        _importServiceMock.Verify(x => x.ImportEntries(_testUserId, _testAccountId, It.IsAny<IEnumerable<BondEntryImport>>()), Times.Once);
     }
 
     [Fact]
@@ -79,7 +80,7 @@ public class BondAccountImportControllerTests(OptionsProvider optionsProvider) :
         var response = await Client.PostAsJsonAsync("api/BondAccountImport/ImportBondEntries", dto, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-        _importServiceMock!.Verify(x => x.ImportEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<BondEntryImport>>()), Times.Never);
+        _importServiceMock.Verify(x => x.ImportEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<BondEntryImport>>()), Times.Never);
     }
 
     public override void Dispose()

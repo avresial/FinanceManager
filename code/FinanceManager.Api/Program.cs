@@ -71,7 +71,7 @@ builder.Logging.AddFilter<DatabaseLoggerProvider>("Microsoft.AspNetCore.Http.Con
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
-    app.Logger.LogWarning(
+    app.Logger.LogDebug(
         "Password reset endpoints are disabled outside Development until transactional email delivery is implemented.");
 
 // Must run before any middleware that inspects the scheme or client IP (HTTPS redirect, CORS,

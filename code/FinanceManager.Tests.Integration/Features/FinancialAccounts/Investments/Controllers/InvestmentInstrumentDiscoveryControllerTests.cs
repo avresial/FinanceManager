@@ -15,14 +15,17 @@ namespace FinanceManager.Tests.Integration.Features.FinancialAccounts.Investment
 [Trait("Category", "Integration")]
 public class InvestmentInstrumentDiscoveryControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
-    private readonly Mock<IOpenFigiClient> _openFigiMock = new();
-    private readonly Mock<IAlphaVantageClient> _alphaVantageMock = new();
+    private static readonly Mock<IOpenFigiClient> _openFigiMock = new();
+    private static readonly Mock<IAlphaVantageClient> _alphaVantageMock = new();
 
     // Override the external provider clients with mocks so the real discovery service runs but no
     // real OpenFIGI/Alpha Vantage calls are made. The last registration for a service type wins,
     // so these replace the typed HttpClient registrations for resolution.
     protected override void ConfigureServices(IServiceCollection services)
     {
+        _openFigiMock.Reset();
+        _alphaVantageMock.Reset();
+
         services.AddSingleton(_openFigiMock.Object);
         services.AddSingleton(_alphaVantageMock.Object);
     }
