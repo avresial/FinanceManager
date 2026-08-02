@@ -17,260 +17,245 @@ else
             <MudAlert Severity="Severity.Error">@message</MudAlert>
         }
 
-        <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-            <MudText Typo="Typo.h5">AI Providers</MudText>
-            @if (_availableToAdd.Count > 0)
-            {
-                <MudMenu Label="Add Provider"
-                         StartIcon="@Icons.Material.Filled.Add"
-                         EndIcon="@Icons.Material.Filled.ArrowDropDown"
-                         Variant="Variant.Filled" Color="Color.Primary"
-                         Disabled="@_addingProvider">
-                    @foreach (var name in _availableToAdd)
-                    {
-                        <MudMenuItem OnClick="@(() => AddProviderAsync(name))">@name</MudMenuItem>
-                    }
-                </MudMenu>
-            }
-        </MudStack>
+        <MudText Typo="Typo.h5">AI Providers</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            Configure the models and credentials used for AI features.
+            Changes take effect immediately without redeployment.
+            Values set here override environment variables and <code>appsettings.json</code>.
+        </MudText>
 
-        @if (_providers.Count == 0)
-        {
-            <MudAlert Severity="Severity.Info">
-                No AI providers configured. Use the Add Provider button to get started.
-            </MudAlert>
-        }
-        else
-        {
-            <MudGrid Spacing="3">
-                @foreach (var provider in _providers)
-                {
-                    <MudItem xs="12" md="6">
-                        <MudCard Outlined>
-                            <MudCardHeader>
-                                <CardHeaderContent>
-                                    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+        <MudGrid Spacing="3">
+            @foreach (var provider in _providers)
+            {
+                <MudItem xs="12" md="6">
+                    <MudCard Outlined>
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudStack Spacing="0">
                                         <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
-                                            <MudText Typo="Typo.h6">@provider.ProviderName</MudText>
+                                            <MudText Typo="Typo.h6">@provider.DisplayName</MudText>
                                             <MudSwitch T="bool" Value="@provider.IsEnabled"
                                                        ValueChanged="@(v => provider.IsEnabled = v)"
                                                        Color="Color.Primary" />
                                         </MudStack>
-                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                       Color="Color.Error"
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@provider.Description</MudText>
+                                    </MudStack>
+                                    <MudTooltip Text="Documentation">
+                                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
                                                        Size="Size.Small"
-                                                       Disabled="@_deletingProvider.Contains(provider.ProviderName)"
-                                                       OnClick="@(() => DeleteProviderAsync(provider))"
-                                                       aria-label="@($"Delete provider {provider.ProviderName}")" />
-                                    </MudStack>
-                                </CardHeaderContent>
-                            </MudCardHeader>
-                            <MudCardContent>
-                                <MudStack Spacing="3">
-                                    <MudTextField T="string" Label="Base URL"
-                                                  Value="@provider.BaseUrl"
-                                                  ValueChanged="@(v => provider.BaseUrl = v)"
-                                                  Immediate
-                                                  Variant="Variant.Outlined" />
-
-                                    @{
-                                        var apiKeyVisible = _showApiKey.TryGetValue(provider.ProviderName, out var show) && show;
-                                    }
-                                    <MudTextField T="string" Label="@(provider.HasApiKey ? "API Key (set — enter new to replace)" : "API Key")"
-                                                  Value="@provider.NewApiKey"
-                                                  ValueChanged="@(v => provider.NewApiKey = v)"
-                                                  Immediate
-                                                  InputType="@(apiKeyVisible ? InputType.Text : InputType.Password)"
-                                                  Variant="Variant.Outlined"
-                                                  Adornment="Adornment.End"
-                                                  AdornmentIcon="@(apiKeyVisible ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
-                                                  OnAdornmentClick="@(() => ToggleApiKeyVisibility(provider.ProviderName))" />
-
-                                    <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
-                                        @if (provider.HasApiKey)
-                                        {
-                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
-                                            <MudText Typo="Typo.body2" Color="Color.Success">API key configured</MudText>
-                                        }
-                                        else
-                                        {
-                                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
-                                            <MudText Typo="Typo.body2" Color="Color.Warning">No API key — using appsettings default</MudText>
-                                        }
-                                    </MudStack>
-
-                                    <MudNumericField T="int" Label="Timeout (seconds)"
-                                                     Value="@provider.RequestTimeoutSeconds"
-                                                     ValueChanged="@(v => provider.RequestTimeoutSeconds = v)"
-                                                     Immediate
-                                                     Min="1" Max="3600"
-                                                     Variant="Variant.Outlined" />
-
-                                    <MudExpansionPanels Elevation="0" Class="border rounded">
-                                        <MudExpansionPanel>
-                                            <TitleContent>
-                                                <MudText Typo="Typo.subtitle2">Models (@provider.Models.Count)</MudText>
-                                            </TitleContent>
-                                            <ChildContent>
-                                            <MudStack Spacing="2">
-                                                @if (provider.Models.Count == 0)
-                                                {
-                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">No models configured.</MudText>
-                                                }
-                                                else
-                                                {
-                                                    @foreach (var model in provider.Models)
-                                                    {
-                                                        <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                                                            <MudText Typo="Typo.body2"
-                                                                     Style="@(!model.IsEnabled ? "color: var(--mud-palette-text-disabled);" : "")">
-                                                                @model.ModelName
-                                                            </MudText>
-                                                            <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
-                                                                <MudSwitch T="bool" Value="@model.IsEnabled"
-                                                                           ValueChanged="@(_ => ToggleModelAsync(provider, model))"
-                                                                           Disabled="@_togglingModel.Contains(model.Id)"
-                                                                           Color="Color.Primary"
-                                                                           Size="Size.Small" />
-                                                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                                               Color="Color.Error"
-                                                                               Size="Size.Small"
-                                                                               Disabled="@_deletingModel.Contains(model.Id)"
-                                                                               OnClick="@(() => DeleteModelAsync(provider, model))"
-                                                                               aria-label="@($"Delete model {model.ModelName}")" />
-                                                            </MudStack>
-                                                        </MudStack>
-                                                    }
-                                                }
-
-                                                <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
-                                                    <MudTextField T="string" Label="New model name"
-                                                                  Value="@provider.NewModelName"
-                                                                  ValueChanged="@(v => provider.NewModelName = v)"
-                                                                  Immediate
-                                                                  Variant="Variant.Outlined"
-                                                                  Dense
-                                                                  Style="flex:1" />
-                                                    <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                                                   Color="Color.Primary"
-                                                                   Disabled="@(_addingModel.Contains(provider.ProviderName) || string.IsNullOrWhiteSpace(provider.NewModelName))"
-                                                                   OnClick="@(() => AddModelAsync(provider))"
-                                                                   aria-label="@($"Add model to {provider.ProviderName}")" />
-                                                </MudStack>
-                                            </MudStack>
-                                            </ChildContent>
-                                        </MudExpansionPanel>
-                                    </MudExpansionPanels>
+                                                       Href="@provider.DocsUrl"
+                                                       Target="_blank"
+                                                       aria-label="@($"Open {provider.DisplayName} documentation")" />
+                                    </MudTooltip>
                                 </MudStack>
-                            </MudCardContent>
-                            @if (provider.IsDirty)
-                            {
-                                <MudCardActions>
-                                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                                               OnClick="@(() => SaveProviderAsync(provider))"
-                                               Disabled="@_savingProviders.Contains(provider.ProviderName)">
-                                        @if (_savingProviders.Contains(provider.ProviderName))
-                                        {
-                                            <MudProgressCircular Size="Size.Small" Indeterminate Class="mr-2" />
-                                        }
-                                        Save
-                                    </MudButton>
-                                </MudCardActions>
-                            }
-                        </MudCard>
-                    </MudItem>
-                }
-            </MudGrid>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudStack Spacing="3">
+                                <MudTextField T="string" Label="Base URL"
+                                              Value="@provider.BaseUrl"
+                                              ValueChanged="@(v => provider.BaseUrl = v)"
+                                              Immediate
+                                              Variant="Variant.Outlined" />
 
-            <MudDivider />
+                                @{
+                                    var apiKeyVisible = _showApiKey.TryGetValue(provider.ProviderName, out var show) && show;
+                                }
+                                <MudTextField T="string" Label="@(provider.HasApiKey ? "API Key (set — enter new to replace)" : "API Key")"
+                                              Value="@provider.NewApiKey"
+                                              ValueChanged="@(v => provider.NewApiKey = v)"
+                                              Immediate
+                                              InputType="@(apiKeyVisible ? InputType.Text : InputType.Password)"
+                                              Variant="Variant.Outlined"
+                                              Adornment="Adornment.End"
+                                              AdornmentIcon="@(apiKeyVisible ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                              OnAdornmentClick="@(() => ToggleApiKeyVisibility(provider.ProviderName))" />
 
-            <MudText Typo="Typo.h5">Default Fallback Strategy</MudText>
+                                <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                                    @if (provider.HasApiKey)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                        <MudText Typo="Typo.body2" Color="Color.Success">API key configured</MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                                        <MudText Typo="Typo.body2" Color="Color.Warning">No API key — using appsettings default</MudText>
+                                    }
+                                </MudStack>
 
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                Providers are tried in order. On failure or empty response the next entry is used.
-                Entries referencing a disabled provider or model are grayed out and will be skipped at runtime.
-            </MudText>
+                                <MudNumericField T="int" Label="Timeout (seconds)"
+                                                 Value="@provider.RequestTimeoutSeconds"
+                                                 ValueChanged="@(v => provider.RequestTimeoutSeconds = v)"
+                                                 Immediate
+                                                 Min="1" Max="3600"
+                                                 Variant="Variant.Outlined" />
 
-            <MudTable Items="_fallbackEntries" Hover Dense>
-                <HeaderContent>
-                    <MudTh>Order</MudTh>
-                    <MudTh>Provider</MudTh>
-                    <MudTh>Model</MudTh>
-                    <MudTh>Actions</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    @{
-                        var isDisabled = IsProviderDisabledInFallback(context.ProviderName)
-                                         || IsModelDisabledInFallback(context.ProviderName, context.Model);
-                    }
-                    <MudTd Style="@(isDisabled ? "opacity:0.4;" : "")">
-                        <MudStack Row Spacing="1">
-                            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
-                                           Disabled="@(_fallbackEntries.IndexOf(context) == 0)"
-                                           OnClick="@(() => MoveFallbackEntry(context, -1))"
-                                           aria-label="Move fallback entry up" />
-                            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
-                                           Disabled="@(_fallbackEntries.IndexOf(context) == _fallbackEntries.Count - 1)"
-                                           OnClick="@(() => MoveFallbackEntry(context, 1))"
-                                           aria-label="Move fallback entry down" />
-                        </MudStack>
-                    </MudTd>
-                    <MudTd Style="@(isDisabled ? "opacity:0.4;" : "")">
-                        <MudSelect T="string" Value="@context.ProviderName"
-                                   ValueChanged="@(v => OnFallbackProviderChanged(context, v))"
-                                   Variant="Variant.Text" Dense>
-                            @foreach (var p in _providers)
-                            {
-                                <MudSelectItem Value="@p.ProviderName">@p.ProviderName</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudTd>
-                    <MudTd Style="@(isDisabled ? "opacity:0.4;" : "")">
-                        <MudSelect T="string" Value="@context.Model"
-                                   ValueChanged="@(v => context.Model = v)"
-                                   Variant="Variant.Text" Dense>
-                            @foreach (var m in ModelsForProvider(context.ProviderName))
-                            {
-                                <MudSelectItem Value="@m.ModelName">@m.ModelName</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudTd>
-                    <MudTd>
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                                       OnClick="@(() => _fallbackEntries.Remove(context))"
-                                       aria-label="Remove fallback entry" />
-                    </MudTd>
-                </RowTemplate>
-                <FooterContent>
-                    <MudTr>
-                        <MudTd colspan="4" Class="pa-0">
-                            <MudButton Variant="Variant.Text" Color="Color.Primary"
-                                       StartIcon="@Icons.Material.Filled.Add"
-                                       FullWidth OnClick="AddFallbackEntry">Add Entry</MudButton>
-                        </MudTd>
-                    </MudTr>
-                </FooterContent>
-            </MudTable>
+                                <MudExpansionPanels Elevation="0" Class="border rounded">
+                                    <MudExpansionPanel>
+                                        <TitleContent>
+                                            <MudText Typo="Typo.subtitle2">Models (@provider.Models.Count)</MudText>
+                                        </TitleContent>
+                                        <ChildContent>
+                                        <MudStack Spacing="2">
+                                            @if (provider.Models.Count == 0)
+                                            {
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">No models configured.</MudText>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var model in provider.Models)
+                                                {
+                                                    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                                        <MudText Typo="Typo.body2"
+                                                                 Style="@(!model.IsEnabled ? "color: var(--mud-palette-text-disabled);" : "")">
+                                                            @model.ModelName
+                                                        </MudText>
+                                                        <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                                                            <MudSwitch T="bool" Value="@model.IsEnabled"
+                                                                       ValueChanged="@(_ => ToggleModelAsync(provider, model))"
+                                                                       Disabled="@_togglingModel.Contains(model.Id)"
+                                                                       Color="Color.Primary"
+                                                                       Size="Size.Small" />
+                                                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                           Color="Color.Error"
+                                                                           Size="Size.Small"
+                                                                           Disabled="@_deletingModel.Contains(model.Id)"
+                                                                           OnClick="@(() => DeleteModelAsync(provider, model))"
+                                                                           aria-label="@($"Delete model {model.ModelName}")" />
+                                                        </MudStack>
+                                                    </MudStack>
+                                                }
+                                            }
 
-            @if (_fallbackEntries.Count == 0)
-            {
-                <MudAlert Severity="Severity.Info">No fallback entries configured. Add at least one provider and model.</MudAlert>
-            }
-
-            @if (FallbackDirty)
-            {
-                <MudStack Row Justify="Justify.FlexEnd">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                               OnClick="SaveFallbackAsync"
-                               Disabled="@_savingFallback">
-                        @if (_savingFallback)
+                                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                                <MudTextField T="string" Label="New model name"
+                                                              Value="@provider.NewModelName"
+                                                              ValueChanged="@(v => provider.NewModelName = v)"
+                                                              Immediate
+                                                              Variant="Variant.Outlined"
+                                                              Dense
+                                                              Style="flex:1" />
+                                                <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                                               Color="Color.Primary"
+                                                               Disabled="@(_addingModel.Contains(provider.ProviderName) || string.IsNullOrWhiteSpace(provider.NewModelName))"
+                                                               OnClick="@(() => AddModelAsync(provider))"
+                                                               aria-label="@($"Add model to {provider.ProviderName}")" />
+                                            </MudStack>
+                                        </MudStack>
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                </MudExpansionPanels>
+                            </MudStack>
+                        </MudCardContent>
+                        @if (provider.IsDirty)
                         {
-                            <MudProgressCircular Size="Size.Small" Indeterminate Class="mr-2" />
+                            <MudCardActions>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                           OnClick="@(() => SaveProviderAsync(provider))"
+                                           Disabled="@_savingProviders.Contains(provider.ProviderName)">
+                                    @if (_savingProviders.Contains(provider.ProviderName))
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate Class="mr-2" />
+                                    }
+                                    Save
+                                </MudButton>
+                            </MudCardActions>
                         }
-                        Save Fallback Strategy
-                    </MudButton>
-                </MudStack>
+                    </MudCard>
+                </MudItem>
             }
+        </MudGrid>
+
+        <MudDivider />
+
+        <MudText Typo="Typo.h5">Default Fallback Strategy</MudText>
+
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            Providers are tried in order. On failure or empty response the next entry is used.
+            Entries referencing a disabled provider or model are grayed out and will be skipped at runtime.
+        </MudText>
+
+        <MudTable Items="_fallbackEntries" Hover Dense>
+            <HeaderContent>
+                <MudTh>Order</MudTh>
+                <MudTh>Provider</MudTh>
+                <MudTh>Model</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                @{
+                    var isDisabled = IsProviderDisabledInFallback(context.ProviderName)
+                                     || IsModelDisabledInFallback(context.ProviderName, context.Model);
+                }
+                <MudTd Style="@(isDisabled ? "opacity:0.4;" : "")">
+                    <MudStack Row Spacing="1">
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
+                                       Disabled="@(_fallbackEntries.IndexOf(context) == 0)"
+                                       OnClick="@(() => MoveFallbackEntry(context, -1))"
+                                       aria-label="Move fallback entry up" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
+                                       Disabled="@(_fallbackEntries.IndexOf(context) == _fallbackEntries.Count - 1)"
+                                       OnClick="@(() => MoveFallbackEntry(context, 1))"
+                                       aria-label="Move fallback entry down" />
+                    </MudStack>
+                </MudTd>
+                <MudTd Style="@(isDisabled ? "opacity:0.4;" : "")">
+                    <MudSelect T="string" Value="@context.ProviderName"
+                               ValueChanged="@(v => OnFallbackProviderChanged(context, v))"
+                               Variant="Variant.Text" Dense>
+                        @foreach (var p in _providers)
+                        {
+                            <MudSelectItem Value="@p.ProviderName">@p.ProviderName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudTd>
+                <MudTd Style="@(isDisabled ? "opacity:0.4;" : "")">
+                    <MudSelect T="string" Value="@context.Model"
+                               ValueChanged="@(v => context.Model = v)"
+                               Variant="Variant.Text" Dense>
+                        @foreach (var m in ModelsForProvider(context.ProviderName))
+                        {
+                            <MudSelectItem Value="@m.ModelName">@m.ModelName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                   OnClick="@(() => _fallbackEntries.Remove(context))"
+                                   aria-label="Remove fallback entry" />
+                </MudTd>
+            </RowTemplate>
+            <FooterContent>
+                <MudTr>
+                    <MudTd colspan="4" Class="pa-0">
+                        <MudButton Variant="Variant.Text" Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   FullWidth OnClick="AddFallbackEntry">Add Entry</MudButton>
+                    </MudTd>
+                </MudTr>
+            </FooterContent>
+        </MudTable>
+
+        @if (_fallbackEntries.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">No fallback entries configured. Add at least one provider and model.</MudAlert>
+        }
+
+        @if (FallbackDirty)
+        {
+            <MudStack Row Justify="Justify.FlexEnd">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="SaveFallbackAsync"
+                           Disabled="@_savingFallback">
+                    @if (_savingFallback)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate Class="mr-2" />
+                    }
+                    Save Fallback Strategy
+                </MudButton>
+            </MudStack>
         }
     </MudStack>
 }

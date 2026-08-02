@@ -9,6 +9,9 @@ public partial class AdminAiProviders : ComponentBase
     private sealed class ProviderModel
     {
         public string ProviderName { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string DocsUrl { get; set; } = string.Empty;
         public string BaseUrl { get; set; } = string.Empty;
         public bool HasApiKey { get; set; }
         public string NewApiKey { get; set; } = string.Empty;
@@ -57,14 +60,10 @@ public partial class AdminAiProviders : ComponentBase
     private readonly HashSet<string> _addingModel = [];
     private readonly HashSet<int> _togglingModel = [];
     private readonly HashSet<int> _deletingModel = [];
-    private readonly HashSet<string> _deletingProvider = [];
     private readonly List<string> _errors = [];
     private readonly List<ProviderModel> _providers = [];
     private readonly List<FallbackEntryModel> _fallbackEntries = [];
     private readonly Dictionary<string, bool> _showApiKey = [];
-    private List<string> _availableToAdd = [];
-    private List<string> _knownProviders = [];
-    private bool _addingProvider;
     private string _savedFallbackSignature = string.Empty;
 
     private bool FallbackDirty => FallbackSignature() != _savedFallbackSignature;
@@ -84,6 +83,7 @@ public partial class AdminAiProviders : ComponentBase
             if (config is null) return;
 
             _providers.Clear();
+            _showApiKey.Clear();
             foreach (var p in config.Providers)
             {
                 _providers.Add(ToProviderModel(p));
@@ -100,9 +100,6 @@ public partial class AdminAiProviders : ComponentBase
                 });
             }
             _savedFallbackSignature = FallbackSignature();
-
-            _knownProviders = config.KnownProviders.ToList();
-            RecomputeAvailableToAdd();
         }
         catch (Exception ex)
         {
@@ -112,23 +109,6 @@ public partial class AdminAiProviders : ComponentBase
         {
             _isLoading = false;
         }
-    }
-
-    // Fetches the latest config and appends any provider card not already shown, leaving existing cards
-    // (and their unsaved edits / dirty state) untouched.
-    private async Task AddProviderCardAsync(string providerName)
-    {
-        var config = await ApiClient.GetConfigurationAsync();
-        if (config is null) return;
-
-        _knownProviders = config.KnownProviders.ToList();
-        var existing = _providers.Select(p => p.ProviderName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var p in config.Providers.Where(p => !existing.Contains(p.ProviderName)))
-        {
-            _providers.Add(ToProviderModel(p));
-            _showApiKey[p.ProviderName] = false;
-        }
-        RecomputeAvailableToAdd();
     }
 
     // Replaces just one provider's model list from the server (e.g. after adding a model) without
@@ -141,17 +121,14 @@ public partial class AdminAiProviders : ComponentBase
         provider.Models = dto.Models.Select(ToModelEntry).ToList();
     }
 
-    private void RecomputeAvailableToAdd()
-    {
-        var configuredNames = _providers.Select(p => p.ProviderName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        _availableToAdd = _knownProviders.Where(n => !configuredNames.Contains(n)).ToList();
-    }
-
     private static ProviderModel ToProviderModel(AiProviderDto p)
     {
         var provider = new ProviderModel
         {
             ProviderName = p.ProviderName,
+            DisplayName = p.DisplayName,
+            Description = p.Description,
+            DocsUrl = p.DocsUrl,
             BaseUrl = p.BaseUrl,
             HasApiKey = p.HasApiKey,
             RequestTimeoutSeconds = p.RequestTimeoutSeconds,
@@ -169,49 +146,6 @@ public partial class AdminAiProviders : ComponentBase
         IsEnabled = m.IsEnabled,
     };
 
-    private async Task AddProviderAsync(string providerName)
-    {
-        if (string.IsNullOrEmpty(providerName)) return;
-        _addingProvider = true;
-        try
-        {
-            await ApiClient.AddProviderAsync(new AddProviderRequest(providerName));
-            // Add only the new card so unsaved edits on existing cards (and their dirty state) survive.
-            await AddProviderCardAsync(providerName);
-            Snackbar.Add($"{providerName} added.", Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            _errors.Add($"Failed to add provider: {ex.Message}");
-        }
-        finally
-        {
-            _addingProvider = false;
-        }
-    }
-
-    private async Task DeleteProviderAsync(ProviderModel provider)
-    {
-        _deletingProvider.Add(provider.ProviderName);
-        try
-        {
-            await ApiClient.DeleteProviderAsync(provider.ProviderName);
-            // Drop only this card locally so unsaved edits on the remaining cards survive.
-            _providers.Remove(provider);
-            _showApiKey.Remove(provider.ProviderName);
-            RecomputeAvailableToAdd();
-            Snackbar.Add($"{provider.ProviderName} removed.", Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            _errors.Add($"Failed to remove {provider.ProviderName}: {ex.Message}");
-        }
-        finally
-        {
-            _deletingProvider.Remove(provider.ProviderName);
-        }
-    }
-
     private async Task SaveProviderAsync(ProviderModel provider)
     {
         _savingProviders.Add(provider.ProviderName);
@@ -228,11 +162,11 @@ public partial class AdminAiProviders : ComponentBase
             provider.HasApiKey = provider.HasApiKey || !string.IsNullOrEmpty(provider.NewApiKey);
             provider.NewApiKey = string.Empty;
             provider.CaptureSnapshot();
-            Snackbar.Add($"{provider.ProviderName} saved.", Severity.Success);
+            Snackbar.Add($"{provider.DisplayName} saved.", Severity.Success);
         }
         catch (Exception ex)
         {
-            _errors.Add($"Failed to save {provider.ProviderName}: {ex.Message}");
+            _errors.Add($"Failed to save {provider.DisplayName}: {ex.Message}");
         }
         finally
         {
