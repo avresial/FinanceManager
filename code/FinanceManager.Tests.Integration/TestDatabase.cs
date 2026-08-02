@@ -1,7 +1,7 @@
-using System.Collections.Concurrent;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using System.Collections.Concurrent;
 using Xunit;
 
 namespace FinanceManager.Tests.Integration;
