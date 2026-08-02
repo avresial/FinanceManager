@@ -57,6 +57,19 @@ public class InsightsGenerationChannelTests
         Assert.Equal([1, 2], await Drain());
     }
 
+    [Fact]
+    public async Task QueueUser_ReleasesCooldown_WhenWriteFails()
+    {
+        using var canceled = new CancellationTokenSource();
+        await canceled.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await _channel.QueueUser(1, canceled.Token));
+        var queued = await _channel.QueueUser(1, TestContext.Current.CancellationToken);
+
+        Assert.True(queued);
+        Assert.Equal([1], await Drain());
+    }
+
     /// <summary>Reads everything published so far; the channel stays open, so the read is bounded by a short timeout.</summary>
     private async Task<List<int>> Drain()
     {

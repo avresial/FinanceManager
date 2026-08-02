@@ -3,11 +3,13 @@ using FinanceManager.Api.Shared.Helpers;
 using FinanceManager.Application.Insights.Generation;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Insights.Repositories;
 using FinanceManager.Domain.Shared.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace FinanceManager.Api.Features.Insights.Controllers;
 
@@ -37,8 +39,12 @@ public class FinancialInsightsController(
         // could show the same insights for weeks. Reading them is the usage signal: once the newest one has aged
         // out, queue a regeneration for the background worker rather than making this response wait for the model.
         // Account-scoped reads are left out — generation produces insights for the whole user, so it belongs to
-        // the unfiltered view that can actually tell whether the user's newest insight is stale.
-        if (accountId is null && InsightsFreshness.IsStale(result.FirstOrDefault()?.CreatedAt, dateTimeProvider.UtcNow))
+        // the unfiltered view that can actually tell whether the user's newest insight is stale. Guests are left
+        // out too: their sandbox is seeded with demo insights and thrown away within the hour, and the worker
+        // resolves its own scope, which cannot reach a guest's per-session in-memory database anyway.
+        if (accountId is null
+            && !IsGuest()
+            && InsightsFreshness.IsStale(result.FirstOrDefault()?.CreatedAt, dateTimeProvider.UtcNow))
             await QueueRegeneration(userId, cancellationToken);
 
         return Ok(result);
@@ -60,6 +66,9 @@ public class FinancialInsightsController(
         await financialInsightsRepository.AddRange(insights, cancellationToken);
         return Ok(insights);
     }
+
+    private bool IsGuest() =>
+        string.Equals(User.FindFirstValue(GuestClaims.IsGuest), "true", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Asks for a background regeneration without letting it affect the read: queueing is best-effort, so a full

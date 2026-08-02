@@ -25,14 +25,14 @@ public sealed class InsightsGenerationChannel(IDateTimeProvider dateTimeProvider
         FullMode = BoundedChannelFullMode.DropOldest
     });
 
-    public ValueTask<bool> QueueUser(int userId, CancellationToken cancellationToken = default)
+    public async ValueTask<bool> QueueUser(int userId, CancellationToken cancellationToken = default)
     {
         var now = dateTimeProvider.UtcNow;
 
         lock (_lastQueuedLock)
         {
             if (_lastQueued.TryGetValue(userId, out var lastQueuedAt) && now - lastQueuedAt < _queueCooldown)
-                return ValueTask.FromResult(false);
+                return false;
 
             if (_lastQueued.Count >= _pruneThreshold)
                 PruneExpired(now);
@@ -40,17 +40,28 @@ public sealed class InsightsGenerationChannel(IDateTimeProvider dateTimeProvider
             _lastQueued[userId] = now;
         }
 
-        return Write(userId, cancellationToken);
+        try
+        {
+            await _channel.Writer.WriteAsync(userId, cancellationToken);
+            return true;
+        }
+        catch
+        {
+            // Nothing was enqueued, so the cooldown this call claimed would silence the user for an hour over a
+            // request that never reached the worker — a caller passing a request-scoped token only has to
+            // disconnect to trigger it. Give the slot back, unless a later call has already taken it.
+            lock (_lastQueuedLock)
+            {
+                if (_lastQueued.TryGetValue(userId, out var claimedAt) && claimedAt == now)
+                    _lastQueued.Remove(userId);
+            }
+
+            throw;
+        }
     }
 
     public IAsyncEnumerable<int> ReadAll(CancellationToken cancellationToken) =>
         _channel.Reader.ReadAllAsync(cancellationToken);
-
-    private async ValueTask<bool> Write(int userId, CancellationToken cancellationToken)
-    {
-        await _channel.Writer.WriteAsync(userId, cancellationToken);
-        return true;
-    }
 
     private void PruneExpired(DateTime now)
     {

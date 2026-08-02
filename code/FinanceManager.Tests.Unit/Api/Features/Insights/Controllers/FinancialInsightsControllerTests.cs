@@ -3,6 +3,7 @@ using FinanceManager.Api.Features.Insights.Services;
 using FinanceManager.Application.Insights.Generation;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Insights.Repositories;
 using FinanceManager.Tests.Unit.Shared.Time;
@@ -102,6 +103,19 @@ public class FinancialInsightsControllerTests
             .ReturnsAsync([]);
 
         await _controller.GetLatest(3, 7, TestContext.Current.CancellationToken);
+
+        _mockGenerationChannel.Verify(channel => channel.QueueUser(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetLatest_DoesNotQueueRegeneration_ForGuestSession()
+    {
+        SetupLatestInsights(BuildInsight(_utcNow.AddDays(-30)));
+        var guest = new ClaimsPrincipal(new ClaimsIdentity(
+            [new(ClaimTypes.NameIdentifier, _testUserId.ToString()), new(GuestClaims.IsGuest, "true")], "mock"));
+        _controller.ControllerContext.HttpContext.User = guest;
+
+        await _controller.GetLatest(3, cancellationToken: TestContext.Current.CancellationToken);
 
         _mockGenerationChannel.Verify(channel => channel.QueueUser(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
