@@ -1,5 +1,6 @@
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.Shared;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -32,7 +33,10 @@ public sealed class CurrencyRateBackfillService(
 
         var lookback = Math.Max(1, options.Value.CurrencyLookbackDays);
         var nowUtc = DateTime.UtcNow;
-        var expectedLatest = LastMarketDay(nowUtc);
+        // FX markets are closed at weekends, so a Saturday/Sunday restart expects nothing newer
+        // than Friday — treating Friday as "latest" keeps weekend restarts from re-requesting a
+        // pair that is already up to date.
+        var expectedLatest = MarketCalendar.LastMarketDay(nowUtc);
         var windowStart = nowUtc.Date.AddDays(-lookback);
 
         var pairs = await pairDiscovery.GetPairsAsync(cancellationToken);
@@ -119,17 +123,5 @@ public sealed class CurrencyRateBackfillService(
             inspected, requests, inserted, skipped, failures, rateLimited);
 
         return new BackfillResult(inspected, requests, inserted, skipped, failures, rateLimited);
-    }
-
-    // The most recent weekday at or before now (UTC). FX markets are closed on weekends, so a
-    // Saturday/Sunday restart expects nothing newer than Friday — treating Friday as "latest" keeps
-    // weekend restarts from re-requesting a pair that is already up to date.
-    private static DateTime LastMarketDay(DateTime nowUtc)
-    {
-        var date = nowUtc.Date;
-        while (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
-            date = date.AddDays(-1);
-
-        return date;
     }
 }

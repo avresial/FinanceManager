@@ -15,15 +15,17 @@ public interface IInvestmentPriceProvider
     /// <summary>
     /// Get the normalised price per unit for <paramref name="assetListingId"/> converted to
     /// <paramref name="targetCurrency"/> as of <paramref name="asOf"/>. Uses the most recent quote
-    /// on or before that date, fetching from the provider when the cache has nothing.
-    /// Returns 0 when no price can be determined.
+    /// on or before that date, fetching from the provider when the cache has nothing. A weekend
+    /// <paramref name="asOf"/> is priced from that week's Friday close — exchanges are shut, so no
+    /// provider publishes a Saturday or Sunday value. Returns 0 when no price can be determined.
     /// </summary>
     Task<decimal> GetPricePerUnitAsync(long assetListingId, Currency targetCurrency, DateTime asOf, CancellationToken ct = default);
 
     /// <summary>
     /// Get the per-day price per unit for <paramref name="assetListingId"/> converted to
     /// <paramref name="targetCurrency"/> over [<paramref name="start"/>, <paramref name="end"/>].
-    /// Days without a quote carry the latest known older price forward.
+    /// Days without a quote — weekends included — carry the latest known older price forward, so a
+    /// Saturday and Sunday both report that week's Friday close.
     /// </summary>
     Task<IReadOnlyDictionary<DateTime, decimal>> GetPricePerUnitSeriesAsync(
         long assetListingId,
@@ -35,8 +37,9 @@ public interface IInvestmentPriceProvider
     /// <summary>
     /// Ensure stored end-of-day quotes exist for <paramref name="assetListingId"/> over
     /// [<paramref name="start"/>, <paramref name="end"/>], fetching from the provider chain and
-    /// persisting when coverage is missing. Performs no currency conversion. Returns <c>true</c>
-    /// when at least one quote exists in the range after the attempt.
+    /// persisting when coverage is missing. Performs no currency conversion. Only trading days are
+    /// requested from the provider; a range holding no trading day at all is answered from the last
+    /// close before it. Returns <c>true</c> when at least one quote covers the range after the attempt.
     /// </summary>
     Task<bool> EnsureQuotesAsync(long assetListingId, DateTime start, DateTime end, CancellationToken ct = default);
 }
