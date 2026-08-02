@@ -1,5 +1,4 @@
 using FinanceManager.Application.Shared.ExternalServices;
-using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Shared.ExternalServices.Entities;
 using FinanceManager.Infrastructure.Features.Assets.Providers;
@@ -21,7 +20,6 @@ public class AlphaVantageClientTests
     {
         var httpClient = new HttpClient(handler);
         var logger = LoggerFactory.Create(b => { }).CreateLogger<AlphaVantageClient>();
-        var options = Options.Create(new StockApiOptions { OutputSize = "compact" });
         var config = new ExternalServiceConfiguration
         {
             ServiceName = "AlphaVantage",
@@ -29,69 +27,28 @@ public class AlphaVantageClientTests
             ApiKey = "test-key",
             IsEnabled = true,
         };
-        return new AlphaVantageClient(httpClient, logger, options, new StubExternalServiceConfigService(config));
+        return new AlphaVantageClient(httpClient, logger, new StubExternalServiceConfigService(config));
     }
 
     [Fact]
-    public async Task GetDailySeries_FallsBackToFreeDailyEndpoint_WhenAdjustedUnavailable()
+    public async Task GetDailySeries_UsesFreeDailyEndpoint()
     {
-        var handler = new MockHttpMessageHandler(responses:
-        [
-            """{ "Information": "premium endpoint" }""",
-            """
+        var handler = new MockHttpMessageHandler(response: """
             {
               "Time Series (Daily)": {
                 "2024-01-15": { "4. close": "190.0000" }
               }
             }
-            """
-        ]);
+            """);
         var client = CreateClient(handler);
 
         var result = await client.GetDailySeries("AAPL", "US0378331005", _start, _end, _usd, TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, handler.RequestUris.Count);
-        Assert.Contains("function=TIME_SERIES_DAILY_ADJUSTED", handler.RequestUris[0].AbsoluteUri);
-        Assert.Contains("function=TIME_SERIES_DAILY&", handler.RequestUris[1].AbsoluteUri);
-        Assert.Contains("outputsize=compact", handler.RequestUris[1].AbsoluteUri);
+        Assert.Single(handler.RequestUris);
+        Assert.DoesNotContain("TIME_SERIES_DAILY_ADJUSTED", handler.RequestUris[0].AbsoluteUri);
+        Assert.Contains("function=TIME_SERIES_DAILY&", handler.RequestUris[0].AbsoluteUri);
+        Assert.Contains("outputsize=compact", handler.RequestUris[0].AbsoluteUri);
         Assert.Equal(190m, Assert.Single(result).PricePerUnit);
-    }
-
-    [Fact]
-    public async Task GetDailySeries_PrefersAdjustedClose()
-    {
-        var handler = new MockHttpMessageHandler(response: """
-            {
-              "Time Series (Daily)": {
-                "2024-01-15": { "4. close": "190.0000", "5. adjusted close": "188.5000" }
-              }
-            }
-            """);
-        var client = CreateClient(handler);
-
-        var result = await client.GetDailySeries("AAPL", "US0378331005", _start, _end, _usd, TestContext.Current.CancellationToken);
-
-        Assert.Single(result);
-        Assert.Equal(188.5m, result[0].PricePerUnit);
-        Assert.Equal("US0378331005", result[0].Isin);
-    }
-
-    [Fact]
-    public async Task GetDailySeries_FallsBackToRawClose_WhenAdjustedAbsent()
-    {
-        var handler = new MockHttpMessageHandler(response: """
-            {
-              "Time Series (Daily)": {
-                "2024-01-15": { "4. close": "190.0000" }
-              }
-            }
-            """);
-        var client = CreateClient(handler);
-
-        var result = await client.GetDailySeries("AAPL", "US0378331005", _start, _end, _usd, TestContext.Current.CancellationToken);
-
-        Assert.Single(result);
-        Assert.Equal(190.0m, result[0].PricePerUnit);
     }
 
     [Fact]
