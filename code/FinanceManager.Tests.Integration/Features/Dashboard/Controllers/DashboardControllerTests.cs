@@ -12,7 +12,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.Dashboard.Controllers;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class DashboardControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {

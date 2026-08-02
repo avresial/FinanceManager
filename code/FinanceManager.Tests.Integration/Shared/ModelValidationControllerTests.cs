@@ -19,7 +19,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Shared;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class ModelValidationControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {

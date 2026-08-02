@@ -22,7 +22,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.FinancialAccounts.Investments.Controllers;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class InvestmentTransactionControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {

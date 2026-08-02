@@ -8,7 +8,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Shared;
 
-[Collection("api")]
 public abstract class ControllerTests : IClassFixture<OptionsProvider>, IDisposable
 {
     private readonly FinanceManagerApiTestApp _app;

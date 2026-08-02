@@ -9,7 +9,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.FinancialAccounts.Shared.Controllers;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class CsvHeaderMappingControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {

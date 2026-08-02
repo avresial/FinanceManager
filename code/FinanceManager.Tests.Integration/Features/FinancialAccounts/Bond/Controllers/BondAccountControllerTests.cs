@@ -15,7 +15,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.FinancialAccounts.Bond.Controllers;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class BondAccountControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {

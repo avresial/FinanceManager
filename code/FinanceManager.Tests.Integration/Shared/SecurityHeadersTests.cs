@@ -3,7 +3,6 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Shared;
 
-[Collection("api")]
 [Trait("Category", "Integration")]
 public class SecurityHeadersTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
