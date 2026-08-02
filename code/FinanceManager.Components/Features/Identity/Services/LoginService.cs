@@ -15,6 +15,10 @@ namespace FinanceManager.Components.Features.Identity.Services;
 
 public class LoginService : ILoginService
 {
+    // Mirrors RefreshTokenCookie.PresenceCookieName on the API side. Duplicated across the project boundary the
+    // same way the antiforgery cookie name already is, since Components does not reference the API project.
+    public const string SessionPresenceCookieName = "fm_has_session";
+
     private const string _sessionString = "userSession";
     private UserSession? _loggedUser = null;
     private readonly ISessionStorageService _sessionStorageService;
@@ -22,6 +26,7 @@ public class LoginService : ILoginService
     private readonly HttpClient _httpClient;
     private readonly ILogger<LoginService> _logger;
     private readonly IAntiforgeryTokenService _antiforgeryTokenService;
+    private readonly IBrowserCookieReader _browserCookieReader;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     // Once we've tried (and failed) to silently restore a session we don't keep hammering the refresh endpoint on
@@ -43,7 +48,8 @@ public class LoginService : ILoginService
     private readonly AuthenticationStateProvider _authStateProvider;
     public LoginService(ISessionStorageService sessionStorageService, ILocalStorageService localStorageService,
         AuthenticationStateProvider authState, HttpClient httpClient,
-        IAntiforgeryTokenService antiforgeryTokenService, ILogger<LoginService> logger)
+        IAntiforgeryTokenService antiforgeryTokenService, IBrowserCookieReader browserCookieReader,
+        ILogger<LoginService> logger)
     {
         _sessionStorageService = sessionStorageService;
         _localStorageService = localStorageService;
@@ -51,6 +57,7 @@ public class LoginService : ILoginService
 
         _httpClient = httpClient;
         _antiforgeryTokenService = antiforgeryTokenService;
+        _browserCookieReader = browserCookieReader;
         _logger = logger;
     }
 
@@ -73,11 +80,33 @@ public class LoginService : ILoginService
     {
         try
         {
+            if (!await HasRestorableSession())
+                return;
+
             await TryRefresh();
         }
         finally
         {
             _initialRefreshAttempted = true;
+        }
+    }
+
+    // The refresh token itself is HttpOnly, so the client cannot see whether one exists. The server writes a
+    // script-readable companion cookie alongside it purely as a presence hint, letting a signed-out visitor skip
+    // a refresh that can only ever come back 401 — a round-trip that costs two of the strict auth rate-limit
+    // permits, enough that a handful of login-page loads alone would trip the limit.
+    private async Task<bool> HasRestorableSession()
+    {
+        try
+        {
+            return await _browserCookieReader.Exists(SessionPresenceCookieName);
+        }
+        catch (Exception ex)
+        {
+            // Fail open: if the hint cannot be read the session may still be restorable, and a redundant request
+            // is far cheaper than stranding a signed-in user on the login page.
+            _logger.LogWarning(ex, "Could not read the session presence cookie; attempting a refresh anyway.");
+            return true;
         }
     }
 
