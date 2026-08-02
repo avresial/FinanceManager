@@ -19,6 +19,7 @@ using FinanceManager.Application.FinancialAccounts.Investments.Assets;
 using FinanceManager.Application.FinancialAccounts.Investments.Balance;
 using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
 using FinanceManager.Application.FinancialAccounts.Investments.Seeders;
+using FinanceManager.Application.FinancialAccounts.Investments.Transactions;
 using FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 using FinanceManager.Application.FinancialAccounts.Shared.Csv;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
@@ -77,7 +78,9 @@ internal static class Registration
                 .AddScoped<IInvestmentValuationService, InvestmentValuationService>()
                 .AddScoped<IInvestmentTransactionValuationService, InvestmentTransactionValuationService>()
                 .AddScoped<IInvestmentInstrumentDiscoveryService, InvestmentInstrumentDiscoveryService>()
+                .AddScoped<IInvestmentInstrumentSearchService, InvestmentInstrumentSearchService>()
                 .AddScoped<IInstrumentImportService, InstrumentImportService>()
+                .AddScoped<IInvestmentTransactionService, InvestmentTransactionService>()
                 .AddScoped<IBondUnrealizedGainLossCalculator, BondUnrealizedGainLossCalculator>()
                 .AddScoped<IBondService, BondService>();
 

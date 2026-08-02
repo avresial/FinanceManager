@@ -43,12 +43,7 @@ public class AssetRepository(AppDbContext context) : IAssetRepository
     {
         // Identity is FIGI-centric: prefer matching an existing asset by ISIN when one is supplied,
         // otherwise fall back to the canonical share-class FIGI. Either key locates the same security.
-        Asset? existing = null;
-        if (!string.IsNullOrWhiteSpace(asset.Isin))
-            existing = await context.Assets.FirstOrDefaultAsync(x => x.Isin == asset.Isin, cancellationToken);
-
-        if (existing is null && !string.IsNullOrWhiteSpace(asset.ShareClassFigi))
-            existing = await context.Assets.FirstOrDefaultAsync(x => x.ShareClassFigi == asset.ShareClassFigi, cancellationToken);
+        var existing = await FindByIdentityAsync(asset, cancellationToken);
 
         if (existing is not null)
         {
@@ -75,7 +70,29 @@ public class AssetRepository(AppDbContext context) : IAssetRepository
             return existing;
         }
 
-        return await Add(asset, cancellationToken);
+        try
+        {
+            return await Add(asset, cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            context.Entry(asset).State = EntityState.Detached;
+            existing = await FindByIdentityAsync(asset, cancellationToken);
+            if (existing is null) throw;
+            return existing;
+        }
+    }
+
+    private async Task<Asset?> FindByIdentityAsync(Asset asset, CancellationToken cancellationToken)
+    {
+        Asset? existing = null;
+        if (!string.IsNullOrWhiteSpace(asset.Isin))
+            existing = await context.Assets.FirstOrDefaultAsync(x => x.Isin == asset.Isin, cancellationToken);
+
+        if (existing is null && !string.IsNullOrWhiteSpace(asset.ShareClassFigi))
+            existing = await context.Assets.FirstOrDefaultAsync(x => x.ShareClassFigi == asset.ShareClassFigi, cancellationToken);
+
+        return existing;
     }
 
     public async Task<bool> Update(Asset asset, CancellationToken cancellationToken = default)

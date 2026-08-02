@@ -19,12 +19,12 @@ public static class InvestmentTransactionMappingExtensions
         transaction.AssetListing?.Ticker ?? string.Empty,
         transaction.AssetListing?.ExchangeName ?? string.Empty);
 
-    /// <summary>Build a new entity from an add request, stamping the owning user resolved from the account.</summary>
-    public static InvestmentTransaction ToEntity(this AddInvestmentTransactionRequest request, long userId) => new()
+    /// <summary>Build a new entity from an add request after its instrument source was resolved.</summary>
+    public static InvestmentTransaction ToEntity(this AddInvestmentTransactionRequest request, long userId, long assetListingId) => new()
     {
         UserId = userId,
         AccountId = request.AccountId,
-        AssetListingId = request.AssetListingId,
+        AssetListingId = assetListingId,
         Type = request.Type,
         Quantity = request.Quantity,
         UnitPrice = request.UnitPrice,

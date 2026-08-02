@@ -1,6 +1,5 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Domain.Assets.Discovery;
-using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using Microsoft.AspNetCore.Components;
@@ -24,7 +23,7 @@ public partial class InvestmentTransactionForm : ComponentBase
     private bool _wasVisible;
     private long? _initializedTransactionId;
     private long? _editingId;
-    private InstrumentSearchResultDto? _selectedInstrument;
+    private InvestmentInstrumentOptionDto? _selectedInstrument;
     private long _formListingId;
     private InvestmentTransactionType _formType = InvestmentTransactionType.Buy;
     private decimal _formQuantity = 1m;
@@ -35,6 +34,7 @@ public partial class InvestmentTransactionForm : ComponentBase
     private string? _formNotes;
     private bool _saving;
     private bool _noPriceAvailable;
+    private string? _error;
 
     protected override void OnParametersSet()
     {
@@ -48,9 +48,16 @@ public partial class InvestmentTransactionForm : ComponentBase
     {
         _initializedTransactionId = Transaction?.Id;
         _editingId = Transaction?.Id;
-        _selectedInstrument = Transaction is null
-            ? null
-            : new InstrumentSearchResultDto(Transaction.AssetListingId, Transaction.Ticker, Transaction.ExchangeName, Transaction.Currency);
+        _selectedInstrument = Transaction is null ? null : new InvestmentInstrumentOptionDto
+        {
+            ResultId = $"listing:{Transaction.AssetListingId}",
+            Source = InstrumentOptionSource.Existing,
+            AssetListingId = Transaction.AssetListingId,
+            Ticker = Transaction.Ticker,
+            DisplayName = Transaction.Ticker,
+            ExchangeName = Transaction.ExchangeName,
+            TradingCurrency = Transaction.Currency
+        };
         _formListingId = Transaction?.AssetListingId ?? 0;
         _formType = Transaction?.Type ?? InvestmentTransactionType.Buy;
         _formQuantity = Transaction?.Quantity ?? 1m;
@@ -60,17 +67,25 @@ public partial class InvestmentTransactionForm : ComponentBase
         _formFee = Transaction?.Fee;
         _formNotes = Transaction?.Notes;
         _noPriceAvailable = false;
+        _error = null;
     }
 
-    private bool CanSave => _formListingId > 0 && _formQuantity > 0 && _formUnitPrice >= 0
+    private bool HasInstrument => _selectedInstrument is { Source: InstrumentOptionSource.Existing, AssetListingId: > 0 }
+        || _selectedInstrument is { Source: InstrumentOptionSource.External, ResultId: not null and not "" };
+
+    private bool IsUnsupportedExternalEdit => _editingId is not null
+        && _selectedInstrument?.Source == InstrumentOptionSource.External;
+
+    private bool CanSave => !IsUnsupportedExternalEdit && HasInstrument && _formQuantity > 0 && _formUnitPrice >= 0
         && _formTradeDate is not null && !string.IsNullOrWhiteSpace(_formCurrency);
 
     private async Task CloseAsync() => await VisibleChanged.InvokeAsync(false);
 
-    private async Task OnInstrumentSelectedAsync(InstrumentSearchResultDto? dto)
+    private async Task OnInstrumentSelectedAsync(InvestmentInstrumentOptionDto? dto)
     {
         _selectedInstrument = dto;
         _noPriceAvailable = false;
+        _error = null;
         if (dto is null)
         {
             _formListingId = 0;
@@ -79,9 +94,18 @@ public partial class InvestmentTransactionForm : ComponentBase
             return;
         }
 
-        _formListingId = dto.ListingId;
-        _formCurrency = dto.Currency;
-        await RefreshFormPriceAsync();
+        _formCurrency = dto.TradingCurrency;
+        if (dto.AssetListingId is long listingId)
+        {
+            _formListingId = listingId;
+            await RefreshFormPriceAsync();
+        }
+        else
+        {
+            _formListingId = 0;
+            _formUnitPrice = 0m;
+            _noPriceAvailable = true;
+        }
     }
 
     private async Task OnTradeDateChangedAsync(DateTime? value)
@@ -92,7 +116,7 @@ public partial class InvestmentTransactionForm : ComponentBase
 
     private async Task RefreshFormPriceAsync()
     {
-        if (_selectedInstrument is null || _formTradeDate is not DateTime tradeDate)
+        if (_selectedInstrument?.AssetListingId is not long listingId || _formTradeDate is not DateTime tradeDate)
         {
             _formUnitPrice = 0m;
             return;
@@ -100,7 +124,7 @@ public partial class InvestmentTransactionForm : ComponentBase
 
         try
         {
-            var priceInfo = await TransactionHttpClient.GetListingPriceAsync(_selectedInstrument.ListingId, DateOnly.FromDateTime(tradeDate));
+            var priceInfo = await TransactionHttpClient.GetListingPriceAsync(listingId, DateOnly.FromDateTime(tradeDate));
             if (priceInfo?.LatestPrice is decimal price)
                 _formUnitPrice = price;
             else
@@ -111,18 +135,21 @@ public partial class InvestmentTransactionForm : ComponentBase
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to fetch price for listing {ListingId}", _selectedInstrument.ListingId);
+            Logger.LogError(ex, "Failed to fetch price for listing {ListingId}", listingId);
             _formUnitPrice = 0m;
             _noPriceAvailable = true;
         }
     }
 
-    private async Task<IEnumerable<InstrumentSearchResultDto>> SearchInstrumentsAsync(string value, CancellationToken cancellationToken)
+    private async Task<IEnumerable<InvestmentInstrumentOptionDto>> SearchInstrumentsAsync(string value, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(value)) return [];
         try
         {
-            return await TransactionHttpClient.SearchListingsAsync(value);
+            var results = await TransactionHttpClient.SearchInstrumentsAsync(value, cancellationToken: cancellationToken);
+            return _editingId is null
+                ? results
+                : results.Where(x => x.Source == InstrumentOptionSource.Existing);
         }
         catch (Exception ex)
         {
@@ -131,17 +158,18 @@ public partial class InvestmentTransactionForm : ComponentBase
         }
     }
 
-    private async Task OnInstrumentImportedAsync(ImportedInstrumentDto imported)
-    {
-        await OnInstrumentSelectedAsync(new InstrumentSearchResultDto(
-            imported.AssetListingId, imported.Ticker, imported.ExchangeName, imported.TradingCurrency));
-        Snackbar.Add(imported.Warnings.Count == 0 ? "Instrument imported." : $"Instrument imported with {imported.Warnings.Count} warning(s).", Severity.Success);
-    }
-
     private async Task SaveAsync()
     {
+        if (IsUnsupportedExternalEdit)
+        {
+            _error = "External instruments cannot replace an existing instrument while editing.";
+            Snackbar.Add(_error, Severity.Error);
+            return;
+        }
+
         if (!CanSave) return;
         _saving = true;
+        _error = null;
         try
         {
             var tradeDate = DateOnly.FromDateTime(_formTradeDate!.Value);
@@ -149,11 +177,21 @@ public partial class InvestmentTransactionForm : ComponentBase
                 ? await TransactionHttpClient.UpdateAsync(new UpdateInvestmentTransactionRequest(
                     id, AccountId, _formListingId, _formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes))
                 : await TransactionHttpClient.AddAsync(new AddInvestmentTransactionRequest(
-                    AccountId, _formListingId, _formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes)) is not null;
+                    AccountId,
+                    _selectedInstrument?.Source == InstrumentOptionSource.Existing ? _formListingId : null,
+                    _formType,
+                    _formQuantity,
+                    _formUnitPrice,
+                    _formCurrency,
+                    tradeDate,
+                    _formFee,
+                    _formNotes,
+                    _selectedInstrument?.Source == InstrumentOptionSource.External ? _selectedInstrument.ResultId : null)) is not null;
 
             if (!ok)
             {
-                Snackbar.Add("Could not save the transaction.", Severity.Error);
+                _error = "Could not save the transaction.";
+                Snackbar.Add(_error, Severity.Error);
                 return;
             }
 
@@ -163,11 +201,17 @@ public partial class InvestmentTransactionForm : ComponentBase
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to save investment transaction for account {AccountId}", AccountId);
-            Snackbar.Add("Could not save the transaction.", Severity.Error);
+            _error = ex is HttpRequestException && !string.IsNullOrWhiteSpace(ex.Message)
+                ? ex.Message
+                : "Could not save the transaction.";
+            Snackbar.Add(_error, Severity.Error);
         }
         finally
         {
             _saving = false;
         }
     }
+
+    private static string GetSourceLabel(InstrumentOptionSource source) =>
+        source == InstrumentOptionSource.Existing ? "Existing" : "External";
 }

@@ -32,15 +32,35 @@ public sealed class InstrumentImportService(
 
     public async Task<ImportedInstrumentDto> ImportAsync(ImportInstrumentCommand command, CancellationToken ct = default)
     {
-        var instrument = command.Instrument;
-        ValidateImport(instrument);
+        ValidateImport(command.Instrument);
+        return await PersistAsync(command.Instrument, strict: false, ct);
+    }
+
+    public async Task ValidateForTransactionAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default)
+    {
+        ValidateTransactionImport(instrument);
+        await ValidateSymbolAsync(instrument, ct, strict: true);
+    }
+
+    public async Task<ImportedInstrumentDto> ImportValidatedAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default)
+    {
+        ValidateTransactionImport(instrument);
+        await ValidateSymbolAsync(instrument, ct, strict: true);
+        return await PersistAsync(instrument, strict: true, ct);
+    }
+
+    private async Task<ImportedInstrumentDto> PersistAsync(
+        InstrumentDiscoveryResultDto instrument,
+        bool strict,
+        CancellationToken ct)
+    {
         var warnings = ImportWarnings(instrument).ToList();
         var (asset, listing, symbol) = await FindExistingAsync(instrument, ct);
         var createdAsset = asset is null;
-        asset ??= await assetRepository.Add(new Asset
+        asset ??= await assetRepository.Upsert(new Asset
         {
             Name = instrument.DisplayName,
-            Type = ParseAssetType(instrument.SecurityType),
+            Type = ParseAssetType(instrument.SecurityType, defaultToStock: strict),
             Isin = instrument.Isin,
             ShareClassFigi = instrument.ShareClassFigi,
             CompositeFigi = instrument.CompositeFigi,
@@ -48,7 +68,7 @@ public sealed class InstrumentImportService(
         }, ct);
 
         var createdListing = listing is null;
-        listing ??= await listingRepository.Add(new AssetListing
+        listing ??= await listingRepository.Upsert(new AssetListing
         {
             AssetId = asset.Id,
             Ticker = instrument.Ticker.Trim().ToUpperInvariant(),
@@ -62,9 +82,9 @@ public sealed class InstrumentImportService(
         var createdSymbol = symbol is null && !string.IsNullOrWhiteSpace(instrument.ProviderSymbol);
         if (createdSymbol)
         {
-            var error = await ValidateSymbolAsync(instrument, ct);
+            var error = strict ? null : await ValidateSymbolAsync(instrument, ct);
             if (error is not null) warnings.Add(error);
-            symbol = await symbolRepository.Add(new MarketDataSymbol
+            symbol = await symbolRepository.Upsert(new MarketDataSymbol
             {
                 AssetListingId = listing.Id,
                 Provider = MarketDataProvider.AlphaVantage,
@@ -142,18 +162,37 @@ public sealed class InstrumentImportService(
         return (asset, listing, symbol);
     }
 
-    private async Task<string?> ValidateSymbolAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct)
+    private async Task<string?> ValidateSymbolAsync(
+        InstrumentDiscoveryResultDto instrument,
+        CancellationToken ct,
+        bool strict = false)
     {
         try
         {
             var prices = await alphaVantageClient.GetDailySeries(instrument.ProviderSymbol!, DateTime.UtcNow.AddDays(-10), DateTime.UtcNow,
                 new Currency { ShortName = instrument.TradingCurrency! }, ct);
-            return prices.Any(x => x.PricePerUnit > 0) ? null : "Alpha Vantage returned no positive recent price; the symbol was saved disabled.";
+            if (prices.Any(x => x.PricePerUnit > 0)) return null;
+            if (strict)
+                throw new InstrumentImportException(
+                    "market_data_symbol_invalid",
+                    "Alpha Vantage could not validate the selected market-data symbol. No asset or transaction was created.");
+
+            return "Alpha Vantage returned no positive recent price; the symbol was saved disabled.";
+        }
+        catch (InstrumentImportException) when (strict)
+        {
+            throw;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var sanitizedSymbol = instrument.ProviderSymbol?.Replace("\r", string.Empty).Replace("\n", string.Empty);
             logger.LogWarning(ex, "Alpha Vantage validation failed for {Symbol}", sanitizedSymbol);
+            if (strict)
+                throw new InstrumentImportException(
+                    "provider_unavailable",
+                    "Alpha Vantage could not validate the selected market-data symbol. No asset or transaction was created.",
+                    ex);
+
             return "Alpha Vantage validation failed; the symbol was saved disabled.";
         }
     }
@@ -172,13 +211,38 @@ public sealed class InstrumentImportService(
             throw new ArgumentException("Only stocks and ETFs can be imported.");
     }
 
+    private static void ValidateTransactionImport(InstrumentDiscoveryResultDto instrument)
+    {
+        if (!HasRequiredImportData(instrument))
+            throw new InstrumentImportException(
+                "instrument_not_found",
+                "The selected instrument is missing a name, ticker, exchange, or trading currency.");
+        if (string.IsNullOrWhiteSpace(instrument.ProviderSymbol))
+            throw new InstrumentImportException(
+                "market_data_symbol_invalid",
+                "The selected instrument has no usable market-data symbol. No asset or transaction was created.");
+        if (ParseAssetType(instrument.SecurityType) is AssetType.Other)
+            throw new InstrumentImportException(
+                "instrument_import_failed",
+                "The selected instrument's asset type could not be determined; only stocks and ETFs can be added to an investment transaction.");
+
+        if (instrument.Warnings.Any(w =>
+                w.Contains("ambiguous", StringComparison.OrdinalIgnoreCase)
+                || w.Contains("not confirmed", StringComparison.OrdinalIgnoreCase)
+                || w.Contains("differs", StringComparison.OrdinalIgnoreCase)))
+            throw new InstrumentImportException(
+                "instrument_ambiguous",
+                "The selected instrument could not be resolved to a specific exchange and currency.");
+    }
+
     private static bool HasRequiredImportData(InstrumentDiscoveryResultDto instrument) =>
         !string.IsNullOrWhiteSpace(instrument.DisplayName) && !string.IsNullOrWhiteSpace(instrument.Ticker)
         && !string.IsNullOrWhiteSpace(instrument.ExchangeMic) && !string.IsNullOrWhiteSpace(instrument.TradingCurrency);
 
-    private static AssetType ParseAssetType(string? securityType) =>
+    private static AssetType ParseAssetType(string? securityType, bool defaultToStock = false) =>
         securityType?.Contains("ETF", StringComparison.OrdinalIgnoreCase) == true ? AssetType.ETF
         : securityType?.Contains("Equity", StringComparison.OrdinalIgnoreCase) == true || securityType?.Contains("Stock", StringComparison.OrdinalIgnoreCase) == true ? AssetType.Stock
+        : defaultToStock && string.IsNullOrWhiteSpace(securityType) ? AssetType.Stock
         : AssetType.Other;
 }
 

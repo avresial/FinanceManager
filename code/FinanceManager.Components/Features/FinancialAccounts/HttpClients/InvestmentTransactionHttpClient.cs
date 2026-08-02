@@ -1,7 +1,9 @@
+using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 
@@ -30,7 +32,8 @@ public class InvestmentTransactionHttpClient(HttpClient httpClient)
     public async Task<InvestmentTransactionDto?> AddAsync(AddInvestmentTransactionRequest request)
     {
         using var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/InvestmentTransaction/Add", request);
-        if (!response.IsSuccessStatusCode) return null;
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException(await GetProblemDetailAsync(response));
         return await response.Content.ReadFromJsonAsync<InvestmentTransactionDto>();
     }
 
@@ -58,6 +61,18 @@ public class InvestmentTransactionHttpClient(HttpClient httpClient)
         return await response.Content.ReadFromJsonAsync<List<InstrumentSearchResultDto>>(cancellationToken) ?? [];
     }
 
+    public async Task<IReadOnlyList<InvestmentInstrumentOptionDto>> SearchInstrumentsAsync(
+        string query,
+        int maxResults = 20,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return [];
+        var url = $"{httpClient.BaseAddress}api/InvestmentTransaction/SearchInstruments?q={Uri.EscapeDataString(query)}&maxResults={maxResults}";
+        using var response = await httpClient.GetAsync(url, cancellationToken);
+        if (!response.IsSuccessStatusCode) return [];
+        return await response.Content.ReadFromJsonAsync<List<InvestmentInstrumentOptionDto>>(cancellationToken) ?? [];
+    }
+
     public async Task<InstrumentSearchResultDto?> GetListingAsync(long listingId)
     {
         using var response = await httpClient.GetAsync(
@@ -75,5 +90,23 @@ public class InvestmentTransactionHttpClient(HttpClient httpClient)
         using var response = await httpClient.GetAsync(url);
         if (!response.IsSuccessStatusCode) return null;
         return await response.Content.ReadFromJsonAsync<ListingPriceDto>();
+    }
+
+    private static async Task<string> GetProblemDetailAsync(HttpResponseMessage response)
+    {
+        try
+        {
+            var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+            if (problem.ValueKind == JsonValueKind.Object
+                && problem.TryGetProperty("detail", out var detail)
+                && detail.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(detail.GetString()))
+                return detail.GetString()!;
+        }
+        catch (JsonException)
+        {
+        }
+
+        return "Could not save the transaction.";
     }
 }

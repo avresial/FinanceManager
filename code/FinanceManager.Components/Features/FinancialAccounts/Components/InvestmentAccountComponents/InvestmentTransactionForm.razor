@@ -1,21 +1,36 @@
 @namespace FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents
-@using FinanceManager.Domain.Assets.Dtos
+@using FinanceManager.Domain.Assets.Discovery
 @using FinanceManager.Domain.FinancialAccounts.Investments.Entities
 
 <MudOverlay Visible="@Visible" DarkBackground="true" ZIndex="1300">
     <MudPaper Class="pa-5" Style="width: min(460px, 92vw);" role="dialog" aria-modal="true" aria-label="@(_editingId is null ? "Add transaction" : "Edit transaction")">
         <MudText Typo="Typo.h6" Class="mb-3">@(_editingId is null ? "Add transaction" : "Edit transaction")</MudText>
         <MudStack Spacing="3">
-            <MudAutocomplete T="InstrumentSearchResultDto" Label="Instrument"
+            <MudAutocomplete T="InvestmentInstrumentOptionDto" Label="Instrument"
                              Value="_selectedInstrument"
                              ValueChanged="OnInstrumentSelectedAsync"
                              SearchFunc="SearchInstrumentsAsync"
-                             ToStringFunc="@(dto => dto is null ? string.Empty : $"{dto.Ticker} — {dto.ExchangeName}")"
+                             ToStringFunc="@(dto => dto is null ? string.Empty : $"{dto.Ticker} — {dto.DisplayName}")"
                              MinCharacters="1" DebounceInterval="300" ResetValueOnEmptyText="true"
-                             CoerceText="false" Dense="true" />
-            @if (_editingId is null)
+                             CoerceText="false" Dense="true">
+                <ItemTemplate Context="option">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.body2">@option.Ticker — @option.DisplayName</MudText>
+                        <MudText Typo="Typo.caption">@option.ExchangeName (@option.ExchangeMic) · @option.TradingCurrency · @GetSourceLabel(option.Source)</MudText>
+                        @if (!string.IsNullOrWhiteSpace(option.Isin))
+                        {
+                            <MudText Typo="Typo.caption">ISIN: @option.Isin</MudText>
+                        }
+                    </MudStack>
+                </ItemTemplate>
+            </MudAutocomplete>
+            @if (_selectedInstrument?.Source == InstrumentOptionSource.External)
             {
-                <InstrumentImport ButtonText="Can't find it? Import instrument" Imported="OnInstrumentImportedAsync" />
+                <MudAlert Severity="Severity.Info" Dense="true">This instrument will be added when the transaction is saved.</MudAlert>
+            }
+            @if (_error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
             }
             <MudSelect T="InvestmentTransactionType" Label="Type" @bind-Value="_formType" Dense="true">
                 <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Buy">Buy</MudSelectItem>
@@ -23,7 +38,7 @@
             </MudSelect>
             <MudNumericField T="decimal" Label="Units" @bind-Value="_formQuantity" Min="0" Step="0.0001M" />
             <MudTextField T="string" Label="Unit price" Value="@(_selectedInstrument is null ? string.Empty : _formUnitPrice.ToString("N2"))" ReadOnly="true" Disabled="true" />
-            @if (_noPriceAvailable && _selectedInstrument is not null)
+            @if (_noPriceAvailable && _selectedInstrument?.Source == InstrumentOptionSource.Existing)
             {
                 <MudAlert Severity="Severity.Info" Dense="true">No price data found for this instrument. You can still save the transaction — the unit price will be recalculated once a price quote is available.</MudAlert>
             }

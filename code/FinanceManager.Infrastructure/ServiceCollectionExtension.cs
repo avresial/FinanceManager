@@ -6,6 +6,7 @@ using FinanceManager.Application.Labels.Setter;
 using FinanceManager.Application.Labels.Suggestions;
 using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Application.Shared.Options;
+using FinanceManager.Application.Shared.Persistence;
 using FinanceManager.Domain.Administration.Logging;
 using FinanceManager.Domain.Administration.Monitoring;
 using FinanceManager.Domain.Assets.Repositories;
@@ -44,6 +45,7 @@ using FinanceManager.Infrastructure.Features.Mcp.OAuth;
 using FinanceManager.Infrastructure.Features.MoneyFlow.Providers;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Infrastructure.Shared.Ai;
+using FinanceManager.Infrastructure.Shared.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -99,6 +101,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IAssetListingRepository, AssetListingRepository>()
                 .AddScoped<IMarketDataSymbolRepository, MarketDataSymbolRepository>()
                 .AddScoped<IInvestmentTransactionRepository, InvestmentTransactionRepository>()
+                .AddScoped<IAtomicOperation, EfAtomicOperation>()
                 .AddScoped<IPriceQuoteRepository, PriceQuoteRepository>()
                 .AddScoped<IFinancialAccountRepository, AccountRepository>()
                 .AddScoped<IUserRepository, UserRepository>()
