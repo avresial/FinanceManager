@@ -1,13 +1,11 @@
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Application.Shared.ExternalServices;
-using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -17,7 +15,6 @@ namespace FinanceManager.Infrastructure.Features.Assets.Providers;
 internal sealed class AlphaVantageClient(
     HttpClient httpClient,
     ILogger<AlphaVantageClient> logger,
-    IOptions<StockApiOptions> options,
     IExternalServiceConfigService configService) : IAlphaVantageClient, IStockPriceSource
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -99,15 +96,9 @@ internal sealed class AlphaVantageClient(
             return [];
         }
 
-        var outputSize = string.IsNullOrWhiteSpace(options.Value.OutputSize) ? "compact" : options.Value.OutputSize;
         try
         {
-            var apiResponse = await FetchDailySeries("TIME_SERIES_DAILY_ADJUSTED", ticker, outputSize, apiKey, config.BaseUrl, ct);
-            if (apiResponse?.Series is null or { Count: 0 })
-            {
-                await Task.Delay(TimeSpan.FromSeconds(1), ct);
-                apiResponse = await FetchDailySeries("TIME_SERIES_DAILY", ticker, "compact", apiKey, config.BaseUrl, ct);
-            }
+            var apiResponse = await FetchDailySeries("TIME_SERIES_DAILY", ticker, "compact", apiKey, config.BaseUrl, ct);
 
             if (apiResponse?.Series is null || apiResponse.Series.Count == 0) return [];
 
@@ -117,9 +108,7 @@ internal sealed class AlphaVantageClient(
                 if (!TryParseDate(entry.Key, out var date)) continue;
                 if (date < start.Date || date > end.Date) continue;
 
-                // Prefer the adjusted close; fall back to the raw close if the adjusted field is absent.
-                var close = ParseDecimal(entry.Value?.AdjustedClose);
-                if (close <= 0) close = ParseDecimal(entry.Value?.Close);
+                var close = ParseDecimal(entry.Value?.Close);
                 if (close <= 0) continue;
 
                 prices.Add(new StockPrice
@@ -238,7 +227,5 @@ internal sealed class AlphaVantageClient(
         [JsonPropertyName("4. close")]
         public string? Close { get; set; }
 
-        [JsonPropertyName("5. adjusted close")]
-        public string? AdjustedClose { get; set; }
     }
 }
