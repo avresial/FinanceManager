@@ -2,6 +2,7 @@ using FinanceManager.Application.Insights.Generation;
 using FinanceManager.Application.Shared.Diagnostics;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Insights.Repositories;
+using FinanceManager.Domain.Shared.Services;
 using System.Diagnostics;
 
 namespace FinanceManager.Api.Features.Insights.Services;
@@ -9,6 +10,7 @@ namespace FinanceManager.Api.Features.Insights.Services;
 public sealed class InsightsGenerationBackgroundService(
     IInsightsGenerationChannel channel,
     IServiceScopeFactory scopeFactory,
+    IDateTimeProvider dateTimeProvider,
     ILogger<InsightsGenerationBackgroundService> logger) : BackgroundService
 {
     private const int _insightsCountToGenerate = 5;
@@ -32,11 +34,10 @@ public sealed class InsightsGenerationBackgroundService(
                 var financialInsightsAiGenerator = scope.ServiceProvider.GetRequiredService<IFinancialInsightsAiGenerator>();
 
                 var latest = await financialInsightsRepository.GetLatestByUser(userId, 1, cancellationToken: stoppingToken);
-                var hasRecent = latest.Any(x => x.CreatedAt >= DateTime.UtcNow.AddHours(-24));
-                if (hasRecent)
+                if (!InsightsFreshness.IsStale(latest.FirstOrDefault()?.CreatedAt, dateTimeProvider.UtcNow))
                 {
                     outcome = "skipped";
-                    logger.LogDebug("Skipping insights generation for user {UserId}; recent insights found.", userId);
+                    logger.LogDebug("Skipping insights generation for user {UserId}; insights are still fresh.", userId);
                     continue;
                 }
 
