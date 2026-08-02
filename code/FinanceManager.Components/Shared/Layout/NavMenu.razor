@@ -46,13 +46,4 @@
 
     <MudNavLink Icon="@Icons.Material.Filled.Add" Href="AddAccount" data-testid="nav-add-account" aria-label="Add account">Add</MudNavLink>
 
-    <AuthorizeView>
-        <Authorized>
-            @if (@context.User.IsInRole(UserRole.Admin.ToString()))
-            {
-                <MudNavLink Icon="@Icons.Material.Filled.AdminPanelSettings" Href="Admin/Dashboard" data-testid="nav-admin">Admin</MudNavLink>
-            }
-        </Authorized>
-    </AuthorizeView>
-
 </MudNavMenu>
