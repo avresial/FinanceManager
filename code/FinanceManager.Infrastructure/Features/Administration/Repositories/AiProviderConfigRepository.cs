@@ -34,20 +34,6 @@ internal sealed class AiProviderConfigRepository(AppDbContext dbContext) : IAiPr
         await dbContext.SaveChangesAsync(ct);
     }
 
-    public async Task DeleteProviderAsync(string providerName, CancellationToken ct = default)
-    {
-        var provider = await dbContext.AiProviderConfigurations.FindAsync([providerName], ct);
-        if (provider is not null)
-            dbContext.AiProviderConfigurations.Remove(provider);
-
-        var models = await dbContext.AiProviderModels
-            .Where(m => m.ProviderName == providerName)
-            .ToListAsync(ct);
-        dbContext.AiProviderModels.RemoveRange(models);
-
-        await dbContext.SaveChangesAsync(ct);
-    }
-
     public async Task SaveFallbackEntriesAsync(List<AiFallbackEntry> entries, CancellationToken ct = default)
     {
         var existing = await dbContext.AiFallbackEntries.ToListAsync(ct);

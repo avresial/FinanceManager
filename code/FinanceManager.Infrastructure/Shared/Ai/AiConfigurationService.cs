@@ -76,14 +76,6 @@ internal sealed class AiConfigurationService(
         await InvalidateCacheAsync(ct);
     }
 
-    public async Task DeleteProviderAsync(string providerName, CancellationToken ct = default)
-    {
-        using var scope = scopeFactory.CreateScope();
-        var repo = scope.ServiceProvider.GetRequiredService<IAiProviderConfigRepository>();
-        await repo.DeleteProviderAsync(providerName, ct);
-        await InvalidateCacheAsync(ct);
-    }
-
     public async Task SaveFallbackEntriesAsync(IReadOnlyList<AiFallbackEntry> entries, CancellationToken ct = default)
     {
         using var scope = scopeFactory.CreateScope();

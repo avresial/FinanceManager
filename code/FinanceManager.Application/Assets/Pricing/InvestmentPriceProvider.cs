@@ -5,6 +5,7 @@ using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.Shared;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -48,11 +49,15 @@ public class InvestmentPriceProvider(
         var listing = await listingRepository.Get(assetListingId, ct);
         if (listing is null) return 0m;
 
-        var quote = await priceQuoteRepository.GetLatestOnOrBefore(assetListingId, DayEnd(asOf), cancellationToken: ct);
+        // Exchanges are closed at the weekend, so a Saturday/Sunday "as of" is priced from that
+        // week's Friday close rather than from dates no provider will ever publish.
+        var priceDate = MarketCalendar.LastMarketDay(asOf);
+
+        var quote = await priceQuoteRepository.GetLatestOnOrBefore(assetListingId, DayEnd(priceDate), cancellationToken: ct);
         if (quote is null)
         {
-            await TryFetchAndStoreAsync(listing, asOf.AddDays(-_fetchLookbackDays), asOf, ct);
-            quote = await priceQuoteRepository.GetLatestOnOrBefore(assetListingId, DayEnd(asOf), cancellationToken: ct);
+            await TryFetchAndStoreAsync(listing, priceDate.AddDays(-_fetchLookbackDays), priceDate, ct);
+            quote = await priceQuoteRepository.GetLatestOnOrBefore(assetListingId, DayEnd(priceDate), cancellationToken: ct);
         }
 
         if (quote is null) return 0m;
@@ -171,6 +176,12 @@ public class InvestmentPriceProvider(
         var startDate = start.Date;
         var endDate = end.Date;
 
+        // A window with no trading day at all — a weekend restart of the startup backfill — is
+        // served by the last close before it. Reporting it as uncovered would make every listing
+        // look like a gap and send the whole portfolio through the provider chain for nothing.
+        if (!MarketCalendar.HasMarketDay(startDate, endDate))
+            return await priceQuoteRepository.GetLatestOnOrBefore(assetListingId, DayEnd(endDate), cancellationToken: ct) is not null;
+
         // Coverage check before the fetch path, mirroring GetPricePerUnitSeriesAsync: an
         // already-covered listing skips the per-symbol lock and the provider chain entirely.
         var existing = await priceQuoteRepository.GetRange(assetListingId, DayStart(startDate), DayEnd(endDate), ct);
@@ -230,6 +241,19 @@ public class InvestmentPriceProvider(
 
     private async Task TryFetchAndStoreAsync(AssetListing listing, DateTime start, DateTime end, CancellationToken ct)
     {
+        // Trim the window to trading days before touching the provider chain: a window that is all
+        // weekend has nothing to return, and a weekend edge only widens the request for free.
+        if (!MarketCalendar.HasMarketDay(start, end))
+        {
+            logger.LogDebug(
+                "Skipping price fetch for listing {ListingId}: {Start:yyyy-MM-dd}..{End:yyyy-MM-dd} contains no trading day.",
+                listing.Id, start.Date, end.Date);
+            return;
+        }
+
+        start = MarketCalendar.NextMarketDay(start);
+        end = MarketCalendar.LastMarketDay(end);
+
         var symbols = listing.MarketDataSymbols
             .Where(s => s.IsEnabled)
             .OrderBy(s => priceSource.SupportsProviderSelection ? priceSource.GetPriority(s.Provider) : 0)
@@ -337,18 +361,26 @@ public class InvestmentPriceProvider(
 
     private static bool NeedsFetch(IReadOnlyList<PriceQuote> existing, DateTime start, DateTime end)
     {
+        // A weekend-only window can never become covered — providers publish no Saturday or Sunday
+        // close — so reporting it as missing would re-request it on every single call.
+        if (!MarketCalendar.HasMarketDay(start, end)) return false;
+
         if (existing is null || existing.Count == 0) return true;
 
         var existingDates = existing.Select(x => x.PriceTime.Date).ToHashSet();
 
-        // Boundary-coverage check using the 7-day lookback tolerance: ensure data exists
-        // within [start, start+7d] and [end-7d, end]. This allows for market holidays and
-        // weekends without triggering a full refetch, while genuine gaps at boundaries do.
-        var startBoundary = start.AddDays(_fetchLookbackDays);
-        var hasStartCoverage = existingDates.Any(d => d >= start && d <= startBoundary);
+        // Boundary-coverage check using the 7-day lookback tolerance, measured from the first and
+        // last *trading* day in the window: ensure data exists within [start, start+7d] and
+        // [end-7d, end]. This allows for market holidays and weekends without triggering a full
+        // refetch, while genuine gaps at boundaries do.
+        var marketStart = MarketCalendar.NextMarketDay(start);
+        var marketEnd = MarketCalendar.LastMarketDay(end);
 
-        var endBoundary = end.AddDays(-_fetchLookbackDays);
-        var hasEndCoverage = existingDates.Any(d => d >= endBoundary && d <= end);
+        var startBoundary = marketStart.AddDays(_fetchLookbackDays);
+        var hasStartCoverage = existingDates.Any(d => d >= marketStart && d <= startBoundary);
+
+        var endBoundary = marketEnd.AddDays(-_fetchLookbackDays);
+        var hasEndCoverage = existingDates.Any(d => d >= endBoundary && d <= marketEnd);
 
         return !hasStartCoverage || !hasEndCoverage;
     }

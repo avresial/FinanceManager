@@ -38,7 +38,6 @@ public class ModelValidationControllerTests(OptionsProvider optionsProvider) : C
         { "api/FinancialLabel/add", HttpMethod.Post, new AddFinancialLabel(""), null },
         { "api/FinancialLabel/add-classification", HttpMethod.Post, new AddFinancialLabelClassification(0, "", ""), null },
         { "api/BondDetails", HttpMethod.Put, new UpdateBondDetails(0, "", "", -1), UserRole.Admin },
-        { "api/admin/ai-providers", HttpMethod.Post, new AddProviderRequest(""), UserRole.Admin },
         { "api/admin/ai-providers/OpenRouter/models", HttpMethod.Post, new AddModelRequest(""), UserRole.Admin },
         { "api/admin/ai-providers/OpenRouter", HttpMethod.Put, new UpdateProviderRequest("not-a-url", null, 0, true), UserRole.Admin },
         { "api/admin/ai-providers/OpenRouter/models/1", HttpMethod.Put, new UpdateModelRequest("", true), UserRole.Admin },

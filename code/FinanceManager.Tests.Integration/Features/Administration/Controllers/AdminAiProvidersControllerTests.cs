@@ -14,18 +14,15 @@ public class AdminAiProvidersControllerTests(OptionsProvider optionsProvider) : 
     protected override void ConfigureServices(IServiceCollection services)
     {
         var configMock = new Mock<IAiConfigurationService>();
-        configMock.Setup(x => x.GetAllProvidersAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
-            [
-                new AiProviderConfiguration
-                {
-                    ProviderName = "OpenRouter",
-                    BaseUrl = "https://openrouter.test",
-                    ApiKey = "secret",
-                    RequestTimeoutSeconds = 30,
-                    IsEnabled = true
-                }
-            ]);
+        configMock.Setup(x => x.GetProviderAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((string providerName, CancellationToken _) => ValueTask.FromResult(new AiProviderConfiguration
+            {
+                ProviderName = providerName,
+                BaseUrl = $"https://{providerName}.test",
+                ApiKey = providerName == "OpenRouter" ? "secret" : string.Empty,
+                RequestTimeoutSeconds = 30,
+                IsEnabled = true
+            }));
         configMock.Setup(x => x.GetAllModelsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([new AiProviderModel { Id = 3, ProviderName = "OpenRouter", ModelName = "test-model", IsEnabled = true }]);
         configMock.Setup(x => x.GetFallbackEntriesAsync(It.IsAny<CancellationToken>()))

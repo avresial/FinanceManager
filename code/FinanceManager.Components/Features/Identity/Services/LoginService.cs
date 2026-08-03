@@ -15,13 +15,22 @@ namespace FinanceManager.Components.Features.Identity.Services;
 
 public class LoginService : ILoginService
 {
+    // Mirrors RefreshTokenCookie.PresenceCookieName on the API side. Duplicated across the project boundary the
+    // same way the antiforgery cookie name already is, since Components does not reference the API project.
+    public const string SessionPresenceCookieName = "fm_has_session";
+
     private const string _sessionString = "userSession";
+
+    // Marks that this browser has already made the one-time attempt to restore a pre-presence-cookie session.
+    // Deliberately survives logout: it records a migration step, not session state.
+    private const string _legacySessionProbedKey = "legacySessionProbed";
     private UserSession? _loggedUser = null;
     private readonly ISessionStorageService _sessionStorageService;
     private readonly ILocalStorageService _localStorageService;
     private readonly HttpClient _httpClient;
     private readonly ILogger<LoginService> _logger;
     private readonly IAntiforgeryTokenService _antiforgeryTokenService;
+    private readonly IBrowserCookieReader _browserCookieReader;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     // Once we've tried (and failed) to silently restore a session we don't keep hammering the refresh endpoint on
@@ -32,12 +41,19 @@ public class LoginService : ILoginService
     // instead of the second caller seeing the "attempted" flag and returning a null (unauthenticated) session.
     private Task? _initialRefreshTask;
 
+    // Sequence number and outcome of the last completed refresh. A caller snapshots the sequence before it
+    // queues on _refreshLock; if the sequence has moved by the time the lock is acquired, another caller
+    // already performed the refresh this one was about to duplicate, so its outcome is adopted instead.
+    private int _refreshSequence;
+    private bool _lastRefreshSucceeded;
+
     public event Action<bool>? LogginStateChanged;
 
     private readonly AuthenticationStateProvider _authStateProvider;
     public LoginService(ISessionStorageService sessionStorageService, ILocalStorageService localStorageService,
         AuthenticationStateProvider authState, HttpClient httpClient,
-        IAntiforgeryTokenService antiforgeryTokenService, ILogger<LoginService> logger)
+        IAntiforgeryTokenService antiforgeryTokenService, IBrowserCookieReader browserCookieReader,
+        ILogger<LoginService> logger)
     {
         _sessionStorageService = sessionStorageService;
         _localStorageService = localStorageService;
@@ -45,6 +61,7 @@ public class LoginService : ILoginService
 
         _httpClient = httpClient;
         _antiforgeryTokenService = antiforgeryTokenService;
+        _browserCookieReader = browserCookieReader;
         _logger = logger;
     }
 
@@ -67,11 +84,64 @@ public class LoginService : ILoginService
     {
         try
         {
+            if (!await ShouldAttemptRestore())
+                return;
+
             await TryRefresh();
         }
         finally
         {
             _initialRefreshAttempted = true;
+        }
+    }
+
+    private async Task<bool> ShouldAttemptRestore()
+    {
+        // Sessions issued before the presence cookie existed carry a valid refresh token but no hint, and a
+        // refresh token stays valid for weeks — so trusting the hint immediately would silently sign those users
+        // out on their next visit. Probing once per browser lets them restore normally and re-issues the hint as
+        // part of the rotation; every load after that consults the hint and costs nothing.
+        if (!await HasProbedForLegacySession())
+            return true;
+
+        return await HasRestorableSession();
+    }
+
+    private async Task<bool> HasProbedForLegacySession()
+    {
+        try
+        {
+            if (await _localStorageService.ContainKeyAsync(_legacySessionProbedKey))
+                return true;
+
+            await _localStorageService.SetItemAsync(_legacySessionProbedKey, true);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            // Treating the probe as already done keeps a storage failure from reinstating the per-load refresh
+            // for good; the hint below still governs, and it is correct for every session issued from now on.
+            _logger.LogWarning(ex, "Could not record the legacy-session probe; relying on the presence cookie.");
+            return true;
+        }
+    }
+
+    // The refresh token itself is HttpOnly, so the client cannot see whether one exists. The server writes a
+    // script-readable companion cookie alongside it purely as a presence hint, letting a signed-out visitor skip
+    // a refresh that can only ever come back 401 — a round-trip that costs two of the strict auth rate-limit
+    // permits, enough that a handful of login-page loads alone would trip the limit.
+    private async Task<bool> HasRestorableSession()
+    {
+        try
+        {
+            return await _browserCookieReader.Exists(SessionPresenceCookieName);
+        }
+        catch (Exception ex)
+        {
+            // Fail open: if the hint cannot be read the session may still be restorable, and a redundant request
+            // is far cheaper than stranding a signed-in user on the login page.
+            _logger.LogWarning(ex, "Could not read the session presence cookie; attempting a refresh anyway.");
+            return true;
         }
     }
 
@@ -142,9 +212,36 @@ public class LoginService : ILoginService
 
     public async Task<bool> TryRefresh()
     {
-        // Serialise concurrent refreshes (e.g. a burst of dashboard cards all hitting a 401 at once) so we only
-        // rotate the refresh token once and the rest observe the freshly restored session.
+        // Coalesce concurrent refreshes (e.g. a burst of dashboard cards all hitting a 401 at once) so we only
+        // rotate the refresh token once and the rest observe the freshly restored session. Snapshot the sequence
+        // *before* queueing on the lock: every caller that was already waiting when the winner completed adopts
+        // its outcome instead of issuing a redundant refresh, which would otherwise burn the strict auth
+        // rate-limit budget and end the session with a 429 the moment an access token expires.
+        var observedSequence = Volatile.Read(ref _refreshSequence);
+
         await _refreshLock.WaitAsync();
+        try
+        {
+            if (Volatile.Read(ref _refreshSequence) != observedSequence)
+                return _lastRefreshSucceeded;
+
+            _lastRefreshSucceeded = await SendRefreshRequest();
+
+            // Only the lock holder advances the sequence, and only after the refresh it performed has settled,
+            // so a caller arriving after this point still gets a fresh refresh rather than a stale outcome.
+            Interlocked.Increment(ref _refreshSequence);
+            return _lastRefreshSucceeded;
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
+    }
+
+    // Performs the actual refresh round-trip. Never throws: a failure here means "the session could not be
+    // restored", which callers translate into ending the session rather than an error surfaced to the user.
+    private async Task<bool> SendRefreshRequest()
+    {
         try
         {
             using var request = await _antiforgeryTokenService.CreateRequest(
@@ -155,7 +252,10 @@ public class LoginService : ILoginService
             var result = await response.Content.ReadFromJsonAsync<LoginResponseModel>();
             if (result is null) return false;
 
-            await ApplySession(result);
+            // A refresh rotates the refresh token but does not change identity, so the cached antiforgery token
+            // stays valid. Clearing it here would force an avoidable GET api/Auth/csrf-token on the next auth
+            // operation (and, on the strict auth rate-limit budget, an avoidable permit).
+            await ApplySession(result, clearAntiforgeryToken: false);
             LogginStateChanged?.Invoke(true);
             return true;
         }
@@ -163,10 +263,6 @@ public class LoginService : ILoginService
         {
             _logger.LogError(ex, "Error refreshing session.");
             return false;
-        }
-        finally
-        {
-            _refreshLock.Release();
         }
     }
 
@@ -202,7 +298,7 @@ public class LoginService : ILoginService
     // Applies a successful login/refresh response: updates the in-memory session, the bearer header used by the
     // typed HttpClients, and the cascading authentication state. The refresh token itself lives only in the
     // server-set HttpOnly cookie, so nothing sensitive is written to browser storage here.
-    private async Task ApplySession(LoginResponseModel result, UserSession? existing = null)
+    private async Task ApplySession(LoginResponseModel result, UserSession? existing = null, bool clearAntiforgeryToken = true)
     {
         var session = existing ?? new UserSession
         {
@@ -220,7 +316,11 @@ public class LoginService : ILoginService
         _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.AccessToken);
         _loggedUser = session;
         _initialRefreshAttempted = true;
-        _antiforgeryTokenService.ClearToken();
+
+        // Only clear the cached antiforgery token when the identity actually changes (login / develop login);
+        // a plain refresh keeps the same user, so the token remains valid.
+        if (clearAntiforgeryToken)
+            _antiforgeryTokenService.ClearToken();
 
         await ((CustomAuthenticationStateProvider)_authStateProvider)
             .ChangeUser(session.UserName, session.UserId.ToString(), session.UserRole);

@@ -4,12 +4,9 @@ namespace FinanceManager.Domain.Administration;
 
 public sealed record AddModelRequest([Required, StringLength(256)] string ModelName);
 
-public sealed record AddProviderRequest([Required, StringLength(256)] string ProviderName);
-
 public sealed record AiConfigurationResponse(
     IReadOnlyList<AiProviderDto> Providers,
-    IReadOnlyList<AiFallbackEntryDto> FallbackEntries,
-    IReadOnlyList<string> KnownProviders);
+    IReadOnlyList<AiFallbackEntryDto> FallbackEntries);
 
 public sealed record AiFallbackEntryDto(
     [Required, StringLength(256)] string ProviderName,
@@ -18,6 +15,9 @@ public sealed record AiFallbackEntryDto(
 
 public sealed record AiProviderDto(
     string ProviderName,
+    string DisplayName,
+    string Description,
+    string DocsUrl,
     string BaseUrl,
     bool HasApiKey,
     int RequestTimeoutSeconds,
