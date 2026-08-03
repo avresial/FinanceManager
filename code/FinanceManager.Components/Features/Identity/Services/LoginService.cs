@@ -188,7 +188,10 @@ public class LoginService : ILoginService
             var result = await response.Content.ReadFromJsonAsync<LoginResponseModel>();
             if (result is null) return false;
 
-            await ApplySession(result);
+            // A refresh rotates the refresh token but does not change identity, so the cached antiforgery token
+            // stays valid. Clearing it here would force an avoidable GET api/Auth/csrf-token on the next auth
+            // operation (and, on the strict auth rate-limit budget, an avoidable permit).
+            await ApplySession(result, clearAntiforgeryToken: false);
             LogginStateChanged?.Invoke(true);
             return true;
         }
@@ -231,7 +234,7 @@ public class LoginService : ILoginService
     // Applies a successful login/refresh response: updates the in-memory session, the bearer header used by the
     // typed HttpClients, and the cascading authentication state. The refresh token itself lives only in the
     // server-set HttpOnly cookie, so nothing sensitive is written to browser storage here.
-    private async Task ApplySession(LoginResponseModel result, UserSession? existing = null)
+    private async Task ApplySession(LoginResponseModel result, UserSession? existing = null, bool clearAntiforgeryToken = true)
     {
         var session = existing ?? new UserSession
         {
@@ -249,7 +252,11 @@ public class LoginService : ILoginService
         _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.AccessToken);
         _loggedUser = session;
         _initialRefreshAttempted = true;
-        _antiforgeryTokenService.ClearToken();
+
+        // Only clear the cached antiforgery token when the identity actually changes (login / develop login);
+        // a plain refresh keeps the same user, so the token remains valid.
+        if (clearAntiforgeryToken)
+            _antiforgeryTokenService.ClearToken();
 
         await ((CustomAuthenticationStateProvider)_authStateProvider)
             .ChangeUser(session.UserName, session.UserId.ToString(), session.UserRole);
