@@ -67,6 +67,11 @@ public abstract class ControllerTests : IClassFixture<OptionsProvider>, IDisposa
 
         if (!created)
         {
+            // The host already built its provider, so nothing registered here can reach it — this call is made
+            // purely for the side effects inside ConfigureServices that a reused host still needs per test
+            // instance: resetting shared mocks, and re-acquiring the fixture's TestDatabase. The scope makes that
+            // TestDatabase resolve to the very context the host was built with, so the discarded registrations
+            // would be identical to the live ones anyway. Cross-test data is prevented by the reset below.
             using (TestDatabase.UseDatabase(appKey))
                 ConfigureServices(new ServiceCollection());
         }

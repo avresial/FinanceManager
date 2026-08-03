@@ -86,6 +86,7 @@ public class LoginServiceTests
             new CustomAuthenticationStateProvider(),
             httpClient,
             antiforgery.Object,
+            CookieReader(sessionPresent: false),
             NullLogger<LoginService>.Instance);
 
         var success = await loginService.Login(new UserSession
