@@ -11,18 +11,19 @@ internal sealed class TestDatabase : IDisposable
     private static readonly ConcurrentDictionary<string, InMemoryDatabaseRoot> _databaseRoots = [];
     private static readonly ConcurrentDictionary<string, AppDbContext> _sharedContexts = [];
     private static readonly AsyncLocal<string?> _scopedDatabaseName = new();
+    private readonly string _databaseName;
     private readonly bool _shared;
 
     public AppDbContext Context { get; }
 
     public TestDatabase()
     {
-        var databaseName = _scopedDatabaseName.Value
+        _databaseName = _scopedDatabaseName.Value
             ?? Guid.NewGuid().ToString();
         _shared = _scopedDatabaseName.Value is not null;
         Context = _shared
-            ? _sharedContexts.GetOrAdd(databaseName, static name => CreateContext(name))
-            : CreateContext(databaseName);
+            ? _sharedContexts.GetOrAdd(_databaseName, static name => CreateContext(name))
+            : CreateContext(_databaseName);
     }
 
     internal static IDisposable UseDatabase(string databaseName) => new DatabaseScope(databaseName);
@@ -37,6 +38,10 @@ internal sealed class TestDatabase : IDisposable
 
         Context.Database.EnsureDeleted();
         Context.Dispose();
+
+        // An isolated database is never reopened, so its root would otherwise sit in the static dictionary for the
+        // rest of the test run — one leaked root per test. Shared roots stay: their contexts outlive this instance.
+        _databaseRoots.TryRemove(_databaseName, out _);
         GC.SuppressFinalize(this);
     }
 
