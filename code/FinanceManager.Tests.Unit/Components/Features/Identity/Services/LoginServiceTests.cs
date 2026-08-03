@@ -56,6 +56,48 @@ public class LoginServiceTests
         var request = Assert.Single(handler.Requests);
         Assert.True(request.Headers.TryGetValues(IAntiforgeryTokenService.HeaderName, out var values));
         Assert.Equal("csrf-token", Assert.Single(values));
+
+        // A refresh keeps the same identity, so the cached antiforgery token must survive it — clearing it would
+        // force an avoidable csrf-token round-trip (and permit) on the next auth operation.
+        antiforgery.Verify(service => service.ClearToken(), Times.Never);
+    }
+
+    [Fact]
+    public async Task Login_ClearsAntiforgeryToken()
+    {
+        var handler = new RecordingHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new LoginResponseModel
+            {
+                UserId = 1,
+                UserName = "user@example.com",
+                UserRole = UserRole.User,
+                AccessToken = "fresh-token",
+                ExpiresIn = 900,
+            }),
+        });
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+
+        var antiforgery = new Mock<IAntiforgeryTokenService>();
+
+        var loginService = new LoginService(
+            Mock.Of<ISessionStorageService>(),
+            Mock.Of<ILocalStorageService>(),
+            new CustomAuthenticationStateProvider(),
+            httpClient,
+            antiforgery.Object,
+            NullLogger<LoginService>.Instance);
+
+        var success = await loginService.Login(new UserSession
+        {
+            UserId = 0,
+            UserName = "user@example.com",
+            Password = "password",
+            UserRole = UserRole.User,
+        });
+
+        Assert.True(success);
+        // A login changes identity, so the cached antiforgery token must be cleared.
         antiforgery.Verify(service => service.ClearToken(), Times.Once);
     }
 
