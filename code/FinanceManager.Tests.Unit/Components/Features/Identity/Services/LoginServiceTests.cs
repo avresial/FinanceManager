@@ -145,10 +145,18 @@ public class LoginServiceTests
         gate.SetResult();
         var handler = new GatedHandler(gate.Task, HttpStatusCode.OK);
         var localStorage = LegacyProbe(alreadyProbed: false);
-        var loginService = CreateLoginService(handler, CookieReader(sessionPresent: false), localStorage);
+        var cookieReader = CookieReader(sessionPresent: false);
 
-        await loginService.GetLoggedUser();
+        // First page load: nothing recorded yet, so the probe runs.
+        await CreateLoginService(handler, cookieReader, localStorage).GetLoggedUser();
+        Assert.Equal(1, handler.RequestCount);
 
+        // A second page load is a fresh LoginService over the same browser storage. Only the recorded flag can
+        // stop it probing again — the per-instance "already attempted" guard does not survive a reload, so
+        // asserting on one instance would prove nothing about the once-per-browser claim.
+        await CreateLoginService(handler, cookieReader, localStorage).GetLoggedUser();
+
+        Assert.Equal(1, handler.RequestCount);
         Mock.Get(localStorage).Verify(
             storage => storage.SetItemAsync("legacySessionProbed", true, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -213,13 +221,20 @@ public class LoginServiceTests
             NullLogger<LoginService>.Instance);
     }
 
-    // The default across most tests is "migration already done", so the presence cookie alone decides.
+    // The default across most tests is "migration already done", so the presence cookie alone decides. The stored
+    // flag is stateful rather than fixed: recording the probe has to be observable to a later LoginService, since
+    // that -- not the per-instance "already attempted" flag -- is what makes the probe once-per-browser.
     private static ILocalStorageService LegacyProbe(bool alreadyProbed)
     {
+        var probed = alreadyProbed;
         var localStorage = new Mock<ILocalStorageService>();
         localStorage
             .Setup(storage => storage.ContainKeyAsync("legacySessionProbed", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(alreadyProbed);
+            .ReturnsAsync(() => probed);
+        localStorage
+            .Setup(storage => storage.SetItemAsync("legacySessionProbed", true, It.IsAny<CancellationToken>()))
+            .Callback(() => probed = true)
+            .Returns(ValueTask.CompletedTask);
 
         return localStorage.Object;
     }
