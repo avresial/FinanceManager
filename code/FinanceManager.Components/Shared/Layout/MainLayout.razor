@@ -22,6 +22,9 @@
                     <MudText Typo="Typo.body2" Class="px-4 py-1" Style="color: var(--mud-palette-text-secondary);">@_greeting</MudText>
                 }
                 <MudNavMenu aria-label="Account">
+                    <AuthorizeView Roles="Admin" Context="adminContext">
+                        <MudNavLink Icon="@Icons.Material.Filled.AdminPanelSettings" Href="Admin/Dashboard" data-testid="nav-admin">Admin</MudNavLink>
+                    </AuthorizeView>
                     <MudNavLink Icon="@Icons.Material.Filled.Settings" Href="UserSettings" data-testid="nav-settings">Settings</MudNavLink>
                     <MudNavLink Icon="@Icons.Material.Filled.Logout" @onclick=LogOut data-testid="nav-logout">Log out</MudNavLink>
                 </MudNavMenu>
