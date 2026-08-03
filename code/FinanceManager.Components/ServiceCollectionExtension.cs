@@ -25,6 +25,7 @@ public static class ServiceCollectionExtension
         services.AddMemoryCache();
 
         services.AddScoped<IAntiforgeryTokenService, AntiforgeryTokenService>()
+                .AddScoped<IBrowserCookieReader, BrowserCookieReader>()
                 .AddScoped<ILoginService, LoginService>()
 
                 .AddScoped<InvestmentAccountHttpClient>()
