@@ -1,4 +1,5 @@
 using FinanceManager.Api.Features.Identity.Controllers;
+using FinanceManager.Api.Features.Identity.Services;
 using FinanceManager.Application.Commands.Login;
 using FinanceManager.Application.Identity;
 using FinanceManager.Components.Shared.Services;
@@ -90,6 +91,50 @@ public class AuthControllerTests(OptionsProvider optionsProvider) : ControllerTe
         // After logout there is no usable refresh cookie, so a further refresh is rejected.
         var afterLogout = await PostWithCsrf("api/Auth/refresh", csrfToken, ct);
         Assert.Equal(HttpStatusCode.Unauthorized, afterLogout.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_SetsAScriptReadableSessionPresenceCookieAlongsideTheRefreshToken()
+    {
+        var ct = TestContext.Current.CancellationToken;
+
+        var loginRequest = new LoginRequestModel(_userName, _password);
+        var loginResponse = await Client.PostAsJsonAsync("api/Login", loginRequest, ct);
+        loginResponse.EnsureSuccessStatusCode();
+
+        var cookies = loginResponse.Headers.TryGetValues("Set-Cookie", out var values) ? values.ToArray() : [];
+        var presenceCookie = cookies.Single(value => value.StartsWith(
+            $"{RefreshTokenCookie.PresenceCookieName}=", StringComparison.OrdinalIgnoreCase));
+
+        // Readable by script and site-wide, so the client can check it before deciding to attempt a refresh.
+        Assert.DoesNotContain("httponly", presenceCookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("path=/", presenceCookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("samesite=strict", presenceCookie, StringComparison.OrdinalIgnoreCase);
+
+        // It is a presence hint, not a credential: the refresh token must never leak into it.
+        Assert.DoesNotContain("refresh-token-1", presenceCookie, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Logout_ClearsTheSessionPresenceCookie()
+    {
+        var ct = TestContext.Current.CancellationToken;
+
+        var loginRequest = new LoginRequestModel(_userName, _password);
+        var loginResponse = await Client.PostAsJsonAsync("api/Login", loginRequest, ct);
+        loginResponse.EnsureSuccessStatusCode();
+
+        var csrfToken = await BootstrapCsrfToken(ct);
+        var logoutResponse = await PostWithCsrf("api/Auth/logout", csrfToken, ct);
+        logoutResponse.EnsureSuccessStatusCode();
+
+        var cookies = logoutResponse.Headers.TryGetValues("Set-Cookie", out var values) ? values.ToArray() : [];
+        var presenceCookie = cookies.Single(value => value.StartsWith(
+            $"{RefreshTokenCookie.PresenceCookieName}=", StringComparison.OrdinalIgnoreCase));
+
+        // An expiry in the past is how deletion is expressed; without it the client would keep believing a
+        // session is restorable and go on paying for a refresh that can only fail.
+        Assert.Contains("expires=Thu, 01 Jan 1970", presenceCookie, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
