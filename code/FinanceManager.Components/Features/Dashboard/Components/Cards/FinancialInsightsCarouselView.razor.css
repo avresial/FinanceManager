@@ -112,12 +112,13 @@
     overflow: hidden;
 }
 
-.ins-body-spacer {
-    flex: 1;
-}
-
 /* Content fade-in on slide change; resting state is visible */
 .ins-fade {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
     opacity: 1;
 }
 
@@ -150,9 +151,8 @@
     line-height: 1.55;
     color: var(--mud-palette-text-secondary);
     margin: 8px 0 0;
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
+    flex: 1;
+    min-height: 0;
     overflow: hidden;
 }
 
