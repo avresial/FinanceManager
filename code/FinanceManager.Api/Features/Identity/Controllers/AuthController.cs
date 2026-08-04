@@ -15,7 +15,6 @@ namespace FinanceManager.Api.Features.Identity.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Authentication")]
-[EnableRateLimiting(RateLimitingServiceCollectionExtension.AuthPolicy)]
 public class AuthController(
     IRefreshTokenService refreshTokenService,
     JwtTokenGenerator jwtTokenGenerator,
@@ -29,6 +28,12 @@ public class AuthController(
     private RefreshTokenOptions Options => refreshOptions.Value;
 
     /// <summary>Issues an antiforgery request token that the Blazor client echoes in the X-CSRF-Token header.</summary>
+    /// <remarks>
+    /// Deliberately left on the lenient global limiter rather than the strict <see cref="RateLimitingServiceCollectionExtension.AuthPolicy"/>
+    /// that guards the sibling actions: the client must fetch a token before every refresh/logout, so pinning it to
+    /// the auth budget would make each auth operation cost two permits and halve the effective budget. This is an
+    /// idempotent read that cannot be used to brute-force credentials, so the global limiter is sufficient.
+    /// </remarks>
     [AllowAnonymous]
     [HttpGet("csrf-token")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -52,6 +57,7 @@ public class AuthController(
     /// Returns 401 (and clears the cookie) whenever the refresh token is missing, expired, or revoked.
     /// </summary>
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitingServiceCollectionExtension.AuthPolicy)]
     [HttpPost("refresh")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(LoginResponseModel))]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -88,6 +94,7 @@ public class AuthController(
 
     /// <summary>Revokes the current refresh token server-side and clears the cookie.</summary>
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitingServiceCollectionExtension.AuthPolicy)]
     [HttpPost("logout")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

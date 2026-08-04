@@ -45,4 +45,17 @@ public class RateLimitingTests(OptionsProvider optionsProvider) : ControllerTest
         Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
         Assert.NotNull(limited.Headers.RetryAfter);
     }
+
+    [Fact]
+    public async Task CsrfTokenEndpoint_IsNotBoundByTheAuthBudget()
+    {
+        // csrf-token is an idempotent read the client must fetch before every refresh/logout, so it is
+        // deliberately kept off the strict auth policy. Sending comfortably more requests than the auth
+        // permit limit must never trip the 429 path (only the far larger global limiter applies here).
+        for (var attempt = 0; attempt < _authPermitLimit * 2; attempt++)
+        {
+            var response = await Client.GetAsync("api/Auth/csrf-token", TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        }
+    }
 }
