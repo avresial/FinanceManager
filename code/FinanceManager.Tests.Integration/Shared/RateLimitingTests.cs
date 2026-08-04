@@ -49,13 +49,38 @@ public class RateLimitingTests(OptionsProvider optionsProvider) : ControllerTest
     [Fact]
     public async Task CsrfTokenEndpoint_IsNotBoundByTheAuthBudget()
     {
-        // csrf-token is an idempotent read the client must fetch before every refresh/logout, so it is
-        // deliberately kept off the strict auth policy. Sending comfortably more requests than the auth
-        // permit limit must never trip the 429 path (only the far larger global limiter applies here).
+        // csrf-token is an idempotent read the client fetches (and caches) before it can refresh/logout, so it is
+        // deliberately kept off the strict auth policy. Sending comfortably more requests than the auth permit
+        // limit must never trip the 429 path (only the far larger global limiter applies here).
         for (var attempt = 0; attempt < _authPermitLimit * 2; attempt++)
         {
             var response = await Client.GetAsync("api/Auth/csrf-token", TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         }
+    }
+
+    [Fact]
+    public async Task LogoutEndpoint_ReturnsTooManyRequests_OnceLimitExceeded()
+    {
+        // logout carries the strict auth policy per-action (the class-level attribute was removed), so it must still
+        // trip the 429 path once the budget is spent. Like refresh it 403s without a CSRF token, so no setup is
+        // needed. The loop breaks on the first 429, which keeps the test robust to the auth partition already being
+        // (partly) spent by the sibling refresh test that shares this class's rate limiter within the same window.
+        HttpResponseMessage? limited = null;
+        for (var attempt = 0; attempt < _authPermitLimit + 1; attempt++)
+        {
+            var response = await Client.PostAsync("api/Auth/logout", content: null, TestContext.Current.CancellationToken);
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                limited = response;
+                break;
+            }
+
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+
+        Assert.NotNull(limited);
+        Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+        Assert.NotNull(limited.Headers.RetryAfter);
     }
 }

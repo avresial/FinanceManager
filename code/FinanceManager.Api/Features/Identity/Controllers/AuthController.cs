@@ -30,9 +30,11 @@ public class AuthController(
     /// <summary>Issues an antiforgery request token that the Blazor client echoes in the X-CSRF-Token header.</summary>
     /// <remarks>
     /// Deliberately left on the lenient global limiter rather than the strict <see cref="RateLimitingServiceCollectionExtension.AuthPolicy"/>
-    /// that guards the sibling actions: the client must fetch a token before every refresh/logout, so pinning it to
-    /// the auth budget would make each auth operation cost two permits and halve the effective budget. This is an
-    /// idempotent read that cannot be used to brute-force credentials, so the global limiter is sufficient.
+    /// that guards the sibling actions. The client fetches a token once and reuses it for subsequent refresh/logout
+    /// calls, but whenever no token is cached (first use, or after a sign-in/out clears it) the next auth operation
+    /// must fetch one first; pinning that fetch to the auth budget would make such operations cost two permits and
+    /// halve the effective budget. This is an idempotent read that cannot be used to brute-force credentials, so the
+    /// global limiter is sufficient.
     /// </remarks>
     [AllowAnonymous]
     [HttpGet("csrf-token")]
