@@ -19,6 +19,10 @@ public partial class LoginComponent
     private const string _guestLogin = "Guest";
     private bool _success;
     private string[] _errors = [];
+
+    // Login failure is shown separately from _errors: _errors is two-way bound to the MudForm's field validation
+    // (@bind-Errors) and gets overwritten whenever the form re-validates, which would silently clobber this message.
+    private string? _loginError;
     private MudForm? _form;
     private LoginModel _loginModel = new();
     private bool _isProcessing = false;
@@ -85,6 +89,7 @@ public partial class LoginComponent
 
         if (_isProcessing) return;
         _isProcessing = true;
+        _loginError = null;
 
         try
         {
@@ -115,8 +120,7 @@ public partial class LoginComponent
                 return;
             }
 
-            _errors = [DescribeFailure(loginResult)];
-            _loginModel.Password = string.Empty;
+            _loginError = DescribeFailure(loginResult);
         }
         finally
         {
@@ -136,7 +140,12 @@ public partial class LoginComponent
 
     private static string DescribeRateLimit(TimeSpan? retryAfter)
     {
-        var seconds = Math.Max(1, (int)Math.Ceiling((retryAfter ?? TimeSpan.Zero).TotalSeconds));
+        // Only quote a countdown when the server actually told us how long to wait; otherwise stay generic rather
+        // than inventing a "1 second" from a missing/zero Retry-After.
+        if (retryAfter is not TimeSpan wait || wait <= TimeSpan.Zero)
+            return "Too many attempts. Please wait a moment and try again.";
+
+        var seconds = (int)Math.Ceiling(wait.TotalSeconds);
         return $"Too many attempts. Please try again in {seconds} second{(seconds == 1 ? "" : "s")}.";
     }
 

@@ -120,6 +120,18 @@ public class LoginServiceTests
     }
 
     [Fact]
+    public async Task Login_WhenRateLimitedWithoutRetryAfterHeader_ReturnsRateLimitedWithZeroDelay()
+    {
+        var loginService = CreateLoginService(new RecordingHandler(new HttpResponseMessage(HttpStatusCode.TooManyRequests)));
+
+        var result = await loginService.Login("user@example.com", "password");
+
+        Assert.Equal(LoginResultStatus.RateLimited, result.Status);
+        // No header to parse: the UI must fall back to a generic message rather than inventing a countdown.
+        Assert.Equal(TimeSpan.Zero, result.RetryAfter);
+    }
+
+    [Fact]
     public async Task Login_WhenAccountLockedOut_ReturnsLockedOutWithServerMessage()
     {
         const string lockoutMessage = "This account is temporarily locked. Please try again later.";

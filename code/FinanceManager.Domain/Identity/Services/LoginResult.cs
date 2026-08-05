@@ -4,10 +4,10 @@ namespace FinanceManager.Domain.Identity.Services;
 /// Outcome of a login attempt. Replaces the earlier <c>bool</c> return so callers can tell a genuine credential
 /// failure apart from a rate-limit (429) or an account lockout (403) and surface the matching message.
 /// </summary>
-// A private constructor with static factories is used instead of a public primary constructor so only the valid
-// (status, payload) combinations can be produced — RetryAfter is meaningful only for RateLimited, Message only for LockedOut.
 public sealed record LoginResult
 {
+    // No public primary constructor: static factories keep construction to the valid (status, payload) combinations
+    // only — RetryAfter is meaningful only for RateLimited, Message only for LockedOut.
     private LoginResult(LoginResultStatus status, TimeSpan? retryAfter = null, string? message = null)
     {
         Status = status;
