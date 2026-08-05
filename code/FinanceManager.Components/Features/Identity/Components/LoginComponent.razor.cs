@@ -92,7 +92,7 @@ public partial class LoginComponent
 
             var loginResult = await LoginService.Login(_loginModel.Login, _loginModel.Password);
 
-            if (loginResult)
+            if (loginResult.IsSuccess)
             {
                 var loggedUser = await LoginService.GetLoggedUser();
                 if (loggedUser is null) return;
@@ -115,13 +115,29 @@ public partial class LoginComponent
                 return;
             }
 
-            _errors = ["Incorrect username or password."];
+            _errors = [DescribeFailure(loginResult)];
             _loginModel.Password = string.Empty;
         }
         finally
         {
             _isProcessing = false;
         }
+    }
+
+    private static string DescribeFailure(LoginResult result) => result.Status switch
+    {
+        LoginResultStatus.RateLimited => DescribeRateLimit(result.RetryAfter),
+        LoginResultStatus.LockedOut => string.IsNullOrWhiteSpace(result.Message)
+            ? "This account is temporarily locked due to repeated failed login attempts. Please try again later."
+            : result.Message,
+        LoginResultStatus.Error => "Something went wrong while signing in. Please try again.",
+        _ => "Incorrect username or password.",
+    };
+
+    private static string DescribeRateLimit(TimeSpan? retryAfter)
+    {
+        var seconds = Math.Max(1, (int)Math.Ceiling((retryAfter ?? TimeSpan.Zero).TotalSeconds));
+        return $"Too many attempts. Please try again in {seconds} second{(seconds == 1 ? "" : "s")}.";
     }
 
     private async Task<bool> ContinueOAuth(UserSession user)
