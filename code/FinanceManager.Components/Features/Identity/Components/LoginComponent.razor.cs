@@ -19,6 +19,10 @@ public partial class LoginComponent
     private const string _guestLogin = "Guest";
     private bool _success;
     private string[] _errors = [];
+
+    // Login failure is shown separately from _errors: _errors is two-way bound to the MudForm's field validation
+    // (@bind-Errors) and gets overwritten whenever the form re-validates, which would silently clobber this message.
+    private string? _loginError;
     private MudForm? _form;
     private LoginModel _loginModel = new();
     private bool _isProcessing = false;
@@ -85,6 +89,7 @@ public partial class LoginComponent
 
         if (_isProcessing) return;
         _isProcessing = true;
+        _loginError = null;
 
         try
         {
@@ -92,7 +97,7 @@ public partial class LoginComponent
 
             var loginResult = await LoginService.Login(_loginModel.Login, _loginModel.Password);
 
-            if (loginResult)
+            if (loginResult.IsSuccess)
             {
                 var loggedUser = await LoginService.GetLoggedUser();
                 if (loggedUser is null) return;
@@ -115,13 +120,33 @@ public partial class LoginComponent
                 return;
             }
 
-            _errors = ["Incorrect username or password."];
-            _loginModel.Password = string.Empty;
+            _loginError = DescribeFailure(loginResult);
         }
         finally
         {
             _isProcessing = false;
         }
+    }
+
+    private static string DescribeFailure(LoginResult result) => result.Status switch
+    {
+        LoginResultStatus.RateLimited => DescribeRateLimit(result.RetryAfter),
+        LoginResultStatus.LockedOut => string.IsNullOrWhiteSpace(result.Message)
+            ? "This account is temporarily locked due to repeated failed login attempts. Please try again later."
+            : result.Message,
+        LoginResultStatus.Error => "Something went wrong while signing in. Please try again.",
+        _ => "Incorrect username or password.",
+    };
+
+    private static string DescribeRateLimit(TimeSpan? retryAfter)
+    {
+        // Only quote a countdown when the server actually told us how long to wait; otherwise stay generic rather
+        // than inventing a "1 second" from a missing/zero Retry-After.
+        if (retryAfter is not TimeSpan wait || wait <= TimeSpan.Zero)
+            return "Too many attempts. Please wait a moment and try again.";
+
+        var seconds = (int)Math.Ceiling(wait.TotalSeconds);
+        return $"Too many attempts. Please try again in {seconds} second{(seconds == 1 ? "" : "s")}.";
     }
 
     private async Task<bool> ContinueOAuth(UserSession user)

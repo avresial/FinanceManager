@@ -9,7 +9,9 @@ using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace FinanceManager.Components.Features.Identity.Services;
 
@@ -145,25 +147,26 @@ public class LoginService : ILoginService
         }
     }
 
-    public async Task<bool> Login(UserSession userSession)
+    public async Task<LoginResult> Login(UserSession userSession)
     {
         LoginRequestModel loginRequestModel = new(userSession.UserName, userSession.Password);
         LoginResponseModel? result = null;
-        HttpResponseMessage? response = null;
 
         try
         {
-            response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/Login",
+            using var response = await _httpClient.PostAsync($"{_httpClient.BaseAddress}api/Login",
                 JsonHelper.GenerateStringContent(JsonHelper.SerializeObj(loginRequestModel)));
-            if (!response.IsSuccessStatusCode) return false;
+            if (!response.IsSuccessStatusCode)
+                return await MapFailureResponse(response);
             result = await response.Content.ReadFromJsonAsync<LoginResponseModel>();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during login request.");
+            return LoginResult.Error();
         }
 
-        if (result is null) return false;
+        if (result is null) return LoginResult.Error();
 
         // Don't let the plaintext password ride along on the session we keep in memory as _loggedUser; it's only
         // needed for the request above.
@@ -171,9 +174,9 @@ public class LoginService : ILoginService
         await ApplySession(result, userSession);
 
         LogginStateChanged?.Invoke(true);
-        return true;
+        return LoginResult.Success();
     }
-    public async Task<bool> Login(string username, string password)
+    public async Task<LoginResult> Login(string username, string password)
     {
         var loginResult = await Login(new()
         {
@@ -184,9 +187,65 @@ public class LoginService : ILoginService
             UserRole = UserRole.User,
         });
 
-        LogginStateChanged?.Invoke(loginResult);
+        LogginStateChanged?.Invoke(loginResult.IsSuccess);
 
         return loginResult;
+    }
+
+    // Translates a non-success login response into the specific outcome the UI needs. A 429 carries Retry-After;
+    // the API returns 403 both for a bad password (Forbid(), empty body) and for a locked-out account
+    // (StatusCode(403, message)), so the presence of a body is what tells those two apart.
+    private async Task<LoginResult> MapFailureResponse(HttpResponseMessage response)
+    {
+        switch (response.StatusCode)
+        {
+            case HttpStatusCode.TooManyRequests:
+                return LoginResult.RateLimited(ParseRetryAfter(response));
+            case HttpStatusCode.Forbidden:
+                var message = await ReadTextBody(response);
+                return string.IsNullOrWhiteSpace(message)
+                    ? LoginResult.InvalidCredentials()
+                    : LoginResult.LockedOut(message);
+            default:
+                return LoginResult.Error();
+        }
+    }
+
+    private static TimeSpan ParseRetryAfter(HttpResponseMessage response)
+    {
+        var retryAfter = response.Headers.RetryAfter;
+        if (retryAfter?.Delta is TimeSpan delta)
+            return delta;
+        if (retryAfter?.Date is DateTimeOffset date)
+        {
+            var wait = date - DateTimeOffset.UtcNow;
+            return wait > TimeSpan.Zero ? wait : TimeSpan.Zero;
+        }
+        return TimeSpan.Zero;
+    }
+
+    private async Task<string?> ReadTextBody(HttpResponseMessage response)
+    {
+        try
+        {
+            var raw = (await response.Content.ReadAsStringAsync()).Trim();
+            if (string.IsNullOrWhiteSpace(raw))
+                return null;
+
+            // ObjectResult serializes a string payload as a JSON string literal ("..."); unwrap it for display.
+            if (raw.Length >= 2 && raw[0] == '"' && raw[^1] == '"')
+            {
+                try { return JsonSerializer.Deserialize<string>(raw); }
+                catch (JsonException) { return raw; }
+            }
+
+            return raw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not read the login failure response body.");
+            return null;
+        }
     }
 
     public async Task<bool> DevelopLogin(string login)

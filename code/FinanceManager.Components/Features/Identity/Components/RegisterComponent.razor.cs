@@ -45,7 +45,7 @@ public partial class RegisterComponent
         {
             if (!await UserService.AddUser(_loginModel.Login, _loginModel.Password, PricingLevel, FirstName, LastName))
                 newErrors.Add("Incorrect username or password.");
-            else if (await LoginService.Login(_loginModel.Login, _loginModel.Password))
+            else if ((await LoginService.Login(_loginModel.Login, _loginModel.Password)).IsSuccess)
                 Navigation.NavigateTo("");
         }
 

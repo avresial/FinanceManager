@@ -18,6 +18,10 @@
                 {
                     <MudAlert Severity="Severity.Info" Class="my-3">Sign in to authorize MCP access to your Finance Manager account.</MudAlert>
                 }
+                @if (!string.IsNullOrWhiteSpace(_loginError))
+                {
+                    <MudAlert Severity="Severity.Error" Class="my-3" data-testid="login-error">@_loginError</MudAlert>
+                }
                 @if (_errors is not null)
                 {
                     @foreach (var error in _errors)

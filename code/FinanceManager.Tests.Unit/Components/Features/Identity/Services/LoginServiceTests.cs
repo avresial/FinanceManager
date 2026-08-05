@@ -5,9 +5,11 @@ using FinanceManager.Application.Identity;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Tests.Unit.Components.Features.Identity.Services;
@@ -89,7 +91,7 @@ public class LoginServiceTests
             CookieReader(sessionPresent: false),
             NullLogger<LoginService>.Instance);
 
-        var success = await loginService.Login(new UserSession
+        var result = await loginService.Login(new UserSession
         {
             UserId = 0,
             UserName = "user@example.com",
@@ -97,9 +99,75 @@ public class LoginServiceTests
             UserRole = UserRole.User,
         });
 
-        Assert.True(success);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(LoginResultStatus.Success, result.Status);
         // A login changes identity, so the cached antiforgery token must be cleared.
         antiforgery.Verify(service => service.ClearToken(), Times.Once);
+    }
+
+    [Fact]
+    public async Task Login_WhenRateLimited_ReturnsRateLimitedWithRetryAfter()
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+        response.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromSeconds(42));
+        var loginService = CreateLoginService(new RecordingHandler(response));
+
+        var result = await loginService.Login("user@example.com", "password");
+
+        Assert.Equal(LoginResultStatus.RateLimited, result.Status);
+        Assert.False(result.IsSuccess);
+        Assert.Equal(TimeSpan.FromSeconds(42), result.RetryAfter);
+    }
+
+    [Fact]
+    public async Task Login_WhenRateLimitedWithoutRetryAfterHeader_ReturnsRateLimitedWithZeroDelay()
+    {
+        var loginService = CreateLoginService(new RecordingHandler(new HttpResponseMessage(HttpStatusCode.TooManyRequests)));
+
+        var result = await loginService.Login("user@example.com", "password");
+
+        Assert.Equal(LoginResultStatus.RateLimited, result.Status);
+        // No header to parse: the UI must fall back to a generic message rather than inventing a countdown.
+        Assert.Equal(TimeSpan.Zero, result.RetryAfter);
+    }
+
+    [Fact]
+    public async Task Login_WhenAccountLockedOut_ReturnsLockedOutWithServerMessage()
+    {
+        const string lockoutMessage = "This account is temporarily locked. Please try again later.";
+        var response = new HttpResponseMessage(HttpStatusCode.Forbidden)
+        {
+            // Mirrors LoginController's StatusCode(403, message): a string serialized as a JSON literal.
+            Content = JsonContent.Create(lockoutMessage),
+        };
+        var loginService = CreateLoginService(new RecordingHandler(response));
+
+        var result = await loginService.Login("user@example.com", "password");
+
+        Assert.Equal(LoginResultStatus.LockedOut, result.Status);
+        Assert.Equal(lockoutMessage, result.Message);
+    }
+
+    [Fact]
+    public async Task Login_WithBadCredentials_ReturnsInvalidCredentials()
+    {
+        // LoginController returns Forbid() (403, empty body) for a wrong password.
+        var loginService = CreateLoginService(new RecordingHandler(new HttpResponseMessage(HttpStatusCode.Forbidden)));
+
+        var result = await loginService.Login("user@example.com", "wrong-password");
+
+        Assert.Equal(LoginResultStatus.InvalidCredentials, result.Status);
+        Assert.Null(result.Message);
+    }
+
+    [Fact]
+    public async Task Login_OnServerError_ReturnsError()
+    {
+        var loginService = CreateLoginService(new RecordingHandler(new HttpResponseMessage(HttpStatusCode.InternalServerError)));
+
+        var result = await loginService.Login("user@example.com", "password");
+
+        Assert.Equal(LoginResultStatus.Error, result.Status);
     }
 
     [Fact]
