@@ -31,6 +31,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Authentication rate-limit budget raised from 10 to 20 requests per 60-second window, reducing false positives for legitimate login and token-refresh traffic. #669
 - The Financial Insights card now uses available vertical space for insight messages instead of a fixed four-line clamp, while keeping the card height stable. #663
 - Moved the **Admin** navigation link next to **Settings** at the bottom of the menu.
 - The admin **AI Providers** page now works like **Service Keys**: every supported provider (OpenRouter, GitHub Models, Ollama, LM Studio) is always listed with a description and documentation link, and its base URL, timeout and API-key status are read from the saved configuration falling back to the app's own settings — so a key supplied through configuration shows the green "API key configured" mark straight away instead of the page reporting no providers. Providers are turned off with the enable switch rather than being added and deleted. #656

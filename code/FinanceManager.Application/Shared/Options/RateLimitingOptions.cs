@@ -16,7 +16,7 @@ public sealed class RateLimitingOptions
     public RateLimitPolicyOptions Global { get; set; } = new() { PermitLimit = 100, WindowSeconds = 60 };
 
     /// <summary>Tighter limit for authentication endpoints (login, refresh, logout) to blunt brute-force attempts.</summary>
-    public RateLimitPolicyOptions Auth { get; set; } = new() { PermitLimit = 10, WindowSeconds = 60 };
+    public RateLimitPolicyOptions Auth { get; set; } = new() { PermitLimit = 20, WindowSeconds = 60 };
 
     /// <summary>Tighter limit for endpoints that fan out to paid/quota'd external providers (Alpha Vantage, OpenFIGI).</summary>
     public RateLimitPolicyOptions ExternalProvider { get; set; } = new() { PermitLimit = 30, WindowSeconds = 60 };
