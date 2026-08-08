@@ -72,6 +72,11 @@ public class CsvHeaderMappingService(ICsvHeaderMappingRepository mappingReposito
             await mappingRepository.SaveOrUpdateMappings(mappingsToSave);
             logger.LogInformation("Saved {Count} header mappings", mappingsToSave.Count);
         }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Saving CSV header mappings cancelled or timed out.");
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to save header mappings");

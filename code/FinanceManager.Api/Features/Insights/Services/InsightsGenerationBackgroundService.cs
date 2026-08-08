@@ -53,10 +53,16 @@ public sealed class InsightsGenerationBackgroundService(
                 activity?.SetTag("insights.count", insights.Count);
                 logger.LogInformation("Stored {Count} insights for user {UserId}.", insights.Count, userId);
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
                 outcome = "canceled";
+                logger.LogDebug(ex, "Insights generation cancelled during application shutdown for user {UserId}.", userId);
                 break;
+            }
+            catch (OperationCanceledException ex)
+            {
+                outcome = "canceled";
+                logger.LogDebug(ex, "Insights generation cancelled or timed out for user {UserId}.", userId);
             }
             catch (Exception ex)
             {

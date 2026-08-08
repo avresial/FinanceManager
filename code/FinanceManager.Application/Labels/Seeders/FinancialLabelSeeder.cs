@@ -79,6 +79,15 @@ public class FinancialLabelSeeder(IFinancialLabelsRepository financialLabelsRepo
 
             await SeedClassifications(cancellationToken);
         }
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            logger.LogDebug(ex, "Financial label seeding cancelled during application shutdown.");
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Financial label seeding cancelled or timed out.");
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error seeding financial labels");

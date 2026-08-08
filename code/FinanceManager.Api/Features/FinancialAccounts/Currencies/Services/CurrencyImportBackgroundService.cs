@@ -75,10 +75,18 @@ public sealed class CurrencyImportBackgroundService(
                 jobStore.TryMarkCompleted(request.JobId, result);
                 await PublishStatus(request.JobId, request.UserId, stoppingToken);
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
                 outcome = "canceled";
+                logger.LogDebug(ex, "Currency import job {JobId} cancelled during application shutdown.", request.JobId);
                 break;
+            }
+            catch (OperationCanceledException ex)
+            {
+                outcome = "canceled";
+                logger.LogDebug(ex, "Currency import job {JobId} cancelled or timed out.", request.JobId);
+                jobStore.TryMarkFailed(request.JobId, ex.Message);
+                await PublishStatus(request.JobId, request.UserId, stoppingToken);
             }
             catch (Exception ex)
             {

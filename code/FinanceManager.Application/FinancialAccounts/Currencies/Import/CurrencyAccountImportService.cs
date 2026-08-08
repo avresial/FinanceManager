@@ -98,6 +98,11 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                         errors.Add($"Failed to import entry with date {import.PostingDate}.");
                     }
                 }
+                catch (OperationCanceledException ex)
+                {
+                    logger.LogDebug(ex, "Currency account import cancelled while processing account {AccountId}.", accountId);
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     failed++;
@@ -133,6 +138,10 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                     var importData = resolvedConflict.ImportData;
                     await currencyAccountEntryRepository.Add(resolvedConflict.ToEntry());
                 }
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogDebug(ex, "Applying resolved currency import conflict cancelled for account {AccountId}.", resolvedConflict.AccountId);
             }
             catch (Exception ex)
             {

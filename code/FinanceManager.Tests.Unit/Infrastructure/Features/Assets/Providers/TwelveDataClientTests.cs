@@ -121,6 +121,18 @@ public class TwelveDataClientTests
         Assert.Equal(FinanceManager.Application.Backfill.Currencies.FxDailyStatus.RateLimited, result.Status);
     }
 
+    [Fact]
+    public async Task GetDailyRatesAsync_WhenHttpTimesOut_ReturnsFailed()
+    {
+        var client = CreateClient(new MockHttpMessageHandler(
+            "{}", exception: new TaskCanceledException("request timeout")));
+
+        var result = await client.GetDailyRatesAsync("EUR", "USD", TestContext.Current.CancellationToken);
+
+        Assert.Equal(FinanceManager.Application.Backfill.Currencies.FxDailyStatus.Error, result.Status);
+        Assert.Empty(result.Points);
+    }
+
     private static TwelveDataClient CreateClient(MockHttpMessageHandler handler)
     {
         var options = Options.Create(new TwelveDataOptions());
@@ -150,7 +162,10 @@ public class TwelveDataClientTests
         public Task SaveServiceAsync(ExternalServiceConfiguration config, CancellationToken ct = default) => Task.CompletedTask;
     }
 
-    private sealed class MockHttpMessageHandler(string response, HttpStatusCode statusCode = HttpStatusCode.OK) : HttpMessageHandler
+    private sealed class MockHttpMessageHandler(
+        string response,
+        HttpStatusCode statusCode = HttpStatusCode.OK,
+        Exception? exception = null) : HttpMessageHandler
     {
         public Uri? LastRequestUri { get; private set; }
         public string? LastAuthorization { get; private set; }
@@ -159,6 +174,9 @@ public class TwelveDataClientTests
         {
             LastRequestUri = request.RequestUri;
             LastAuthorization = request.Headers.Authorization?.ToString();
+            if (exception is not null)
+                return Task.FromException<HttpResponseMessage>(exception);
+
             return Task.FromResult(new HttpResponseMessage(statusCode) { Content = new StringContent(response) });
         }
     }

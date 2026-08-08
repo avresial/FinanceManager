@@ -195,9 +195,15 @@ internal sealed class TwelveDataClient(
 
             return new(RequestStatus.Ok, content);
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (ct.IsCancellationRequested)
         {
+            logger.LogDebug(ex, "Twelve Data request cancelled.");
             throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Twelve Data request cancelled or timed out.");
+            return new(RequestStatus.Error, string.Empty);
         }
         catch (Exception ex)
         {

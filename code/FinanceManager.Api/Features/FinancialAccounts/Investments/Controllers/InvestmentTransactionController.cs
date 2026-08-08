@@ -68,6 +68,16 @@ public class InvestmentTransactionController(
                     group.Key.TradeDate.ToDateTime(TimeOnly.MinValue),
                     cancellationToken);
             }
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+            {
+                logger.LogDebug(ex, "Price recovery cancelled for listing {ListingId} on {TradeDate}.", group.Key.AssetListingId, group.Key.TradeDate);
+                throw;
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogDebug(ex, "Price recovery cancelled or timed out for listing {ListingId} on {TradeDate}; continuing.", group.Key.AssetListingId, group.Key.TradeDate);
+                continue;
+            }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 logger.LogWarning(ex, "Failed to recover price for listing {ListingId} on {TradeDate}", group.Key.AssetListingId, group.Key.TradeDate);

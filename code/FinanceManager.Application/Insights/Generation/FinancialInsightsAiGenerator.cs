@@ -46,6 +46,16 @@ internal sealed class FinancialInsightsAiGenerator(
 
             return financialInsightNormalizer.Normalize(parsed, userId, accountId, count);
         }
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            logger.LogDebug(ex, "AI insights generation cancelled for user {UserId}.", userId);
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "AI insights generation cancelled or timed out for user {UserId}.", userId);
+            return [];
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "AI insights generation failed");

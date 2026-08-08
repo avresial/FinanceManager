@@ -75,6 +75,11 @@ public class BondAccountImportService(
                         errors.Add($"Failed to import entry with date {import.PostingDate}.");
                     }
                 }
+                catch (OperationCanceledException ex)
+                {
+                    logger.LogDebug(ex, "Bond account import cancelled while processing account {AccountId}.", accountId);
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     failed++;
@@ -105,6 +110,10 @@ public class BondAccountImportService(
                     var entry = resolvedConflict.ToEntry();
                     await bondAccountEntryRepository.Add(entry, recalculate: true);
                 }
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogDebug(ex, "Applying resolved bond import conflict cancelled for account {AccountId}.", resolvedConflict.AccountId);
             }
             catch (Exception ex)
             {

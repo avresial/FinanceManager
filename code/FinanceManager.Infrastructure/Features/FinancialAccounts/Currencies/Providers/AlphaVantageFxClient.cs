@@ -83,9 +83,15 @@ internal sealed class AlphaVantageFxClient(
 
             return points.Count == 0 ? FxDailyResult.Empty : FxDailyResult.Success(points);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
+            logger.LogDebug(ex, "Alpha Vantage FX_DAILY cancelled for {From}->{To}.", fromCurrency, toCurrency);
             throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Alpha Vantage FX_DAILY cancelled or timed out for {From}->{To}.", fromCurrency, toCurrency);
+            return FxDailyResult.Failed;
         }
         catch (Exception ex)
         {

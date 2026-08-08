@@ -17,11 +17,22 @@ public sealed class GlobalExceptionHandler(
     {
         // Strip line breaks from the request method/path before logging so a crafted URL can't forge
         // additional log entries (CodeQL: log entries created from user input).
-        logger.LogError(
-            exception,
-            "Unhandled exception while processing {Method} {Path}",
-            Sanitize(httpContext.Request.Method),
-            Sanitize(httpContext.Request.Path.Value));
+        if (exception is OperationCanceledException)
+        {
+            logger.LogDebug(
+                exception,
+                "Request cancelled while processing {Method} {Path}",
+                Sanitize(httpContext.Request.Method),
+                Sanitize(httpContext.Request.Path.Value));
+        }
+        else
+        {
+            logger.LogError(
+                exception,
+                "Unhandled exception while processing {Method} {Path}",
+                Sanitize(httpContext.Request.Method),
+                Sanitize(httpContext.Request.Path.Value));
+        }
 
         httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
 

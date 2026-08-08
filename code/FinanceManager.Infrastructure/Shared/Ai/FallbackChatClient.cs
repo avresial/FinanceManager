@@ -38,9 +38,21 @@ internal sealed class FallbackChatClient(
                     attempt.ProviderName,
                     attempt.ModelId);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
             {
+                logger.LogDebug(ex, "Chat provider {Provider} with model {Model} cancelled.", attempt.ProviderName, attempt.ModelId);
                 throw;
+            }
+            catch (OperationCanceledException ex)
+            {
+                RecordAttempt(attempt.ProviderName, "canceled");
+                exceptions ??= [];
+                exceptions.Add(ex);
+                logger.LogDebug(
+                    ex,
+                    "Chat provider {Provider} with model {Model} cancelled or timed out. Trying fallback.",
+                    attempt.ProviderName,
+                    attempt.ModelId);
             }
             catch (Exception ex)
             {
@@ -94,9 +106,21 @@ internal sealed class FallbackChatClient(
                     entry.ProviderName,
                     entry.ModelId);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
             {
+                logger.LogDebug(ex, "Streaming chat provider {Provider} with model {Model} cancelled.", entry.ProviderName, entry.ModelId);
                 throw;
+            }
+            catch (OperationCanceledException ex)
+            {
+                RecordAttempt(entry.ProviderName, "canceled");
+                exceptions ??= [];
+                exceptions.Add(ex);
+                logger.LogDebug(
+                    ex,
+                    "Streaming chat provider {Provider} with model {Model} cancelled or timed out. Trying fallback.",
+                    entry.ProviderName,
+                    entry.ModelId);
             }
             catch (Exception ex)
             {

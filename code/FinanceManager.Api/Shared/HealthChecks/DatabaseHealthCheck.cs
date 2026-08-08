@@ -17,6 +17,14 @@ public sealed class DatabaseHealthCheck(AppDbContext dbContext) : IHealthCheck
                 ? HealthCheckResult.Healthy("Database connection is available.")
                 : HealthCheckResult.Unhealthy("Database connection could not be established.");
         }
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            return HealthCheckResult.Unhealthy("Database connectivity check was cancelled.", ex);
+        }
+        catch (OperationCanceledException ex)
+        {
+            return HealthCheckResult.Unhealthy("Database connectivity check timed out.", ex);
+        }
         catch (Exception ex)
         {
             return HealthCheckResult.Unhealthy("Database connectivity check failed.", ex);

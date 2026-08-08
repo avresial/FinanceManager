@@ -131,7 +131,8 @@ internal sealed class EcbCurrencyExchangeRateProvider(
 
     // Returns (Failed, date→(code per EUR)). Failed marks a transport/parse error; a 404 (unsupported
     // currency or a range with no published observations) is not a failure and yields an empty map.
-    private async Task<(bool Failed, Dictionary<DateTime, decimal> Series)> GetSeriesAsync(string code, DateTime start, DateTime end)
+    private async Task<(bool Failed, Dictionary<DateTime, decimal> Series)> GetSeriesAsync(
+        string code, DateTime start, DateTime end)
     {
         var baseUrl = options.Value.BaseUrl.TrimEnd('/');
         var url = $"{baseUrl}/data/EXR/D.{code}.EUR.SP00.A?startPeriod={Iso(start)}&endPeriod={Iso(end)}&format=csvdata";
@@ -148,8 +149,13 @@ internal sealed class EcbCurrencyExchangeRateProvider(
                 return (true, []);
             }
 
-            var content = await response.Content.ReadAsStringAsync();
-            return (false, ParseCsv(content));
+            var responseContent = await response.Content.ReadAsStringAsync();
+            return (false, ParseCsv(responseContent));
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "ECB request cancelled or timed out for {Code} {Start:yyyy-MM-dd}..{End:yyyy-MM-dd}.", code, start, end);
+            return (true, []);
         }
         catch (Exception ex)
         {

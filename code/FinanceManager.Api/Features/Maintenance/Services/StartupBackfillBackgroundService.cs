@@ -64,11 +64,17 @@ public sealed class StartupBackfillBackgroundService(
                     service.Name, stopwatch.ElapsedMilliseconds, result.TargetsInspected, result.ProviderRequests,
                     result.RowsInserted, result.RowsSkipped, result.Failures, result.RateLimited);
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
                 // Host is shutting down: stop cleanly without treating it as a service failure.
-                logger.LogInformation("Startup backfill cancelled during {Service}.", service.Name);
+                logger.LogDebug(ex, "Startup backfill cancelled during application shutdown for {Service}.", service.Name);
                 break;
+            }
+            catch (OperationCanceledException ex)
+            {
+                // A provider timeout is isolated just like any other service failure, but is expected control flow.
+                stopwatch.Stop();
+                logger.LogDebug(ex, "Startup backfill service {Service} cancelled or timed out after {ElapsedMs} ms.", service.Name, stopwatch.ElapsedMilliseconds);
             }
             catch (Exception ex)
             {

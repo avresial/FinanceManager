@@ -253,6 +253,11 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
         {
             return await call();
         }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "OpenFIGI call cancelled during {Context}.", context);
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "OpenFIGI call failed during {Context}", context);
@@ -265,6 +270,11 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
         try
         {
             return await call();
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Alpha Vantage symbol search cancelled.");
+            throw;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

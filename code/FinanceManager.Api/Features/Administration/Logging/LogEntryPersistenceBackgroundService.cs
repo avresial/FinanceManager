@@ -44,18 +44,30 @@ public sealed class LogEntryPersistenceBackgroundService(
                             buffer.Add(entry);
                     }
                 }
-                catch (OperationCanceledException) when (batchTimeout.IsCancellationRequested && !stoppingToken.IsCancellationRequested)
+                catch (OperationCanceledException ex) when (batchTimeout.IsCancellationRequested && !stoppingToken.IsCancellationRequested)
                 {
                     // flush whatever we collected
+                    logger.LogDebug(ex, "Log persistence batch fill timed out; flushing {Count} entries.", buffer.Count);
                 }
 
                 if (buffer.Count == 0) continue;
 
                 await Flush(buffer, stoppingToken);
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
+                logger.LogDebug(ex, "Log persistence background service cancelled during application shutdown.");
                 break;
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogDebug(ex, "Log persistence batch cancelled or timed out; retrying after backoff.");
+                try { await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken); }
+                catch (OperationCanceledException delayEx)
+                {
+                    logger.LogDebug(delayEx, "Log persistence retry backoff cancelled during application shutdown.");
+                    break;
+                }
             }
             catch (Exception ex)
             {
@@ -63,7 +75,11 @@ public sealed class LogEntryPersistenceBackgroundService(
                 logger.LogError(ex, "Failed to persist log batch of {Count} entries.", buffer.Count);
                 // brief backoff to avoid tight failure loop
                 try { await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken); }
-                catch (OperationCanceledException) { break; }
+                catch (OperationCanceledException delayEx)
+                {
+                    logger.LogDebug(delayEx, "Log persistence retry backoff cancelled during application shutdown.");
+                    break;
+                }
             }
         }
 
@@ -93,6 +109,10 @@ public sealed class LogEntryPersistenceBackgroundService(
         try
         {
             await hubContext.Clients.Group(AdminLogsHub.GroupName).SendAsync("LogsAppended", payload, cancellationToken);
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Log persistence SignalR broadcast cancelled or timed out.");
         }
         catch (Exception ex)
         {

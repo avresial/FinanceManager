@@ -16,10 +16,12 @@ public class AlphaVantageClientTests
     private static readonly DateTime _start = new(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _end = new(2024, 1, 31, 0, 0, 0, DateTimeKind.Utc);
 
-    private static AlphaVantageClient CreateClient(MockHttpMessageHandler handler)
+    private static AlphaVantageClient CreateClient(
+        HttpMessageHandler handler,
+        ILogger<AlphaVantageClient>? logger = null)
     {
         var httpClient = new HttpClient(handler);
-        var logger = LoggerFactory.Create(b => { }).CreateLogger<AlphaVantageClient>();
+        logger ??= LoggerFactory.Create(b => { }).CreateLogger<AlphaVantageClient>();
         var config = new ExternalServiceConfiguration
         {
             ServiceName = "AlphaVantage",
@@ -66,6 +68,39 @@ public class AlphaVantageClientTests
         Assert.Empty(result);
     }
 
+    [Fact]
+    public async Task GetDailySeries_WhenCallerCancels_RethrowsAndLogsDebug()
+    {
+        var logger = new ListLogger<AlphaVantageClient>();
+        using var cancellation = new CancellationTokenSource();
+        var client = CreateClient(
+            new ThrowingHttpMessageHandler(new OperationCanceledException("caller cancelled", cancellation.Token)), logger);
+        cancellation.Cancel();
+
+        // This test intentionally supplies a cancelled caller token rather than the test-run token.
+#pragma warning disable xUnit1051
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            client.GetDailySeries("AAPL", "US0378331005", _start, _end, _usd, cancellation.Token));
+#pragma warning restore xUnit1051
+
+        Assert.Contains(LogLevel.Debug, logger.Levels);
+        Assert.DoesNotContain(LogLevel.Error, logger.Levels);
+    }
+
+    [Fact]
+    public async Task GetDailySeries_WhenHttpTimesOut_ReturnsEmptyAndLogsDebug()
+    {
+        var logger = new ListLogger<AlphaVantageClient>();
+        var client = CreateClient(new ThrowingHttpMessageHandler(new TaskCanceledException("request timeout")), logger);
+
+        var result = await client.GetDailySeries(
+            "AAPL", "US0378331005", _start, _end, _usd, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+        Assert.Contains(LogLevel.Debug, logger.Levels);
+        Assert.DoesNotContain(LogLevel.Error, logger.Levels);
+    }
+
     private const string _emptySeries = """{ "Time Series (Daily)": {} }""";
 
     private sealed class StubExternalServiceConfigService(ExternalServiceConfiguration config) : IExternalServiceConfigService
@@ -99,5 +134,28 @@ public class AlphaVantageClientTests
                 Content = new StringContent(_responses.Count > 1 ? _responses.Dequeue() : _responses.Peek())
             });
         }
+    }
+
+    private sealed class ThrowingHttpMessageHandler(Exception exception) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromException<HttpResponseMessage>(exception);
+    }
+
+    private sealed class ListLogger<T> : ILogger<T>
+    {
+        public List<LogLevel> Levels { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter) =>
+            Levels.Add(logLevel);
     }
 }

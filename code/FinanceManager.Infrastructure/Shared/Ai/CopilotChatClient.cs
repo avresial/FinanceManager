@@ -57,9 +57,14 @@ internal sealed class CopilotChatClient(
             var content = response?.Data?.Content ?? string.Empty;
             return new ChatResponse(new ChatMessage(ChatRole.Assistant, content));
         }
-        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
-            logger.LogWarning(ex, "GitHub Copilot SDK request timed out");
+            logger.LogDebug(ex, "GitHub Copilot SDK request cancelled.");
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "GitHub Copilot SDK request cancelled or timed out.");
             return new ChatResponse(new ChatMessage(ChatRole.Assistant, string.Empty));
         }
         catch (Exception ex)
@@ -74,6 +79,10 @@ internal sealed class CopilotChatClient(
                 await client.StopAsync();
                 if (sessionId is not null)
                     await client.DeleteSessionAsync(sessionId, CancellationToken.None);
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogDebug(ex, "GitHub Copilot SDK shutdown cancelled or timed out.");
             }
             catch (Exception ex)
             {

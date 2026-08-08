@@ -125,9 +125,14 @@ public sealed class LabelSetterBackgroundService(
                     request.EntryIds.Count,
                     batches.Count);
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
+                logger.LogDebug(ex, "Label assignment cancelled during application shutdown for account {AccountId}.", request.AccountId);
                 break;
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogDebug(ex, "Label assignment cancelled or timed out for account {AccountId}.", request.AccountId);
             }
             catch (Exception ex)
             {

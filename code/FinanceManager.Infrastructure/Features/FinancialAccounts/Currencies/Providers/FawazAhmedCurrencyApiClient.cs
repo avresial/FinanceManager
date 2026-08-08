@@ -3,6 +3,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Text.Json;
 
 namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Providers;
@@ -26,7 +27,7 @@ internal sealed class FawazAhmedCurrencyApiClient(
             {
                 var errorMessage = await response.Content.ReadAsStringAsync();
                 logger.LogWarning("Currency API returned {StatusCode} for {FromCurrency} to {ToCurrency} on {Date}: {Message}", response.StatusCode, fromCurrency, toCurrency, date, errorMessage.Trim());
-                return new(response.StatusCode == System.Net.HttpStatusCode.NotFound
+                return new(response.StatusCode == HttpStatusCode.NotFound
                     ? CurrencyExchangeRateProviderStatus.NotFound
                     : CurrencyExchangeRateProviderStatus.Failed);
             }
@@ -46,6 +47,11 @@ internal sealed class FawazAhmedCurrencyApiClient(
             logger.LogWarning(ex, "Currency API returned invalid JSON for {FromCurrency} to {ToCurrency} on {Date}", fromCurrency, toCurrency, date);
             return new(CurrencyExchangeRateProviderStatus.Failed);
         }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Fawaz request cancelled or timed out for {FromCurrency} to {ToCurrency} on {Date}.", fromCurrency, toCurrency, date);
+            return new(CurrencyExchangeRateProviderStatus.Failed);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get exchange rate from {FromCurrency} to {ToCurrency} on {Date}", fromCurrency, toCurrency, date);
@@ -53,7 +59,8 @@ internal sealed class FawazAhmedCurrencyApiClient(
         }
     }
 
-    public async Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
+    public async Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateAsync(
+        Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
     {
         var start = dateStart.Date;
         var end = dateEnd.Date;

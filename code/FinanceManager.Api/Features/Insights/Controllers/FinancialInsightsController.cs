@@ -81,6 +81,10 @@ public class FinancialInsightsController(
             if (await insightsGenerationChannel.QueueUser(userId, cancellationToken))
                 logger.LogDebug("Queued insights regeneration for user {UserId}; stored insights are stale.", userId);
         }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Insights regeneration queueing cancelled for user {UserId}; keeping the existing insights.", userId);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error occurred while queueing user {UserId} for insights generation", userId);

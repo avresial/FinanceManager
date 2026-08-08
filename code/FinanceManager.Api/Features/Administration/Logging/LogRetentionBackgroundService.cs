@@ -24,8 +24,9 @@ public sealed class LogRetentionBackgroundService(
                 if (!await timer.WaitForNextTickAsync(stoppingToken)) break;
                 await Cleanup(stoppingToken);
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
+                logger.LogDebug(ex, "Log retention timer cancelled during application shutdown.");
                 break;
             }
         }
@@ -46,6 +47,14 @@ public sealed class LogRetentionBackgroundService(
 
             if (deleted > 0)
                 logger.LogInformation("Log retention removed {Count} entries older than {Cutoff:o}.", deleted, cutoffUtc);
+        }
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            logger.LogDebug(ex, "Log retention cleanup cancelled during application shutdown.");
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Log retention cleanup cancelled or timed out.");
         }
         catch (Exception ex)
         {
