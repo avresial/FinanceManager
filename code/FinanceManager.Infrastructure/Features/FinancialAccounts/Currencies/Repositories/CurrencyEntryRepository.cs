@@ -22,10 +22,34 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             Labels = await ResolveTrackedLabels(entry.Labels, cancellationToken),
         };
 
-        context.CurrencyEntries.Add(newAccountEntry);
-        await context.SaveChangesAsync(cancellationToken);
-        if (recalculate)
+        if (context.Database.IsRelational() && recalculate)
+        {
+            // Relational: transactional mutation + recalculation commit together atomically.
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+            context.CurrencyEntries.Add(newAccountEntry);
+            await context.SaveChangesAsync(cancellationToken);
             await RecalculateValues(newAccountEntry.AccountId, newAccountEntry.EntryId, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        else
+        {
+            // Non-relational or no recalculation: persist entry first.
+            context.CurrencyEntries.Add(newAccountEntry);
+            await context.SaveChangesAsync(cancellationToken);
+            if (recalculate)
+            {
+                // Post-commit repair: complete recalculation before propagating cancellation.
+                try
+                {
+                    await RecalculateValues(newAccountEntry.AccountId, newAccountEntry.EntryId, cancellationToken);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    // Provider timeout or internal cancellation: complete recalculation with no-token fallback.
+                    await RecalculateValues(newAccountEntry.AccountId, newAccountEntry.EntryId, CancellationToken.None);
+                }
+            }
+        }
         return true;
     }
     public Task<bool> Add(IEnumerable<CurrencyAccountEntry> entries, bool recalculate = true) =>
@@ -62,9 +86,32 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             context.CurrencyEntries.Add(newEntry);
         }
 
-        await context.SaveChangesAsync(cancellationToken);
-        if (recalculate && firstEntry is not null)
+        if (context.Database.IsRelational() && recalculate && firstEntry is not null)
+        {
+            // Relational: transactional mutation + recalculation commit together atomically.
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
             await RecalculateValues(firstEntry.AccountId, firstEntry.EntryId, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        else
+        {
+            // Non-relational or no recalculation: persist entries first.
+            await context.SaveChangesAsync(cancellationToken);
+            if (recalculate && firstEntry is not null)
+            {
+                // Post-commit repair: complete recalculation before propagating cancellation.
+                try
+                {
+                    await RecalculateValues(firstEntry.AccountId, firstEntry.EntryId, cancellationToken);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    // Provider timeout or internal cancellation: complete recalculation with no-token fallback.
+                    await RecalculateValues(firstEntry.AccountId, firstEntry.EntryId, CancellationToken.None);
+                }
+            }
+        }
         return true;
     }
 
@@ -95,9 +142,35 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             e => e.AccountId == accountId && e.EntryId == entryId,
             cancellationToken);
         if (entryToDelete is null) return false;
-        context.CurrencyEntries.Remove(entryToDelete);
-        await context.SaveChangesAsync(cancellationToken);
-        await RecalculateValues(entryToDelete.AccountId, entryToDelete.PostingDate, cancellationToken);
+
+        var deletedAccountId = entryToDelete.AccountId;
+        var deletedPostingDate = entryToDelete.PostingDate;
+
+        if (context.Database.IsRelational())
+        {
+            // Relational: transactional mutation + recalculation commit together atomically.
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+            context.CurrencyEntries.Remove(entryToDelete);
+            await context.SaveChangesAsync(cancellationToken);
+            await RecalculateValues(deletedAccountId, deletedPostingDate, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        else
+        {
+            // Non-relational: persist deletion first, then repair with post-commit recalculation.
+            context.CurrencyEntries.Remove(entryToDelete);
+            await context.SaveChangesAsync(cancellationToken);
+            // Post-commit repair: complete recalculation before propagating cancellation.
+            try
+            {
+                await RecalculateValues(deletedAccountId, deletedPostingDate, cancellationToken);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // Provider timeout or internal cancellation: complete recalculation with no-token fallback.
+                await RecalculateValues(deletedAccountId, deletedPostingDate, CancellationToken.None);
+            }
+        }
 
         return true;
     }

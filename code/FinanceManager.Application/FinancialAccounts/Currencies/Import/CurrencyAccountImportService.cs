@@ -153,10 +153,16 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                 else
                     await currencyAccountEntryRepository.RecalculateValues(accountId, oldestInserted.EntryId);
             }
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+            {
+                logger.LogDebug(ex, "Currency account import recalculation cancelled.");
+                throw;
+            }
             catch (OperationCanceledException ex)
             {
-                logger.LogDebug(ex, "Currency account import recalculation cancelled or timed out.");
-                throw;
+                failed++;
+                errors.Add("Recalculation cancelled or timed out.");
+                logger.LogDebug(ex, "Currency account import recalculation cancelled or timed out; marking it failed.");
             }
         }
 

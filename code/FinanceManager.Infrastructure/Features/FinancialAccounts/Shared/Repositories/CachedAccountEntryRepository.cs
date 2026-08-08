@@ -54,7 +54,7 @@ public class CachedAccountEntryRepository<T>(
     {
         if (await userResolver.GetUserId(accountId, cancellationToken) is not int userId)
         {
-            await foreach (var e in inner.Get(accountId, startDate, endDate).WithCancellation(cancellationToken))
+            await foreach (var e in inner.Get(accountId, startDate, endDate, cancellationToken))
                 yield return e;
             yield break;
         }
@@ -76,7 +76,7 @@ public class CachedAccountEntryRepository<T>(
         if (startDate < horizonStart)
         {
             var olderEnd = endDate < horizonStart ? endDate : horizonStart.AddTicks(-1);
-            await foreach (var e in inner.Get(accountId, startDate, olderEnd).WithCancellation(cancellationToken))
+            await foreach (var e in inner.Get(accountId, startDate, olderEnd, cancellationToken))
                 yield return e;
         }
     }
@@ -210,9 +210,14 @@ public class CachedAccountEntryRepository<T>(
 
     public async Task<bool> Add(T entry, bool recalculate, CancellationToken cancellationToken)
     {
-        var result = await inner.Add(entry, recalculate, cancellationToken);
-        await InvalidateAccounts([entry.AccountId], CancellationToken.None);
-        return result;
+        try
+        {
+            return await inner.Add(entry, recalculate, cancellationToken);
+        }
+        finally
+        {
+            await InvalidateAccounts([entry.AccountId], CancellationToken.None);
+        }
     }
 
     public Task<bool> Add(IEnumerable<T> entries, bool recalculate = true) =>
@@ -224,9 +229,14 @@ public class CachedAccountEntryRepository<T>(
         CancellationToken cancellationToken)
     {
         var entryList = entries as IList<T> ?? entries.ToList();
-        var result = await inner.Add(entryList, recalculate, cancellationToken);
-        await InvalidateAccounts(entryList.Select(e => e.AccountId), CancellationToken.None);
-        return result;
+        try
+        {
+            return await inner.Add(entryList, recalculate, cancellationToken);
+        }
+        finally
+        {
+            await InvalidateAccounts(entryList.Select(e => e.AccountId), CancellationToken.None);
+        }
     }
 
     public async Task<bool> Update(T entry)
@@ -240,18 +250,28 @@ public class CachedAccountEntryRepository<T>(
 
     public async Task<bool> Delete(int accountId, int entryId, CancellationToken cancellationToken)
     {
-        var result = await inner.Delete(accountId, entryId, cancellationToken);
-        await InvalidateAccounts([accountId], CancellationToken.None);
-        return result;
+        try
+        {
+            return await inner.Delete(accountId, entryId, cancellationToken);
+        }
+        finally
+        {
+            await InvalidateAccounts([accountId], CancellationToken.None);
+        }
     }
 
     public Task<bool> Delete(int accountId) => Delete(accountId, CancellationToken.None);
 
     public async Task<bool> Delete(int accountId, CancellationToken cancellationToken)
     {
-        var result = await inner.Delete(accountId, cancellationToken);
-        await InvalidateAccounts([accountId], CancellationToken.None);
-        return result;
+        try
+        {
+            return await inner.Delete(accountId, cancellationToken);
+        }
+        finally
+        {
+            await InvalidateAccounts([accountId], CancellationToken.None);
+        }
     }
 
     public async Task<bool> AddLabel(int entryId, int labelId)
@@ -302,7 +322,7 @@ public class CachedAccountEntryRepository<T>(
                 async ct =>
                 {
                     var list = new List<T>();
-                    await foreach (var e in inner.Get(accountId, ms, me).WithCancellation(ct))
+                    await foreach (var e in inner.Get(accountId, ms, me, ct))
                         list.Add(e);
                     return list;
                 },

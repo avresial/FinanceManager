@@ -123,10 +123,16 @@ public class BondAccountImportService(
             {
                 await RecalculateBonds(accountId, minDay, maxDay, cancellationToken);
             }
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+            {
+                logger.LogDebug(ex, "Bond account import recalculation cancelled.");
+                throw;
+            }
             catch (OperationCanceledException ex)
             {
-                logger.LogDebug(ex, "Bond account import recalculation cancelled or timed out.");
-                throw;
+                failed++;
+                errors.Add("Recalculation cancelled or timed out.");
+                logger.LogDebug(ex, "Bond account import recalculation cancelled or timed out; marking it failed.");
             }
         }
 
